@@ -38,7 +38,7 @@ def detector():
     options = FaceLandmarkerOptions (
         base_options = BaseOptions(model_asset_path=model_path),
         running_mode = VisionRunningMode.IMAGE,
-        #num_faces = 1,                           # Cantidad de rostros maximos para evaluar
+        num_faces = 1,                           # Cantidad de rostros maximos para evaluar
         min_face_detection_confidence = 0.7,    # Mayor confianza para la deteccion de rostros sea exitosa
         min_face_presence_confidence = 0.7      # Controla detecciones superpuestas
     )
@@ -117,7 +117,6 @@ def recortar_rostro(imagen_bgr, landmarks):
 
     rostro = imagen_bgr[crop_ymin:crop_ymax, crop_xmin:crop_xmax]
 
-    """
     # agregar padding si hace falta
     if any([pad_left, pad_top, pad_right, pad_bottom]):
         rostro = cv2.copyMakeBorder(
@@ -129,20 +128,40 @@ def recortar_rostro(imagen_bgr, landmarks):
             borderType=cv2.BORDER_CONSTANT,
             value=(255,255,255)
         )
-        """
 
-    # =============================
-    # RECORTE FINAL
-    # =============================
-    rostro = imagen_bgr[y_min:y_max, x_min:x_max]
-
-    rostro = cv2.resize(rostro, (400,500))
     if rostro.size == 0:
         return 0, "Recorte vacío"
+    
+
+    #rostro = imagen_bgr[y_min:y_max, x_min:x_max]
+     
+    """
+    if rostro.shape[0] < 500:
+        return 0, "Resolución muy baja para impresión"
+    """
+
+    rostro = cv2.resize(rostro, (295, 354)) # 3x4 cm  (354,472) --- 2.5x3 (295, 354)
 
     return rostro
 
 
+# =====================================
+# FUNCION PARA DETECTAR IMAGEN BORROSA
+# =====================================
+def imagen_nitida(imagen_bgr, umbral):
+
+    # Convertir a escala de grises
+    gray = cv2.cvtColor(imagen_bgr, cv2.COLOR_BGR2GRAY)
+
+    # Aplicar Laplaciano
+    laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+
+    # Varianza
+    varianza = laplacian.var()
+
+    return varianza > umbral
+
+    
 # =====================================
 # FUNCION RELACION DE ASPECTO OCULAR (EAR)
 # =====================================
@@ -467,19 +486,27 @@ def es_frontal(landmarks, tolerancia_ojos_y = 0.04, tolerancia_nariz_x = 0.05, t
         return False
 
 
+
+"""
 # =====================================
 # FUNCION PRINCIPAL PARA LA DETECCIÓN DE ROSTROS EN IMÁGENES
 # =====================================
 def validacion_fotografia(imagen_bytes):
 
+    # =========================
+    # DECODIFICAR IMAGEN
+    # =========================
     # Convertir bytes a imagen
     nparr = np.frombuffer(imagen_bytes, np.uint8) # Convertir bytes a un arreglo de NumPy
     imagen_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR) # Decodificar la imagen a formato BGR (formato predeterminado de OpenCV)
 
     # Verificar si la imagen se cargó correctamente
     if imagen_bgr is None:
-        return 0, "No se pudo cargar la imagen desde bytes" 
-    
+        return 0, "No se pudo cargar la imagen" 
+
+    # =========================
+    # DETECCIÓN INICIAL
+    # =========================
     # Convertir la imagen de BGR a RGB (formato requerido por MediaPipe)
     imagen_rgb = cv2.cvtColor(imagen_bgr, cv2.COLOR_BGR2RGB)
       
@@ -497,12 +524,16 @@ def validacion_fotografia(imagen_bytes):
     # Limitar a un solo rostro
     if not result.face_landmarks:
         return 0, "No se detectó rostro"
-    if len(result.face_landmarks) != 1:
+    
+    if len(result.face_landmarks) > 1:
         return 0, "Se detectaron múltiples rostros"
     
     # Obtener landmarks
     landmarks = result.face_landmarks[0]
 
+    # =========================
+    # RECORTE
+    # =========================
     # recorte
     imagen_bgr = recortar_rostro(imagen_bgr, landmarks)
 
@@ -541,6 +572,110 @@ def validacion_fotografia(imagen_bytes):
             return 0,  "La rostro no esta frontal"
         elif not expresion_seria:
             return 0, "La expresion no es neutra"
+
+"""
+
+
+# =====================================
+# FUNCION PRINCIPAL PARA LA DETECCIÓN DE ROSTROS EN IMÁGENES
+# =====================================
+def validacion_fotografia(imagen_bytes):
+
+    # =========================
+    # DECODIFICAR IMAGEN
+    # =========================
+    nparr = np.frombuffer(imagen_bytes, np.uint8)
+    imagen_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if imagen_bgr is None:
+        return 0, "No se pudo cargar la imagen"
+
+    # =========================
+    # DETECCIÓN INICIAL
+    # =========================
+    imagen_rgb = cv2.cvtColor(imagen_bgr, cv2.COLOR_BGR2RGB)
+    mp_imagen = mp.Image(
+        image_format=mp.ImageFormat.SRGB,
+        data=imagen_rgb
+    )
+
+    global detector_instance
+    if detector_instance is None:
+        detector_instance = detector()
+
+    result = detector_instance.detect(mp_imagen)
+
+    if not result.face_landmarks:
+        return 0, "No se detectó rostro"
+
+    if len(result.face_landmarks) > 1:
+        return 0, "Se detectaron múltiples rostros"
+
+    landmarks = result.face_landmarks[0]
+
+    # =========================
+    # RECORTE
+    # =========================
+    imagen_recortada = recortar_rostro(imagen_bgr, landmarks)
+
+    if isinstance(imagen_recortada, tuple):
+        return imagen_recortada
+
+    # =========================
+    # VALIDAR NITIDEZ (ANTES DE RESIZE)
+    # =========================
+    if not imagen_nitida(imagen_recortada, 170):
+        return 0, "El rostro está borroso"
+
+    # =========================
+    # REDIMENSIONAR
+    # =========================
+    imagen_recortada = cv2.resize(imagen_recortada, (400, 500))
+
+    # =========================
+    # REDETECTAR LANDMARKS
+    # =========================
+    imagen_rgb = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2RGB)
+    mp_imagen = mp.Image(
+        image_format=mp.ImageFormat.SRGB,
+        data=imagen_rgb
+    )
+
+    result = detector_instance.detect(mp_imagen)
+
+    if not result.face_landmarks:
+        return 0, "No se detectó rostro tras recorte"
+
+    landmarks = result.face_landmarks[0]
+
+    # =========================
+    # VALIDACIONES FACIALES
+    # =========================
+
+    ojos_ok = ojos_abiertos(landmarks, imagen_recortada.shape)
+    frontal_ok = es_frontal(landmarks)
+    expresion_ok = expresion_neutra(landmarks, imagen_recortada.shape)
+
+    # =========================
+    # RESULTADO FINAL
+    # =========================
+    if ojos_ok and frontal_ok and expresion_ok:
+
+        _, buffer = cv2.imencode(".jpg", imagen_recortada)
+        imagen_bytes_recortada = buffer.tobytes()
+
+        return 1, imagen_bytes_recortada
+
+    if not ojos_ok:
+        return 0, "Los ojos están cerrados o no visibles"
+
+    if not frontal_ok:
+        return 0, "El rostro no está frontal o está inclinado"
+
+    if not expresion_ok:
+        return 0, "La expresión no es neutra"
+
+    return 0, "La imagen no cumple con los requisitos"
 
 
 # =====================================
