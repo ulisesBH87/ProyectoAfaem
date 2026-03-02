@@ -1,4 +1,20 @@
+# Python
 Backend/venv/
+venv/
+
+# Cache de Python
 __pycache__/
 *.pyc
-git commit -m 
+
+
+# Node
+node_modules/
+
+# VS Code
+.vscode/
+
+# Backups
+Respaldos/
+
+# OS
+.DS_Store
