@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.modelos import Solicitud, Usuario
+from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion
 
 def crear_solicitudrepo(db: Session, solicitud: Solicitud, usuario: Usuario):
     db.add(solicitud)
@@ -22,14 +22,18 @@ def obtener_solicitud_individual_repo(db:Session, solicitud_id: int):
     SolicitudUsuario = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     
     usuario = SolicitudUsuario.UsuarioRelacion
+    sexo = SolicitudUsuario.UsuarioRelacion.SexoFk
+    tipoSolicitud = SolicitudUsuario.CatalogoTiposAfiliacionRelacion
+    estatus = SolicitudUsuario.CatalogoEstadosValidacion
     
     return {
         "Nombre": usuario.Nombre,
         "PrimerApellido": usuario.PrimerApellido,
         "SegundoApellido": usuario.SegundoApellido,
         "CURP": usuario.CURP,
-        "SexoId": usuario.SexoId,
+        "Sexo": sexo.Nombre,
         "FechaNacimiento": usuario.FechaNacimiento,
         "FechaSolicitud": SolicitudUsuario.FechaSolicitud,
-        "EstatusSolicitud": SolicitudUsuario.EstatusValidacion
+        "EstatusSolicitud": estatus.Nombre,
+        "TipoSolicitud": tipoSolicitud.NombreAfiliacion
     }

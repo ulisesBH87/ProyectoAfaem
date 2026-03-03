@@ -10,8 +10,8 @@ def crear_solicitud(db: Session, data, usuario):
     solicitud = Solicitud(
         UsuarioId=usuario.UsuarioId,
         FechaSolicitud=data.FechaSolicitud,
-        EstatusValidacion=estatusDefecto
-        
+        EstatusValidacion=estatusDefecto,
+        TipoAfiliacionId=data.TipoAfiliacion
     )
 
     usuario = Usuario(

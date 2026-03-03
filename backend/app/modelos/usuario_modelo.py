@@ -21,7 +21,7 @@ class Usuario(Base):
     NUI = Column(String(60), nullable=True, index=True)
 
     SexoId = Column(Integer, ForeignKey("CatalogoSexo.SexoId"), nullable=True)
-    Sexo = relationship("CatalogoSexo")
+    SexoFk = relationship("CatalogoSexo", back_populates="UsuarioFk")
 
     FechaNacimiento = Column(Date, nullable=True)
 

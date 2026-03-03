@@ -4,6 +4,7 @@ import re
 
 class SolicitudCrear(BaseModel):
     UsuarioId: int
+    TipoAfiliacion: int
     FechaSolicitud: datetime
     EstatusValidacion: int
 
@@ -80,12 +81,13 @@ class SolicitudIndividualRespuesta(BaseModel):
     PrimerApellido: str
     SegundoApellido: str | None
     CURP: str
-    SexoId: int
+    Sexo: str
     FechaNacimiento: date
 
     #Datos de la solicitud
+    TipoSolicitud: str
     FechaSolicitud: datetime
-    EstatusSolicitud: int
+    EstatusSolicitud: str
 
     model_config = {
         "from_attributes": True

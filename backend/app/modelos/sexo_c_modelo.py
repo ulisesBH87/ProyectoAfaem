@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 from app.db.base import Base
 
 class CatalogoSexo(Base):
@@ -6,3 +7,5 @@ class CatalogoSexo(Base):
 
     SexoId = Column(Integer, primary_key=True)
     Nombre = Column(String(40), nullable=False, unique=True)
+    
+    UsuarioFk = relationship("Usuario", back_populates="SexoFk")
