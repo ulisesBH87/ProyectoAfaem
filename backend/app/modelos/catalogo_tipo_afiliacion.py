@@ -8,4 +8,4 @@ class CatalogoTiposAfiliacion(Base):
     TipoAfiliacionId = Column(Integer, primary_key=True)
     NombreAfiliacion = Column(String(100), nullable=False)
 
-   # SolicitudRelacion = relationship("Solicitud", back_populates="CatalogoTiposAfiliacionRelacion")
+    SolicitudRelacion = relationship("Solicitud", back_populates="CatalogoTiposAfiliacionRelacion")

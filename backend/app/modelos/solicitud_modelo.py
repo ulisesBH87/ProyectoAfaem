@@ -14,3 +14,6 @@ class Solicitud(Base):
 
     EstatusValidacion = Column(Integer, ForeignKey("CatalogoEstadosValidacion.EstadoValidacionId"), nullable=False)
     CatalogoEstadosValidacion = relationship("CatalogoEstadosValidacion")
+
+    TipoAfiliacionId = Column(Integer, ForeignKey("CatalogoTiposAfiliacion.TipoAfiliacionId"), nullable=True)
+    CatalogoTiposAfiliacionRelacion = relationship("CatalogoTiposAfiliacion", back_populates="SolicitudRelacion")
