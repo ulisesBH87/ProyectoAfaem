@@ -7,7 +7,7 @@ class Solicitud(Base):
     SolicitudId = Column(Integer, primary_key=True)
 
     UsuarioId = Column(Integer, ForeignKey("Usuarios.UsuarioId"), nullable=False)
-    Usuario = relationship("Usuario")
+    UsuarioRelacion = relationship("Usuario", back_populates="SolicitudRelacion")
 
     FechaSolicitud = Column(DateTime, nullable=False)
     ObservacionesSolicitud = Column(String(500), nullable=True)

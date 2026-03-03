@@ -32,3 +32,5 @@ class Usuario(Base):
     Eliminado = Column(Boolean, default=False, nullable=False)
 
     Salt = Column(String(32), nullable=False)
+
+    SolicitudRelacion = relationship("Solicitud", back_populates="UsuarioRelacion")

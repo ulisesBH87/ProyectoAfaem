@@ -73,3 +73,15 @@ class SolicitudesTodas(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class SolicitudIndividualRespuesta(BaseModel):
+    Nombre: str
+    PrimerApellido: str
+    SegundoApellido: str | None
+    CURP: str
+    SexoId: int
+    FechaNacimiento: date
+    
+    model_config = {
+        "from_attributes": True
+    }
