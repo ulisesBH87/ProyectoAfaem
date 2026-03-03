@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
 
-from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, SolicitudIndividual, SolicitudIndividualRespuesta
+from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, SolicitudIndividualRespuesta
 
 from app.servicios.solicitud_servicio import crear_solicitud, obtener_solicitudes_servicio, obtener_solicitud_individual_servicio
 from app.modelos.usuario_modelo import Usuario

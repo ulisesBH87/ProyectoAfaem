@@ -29,5 +29,7 @@ def obtener_solicitud_individual_repo(db:Session, solicitud_id: int):
         "SegundoApellido": usuario.SegundoApellido,
         "CURP": usuario.CURP,
         "SexoId": usuario.SexoId,
-        "FechaNacimiento": usuario.FechaNacimiento
+        "FechaNacimiento": usuario.FechaNacimiento,
+        "FechaSolicitud": SolicitudUsuario.FechaSolicitud,
+        "EstatusSolicitud": SolicitudUsuario.EstatusValidacion
     }
