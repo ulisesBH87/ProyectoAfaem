@@ -6,3 +6,5 @@ from .catalogo_estado_validacion import CatalogoEstadosValidacion
 from .catalogo_tipo_afiliacion import CatalogoTiposAfiliacion
 from .catalogo_tipos_archivo import CatalogoTiposArchivo
 from .catalogo_documento import CatalogoDocumentos
+
+from .persona_modelo import Personas
