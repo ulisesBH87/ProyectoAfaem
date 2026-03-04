@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.seguridad import crear_token, verificar_token
+from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
-from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion
-from app.servicios.autenticacion_servicio import registrar_usuario, iniciar_sesion
+from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena
+from app.esquemas.auth_esquema import TokenResponse
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
@@ -12,15 +12,18 @@ def register(data: RegistroUsuario, db:Session = Depends(get_db)):
     registrar_usuario(db, data)
     return {"message": "Usuario registrado correctamente"}
 
-@router.post("/iniciar-sesion")
-def login(data: InicioSesion, db:Session = Depends(get_db)):
+@router.post("/iniciar-sesion", response_model=TokenResponse)
+def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
     usuarioIntentoSesion = iniciar_sesion(db, data.Correo, data.Contrasena)
 
     if not usuarioIntentoSesion:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas")
+        raise HTTPException(
+            status_code = status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales inválidas"
+        )
 
     datos_token = {
-        "UsuarioId": str(usuarioIntentoSesion.UsuarioId),
+        "sub": str(usuarioIntentoSesion.UsuarioId),
         "correo": usuarioIntentoSesion.Correo
     }
 

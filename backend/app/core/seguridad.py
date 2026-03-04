@@ -9,6 +9,7 @@ from app.modelos.usuario_modelo import Usuario
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from app.repositorios.usuario_repositorio import obtener_usuario_por_id
 
 from app.core.config import obtener_configuracion
 
@@ -44,7 +45,7 @@ def crear_token(data: dict) -> str:
     #fecha de expiración agregada al payload del token
     datos.update(
         {
-            "sub": str(data["UsuarioId"]),
+            "sub": str(data["sub"]),
             "exp": expire,
             "type": "access"
         }
@@ -66,6 +67,7 @@ def verificar_token(token: str):
         )
 
         return payload
+
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -79,21 +81,21 @@ def obtener_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = De
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado"
         )
-        
+
     if payload.get("type") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tipo de token inválido"
         )
 
-    usuario_id = payload.get("sub")
+    usuario_id = int(payload.get("sub"))
     if usuario_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido"
         )
-    
-    usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+
+    usuario = obtener_usuario_por_id(db, usuario_id)
 
     if usuario is None:
         raise HTTPException(
@@ -102,5 +104,3 @@ def obtener_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = De
         )
 
     return usuario
-
-#desde el front se manda el #bearer #header
