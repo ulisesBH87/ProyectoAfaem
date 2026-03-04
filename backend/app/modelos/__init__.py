@@ -8,5 +8,6 @@ from .catalogo_tipos_archivo import CatalogoTiposArchivo
 from .catalogo_documento import CatalogoDocumentos
 from .persona_modelo import Personas
 from .catalogo_tipo_documento import CatalogoTipoDocumentos
-
 from .catalogo_rol_personas import CatalogoRolesPersonas
+
+from .documento_afiliacion_modelo import DocumentoAfiliacion
