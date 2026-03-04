@@ -4,6 +4,7 @@ from app.core.seguridad import crear_token, verificar_token, obtener_usuario_act
 from app.db.sesion import get_db
 from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena
 from app.esquemas.auth_esquema import TokenResponse
+from app.servicios.autenticacion_servicio import registrar_usuario, iniciar_sesion, cambiar_contrasena_servicio
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
@@ -33,3 +34,16 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
         "access_token": token_generado,
         "token_type": "bearer"
     }
+
+@router.post("/cambiar-contrasena")
+def cambiar_contrasena(data: CambiarContrasena, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+
+    cambio = cambiar_contrasena_servicio(db, usuario.UsuarioId, data.ContrasenaActual, data.NuevaContrasena)
+
+    if not cambio:
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail="Contraseña actual incorrecta"
+        )
+
+    return {"message": "Contraseña cambiada correctamente"}

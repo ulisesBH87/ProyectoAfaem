@@ -19,5 +19,16 @@ def crear_usuario(db: Session, usuario: Usuario):
 
     return usuario
 
-def obtener_por_correo(db: Session, correo: str):
-    return db.query(Usuario).filter (Usuario.Correo == correo).first()
+# Contraseña
+def cambiar_contrasena_repo(db: Session, usuario_id: int, hash: str, salt: str):
+
+    usuario = obtener_usuario_por_id(db, usuario_id)
+
+    if not usuario:
+        return False
+
+    usuario.Contrasena = hash
+    usuario.Salt = salt
+
+    db.commit()
+    return True
