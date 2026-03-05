@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 
 # Importar el enrutador de validación de rutas
-from app.api.validacion_rutas import router
+from app.router.validacion_rutas import router
 
 from fastapi.middleware.cors import CORSMiddleware
 

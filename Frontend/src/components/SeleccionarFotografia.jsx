@@ -77,7 +77,7 @@ function SeleccionarFotografia() {
     // Enviar el archivo al backend para validación  
     try{
       
-      const response = await fetch("http://127.0.0.1:8000/fotografia/validar", {
+      const response = await fetch("http://127.0.0.1:8000/validar/fotografia", {
         method: "POST",
         body: formData
       });
@@ -208,7 +208,48 @@ function SeleccionarFotografia() {
     }
     
     EnviarArchivo(Archivo); // Enviar el archivo al servidor para validación
+    
+  };
 
+  /*====
+  FUNCION PARA DESCARGAR IMAGEN EN RESOLUCION MEDIA (CREDENCIAL)
+  ====*/
+  const descargarCredencial = () => {
+    if (!vistaPrevia) {
+      mostrarModal("No hay imagen para descargar.");
+      return;
+    }
+
+    const img = new Image();
+    img.src = vistaPrevia;
+
+    img.onload = () => {
+      // Tamaño ideal tipo credencial (pueden cambiarse)
+      const ancho = 400;
+      const alto = 500;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = ancho;
+      canvas.height = alto;
+
+      const ctx = canvas.getContext("2d");
+
+      // Fondo blanco (por si la imagen tiene transparencia)
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, ancho, alto);
+
+      // Ajustar imagen proporcionalmente
+      ctx.drawImage(img, 0, 0, ancho, alto);
+
+      // Convertir a JPG calidad media
+      const imagenFinal = canvas.toDataURL("image/jpeg", 0.8);
+
+      // Crear enlace de descarga
+      const link = document.createElement("a");
+      link.href = imagenFinal;
+      link.download = "credencial.jpg";
+      link.click();
+    };
   };
   
   return (
@@ -250,11 +291,7 @@ function SeleccionarFotografia() {
         />
         */}
 
-        {procesando && <p>Procesando archivo...</p>}
-        
-        {vistaPrevia && (
-          <div
-            style={{
+        {/*
               width: '400px',
               height: '500px',
               border: '1px solid #ccc',
@@ -262,20 +299,50 @@ function SeleccionarFotografia() {
               alignItems: 'center',
               justifyContent: 'center',
               marginTop: '10px',
-              marginLeft: '100px'
+              marginLeft: '100px' */}
+
+        {procesando && <p>Procesando archivo...</p>}
+        
+        {vistaPrevia && (
+
+          <div
+            style={{
+              width: '400px',
+              aspectRatio: '4 / 5',
+              border: '1px solid #ccc',
+              borderRadius: '8px',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: '10px',
+              marginLeft: '100px',
+              overflow: 'hidden',
+              backgroundColor: '#fff'
             }}
           >
             <img
               src={vistaPrevia}
               alt="Fotografía seleccionada"
               style={{
-                maxWidth: '400px',
-                maxHeight: '500px',
-                objectFit: 'contain'
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'cover',
+                display: 'block'
               }}
             />
           </div>
+          
         )}
+        <div style={{ marginTop: "15px", marginLeft: "100px" }}>
+            <button
+              className="btn btn-success"
+              onClick={descargarCredencial}
+              disabled={procesando}
+            >
+              Descargar imagen para credencial
+            </button>
+          </div>
         
         {/* 
         {mensaje && (
