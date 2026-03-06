@@ -10,5 +10,6 @@ from .persona_modelo import Personas
 from .catalogo_tipo_documento import CatalogoTipoDocumentos
 from .catalogo_rol_personas import CatalogoRolesPersonas
 from .documento_afiliacion_modelo import DocumentoAfiliacion
-
 from .documentos_entregados_modelo import DocumentosEntregados
+
+from .catalogo_documentos_persona import CatalogoDocumentosPersonas

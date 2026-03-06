@@ -7,5 +7,4 @@ class DocumentoAfiliacion(Base):
 
     DocumentoAfiliacionId = Column(Integer, primary_key=True)
     TipoAfiliacionId = Column(Integer, ForeignKey("CatalogoTiposAfiliacion.TipoAfiliacionId"), nullable=False)
-    DocumentoId = Column(Integer, ForeignKey("CatalogoDocumentos.DocumentoId"), nullable=False)
-    RolPersonaId = Column(Integer, ForeignKey("CatalogoRolesPersonas.RolPersonaId"), nullable=False)
+    DocumentoPersonaId = Column(Integer, ForeignKey("CatalogoDocumentosPersonas.DocumentosPersonasId"), nullable=False)
