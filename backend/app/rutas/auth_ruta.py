@@ -4,14 +4,17 @@ from app.core.seguridad import crear_token, verificar_token, obtener_usuario_act
 from app.db.sesion import get_db
 from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena
 from app.esquemas.auth_esquema import TokenResponse
-from app.servicios.autenticacion_servicio import registrar_usuario, iniciar_sesion, cambiar_contrasena_servicio
+from app.servicios.autenticacion_servicio import registrar_usuario_servicio, iniciar_sesion, cambiar_contrasena_servicio
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
 @router.post("/registro")
 def register(data: RegistroUsuario, db:Session = Depends(get_db)):
-    registrar_usuario(db, data)
-    return {"message": "Usuario registrado correctamente"}
+    persona, usuario = registrar_usuario_servicio(data, db)
+    return {
+        "message": "Usuario registrado correctamente",
+        "usuario_id": usuario.UsuarioId
+    }
 
 @router.post("/iniciar-sesion", response_model=TokenResponse)
 def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:

@@ -11,7 +11,7 @@ class DocumentosEntregados(Base):
     PersonaId = Column(Integer, ForeignKey("Personas.PersonaId"), nullable=True)
 
     SolicitudId = Column(Integer, ForeignKey("Solicitudes.SolicitudId"), nullable=False)
-    Solicitud = relationship("Solicitudes")
+    Solicitud = relationship("Solicitud")
 
     DocumentoAfiliacionId = Column(Integer, ForeignKey("DocumentoAfiliacion.DocumentoAfiliacionId"), nullable=False)
 
