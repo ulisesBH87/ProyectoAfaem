@@ -9,3 +9,5 @@ class CatalogoDocumentos(Base):
     Descripcion = Column(String(200), nullable=True)
 
     TipoArchivoId = Column(Integer, ForeignKey("CatalogoTiposArchivo.TipoArchivoId"), nullable=True)
+
+    TipoDocumentoId = Column(Integer, ForeignKey("CatalogoTiposDocumento.TipoDocumentoId"), nullable=True)

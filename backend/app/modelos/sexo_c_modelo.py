@@ -7,5 +7,5 @@ class CatalogoSexo(Base):
 
     SexoId = Column(Integer, primary_key=True)
     Nombre = Column(String(40), nullable=False, unique=True)
-    
-    UsuarioFk = relationship("Usuario", back_populates="SexoFk")
+
+    PersonaRelacion = relationship("Personas", back_populates="SexoRelacion")

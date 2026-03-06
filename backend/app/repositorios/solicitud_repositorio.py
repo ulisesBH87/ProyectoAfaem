@@ -1,15 +1,15 @@
 from sqlalchemy.orm import Session
-from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion
+from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas
 
-def crear_solicitudrepo(db: Session, solicitud: Solicitud, usuario: Usuario):
+def crear_solicitud_repo(db: Session, solicitud: Solicitud, usuario: Usuario, persona: Personas):
     db.add(solicitud)
-    
+
     usuariosolicitud = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
     
-    usuariosolicitud.CURP = usuario.CURP
-    usuariosolicitud.RFC = usuario.RFC
-    usuariosolicitud.SexoId = usuario.SexoId
-    usuariosolicitud.FechaNacimiento = usuario.FechaNacimiento
+    persona.CURP = usuariosolicitud.CURP
+    persona.RFC = usuariosolicitud.RFC
+    persona.SexoId = usuariosolicitud.SexoId
+    persona.FechaNacimiento = usuariosolicitud.FechaNacimiento
 
     db.commit()
     db.refresh(solicitud)
@@ -27,12 +27,12 @@ def obtener_solicitud_individual_repo(db:Session, solicitud_id: int):
     estatus = SolicitudUsuario.CatalogoEstadosValidacion
     
     return {
-        "Nombre": usuario.Nombre,
-        "PrimerApellido": usuario.PrimerApellido,
-        "SegundoApellido": usuario.SegundoApellido,
-        "CURP": usuario.CURP,
-        "Sexo": sexo.Nombre,
-        "FechaNacimiento": usuario.FechaNacimiento,
+        #"Nombre": usuario.Nombre,
+        #"PrimerApellido": usuario.PrimerApellido,
+        #"SegundoApellido": usuario.SegundoApellido,
+        #"CURP": usuario.CURP,
+        #"Sexo": sexo.Nombre,
+        #"FechaNacimiento": usuario.FechaNacimiento,
         "FechaSolicitud": SolicitudUsuario.FechaSolicitud,
         "EstatusSolicitud": estatus.Nombre,
         "TipoSolicitud": tipoSolicitud.NombreAfiliacion

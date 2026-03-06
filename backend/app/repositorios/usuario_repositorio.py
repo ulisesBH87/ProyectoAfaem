@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.modelos.usuario_modelo import Usuario
+from app.modelos.persona_modelo import Personas
 
 # Métodos para obtener el usuario
 def obtener_por_correo(db: Session, correo: str):
@@ -10,14 +11,25 @@ def obtener_usuario_por_id(db:Session, usuario_id: int):
 
 
 # Registro
-def crear_usuario(db: Session, usuario: Usuario):
-    db.add(usuario)
-    db.flush() #obtener el user.id
+def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
+    try:
+        db.add(persona)
+        db.flush() #generar id de la persona sin hacer commit
 
-    db.commit()
-    db.refresh(usuario)
+        usuario.PersonaId = persona.PersonaId
 
-    return usuario
+        db.add(usuario)
+
+        db.commit()
+
+        db.refresh(persona)
+        db.refresh(usuario)
+
+        return persona, usuario
+
+    except Exception as e:
+        db.rollback()
+        raise e
 
 # Contraseña
 def cambiar_contrasena_repo(db: Session, usuario_id: int, hash: str, salt: str):
