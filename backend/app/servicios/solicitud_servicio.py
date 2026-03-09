@@ -22,10 +22,29 @@ def crear_solicitud(db: Session, data, usuario):
         FechaNacimiento=data.FechaNacimiento
     )
 
-    return solicitud_repositorio.crear_solicitudrepo(db, solicitud, persona)
+    return solicitud_repositorio.crear_solicitud_repo(db, solicitud, persona)
 
 def obtener_solicitudes_servicio(db: Session):
     return solicitud_repositorio.obtener_solicitudes_repo(db)
 
 def obtener_solicitud_individual_servicio(db: Session, solicitud_id: int):
     return solicitud_repositorio.obtener_solicitud_individual_repo(db, solicitud_id)
+
+def agregar_requisitos_servicio(db: Session, tipo_afiliacion_id: int, documentos_persona_ids: list[int]):
+    existentes = solicitud_repositorio.obtener_por_tipo_afiliacion(db, tipo_afiliacion_id)
+
+    existentes_ids = {doc.DocumentoPersonaId for doc in existentes}
+
+    nuevos_registros = []
+
+    for doc_persona_id in documentos_persona_ids:
+        if doc_persona_id in existentes_ids:
+            continue
+
+        registro = solicitud_repositorio.crear_requisito_repo(db, tipo_afiliacion_id, doc_persona_id)
+
+        nuevos_registros.append(registro)
+
+    db.commit()
+
+    return nuevos_registros

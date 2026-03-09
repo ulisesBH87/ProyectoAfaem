@@ -1,12 +1,12 @@
 from pydantic import BaseModel, EmailStr, field_validator, model_validator, Field
 from datetime import datetime, date
 import re
+from typing import List
 
 class SolicitudCrear(BaseModel):
     UsuarioId: int
-    TipoAfiliacion: int
     FechaSolicitud: datetime
-    EstatusValidacion: int
+    TipoAfiliacion: int
 
     CURP: str
     RFC: str
@@ -70,7 +70,7 @@ class SolicitudesTodas(BaseModel):
     UsuarioId: int
     FechaSolicitud: datetime
     EstatusValidacion: int
-    
+
     model_config = {
         "from_attributes": True
     }
@@ -92,3 +92,11 @@ class SolicitudIndividualRespuesta(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class RequisitosParaAfiliacion(BaseModel):
+    DocumentosPersonaIds: List[int]
+
+class RequisitosParaAfiliacionRespuesta(BaseModel):
+    DocumentoAfiliacionId: int
+    TipoAfiliacionId: int
+    DocumentoPersonaId: int

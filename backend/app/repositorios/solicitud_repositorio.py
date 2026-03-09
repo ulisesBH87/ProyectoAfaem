@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas
+from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion
 
 def crear_solicitud_repo(db: Session, solicitud: Solicitud, usuario: Usuario, persona: Personas):
     db.add(solicitud)
@@ -37,3 +37,12 @@ def obtener_solicitud_individual_repo(db:Session, solicitud_id: int):
         "EstatusSolicitud": estatus.Nombre,
         "TipoSolicitud": tipoSolicitud.NombreAfiliacion
     }
+    
+def obtener_por_tipo_afiliacion(db: Session, tipo_afiliacion_id: int):
+    return db.query(DocumentoAfiliacion).filter(DocumentoAfiliacion.TipoAfiliacionId == tipo_afiliacion_id).all()
+
+def crear_requisito_repo(db: Session, tipo_afiliacion_id: int, documento_persona_id: int):
+    nuevo = DocumentoAfiliacion(TipoAfiliacionId=tipo_afiliacion_id, DocumentoPersonaId=documento_persona_id)
+
+    db.add(nuevo)
+    return nuevo
