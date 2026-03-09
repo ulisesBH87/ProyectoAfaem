@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion
+from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas
+from app.modelos import CatalogoDocumentosPersonas
 
 def crear_solicitud_repo(db: Session, solicitud: Solicitud, usuario: Usuario, persona: Personas):
     db.add(solicitud)
@@ -37,7 +38,7 @@ def obtener_solicitud_individual_repo(db:Session, solicitud_id: int):
         "EstatusSolicitud": estatus.Nombre,
         "TipoSolicitud": tipoSolicitud.NombreAfiliacion
     }
-    
+
 def obtener_por_tipo_afiliacion(db: Session, tipo_afiliacion_id: int):
     return db.query(DocumentoAfiliacion).filter(DocumentoAfiliacion.TipoAfiliacionId == tipo_afiliacion_id).all()
 
@@ -46,3 +47,42 @@ def crear_requisito_repo(db: Session, tipo_afiliacion_id: int, documento_persona
 
     db.add(nuevo)
     return nuevo
+
+
+def ver_requisitos_afiliacion_repo(db: Session, tipo_afiliacion_id: int):
+
+    requisitos = (
+        db.query(
+            DocumentoAfiliacion.DocumentoAfiliacionId,
+            CatalogoDocumentos.NombreDocumento,
+            CatalogoRolesPersonas.Nombre
+        )
+        .join(
+            CatalogoDocumentosPersonas,
+            CatalogoDocumentosPersonas.DocumentosPersonasId
+            == DocumentoAfiliacion.DocumentoPersonaId
+        )
+        .join(
+            CatalogoDocumentos,
+            CatalogoDocumentos.DocumentoId
+            == CatalogoDocumentosPersonas.DocumentoId
+        )
+        .join(
+            CatalogoRolesPersonas,
+            CatalogoRolesPersonas.RolPersonaId
+            == CatalogoDocumentosPersonas.RolPersonaId
+        )
+        .filter(DocumentoAfiliacion.TipoAfiliacionId == tipo_afiliacion_id)
+        .all()
+    )
+
+    resultado = []
+
+    for r in requisitos:
+        resultado.append({
+            "documento_afiliacion_id": r.DocumentoAfiliacionId,
+            "documento": r.NombreDocumento,
+            "rol": r.Nombre
+        })
+
+    return resultado

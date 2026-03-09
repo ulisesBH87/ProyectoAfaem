@@ -8,6 +8,7 @@ from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, Sol
 from app.servicios.solicitud_servicio import crear_solicitud, obtener_solicitudes_servicio, obtener_solicitud_individual_servicio, agregar_requisitos_servicio
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.solicitud_modelo import Solicitud
+from app.servicios import solicitud_servicio
 
 from typing import List
 
@@ -47,3 +48,9 @@ def agregar_requisitos_afiliacion(tipo_afiliacion_id: int, requisitos: Requisito
         "tipo_afiliacion_id": tipo_afiliacion_id,
         "requisitos_creados": len(registros)
     }
+
+@router.get("/{tipo_afiliacion_id}/requisitos")
+def ver_requisitos_afiliacion(tipo_afiliacion_id: int, db:Session=Depends(get_db)):
+    
+    requisitos = solicitud_servicio.ver_requisitos_afiliacion_servicio(db, tipo_afiliacion_id)
+    return requisitos

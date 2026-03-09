@@ -48,3 +48,9 @@ def agregar_requisitos_servicio(db: Session, tipo_afiliacion_id: int, documentos
     db.commit()
 
     return nuevos_registros
+
+def ver_requisitos_afiliacion_servicio(db, tipo_afiliacion_id: int):
+
+    requisitos = solicitud_repositorio.ver_requisitos_afiliacion_repo(db, tipo_afiliacion_id)
+
+    return requisitos
