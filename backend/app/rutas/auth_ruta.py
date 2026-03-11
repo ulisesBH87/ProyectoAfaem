@@ -43,7 +43,7 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
 
     return {
         "access_token": token_generado,
-        "token_type": "bearer"
+        "token_type": "bearer",
         "usuario": {
             "id": usuarioIntentoSesion.UsuarioId,
             "correo": usuarioIntentoSesion.correo,
