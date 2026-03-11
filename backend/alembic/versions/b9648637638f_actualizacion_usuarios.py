@@ -25,7 +25,18 @@ def upgrade() -> None:
     op.drop_index(op.f('ix_Usuarios_CURP'), table_name='Usuarios')
     op.drop_index(op.f('ix_Usuarios_NUI'), table_name='Usuarios')
 
-    op.drop_constraint(op.f('FK__Usuarios__SexoId__4CA06362'), 'Usuarios', type_='foreignkey')
+    op.execute("""
+        DECLARE @fk_name NVARCHAR(255);
+
+        SELECT @fk_name = fk.name
+        FROM sys.foreign_keys fk
+        JOIN sys.tables t ON fk.parent_object_id = t.object_id
+        WHERE t.name = 'Usuarios'
+        AND fk.referenced_object_id = OBJECT_ID('CatalogoSexo');
+
+        IF @fk_name IS NOT NULL
+            EXEC('ALTER TABLE Usuarios DROP CONSTRAINT ' + @fk_name);
+    """)
 
     op.create_foreign_key(None, 'Usuarios', 'Personas', ['PersonaId'], ['PersonaId'])
 
