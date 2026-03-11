@@ -20,18 +20,25 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
-    catalogo_sexo = table('CatalogoSexo',
+
+    op.execute("SET IDENTITY_INSERT CatalogoSexo ON")
+
+    catalogo_sexo = table(
+        'CatalogoSexo',
         column('SexoId', sa.Integer),
         column('Nombre', sa.String(40))
     )
-    op.bulk_insert(catalogo_sexo,
+
+    op.bulk_insert(
+        catalogo_sexo,
         [
             {'SexoId': 1, 'Nombre': 'Masculino'},
             {'SexoId': 2, 'Nombre': 'Femenino'},
             {'SexoId': 3, 'Nombre': 'No binario'}
         ]
     )
+
+    op.execute("SET IDENTITY_INSERT CatalogoSexo OFF")
 
 
 def downgrade():
