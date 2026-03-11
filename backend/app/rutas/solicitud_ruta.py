@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
 
-from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, SolicitudIndividualRespuesta, RequisitosParaAfiliacion
+from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, SolicitudIndividualRespuesta, RequisitosParaAfiliacion, CrearSolicitud
 
 from app.servicios.solicitud_servicio import crear_solicitud, obtener_solicitudes_servicio, obtener_solicitud_individual_servicio, agregar_requisitos_servicio
 from app.modelos.usuario_modelo import Usuario
@@ -38,6 +38,7 @@ def obtener_solicitudes(db:Session = Depends(get_db)):
 def obtener_solicitud_usuario(solicitud_id: int, db:Session = Depends(get_db)):
     return obtener_solicitud_individual_servicio(db, solicitud_id)
 
+############## NUEVAS  #############################################################
 
 @router.post("/{tipo_afiliacion_id}/requisitos")
 def agregar_requisitos_afiliacion(tipo_afiliacion_id: int, requisitos: RequisitosParaAfiliacion, db:Session=Depends(get_db)):
@@ -51,6 +52,11 @@ def agregar_requisitos_afiliacion(tipo_afiliacion_id: int, requisitos: Requisito
 
 @router.get("/{tipo_afiliacion_id}/requisitos")
 def ver_requisitos_afiliacion(tipo_afiliacion_id: int, db:Session=Depends(get_db)):
-    
+
     requisitos = solicitud_servicio.ver_requisitos_afiliacion_servicio(db, tipo_afiliacion_id)
     return requisitos
+
+@router.post("/")
+def crear_solicitud(solicitud: CrearSolicitud, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
+    resultado = solicitud_servicio.crear_solicitud_servicio(db, solicitud, usuario.id)
+    return resultado

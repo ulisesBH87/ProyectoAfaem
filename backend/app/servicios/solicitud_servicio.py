@@ -54,3 +54,22 @@ def ver_requisitos_afiliacion_servicio(db, tipo_afiliacion_id: int):
     requisitos = solicitud_repositorio.ver_requisitos_afiliacion_repo(db, tipo_afiliacion_id)
 
     return requisitos
+
+def crear_solicitud_servicio(db, solicitud, usuarioid):
+    solicitud.UsuarioId = usuarioid
+    nueva_solicitud = solicitud_repositorio.crear_solicitud_repo(db, solicitud.TipoAfiliacionId, solicitud.UsuarioId)
+
+    for persona in solicitud.Persona:
+
+        for doc in persona.Documentos:
+
+            solicitud_repositorio.crear_documento_solicitud_repo(
+                db=db,
+                SolicitudId = nueva_solicitud.SolicitudId,
+                PersonaId = persona.persona_id,
+                DocumentoAfiliacionId = doc.documento_afiliacion_id,
+                RutaArchivo = doc.ruta_archivo
+            )
+    db.commit()
+
+    return {"solicitud_id": nueva_solicitud.SolicitudId, "mensaje": "Solicitud enviada correctamente"}

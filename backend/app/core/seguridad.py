@@ -87,8 +87,15 @@ def obtener_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = De
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Tipo de token inválido"
         )
+    
+    usuario_id = payload.get("sub")
+    if usuario_id is None:
+        raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token inválido"
+        )
 
-    usuario_id = int(payload.get("sub"))
+    usuario_id = int(usuario_id)
     if usuario_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -99,7 +106,7 @@ def obtener_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = De
 
     if usuario is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario no encontrado"
         )
 
