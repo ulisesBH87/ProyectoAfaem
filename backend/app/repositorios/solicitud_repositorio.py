@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas
-from app.modelos import CatalogoDocumentosPersonas
+from app.modelos import CatalogoDocumentosPersonas, DocumentosEntregados
 
-def crear_solicitud_repo(db: Session, solicitud: Solicitud, usuario: Usuario, persona: Personas):
+def crear_solicitud_repos(db: Session, solicitud: Solicitud, usuario: Usuario, persona: Personas):
     db.add(solicitud)
 
     usuariosolicitud = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
@@ -86,3 +86,25 @@ def ver_requisitos_afiliacion_repo(db: Session, tipo_afiliacion_id: int):
         })
 
     return resultado
+
+def crear_solicitud_repo(db, tipo_afiliacion_id):
+
+    nueva = Solicitud(TipoAfiliacionId = tipo_afiliacion_id)
+    
+    db.add(nueva)
+    db.flush()
+
+    return nueva
+
+def crear_documento_solicitud_repo(db, solicitud_id, persona_id, documento_afiliacion_id, ruta_archivo):
+    
+    documento = DocumentosEntregados(
+        SolicitudId = solicitud_id,
+        PersonaId = persona_id,
+        DocumentoAfiliacionId = documento_afiliacion_id,
+        RutaArchivo = ruta_archivo
+    )
+    
+    db.add(documento)
+    
+    return documento

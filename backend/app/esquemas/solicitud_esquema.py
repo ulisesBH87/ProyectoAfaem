@@ -100,3 +100,15 @@ class RequisitosParaAfiliacionRespuesta(BaseModel):
     DocumentoAfiliacionId: int
     TipoAfiliacionId: int
     DocumentoPersonaId: int
+
+class CrearDocumentoSolicitud(BaseModel):
+    DocumentoAfiliacionId: int
+    RutaArchivo: str
+
+class CrearPersonaSolicitud(BaseModel):
+    PersonaId: int
+    Documentos: List[CrearDocumentoSolicitud]
+
+class CrearSolicitud(BaseModel):
+    TipoAfiliacionId: int
+    Persona: List[CrearPersonaSolicitud]
