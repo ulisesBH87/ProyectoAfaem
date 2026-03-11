@@ -4,6 +4,7 @@ import React, { Suspense, lazy } from 'react';
 
 const Ingresar = lazy(() => import('./pages/Auth/Ingresar'));
 const Registrarse = lazy(() =>  import('./pages/Auth/Registrarse'));
+const RegistrarseCuenta = lazy(() => import('./components/RegistrarseCuenta'));
 const PresidenteEquipo = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipo'));
 const PresidenteEquipoJugadores = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoJugadores'));
 const PresidenteEquipoSolicitudes = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoSolicitudes'));
@@ -28,7 +29,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Ingresar />} />
           <Route path="/ingresar" element={<Ingresar />} />
-          <Route path="/registrarse-cuenta" element={<Registrarse />} />
+          <Route path="/registrarse-cuenta" element={<RegistrarseCuenta />} />
           <Route path="/proximo-presidente" element={<ProximoPresidente />} />
           <Route path="/pre-registro-presidente" element={<PreRegistroPresidente />} />
           <Route path="/presidente-equipo" element={<PresidenteEquipo />} />
