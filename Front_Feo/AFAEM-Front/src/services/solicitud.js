@@ -147,7 +147,34 @@ export const getSolicitudes = async () => {
   }
 };
 
+/**
+ * OBTIENE LOS REQUISITOS DE UN TIPO DE AFILIACIÓN
+ * @param {number} tipoAfiliacionId - ID del tipo de afiliación
+ * @returns {Promise} REQUISITOS DE LA AFILIACIÓN
+ */
+export const getRequisitos = async (tipoAfiliacionId) => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await api.get(`/solicitud/${tipoAfiliacionId}/requisitos`, { headers });
+    return response.data;
+  } catch (error) {
+    const errorDetail = error.response?.data?.detail;
+    console.error('❌ Error obteniendo requisitos:', errorDetail);
+    throw error;
+  }
+};
+
 export default {
   sendRegistroSolicitud,
-  getSolicitudes
+  getSolicitudes,
+  getRequisitos
 };

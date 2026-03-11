@@ -114,13 +114,8 @@ export default function AdminSolicitudes() {
 
   const columns = [
     { 
-      key: 'SolicitudId', 
-      label: 'ID Solicitud',
-      render: (value) => value || '-'
-    },
-    { 
-      key: 'UsuarioId', 
-      label: 'ID Usuario',
+      key: 'Correo', 
+      label: 'Correo',
       render: (value) => value || '-'
     },
     { 
@@ -141,6 +136,11 @@ export default function AdminSolicitudes() {
           return fecha;
         }
       }
+    },
+    { 
+      key: 'TipoSolicitud', 
+      label: 'Tipo de Solicitud',
+      render: (value) => value || '-'
     },
     { 
       key: 'EstatusValidacion', 
