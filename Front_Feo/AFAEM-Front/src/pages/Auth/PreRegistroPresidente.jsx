@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaUpload } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
@@ -16,6 +17,63 @@ export default function PreRegistroPresidente() {
     sexoId: '',
     fechaNacimiento: ''
   });
+
+  // ESTADO PARA DOCUMENTOS
+  const [documents, setDocuments] = useState({});
+  const [requisitos, setRequisitos] = useState([]);
+  const [tipoAfiliacionId, setTipoAfiliacionId] = useState(2); // PRESIDENTE DE EQUIPO = ID 2
+  const [requisitosLoading, setRequisitosLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // CARGAR REQUISITOS AL MONTAR EL COMPONENTE
+  useEffect(() => {
+    const cargarRequisitos = async () => {
+      try {
+        setRequisitosLoading(true);
+        const data = await solicitudService.getRequisitos(tipoAfiliacionId);
+        setRequisitos(data || []);
+      } catch (err) {
+        console.error('❌ Error cargando requisitos:', err);
+        setError('No se pudieron cargar los requisitos. Por favor, intenta de nuevo.');
+      } finally {
+        setRequisitosLoading(false);
+      }
+    };
+    
+    cargarRequisitos();
+  }, [tipoAfiliacionId]);
+
+  // MANEJAR SUBIDA DE ARCHIVOS
+  const handleFileUpload = (documentKey, file) => {
+    if (file) {
+      setDocuments(prev => ({
+        ...prev,
+        [documentKey]: file
+      }));
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.currentTarget.style.backgroundColor = '#dbeafe';
+    e.currentTarget.style.borderColor = '#0b4ea6';
+  };
+
+  const handleDragLeave = (e) => {
+    e.currentTarget.style.backgroundColor = 'white';
+    e.currentTarget.style.borderColor = '#e2e8f0';
+  };
+
+  const handleDrop = (e, documentKey) => {
+    e.preventDefault();
+    e.currentTarget.style.backgroundColor = 'white';
+    e.currentTarget.style.borderColor = '#e2e8f0';
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(documentKey, file);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -459,6 +517,156 @@ export default function PreRegistroPresidente() {
                 disabled={loading}
               />
             </div>
+          </div>
+
+          {/* SECCIÓN DE DOCUMENTOS REQUERIDOS */}
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ 
+              fontSize: '15px', 
+              fontWeight: 700, 
+              color: '#0b4ea6', 
+              margin: '0 0 16px 0',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              Documentos requeridos
+            </h3>
+
+            {requisitosLoading ? (
+              <div style={{ 
+                backgroundColor: '#f0f2f5', 
+                padding: '20px', 
+                borderRadius: '8px', 
+                textAlign: 'center',
+                color: '#666'
+              }}>
+                ⏳ Cargando requisitos...
+              </div>
+            ) : requisitos.length === 0 ? (
+              <div style={{ 
+                backgroundColor: '#fef3c7', 
+                padding: '16px', 
+                borderRadius: '8px',
+                color: '#92400e',
+                fontSize: '14px'
+              }}>
+                ⚠️ No hay requisitos configurados para tu tipo de afiliación.
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px'
+              }}>
+                {requisitos.map((doc, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      border: '2px dashed #e2e8f0',
+                      padding: '20px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      minHeight: '220px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, `doc_${idx}`)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
+                      <h4 style={{
+                        margin: '0 0 12px 0',
+                        color: '#1e293b',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        lineHeight: '1.3'
+                      }}>
+                        {doc.documento || `Documento ${idx + 1}`}
+                      </h4>
+                      
+                      {documents[`doc_${idx}`] ? (
+                        <div style={{
+                          backgroundColor: '#dcfce7',
+                          color: '#166534',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          border: '1px solid #86efac',
+                          wordBreak: 'break-all'
+                        }}>
+                          ✓ {documents[`doc_${idx}`].name}
+                        </div>
+                      ) : (
+                        <div style={{
+                          backgroundColor: '#fef3c7',
+                          color: '#92400e',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          border: '1px solid #fcd34d'
+                        }}>
+                          Pendiente
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      type="file"
+                      id={`file-doc-${idx}`}
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => handleFileUpload(`doc_${idx}`, e.target.files[0])}
+                    />
+
+                    <button
+                      onClick={() => document.getElementById(`file-doc-${idx}`).click()}
+                      style={{
+                        backgroundColor: '#0b4ea6',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        marginTop: '8px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0a3d85';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0b4ea6';
+                      }}
+                    >
+                      <FaUpload size={10} />
+                      Subir archivo
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <button 

@@ -1,0 +1,53 @@
+# =========================
+# 🔹 Backend - Entornos virtuales
+# =========================
+backend/venv/
+backend/.venv/
+backend/env/
+backend/ENV/
+
+# =========================
+# 🔹 Backend - Variables de entorno
+# =========================
+backend/.env
+backend/.env.*
+backend/*.env
+
+# =========================
+# 🔹 Python
+# =========================
+backend/__pycache__/
+backend/**/*.py[cod]
+*$py.class
+
+# =========================
+# 🔹 Distribución / packaging
+# =========================
+backend/build/
+backend/dist/
+backend/*.egg-info/
+backend/.eggs/
+
+# =========================
+# 🔹 Bases de datos locales
+# =========================
+backend/*.sqlite3
+backend/*.db
+
+# =========================
+# 🔹 Alembic
+# =========================
+backend/alembic/*.pyc
+backend/alembic/__pycache__/
+
+# =========================
+# 🔹 Frontend
+# =========================
+frontend/node_modules/
+frontend/dist/
+
+# =========================
+# 🔹 IDEs
+# =========================
+.vscode/
+.idea/
