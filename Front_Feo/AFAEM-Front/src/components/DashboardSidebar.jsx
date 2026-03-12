@@ -9,12 +9,12 @@ const DashboardSidebar = ({ userEmail }) => {
   const [isHovering, setIsHovering] = useState(false);
 
   const menuItems = [
-    { label: 'Inicio', icon: FaHome, path: '/presidente-equipo' },
-    { label: 'Equipos', icon: FaFootballBall, path: '/presidente-equipo/equipos' },
-    { label: 'Jugadores', icon: FaUsers, path: '/presidente-equipo/mis-jugadores' },
-    { label: 'Solicitudes', icon: FaClipboard, path: '/presidente-equipo/solicitudes' },
-    { label: 'Reportes', icon: FaChartBar, path: '/presidente-equipo/reportes' },
-    { label: 'Configuración', icon: FaCog, path: '/presidente-equipo/configuracion' },
+    { label: 'Inicio', icon: <FaHome />, path: '/presidente-equipo' },
+    { label: 'Equipos', icon: <FaFootballBall />, path: '/presidente-equipo/equipos' },
+    { label: 'Jugadores', icon: <FaUsers />, path: '/presidente-equipo/mis-jugadores' },
+    { label: 'Solicitudes', icon: <FaClipboard />, path: '/presidente-equipo/solicitudes' },
+    { label: 'Reportes', icon: <FaChartBar />, path: '/presidente-equipo/reportes' },
+    { label: 'Configuración', icon: <FaCog />, path: '/presidente-equipo/configuracion' },
   ];
 
   // Determinar si mostrar expandido (por collapse manual o hover)
