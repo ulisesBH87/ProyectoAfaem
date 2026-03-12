@@ -16,3 +16,5 @@ class OrdenPago(Base):
     EstatusPagoRelacion = relationship("EstatusPago", back_populates="OrdenPagoRelacion")
 
     TotalPagar = Column(DECIMAL(7,2), nullable=False)
+
+    OrdenPagoDetalleRelacion = relationship("OrdenPago", back_populates="OrdenPagoRelacion")

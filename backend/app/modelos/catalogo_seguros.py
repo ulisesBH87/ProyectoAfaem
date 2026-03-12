@@ -8,3 +8,5 @@ class Seguro(Base):
     Nombre = Column(String(100))
     Activo = Column(Boolean)
     Precio = Column(DECIMAL(7,2), nullable=False)
+
+    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="SeguroRelacion")

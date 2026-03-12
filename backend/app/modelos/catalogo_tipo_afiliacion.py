@@ -9,3 +9,5 @@ class CatalogoTiposAfiliacion(Base):
     NombreAfiliacion = Column(String(100), nullable=False)
 
     SolicitudRelacion = relationship("Solicitud", back_populates="CatalogoTiposAfiliacionRelacion")
+
+    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalles", back_populates="AfiliacionRelacion")

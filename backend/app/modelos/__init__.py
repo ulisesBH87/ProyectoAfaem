@@ -15,5 +15,6 @@ from .roles_modelo import Roles
 from .catalogo_seguros import Seguro
 from .catalogo_conceptos import Conceptos
 from .catalogo_estatus_pago import EstatusPago
-
 from .ordenes_pago_modelo import OrdenPago
+
+from .orden_pago_detalle_modelo import OrdenPagoDetalle
