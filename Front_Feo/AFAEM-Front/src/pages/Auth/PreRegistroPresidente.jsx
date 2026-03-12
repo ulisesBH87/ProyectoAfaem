@@ -53,7 +53,7 @@ function PreRegistroPresidente() {
   const [seguroId, setSeguroId] = useState('');
   const [pagoRealizado, setPagoRealizado] = useState(false);
   const [validandoPago, setValidandoPago] = useState(false);
-  // Simulación de catálogo de seguros
+  // Catálogo de seguros inventados
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
     { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
@@ -453,7 +453,7 @@ function PreRegistroPresidente() {
         </div>
         
         <div className="pre-registro-body">
-          <>
+          <React.Fragment>
             <div className="pre-registro-user-info">
               <div className="pre-registro-info-item">
                 <span className="pre-registro-info-label">👤 Nombre:</span>
@@ -486,118 +486,123 @@ function PreRegistroPresidente() {
               }}>
                 DOCUMENTOS REQUERIDOS
               </h3>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-                gap: '20px',
-                marginBottom: '40px'
-              }}>
-                {requisitos.map((doc, idx) => (
-                  <div
-                    key={doc.documento || idx}
-                    style={{
-                      backgroundColor: 'white',
-                      borderRadius: '12px',
-                      border: '2px dashed #e2e8f0',
-                      padding: '20px',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      position: 'relative',
-                      minHeight: '280px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between'
-                    }}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, doc.documento)}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f8fafc';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'white';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
-                      <h3 style={{
-                        margin: '0 0 12px 0',
-                        color: '#1e293b',
-                        fontSize: '14px',
-                        fontWeight: '700',
-                        lineHeight: '1.3'
-                      }}>
-                        {doc.nombre}
-                      </h3>
-                      {/* Estado de carga */}
-                      {documents[doc.documento] ? (
-                        <div style={{
-                          backgroundColor: '#dcfce7',
-                          color: '#166534',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          marginBottom: '12px',
-                          border: '1px solid #86efac'
-                        }}>
-                          ✓ {documents[doc.documento].name}
-                        </div>
-                      ) : (
-                        <div style={{
-                          backgroundColor: '#fef3c7',
-                          color: '#92400e',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          marginBottom: '12px',
-                          border: '1px solid #fcd34d'
-                        }}>
-                          Pendiente
-                        </div>
-                      )}
+              {/* Bloqueo de documentos hasta pago */}
+              {!pagoRealizado ? (
+                <div style={{background:'#fef3c7',padding:'18px',borderRadius:'8px',color:'#92400e',fontSize:'15px',fontWeight:'600',marginBottom:'12px',border:'1px solid #fcd34d'}}>
+                  💸 Antes de continuar, debes realizar el pago correspondiente.<br />
+                  <span style={{fontWeight:'bold'}}>¿Cuántas personas tendrá tu equipo?</span>
+                  <input type="number" min={1} value={numPersonas} onChange={e=>setNumPersonas(Number(e.target.value))} style={{marginLeft:'8px',padding:'6px',borderRadius:'6px',border:'1px solid #e2e8f0',width:'80px'}} />
+                  <br />
+                  <span style={{fontWeight:'bold'}}>Tipo de seguro:</span>
+                  <select value={seguroId} onChange={e=>setSeguroId(e.target.value)} style={{marginLeft:'8px',padding:'6px',borderRadius:'6px',border:'1px solid #e2e8f0'}}>
+                    <option value="">-- Selecciona un seguro --</option>
+                    {catalogoSeguros.map(seg=>(
+                      <option key={seg.id} value={seg.id}>{seg.nombre.toUpperCase()} - ${seg.precio} ({seg.descripcion})</option>
+                    ))}
+                  </select>
+                  <br />
+                  {numPersonas > 0 && seguroId && (
+                    <div style={{background:'#e0f2fe',padding:'14px',borderRadius:'8px',color:'#0b4ea6',fontWeight:'600',marginTop:'12px',border:'1px solid #38bdf8'}}>
+                      Para continuar con el registro de jugadores debes de hacer el pago de <span style={{color:'#d32f2f'}}>${totalPagar}</span> ya que quieres el seguro <span style={{color:'#0b4ea6'}}>{catalogoSeguros.find(s=>s.id===seguroId)?.nombre.toUpperCase()}</span> y tienes <span style={{color:'#0b4ea6'}}>{numPersonas}</span> jugadores.<br />
+                      Vas a depositar en <span style={{color:'#0b4ea6'}}>{cuentaBancaria}</span> la cantidad de <span style={{color:'#d32f2f'}}>${totalPagar}</span>.<br />
+                      <span style={{fontWeight:'bold'}}>Referencia bancaria:</span> {referenciaBancaria}<br />
+                      <span style={{fontWeight:'bold'}}>Comprobante de pago:</span>
+                      <input type="file" accept="image/*,.pdf" style={{marginLeft:'8px'}} onChange={e=>setComprobantePago(e.target.files[0])} />
+                      <br />
+                      <span style={{fontWeight:'bold'}}>Mensaje:</span> "Validando el pago, después de un breve tiempo tendrás una respuesta."
+                      <br />
+                      <button style={{marginTop:'12px',background:'#0b4ea6',color:'white',padding:'10px 18px',border:'none',borderRadius:'8px',fontWeight:'700',fontSize:'15px',cursor:'pointer'}} onClick={()=>setPagoRealizado(true)} disabled={!comprobantePago || !numPersonas || !seguroId}>Enviar comprobante y continuar</button>
                     </div>
-                    {/* Input oculto */}
-                    <input
-                      type="file"
-                      id={`file-${doc.documento}`}
-                      accept="image/*,.pdf"
-                      style={{ display: 'none' }}
-                      onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])}
-                    />
-                    <button
-                      onClick={() => document.getElementById(`file-${doc.documento}`).click()}
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                  gap: '20px',
+                  marginBottom: '40px'
+                }}>
+                  {requisitos.map((doc, idx) => (
+                    <div
+                      key={doc.documento || idx}
                       style={{
-                        backgroundColor: '#0b4ea6',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        border: '2px dashed #e2e8f0',
+                        padding: '20px',
+                        textAlign: 'center',
                         cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        minHeight: '280px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
                       }}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, doc.documento)}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#0a3d85';
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                        e.currentTarget.style.borderColor = '#cbd5e1';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#0b4ea6';
+                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.borderColor = '#e2e8f0';
                       }}
                     >
-                      <FaUpload style={{ marginRight: '6px' }} />
-                      Subir archivo
-                    </button>
-                    {/* Botón OCR solo para acta, identificación y formato */}
-                    {['actaNacimiento','identificacion','formatoAfiliacion'].includes(doc.documento) && (
+                      <div>
+                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
+                        <h3 style={{
+                          margin: '0 0 12px 0',
+                          color: '#1e293b',
+                          fontSize: '14px',
+                          fontWeight: '700',
+                          lineHeight: '1.3'
+                        }}>
+                          {doc.nombre}
+                        </h3>
+                        {/* Estado de carga */}
+                        {documents[doc.documento] ? (
+                          <div style={{
+                            backgroundColor: '#dcfce7',
+                            color: '#166534',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            marginBottom: '12px',
+                            border: '1px solid #86efac'
+                          }}>
+                            ✓ {documents[doc.documento].name}
+                          </div>
+                        ) : (
+                          <div style={{
+                            backgroundColor: '#fef3c7',
+                            color: '#92400e',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            marginBottom: '12px',
+                            border: '1px solid #fcd34d'
+                          }}>
+                            Pendiente
+                          </div>
+                        )}
+                      </div>
+                      {/* Input oculto */}
+                      <input
+                        type="file"
+                        id={`file-${doc.documento}`}
+                        accept="image/*,.pdf"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])}
+                      />
                       <button
+                        onClick={() => document.getElementById(`file-${doc.documento}`).click()}
                         style={{
-                          marginTop: '10px',
-                          backgroundColor: '#38bdf8',
+                          backgroundColor: '#0b4ea6',
                           color: 'white',
                           border: 'none',
                           padding: '8px 12px',
@@ -607,21 +612,47 @@ function PreRegistroPresidente() {
                           fontWeight: '700',
                           transition: 'all 0.2s ease'
                         }}
-                        disabled={loading}
-                        onClick={() => handleEnviarOCR(doc.documento)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#0a3d85';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#0b4ea6';
+                        }}
                       >
-                        {loading ? '⏳ Procesando OCR...' : 'Procesar OCR'}
+                        <FaUpload style={{ marginRight: '6px' }} />
+                        Subir archivo
                       </button>
-                    )}
-                    {/* Mostrar resultado OCR */}
-                    {ocrResults[doc.documento] && (
-                      <div style={{marginTop:'10px',background:'#e0f2fe',color:'#0b4ea6',padding:'8px',borderRadius:'6px',fontSize:'13px',border:'1px solid #38bdf8'}}>
-                        <strong>Resultado OCR:</strong><br />{ocrResults[doc.documento]}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      {/* Botón OCR solo para acta, identificación y formato */}
+                      {['actaNacimiento','identificacion','formatoAfiliacion'].includes(doc.documento) && (
+                        <button
+                          style={{
+                            marginTop: '10px',
+                            backgroundColor: '#38bdf8',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            transition: 'all 0.2s ease'
+                          }}
+                          disabled={loading}
+                          onClick={() => handleEnviarOCR(doc.documento)}
+                        >
+                          {loading ? '⏳ Procesando OCR...' : 'Procesar OCR'}
+                        </button>
+                      )}
+                      {/* Mostrar resultado OCR */}
+                      {ocrResults[doc.documento] && (
+                        <div style={{marginTop:'10px',background:'#e0f2fe',color:'#0b4ea6',padding:'8px',borderRadius:'6px',fontSize:'13px',border:'1px solid #38bdf8'}}>
+                          <strong>Resultado OCR:</strong><br />{ocrResults[doc.documento]}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <button 
               className="pre-registro-button pre-registro-button-primary"
@@ -631,19 +662,9 @@ function PreRegistroPresidente() {
             >
               {loading ? '⏳ Enviando solicitud...' : '✅ Solicitar registro'}
             </button>
-          </>
-          
-          <button 
-            className="pre-registro-button pre-registro-button-secondary"
-            onClick={() => {
-              // PARA PRUEBAS: guardar un email de prueba y navegar
-              localStorage.setItem('email', 'prueba@test.com');
-              localStorage.setItem('user', JSON.stringify({ email: 'prueba@test.com' }));
-              navigate('/presidente-equipo');
-            }}
-          >
-            Prueba rápida
-          </button>
+          </React.Fragment>
+        {/* El fragmento se cierra aquí, el botón de prueba rápida va fuera del fragmento */}
+        {/* Botón de prueba rápida eliminado */}
         </div>
       </div>
     </div>
