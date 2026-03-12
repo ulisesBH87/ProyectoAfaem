@@ -14,11 +14,12 @@ app.add_middleware(
         "http://192.168.0.172:3000",
         "http://localhost:5173",
         "http://192.168.0.172:5173",
+        "http://localhost:5174",
+        "http://192.168.0.172:5174",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-
 )
 
 app.include_router(auth_ruta.router)
