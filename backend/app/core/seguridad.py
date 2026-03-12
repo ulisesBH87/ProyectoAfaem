@@ -111,3 +111,18 @@ def obtener_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = De
         )
 
     return usuario
+
+
+def requerir_roles(*roles_permitidos):
+
+    def verificador(usuario = Depends(obtener_usuario_actual)):
+
+        if usuario.Rol.Nombre not in roles_permitidos:
+            raise HTTPException(
+                status_code = status.HTTP_403_FORBIDDEN,
+                detail = "No tienes permiso para acceder"
+            )
+
+        return usuario
+
+    return verificador

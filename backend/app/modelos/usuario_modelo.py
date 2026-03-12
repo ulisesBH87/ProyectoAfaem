@@ -18,3 +18,6 @@ class Usuario(Base):
     Eliminado = Column(Boolean, default=False, nullable=False)
 
     SolicitudRelacion = relationship("Solicitud", back_populates="UsuarioRelacion")
+
+    RolId = Column(Integer, ForeignKey("Roles.RolId"), nullable=False)
+    RolRelacion = relationship("Roles", back_populates="UsuarioRelacion")

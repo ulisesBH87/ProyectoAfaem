@@ -14,3 +14,11 @@ class InicioSesion(BaseModel):
 class CambiarContrasena(BaseModel):
     ContrasenaActual: str
     NuevaContrasena: str = Field(min_length=8, max_length=50)
+    
+class RegistroAdmin(BaseModel):
+    Nombre: str
+    PrimerApellido: str
+    SegundoApellido: str
+    Correo: EmailStr
+    Contrasena: str = Field(min_length=8, max_length=50)
+    RolId: int

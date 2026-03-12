@@ -2,15 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
-from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena
+from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena, RegistroAdmin
 from app.esquemas.auth_esquema import TokenResponse
-from app.servicios.autenticacion_servicio import registrar_usuario_servicio, iniciar_sesion, cambiar_contrasena_servicio
+from app.servicios.autenticacion_servicio import registrar_usuario_servicio, iniciar_sesion, cambiar_contrasena_servicio, registrar_admin_servicio
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
 @router.post("/registro")
 def register(data: RegistroUsuario, db:Session = Depends(get_db)):
     persona, usuario = registrar_usuario_servicio(data, db)
+    return {
+        "message": "Usuario registrado correctamente",
+        "usuario_id": usuario.UsuarioId
+    }
+
+@router.post("/registrar_admin")
+def registrar_administrador(data: RegistroAdmin, db:Session = Depends(get_db)):
+    persona, usuario = registrar_admin_servicio(data, db)
     return {
         "message": "Usuario registrado correctamente",
         "usuario_id": usuario.UsuarioId
@@ -28,14 +36,20 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
 
     datos_token = {
         "sub": str(usuarioIntentoSesion.UsuarioId),
-        "correo": usuarioIntentoSesion.Correo
+        "correo": usuarioIntentoSesion.Correo,
+        "rol": usuarioIntentoSesion.RolRelacion.Nombre
     }
 
     token_generado = crear_token(datos_token)
 
     return {
         "access_token": token_generado,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "usuario": {
+            "id": usuarioIntentoSesion.UsuarioId,
+            "correo": usuarioIntentoSesion.Correo,
+            "rol": usuarioIntentoSesion.RolRelacion.Nombre
+        }
     }
 
 @router.post("/cambiar-contrasena")

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
-from app.repositorios.usuario_repositorio import registrar_usuario_repo, obtener_por_correo, obtener_usuario_por_id, cambiar_contrasena_repo
+from app.repositorios.usuario_repositorio import registrar_usuario_repo, obtener_por_correo, obtener_usuario_por_id, cambiar_contrasena_repo, registrar_admin_repo
 from app.core.seguridad import generar_hash, verificar_contrasena, generar_salt
 
 
@@ -23,6 +23,26 @@ def registrar_usuario_servicio(data, db: Session):
     )
 
     return registrar_usuario_repo(db, datos_persona, datos_usuario)
+
+
+def registrar_admin_servicio(data, db: Session):
+    salt = generar_salt()
+    hashed_password = generar_hash(salt, data.Contrasena)
+
+    datos_persona = Personas(
+        Nombre=data.Nombre,
+        PrimerApellido=data.PrimerApellido,
+        SegundoApellido=data.SegundoApellido
+    )
+
+    datos_usuario = Usuario(
+        Correo=data.Correo,
+        Contrasena=hashed_password,
+        Salt=salt,
+        RolId = data.RolId
+    )
+
+    return registrar_admin_repo(db, datos_persona, datos_usuario)
 
 
 def iniciar_sesion(db: Session, correo: str, contrasena: str):

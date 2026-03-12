@@ -31,6 +31,27 @@ def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
         db.rollback()
         raise e
 
+# Registro
+def registrar_admin_repo(db: Session, persona: Personas, usuario: Usuario):
+    try:
+        db.add(persona)
+        db.flush() #generar id de la persona sin hacer commit
+
+        usuario.PersonaId = persona.PersonaId
+
+        db.add(usuario)
+
+        db.commit()
+
+        db.refresh(persona)
+        db.refresh(usuario)
+
+        return persona, usuario
+
+    except Exception as e:
+        db.rollback()
+        raise e
+
 # Contraseña
 def cambiar_contrasena_repo(db: Session, usuario_id: int, hash: str, salt: str):
 
