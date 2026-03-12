@@ -12,8 +12,5 @@ node_modules/
 # VS Code
 .vscode/
 
-# Backups
-Respaldos/
-
 # OS
 .DS_Store

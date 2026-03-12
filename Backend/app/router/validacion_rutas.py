@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File #|importar las clases
 
 #Importar las funciones de detección de rostros con FACE DETECTOR
-from app.services.validacion import (
+from app.services.digitalizacion import (
     validacion_fotografia, 
     detectar_rostro_pdf
 ) 
@@ -18,7 +18,7 @@ async def validar_archivo(file: UploadFile = File(...)): #|definir una función 
     contenido = await file.read() #leer el contenido del archivo de forma asincrónica
 
     #Valida el peso maximo que puede tener el archivo 5 MB
-    MAX_MB = 5
+    MAX_MB = 3
     MAX_BYTES = MAX_MB * 1024 * 1024
 
     if len(contenido) > MAX_BYTES:
@@ -48,17 +48,12 @@ async def validar_archivo(file: UploadFile = File(...)): #|definir una función 
             "valido": True,
             "imagen": imagen_base64,
             "tipo_imagen": tipo_imagen,
-            "mensaje": "Archivo válido"
+            "mensaje": "Fotografìa aprobada"
         }
 
     elif rostros_detectados == 0:
         return {
             "valido": False,
-            "mensaje": f"Archivo no válido: {razon}"
-        }
-    else:
-        return {
-            "valido": False,
-            "mensaje": f"Archivo no válido: {razon or 'Se detectaron múltiples rostros'}"
+            "mensaje": f"Fotografía no aprobada: {razon}"
         }
         

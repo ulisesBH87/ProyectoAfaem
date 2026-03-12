@@ -356,7 +356,7 @@ function SeleccionarFotografia() {
         <AvisoModal
           mostrar={modalVisible}
           onCerrar={() => setModalVisible(false)}
-          titulo="Aviso"
+          titulo="VALIDACION"
           mensaje={mensajeModal}
         />
       </div>
