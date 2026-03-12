@@ -7,4 +7,4 @@ class Conceptos(Base):
     ConceptoId = Column(Integer, primary_key=True)
     Nombre = Column(String)
 
-    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalles", back_populates="ConceptoRelacion")
+    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="ConceptoRelacion")

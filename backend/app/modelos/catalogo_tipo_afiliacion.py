@@ -10,4 +10,4 @@ class CatalogoTiposAfiliacion(Base):
 
     SolicitudRelacion = relationship("Solicitud", back_populates="CatalogoTiposAfiliacionRelacion")
 
-    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalles", back_populates="AfiliacionRelacion")
+    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="AfiliacionRelacion")
