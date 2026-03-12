@@ -36,7 +36,8 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
 
     datos_token = {
         "sub": str(usuarioIntentoSesion.UsuarioId),
-        "correo": usuarioIntentoSesion.Correo
+        "correo": usuarioIntentoSesion.Correo,
+        "rol": usuarioIntentoSesion.RolRelacion.Nombre
     }
 
     token_generado = crear_token(datos_token)
@@ -46,8 +47,8 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
         "token_type": "bearer",
         "usuario": {
             "id": usuarioIntentoSesion.UsuarioId,
-            "correo": usuarioIntentoSesion.correo,
-            "rol": usuarioIntentoSesion.rol.nombre
+            "correo": usuarioIntentoSesion.Correo,
+            "rol": usuarioIntentoSesion.RolRelacion.Nombre
         }
     }
 
