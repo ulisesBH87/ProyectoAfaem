@@ -6,42 +6,75 @@ import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import solicitudService from '../../services/solicitud';
 
-export default function PreRegistroPresidente() {
+function PreRegistroPresidente() {
+      // Estado para resultados OCR
+      const [ocrResults, setOcrResults] = useState({});
+
+      // Simulación de envío a OCR
+      const handleEnviarOCR = async (docKey) => {
+        if (!documents[docKey]) {
+          setError('Debes subir el archivo antes de enviar al OCR.');
+          return;
+        }
+        setLoading(true);
+        setError(null);
+        // Simulación: espera 2 segundos y muestra resultado
+        setTimeout(() => {
+          setOcrResults(prev => ({
+            ...prev,
+            [docKey]: `Resultado simulado del OCR para ${docKey}`
+          }));
+          setLoading(false);
+        }, 2000);
+      };
+    // Documentos fijos para evitar error 404
+    const requisitos = [
+      { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
+      { documento: 'identificacion', nombre: 'Identificación oficial' },
+      { documento: 'fotografia', nombre: 'Fotografía' },
+      { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación' }
+    ];
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    curp: '',
-    rfc: '',
-    sexoId: '',
-    fechaNacimiento: ''
+     // curp, rfc, sexoId, fechaNacimiento removed
   });
-
-  // ESTADO PARA DOCUMENTOS
+  // Validaciones
+  const [valid, setValid] = useState({});
+    // ...existing code...
+  // Estado para correo en minúsculas
+  const correoMin = (user?.email || user?.correo || '').toLowerCase();
+  // Estado para registro en mayúsculas
+  const nombreMay = (user?.Nombre || user?.nombre || '').toUpperCase();
+  // Estado para preguntas de seguro y personas
+  const [numPersonas, setNumPersonas] = useState(0);
+  const [seguroId, setSeguroId] = useState('');
+  const [pagoRealizado, setPagoRealizado] = useState(false);
+  const [validandoPago, setValidandoPago] = useState(false);
+  // Simulación de catálogo de seguros
+  const catalogoSeguros = [
+    { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
+    { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
+    { id: '3', nombre: 'Seguro médico', descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 }
+  ];
+  // Estado para comprobante de pago
+  const [comprobantePago, setComprobantePago] = useState(null);
+  // Estado para referencia bancaria
+  const referenciaBancaria = 'AFAEM2026';
+  const cuentaBancaria = '1234567890';
+  // Estado para total a pagar
+  const totalPagar = numPersonas && seguroId ? catalogoSeguros.find(s => s.id === seguroId)?.precio * numPersonas : 0;
+  // Estado para documentos
   const [documents, setDocuments] = useState({});
-  const [requisitos, setRequisitos] = useState([]);
-  const [tipoAfiliacionId, setTipoAfiliacionId] = useState(2); // PRESIDENTE DE EQUIPO = ID 2
-  const [requisitosLoading, setRequisitosLoading] = useState(false);
+  // Requisitos eliminados temporalmente por error 404
+  // const [requisitos, setRequisitos] = useState([]);
+  // const [tipoAfiliacionId, setTipoAfiliacionId] = useState(2); // PRESIDENTE DE EQUIPO = ID 2
+  // const [requisitosLoading, setRequisitosLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // CARGAR REQUISITOS AL MONTAR EL COMPONENTE
-  useEffect(() => {
-    const cargarRequisitos = async () => {
-      try {
-        setRequisitosLoading(true);
-        const data = await solicitudService.getRequisitos(tipoAfiliacionId);
-        setRequisitos(data || []);
-      } catch (err) {
-        console.error('❌ Error cargando requisitos:', err);
-        setError('No se pudieron cargar los requisitos. Por favor, intenta de nuevo.');
-      } finally {
-        setRequisitosLoading(false);
-      }
-    };
-    
-    cargarRequisitos();
-  }, [tipoAfiliacionId]);
+  // useEffect para cargar requisitos eliminado por error 404
 
   // MANEJAR SUBIDA DE ARCHIVOS
   const handleFileUpload = (documentKey, file) => {
@@ -420,147 +453,48 @@ export default function PreRegistroPresidente() {
         </div>
         
         <div className="pre-registro-body">
-          <div className="pre-registro-user-info">
-            <div className="pre-registro-info-item">
-              <span className="pre-registro-info-label">👤 Nombre:</span>
-              <span className="pre-registro-info-value">
-                {user?.Nombre || user?.nombre || 'No registrado'}
-              </span>
-            </div>
-            <div className="pre-registro-info-item">
-              <span className="pre-registro-info-label">📧 Email:</span>
-              <span className="pre-registro-info-value">{user?.email || user?.correo}</span>
-            </div>
-            <div className="pre-registro-info-item">
-              <span className="pre-registro-info-label">📱 Teléfono:</span>
-              <span className="pre-registro-info-value">
-                {user?.telefono || <span style={{ color: '#ccc' }}>No registrado</span>}
-              </span>
-            </div>
-          </div>
-          
-          {error && (
-            <div className="pre-registro-error">
-              <span>⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
-          
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ 
-              fontSize: '15px', 
-              fontWeight: 700, 
-              color: '#0b4ea6', 
-              margin: '0 0 16px 0',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              Información adicional requerida
-            </h3>
-            
-            <div className="pre-registro-form-group">
-              <label className="pre-registro-label" htmlFor="curp">CURP (18 caracteres) <span style={{color:'#d32f2f'}}>*</span></label>
-              <input
-                id="curp"
-                type="text"
-                name="curp"
-                value={formData.curp}
-                onChange={handleInputChange}
-                placeholder="ABCD123456HDFRTI09"
-                maxLength={18}
-                className="pre-registro-input"
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="pre-registro-form-group">
-              <label className="pre-registro-label" htmlFor="rfc">RFC (12-13 caracteres) <span style={{color:'#d32f2f'}}>*</span></label>
-              <input
-                id="rfc"
-                type="text"
-                name="rfc"
-                value={formData.rfc}
-                onChange={handleInputChange}
-                placeholder="ABCD123456DF9"
-                maxLength={13}
-                className="pre-registro-input"
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="pre-registro-form-group">
-              <label className="pre-registro-label" htmlFor="sexoId">Sexo <span style={{color:'#d32f2f'}}>*</span></label>
-              <select
-                id="sexoId"
-                name="sexoId"
-                value={formData.sexoId}
-                onChange={handleInputChange}
-                className="pre-registro-input"
-                disabled={loading}
-              >
-                <option value="">-- Selecciona una opción --</option>
-                <option value="1">Masculino</option>
-                <option value="2">Femenino</option>
-                <option value="3">No binario</option>
-              </select>
-            </div>
-            
-            <div className="pre-registro-form-group">
-              <label className="pre-registro-label" htmlFor="fechaNacimiento">Fecha de nacimiento <span style={{color:'#d32f2f'}}>*</span></label>
-              <input
-                id="fechaNacimiento"
-                type="date"
-                name="fechaNacimiento"
-                value={formData.fechaNacimiento}
-                onChange={handleInputChange}
-                className="pre-registro-input"
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          {/* SECCIÓN DE DOCUMENTOS REQUERIDOS */}
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ 
-              fontSize: '15px', 
-              fontWeight: 700, 
-              color: '#0b4ea6', 
-              margin: '0 0 16px 0',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              Documentos requeridos
-            </h3>
-
-            {requisitosLoading ? (
-              <div style={{ 
-                backgroundColor: '#f0f2f5', 
-                padding: '20px', 
-                borderRadius: '8px', 
-                textAlign: 'center',
-                color: '#666'
-              }}>
-                ⏳ Cargando requisitos...
+          <>
+            <div className="pre-registro-user-info">
+              <div className="pre-registro-info-item">
+                <span className="pre-registro-info-label">👤 Nombre:</span>
+                <span className="pre-registro-info-value">{nombreMay || 'NO REGISTRADO'}</span>
               </div>
-            ) : requisitos.length === 0 ? (
-              <div style={{ 
-                backgroundColor: '#fef3c7', 
-                padding: '16px', 
-                borderRadius: '8px',
-                color: '#92400e',
-                fontSize: '14px'
-              }}>
-                ⚠️ No hay requisitos configurados para tu tipo de afiliación.
+              <div className="pre-registro-info-item">
+                <span className="pre-registro-info-label">📧 Email:</span>
+                <span className="pre-registro-info-value">{correoMin || 'no registrado'}</span>
               </div>
-            ) : (
+              <div className="pre-registro-info-item">
+                <span className="pre-registro-info-label">📱 Teléfono:</span>
+                <span className="pre-registro-info-value">{user?.telefono || <span style={{ color: '#ccc' }}>No registrado</span>}</span>
+              </div>
+            </div>
+            {error && (
+              <div className="pre-registro-error">
+                <span>⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
+            {/* SECCIÓN DE CUOTAS, SEGURO Y DOCUMENTOS */}
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ 
+                fontSize: '15px', 
+                fontWeight: 700, 
+                color: '#0b4ea6', 
+                margin: '0 0 16px 0',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                DOCUMENTOS REQUERIDOS
+              </h3>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '16px'
+                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                gap: '20px',
+                marginBottom: '40px'
               }}>
                 {requisitos.map((doc, idx) => (
                   <div
-                    key={idx}
+                    key={doc.documento || idx}
                     style={{
                       backgroundColor: 'white',
                       borderRadius: '12px',
@@ -570,14 +504,14 @@ export default function PreRegistroPresidente() {
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
                       position: 'relative',
-                      minHeight: '220px',
+                      minHeight: '280px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between'
                     }}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, `doc_${idx}`)}
+                    onDrop={(e) => handleDrop(e, doc.documento)}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#f8fafc';
                       e.currentTarget.style.borderColor = '#cbd5e1';
@@ -588,18 +522,18 @@ export default function PreRegistroPresidente() {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
-                      <h4 style={{
+                      <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
+                      <h3 style={{
                         margin: '0 0 12px 0',
                         color: '#1e293b',
                         fontSize: '14px',
                         fontWeight: '700',
                         lineHeight: '1.3'
                       }}>
-                        {doc.documento || `Documento ${idx + 1}`}
-                      </h4>
-                      
-                      {documents[`doc_${idx}`] ? (
+                        {doc.nombre}
+                      </h3>
+                      {/* Estado de carga */}
+                      {documents[doc.documento] ? (
                         <div style={{
                           backgroundColor: '#dcfce7',
                           color: '#166534',
@@ -607,10 +541,10 @@ export default function PreRegistroPresidente() {
                           borderRadius: '6px',
                           fontSize: '12px',
                           fontWeight: '700',
-                          border: '1px solid #86efac',
-                          wordBreak: 'break-all'
+                          marginBottom: '12px',
+                          border: '1px solid #86efac'
                         }}>
-                          ✓ {documents[`doc_${idx}`].name}
+                          ✓ {documents[doc.documento].name}
                         </div>
                       ) : (
                         <div style={{
@@ -620,23 +554,23 @@ export default function PreRegistroPresidente() {
                           borderRadius: '6px',
                           fontSize: '12px',
                           fontWeight: '700',
+                          marginBottom: '12px',
                           border: '1px solid #fcd34d'
                         }}>
                           Pendiente
                         </div>
                       )}
                     </div>
-
+                    {/* Input oculto */}
                     <input
                       type="file"
-                      id={`file-doc-${idx}`}
+                      id={`file-${doc.documento}`}
                       accept="image/*,.pdf"
                       style={{ display: 'none' }}
-                      onChange={(e) => handleFileUpload(`doc_${idx}`, e.target.files[0])}
+                      onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])}
                     />
-
                     <button
-                      onClick={() => document.getElementById(`file-doc-${idx}`).click()}
+                      onClick={() => document.getElementById(`file-${doc.documento}`).click()}
                       style={{
                         backgroundColor: '#0b4ea6',
                         color: 'white',
@@ -646,12 +580,7 @@ export default function PreRegistroPresidente() {
                         cursor: 'pointer',
                         fontSize: '12px',
                         fontWeight: '700',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        marginTop: '8px'
+                        transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = '#0a3d85';
@@ -660,23 +589,49 @@ export default function PreRegistroPresidente() {
                         e.currentTarget.style.backgroundColor = '#0b4ea6';
                       }}
                     >
-                      <FaUpload size={10} />
+                      <FaUpload style={{ marginRight: '6px' }} />
                       Subir archivo
                     </button>
+                    {/* Botón OCR solo para acta, identificación y formato */}
+                    {['actaNacimiento','identificacion','formatoAfiliacion'].includes(doc.documento) && (
+                      <button
+                        style={{
+                          marginTop: '10px',
+                          backgroundColor: '#38bdf8',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          transition: 'all 0.2s ease'
+                        }}
+                        disabled={loading}
+                        onClick={() => handleEnviarOCR(doc.documento)}
+                      >
+                        {loading ? '⏳ Procesando OCR...' : 'Procesar OCR'}
+                      </button>
+                    )}
+                    {/* Mostrar resultado OCR */}
+                    {ocrResults[doc.documento] && (
+                      <div style={{marginTop:'10px',background:'#e0f2fe',color:'#0b4ea6',padding:'8px',borderRadius:'6px',fontSize:'13px',border:'1px solid #38bdf8'}}>
+                        <strong>Resultado OCR:</strong><br />{ocrResults[doc.documento]}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-          
-          <button 
-            className="pre-registro-button pre-registro-button-primary"
-            onClick={handleSolicitarRegistro}
-            disabled={loading}
-            aria-busy={loading}
-          >
-            {loading ? '⏳ Enviando solicitud...' : '✅ Solicitar registro'}
-          </button>
+            </div>
+            <button 
+              className="pre-registro-button pre-registro-button-primary"
+              onClick={handleSolicitarRegistro}
+              disabled={loading}
+              aria-busy={loading}
+            >
+              {loading ? '⏳ Enviando solicitud...' : '✅ Solicitar registro'}
+            </button>
+          </>
           
           <button 
             className="pre-registro-button pre-registro-button-secondary"
@@ -686,38 +641,13 @@ export default function PreRegistroPresidente() {
               localStorage.setItem('user', JSON.stringify({ email: 'prueba@test.com' }));
               navigate('/presidente-equipo');
             }}
-            style={{ background: '#28a745' }}
           >
-            → Ir al panel de presidente
-          </button>
-          
-          <button 
-            className="pre-registro-button pre-registro-button-secondary"
-            onClick={() => {
-              // GUARDAR EMAIL EN LOCALSTORAGE ANTES DE NAVEGAR
-              const userEmail = localStorage.getItem('email');
-              if (userEmail) {
-                navigate('/presidente-equipo/admin-solicitudes');
-              } else {
-                alert('Por favor inicia sesión primero');
-                navigate('/ingresar');
-              }
-            }}
-            disabled={loading}
-            style={{ background: '#6366f1' }}
-          >
-            📋 Ir a solicitudes como administrador
-          </button>
-          
-          <button 
-            className="pre-registro-button pre-registro-button-secondary"
-            onClick={() => navigate('/ingresar')}
-            disabled={loading}
-          >
-            ← Volver al inicio
+            Prueba rápida
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+export default PreRegistroPresidente;

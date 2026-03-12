@@ -42,13 +42,16 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
 
     token_generado = crear_token(datos_token)
 
+    persona = usuarioIntentoSesion.PersonaRelacion
     return {
         "access_token": token_generado,
         "token_type": "bearer",
         "usuario": {
             "id": usuarioIntentoSesion.UsuarioId,
             "correo": usuarioIntentoSesion.Correo,
-            "rol": usuarioIntentoSesion.RolRelacion.Nombre
+            "rol": usuarioIntentoSesion.RolRelacion.Nombre,
+            "nombre": persona.Nombre if persona else None,
+            "telefono": getattr(persona, "NumeroTelefono", None)
         }
     }
 

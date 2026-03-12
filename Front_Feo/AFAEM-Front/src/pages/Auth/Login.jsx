@@ -51,7 +51,6 @@ export default function Login() {
       };
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('email', email); // GUARDAR EMAIL DIRECTAMENTE
-      
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
         localStorage.setItem('UsuarioId', data.UsuarioId);
@@ -60,8 +59,18 @@ export default function Login() {
       } else if (data?.id) {
         localStorage.setItem('UsuarioId', data.id);
       }
-      
-      navigate('/pre-registro-presidente');
+
+      // Redirigir según el rol
+      const rol = data?.usuario?.rol || data?.rol || null;
+      if (rol === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else if (rol === 'ENTRENADOR') {
+        navigate('/coach/dashboard');
+      } else if (rol === 'USUARIO') {
+        navigate('/panel');
+      } else {
+        navigate('/pre-registro-presidente');
+      }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);
       setErr(typeof msg === 'object' ? JSON.stringify(msg) : msg);
