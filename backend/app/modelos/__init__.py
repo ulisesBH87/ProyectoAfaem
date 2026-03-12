@@ -13,5 +13,6 @@ from .documentos_entregados_modelo import DocumentosEntregados
 from .catalogo_documentos_persona import CatalogoDocumentosPersonas
 from .roles_modelo import Roles
 from .catalogo_seguros import Seguro
-
 from .catalogo_conceptos import Conceptos
+
+from .catalogo_estatus_pago import EstatusPago
