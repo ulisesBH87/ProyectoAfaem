@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 import os
 from datetime import date
-from app.esquemas.pago_esquema import SeguroBase
-from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo, obtener_orden_repo, actualizar_comprobante_repo, obtener_seguros_repo)
+from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase
+from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo, obtener_orden_repo, actualizar_comprobante_repo, obtener_seguros_repo, obtener_afiliaciones_repo)
 
 
 TIPO_AFILIACION_PRESIDENTE = 2
@@ -110,7 +110,7 @@ async def subir_comprobante_servicio(db, orden_id, archivo):
         db.commit()
 
         return {
-            "mensaje": "Comrpobante subido correctamente",
+            "mensaje": "Comprobante subido correctamente",
             "orden_pago_id": orden_id
         }
 
@@ -118,3 +118,7 @@ async def subir_comprobante_servicio(db, orden_id, archivo):
 def obtener_seguros_servicio(db):
     seguros = obtener_seguros_repo(db)
     return [SeguroBase.model_validate(seguro) for seguro in seguros]
+
+def obtener_afiliaciones_servicio(db):
+    afiliaciones = obtener_afiliaciones_repo(db)
+    return [AfiliacionesBase.model_validate(afiliacion) for afiliacion in afiliaciones]

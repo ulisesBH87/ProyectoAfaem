@@ -68,3 +68,6 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
 
 def obtener_seguros_repo(db):
     return db.query(Seguro).all()
+
+def obtener_afiliaciones_repo(db):
+    return db.query(CatalogoTiposAfiliacion).all()
