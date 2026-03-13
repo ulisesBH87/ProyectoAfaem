@@ -21,3 +21,5 @@ class Usuario(Base):
 
     RolId = Column(Integer, ForeignKey("Roles.RolId"), nullable=False)
     RolRelacion = relationship("Roles", back_populates="UsuarioRelacion")
+
+    OrdenPagoRelacion = relationship("OrdenPago", back_populates="UsuarioPagoRelacion")

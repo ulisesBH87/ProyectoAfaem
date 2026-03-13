@@ -17,6 +17,7 @@ def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
         db.flush() #generar id de la persona sin hacer commit
 
         usuario.PersonaId = persona.PersonaId
+        usuario.RolId = 3
 
         db.add(usuario)
 

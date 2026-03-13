@@ -6,6 +6,9 @@ import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import solicitudService from '../../services/solicitud';
 
+//FOTOGRAFIA
+import { validarFotografia } from "../../services/foto";
+
 function PreRegistroPresidente() {
       // Estado para resultados OCR
       const [ocrResults, setOcrResults] = useState({});
@@ -84,6 +87,29 @@ function PreRegistroPresidente() {
         [documentKey]: file
       }));
     }
+
+    //PROCESO PAEA LA SUBIDA DE FOTOGRAFIA
+    if (documentKey === "fotografia") {
+      if (!file) return;
+      setFotoPreview(null);
+
+      setDocuments(prev => {
+        const updated = { ...prev };
+        delete updated.fotografia;
+        return updated;
+      });
+
+      procesarFotografia(file);
+
+    } else {
+
+      setDocuments(prev => ({
+        ...prev,
+        [documentKey]: file
+      }));
+
+    }
+    
   };
 
   const handleDragOver = (e) => {
@@ -195,6 +221,62 @@ function PreRegistroPresidente() {
     } finally {
       setLoading(false);
     }
+  };
+
+
+  //PROCESO PARA LA VALIDACION DE FOTOGRAFIA
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const [procesandoFoto, setProcesandoFoto] = useState(false);
+
+  const procesarFotografia = async (archivo) => {
+
+    setProcesandoFoto(true);
+    setError(null);
+
+    try {
+
+      const data = await validarFotografia(archivo);
+
+      if (data.valido) {
+
+        setFotoPreview(`data:${data.tipo_imagen};base64,${data.imagen}`);
+
+        setDocuments(prev => ({
+          ...prev,
+          fotografia: archivo
+        }));
+
+      } else {
+
+        setFotoPreview(null);
+
+        setDocuments(prev => {
+          const updated = { ...prev };
+          delete updated.fotografia;
+          return updated;
+        });
+
+        setError(data.mensaje);
+      }
+
+    } catch (error) {
+
+      setFotoPreview(null);
+
+      setDocuments(prev => {
+        const updated = { ...prev };
+        delete updated.fotografia;
+        return updated;
+      });
+
+      setError(error.message);
+
+    } finally {
+
+      setProcesandoFoto(false);
+
+    }
+
   };
 
   return (
@@ -552,7 +634,13 @@ function PreRegistroPresidente() {
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
+                        {doc.documento !== "fotografia" && (
+                          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
+                        )}
+
+                        {doc.documento === "fotografia" && !fotoPreview && (
+                          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
+                        )}
                         <h3 style={{
                           margin: '0 0 12px 0',
                           color: '#1e293b',
@@ -562,7 +650,41 @@ function PreRegistroPresidente() {
                         }}>
                           {doc.nombre}
                         </h3>
-                        {/* Estado de carga */}
+                        
+                        {/* ESTADO DE LA FOTOFRAFIA*/}
+                        {doc.documento === "fotografia" && procesandoFoto && (
+
+                          <div style={{
+                            backgroundColor: '#e0f2fe',
+                            color: '#0b4ea6',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            marginBottom: '12px',
+                            border: '1px solid #38bdf8'
+                          }}>
+                            ⏳ Validando fotografía...
+                          </div>
+                        )}
+
+                        {doc.documento === "fotografia" && !procesandoFoto && fotoPreview && (
+                          <div style={{ marginTop: "10px" }}>
+                            <img
+                              src={fotoPreview}
+                              alt="Fotografía validada"
+                              style={{
+                                width: "100%",
+                                maxHeight: "180px",
+                                aspectRatio: "4 / 5",
+                                objectFit: "cover",
+                                borderRadius: "8px"
+                              }}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Estado de archivos */}
                         {documents[doc.documento] ? (
                           <div style={{
                             backgroundColor: '#dcfce7',

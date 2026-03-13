@@ -11,5 +11,10 @@ from .catalogo_rol_personas import CatalogoRolesPersonas
 from .documento_afiliacion_modelo import DocumentoAfiliacion
 from .documentos_entregados_modelo import DocumentosEntregados
 from .catalogo_documentos_persona import CatalogoDocumentosPersonas
-
 from .roles_modelo import Roles
+from .catalogo_seguros import Seguro
+from .catalogo_conceptos import Conceptos
+from .catalogo_estatus_pago import EstatusPago
+from .ordenes_pago_modelo import OrdenPago
+
+from .orden_pago_detalle_modelo import OrdenPagoDetalle
