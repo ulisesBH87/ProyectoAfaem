@@ -51,3 +51,4 @@ frontend/dist/
 # =========================
 .vscode/
 .idea/
+.vs/
