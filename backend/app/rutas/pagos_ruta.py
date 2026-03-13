@@ -21,6 +21,6 @@ def crear_orden_pago(datos: CrearOrdenPago, db: Session = Depends(get_db), usuar
 
 @router.post("/ordenes-pago/{orden_id}/comprobante")
 async def subir_comprobante(orden_id: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
-    result = await subir_comprobante_servicio(db=db, orden_id=orden_id, archivo=archivo)
+    resultado = await subir_comprobante_servicio(db=db, orden_id=orden_id, archivo=archivo)
     
     return resultado
