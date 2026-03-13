@@ -14,3 +14,9 @@ node_modules/
 
 # OS
 .DS_Store
+
+# Vite
+.vite/
+
+#Front de pruebas
+Frontend/
