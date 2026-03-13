@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Numeric
+from decimal import Decimal
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 
@@ -11,3 +12,5 @@ class CatalogoTiposAfiliacion(Base):
     SolicitudRelacion = relationship("Solicitud", back_populates="CatalogoTiposAfiliacionRelacion")
 
     OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="AfiliacionRelacion")
+
+    CostoActual = Column(Numeric(7, 2))

@@ -15,7 +15,7 @@ router = APIRouter(
 def crear_orden_pago(datos: CrearOrdenPago, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
 
     usuario_id = usuario.UsuarioId
-    resultado = crear_orden_pago_servicio(db, usuario_id = usuario_id, datos=datos)
+    resultado = crear_orden_pago_servicio(db, usuario_id, datos)
 
     return resultado
 
