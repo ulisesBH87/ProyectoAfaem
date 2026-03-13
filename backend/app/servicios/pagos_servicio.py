@@ -43,7 +43,7 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
     #JUGADORES
     afiliacion_jugador = obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_JUGADOR)
     
-    subtotal = afiliacion_jugador.CostoActual * orden.cantidad_jugadores
+    subtotal = afiliacion_jugador.CostoActual * orden.CantidadJugadores
     
     detalles.append({
         "tipo_concepto": 1,
