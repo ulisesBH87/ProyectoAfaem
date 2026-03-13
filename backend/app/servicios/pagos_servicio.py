@@ -1,11 +1,14 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+import os
+from datetime import date
 
-from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo)
+from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo, obtener_orden_repo, actualizar_comprobante_repo)
 
 
 TIPO_AFILIACION_PRESIDENTE = 2
 TIPO_AFILIACION_JUGADOR = 4
+UPLOAD_DIR = "uploads/vouchers"
 
 def crear_orden_pago_servicio(db, usuario_id, orden):
     if orden.CantidadJugadores < 1:
@@ -84,4 +87,29 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
         return {
             "orden_pago_id": orden_pago.OrdenPagoId,
             "total": total
+        }
+        
+    
+async def subir_comprobante_servicio(db, orden_id, archivo):
+    orden = obtener_orden_repo(db, orden_id)
+    
+    if not orden: 
+        raise HTTPException(status_code=404, detail="Orden de pago no encontrada")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    extension = archivo.filename.split(".")[-1]
+    
+    nombre_archivo = f"orden_{orden_id}.{extension}"
+    
+    ruta = os.path.join(UPLOAD_DIR, nombre_archivo)
+    
+    with open(ruta, "wb") as buffer:
+        buffer.write(await archivo.read())
+        actualizar_comprobante_repo(db, orden_id, ruta)
+
+        db.commit()
+
+        return {
+            "mensaje": "Comrpobante subido correctamente",
+            "orden_pago_id": orden_id
         }

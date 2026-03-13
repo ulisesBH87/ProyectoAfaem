@@ -3,7 +3,6 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List
 
-
 class SeguroSeleccionado(BaseModel):
     SeguroId: int
     Cantidad: int
@@ -11,3 +10,7 @@ class SeguroSeleccionado(BaseModel):
 class CrearOrdenPago(BaseModel):
     CantidadJugadores: int
     Seguros: List[SeguroSeleccionado]
+
+class SubirComprobanteRespuesta(BaseModel):
+    Mensaje: str
+    OrdenPagoId: int
