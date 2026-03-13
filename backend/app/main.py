@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.rutas import auth_ruta, solicitud_ruta
+from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta
 
 app = FastAPI(
     title = "BackendAFAEM",
@@ -24,6 +24,7 @@ app.add_middleware(
 
 app.include_router(auth_ruta.router)
 app.include_router(solicitud_ruta.router)
+app.include_router(pagos_ruta.router)
 
 @app.get("/")
 def health_check():
