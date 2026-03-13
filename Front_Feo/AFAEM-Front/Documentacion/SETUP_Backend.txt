@@ -1,0 +1,31 @@
+Instrucciones de Configuración Rápida (Windows)
+
+Paso 1: Crear y activar entorno virtual
+
+  python -m venv .venv
+  .venv\Scripts\activate
+
+Paso 2: Instalar dependencias
+
+  pip install -r requirements.txt
+
+Paso 3: Arrancar el servidor de desarrollo (desde la carpeta backend)
+
+  py -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+  O usar el script incluido (evita errores de tipeo):
+
+  start_uvicorn.bat
+
+Nota sobre errores comunes
+
+El mensaje "Invalid value for '--port': '8000)'" ocurre cuando se añade por error un paréntesis final al ejecutar el comando:
+
+  Ejemplo ERRONEO: py -m uvicorn main:app --reload --host 0.0.0.0 --port 8000)
+  Solución: Quitar el paréntesis final (usar exactamente los comandos anteriores).
+
+Si accedes desde otra máquina de la red
+
+- Asegúrate de arrancar uvicorn con --host 0.0.0.0
+- Habilita CORS en la app (ya incluido en main.py de ejemplo)
+- Verifica que el firewall permite conexiones en el puerto 8000
