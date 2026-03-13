@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 import os
 from datetime import date
-
-from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo, obtener_orden_repo, actualizar_comprobante_repo)
+from app.esquemas.pago_esquema import SeguroBase
+from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo, obtener_orden_repo, actualizar_comprobante_repo, obtener_seguros_repo)
 
 
 TIPO_AFILIACION_PRESIDENTE = 2
@@ -93,16 +93,16 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
 async def subir_comprobante_servicio(db, orden_id, archivo):
     orden = obtener_orden_repo(db, orden_id)
     
-    if not orden: 
+    if not orden:
         raise HTTPException(status_code=404, detail="Orden de pago no encontrada")
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     
     extension = archivo.filename.split(".")[-1]
     
     nombre_archivo = f"orden_{orden_id}.{extension}"
-    
+
     ruta = os.path.join(UPLOAD_DIR, nombre_archivo)
-    
+
     with open(ruta, "wb") as buffer:
         buffer.write(await archivo.read())
         actualizar_comprobante_repo(db, orden_id, ruta)
@@ -113,3 +113,8 @@ async def subir_comprobante_servicio(db, orden_id, archivo):
             "mensaje": "Comrpobante subido correctamente",
             "orden_pago_id": orden_id
         }
+
+
+def obtener_seguros_servicio(db):
+    seguros = obtener_seguros_repo(db)
+    return [SeguroBase.model_validate(seguro) for seguro in seguros]

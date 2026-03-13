@@ -2,7 +2,9 @@ from app.modelos.catalogo_tipo_afiliacion import CatalogoTiposAfiliacion
 from app.modelos.catalogo_seguros import Seguro
 from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
+from app.esquemas.pago_esquema import VerComprobantes
 from datetime import datetime
+from app.esquemas.pago_esquema import SeguroBase
 
 def obtener_tipo_afiliacion_repo(db, tipo_afiliacion_id):
 
@@ -61,5 +63,8 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
     orden.RutaVoucher = ruta
     orden.FechaEnvio = datetime.now()
     orden.EstatusPagoId = 1 #comprobante subido
-    
+
     return orden
+
+def obtener_seguros_repo(db):
+    return db.query(Seguro).all()
