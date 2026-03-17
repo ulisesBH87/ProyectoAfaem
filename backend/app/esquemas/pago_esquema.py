@@ -38,6 +38,7 @@ class AfiliacionesBase(BaseModel):
         from_attributes = True
 
 class ListaPagos(BaseModel):
+    OrdenPagoId: int
     UsuarioId: int
     #Correo = EmailStr
     FechaEnvio: datetime
