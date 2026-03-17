@@ -130,5 +130,12 @@ def obtener_pagos_servicio(db):
 
 def estatus_pago_servicio(db, orden_pago_id, estatus):
     response = pagos_repositorio.estatus_pago_repo(db, orden_pago_id, estatus)
-    
+
     return response
+
+def orden_pago_individual_servicio(db, orden_pago_id):
+
+    orden = pagos_repositorio.orden_pago_individual_repo(db, orden_pago_id)
+
+    return orden
+    

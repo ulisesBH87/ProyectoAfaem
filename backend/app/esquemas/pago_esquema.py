@@ -47,3 +47,29 @@ class ListaPagos(BaseModel):
 
     class Config:
         from_attributes = True
+
+class OrdenPagoDetallesIndividual(BaseModel):
+    OrdenPagoDetalleId: int
+    TipoAfiliacionId: int | None
+    TipoConceptoId: int
+    SeguroId: int | None
+    Cantidad: int
+    PrecioUnitarioCobrado: Decimal
+    Subtotal: Decimal
+
+    class Config:
+        from_attributes = True
+
+class OrdenPagoIndividual(BaseModel):
+    OrdenPagoId: int
+    UsuarioId: int
+    FechaDePago: datetime | None
+    FechaEnvio: datetime
+    RutaVoucher: str
+    EstatusPagoId: int
+    TotalPagar: Decimal
+
+    OrdenPagoDetalleRelacion: list[OrdenPagoDetallesIndividual]
+    class Config:
+        from_attributes = True
+

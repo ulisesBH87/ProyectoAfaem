@@ -5,6 +5,7 @@ from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
 from app.esquemas.pago_esquema import VerComprobantes
 from datetime import datetime
 from app.esquemas.pago_esquema import SeguroBase
+from sqlalchemy.orm import selectinload
 
 def obtener_tipo_afiliacion_repo(db, tipo_afiliacion_id):
 
@@ -76,11 +77,16 @@ def obtener_pagos_repo(db):
     return db.query(OrdenPago).all()
 
 def estatus_pago_repo(db, orden_pago_id, estatus):
-    
+
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
-    
+
     orden.EstatusPagoId = estatus
-    
+
     db.commit()
-    
+
+    return orden
+
+def orden_pago_individual_repo(db, orden_pago_id):
+    orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
+
     return orden
