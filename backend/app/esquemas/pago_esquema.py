@@ -28,12 +28,21 @@ class SeguroBase(BaseModel):
 
     class Config:
         from_attributes = True
-        
 
 class AfiliacionesBase(BaseModel):
     TipoAfiliacionId: int
     NombreAfiliacion: str
     CostoActual: float
+
+    class Config:
+        from_attributes = True
+
+class ListaPagos(BaseModel):
+    UsuarioId: int
+    #Correo = EmailStr
+    FechaEnvio: datetime
+    RutaVoucher: str
+    EstatusPagoId: int
 
     class Config:
         from_attributes = True

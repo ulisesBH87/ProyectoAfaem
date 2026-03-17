@@ -71,3 +71,6 @@ def obtener_seguros_repo(db):
 
 def obtener_afiliaciones_repo(db):
     return db.query(CatalogoTiposAfiliacion).all()
+
+def obtener_pagos_repo(db):
+    return db.query(OrdenPago).all()

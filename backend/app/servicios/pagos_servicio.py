@@ -2,9 +2,9 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 import os
 from datetime import date
-from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase
-from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo, obtener_orden_repo, actualizar_comprobante_repo, obtener_seguros_repo, obtener_afiliaciones_repo)
 
+from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase, ListaPagos
+from app.repositorios import pagos_repositorio
 
 TIPO_AFILIACION_PRESIDENTE = 2
 TIPO_AFILIACION_JUGADOR = 4
@@ -25,7 +25,7 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
     
     #PRESIDENTE
     
-    afiliacion_presidente = obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_PRESIDENTE)
+    afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_PRESIDENTE)
     
     subtotal = afiliacion_presidente.CostoActual * 1
     
@@ -41,7 +41,7 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
     total += subtotal
     
     #JUGADORES
-    afiliacion_jugador = obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_JUGADOR)
+    afiliacion_jugador = pagos_repositorio.obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_JUGADOR)
     
     subtotal = afiliacion_jugador.CostoActual * orden.CantidadJugadores
     
@@ -59,7 +59,7 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
     #seguros
     
     for s in orden.Seguros:
-        seguro = obtener_seguro_repo(db, s.SeguroId)
+        seguro = pagos_repositorio.obtener_seguro_repo(db, s.SeguroId)
         
         if not seguro:
             raise HTTPException(status_code=404, detail=f"Seguro {s.SeguroId} no existe")
@@ -77,10 +77,10 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
         
         total += subtotal
         
-        orden_pago = crear_orden_pago_repo(db, usuario_id, total)
+        orden_pago = pagos_repositorio.crear_orden_pago_repo(db, usuario_id, total)
         
         for d in detalles:
-            crear_detalle_pago_repo(db=db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
+            pagos_repositorio.crear_detalle_pago_repo(db=db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
             
         db.commit()
         
@@ -91,7 +91,7 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
         
     
 async def subir_comprobante_servicio(db, orden_id, archivo):
-    orden = obtener_orden_repo(db, orden_id)
+    orden = pagos_repositorio.obtener_orden_repo(db, orden_id)
     
     if not orden:
         raise HTTPException(status_code=404, detail="Orden de pago no encontrada")
@@ -105,7 +105,7 @@ async def subir_comprobante_servicio(db, orden_id, archivo):
 
     with open(ruta, "wb") as buffer:
         buffer.write(await archivo.read())
-        actualizar_comprobante_repo(db, orden_id, ruta)
+        pagos_repositorio.actualizar_comprobante_repo(db, orden_id, ruta)
 
         db.commit()
 
@@ -116,9 +116,14 @@ async def subir_comprobante_servicio(db, orden_id, archivo):
 
 
 def obtener_seguros_servicio(db):
-    seguros = obtener_seguros_repo(db)
+    seguros = pagos_repositorio.obtener_seguros_repo(db)
     return [SeguroBase.model_validate(seguro) for seguro in seguros]
 
 def obtener_afiliaciones_servicio(db):
-    afiliaciones = obtener_afiliaciones_repo(db)
+    afiliaciones = pagos_repositorio.obtener_afiliaciones_repo(db)
     return [AfiliacionesBase.model_validate(afiliacion) for afiliacion in afiliaciones]
+
+def obtener_pagos_servicio(db):
+    pagos = pagos_repositorio.obtener_pagos_repo(db)
+
+    return [ListaPagos.model_validate(pago) for pago in pagos]

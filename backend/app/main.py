@@ -4,7 +4,7 @@ from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta
 
 app = FastAPI(
     title = "BackendAFAEM",
-    version = "1.0.0"
+    version = "0.3.0"
 )
 
 app.add_middleware(
