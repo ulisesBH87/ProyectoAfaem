@@ -26,12 +26,6 @@ async def subir_comprobante(orden_id: int, archivo: UploadFile = File(...), db: 
 
     return resultado
 
-@router.get("/generales", response_model=list[ListaPagos])
-def obtener_pagos(db:Session=Depends(get_db)):
-    pagos = pagos_servicio.obtener_pagos_servicio(db)
-
-    return pagos
-
 @router.get("/seguros", response_model=list[SeguroBase])
 def obtener_seguros(db:Session=Depends(get_db)):
     seguros = pagos_servicio.obtener_seguros_servicio(db)
@@ -43,3 +37,16 @@ def obtener_afiliaciones(db:Session=Depends(get_db)):
     afiliaciones = pagos_servicio.obtener_afiliaciones_servicio
 
     return afiliaciones
+
+
+@router.get("/generales", response_model=list[ListaPagos])
+def obtener_pagos(db:Session=Depends(get_db)):
+    pagos = pagos_servicio.obtener_pagos_servicio(db)
+
+    return pagos
+
+@router.post("/estatus-pago")
+def estatus_pago(orden_pago_id: int, estatus: int, db:Session=Depends(get_db)):
+    response = pagos_servicio.estatus_pago_servicio(db, orden_pago_id, estatus)
+
+    return response

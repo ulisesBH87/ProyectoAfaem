@@ -74,3 +74,13 @@ def obtener_afiliaciones_repo(db):
 
 def obtener_pagos_repo(db):
     return db.query(OrdenPago).all()
+
+def estatus_pago_repo(db, orden_pago_id, estatus):
+    
+    orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
+    
+    orden.EstatusPagoId = estatus
+    
+    db.commit()
+    
+    return orden

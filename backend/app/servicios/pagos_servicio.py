@@ -127,3 +127,8 @@ def obtener_pagos_servicio(db):
     pagos = pagos_repositorio.obtener_pagos_repo(db)
 
     return [ListaPagos.model_validate(pago) for pago in pagos]
+
+def estatus_pago_servicio(db, orden_pago_id, estatus):
+    response = pagos_repositorio.estatus_pago_repo(db, orden_pago_id, estatus)
+    
+    return response
