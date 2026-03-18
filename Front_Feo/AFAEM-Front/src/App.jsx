@@ -20,6 +20,7 @@ const ProximoPresidente = lazy(() => import('./pages/Auth/ProximoPresidente'));
 const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPresidente'));
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
+const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
           <Route path="/presidente-equipo/admin-solicitudes" element={<AdminSolicitudes />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
+          <Route path="/presidente-equipo/configurar-equipo" element={<ConfigurarEquipo />} />
         </Routes>
       </Suspense>
     </Router>

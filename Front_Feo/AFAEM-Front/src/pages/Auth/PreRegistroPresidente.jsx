@@ -30,6 +30,14 @@ function PreRegistroPresidente() {
     { id: '3', nombre: 'Seguro médico', descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 }
   ];
 
+  const bankInfo = {
+    banco: 'BBVA México',
+    titular: 'Asociación Deportiva Estatal AC',
+    cuenta: '0123456789 01',
+    clabe: '012 180 0001234567 89',
+    referencia: 'RHX-CL26-001'
+  };
+
   const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + val, 0);
   const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (asignacionSeguros[seg.id] || 0) * seg.precio, 0);
   const jugadoresRestantes = numPersonas - totalAsignados;
@@ -284,13 +292,51 @@ function PreRegistroPresidente() {
 
       // (Simulación de guardar documentos + solicitud al back)
       // Como ya no pedimos datos, enviamos cadenas vacías o valores nulos
+      // Mapeamos los resultados del OCR a lo que el backend espera
+      const curp = ocrResults.curp || '';
+      
+      // Derivamos RFC (primeros 10 de CURP + homoclave dummy)
+      const rfc = curp ? (curp.substring(0, 10) + 'XXX') : '';
+      
+      // Derivamos SexoId del caracter 10 de la CURP (H=1, M=2, x=3)
+      const sexoChar = curp ? curp.charAt(10).toUpperCase() : '';
+      const sexoId = sexoChar === 'H' ? 1 : (sexoChar === 'M' ? 2 : 3);
+      
+      // Convertimos Fecha de Nacimiento de DD/MM/YYYY a YYYY-MM-DD
+      let fechaISO = '';
+      if (ocrResults.fecha_nac && ocrResults.fecha_nac.includes('/')) {
+          const parts = ocrResults.fecha_nac.split('/');
+          if (parts.length === 3) {
+              fechaISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+      } else if (curp && curp.length >= 10) {
+          // Fallback: extraer de la CURP (YYMMDD)
+          const yy = curp.substring(4, 6);
+          const mm = curp.substring(6, 8);
+          const dd = curp.substring(8, 10);
+          const anio = parseInt(yy) < 30 ? `20${yy}` : `19${yy}`;
+          fechaISO = `${anio}-${mm}-${dd}`;
+      }
+
+      console.log("🚀 Enviando datos reales:", { curp, rfc, sexoId, fechaISO });
+
       const response = await solicitudService.sendRegistroSolicitud(
-        '',
-        '',
-        0,
-        ''
+        curp,
+        rfc,
+        sexoId,
+        fechaISO
       );
       
+      // PERSISTIR DATOS PARA EL SIGUIENTE PASO (CONFIGURAR EQUIPO)
+      const preRegistroData = {
+        numPersonas,
+        asignacionSeguros,
+        totalPagar,
+        fechaRegistro: new Date().toISOString()
+      };
+      localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
+      console.log("💾 Datos de pre-registro guardados en localStorage:", preRegistroData);
+
       Swal.fire({
         title: '¡Registro Exitoso!',
         text: 'Tu solicitud de presidente ha sido registrada.',
@@ -540,14 +586,103 @@ function PreRegistroPresidente() {
               </div>
 
               {numPersonas > 0 && totalAsignados === numPersonas && (
-                <div className="info-bancaria">
-                  <h4 style={{margin:'0 0 10px 0', color:'#0b4ea6'}}>Resumen de Pago</h4>
-                  <p style={{margin:'0 0 5px 0'}}>Total a pagar: <strong>${totalPagar} MXN</strong></p>
-                  <p style={{margin:'0 0 5px 0'}}>Cuenta BBVA: <strong>{cuentaBancaria}</strong></p>
-                  <p style={{margin:'0 0 15px 0'}}>Concepto: <strong>{referenciaBancaria}</strong></p>
-                  
-                  <label style={{fontWeight:'bold', display:'block', marginBottom:'5px'}}>Sube tu comprobante (Foto o PDF)</label>
-                  <input type="file" accept="image/*,.pdf" onChange={e=>setComprobantePago(e.target.files[0])} style={{width:'100%'}}/>
+                <div style={{ marginTop: '30px', animation: 'slideUp 0.4s ease' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gap: '20px',
+                    marginBottom: '25px'
+                  }}>
+                    {/* TARJETA CUOTAS */}
+                    <div style={{
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      backgroundColor: 'white',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                    }}>
+                      <h5 style={{ marginBottom: '15px', color: '#0b4ea6', fontSize: '16px', fontWeight: 'bold' }}>
+                         Cuotas correspondientes
+                      </h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {catalogoSeguros.map(seg => (
+                          asignacionSeguros[seg.id] > 0 && (
+                            <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
+                              <span style={{ color: '#64748b' }}>{seg.nombre} (x{asignacionSeguros[seg.id]}):</span>
+                              <strong style={{ color: '#0b4ea6' }}>${seg.precio * asignacionSeguros[seg.id]}</strong>
+                            </div>
+                          )
+                        ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', marginTop: '5px' }}>
+                          <span style={{ fontWeight: 'bold', color: '#1e293b' }}>Total a pagar:</span>
+                          <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#0b4ea6', background: '#dbeafe', padding: '4px 10px', borderRadius: '6px' }}>
+                            ${totalPagar}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* TARJETA INFO BANCARIA */}
+                    <div style={{
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      backgroundColor: 'white',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                    }}>
+                      <h5 style={{ marginBottom: '15px', color: '#0b4ea6', fontSize: '16px', fontWeight: 'bold' }}>
+                        Depósito o transferencia
+                      </h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                        <div>
+                          <small style={{ color: '#64748b', display: 'block' }}>Banco:</small>
+                          <strong style={{ color: '#1e293b' }}>{bankInfo.banco}</strong>
+                        </div>
+                        <div>
+                          <small style={{ color: '#64748b', display: 'block' }}>Cuenta:</small>
+                          <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0b4ea6', fontWeight: 'bold' }}>{bankInfo.cuenta}</code>
+                        </div>
+                        <div>
+                          <small style={{ color: '#64748b', display: 'block' }}>CLABE:</small>
+                          <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0b4ea6', fontWeight: 'bold' }}>{bankInfo.clabe}</code>
+                        </div>
+                        <div>
+                          <small style={{ color: '#64748b', display: 'block' }}>Referencia:</small>
+                          <span style={{ background: '#fef08a', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '11px' }}>{bankInfo.referencia}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUBIDA DE COMPROBANTE INTEGRADA */}
+                  <div style={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    backgroundColor: '#f8fafc'
+                  }}>
+                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px', color: '#1e293b' }}>
+                      Sube tu comprobante de pago
+                    </label>
+                    <input 
+                      type="file" 
+                      accept="image/*,.pdf" 
+                      onChange={e => setComprobantePago(e.target.files[0])} 
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        backgroundColor: 'white',
+                        cursor: 'pointer'
+                      }} 
+                    />
+                    {comprobantePago && (
+                      <div style={{ marginTop: '10px', color: '#059669', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        ✅ {comprobantePago.name}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -620,7 +755,11 @@ function PreRegistroPresidente() {
                 <button className="btn btn-outline" disabled={loading} onClick={irPasoAnterior}>
                   <FaChevronLeft /> Anterior
                 </button>
-                <button className="btn btn-success" disabled={loading || Object.keys(documents).length < 4} onClick={handleSolicitarRegistro}>
+                <button 
+                  className="btn btn-success" 
+                  disabled={loading || !documents.identificacion || !documents.fotografia || !documents.formatoAfiliacion} 
+                  onClick={handleSolicitarRegistro}
+                >
                   {loading ? 'Enviando...' : <><FaCheckCircle /> Finalizar Registro</>}
                 </button>
               </div>
