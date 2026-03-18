@@ -8,3 +8,5 @@ class EstatusPresidente(Base):
     EstatusPresidenteId = Column(Integer, primary_key=True)
 
     Nombre = Column(String)
+
+    PresidenteEquipoRelacion = relationship("PresidenteEquipo", back_populates="EstatusPresidenteRelacion")

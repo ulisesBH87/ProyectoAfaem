@@ -17,5 +17,6 @@ from .catalogo_conceptos import Conceptos
 from .catalogo_estatus_pago import EstatusPago
 from .ordenes_pago_modelo import OrdenPago
 from .orden_pago_detalle_modelo import OrdenPagoDetalle
-
 from .catalogo_estatus_presidente import EstatusPresidente
+
+from .presidente_equipo_modelo import PresidenteEquipo
