@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
+from app.enums.roles_enum import Rol
 
 # Métodos para obtener el usuario
 def obtener_por_correo(db: Session, correo: str):
@@ -17,7 +18,7 @@ def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
         db.flush() #generar id de la persona sin hacer commit
 
         usuario.PersonaId = persona.PersonaId
-        usuario.RolId = 3
+        usuario.RolId = Rol.INVITADO
 
         db.add(usuario)
 
