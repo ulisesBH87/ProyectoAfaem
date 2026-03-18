@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { FaUserCog, FaLock, FaBell, FaSave } from 'react-icons/fa';
+import { FaUserCog, FaLock, FaBell, FaSave, FaFootballBall, FaTags, FaCalendar, FaPlus, FaUsers, FaShieldAlt } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 
@@ -7,541 +8,364 @@ import '../../styles/dashboard.css';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import DashboardHeader from '../../components/DashboardHeader';
 import { EntradaFormulario, BotonPrimario, BotonSecundario, Alerta } from '../../components/partials';
+import { createTeam } from '../../services/teams';
 
 export default function PresidenteEquipoConfiguracion() {
   const userEmail = localStorage.getItem('email');
-  
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [exito, setExito] = useState(null);
+  
+  // Estado para saber si ya tiene un equipo registrado
+  const [hasTeam, setHasTeam] = useState(false);
+  const [equipoValidado, setEquipoValidado] = useState(false);
 
-  // Datos del perfil
-  const [perfil, setPerfil] = useState({
-    nombre: 'Juan Entrenador',
-    apellido: 'García López',
-    email: userEmail,
-    telefono: '+56 9 1234 5678',
-    ciudad: 'Santiago',
-    experiencia: '15 años',
-    especializacion: 'Fútbol'
+  // ESTADOS PARA CREACIÓN DE EQUIPO (Paso 1)
+  const [teamForm, setTeamForm] = useState({
+    teamName: '',
+    modality: '',
+    category: '',
+    season: '',
+    paymentProof: null,
+    teamLogo: null,
   });
 
-  // Datos de seguridad
-  const [seguridad, setSeguridad] = useState({
-    contraseniaActual: '',
-    contraseniaNueva: '',
-    confirmarContrasenia: ''
+  // ESTADOS PARA JUGADORES (Paso 2)
+  const [jugadores, setJugadores] = useState([]); // Lista de jugadores añadidos
+  const [mostrarFormularioJugador, setMostrarFormularioJugador] = useState(false);
+  const [nuevoJugador, setNuevoJugador] = useState({
+    nombre: '',
+    curp: '',
+    asignarSeguro: false
   });
 
-  // Notificaciones
-  const [notificaciones, setNotificaciones] = useState({
-    emailSolicitudes: true,
-    emailReportes: true,
-    emailCambios: false,
-    emailNoticiasEquipo: true,
-    notificacionesPush: true
-  });
+  const modalities = [
+    { id: 'futbol7', name: 'Fútbol 7', maxJugadores: 14 },
+    { id: 'futbol9', name: 'Fútbol 9', maxJugadores: 18 },
+    { id: 'futbol11', name: 'Fútbol 11', maxJugadores: 25 }
+  ];
 
-  // Configuración de equipo
-  const [equipoConfig, setEquipoConfig] = useState({
-    nombreEquipo: 'Equipo Ejemplo',
-    ciudad: 'Santiago',
-    aFundacion: 2015,
-    descripcion: 'Descripción del equipo'
-  });
+  const categories = [
+    { id: 'infantil', name: 'Infantil (2012-2013)' },
+    { id: 'juvenil', name: 'Juvenil (2008-2011)' },
+    { id: 'mayor', name: 'Mayor Libre' },
+  ];
+
+  const seasons = [
+    { id: 'clausura2026', name: 'Clausura 2026' }
+  ];
+
+  // Simulación de los seguros comprados en PreRegistro
+  const [segurosComprados] = useState(5);
+  const segurosUtilizados = jugadores.filter(j => j.asignarSeguro).length;
+  const segurosRestantes = segurosComprados - segurosUtilizados;
 
   useEffect(() => {
-    const cargarConfiguracion = async () => {
-      try {
-        setLoading(true);
-        // Aquí iría la llamada a API para obtener configuración
-        // const datos = await authService.obtenerConfiguracion();
-        setError(null);
-      } catch (err) {
-        console.error('Error al cargar configuración:', err);
-        setError('No se pudo cargar la configuración');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Al cargar comprobamos si hay equipo
+    setTimeout(() => {
+      // Mock: Asumimos que no tiene equipo todavía para poder mostrar el flujo
+      setHasTeam(false);
+      setLoading(false);
+    }, 500);
+  }, []);
 
-    if (userEmail) {
-      cargarConfiguracion();
-    }
-  }, [userEmail]);
-
-  const manejarCambioPerfil = (campo, valor) => {
-    setPerfil({ ...perfil, [campo]: valor });
+  const handleTeamFormChange = (campo, valor) => {
+    setTeamForm(prev => ({ ...prev, [campo]: valor }));
   };
 
-  const manejarCambioSeguridad = (campo, valor) => {
-    setSeguridad({ ...seguridad, [campo]: valor });
-  };
-
-  const manejarCambioNotificaciones = (campo, valor) => {
-    setNotificaciones({ ...notificaciones, [campo]: valor });
-  };
-
-  const manejarCambioEquipo = (campo, valor) => {
-    setEquipoConfig({ ...equipoConfig, [campo]: valor });
-  };
-
-  const manejarGuardarPerfil = async () => {
-    try {
-      // Aquí iría la llamada a API para guardar cambios
-      setExito('Perfil actualizado correctamente');
-      setTimeout(() => setExito(null), 3000);
-      // eslint-disable-next-line no-unused-vars
-    } catch (err) {
-      setError('Error al guardar los cambios');
+  const handleFileChange = (campo, file) => {
+    if (file) {
+      setTeamForm(prev => ({ ...prev, [campo]: file }));
     }
   };
 
-  const manejarCambiarContrasenia = async () => {
-    if (seguridad.contraseniaNueva !== seguridad.confirmarContrasenia) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-
-    if (seguridad.contraseniaNueva.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+  const handleSubmitEquipo = async () => {
+    if (!teamForm.teamName || !teamForm.modality || !teamForm.category || !teamForm.season || !teamForm.paymentProof || !teamForm.teamLogo) {
+      Swal.fire('Atención', 'Por favor llena todos los campos, incluyendo logo y comprobante', 'warning');
       return;
     }
 
     try {
-      // Aquí iría la llamada a API para cambiar contraseña
-      setExito('Contraseña actualizada correctamente');
-      setSeguridad({ contraseniaActual: '', contraseniaNueva: '', confirmarContrasenia: '' });
-      setTimeout(() => setExito(null), 3000);
-      // eslint-disable-next-line no-unused-vars
-    } catch (err) {
-      setError('Error al cambiar la contraseña');
+      const payload = { ...teamForm, email: userEmail };
+      const res = await createTeam(payload);
+      
+      Swal.fire({
+        title: 'Equipo Guardado',
+        text: 'Tu equipo ha sido registrado. Ahora puedes registrar a tus jugadores. (La activación del equipo será validada en 48hs)',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+      
+      setHasTeam(true); // Cambiamos de vista
+    } catch (error) {
+      Swal.fire('Error', 'No se pudo crear el equipo', 'error');
     }
   };
 
-  const manejarGuardarNotificaciones = async () => {
-    try {
-      // Aquí iría la llamada a API para guardar preferencias
-      setExito('Preferencias de notificaciones actualizado');
-      setTimeout(() => setExito(null), 3000);
-      // eslint-disable-next-line no-unused-vars
-    } catch (err) {
-      setError('Error al guardar las preferencias');
+  const currentModalityData = modalities.find(m => m.id === teamForm.modality) || modalities[0];
+  const maxJugadores = currentModalityData.maxJugadores;
+
+  const handleRegistrarJugador = () => {
+    if (!nuevoJugador.nombre || !nuevoJugador.curp) {
+      Swal.fire('Error', 'Nombre y CURP son requeridos', 'warning');
+      return;
+    }
+
+    if (jugadores.length >= maxJugadores) {
+      Swal.fire('Límite', `Tu modalidad solo permite ${maxJugadores} jugadores`, 'warning');
+      return;
+    }
+
+    if (nuevoJugador.asignarSeguro && segurosRestantes <= 0) {
+      Swal.fire('Sin seguros', 'No te quedan seguros disponibles para asignar.', 'warning');
+      return;
+    }
+
+    const nuevosJugadores = [...jugadores, { ...nuevoJugador, id: Date.now() }];
+    setJugadores(nuevosJugadores);
+    setNuevoJugador({ nombre: '', curp: '', asignarSeguro: false });
+    setMostrarFormularioJugador(false);
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Jugador añadido localmente',
+      showConfirmButton: false,
+      timer: 2000
+    });
+
+    if (nuevosJugadores.length === 3) {
+      Swal.fire({
+        title: '¡Mínimo de jugadores alcanzado!',
+        text: 'Al tener 3 jugadores ya puedes descargar el formato de afiliación para su firma.',
+        icon: 'info',
+        confirmButtonColor: '#0b4ea6'
+      });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail={userEmail} />
-        <div className="dashboard-container">
-          <DashboardHeader userEmail={userEmail} pageTitle="Cargando..." />
-          <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div>Cargando configuración...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div>Cargando...</div>;
 
   return (
     <div className="dashboard-wrapper">
+      <style>{`
+        .config-card {
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          padding: 24px;
+          margin-bottom: 24px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .config-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .config-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0;
+        }
+        .radio-card {
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .radio-card.active {
+          border-color: #0b4ea6;
+          background: #f0fdf4;
+        }
+        .stats-badge {
+          background: #f1f5f9;
+          padding: 15px;
+          border-radius: 8px;
+          text-align: center;
+          border-bottom: 3px solid #0b4ea6;
+        }
+      `}</style>
+
       <DashboardSidebar userEmail={userEmail} />
       
       <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Configuración" />
+        <DashboardHeader userEmail={userEmail} pageTitle="Configurar Equipo" />
         
         <div className="dashboard-main">
           <div className="dashboard-content">
-            {error && (
-              <Alerta
-                tipo="error"
-                mensaje={error}
-                conCierre={true}
-                alCerrar={() => setError(null)}
-              />
+
+            {/* VISTA 1: CREAR EQUIPO SI NO HAY UNO */}
+            {!hasTeam && (
+              <div className="config-card">
+                <div className="config-header">
+                  <div style={{ padding: '10px', background: '#e0e7ff', borderRadius: '8px', color: '#4f46e5' }}><FaFootballBall size={20} /></div>
+                  <div>
+                    <h2 className="config-title">1. Datos Iniciales del Equipo</h2>
+                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>Define los detalles de tu plantilla y realiza el pago de inscripción.</p>
+                  </div>
+                </div>
+
+                <div className="row g-4">
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Nombre del Equipo</label>
+                    <input type="text" className="form-control" value={teamForm.teamName} onChange={e => handleTeamFormChange('teamName', e.target.value)} placeholder="Ej: Club Tigres" />
+                  </div>
+                  
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Modalidad de Juego</label>
+                    <select className="form-select" value={teamForm.modality} onChange={e => handleTeamFormChange('modality', e.target.value)}>
+                      <option value="">-- Selecciona Modalidad --</option>
+                      {modalities.map(m => <option key={m.id} value={m.id}>{m.name} (Max: {m.maxJugadores})</option>)}
+                    </select>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Categoría</label>
+                    <select className="form-select" value={teamForm.category} onChange={e => handleTeamFormChange('category', e.target.value)}>
+                      <option value="">-- Selecciona Categoría --</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Temporada</label>
+                    <select className="form-select" value={teamForm.season} onChange={e => handleTeamFormChange('season', e.target.value)}>
+                      <option value="">-- Selecciona Temporada --</option>
+                      {seasons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Escudo o Logo del Equipo</label>
+                    <input type="file" className="form-control" accept="image/*" onChange={e => handleFileChange('teamLogo', e.target.files[0])} />
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label fw-bold">Comprobante de Inscripción (PDF/JPG)</label>
+                    <input type="file" className="form-control" onChange={e => handleFileChange('paymentProof', e.target.files[0])} />
+                    <small className="text-muted">Abona la cuota correspondiente y sube aquí tu comprobante.</small>
+                  </div>
+                </div>
+
+                <div className="text-end mt-4">
+                  <button className="btn btn-primary px-4 py-2" style={{ background: '#0b4ea6' }} onClick={handleSubmitEquipo}>
+                    Guardar Equipo y Continuar <FaShieldAlt className="ms-2" />
+                  </button>
+                </div>
+              </div>
             )}
 
-            {exito && (
-              <Alerta
-                tipo="exito"
-                mensaje={exito}
-                conCierre={true}
-                alCerrar={() => setExito(null)}
-              />
+            {/* VISTA 2: GESTIONAR EQUIPO Y JUGADORES */}
+            {hasTeam && (
+              <>
+                <div className="config-card">
+                  <div className="config-header">
+                    <div style={{ padding: '10px', background: '#dcfce7', borderRadius: '8px', color: '#16a34a' }}><FaUsers size={20} /></div>
+                    <div>
+                      <h2 className="config-title">2. Jugadores y Seguros de ({teamForm.teamName})</h2>
+                      <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>Administra tu plantilla actual.</p>
+                    </div>
+                  </div>
+
+                  <div className="row mb-4">
+                    <div className="col-md-4">
+                      <div className="stats-badge" style={{ borderBottomColor: '#3b82f6' }}>
+                        <h4 style={{ margin: 0, fontWeight: 'bold' }}>{jugadores.length} / {maxJugadores}</h4>
+                        <small className="text-muted">Jugadores Registrados</small>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="stats-badge" style={{ borderBottomColor: '#22c55e' }}>
+                        <h4 style={{ margin: 0, fontWeight: 'bold' }}>{segurosComprados}</h4>
+                        <small className="text-muted">Seguros Comprados</small>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="stats-badge" style={{ borderBottomColor: '#eab308' }}>
+                        <h4 style={{ margin: 0, fontWeight: 'bold' }}>{segurosRestantes}</h4>
+                        <small className="text-muted">Seguros Disponibles</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  {jugadores.length >= 3 && (
+                    <div className="alert alert-info d-flex align-items-center justify-content-between mb-4">
+                      <div>
+                        <strong>¡Formato Desbloqueado!</strong> Ya tienes 3 o más jugadores, puedes descargar el formato de afiliación general.
+                      </div>
+                      <button className="btn btn-info text-white">Descargar PDF</button>
+                    </div>
+                  )}
+
+                  {!mostrarFormularioJugador ? (
+                    <button className="btn btn-outline-primary mb-4 w-100 py-3 border-dashed" onClick={() => setMostrarFormularioJugador(true)}>
+                      <FaPlus className="me-2" /> Añadir Nuevo Jugador
+                    </button>
+                  ) : (
+                    <div className="p-4 bg-light border rounded mb-4">
+                      <h5 className="mb-3">Registrar Jugador</h5>
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label className="form-label">Nombre Completo</label>
+                          <input type="text" className="form-control" value={nuevoJugador.nombre} onChange={e => setNuevoJugador({...nuevoJugador, nombre: e.target.value})} />
+                        </div>
+                        <div className="col-md-6">
+                          <label className="form-label">CURP</label>
+                          <input type="text" className="form-control" value={nuevoJugador.curp} onChange={e => setNuevoJugador({...nuevoJugador, curp: e.target.value})} />
+                        </div>
+                        <div className="col-12 mt-3">
+                           <div className="form-check form-switch">
+                            <input className="form-check-input" type="checkbox" id="seguroSwitch" checked={nuevoJugador.asignarSeguro} onChange={e => setNuevoJugador({...nuevoJugador, asignarSeguro: e.target.checked})} disabled={segurosRestantes <= 0}/>
+                            <label className="form-check-label" htmlFor="seguroSwitch">Asignar 1 Seguro de Gastos Médicos a este jugador (Disponibles: {segurosRestantes})</label>
+                          </div>
+                        </div>
+                        <div className="col-12 text-end mt-3">
+                          <button className="btn btn-secondary me-2" onClick={() => setMostrarFormularioJugador(false)}>Cancelar</button>
+                          <button className="btn btn-success" onClick={handleRegistrarJugador}>Registrar Jugador</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="table-responsive">
+                    <table className="table table-hover align-middle">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Nombre del Jugador</th>
+                          <th>CURP</th>
+                          <th>Estado Seguro</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {jugadores.length === 0 ? (
+                          <tr><td colSpan="4" className="text-center text-muted py-4">No hay jugadores registrados.</td></tr>
+                        ) : (
+                          jugadores.map((j) => (
+                            <tr key={j.id}>
+                              <td className="fw-bold">{j.nombre}</td>
+                              <td>{j.curp}</td>
+                              <td>
+                                {j.asignarSeguro ? <span className="badge bg-success">Asegurado</span> : <span className="badge bg-secondary">Sin Seguro</span>}
+                              </td>
+                              <td>
+                                <button className="btn btn-sm btn-outline-primary ms-1">Editar</button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                </div>
+              </>
             )}
 
-            {/* SECCIÓN: PERFIL */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '20px',
-                paddingBottom: '16px',
-                borderBottom: '1px solid #e2e8f0'
-              }}>
-                <FaUserCog style={{ fontSize: '20px', color: '#0b4ea6', marginRight: '12px' }} />
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
-                  Información del Perfil
-                </h3>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '16px'
-              }}>
-                <EntradaFormulario
-                  etiqueta="Nombre"
-                  tipo="text"
-                  valor={perfil.nombre}
-                  alCambiar={(e) => manejarCambioPerfil('nombre', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Apellido"
-                  tipo="text"
-                  valor={perfil.apellido}
-                  alCambiar={(e) => manejarCambioPerfil('apellido', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Correo Electrónico"
-                  tipo="email"
-                  valor={perfil.email}
-                  deshabilitado={true}
-                />
-                <EntradaFormulario
-                  etiqueta="Teléfono"
-                  tipo="tel"
-                  valor={perfil.telefono}
-                  alCambiar={(e) => manejarCambioPerfil('telefono', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Ciudad"
-                  tipo="text"
-                  valor={perfil.ciudad}
-                  alCambiar={(e) => manejarCambioPerfil('ciudad', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Experiencia"
-                  tipo="text"
-                  valor={perfil.experiencia}
-                  alCambiar={(e) => manejarCambioPerfil('experiencia', e.target.value)}
-                />
-              </div>
-
-              <div style={{
-                marginTop: '20px',
-                paddingTop: '20px',
-                borderTop: '1px solid #e2e8f0',
-                display: 'flex',
-                gap: '12px'
-              }}>
-                <BotonPrimario
-                  etiqueta="Guardar Cambios"
-                  alHacerClick={manejarGuardarPerfil}
-                  icono={<FaSave style={{ marginRight: '6px' }} />}
-                />
-              </div>
-            </div>
-
-            {/* SECCIÓN: SEGURIDAD */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '20px',
-                paddingBottom: '16px',
-                borderBottom: '1px solid #e2e8f0'
-              }}>
-                <FaLock style={{ fontSize: '20px', color: '#dc3545', marginRight: '12px' }} />
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
-                  Cambiar Contraseña
-                </h3>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '16px'
-              }}>
-                <EntradaFormulario
-                  etiqueta="Contraseña Actual"
-                  tipo="password"
-                  valor={seguridad.contraseniaActual}
-                  alCambiar={(e) => manejarCambioSeguridad('contraseniaActual', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Nueva Contraseña"
-                  tipo="password"
-                  valor={seguridad.contraseniaNueva}
-                  alCambiar={(e) => manejarCambioSeguridad('contraseniaNueva', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Confirmar Contraseña"
-                  tipo="password"
-                  valor={seguridad.confirmarContrasenia}
-                  alCambiar={(e) => manejarCambioSeguridad('confirmarContrasenia', e.target.value)}
-                />
-              </div>
-
-              <div style={{
-                marginTop: '20px',
-                paddingTop: '20px',
-                borderTop: '1px solid #e2e8f0',
-                display: 'flex',
-                gap: '12px'
-              }}>
-                <BotonPrimario
-                  etiqueta="Cambiar Contraseña"
-                  alHacerClick={manejarCambiarContrasenia}
-                />
-                <BotonSecundario
-                  etiqueta="Cancelar"
-                  alHacerClick={() => setSeguridad({ contraseniaActual: '', contraseniaNueva: '', confirmarContrasenia: '' })}
-                />
-              </div>
-            </div>
-
-            {/* SECCIÓN: NOTIFICACIONES */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '20px',
-                paddingBottom: '16px',
-                borderBottom: '1px solid #e2e8f0'
-              }}>
-                <FaBell style={{ fontSize: '20px', color: '#ffc107', marginRight: '12px' }} />
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
-                  Preferencias de Notificaciones
-                </h3>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  backgroundColor: '#f8fafc',
-                  cursor: 'pointer'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notificaciones.emailSolicitudes}
-                    onChange={(e) => manejarCambioNotificaciones('emailSolicitudes', e.target.checked)}
-                    style={{ marginRight: '12px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '14px', color: '#1e293b' }}>
-                    Notificaciones de solicitudes por correo
-                  </span>
-                </label>
-
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  backgroundColor: '#f8fafc',
-                  cursor: 'pointer'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notificaciones.emailReportes}
-                    onChange={(e) => manejarCambioNotificaciones('emailReportes', e.target.checked)}
-                    style={{ marginRight: '12px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '14px', color: '#1e293b' }}>
-                    Resúmenes de reportes
-                  </span>
-                </label>
-
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  backgroundColor: '#f8fafc',
-                  cursor: 'pointer'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notificaciones.emailCambios}
-                    onChange={(e) => manejarCambioNotificaciones('emailCambios', e.target.checked)}
-                    style={{ marginRight: '12px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '14px', color: '#1e293b' }}>
-                    Notificaciones de cambios importantes
-                  </span>
-                </label>
-
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  backgroundColor: '#f8fafc',
-                  cursor: 'pointer'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notificaciones.emailNoticiasEquipo}
-                    onChange={(e) => manejarCambioNotificaciones('emailNoticiasEquipo', e.target.checked)}
-                    style={{ marginRight: '12px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '14px', color: '#1e293b' }}>
-                    Noticias de mi equipo
-                  </span>
-                </label>
-
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  backgroundColor: '#f8fafc',
-                  cursor: 'pointer'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notificaciones.notificacionesPush}
-                    onChange={(e) => manejarCambioNotificaciones('notificacionesPush', e.target.checked)}
-                    style={{ marginRight: '12px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '14px', color: '#1e293b' }}>
-                    Notificaciones push en el navegador
-                  </span>
-                </label>
-              </div>
-
-              <div style={{
-                marginTop: '20px',
-                paddingTop: '20px',
-                borderTop: '1px solid #e2e8f0',
-                display: 'flex',
-                gap: '12px'
-              }}>
-                <BotonPrimario
-                  etiqueta="Guardar Preferencias"
-                  alHacerClick={manejarGuardarNotificaciones}
-                  icono={<FaSave style={{ marginRight: '6px' }} />}
-                />
-              </div>
-            </div>
-
-            {/* SECCIÓN: CONFIGURACIÓN DE EQUIPO */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '20px',
-                paddingBottom: '16px',
-                borderBottom: '1px solid #e2e8f0'
-              }}>
-                <FaUserCog style={{ fontSize: '20px', color: '#28a745', marginRight: '12px' }} />
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
-                  Información del Equipo
-                </h3>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '16px'
-              }}>
-                <EntradaFormulario
-                  etiqueta="Nombre del Equipo"
-                  tipo="text"
-                  valor={equipoConfig.nombreEquipo}
-                  alCambiar={(e) => manejarCambioEquipo('nombreEquipo', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Ciudad"
-                  tipo="text"
-                  valor={equipoConfig.ciudad}
-                  alCambiar={(e) => manejarCambioEquipo('ciudad', e.target.value)}
-                />
-                <EntradaFormulario
-                  etiqueta="Año de Fundación"
-                  tipo="number"
-                  valor={equipoConfig.aFundacion}
-                  alCambiar={(e) => manejarCambioEquipo('aFundacion', e.target.value)}
-                />
-              </div>
-
-              <div style={{
-                marginTop: '16px',
-                paddingTop: '16px',
-                borderTop: '1px solid #e2e8f0'
-              }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  marginBottom: '8px',
-                  color: '#1e293b'
-                }}>
-                  Descripción del Equipo
-                </label>
-                <textarea
-                  value={equipoConfig.descripcion}
-                  onChange={(e) => manejarCambioEquipo('descripcion', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-                    fontSize: '14px',
-                    resize: 'vertical',
-                    minHeight: '100px'
-                  }}
-                  placeholder="Escribe una descripción de tu equipo..."
-                />
-              </div>
-
-              <div style={{
-                marginTop: '20px',
-                paddingTop: '20px',
-                borderTop: '1px solid #e2e8f0',
-                display: 'flex',
-                gap: '12px'
-              }}>
-                <BotonPrimario
-                  etiqueta="Guardar Información"
-                  alHacerClick={manejarGuardarPerfil}
-                  icono={<FaSave style={{ marginRight: '6px' }} />}
-                />
-              </div>
-            </div>
           </div>
         </div>
       </div>

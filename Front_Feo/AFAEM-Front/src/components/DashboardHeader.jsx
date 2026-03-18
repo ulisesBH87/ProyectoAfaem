@@ -19,9 +19,22 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('email');
-    navigate('/ingresar');
+    Swal.fire({
+      title: '¿Cerrar sesión?',
+      text: 'Tendrás que ingresar tus credenciales nuevamente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6e7d88',
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('email');
+        navigate('/ingresar');
+      }
+    });
   };
 
   return (

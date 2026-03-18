@@ -39,4 +39,4 @@ export { default as MigasDePan } from './Navigation/MigasDePan';
 
 // UTILIDADES
 export { default as ConsejoFlotante } from './Utils/ConsejoFlotante';
-
+export { default as GlobalLoader } from './Utils/GlobalLoader';
