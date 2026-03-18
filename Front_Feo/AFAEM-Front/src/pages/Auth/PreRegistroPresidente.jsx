@@ -7,6 +7,7 @@ import AmateurLogo from '../../assets/amateur-logo.png';
 import solicitudService from '../../services/solicitud';
 import { validarFotografia } from "../../services/foto";
 import Swal from 'sweetalert2';
+import { PDFDocument } from 'pdf-lib';
 
 function PreRegistroPresidente() {
   const navigate = useNavigate();
@@ -94,14 +95,14 @@ function PreRegistroPresidente() {
       procesarFotografia(file);
     } else {
       setDocuments(prev => ({ ...prev, [documentKey]: file }));
-      // Invocar OCR simulado al subir
-      if (['actaNacimiento','identificacion','formatoAfiliacion'].includes(documentKey)) {
-        simularOCRInvasivo(documentKey, file);
+      // Invocar OCR real al subir
+      if (['actaNacimiento','identificacion'].includes(documentKey)) {
+        procesarOCRReal(documentKey, file);
       }
     }
   };
 
-  const simularOCRInvasivo = (docKey, file) => {
+  const procesarOCRReal = async (docKey, file) => {
     Swal.fire({
       title: 'Analizando Documento...',
       html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>',
@@ -112,19 +113,126 @@ function PreRegistroPresidente() {
       }
     });
 
-    setTimeout(() => {
-      Swal.fire({
-        title: '¡Lectura Exitosa!',
-        text: `Datos extraídos correctamente de ${file.name}`,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Usamos el proxy configurado en vite.config.js
+      const response = await fetch('/ocr-api', {
+        method: 'POST',
+        body: formData
       });
+
+      if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+
+      // Parsea el HTML del OCR para extraer los datos
+      const htmlText = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, "text/html");
+      
+      const extractedData = {};
+      const rows = doc.querySelectorAll('.dato-fila');
+      
+      rows.forEach(row => {
+        const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
+        const value = row.querySelector('.valor')?.textContent?.trim() || '';
+        if (label.includes('curp')) extractedData.curp = value;
+        if (label.includes('nombre')) extractedData.nombre = value;
+        if (label.includes('nacionalidad')) extractedData.nacionalidad = value;
+        if (label.includes('fecha de nacimiento')) extractedData.fecha_nac = value;
+        if (label.includes('edad')) extractedData.edad = value;
+        if (label.includes('documento')) extractedData.documento = value;
+      });
+
+      if (!extractedData.curp || extractedData.curp === "No detectado") {
+        throw new Error('No se detectaron datos legibles en el documento.');
+      }
+
       setOcrResults(prev => ({
         ...prev,
-        [docKey]: `OCR Procesado con éxito: Documento validado.`
+        ...extractedData,
+        [docKey]: `OCR Procesado: ${extractedData.nombre}`
       }));
-    }, 2500);
+
+      Swal.fire({
+        title: '¡Lectura Exitosa!',
+        text: `Se detectó a: ${extractedData.nombre}`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (err) {
+      console.error("Error OCR:", err);
+      setOcrResults(prev => ({
+        ...prev,
+        [docKey]: `Error: No se pudo leer el documento.`
+      }));
+      Swal.fire({
+        title: 'Error OCR',
+        text: 'No se pudo leer el documento de forma automática. Podrás continuar, pero el formato no se pre-llenará.',
+        icon: 'warning'
+      });
+    }
+  };
+
+  const handleDownloadFormato = async () => {
+    try {
+      Swal.fire({
+        title: 'Generando PDF...',
+        text: 'Preparando tu formato de afiliación pre-llenado.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const url = '/template.pdf';
+      const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer());
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      const form = pdfDoc.getForm();
+
+      const { nombre, curp, fecha_nac } = ocrResults;
+
+      if (nombre && nombre !== "No detectado") {
+          const parts = nombre.split(' ');
+          if (parts.length >= 3) {
+              form.getTextField('Apellido Paterno')?.setText(parts[0]);
+              form.getTextField('Apellido Materno')?.setText(parts[1]);
+              form.getTextField('Nombres')?.setText(parts.slice(2).join(' '));
+          } else if (parts.length === 2) {
+              form.getTextField('Apellido Paterno')?.setText(parts[0]);
+              form.getTextField('Nombres')?.setText(parts[1]);
+          } else {
+              form.getTextField('Nombres')?.setText(nombre);
+          }
+      }
+      
+      if (curp && curp !== "No detectado") {
+          form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
+      }
+      if (fecha_nac && fecha_nac !== "No detectada") {
+          form.getTextField('Fecha de Nacimiento')?.setText(fecha_nac);
+      }
+      
+      if (user.Correo) {
+          form.getTextField('Correo electrónico')?.setText(user.Correo);
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Formato_Afiliacion_${nombre || 'Usuario'}.pdf`;
+      link.click();
+
+      Swal.fire('¡Listo!', 'El formato se ha generado correctamente.', 'success');
+    } catch (err) {
+      console.error("Error generando PDF:", err);
+      Swal.fire('Error', 'No se pudo generar el PDF pre-llenado. Se descargará el formato base.', 'error');
+      const link = document.createElement('a');
+      link.href = '/template.pdf';
+      link.download = 'Formato_Afiliacion_Base.pdf';
+      link.click();
+    }
   };
 
   const procesarFotografia = async (archivo) => {
@@ -166,23 +274,6 @@ function PreRegistroPresidente() {
         icon: 'error'
       });
     }
-  };
-
-  const handleDownloadFormato = () => {
-    const data = {
-      nombre: ocrResults.nombre || user.nombre || 'Nombre no detectado',
-      curp: ocrResults.curp || 'CURP no detectado',
-      fecha_nac: ocrResults.fecha_nac || '01/01/1900',
-      edad: ocrResults.edad || '0',
-      nacionalidad: ocrResults.nacionalidad || 'MEXICANA',
-      equipo: 'Equipo Predeterminado' // O extraer del estado si existe
-    };
-
-    const params = new URLSearchParams(data).toString();
-    const url = `http://localhost:8000/solicitud/descargar-formato-afiliacion?${params}`;
-    
-    // Abrir en nueva pestaña o forzar descarga
-    window.open(url, '_blank');
   };
 
   // ================== ENVÍO FINAL ==================
@@ -501,20 +592,24 @@ function PreRegistroPresidente() {
                     </button>
                     {doc.documento === 'formatoAfiliacion' && (
                         <div style={{marginTop: '10px', fontSize: '11px'}}>
-                          <button 
-                            onClick={handleDownloadFormato}
-                            disabled={!documents.identificacion || !documents.fotografia}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: (!documents.identificacion || !documents.fotografia) ? '#94a3b8' : '#0b4ea6',
+                          <a 
+                            href="#" 
+                            onClick={(e) => { 
+                              e.preventDefault(); 
+                              if (documents.identificacion && documents.fotografia) {
+                                handleDownloadFormato(); 
+                              }
+                            }}
+                            style={{ 
+                              color: (!documents.identificacion || !documents.fotografia) ? '#94a3b8' : '#003366', 
+                              fontWeight: 'bold', 
                               textDecoration: 'underline',
                               cursor: (!documents.identificacion || !documents.fotografia) ? 'not-allowed' : 'pointer',
-                              padding: 0
+                              fontSize: '11px'
                             }}
                           >
                             Descargar formato pre-llenado aquí
-                          </button>
+                          </a>
                         </div>
                     )}
                   </div>
