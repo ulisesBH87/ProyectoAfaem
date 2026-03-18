@@ -1,282 +1,224 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUpload } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import solicitudService from '../../services/solicitud';
-
-//FOTOGRAFIA
 import { validarFotografia } from "../../services/foto";
+import Swal from 'sweetalert2';
 
 function PreRegistroPresidente() {
-      // Estado para resultados OCR
-      const [ocrResults, setOcrResults] = useState({});
-
-      // Simulación de envío a OCR
-      const handleEnviarOCR = async (docKey) => {
-        if (!documents[docKey]) {
-          setError('Debes subir el archivo antes de enviar al OCR.');
-          return;
-        }
-        setLoading(true);
-        setError(null);
-        // Simulación: espera 2 segundos y muestra resultado
-        setTimeout(() => {
-          setOcrResults(prev => ({
-            ...prev,
-            [docKey]: `Resultado simulado del OCR para ${docKey}`
-          }));
-          setLoading(false);
-        }, 2000);
-      };
-    // Documentos fijos para evitar error 404
-    const requisitos = [
-      { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
-      { documento: 'identificacion', nombre: 'Identificación oficial' },
-      { documento: 'fotografia', nombre: 'Fotografía' },
-      { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación' }
-    ];
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // Estados Generales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [formData, setFormData] = useState({
-     // curp, rfc, sexoId, fechaNacimiento removed
-  });
-  // Validaciones
-  const [valid, setValid] = useState({});
-    // ...existing code...
-  // Estado para correo en minúsculas
-  const correoMin = (user?.email || user?.correo || '').toLowerCase();
-  // Estado para registro en mayúsculas
-  const nombreMay = (user?.Nombre || user?.nombre || '').toUpperCase();
-  // Estado para preguntas de seguro y personas
+  const [pasoActual, setPasoActual] = useState(1); // 1 = Pago/Seguro, 2 = Documentos
+  
+  // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState(0);
-  const [seguroId, setSeguroId] = useState('');
-  const [pagoRealizado, setPagoRealizado] = useState(false);
-  const [validandoPago, setValidandoPago] = useState(false);
-  // Catálogo de seguros inventados
+  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': 0, '2': 0, '3': 0 });
+  const [comprobantePago, setComprobantePago] = useState(null);
+  const referenciaBancaria = 'AFAEM2026';
+  const cuentaBancaria = '1234567890';
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
     { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
     { id: '3', nombre: 'Seguro médico', descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 }
   ];
-  // Estado para comprobante de pago
-  const [comprobantePago, setComprobantePago] = useState(null);
-  // Estado para referencia bancaria
-  const referenciaBancaria = 'AFAEM2026';
-  const cuentaBancaria = '1234567890';
-  // Estado para total a pagar
-  const totalPagar = numPersonas && seguroId ? catalogoSeguros.find(s => s.id === seguroId)?.precio * numPersonas : 0;
-  // Estado para documentos
+
+  const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + val, 0);
+  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (asignacionSeguros[seg.id] || 0) * seg.precio, 0);
+  const jugadoresRestantes = numPersonas - totalAsignados;
+
+  // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
-  // Requisitos eliminados temporalmente por error 404
-  // const [requisitos, setRequisitos] = useState([]);
-  // const [tipoAfiliacionId, setTipoAfiliacionId] = useState(2); // PRESIDENTE DE EQUIPO = ID 2
-  // const [requisitosLoading, setRequisitosLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [ocrResults, setOcrResults] = useState({});
+  const [fotoPreview, setFotoPreview] = useState(null);
 
-  // useEffect para cargar requisitos eliminado por error 404
+  const requisitos = [
+    { documento: 'actaNacimiento', nombre: 'Acta de nacimiento', accept: '.pdf,image/png,image/jpeg,image/jpg' },
+    { documento: 'identificacion', nombre: 'Identificación oficial', accept: '.pdf,image/png,image/jpeg,image/jpg' },
+    { documento: 'fotografia', nombre: 'Fotografía (Imagen)', accept: 'image/*' },
+    { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', accept: '.pdf,image/png,image/jpeg,image/jpg' }
+  ];
 
-  // MANEJAR SUBIDA DE ARCHIVOS
-  const handleFileUpload = (documentKey, file) => {
-    if (file) {
-      setDocuments(prev => ({
-        ...prev,
-        [documentKey]: file
-      }));
+  // ================== METODOS DE NAVEGACIÓN ==================
+  const irSiguientePaso = () => {
+    setError(null);
+    if (pasoActual === 1) {
+      if (numPersonas <= 0) {
+        setError('Debes ingresar el número de personas.');
+        return;
+      }
+      if (totalAsignados !== numPersonas) {
+        setError(`Debes asignar el seguro a todos los jugadores. Faltan ${jugadoresRestantes} por asignar.`);
+        return;
+      }
+      if (!comprobantePago) {
+        setError('Debes subir el comprobante de pago para continuar.');
+        return;
+      }
+      
+      Swal.fire({
+        title: 'Comprobante guardado',
+        text: 'Hemos registrado tu pago para validación interna.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      setPasoActual(2);
     }
+  };
 
-    //PROCESO PAEA LA SUBIDA DE FOTOGRAFIA
+  const irPasoAnterior = () => {
+    setError(null);
+    if (pasoActual > 1) {
+      setPasoActual(pasoActual - 1);
+    }
+  };
+
+  // ================== MANEJADORES PASO 2 (OCR Y FOTO) ==================
+  const handleFileUpload = (documentKey, file) => {
+    if (!file) return;
+
     if (documentKey === "fotografia") {
-      if (!file) return;
       setFotoPreview(null);
-
       setDocuments(prev => {
         const updated = { ...prev };
         delete updated.fotografia;
         return updated;
       });
-
       procesarFotografia(file);
-
     } else {
+      setDocuments(prev => ({ ...prev, [documentKey]: file }));
+      // Invocar OCR simulado al subir
+      if (['actaNacimiento','identificacion','formatoAfiliacion'].includes(documentKey)) {
+        simularOCRInvasivo(documentKey, file);
+      }
+    }
+  };
 
-      setDocuments(prev => ({
+  const simularOCRInvasivo = (docKey, file) => {
+    Swal.fire({
+      title: 'Analizando Documento...',
+      html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    setTimeout(() => {
+      Swal.fire({
+        title: '¡Lectura Exitosa!',
+        text: `Datos extraídos correctamente de ${file.name}`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      setOcrResults(prev => ({
         ...prev,
-        [documentKey]: file
+        [docKey]: `OCR Procesado con éxito: Documento validado.`
       }));
+    }, 2500);
+  };
 
+  const procesarFotografia = async (archivo) => {
+    Swal.fire({
+      title: 'Validando Fotografía...',
+      html: 'Verificando formato, rostros y calidad. <b>Por favor espere.</b>',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      const data = await validarFotografia(archivo);
+      if (data.valido) {
+        setFotoPreview(`data:${data.tipo_imagen};base64,${data.imagen}`);
+        setDocuments(prev => ({ ...prev, fotografia: archivo }));
+        Swal.fire({
+          title: '¡Fotografía Aceptada!',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } else {
+        setFotoPreview(null);
+        setError(data.mensaje);
+        Swal.fire({
+          title: 'Error en la fotografía',
+          text: data.mensaje,
+          icon: 'error'
+        });
+      }
+    } catch (err) {
+      setFotoPreview(null);
+      Swal.fire({
+        title: 'Error de validación',
+        text: err.message || 'No se pudo procesar la foto.',
+        icon: 'error'
+      });
     }
+  };
+
+  const handleDownloadFormato = () => {
+    const data = {
+      nombre: ocrResults.nombre || user.nombre || 'Nombre no detectado',
+      curp: ocrResults.curp || 'CURP no detectado',
+      fecha_nac: ocrResults.fecha_nac || '01/01/1900',
+      edad: ocrResults.edad || '0',
+      nacionalidad: ocrResults.nacionalidad || 'MEXICANA',
+      equipo: 'Equipo Predeterminado' // O extraer del estado si existe
+    };
+
+    const params = new URLSearchParams(data).toString();
+    const url = `http://localhost:8000/solicitud/descargar-formato-afiliacion?${params}`;
     
+    // Abrir en nueva pestaña o forzar descarga
+    window.open(url, '_blank');
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.currentTarget.style.backgroundColor = '#dbeafe';
-    e.currentTarget.style.borderColor = '#0b4ea6';
-  };
-
-  const handleDragLeave = (e) => {
-    e.currentTarget.style.backgroundColor = 'white';
-    e.currentTarget.style.borderColor = '#e2e8f0';
-  };
-
-  const handleDrop = (e, documentKey) => {
-    e.preventDefault();
-    e.currentTarget.style.backgroundColor = 'white';
-    e.currentTarget.style.borderColor = '#e2e8f0';
-    
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      handleFileUpload(documentKey, file);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
+  // ================== ENVÍO FINAL ==================
   const handleSolicitarRegistro = async () => {
     try {
-      // VALIDAR QUE TODOS LOS CAMPOS ESTÉN COMPLETOS
-      if (!formData.curp.trim()) {
-        setError('Por favor ingresa tu CURP');
-        return;
-      }
-      if (!formData.rfc.trim()) {
-        setError('Por favor ingresa tu RFC');
-        return;
-      }
-      if (!formData.sexoId) {
-        setError('Por favor selecciona tu sexo');
-        return;
-      }
-      if (!formData.fechaNacimiento) {
-        setError('Por favor selecciona tu fecha de nacimiento');
-        return;
-      }
-
-      // VALIDAR FORMATO DE FECHA (DEBE SER YYYY-MM-DD)
-      const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!fechaRegex.test(formData.fechaNacimiento)) {
-        setError('Formato de fecha inválido. Debe ser YYYY-MM-DD');
-        return;
-      }
-
-      // VALIDAR QUE LA FECHA SEA VÁLIDA
-      const fechaParts = formData.fechaNacimiento.split('-');
-      const fechaDate = new Date(parseInt(fechaParts[0]), parseInt(fechaParts[1]) - 1, parseInt(fechaParts[2]));
-      if (isNaN(fechaDate.getTime())) {
-        setError('La fecha de nacimiento no es válida');
-        return;
-      }
-
-      // VALIDAR EDAD MÍNIMA (MAYOR DE 18 AÑOS)
-      const hoy = new Date();
-      const edad = hoy.getFullYear() - fechaDate.getFullYear();
-      const mesActual = hoy.getMonth();
-      const mesNacimiento = fechaDate.getMonth();
-      if (edad < 18 || (edad === 18 && mesActual < mesNacimiento)) {
-        setError('Debes ser mayor de 18 años');
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
-      console.log('📝 Datos del formulario:', {
-        curp: formData.curp,
-        rfc: formData.rfc,
-        sexoId: formData.sexoId,
-        fechaNacimiento: formData.fechaNacimiento
-      });
-
-      // ENVIAR SOLICITUD AL SERVIDOR CON LOS DATOS
+      // (Simulación de guardar documentos + solicitud al back)
+      // Como ya no pedimos datos, enviamos cadenas vacías o valores nulos
       const response = await solicitudService.sendRegistroSolicitud(
-        formData.curp,
-        formData.rfc,
-        parseInt(formData.sexoId),
-        formData.fechaNacimiento
+        '',
+        '',
+        0,
+        ''
       );
       
-      console.log('✅ Solicitud enviada exitosamente:', response);
-
-      // REDIRIGIR A PRESIDENTE
-      setTimeout(() => {
+      Swal.fire({
+        title: '¡Registro Exitoso!',
+        text: 'Tu solicitud de presidente ha sido registrada.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      }).then(() => {
         navigate('/presidente-equipo');
-      }, 1500);
+      });
+
     } catch (err) {
-      console.error('❌ Error al enviar solicitud:', err);
-      setError(
-        err.response?.data?.message || 
-        err.message ||
-        'Error al enviar la solicitud. Por favor, intenta nuevamente.'
-      );
+      setError(err.response?.data?.message || err.message || 'Error al enviar la solicitud.');
+      Swal.fire({
+        title: 'Error',
+        text: 'Hubo un problema al finalizar el registro.',
+        icon: 'error'
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-
-  //PROCESO PARA LA VALIDACION DE FOTOGRAFIA
-  const [fotoPreview, setFotoPreview] = useState(null);
-  const [procesandoFoto, setProcesandoFoto] = useState(false);
-
-  const procesarFotografia = async (archivo) => {
-
-    setProcesandoFoto(true);
-    setError(null);
-
-    try {
-
-      const data = await validarFotografia(archivo);
-
-      if (data.valido) {
-
-        setFotoPreview(`data:${data.tipo_imagen};base64,${data.imagen}`);
-
-        setDocuments(prev => ({
-          ...prev,
-          fotografia: archivo
-        }));
-
-      } else {
-
-        setFotoPreview(null);
-
-        setDocuments(prev => {
-          const updated = { ...prev };
-          delete updated.fotografia;
-          return updated;
-        });
-
-        setError(data.mensaje);
-      }
-
-    } catch (error) {
-
-      setFotoPreview(null);
-
-      setDocuments(prev => {
-        const updated = { ...prev };
-        delete updated.fotografia;
-        return updated;
-      });
-
-      setError(error.message);
-
-    } finally {
-
-      setProcesandoFoto(false);
-
-    }
-
   };
 
   return (
@@ -297,496 +239,299 @@ function PreRegistroPresidente() {
           border-radius: 14px;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
           overflow: hidden;
-          max-width: 580px;
+          max-width: 650px;
           width: 100%;
           animation: slideUp 0.4s ease;
         }
         
         @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         
         .pre-registro-header {
           background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-          padding: 52px 32px 40px;
+          padding: 30px 32px 20px;
           text-align: center;
         }
         
         .pre-registro-logo-group {
           display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 18px;
-          margin-bottom: 24px;
-          flex-wrap: wrap;
+          justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;
         }
         
         .pre-registro-logo-item {
-          width: 52px;
-          height: 52px;
-          background: rgba(255, 255, 255, 0.12);
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 6px;
+          width: 45px; height: 45px; background: rgba(255, 255, 255, 0.12);
+          border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 5px;
         }
         
         .pre-registro-logo-item img {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
-          filter: brightness(1.1);
+          max-width: 100%; max-height: 100%; object-fit: contain; filter: brightness(1.1);
         }
         
         .pre-registro-title {
+          color: white; font-size: 20px; font-weight: 700; margin: 0;
+        }
+
+        .stepper-container {
+          display: flex;
+          justify-content: space-around;
+          padding: 15px 32px;
+          background: #f1f5f9;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .step-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+          color: #94a3b8;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .step-item.active {
+          color: #0b4ea6;
+        }
+
+        .step-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: white;
+          border: 2px solid #cbd5e1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          transition: all 0.3s ease;
+        }
+
+        .step-item.active .step-icon {
+          border-color: #0b4ea6;
+          background: #0b4ea6;
           color: white;
-          font-size: 22px;
-          font-weight: 700;
-          margin: 0;
-          letter-spacing: 0.5px;
-          line-height: 1.3;
+        }
+        .step-item.completed .step-icon {
+          border-color: #10b981;
+          background: #10b981;
+          color: white;
         }
         
         .pre-registro-body {
-          padding: 40px 32px;
+          padding: 30px 32px;
         }
-        
-        .pre-registro-user-info {
-          background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
-          padding: 20px;
-          border-radius: 10px;
-          margin-bottom: 28px;
-          border: 1px solid #e0e6ed;
+
+        .info-bancaria {
+          background: #e0f2fe;
+          border: 1px solid #38bdf8;
+          border-radius: 8px;
+          padding: 15px;
+          margin-top: 15px;
         }
-        
-        .pre-registro-info-item {
+
+        .nav-buttons {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 25px;
+          gap: 15px;
+        }
+
+        .btn {
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 12px;
-          font-size: 14px;
-          color: #2c3e50;
-          margin-bottom: 10px;
-        }
-        
-        .pre-registro-info-item:last-child {
-          margin-bottom: 0;
-        }
-        
-        .pre-registro-info-label {
-          font-weight: 700;
-          color: #0b4ea6;
-          min-width: 90px;
-        }
-        
-        .pre-registro-info-value {
-          word-break: break-word;
-        }
-        
-        .pre-registro-form-group {
-          margin-bottom: 20px;
-        }
-        
-        .pre-registro-label {
-          display: block;
-          font-weight: 700;
-          color: #2c3e50;
-          margin-bottom: 8px;
-          font-size: 13px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-        
-        .pre-registro-input {
-          width: 100%;
-          padding: 12px 14px;
-          border: 2px solid #e0e6ed;
-          border-radius: 8px;
-          font-size: 14px;
-          background: #f8fafb;
-          transition: all 0.3s ease;
-          box-sizing: border-box;
-          font-family: inherit;
-        }
-        
-        .pre-registro-input:focus {
-          outline: none;
-          border-color: #0b4ea6;
-          background-color: #ffffff;
-          box-shadow: 0 0 0 4px rgba(11, 78, 166, 0.12);
-        }
-        
-        .pre-registro-input:disabled {
-          background-color: #f0f2f5;
-          color: #aaa;
-          cursor: not-allowed;
-        }
-        
-        .pre-registro-input::placeholder {
-          color: #cbd5e0;
-        }
-        
-        .pre-registro-error {
-          background: linear-gradient(135deg, #fee 0%, #fdd 100%);
-          color: #d32f2f;
-          padding: 12px 14px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-          font-size: 13px;
-          border-left: 4px solid #d32f2f;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-        }
-        
-        .pre-registro-button {
-          width: 100%;
-          padding: 13px;
+          justify-content: center;
+          gap: 8px;
           border: none;
-          border-radius: 8px;
-          font-weight: 700;
-          font-size: 15px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-          margin-bottom: 10px;
+          transition: all 0.2s ease;
         }
-        
-        .pre-registro-button-primary {
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
+
+        .btn-outline {
+          background: white;
+          border: 1px solid #cbd5e1;
+          color: #475569;
+        }
+        .btn-outline:hover { background: #f8fafc; }
+
+        .btn-primary {
+          background: #0b4ea6;
           color: white;
-          box-shadow: 0 4px 15px rgba(11, 78, 166, 0.25);
         }
+        .btn-primary:hover { background: #063f82; }
         
-        .pre-registro-button-primary:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(11, 78, 166, 0.35);
-        }
-        
-        .pre-registro-button-secondary {
-          background: #667085;
+        .btn-success {
+          background: #10b981;
           color: white;
-          box-shadow: 0 4px 15px rgba(102, 112, 133, 0.15);
         }
-        
-        .pre-registro-button-secondary:hover:not(:disabled) {
-          background: #5a6373;
-          transform: translateY(-2px);
-        }
-        
-        .pre-registro-button:disabled {
-          opacity: 0.65;
-          cursor: not-allowed;
-        }
-        
-        .pre-registro-button:last-child {
-          margin-bottom: 0;
-        }
-        
-        .pre-registro-success-icon {
-          font-size: 24px;
-          margin-right: 8px;
-        }
-        
-        @media (max-width: 768px) {
-          .pre-registro-header {
-            padding: 36px 24px 28px;
-          }
-          
-          .pre-registro-body {
-            padding: 32px 24px;
-          }
-          
-          .pre-registro-title {
-            font-size: 20px;
-          }
-          
-          .pre-registro-logo-item {
-            width: 44px;
-            height: 44px;
-          }
-        }
+        .btn-success:hover { background: #059669; }
+
       `}</style>
       
       <div className="pre-registro-card">
         <div className="pre-registro-header">
           <div className="pre-registro-logo-group">
-            <div className="pre-registro-logo-item">
-              <img src={AfaemLogo} alt="AFAEM" />
-            </div>
-            <div className="pre-registro-logo-item">
-              <img src={FmfLogo} alt="FMF" />
-            </div>
-            <div className="pre-registro-logo-item">
-              <img src={AmateurLogo} alt="Sector Amateur" />
-            </div>
+            <div className="pre-registro-logo-item"><img src={AfaemLogo} alt="AFAEM" /></div>
+            <div className="pre-registro-logo-item"><img src={FmfLogo} alt="FMF" /></div>
+            <div className="pre-registro-logo-item"><img src={AmateurLogo} alt="Sector Amateur" /></div>
           </div>
-          <h1 className="pre-registro-title">
-            ¡Bienvenido! 🎉
-          </h1>
+          <h1 className="pre-registro-title">Pre-registro Presidente</h1>
+        </div>
+
+        {/* STEPPER */}
+        <div className="stepper-container">
+          <div className={`step-item ${pasoActual >= 1 ? 'active' : ''} ${pasoActual > 1 ? 'completed' : ''}`}>
+            <div className="step-icon"><FaMoneyBillWave /></div>
+            <span>Cuotas</span>
+          </div>
+          <div className={`step-item ${pasoActual >= 2 ? 'active' : ''}`}>
+            <div className="step-icon"><FaFileAlt /></div>
+            <span>Documentos</span>
+          </div>
         </div>
         
         <div className="pre-registro-body">
-          <React.Fragment>
-            <div className="pre-registro-user-info">
-              <div className="pre-registro-info-item">
-                <span className="pre-registro-info-label">👤 Nombre:</span>
-                <span className="pre-registro-info-value">{nombreMay || 'NO REGISTRADO'}</span>
-              </div>
-              <div className="pre-registro-info-item">
-                <span className="pre-registro-info-label">📧 Email:</span>
-                <span className="pre-registro-info-value">{correoMin || 'no registrado'}</span>
-              </div>
-              <div className="pre-registro-info-item">
-                <span className="pre-registro-info-label">📱 Teléfono:</span>
-                <span className="pre-registro-info-value">{user?.telefono || <span style={{ color: '#ccc' }}>No registrado</span>}</span>
-              </div>
+          {error && (
+            <div style={{background: '#fee', color: '#d32f2f', padding: '12px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #d32f2f'}}>
+              ⚠️ {error}
             </div>
-            {error && (
-              <div className="pre-registro-error">
-                <span>⚠️</span>
-                <span>{error}</span>
+          )}
+
+          {/* ======================= PASO 1 (ANTES PASO 2) ======================= */}
+          {pasoActual === 1 && (
+            <div>
+              <p style={{color:'#64748b', fontSize:'14px', marginBottom:'20px'}}>Antes de subir tus documentos, debes definir la cuota de seguro de tu equipo inicial.</p>
+              
+              <div style={{marginBottom:'15px'}}>
+                <label style={{fontWeight:'bold', display:'block', marginBottom:'5px'}}>¿Cuántas personas tendrá tu equipo inicialmente?</label>
+                <input type="number" min={1} value={numPersonas} onChange={e=>setNumPersonas(Number(e.target.value))} style={{padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1', width:'100px'}} />
               </div>
-            )}
-            {/* SECCIÓN DE CUOTAS, SEGURO Y DOCUMENTOS */}
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ 
-                fontSize: '15px', 
-                fontWeight: 700, 
-                color: '#0b4ea6', 
-                margin: '0 0 16px 0',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                DOCUMENTOS REQUERIDOS
-              </h3>
-              {/* Bloqueo de documentos hasta pago */}
-              {!pagoRealizado ? (
-                <div style={{background:'#fef3c7',padding:'18px',borderRadius:'8px',color:'#92400e',fontSize:'15px',fontWeight:'600',marginBottom:'12px',border:'1px solid #fcd34d'}}>
-                  💸 Antes de continuar, debes realizar el pago correspondiente.<br />
-                  <span style={{fontWeight:'bold'}}>¿Cuántas personas tendrá tu equipo?</span>
-                  <input type="number" min={1} value={numPersonas} onChange={e=>setNumPersonas(Number(e.target.value))} style={{marginLeft:'8px',padding:'6px',borderRadius:'6px',border:'1px solid #e2e8f0',width:'80px'}} />
-                  <br />
-                  <span style={{fontWeight:'bold'}}>Tipo de seguro:</span>
-                  <select value={seguroId} onChange={e=>setSeguroId(e.target.value)} style={{marginLeft:'8px',padding:'6px',borderRadius:'6px',border:'1px solid #e2e8f0'}}>
-                    <option value="">-- Selecciona un seguro --</option>
-                    {catalogoSeguros.map(seg=>(
-                      <option key={seg.id} value={seg.id}>{seg.nombre.toUpperCase()} - ${seg.precio} ({seg.descripcion})</option>
-                    ))}
-                  </select>
-                  <br />
-                  {numPersonas > 0 && seguroId && (
-                    <div style={{background:'#e0f2fe',padding:'14px',borderRadius:'8px',color:'#0b4ea6',fontWeight:'600',marginTop:'12px',border:'1px solid #38bdf8'}}>
-                      Para continuar con el registro de jugadores debes de hacer el pago de <span style={{color:'#d32f2f'}}>${totalPagar}</span> ya que quieres el seguro <span style={{color:'#0b4ea6'}}>{catalogoSeguros.find(s=>s.id===seguroId)?.nombre.toUpperCase()}</span> y tienes <span style={{color:'#0b4ea6'}}>{numPersonas}</span> jugadores.<br />
-                      Vas a depositar en <span style={{color:'#0b4ea6'}}>{cuentaBancaria}</span> la cantidad de <span style={{color:'#d32f2f'}}>${totalPagar}</span>.<br />
-                      <span style={{fontWeight:'bold'}}>Referencia bancaria:</span> {referenciaBancaria}<br />
-                      <span style={{fontWeight:'bold'}}>Comprobante de pago:</span>
-                      <input type="file" accept="image/*,.pdf" style={{marginLeft:'8px'}} onChange={e=>setComprobantePago(e.target.files[0])} />
-                      <br />
-                      <span style={{fontWeight:'bold'}}>Mensaje:</span> "Validando el pago, después de un breve tiempo tendrás una respuesta."
-                      <br />
-                      <button style={{marginTop:'12px',background:'#0b4ea6',color:'white',padding:'10px 18px',border:'none',borderRadius:'8px',fontWeight:'700',fontSize:'15px',cursor:'pointer'}} onClick={()=>setPagoRealizado(true)} disabled={!comprobantePago || !numPersonas || !seguroId}>Enviar comprobante y continuar</button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-                  gap: '20px',
-                  marginBottom: '40px'
-                }}>
-                  {requisitos.map((doc, idx) => (
-                    <div
-                      key={doc.documento || idx}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '12px',
-                        border: '2px dashed #e2e8f0',
-                        padding: '20px',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        position: 'relative',
-                        minHeight: '280px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between'
-                      }}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, doc.documento)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                        e.currentTarget.style.borderColor = '#cbd5e1';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'white';
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                      }}
-                    >
-                      <div>
-                        {doc.documento !== "fotografia" && (
-                          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
-                        )}
 
-                        {doc.documento === "fotografia" && !fotoPreview && (
-                          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📄</div>
-                        )}
-                        <h3 style={{
-                          margin: '0 0 12px 0',
-                          color: '#1e293b',
-                          fontSize: '14px',
-                          fontWeight: '700',
-                          lineHeight: '1.3'
-                        }}>
-                          {doc.nombre}
-                        </h3>
-                        
-                        {/* ESTADO DE LA FOTOFRAFIA*/}
-                        {doc.documento === "fotografia" && procesandoFoto && (
-
-                          <div style={{
-                            backgroundColor: '#e0f2fe',
-                            color: '#0b4ea6',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            marginBottom: '12px',
-                            border: '1px solid #38bdf8'
-                          }}>
-                            ⏳ Validando fotografía...
-                          </div>
-                        )}
-
-                        {doc.documento === "fotografia" && !procesandoFoto && fotoPreview && (
-                          <div style={{ marginTop: "10px" }}>
-                            <img
-                              src={fotoPreview}
-                              alt="Fotografía validada"
-                              style={{
-                                width: "100%",
-                                maxHeight: "180px",
-                                aspectRatio: "4 / 5",
-                                objectFit: "cover",
-                                borderRadius: "8px"
-                              }}
-                            />
-                          </div>
-                        )}
-                        
-                        {/* Estado de archivos */}
-                        {documents[doc.documento] ? (
-                          <div style={{
-                            backgroundColor: '#dcfce7',
-                            color: '#166534',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            marginBottom: '12px',
-                            border: '1px solid #86efac'
-                          }}>
-                            ✓ {documents[doc.documento].name}
-                          </div>
-                        ) : (
-                          <div style={{
-                            backgroundColor: '#fef3c7',
-                            color: '#92400e',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            marginBottom: '12px',
-                            border: '1px solid #fcd34d'
-                          }}>
-                            Pendiente
-                          </div>
-                        )}
-                      </div>
-                      {/* Input oculto */}
-                      <input
-                        type="file"
-                        id={`file-${doc.documento}`}
-                        accept="image/*,.pdf"
-                        style={{ display: 'none' }}
-                        onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])}
-                      />
-                      <button
-                        onClick={() => document.getElementById(`file-${doc.documento}`).click()}
-                        style={{
-                          backgroundColor: '#0b4ea6',
-                          color: 'white',
-                          border: 'none',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#0a3d85';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#0b4ea6';
-                        }}
-                      >
-                        <FaUpload style={{ marginRight: '6px' }} />
-                        Subir archivo
-                      </button>
-                      {/* Botón OCR solo para acta, identificación y formato */}
-                      {['actaNacimiento','identificacion','formatoAfiliacion'].includes(doc.documento) && (
-                        <button
-                          style={{
-                            marginTop: '10px',
-                            backgroundColor: '#38bdf8',
-                            color: 'white',
-                            border: 'none',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            transition: 'all 0.2s ease'
-                          }}
-                          disabled={loading}
-                          onClick={() => handleEnviarOCR(doc.documento)}
-                        >
-                          {loading ? '⏳ Procesando OCR...' : 'Procesar OCR'}
-                        </button>
-                      )}
-                      {/* Mostrar resultado OCR */}
-                      {ocrResults[doc.documento] && (
-                        <div style={{marginTop:'10px',background:'#e0f2fe',color:'#0b4ea6',padding:'8px',borderRadius:'6px',fontSize:'13px',border:'1px solid #38bdf8'}}>
-                          <strong>Resultado OCR:</strong><br />{ocrResults[doc.documento]}
+              <div style={{marginBottom:'20px'}}>
+                <label style={{fontWeight:'bold', display:'block', marginBottom:'10px'}}>Distribución de Seguros (Obligatorio)</label>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
+                  {catalogoSeguros.map(seg => (
+                    <div key={seg.id} style={{padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc'}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px'}}>
+                        <div>
+                          <span style={{fontWeight: '600', color: '#1e293b'}}>{seg.nombre}</span>
+                          <span style={{marginLeft: '8px', color: '#0b4ea6', fontWeight: 'bold'}}>${seg.precio} c/u</span>
                         </div>
-                      )}
+                        <input 
+                          type="number" 
+                          min={0} 
+                          value={asignacionSeguros[seg.id]} 
+                          onChange={e => {
+                            const val = parseInt(e.target.value) || 0;
+                            setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val }));
+                          }}
+                          style={{width: '70px', padding: '5px', borderRadius: '4px', border: '1px solid #cbd5e1'}}
+                        />
+                      </div>
+                      <p style={{margin: 0, fontSize: '12px', color: '#64748b'}}>{seg.descripcion}</p>
                     </div>
                   ))}
                 </div>
+                
+                <div style={{marginTop: '15px', padding: '10px', borderRadius: '6px', background: jugadoresRestantes === 0 ? '#f0fdf4' : (jugadoresRestantes < 0 ? '#fef2f2' : '#fff7ed'), border: `1px solid ${jugadoresRestantes === 0 ? '#22c55e' : (jugadoresRestantes < 0 ? '#ef4444' : '#f97316')}`}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
+                    <span>Total Jugadores: {numPersonas}</span>
+                    <span style={{color: jugadoresRestantes === 0 ? '#15803d' : (jugadoresRestantes < 0 ? '#b91c1c' : '#c2410c')}}>
+                      {jugadoresRestantes === 0 ? '✓ Todos asignados' : (jugadoresRestantes < 0 ? `⚠ Exceso: ${Math.abs(jugadoresRestantes)}` : `Pendientes: ${jugadoresRestantes}`)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {numPersonas > 0 && totalAsignados === numPersonas && (
+                <div className="info-bancaria">
+                  <h4 style={{margin:'0 0 10px 0', color:'#0b4ea6'}}>Resumen de Pago</h4>
+                  <p style={{margin:'0 0 5px 0'}}>Total a pagar: <strong>${totalPagar} MXN</strong></p>
+                  <p style={{margin:'0 0 5px 0'}}>Cuenta BBVA: <strong>{cuentaBancaria}</strong></p>
+                  <p style={{margin:'0 0 15px 0'}}>Concepto: <strong>{referenciaBancaria}</strong></p>
+                  
+                  <label style={{fontWeight:'bold', display:'block', marginBottom:'5px'}}>Sube tu comprobante (Foto o PDF)</label>
+                  <input type="file" accept="image/*,.pdf" onChange={e=>setComprobantePago(e.target.files[0])} style={{width:'100%'}}/>
+                </div>
               )}
+
+              <div className="nav-buttons" style={{justifyContent: 'flex-end'}}>
+                <button className="btn btn-primary" onClick={irSiguientePaso} disabled={totalAsignados !== numPersonas || !comprobantePago}>
+                  Siguiente <FaChevronRight />
+                </button>
+              </div>
             </div>
-            <button 
-              className="pre-registro-button pre-registro-button-primary"
-              onClick={handleSolicitarRegistro}
-              disabled={loading}
-              aria-busy={loading}
-            >
-              {loading ? '⏳ Enviando solicitud...' : '✅ Solicitar registro'}
-            </button>
-          </React.Fragment>
-        {/* El fragmento se cierra aquí, el botón de prueba rápida va fuera del fragmento */}
-        {/* Botón de prueba rápida eliminado */}
+          )}
+
+          {/* ======================= PASO 2 (ANTES PASO 3) ======================= */}
+          {pasoActual === 2 && (
+            <div>
+              <p style={{color:'#64748b', fontSize:'14px', marginBottom:'20px'}}>Sube los documentos requeridos. Puedes subir archivos en formato <strong>PDF, PNG o JPG</strong>.</p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
+                {requisitos.map((doc, idx) => (
+                  <div key={idx} style={{ border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '15px', textAlign: 'center', backgroundColor: documents[doc.documento] ? '#f0fdf4' : 'white' }}>
+                    
+                    <div style={{fontSize:'24px', marginBottom:'10px', color:'#0b4ea6'}}><FaFileAlt /></div>
+                    
+                    <h4 style={{fontSize:'13px', margin:'0 0 10px 0', color:'#334155'}}>{doc.nombre}</h4>
+                    
+                    {doc.documento === "fotografia" && fotoPreview && (
+                      <img src={fotoPreview} alt="Preview" style={{width:'100%', maxHeight:'120px', objectFit:'cover', borderRadius:'6px', marginBottom:'10px'}} />
+                    )}
+
+                    {documents[doc.documento] ? (
+                      <div style={{color:'#10b981', fontSize:'12px', fontWeight:'bold', marginBottom:'10px'}}>
+                        <FaCheckCircle /> {documents[doc.documento].name}
+                      </div>
+                    ) : (
+                      <div style={{color:'#fbbf24', fontSize:'12px', fontWeight:'bold', marginBottom:'10px'}}>
+                        Pendiente
+                      </div>
+                    )}
+
+                    <input type="file" id={`file-${doc.documento}`} accept={doc.accept} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
+                    <button onClick={() => document.getElementById(`file-${doc.documento}`).click()} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', width: '100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
+                      <FaUpload /> Subir Archivo
+                    </button>
+                    {doc.documento === 'formatoAfiliacion' && (
+                        <div style={{marginTop: '10px', fontSize: '11px'}}>
+                          <button 
+                            onClick={handleDownloadFormato}
+                            disabled={!documents.identificacion || !documents.fotografia}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: (!documents.identificacion || !documents.fotografia) ? '#94a3b8' : '#0b4ea6',
+                              textDecoration: 'underline',
+                              cursor: (!documents.identificacion || !documents.fotografia) ? 'not-allowed' : 'pointer',
+                              padding: 0
+                            }}
+                          >
+                            Descargar formato pre-llenado aquí
+                          </button>
+                        </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="nav-buttons">
+                <button className="btn btn-outline" disabled={loading} onClick={irPasoAnterior}>
+                  <FaChevronLeft /> Anterior
+                </button>
+                <button className="btn btn-success" disabled={loading || Object.keys(documents).length < 4} onClick={handleSolicitarRegistro}>
+                  {loading ? 'Enviando...' : <><FaCheckCircle /> Finalizar Registro</>}
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
@@ -794,3 +539,5 @@ function PreRegistroPresidente() {
 }
 
 export default PreRegistroPresidente;
+
+

@@ -12,7 +12,6 @@ const PresidenteEquipoReportes = lazy(() => import('./pages/PresidenteEquipo/Pre
 const PresidenteEquipoConfiguracion = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoConfiguracion'));
 const PresidenteEquipoEquipos = lazy(() => import('./pages/Equipos/PresidenteEquipoEquipos'));
 const PresidenteEquipoMisJugadores = lazy(() => import('./pages/Jugadores/PresidenteEquipoMisJugadores'));
-const CrearEquipo = lazy(() => import('./pages/Equipos/CrearEquipo'));
 const AdminEquipo = lazy(() => import('./pages/Equipos/AdminEquipo'));
 const InscribirEquipoALiga = lazy(() => import('./pages/Equipos/InscribirEquipoALiga'));
 const AdminSolicitudes = lazy(() => import('./pages/Admin/AdminSolicitudes'));
@@ -39,7 +38,6 @@ function App() {
           <Route path="/presidente-equipo/configuracion" element={<PresidenteEquipoConfiguracion />} />
           <Route path="/presidente-equipo/equipos" element={<PresidenteEquipoEquipos />} />
           <Route path="/presidente-equipo/mis-jugadores" element={<PresidenteEquipoMisJugadores />} />
-          <Route path="/presidente-equipo/crear-equipo" element={<CrearEquipo />} />
           <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<AdminEquipo />} />
           <Route path="/presidente-equipo/registro-jugadores" element={<RegistroJugadores />} />
           <Route path="/inscribir-equipo-liga/:equipoId" element={<InscribirEquipoALiga />} />
