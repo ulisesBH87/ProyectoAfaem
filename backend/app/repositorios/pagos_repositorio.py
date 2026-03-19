@@ -101,11 +101,18 @@ def obtener_afiliaciones_repo(db):
 def obtener_pagos_repo(db):
     return db.query(OrdenPago).all()
 
+#Admin valida el pago
 def estatus_pago_repo(db, orden_pago_id, estatus):
 
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     orden.EstatusPagoId = estatus
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == OrdenPago.UsuarioId).first()
+    persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
+
+    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+
+    presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
 
     db.commit()
 
