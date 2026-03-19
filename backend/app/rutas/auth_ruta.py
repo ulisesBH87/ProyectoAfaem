@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
@@ -25,8 +26,8 @@ def registrar_administrador(data: RegistroAdmin, db:Session = Depends(get_db)):
     }
 
 @router.post("/iniciar-sesion", response_model=TokenResponse)
-def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
-    usuarioIntentoSesion = iniciar_sesion(db, data.Correo, data.Contrasena)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
+    usuarioIntentoSesion = iniciar_sesion(db, form_data.username, form_data.password)
 
     if not usuarioIntentoSesion:
         raise HTTPException(
