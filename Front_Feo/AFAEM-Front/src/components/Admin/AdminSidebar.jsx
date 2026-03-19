@@ -2,17 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   FaHome, 
-  FaFootballBall, 
+  FaClipboardList, 
+  FaShieldAlt,
   FaUsers, 
-  FaClipboard, 
-  FaChartBar, 
-  FaCog,
+  FaUserShield, 
+  FaChartLine, 
+  FaCog, 
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight
 } from 'react-icons/fa';
 
-const DashboardSidebar = () => {
+const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -22,10 +23,9 @@ const DashboardSidebar = () => {
   }, [isCollapsed]);
 
   const menuItems = [
-    { label: 'Inicio', icon: <FaHome />, path: '/presidente-equipo' },
-    { label: 'Equipos', icon: <FaFootballBall />, path: '/presidente-equipo/equipos' },
-    { label: 'Jugadores', icon: <FaUsers />, path: '/presidente-equipo/mis-jugadores' },
-    { label: 'Solicitudes', icon: <FaClipboard />, path: '/presidente-equipo/solicitudes' },
+    { label: 'Tablero Principal', icon: <FaHome />, path: '/admin/dashboard' },
+    { label: 'Validar Solicitudes', icon: <FaClipboardList />, path: '/admin/solicitudes' },
+    { label: 'Validación de Pagos', icon: <FaShieldAlt />, path: '/admin/pagos' },
   ];
 
   const handleLogout = () => {
@@ -36,7 +36,7 @@ const DashboardSidebar = () => {
   return (
     <div style={{
       width: isCollapsed ? '80px' : '280px',
-      background: 'linear-gradient(180deg, #0b4ea6 0%, #052c61 100%)',
+      background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
       height: '100vh',
       position: 'fixed',
       left: 0,
@@ -44,7 +44,7 @@ const DashboardSidebar = () => {
       transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       display: 'flex',
       flexDirection: 'column',
-      color: '#e2e8f0',
+      color: '#cbd5e1',
       boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
       zIndex: 1000
     }}>
@@ -54,26 +54,26 @@ const DashboardSidebar = () => {
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
+        borderBottom: '1px solid rgba(255,255,255,0.05)'
       }}>
         <div style={{
           width: '40px',
           height: '40px',
-          background: 'white',
+          background: '#0b4ea6',
           borderRadius: '10px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '20px',
-          color: '#0b4ea6',
+          color: 'white',
           flexShrink: 0
         }}>
-          <FaFootballBall />
+          A
         </div>
         {!isCollapsed && (
           <div style={{ overflow: 'hidden' }}>
             <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'white', whiteSpace: 'nowrap' }}>AFAEM</h1>
-            <p style={{ fontSize: '10px', fontWeight: '500', margin: 0, color: '#94a3b8', textTransform: 'uppercase' }}>Presidente Equipo</p>
+            <p style={{ fontSize: '10px', fontWeight: '500', margin: 0, color: '#64748b', textTransform: 'uppercase' }}>Administrador</p>
           </div>
         )}
       </div>
@@ -92,21 +92,21 @@ const DashboardSidebar = () => {
                 padding: '12px 24px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                backgroundColor: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                borderLeft: `4px solid ${isActive ? 'white' : 'transparent'}`,
-                color: isActive ? 'white' : '#cbd5e1',
+                backgroundColor: isActive ? 'rgba(11, 78, 166, 0.1)' : 'transparent',
+                borderLeft: `4px solid ${isActive ? '#0b4ea6' : 'transparent'}`,
+                color: isActive ? 'white' : '#94a3b8',
                 marginBottom: '4px'
               }}
               onMouseEnter={(e) => {
                 if(!isActive) {
-                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                  e.currentTarget.style.color = '#e2e8f0';
                 }
               }}
               onMouseLeave={(e) => {
                 if(!isActive) {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#cbd5e1';
+                  e.currentTarget.style.color = '#94a3b8';
                 }
               }}
             >
@@ -124,7 +124,7 @@ const DashboardSidebar = () => {
       </nav>
 
       {/* FOOTER ACTIONS */}
-      <div style={{ padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+      <div style={{ padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div 
           onClick={handleLogout}
           style={{
@@ -132,10 +132,10 @@ const DashboardSidebar = () => {
             alignItems: 'center',
             padding: '12px 24px',
             cursor: 'pointer',
-            color: '#ff9494',
+            color: '#ef4444',
             transition: 'all 0.2s'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 148, 148, 0.1)'}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <FaSignOutAlt style={{ fontSize: '20px' }} />
@@ -164,4 +164,4 @@ const DashboardSidebar = () => {
   );
 };
 
-export default DashboardSidebar;
+export default AdminSidebar;

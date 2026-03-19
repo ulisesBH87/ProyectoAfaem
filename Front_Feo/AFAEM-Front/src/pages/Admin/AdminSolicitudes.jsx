@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
-import StatCard from '../../components/StatCard';
 import DashboardTable from '../../components/DashboardTable';
 import { getSolicitudes } from '../../services/solicitud';
+import AdminLayout from '../../components/Admin/AdminLayout';
+import { getSolicitudDetalle } from '../../services/admin';
+import Swal from 'sweetalert2';
 
 export default function AdminSolicitudes() {
   const navigate = useNavigate();
@@ -112,10 +112,69 @@ export default function AdminSolicitudes() {
     loadSolicitudes();
   }, [navigate]);
 
+  const handleVerDetalles = async (id) => {
+    try {
+      Swal.fire({
+        title: 'Cargando detalles...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const detalle = await getSolicitudDetalle(id);
+      
+      Swal.fire({
+        title: `Vista Rápida: Solicitud #${id}`,
+        html: `
+          <div style="text-align: left; font-size: 14px; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <p style="margin-bottom: 8px;"><strong>📋 Tipo:</strong> ${detalle.TipoSolicitud || 'N/A'}</p>
+            <p style="margin-bottom: 8px;"><strong>🔔 Estatus:</strong> ${detalle.EstatusSolicitud || 'N/A'}</p>
+            <p style="margin-bottom: 8px;"><strong>📅 Fecha:</strong> ${new Date(detalle.FechaSolicitud).toLocaleString()}</p>
+            <p style="margin-bottom: 8px;"><strong>👤 Usuario:</strong> ${detalle.Nombre} ${detalle.PrimerApellido}</p>
+            <p style="margin-bottom: 0;"><strong>🆔 CURP:</strong> ${detalle.CURP}</p>
+          </div>
+        `,
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      console.warn('⚠️ Fallback a vista limitada por error de backend:', error);
+      // Obtener datos básicos de la fila si están disponibles (pasados por parámetro o buscados)
+      const row = solicitudes.find(s => s.SolicitudId === id) || {};
+      
+      Swal.fire({
+        title: `Solicitud #${id} (Vista Limitada)`,
+        html: `
+          <div style="text-align: left; font-size: 13px;">
+            <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 6px; margin-bottom: 15px; color: #92400e;">
+               ⚠️ Los detalles completos (nombre, CURP) no están disponibles porque el Backend devolvió un error de esquema.
+            </div>
+            <p><strong>ID Usuario:</strong> ${row.UsuarioId || 'N/A'}</p>
+            <p><strong>Fecha:</strong> ${row.FechaSolicitud ? new Date(row.FechaSolicitud).toLocaleString() : 'N/A'}</p>
+            <p><strong>Estado ID:</strong> ${row.EstatusValidacion !== undefined ? row.EstatusValidacion : 'N/A'}</p>
+          </div>
+        `,
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0b4ea6'
+      });
+    }
+  };
+
+  const handleUpdateStatus = (id, label) => {
+    Swal.fire({
+      title: `${label} Solicitud`,
+      text: `La funcionalidad para ${label.toLowerCase()} solicitudes requiere un nuevo endpoint en el Backend que aún no está disponible.`,
+      icon: 'info',
+      confirmButtonText: 'Aceptar',
+      footer: '<small style="color: #64748b">Nota para el equipo: Falta implementar POST /solicitud/estatus</small>'
+    });
+  };
+
   const columns = [
     { 
-      key: 'Correo', 
-      label: 'Correo',
+      key: 'UsuarioId', 
+      label: 'ID Usuario',
       render: (value) => value || '-'
     },
     { 
@@ -173,7 +232,7 @@ export default function AdminSolicitudes() {
       render: (_, row) => (
         <div style={{ display: 'flex', gap: '8px' }}>
           <button 
-            onClick={() => alert('Ver detalles: ID ' + row.SolicitudId)}
+            onClick={() => handleVerDetalles(row.SolicitudId)}
             style={{
               padding: '6px 12px',
               backgroundColor: '#0b4ea6',
@@ -188,7 +247,7 @@ export default function AdminSolicitudes() {
             Ver
           </button>
           <button 
-            onClick={() => alert('Aprobar: ID ' + row.SolicitudId)}
+            onClick={() => handleUpdateStatus(row.SolicitudId, 'Aprobar')}
             style={{
               padding: '6px 12px',
               backgroundColor: '#28a745',
@@ -203,7 +262,7 @@ export default function AdminSolicitudes() {
             Aprobar
           </button>
           <button 
-            onClick={() => alert('Rechazar: ID ' + row.SolicitudId)}
+            onClick={() => handleUpdateStatus(row.SolicitudId, 'Rechazar')}
             style={{
               padding: '6px 12px',
               backgroundColor: '#dc3545',
@@ -224,96 +283,83 @@ export default function AdminSolicitudes() {
 
   if (loading) {
     return (
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail="" />
-        <div className="dashboard-container">
-          <DashboardHeader userEmail="" pageTitle="Cargando..." />
-          <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Cargando...</span>
-              </div>
-              <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando solicitudes...</p>
+      <AdminLayout title="Gestión de Solicitudes">
+        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Cargando...</span>
             </div>
+            <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando solicitudes...</p>
           </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Gestión de Solicitudes" />
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            {error && (
-              <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
-                <span className="alert-icon">⚠️</span>
-                <div className="alert-content">
-                  <p className="alert-message">{error}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="section-header" style={{ marginBottom: '30px' }}>
-              <h2 className="section-title">Solicitudes de Registro</h2>
-              <div className="section-actions">
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => window.location.reload()}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#0b4ea6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}
-                >
-                  🔄 Actualizar
-                </button>
-              </div>
+    <AdminLayout title="Gestión de Solicitudes">
+      <div className="dashboard-content">
+        {error && (
+          <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
+            <span className="alert-icon">⚠️</span>
+            <div className="alert-content">
+              <p className="alert-message">{error}</p>
             </div>
+          </div>
+        )}
 
-            <div className="card-grid">
-              <StatCard
-                icon="📋"
-                title="Total de Solicitudes"
-                value={stats.total.toString()}
-              />
-              <StatCard
-                icon="⏳"
-                title="Pendientes"
-                value={stats.pendientes.toString()}
-                iconType="warning"
-              />
-              <StatCard
-                icon="✅"
-                title="Aprobadas"
-                value={stats.aprobadas.toString()}
-                iconType="success"
-              />
-              <StatCard
-                icon="❌"
-                title="Rechazadas"
-                value={stats.rechazadas.toString()}
-                iconType="danger"
-              />
-            </div>
-
-            <DashboardTable
-              columns={columns}
-              data={solicitudes}
-              isLoading={loading}
-              emptyMessage="No hay solicitudes registradas"
-            />
+        <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Solicitudes de Registro</h2>
+          <div className="section-actions">
+            <button 
+              className="btn btn-primary"
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#0b4ea6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '14px'
+              }}
+            >
+              🔄 Actualizar
+            </button>
           </div>
         </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+          </div>
+          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '5px' }}>⏳</div>
+            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>PENDIENTES</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
+          </div>
+          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>APROBADAS</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.aprobadas}</div>
+          </div>
+          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '5px' }}>❌</div>
+            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>RECHAZADAS</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.rechazadas}</div>
+          </div>
+        </div>
+
+        <DashboardTable
+          columns={columns}
+          data={solicitudes}
+          isLoading={loading}
+          emptyMessage="No hay solicitudes registradas"
+        />
       </div>
-    </div>
+    </AdminLayout>
   );
 }

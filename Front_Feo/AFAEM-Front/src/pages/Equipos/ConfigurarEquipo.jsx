@@ -624,8 +624,10 @@ export default function ConfigurarEquipo() {
                       </button>
                       <button 
                         onClick={() => {
-                          if (!currentPlayer.firstName || !currentPlayer.insuranceType || Object.keys(currentPlayer.documents || {}).length < 4) {
-                            Swal.fire('Atención', 'Por favor completa todos los campos y sube los 4 documentos requeridos.', 'warning');
+                          const docs = currentPlayer.documents || {};
+                          const hasMinDocs = docs.ine && docs.foto && docs.formato;
+                          if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs) {
+                            Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona seguro y sube al menos INE, Foto y Formato para continuar (Pruebas).', 'warning');
                             return;
                           }
                           setPlayers([...players, currentPlayer]);

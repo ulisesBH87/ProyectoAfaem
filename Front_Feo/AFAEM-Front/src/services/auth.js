@@ -43,6 +43,13 @@ export async function resetPassword(email, token, nueva_contrasena) {
   return res.data;
 }
 
+// REGISTRAR ADMIN
+export async function registrarAdmin(datos) {
+  // EL SERVIDOR ESPERA { Nombre, PrimerApellido, SegundoApellido, Correo, Contrasena, RolId }
+  const res = await api.post('/auth/registrar_admin', datos);
+  return res.data;
+}
+
 // LOGIN
 export async function login(email, password) {
   // EL SERVIDOR ESPERA 'Correo' Y 'Contrasena' 
