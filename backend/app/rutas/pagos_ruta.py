@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from app.db.sesion import get_db
 
-from app.esquemas.pago_esquema import CrearOrdenPago, SeguroBase, AfiliacionesBase, ListaPagos
+from app.esquemas.pago_esquema import CrearOrdenPago, SeguroBase, AfiliacionesBase, ListaPagos, OrdenPagoIndividual
 from app.servicios.pagos_servicio import crear_orden_pago_servicio
 from app.core.seguridad import obtener_usuario_actual
 from app.servicios import pagos_servicio
@@ -45,8 +45,14 @@ def obtener_pagos(db:Session=Depends(get_db)):
 
     return pagos
 
+#Cambiar el estatus de pago
 @router.post("/estatus-pago")
 def estatus_pago(orden_pago_id: int, estatus: int, db:Session=Depends(get_db)):
     response = pagos_servicio.estatus_pago_servicio(db, orden_pago_id, estatus)
 
     return response
+
+@router.get("/{orden_pago_id}", response_model=OrdenPagoIndividual)
+def orden_pago_individual(orden_pago_id: int, db:Session=Depends(get_db)):
+
+    return pagos_servicio.orden_pago_individual_servicio(db, orden_pago_id)

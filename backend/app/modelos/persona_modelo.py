@@ -4,7 +4,7 @@ from app.db.base import Base
 
 class Personas(Base):
     __tablename__ = "Personas"
-
+    
     PersonaId = Column(Integer, primary_key=True)
     Nombre = Column(String(50),nullable=False)
     PrimerApellido = Column(String(50), nullable=False)
@@ -23,3 +23,5 @@ class Personas(Base):
     SexoRelacion = relationship("CatalogoSexo", back_populates="PersonaRelacion")
 
     FechaNacimiento = Column(Date, nullable=True)
+
+    PresidenteEquipoRelacion = relationship("PresidenteEquipo", back_populates="PersonaRelacion")

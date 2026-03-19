@@ -77,17 +77,19 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
         
         total += subtotal
         
-        orden_pago = pagos_repositorio.crear_orden_pago_repo(db, usuario_id, total)
+    orden_pago = pagos_repositorio.crear_orden_pago_repo(db, usuario_id, total)
         
-        for d in detalles:
-            pagos_repositorio.crear_detalle_pago_repo(db=db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
+    for d in detalles:
+        pagos_repositorio.crear_detalle_pago_repo(db=db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
             
-        db.commit()
+    pagos_repositorio.crear_presidente_equipo_repo(db, usuario_id)
+    db.commit()
+
         
-        return {
-            "orden_pago_id": orden_pago.OrdenPagoId,
-            "total": total
-        }
+    return {
+        "orden_pago_id": orden_pago.OrdenPagoId,
+        "total": total
+    }
         
     
 async def subir_comprobante_servicio(db, orden_id, archivo):
@@ -130,5 +132,12 @@ def obtener_pagos_servicio(db):
 
 def estatus_pago_servicio(db, orden_pago_id, estatus):
     response = pagos_repositorio.estatus_pago_repo(db, orden_pago_id, estatus)
-    
+
     return response
+
+def orden_pago_individual_servicio(db, orden_pago_id):
+
+    orden = pagos_repositorio.orden_pago_individual_repo(db, orden_pago_id)
+
+    return orden
+    

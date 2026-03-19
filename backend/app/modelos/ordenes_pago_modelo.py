@@ -17,4 +17,4 @@ class OrdenPago(Base):
 
     TotalPagar = Column(DECIMAL(7,2), nullable=False)
 
-    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="OrdenPagoRelacion")
+    OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="OrdenPagoRelacion", lazy="selectin")
