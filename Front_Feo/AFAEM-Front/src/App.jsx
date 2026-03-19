@@ -15,11 +15,16 @@ const PresidenteEquipoMisJugadores = lazy(() => import('./pages/Jugadores/Presid
 const AdminEquipo = lazy(() => import('./pages/Equipos/AdminEquipo'));
 const InscribirEquipoALiga = lazy(() => import('./pages/Equipos/InscribirEquipoALiga'));
 const AdminSolicitudes = lazy(() => import('./pages/Admin/AdminSolicitudes'));
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
+const AdminPagos = lazy(() => import('./pages/Admin/AdminPagos'));
+const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
+const AdminGuard = lazy(() => import('./routes/AdminGuard'));
 const RegistroJugadores = lazy(() => import('./pages/Jugadores/RegistroJugadores'));
 const ProximoPresidente = lazy(() => import('./pages/Auth/ProximoPresidente'));
 const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPresidente'));
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
+const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 
 function App() {
   return (
@@ -41,9 +46,28 @@ function App() {
           <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<AdminEquipo />} />
           <Route path="/presidente-equipo/registro-jugadores" element={<RegistroJugadores />} />
           <Route path="/inscribir-equipo-liga/:equipoId" element={<InscribirEquipoALiga />} />
+          
+          {/* RUTAS DE ADMINISTRADOR */}
+          <Route path="/registrar-admin" element={<RegistrarAdmin />} />
+          <Route path="/admin/dashboard" element={
+            <AdminGuard>
+              <AdminDashboard />
+            </AdminGuard>
+          } />
+          <Route path="/admin/solicitudes" element={
+            <AdminGuard>
+              <AdminSolicitudes />
+            </AdminGuard>
+          } />
+          <Route path="/admin/pagos" element={
+            <AdminGuard>
+              <AdminPagos />
+            </AdminGuard>
+          } />
           <Route path="/presidente-equipo/admin-solicitudes" element={<AdminSolicitudes />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
+          <Route path="/presidente-equipo/configurar-equipo" element={<ConfigurarEquipo />} />
         </Routes>
       </Suspense>
     </Router>

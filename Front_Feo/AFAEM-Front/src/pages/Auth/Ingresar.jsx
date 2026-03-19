@@ -61,7 +61,18 @@ export default function Ingresar() {
         localStorage.setItem('UsuarioId', data.id);
       }
       
-      navigate('/pre-registro-presidente');
+      const role = data?.usuario?.rol || data?.rol || '';
+      console.log('ROL USUARIO:', role);
+
+      if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
+        navigate('/admin/dashboard');
+      } else if (role === 'ENTRENADOR') {
+        navigate('/coach/dashboard');
+      } else if (role === 'PRESIDENTE_EQUIPO') {
+        navigate('/pre-registro-presidente');
+      } else {
+        navigate('/panel');
+      }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);
       setErr(typeof msg === 'object' ? JSON.stringify(msg) : msg);

@@ -39,6 +39,8 @@
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
+  margin-left: var(--sidebar-width, 280px);
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ==========================================

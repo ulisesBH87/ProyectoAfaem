@@ -155,9 +155,9 @@ export default function PresidenteEquipo() {
                 gap: '16px',
                 marginBottom: '40px'
               }}>
-                {/* BOTÓN 1: CREAR EQUIPO NUEVO */}
+                {/* BOTÓN 1: CONFIGURAR EQUIPO NUEVO */}
                 <button
-                  onClick={() => navigate('/presidente-equipo/crear-equipo')}
+                  onClick={() => navigate('/presidente-equipo/configurar-equipo')}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -184,7 +184,7 @@ export default function PresidenteEquipo() {
                   }}
                 >
                   <div style={{ fontSize: '32px' }}><FaAward /></div>
-                  <span>Crea equipo nuevo</span>
+                  <span>Configura equipo nuevo</span>
                 </button>
 
                 {/* BOTÓN 2: INSCRIBIR A LIGA */}
@@ -464,7 +464,7 @@ export default function PresidenteEquipo() {
                 }}>
                   <p style={{ margin: '0 0 10px 0', fontWeight: '600' }}>No tienes equipos aún</p>
                   <button
-                    onClick={() => navigate('/presidente-equipo/crear-equipo')}
+                    onClick={() => navigate('/presidente-equipo/configurar-equipo')}
                     style={{
                       backgroundColor: '#3d79ff',
                       color: 'white',
