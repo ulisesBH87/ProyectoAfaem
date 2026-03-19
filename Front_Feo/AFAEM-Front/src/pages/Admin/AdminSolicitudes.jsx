@@ -11,7 +11,6 @@ import Swal from 'sweetalert2';
 export default function AdminSolicitudes() {
   const navigate = useNavigate();
   const [solicitudes, setSolicitudes] = useState([]);
-  const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
@@ -46,7 +45,6 @@ export default function AdminSolicitudes() {
           return;
         }
 
-        setUserEmail(email);
         setLoading(true);
 
         console.log('🚀 Haciendo petición a /solicitud/solicitudes-usuarios...');

@@ -52,16 +52,17 @@ export async function registrarAdmin(datos) {
 
 // LOGIN
 export async function login(email, password) {
-  // EL SERVIDOR ESPERA 'Correo' Y 'Contrasena' 
-  const payload = { 
-    Correo: email, 
-    Contrasena: password 
+  // El backend usa OAuth2PasswordRequestForm: espera username/password en form-urlencoded.
+  const payload = new URLSearchParams({
+    username: email,
+    password,
+  });
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
   };
   
-  console.log('📤 Enviando login payload:', payload); // DEBUG
-  
   try {
-    const res = await api.post('/auth/iniciar-sesion', payload);
+    const res = await api.post('/auth/iniciar-sesion', payload.toString(), { headers });
     console.log('✅ Login exitoso:', res.data); // DEBUG
     return res.data;
   } catch (error) {
@@ -83,7 +84,7 @@ export async function pingBackend() {
   try {
     const res = await api.get('/');
     return { ok: true, url: api.defaults.baseURL + '/', res: res.data };
-  } catch (e) {
+  } catch {
     return { ok: false, tried: api.defaults.baseURL || API_BASE };
   }
 }

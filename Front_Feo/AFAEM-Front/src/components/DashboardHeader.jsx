@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaBell, FaSignOutAlt } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 import '../styles/dashboard.css';
 
 const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {

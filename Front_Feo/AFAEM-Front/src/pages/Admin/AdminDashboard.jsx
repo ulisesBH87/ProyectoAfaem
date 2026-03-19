@@ -17,7 +17,6 @@ const AdminDashboard = () => {
     totalIngreso: 0,
     equipos: 0
   });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,7 +42,7 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoading(false);
+        // no-op
       }
     };
     fetchData();

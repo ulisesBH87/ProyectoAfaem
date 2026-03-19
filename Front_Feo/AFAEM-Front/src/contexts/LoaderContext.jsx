@@ -1,9 +1,7 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useState } from 'react';
 import GlobalLoader from '../components/partials/Utils/GlobalLoader';
 
 const LoaderContext = createContext();
-
-export const useLoader = () => useContext(LoaderContext);
 
 export const LoaderProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);

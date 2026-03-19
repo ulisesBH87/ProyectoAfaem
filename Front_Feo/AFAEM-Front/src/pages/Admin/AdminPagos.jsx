@@ -39,7 +39,7 @@ const AdminPagos = () => {
         await updateEstatusPago(id, estatus);
         Swal.fire('¡Éxito!', `Pago ${label.toLowerCase()} correctamente.`, 'success');
         fetchPagos();
-      } catch (error) {
+      } catch {
         Swal.fire('Error', 'No se pudo actualizar el estatus del pago.', 'error');
       }
     }

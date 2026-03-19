@@ -22,8 +22,6 @@ function PreRegistroPresidente() {
   const [numPersonas, setNumPersonas] = useState(0);
   const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': 0, '2': 0, '3': 0 });
   const [comprobantePago, setComprobantePago] = useState(null);
-  const referenciaBancaria = 'AFAEM2026';
-  const cuentaBancaria = '1234567890';
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
     { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
@@ -320,7 +318,7 @@ function PreRegistroPresidente() {
 
       console.log("🚀 Enviando datos reales:", { curp, rfc, sexoId, fechaISO });
 
-      const response = await solicitudService.sendRegistroSolicitud(
+      await solicitudService.sendRegistroSolicitud(
         curp,
         rfc,
         sexoId,
@@ -347,10 +345,18 @@ function PreRegistroPresidente() {
       });
 
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Error al enviar la solicitud.');
+      const statusCode = err?.response?.status;
+      const backendDetail = err?.response?.data?.detail;
+      const safeDetail = typeof backendDetail === 'string' ? backendDetail : '';
+      const fallbackMsg = err?.response?.data?.message || err?.message || 'Error al enviar la solicitud.';
+      const userMsg = statusCode === 500
+        ? 'El servidor no pudo completar la solicitud de pre-registro. Ya registramos el intento; intenta nuevamente en unos minutos o avisa al equipo de backend.'
+        : fallbackMsg;
+
+      setError(userMsg);
       Swal.fire({
-        title: 'Error',
-        text: 'Hubo un problema al finalizar el registro.',
+        title: statusCode === 500 ? 'Error del servidor' : 'Error',
+        text: safeDetail || userMsg,
         icon: 'error'
       });
     } finally {

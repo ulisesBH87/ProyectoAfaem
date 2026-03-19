@@ -64,7 +64,7 @@ function App() {
               <AdminPagos />
             </AdminGuard>
           } />
-          <Route path="/presidente-equipo/admin-solicitudes" element={<AdminSolicitudes />} />
+          <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteEquipoSolicitudes />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
           <Route path="/presidente-equipo/configurar-equipo" element={<ConfigurarEquipo />} />

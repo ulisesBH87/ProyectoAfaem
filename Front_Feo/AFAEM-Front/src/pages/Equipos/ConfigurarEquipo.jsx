@@ -5,7 +5,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import DashboardHeader from '../../components/DashboardHeader';
-import { createTeam } from '../../services/teams';
 import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
 import { validarFotografia } from "../../services/foto";

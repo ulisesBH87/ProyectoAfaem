@@ -16,7 +16,6 @@ export default function PresidenteEquipoConfiguracion() {
   
   // Estado para saber si ya tiene un equipo registrado
   const [hasTeam, setHasTeam] = useState(false);
-  const [equipoValidado, setEquipoValidado] = useState(false);
 
   // ESTADOS PARA CREACIÓN DE EQUIPO (Paso 1)
   const [teamForm, setTeamForm] = useState({
@@ -85,7 +84,7 @@ export default function PresidenteEquipoConfiguracion() {
 
     try {
       const payload = { ...teamForm, email: userEmail };
-      const res = await createTeam(payload);
+      await createTeam(payload);
       
       Swal.fire({
         title: 'Equipo Guardado',
@@ -95,7 +94,7 @@ export default function PresidenteEquipoConfiguracion() {
       });
       
       setHasTeam(true); // Cambiamos de vista
-    } catch (error) {
+    } catch {
       Swal.fire('Error', 'No se pudo crear el equipo', 'error');
     }
   };
