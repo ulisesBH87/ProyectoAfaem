@@ -5,6 +5,11 @@ from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
 from app.esquemas.pago_esquema import VerComprobantes
 from datetime import datetime
 from app.esquemas.pago_esquema import SeguroBase
+from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
+from app.enums.roles_enum import Rol
+from app.modelos.usuario_modelo import Usuario
+from app.modelos.persona_modelo import Personas
 from sqlalchemy.orm import selectinload
 
 def obtener_tipo_afiliacion_repo(db, tipo_afiliacion_id):
@@ -56,6 +61,26 @@ def crear_detalle_pago_repo(db, orden_pago_id, detalle):
 
 def obtener_orden_repo(db, orden_id):
     return (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_id).first())
+
+def crear_presidente_equipo_repo(db, usuario_id):
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+
+    if not usuario:
+        raise Exception("Usuario no encontrado")
+
+    persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
+
+    if not persona:
+        raise Exception("Persona no encontrada")
+    
+    nuevo_presidente = PresidenteEquipo(
+        PersonaId = persona.PersonaId,
+        EstatusId = PresidenteEquipoEstatus.PAGO_PENDIENTE
+    )
+
+    db.add(nuevo_presidente)
+    
+    return nuevo_presidente
 
 def actualizar_comprobante_repo(db, orden_id, ruta):
     
