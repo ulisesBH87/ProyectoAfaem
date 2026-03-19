@@ -71,8 +71,7 @@ def cambiar_contrasena(data: CambiarContrasena, db: Session = Depends(get_db), u
 
 
 #oauth2
-"""
-@router.post("/iniciar-sesion", response_model=TokenResponse)
+@router.post("/iniciar-sesion-oauth", response_model=TokenResponse)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
     usuarioIntentoSesion = iniciar_sesion(db, form_data.username, form_data.password)
 
@@ -102,4 +101,3 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             "telefono": getattr(persona, "NumeroTelefono", None)
         }
     }
-"""
