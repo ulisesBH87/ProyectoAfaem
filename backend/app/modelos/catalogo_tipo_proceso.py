@@ -5,5 +5,5 @@ from app.db.base import Base
 class CatalogoTipoProceso(Base):
     __tablename__ = "CatalogoTipoProceso"
 
-    TipoProceso = Column(Integer, primary_key="True")
+    TipoProcesoId = Column(Integer, primary_key="True")
     Nombre = Column(String)
