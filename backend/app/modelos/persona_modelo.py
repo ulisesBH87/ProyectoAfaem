@@ -25,3 +25,7 @@ class Personas(Base):
     FechaNacimiento = Column(Date, nullable=True)
 
     PresidenteEquipoRelacion = relationship("PresidenteEquipo", back_populates="PersonaRelacion")
+
+    UsuarioRelacion = relationship("Usuario", back_populates="PersonaRelacion")
+    
+    EquipoTemporalJugadorRelacion = relationship("EquipoTemporalJugador", back_populates="PersonaRelacion")
