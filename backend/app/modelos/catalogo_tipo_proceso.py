@@ -7,3 +7,6 @@ class CatalogoTipoProceso(Base):
 
     TipoProcesoId = Column(Integer, primary_key="True")
     Nombre = Column(String)
+
+    EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="TipoProcesoRelacion")
+    
