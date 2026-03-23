@@ -10,6 +10,7 @@ from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
 from app.enums.roles_enum import Rol
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
+from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy.orm import selectinload
 
 def obtener_tipo_afiliacion_repo(db, tipo_afiliacion_id):
@@ -107,7 +108,11 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     orden.EstatusPagoId = estatus
-    usuario = db.query(Usuario).filter(Usuario.UsuarioId == OrdenPago.UsuarioId).first()
+    print("estatus a: ", estatus)
+    if estatus == 3: #aceptado
+        crear_equipo_temporal_repo(db, orden)
+
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
     persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
 
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
