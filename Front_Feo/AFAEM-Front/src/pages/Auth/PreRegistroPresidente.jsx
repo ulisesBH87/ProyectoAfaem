@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUpload, FaCheckCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
@@ -8,6 +8,7 @@ import solicitudService from '../../services/solicitud';
 import { validarFotografia } from "../../services/foto";
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
+import { API_BASE } from '../../config/config';
 
 function PreRegistroPresidente() {
   const navigate = useNavigate();
@@ -16,7 +17,39 @@ function PreRegistroPresidente() {
   // Estados Generales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pasoActual, setPasoActual] = useState(1); // 1 = Pago/Seguro, 2 = Documentos
+  const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Esperando validación, 3 = Documentos
+  const [estadoPago, setEstadoPago] = useState(null); // null, 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
+  const paymentInputRef = useRef(null);
+
+  // Verificar estado de pago al cargar
+  useEffect(() => {
+    const verificarEstadoPago = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.tiene_orden) {
+            setEstadoPago(data.estatus);
+            // Si ya tiene orden, ir a la pantalla correcta
+            if (data.estatus === 3) {
+              // Pago aprobado → mostrar pantalla de validado
+              setPasoActual(2);
+            } else if (data.estatus === 1) {
+              // Pago pendiente → mostrar pantalla de espera
+              setPasoActual(2);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('No se pudo verificar estado de pago:', err);
+      }
+    };
+    verificarEstadoPago();
+  }, []);
   
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState(0);
@@ -46,16 +79,18 @@ function PreRegistroPresidente() {
   const [fotoPreview, setFotoPreview] = useState(null);
 
   const requisitos = [
-    { documento: 'actaNacimiento', nombre: 'Acta de nacimiento', accept: '.pdf,image/png,image/jpeg,image/jpg' },
-    { documento: 'identificacion', nombre: 'Identificación oficial', accept: '.pdf,image/png,image/jpeg,image/jpg' },
-    { documento: 'fotografia', nombre: 'Fotografía (Imagen)', accept: 'image/*' },
-    { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', accept: '.pdf,image/png,image/jpeg,image/jpg' }
+    { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
+    { documento: 'identificacion', nombre: 'Identificación oficial' },
+    { documento: 'fotografia', nombre: 'Fotografía (Imagen)' },
+    { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', hasDownload: true }
   ];
 
   // ================== METODOS DE NAVEGACIÓN ==================
   const irSiguientePaso = () => {
     setError(null);
-    if (pasoActual === 1) {
+    if (pasoActual === 0) {
+      setPasoActual(1);
+    } else if (pasoActual === 1) {
       if (numPersonas <= 0) {
         setError('Debes ingresar el número de personas.');
         return;
@@ -69,20 +104,24 @@ function PreRegistroPresidente() {
         return;
       }
       
-      Swal.fire({
-        title: 'Comprobante guardado',
-        text: 'Hemos registrado tu pago para validación interna.',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
+      // Guardar datos de pre-registro
+      const preRegistroData = {
+        numPersonas,
+        asignacionSeguros,
+        totalPagar,
+        fechaRegistro: new Date().toISOString()
+      };
+      localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
+      
+      // Ir a pantalla de espera
+      setEstadoPago(1); // Pendiente
       setPasoActual(2);
     }
   };
 
   const irPasoAnterior = () => {
     setError(null);
-    if (pasoActual > 1) {
+    if (pasoActual > 0) {
       setPasoActual(pasoActual - 1);
     }
   };
@@ -150,10 +189,6 @@ function PreRegistroPresidente() {
         if (label.includes('documento')) extractedData.documento = value;
       });
 
-      if (!extractedData.curp || extractedData.curp === "No detectado") {
-        throw new Error('No se detectaron datos legibles en el documento.');
-      }
-
       setOcrResults(prev => ({
         ...prev,
         ...extractedData,
@@ -170,13 +205,9 @@ function PreRegistroPresidente() {
 
     } catch (err) {
       console.error("Error OCR:", err);
-      setOcrResults(prev => ({
-        ...prev,
-        [docKey]: `Error: No se pudo leer el documento.`
-      }));
       Swal.fire({
         title: 'Error OCR',
-        text: 'No se pudo leer el documento de forma automática. Podrás continuar, pero el formato no se pre-llenará.',
+        text: 'No se pudo leer el documento de forma automática. Podrás continuar.',
         icon: 'warning'
       });
     }
@@ -233,11 +264,7 @@ function PreRegistroPresidente() {
       Swal.fire('¡Listo!', 'El formato se ha generado correctamente.', 'success');
     } catch (err) {
       console.error("Error generando PDF:", err);
-      Swal.fire('Error', 'No se pudo generar el PDF pre-llenado. Se descargará el formato base.', 'error');
-      const link = document.createElement('a');
-      link.href = '/template.pdf';
-      link.download = 'Formato_Afiliacion_Base.pdf';
-      link.click();
+      Swal.fire('Error', 'No se pudo generar el PDF pre-llenado.', 'error');
     }
   };
 
@@ -282,50 +309,30 @@ function PreRegistroPresidente() {
     }
   };
 
-  // ================== ENVÍO FINAL ==================
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/');
+  };
+
   const handleSolicitarRegistro = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      // (Simulación de guardar documentos + solicitud al back)
-      // Como ya no pedimos datos, enviamos cadenas vacías o valores nulos
-      // Mapeamos los resultados del OCR a lo que el backend espera
       const curp = ocrResults.curp || '';
-      
-      // Derivamos RFC (primeros 10 de CURP + homoclave dummy)
       const rfc = curp ? (curp.substring(0, 10) + 'XXX') : '';
-      
-      // Derivamos SexoId del caracter 10 de la CURP (H=1, M=2, x=3)
       const sexoChar = curp ? curp.charAt(10).toUpperCase() : '';
       const sexoId = sexoChar === 'H' ? 1 : (sexoChar === 'M' ? 2 : 3);
       
-      // Convertimos Fecha de Nacimiento de DD/MM/YYYY a YYYY-MM-DD
       let fechaISO = '';
       if (ocrResults.fecha_nac && ocrResults.fecha_nac.includes('/')) {
           const parts = ocrResults.fecha_nac.split('/');
           if (parts.length === 3) {
               fechaISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
           }
-      } else if (curp && curp.length >= 10) {
-          // Fallback: extraer de la CURP (YYMMDD)
-          const yy = curp.substring(4, 6);
-          const mm = curp.substring(6, 8);
-          const dd = curp.substring(8, 10);
-          const anio = parseInt(yy) < 30 ? `20${yy}` : `19${yy}`;
-          fechaISO = `${anio}-${mm}-${dd}`;
       }
 
-      console.log("🚀 Enviando datos reales:", { curp, rfc, sexoId, fechaISO });
-
-      await solicitudService.sendRegistroSolicitud(
-        curp,
-        rfc,
-        sexoId,
-        fechaISO
-      );
+      await solicitudService.sendRegistroSolicitud(curp, rfc, sexoId, fechaISO);
       
-      // PERSISTIR DATOS PARA EL SIGUIENTE PASO (CONFIGURAR EQUIPO)
       const preRegistroData = {
         numPersonas,
         asignacionSeguros,
@@ -333,7 +340,6 @@ function PreRegistroPresidente() {
         fechaRegistro: new Date().toISOString()
       };
       localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
-      console.log("💾 Datos de pre-registro guardados en localStorage:", preRegistroData);
 
       Swal.fire({
         title: '¡Registro Exitoso!',
@@ -345,18 +351,10 @@ function PreRegistroPresidente() {
       });
 
     } catch (err) {
-      const statusCode = err?.response?.status;
-      const backendDetail = err?.response?.data?.detail;
-      const safeDetail = typeof backendDetail === 'string' ? backendDetail : '';
-      const fallbackMsg = err?.response?.data?.message || err?.message || 'Error al enviar la solicitud.';
-      const userMsg = statusCode === 500
-        ? 'El servidor no pudo completar la solicitud de pre-registro. Ya registramos el intento; intenta nuevamente en unos minutos o avisa al equipo de backend.'
-        : fallbackMsg;
-
-      setError(userMsg);
+      setError('Error al enviar la solicitud.');
       Swal.fire({
-        title: statusCode === 500 ? 'Error del servidor' : 'Error',
-        text: safeDetail || userMsg,
+        title: 'Error',
+        text: 'No se pudo enviar la solicitud.',
         icon: 'error'
       });
     } finally {
@@ -371,408 +369,433 @@ function PreRegistroPresidente() {
           min-height: 100vh;
           background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
           display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-        }
-        
-        .pre-registro-card {
-          background: white;
-          border-radius: 14px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-          overflow: hidden;
-          max-width: 650px;
-          width: 100%;
-          animation: slideUp 0.4s ease;
-        }
-        
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .pre-registro-header {
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-          padding: 30px 32px 20px;
-          text-align: center;
-        }
-        
-        .pre-registro-logo-group {
-          display: flex;
-          justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;
-        }
-        
-        .pre-registro-logo-item {
-          width: 45px; height: 45px; background: rgba(255, 255, 255, 0.12);
-          border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 5px;
-        }
-        
-        .pre-registro-logo-item img {
-          max-width: 100%; max-height: 100%; object-fit: contain; filter: brightness(1.1);
-        }
-        
-        .pre-registro-title {
-          color: white; font-size: 20px; font-weight: 700; margin: 0;
-        }
-
-        .stepper-container {
-          display: flex;
-          justify-content: space-around;
-          padding: 15px 32px;
-          background: #f1f5f9;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .step-item {
-          display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 5px;
-          color: #94a3b8;
-          font-size: 11px;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-
-        .step-item.active {
-          color: #0b4ea6;
-        }
-
-        .step-icon {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: white;
-          border: 2px solid #cbd5e1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 14px;
-          transition: all 0.3s ease;
-        }
-
-        .step-item.active .step-icon {
-          border-color: #0b4ea6;
-          background: #0b4ea6;
-          color: white;
-        }
-        .step-item.completed .step-icon {
-          border-color: #10b981;
-          background: #10b981;
-          color: white;
+          padding: 40px 20px;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
         
-        .pre-registro-body {
-          padding: 30px 32px;
-        }
-
-        .info-bancaria {
-          background: #e0f2fe;
-          border: 1px solid #38bdf8;
-          border-radius: 8px;
-          padding: 15px;
-          margin-top: 15px;
-        }
-
-        .nav-buttons {
+        .header-logos {
+          width: 100%;
+          max-width: 1000px;
           display: flex;
           justify-content: space-between;
-          margin-top: 25px;
-          gap: 15px;
-        }
-
-        .btn {
-          padding: 12px 20px;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 8px;
-          border: none;
-          transition: all 0.2s ease;
+          margin-bottom: 40px;
         }
 
-        .btn-outline {
+        .afaem-logo { height: 60px; }
+        .fmf-logos { height: 40px; display: flex; gap: 20px; }
+        
+        .card-main {
           background: white;
-          border: 1px solid #cbd5e1;
-          color: #475569;
+          border-radius: 20px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+          width: 100%;
+          max-width: 800px;
+          overflow: hidden;
+          animation: fadeIn 0.5s ease;
         }
-        .btn-outline:hover { background: #f8fafc; }
 
-        .btn-primary {
-          background: #0b4ea6;
-          color: white;
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .btn-primary:hover { background: #063f82; }
+
+        .welcome-content {
+          padding: 60px 40px;
+          text-align: center;
+        }
+
+        .title-large { font-size: 32px; font-weight: 800; color: #1e293b; margin-bottom: 10px; }
+        .subtitle { font-size: 18px; font-weight: 600; color: #475569; margin-bottom: 30px; }
+        .welcome-text { font-size: 16px; color: #64748b; line-height: 1.6; margin: 30px 0; border-top: 1px solid #e2e8f0; padding-top: 30px; }
+
+        .btn-blue {
+          background: #5d87e5;
+          color: white;
+          border: none;
+          padding: 14px 60px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 16px;
+          cursor: pointer;
+          transition: transform 0.2s;
+        }
+        .btn-blue:hover { transform: scale(1.02); background: #4a74d1; }
+
+        .link-logout { color: #64748b; text-decoration: none; font-size: 14px; margin-top: 20px; display: inline-block; }
         
-        .btn-success {
-          background: #10b981;
-          color: white;
+        /* Proceso Header */
+        .process-header {
+          background: #f8fafc;
+          padding: 20px;
+          text-align: center;
+          border-bottom: 1px solid #e2e8f0;
         }
-        .btn-success:hover { background: #059669; }
+        .process-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 20px; }
+        .step-icons { display: flex; justify-content: center; gap: 60px; }
+        .step-icon-item { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #94a3b8; }
+        .step-icon-item.active { color: #1e293b; }
+        .icon-circle { width: 44px; height: 44px; border-radius: 50%; background: #94a3b8; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .step-icon-item.active .icon-circle { background: #0b4ea6; }
 
+        .content-body { padding: 30px 40px; }
+        .section-title-small { font-size: 16px; font-weight: 800; color: #1e293b; text-align: center; margin-bottom: 25px; }
+        
+        /* Ocultar flechas de numero */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+
+        .input-group { 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          gap: 20px; 
+          margin-bottom: 30px; 
+          background: #f8fafc;
+          padding: 15px;
+          border-radius: 12px;
+        }
+        .input-label { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0; }
+        .input-number { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 16px; width: 80px; text-align: center; }
+
+        .insurance-card {
+          background: #f1f7ff;
+          border-radius: 12px;
+          padding: 15px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+        .insurance-info h4 { font-size: 15px; font-weight: 800; color: #0b4ea6; margin-bottom: 2px; }
+        .insurance-info p { font-size: 11px; color: #64748b; margin: 0; }
+        .insurance-input { width: 60px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; }
+
+        .assigned-bar {
+          background: #f0fdf4;
+          border-radius: 8px;
+          padding: 10px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 13px;
+          font-weight: 700;
+          color: #166534;
+          margin: 20px 0;
+        }
+
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
+        .summary-card { border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; }
+        .summary-card h5 { font-size: 15px; font-weight: 800; color: #0b4ea6; margin-bottom: 20px; }
+        .summary-row { display: flex; justify-content: space-between; font-size: 13px; color: #475569; margin-bottom: 12px; }
+        .total-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; color: #0b4ea6; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+
+        .bank-info-item { font-size: 13px; margin-bottom: 12px; }
+        .bank-info-label { color: #64748b; display: block; margin-bottom: 2px; }
+        .bank-info-value { font-weight: 700; color: #1e293b; }
+        .referencia-badge { background: #fffbeb; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+
+        .upload-proof { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 30px; margin-top: 30px; text-align: left; }
+        .file-input-custom { margin-top: 15px; display: flex; gap: 10px; align-items: center; }
+        .btn-outline { border: 1px solid #cbd5e1; background: white; padding: 8px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+
+        /* Step 2 Documentos */
+        .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .doc-card { 
+          border: 1px dashed #cbd5e1; 
+          border-radius: 16px; 
+          padding: 24px; 
+          text-align: center; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center;
+          transition: border-color 0.2s;
+        }
+        .doc-card:hover { border-color: #0b4ea6; }
+        .doc-card.success { background: #f0fdf4; border-style: solid; border-color: #10b981; }
+        
+        .doc-title { font-size: 14px; font-weight: 800; color: #0b4ea6; margin: 15px 0 10px; }
+        .status-badge { padding: 2px 12px; border-radius: 12px; font-size: 10px; font-weight: 800; color: white; margin-bottom: 15px; text-transform: uppercase; }
+        .file-name { font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        
+        .doc-actions { display: flex; gap: 8px; width: 100%; margin-bottom: 15px; }
+        .btn-doc { flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
+        .btn-download { flex: 1; background: #0b4ea6; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
+        .link-details { font-size: 11px; color: #64748b; text-decoration: underline; cursor: pointer; }
+
+        .footer-nav { display: flex; justify-content: center; gap: 20px; margin-top: 40px; flex-wrap: wrap; }
+        .btn-nav-blue { background: #5d87e5; color: white; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .btn-nav-gray { background: #f1f5f9; color: #475569; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .btn-nav-test { background: #f59e0b; color: white; border: none; padding: 12px 40px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px; transition: transform 0.2s; }
+        .btn-nav-test:hover { transform: scale(1.02); background: #d97706; }
       `}</style>
-      
-      <div className="pre-registro-card">
-        <div className="pre-registro-header">
-          <div className="pre-registro-logo-group">
-            <div className="pre-registro-logo-item"><img src={AfaemLogo} alt="AFAEM" /></div>
-            <div className="pre-registro-logo-item"><img src={FmfLogo} alt="FMF" /></div>
-            <div className="pre-registro-logo-item"><img src={AmateurLogo} alt="Sector Amateur" /></div>
-          </div>
-          <h1 className="pre-registro-title">Pre-registro Presidente</h1>
+
+      {/* HEADER LOGOS */}
+      <div className="header-logos">
+        <img src={AfaemLogo} alt="AFAEM" className="afaem-logo" />
+        <div className="fmf-logos">
+          <img src={FmfLogo} alt="FMF" />
+          <img src={AmateurLogo} alt="Amateur" />
         </div>
+      </div>
 
-        {/* STEPPER */}
-        <div className="stepper-container">
-          <div className={`step-item ${pasoActual >= 1 ? 'active' : ''} ${pasoActual > 1 ? 'completed' : ''}`}>
-            <div className="step-icon"><FaMoneyBillWave /></div>
-            <span>Cuotas</span>
+      <div className="card-main">
+        {/* PASO 0: BIENVENIDA */}
+        {pasoActual === 0 && (
+          <div className="welcome-content">
+            <h1 className="title-large">Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}</h1>
+            <p className="subtitle">Comencemos con tu registro inicial</p>
+            <p className="welcome-text">
+              Para activar tu cuenta y comenzar a gestionar tu equipo, necesitamos completar dos pasos.
+            </p>
+            <button className="btn-blue" onClick={irSiguientePaso}>Continuar</button>
+            <br />
+            <a href="#" className="link-logout" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
           </div>
-          <div className={`step-item ${pasoActual >= 2 ? 'active' : ''}`}>
-            <div className="step-icon"><FaFileAlt /></div>
-            <span>Documentos</span>
-          </div>
-        </div>
-        
-        <div className="pre-registro-body">
-          {error && (
-            <div style={{background: '#fee', color: '#d32f2f', padding: '12px', borderRadius: '8px', marginBottom: '20px', borderLeft: '4px solid #d32f2f'}}>
-              ⚠️ {error}
-            </div>
-          )}
+        )}
 
-          {/* ======================= PASO 1 (ANTES PASO 2) ======================= */}
-          {pasoActual === 1 && (
-            <div>
-              <p style={{color:'#64748b', fontSize:'14px', marginBottom:'20px'}}>Antes de subir tus documentos, debes definir la cuota de seguro de tu equipo inicial.</p>
-              
-              <div style={{marginBottom:'15px'}}>
-                <label style={{fontWeight:'bold', display:'block', marginBottom:'5px'}}>¿Cuántas personas tendrá tu equipo inicialmente?</label>
-                <input type="number" min={1} value={numPersonas} onChange={e=>setNumPersonas(Number(e.target.value))} style={{padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1', width:'100px'}} />
+        {/* PROCESO HEADER (PASO 1 Y 2) */}
+        {(pasoActual === 1 || pasoActual === 3) && (
+          <div className="process-header">
+            <h2 className="process-title">Proceso de activación</h2>
+            <div className="step-icons">
+              <div className={`step-icon-item ${pasoActual === 1 ? 'active' : ''}`}>
+                <div className="icon-circle"><FaMoneyBillWave /></div>
+                CUOTAS
               </div>
-
-              <div style={{marginBottom:'20px'}}>
-                <label style={{fontWeight:'bold', display:'block', marginBottom:'10px'}}>Distribución de Seguros (Obligatorio)</label>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
-                  {catalogoSeguros.map(seg => (
-                    <div key={seg.id} style={{padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc'}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px'}}>
-                        <div>
-                          <span style={{fontWeight: '600', color: '#1e293b'}}>{seg.nombre}</span>
-                          <span style={{marginLeft: '8px', color: '#0b4ea6', fontWeight: 'bold'}}>${seg.precio} c/u</span>
-                        </div>
-                        <input 
-                          type="number" 
-                          min={0} 
-                          value={asignacionSeguros[seg.id]} 
-                          onChange={e => {
-                            const val = parseInt(e.target.value) || 0;
-                            setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val }));
-                          }}
-                          style={{width: '70px', padding: '5px', borderRadius: '4px', border: '1px solid #cbd5e1'}}
-                        />
-                      </div>
-                      <p style={{margin: 0, fontSize: '12px', color: '#64748b'}}>{seg.descripcion}</p>
-                    </div>
-                  ))}
-                </div>
-                
-                <div style={{marginTop: '15px', padding: '10px', borderRadius: '6px', background: jugadoresRestantes === 0 ? '#f0fdf4' : (jugadoresRestantes < 0 ? '#fef2f2' : '#fff7ed'), border: `1px solid ${jugadoresRestantes === 0 ? '#22c55e' : (jugadoresRestantes < 0 ? '#ef4444' : '#f97316')}`}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
-                    <span>Total Jugadores: {numPersonas}</span>
-                    <span style={{color: jugadoresRestantes === 0 ? '#15803d' : (jugadoresRestantes < 0 ? '#b91c1c' : '#c2410c')}}>
-                      {jugadoresRestantes === 0 ? '✓ Todos asignados' : (jugadoresRestantes < 0 ? `⚠ Exceso: ${Math.abs(jugadoresRestantes)}` : `Pendientes: ${jugadoresRestantes}`)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {numPersonas > 0 && totalAsignados === numPersonas && (
-                <div style={{ marginTop: '30px', animation: 'slideUp 0.4s ease' }}>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                    gap: '20px',
-                    marginBottom: '25px'
-                  }}>
-                    {/* TARJETA CUOTAS */}
-                    <div style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '20px',
-                      backgroundColor: 'white',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-                    }}>
-                      <h5 style={{ marginBottom: '15px', color: '#0b4ea6', fontSize: '16px', fontWeight: 'bold' }}>
-                         Cuotas correspondientes
-                      </h5>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {catalogoSeguros.map(seg => (
-                          asignacionSeguros[seg.id] > 0 && (
-                            <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
-                              <span style={{ color: '#64748b' }}>{seg.nombre} (x{asignacionSeguros[seg.id]}):</span>
-                              <strong style={{ color: '#0b4ea6' }}>${seg.precio * asignacionSeguros[seg.id]}</strong>
-                            </div>
-                          )
-                        ))}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '10px', marginTop: '5px' }}>
-                          <span style={{ fontWeight: 'bold', color: '#1e293b' }}>Total a pagar:</span>
-                          <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#0b4ea6', background: '#dbeafe', padding: '4px 10px', borderRadius: '6px' }}>
-                            ${totalPagar}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* TARJETA INFO BANCARIA */}
-                    <div style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '20px',
-                      backgroundColor: 'white',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
-                    }}>
-                      <h5 style={{ marginBottom: '15px', color: '#0b4ea6', fontSize: '16px', fontWeight: 'bold' }}>
-                        Depósito o transferencia
-                      </h5>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                        <div>
-                          <small style={{ color: '#64748b', display: 'block' }}>Banco:</small>
-                          <strong style={{ color: '#1e293b' }}>{bankInfo.banco}</strong>
-                        </div>
-                        <div>
-                          <small style={{ color: '#64748b', display: 'block' }}>Cuenta:</small>
-                          <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0b4ea6', fontWeight: 'bold' }}>{bankInfo.cuenta}</code>
-                        </div>
-                        <div>
-                          <small style={{ color: '#64748b', display: 'block' }}>CLABE:</small>
-                          <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0b4ea6', fontWeight: 'bold' }}>{bankInfo.clabe}</code>
-                        </div>
-                        <div>
-                          <small style={{ color: '#64748b', display: 'block' }}>Referencia:</small>
-                          <span style={{ background: '#fef08a', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '11px' }}>{bankInfo.referencia}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SUBIDA DE COMPROBANTE INTEGRADA */}
-                  <div style={{
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    backgroundColor: '#f8fafc'
-                  }}>
-                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px', color: '#1e293b' }}>
-                      Sube tu comprobante de pago
-                    </label>
-                    <input 
-                      type="file" 
-                      accept="image/*,.pdf" 
-                      onChange={e => setComprobantePago(e.target.files[0])} 
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        backgroundColor: 'white',
-                        cursor: 'pointer'
-                      }} 
-                    />
-                    {comprobantePago && (
-                      <div style={{ marginTop: '10px', color: '#059669', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        ✅ {comprobantePago.name}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="nav-buttons" style={{justifyContent: 'flex-end'}}>
-                <button className="btn btn-primary" onClick={irSiguientePaso} disabled={totalAsignados !== numPersonas || !comprobantePago}>
-                  Siguiente <FaChevronRight />
-                </button>
+              <div className={`step-icon-item ${pasoActual === 3 ? 'active' : ''}`}>
+                <div className="icon-circle"><FaFileAlt /></div>
+                DOCUMENTOS
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ======================= PASO 2 (ANTES PASO 3) ======================= */}
-          {pasoActual === 2 && (
-            <div>
-              <p style={{color:'#64748b', fontSize:'14px', marginBottom:'20px'}}>Sube los documentos requeridos. Puedes subir archivos en formato <strong>PDF, PNG o JPG</strong>.</p>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
-                {requisitos.map((doc, idx) => (
-                  <div key={idx} style={{ border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '15px', textAlign: 'center', backgroundColor: documents[doc.documento] ? '#f0fdf4' : 'white' }}>
-                    
-                    <div style={{fontSize:'24px', marginBottom:'10px', color:'#0b4ea6'}}><FaFileAlt /></div>
-                    
-                    <h4 style={{fontSize:'13px', margin:'0 0 10px 0', color:'#334155'}}>{doc.nombre}</h4>
-                    
-                    {doc.documento === "fotografia" && fotoPreview && (
-                      <img src={fotoPreview} alt="Preview" style={{width:'100%', maxHeight:'120px', objectFit:'cover', borderRadius:'6px', marginBottom:'10px'}} />
-                    )}
+        {/* PASO 1: CUOTAS */}
+        {pasoActual === 1 && (
+          <div className="content-body">
+            <h3 className="section-title-small">Selecciona el tipo de seguro para tu plantilla inicial</h3>
+            
+            <div className="input-group">
+              <label className="input-label">¿Cuántas personas tendrá tu equipo inicialmente?</label>
+              <input 
+                type="number" 
+                className="input-number" 
+                value={numPersonas} 
+                onChange={(e) => setNumPersonas(Number(e.target.value))} 
+              />
+            </div>
 
-                    {documents[doc.documento] ? (
-                      <div style={{color:'#10b981', fontSize:'12px', fontWeight:'bold', marginBottom:'10px'}}>
-                        <FaCheckCircle /> {documents[doc.documento].name}
-                      </div>
-                    ) : (
-                      <div style={{color:'#fbbf24', fontSize:'12px', fontWeight:'bold', marginBottom:'10px'}}>
-                        Pendiente
-                      </div>
-                    )}
+            <p style={{ fontSize: '12px', fontWeight: '800', textAlign: 'left', marginBottom: '20px' }}>
+              Distribución de Seguros (Obligatorio)
+            </p>
 
-                    <input type="file" id={`file-${doc.documento}`} accept={doc.accept} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
-                    <button onClick={() => document.getElementById(`file-${doc.documento}`).click()} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', width: '100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
-                      <FaUpload /> Subir Archivo
-                    </button>
-                    {doc.documento === 'formatoAfiliacion' && (
-                        <div style={{marginTop: '10px', fontSize: '11px'}}>
-                          <a 
-                            href="#" 
-                            onClick={(e) => { 
-                              e.preventDefault(); 
-                              if (documents.identificacion && documents.fotografia) {
-                                handleDownloadFormato(); 
-                              }
-                            }}
-                            style={{ 
-                              color: (!documents.identificacion || !documents.fotografia) ? '#94a3b8' : '#003366', 
-                              fontWeight: 'bold', 
-                              textDecoration: 'underline',
-                              cursor: (!documents.identificacion || !documents.fotografia) ? 'not-allowed' : 'pointer',
-                              fontSize: '11px'
-                            }}
-                          >
-                            Descargar formato pre-llenado aquí
-                          </a>
-                        </div>
-                    )}
-                  </div>
+            {catalogoSeguros.map(seg => (
+              <div key={seg.id} className="insurance-card">
+                <div className="insurance-info">
+                  <h4>{seg.nombre} <span style={{fontSize: '14px', color: '#5d87e5'}}>${seg.precio} c/u</span></h4>
+                  <p>{seg.descripcion}</p>
+                </div>
+                <input 
+                  type="number" 
+                  className="insurance-input" 
+                  value={asignacionSeguros[seg.id]} 
+                  onChange={(e) => setAsignacionSeguros({...asignacionSeguros, [seg.id]: Number(e.target.value)})} 
+                />
+              </div>
+            ))}
+
+            <div className="assigned-bar">
+              <span>Jugadores asignados: {totalAsignados}/{numPersonas}</span>
+              {totalAsignados === numPersonas ? <span style={{color: '#166534'}}>Todos asignados</span> : <span style={{color: '#ef4444'}}>Pendientes</span>}
+            </div>
+
+            <p style={{ fontSize: '11px', color: '#64748b', textAlign: 'left' }}>
+              Verifica que la distribución sea correcta antes de continuar. Esta información se utilizará para el registro inicial.
+            </p>
+
+            <div className="summary-grid">
+              <div className="summary-card">
+                <h5>Cuotas correspondientes</h5>
+                {catalogoSeguros.map(seg => (
+                  asignacionSeguros[seg.id] > 0 && (
+                    <div key={seg.id} className="summary-row">
+                      <span>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                      <span>${seg.precio * asignacionSeguros[seg.id]}</span>
+                    </div>
+                  )
                 ))}
+                <div className="total-row">
+                  <span>Total a pagar:</span>
+                  <span>${totalPagar}</span>
+                </div>
               </div>
 
-              <div className="nav-buttons">
-                <button className="btn btn-outline" disabled={loading} onClick={irPasoAnterior}>
-                  <FaChevronLeft /> Anterior
-                </button>
-                <button 
-                  className="btn btn-success" 
-                  disabled={loading || !documents.identificacion || !documents.fotografia || !documents.formatoAfiliacion} 
-                  onClick={handleSolicitarRegistro}
-                >
-                  {loading ? 'Enviando...' : <><FaCheckCircle /> Finalizar Registro</>}
-                </button>
+              <div className="summary-card">
+                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                  <h5>Depósito o transferencia</h5>
+                  <span>📋</span>
+                </div>
+                <div className="bank-info-item">
+                  <span className="bank-info-label">Banco:</span>
+                  <span className="bank-info-value">{bankInfo.banco}</span>
+                </div>
+                <div className="bank-info-item">
+                  <span className="bank-info-label">Cuenta:</span>
+                  <span className="bank-info-value">{bankInfo.cuenta}</span>
+                </div>
+                <div className="bank-info-item">
+                  <span className="bank-info-label">CLABE:</span>
+                  <span className="bank-info-value">{bankInfo.clabe}</span>
+                </div>
+                <div className="bank-info-item">
+                  <span className="bank-info-label">Referencia obligatoria:</span>
+                  <span className="referencia-badge">{bankInfo.referencia}</span>
+                </div>
               </div>
             </div>
-          )}
 
-        </div>
+            <div className="upload-proof">
+              <h5 style={{fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0}}>Sube tu comprobante de pago</h5>
+              <div className="file-input-custom">
+                <button className="btn-outline" onClick={() => paymentInputRef.current.click()}>Seleccionar archivo</button>
+                <input 
+                  type="file" 
+                  ref={paymentInputRef} 
+                  style={{display: 'none'}} 
+                  accept="image/*,.pdf" 
+                  onChange={e => setComprobantePago(e.target.files[0])} 
+                />
+                <span style={{fontSize: '11px', color: '#64748b'}}>{comprobantePago ? comprobantePago.name : 'Sin archivos seleccionados'}</span>
+              </div>
+              <p style={{ fontSize: '11px', color: '#475569', marginTop: '20px' }}>
+                Asegúrate de que el comprobante sea legible y contenga la referencia indicada. Tu comprobante será validado en un plazo de 24 a 48 horas hábiles.
+              </p>
+            </div>
+
+            <div className="footer-nav">
+              <button className="btn-nav-blue" onClick={irSiguientePaso} disabled={totalAsignados !== numPersonas || !comprobantePago}>Siguiente</button>
+              <button className="btn-nav-test" onClick={() => {
+                const preRegistroData = {
+                  numPersonas: numPersonas || 15,
+                  asignacionSeguros,
+                  totalPagar: totalPagar || 2250,
+                  fechaRegistro: new Date().toISOString()
+                };
+                localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
+                setPasoActual(3);
+              }}>Siguiente paso (pruebas) ⚡</button>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 2: ESPERANDO VALIDACIÓN / PAGO VALIDADO */}
+        {pasoActual === 2 && (
+          <div className="welcome-content">
+            {estadoPago === 3 ? (
+              /* PAGO VALIDADO */
+              <>
+                <h1 className="title-large">Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}</h1>
+                <div style={{
+                  display: 'inline-block',
+                  background: '#10b981',
+                  color: 'white',
+                  padding: '6px 24px',
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  marginBottom: '10px'
+                }}>Pago validado</div>
+                <p className="welcome-text">
+                  Tu comprobante de pago ha sido verificado correctamente. Ahora puedes continuar con la carga de los documentos.
+                </p>
+                <button className="btn-blue" onClick={() => setPasoActual(3)}>Continuar con documentos</button>
+                <br />
+                <a href="#" className="link-logout" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
+              </>
+            ) : (
+              /* ESPERANDO VALIDACIÓN */
+              <>
+                <h1 className="title-large">Comprobante enviado correctamente</h1>
+                <div className="welcome-text" style={{ textAlign: 'left' }}>
+                  <p>Hemos recibido tu comprobante de pago. Será validado en un plazo de 3 a 5 días hábiles.<br/>
+                  Una vez validado, podrás continuar con la carga de los siguientes documentos:</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', margin: '20px 0', fontSize: '14px' }}>
+                    <span>• Acta de nacimiento</span>
+                    <span>• Fotografía</span>
+                    <span>• Identificación oficial</span>
+                    <span>• Formato de afiliación firmado</span>
+                  </div>
+                  <p style={{ fontSize: '14px', color: '#475569' }}>
+                    Asegúrate de contar con estos archivos en formato digital para agilizar tu registro. Formatos permitidos: PDF, PNG o JPG.
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#64748b', fontStyle: 'italic' }}>
+                    Por el momento, no es posible realizar más acciones hasta que el pago sea validado.<br/>
+                    Puedes cerrar sesión o esta ventana y continuar más tarde.
+                  </p>
+                </div>
+                <button style={{
+                  background: '#64748b',
+                  color: 'white',
+                  border: 'none',
+                  padding: '14px 60px',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  fontSize: '16px',
+                  cursor: 'pointer'
+                }} onClick={handleLogout}>Cerrar sesión</button>
+                <br />
+                <button className="btn-nav-test" style={{ marginTop: '15px' }} onClick={() => setPasoActual(3)}>Siguiente paso (pruebas) ⚡</button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* PASO 3: DOCUMENTOS */}
+        {pasoActual === 3 && (
+          <div className="content-body">
+            <h3 className="section-title-small">Sube tus documentos para completar tu registro</h3>
+            <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', marginBottom: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
+              Asegúrate de que sean legibles. Formatos permitidos: PDF, PNG o JPG
+            </p>
+
+            <div className="doc-grid">
+              {requisitos.map((doc, idx) => {
+                const isUploaded = !!documents[doc.documento];
+                const status = isUploaded ? 'En Revisión' : 'Pendiente';
+                const color = isUploaded ? '#10b981' : '#f59e0b';
+
+                return (
+                  <div key={idx} className={`doc-card ${isUploaded ? 'success' : ''}`}>
+                    <div style={{fontSize: '40px', color: '#0b4ea6'}}><FaFileAlt /></div>
+                    <h4 className="doc-title">{doc.nombre}</h4>
+                    <div className="status-badge" style={{background: color}}>{status}</div>
+                    <div className="file-name">{isUploaded ? documents[doc.documento].name : 'Nombre del archivo'}</div>
+                    <div className="doc-actions">
+                      {doc.hasDownload && <button className="btn-download" onClick={handleDownloadFormato}>Descargar formato</button>}
+                      <button className="btn-doc" onClick={() => document.getElementById(`file-${doc.documento}`).click()}>Seleccionar archivo</button>
+                      <input type="file" id={`file-${doc.documento}`} style={{display: 'none'}} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
+                    </div>
+                    <span className="link-details">Ver detalles</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="footer-nav">
+              <button className="btn-nav-gray" onClick={() => setPasoActual(2)}>Anterior</button>
+              <button className="btn-nav-blue" onClick={handleSolicitarRegistro}>Finalizar</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
