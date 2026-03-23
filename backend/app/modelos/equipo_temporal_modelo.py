@@ -13,7 +13,7 @@ class EquipoTemporal(Base):
     UsuarioId = Column(ForeignKey("Usuarios.UsuarioId"), nullable=False)
     UsuarioRelacion = relationship("Usuario", back_populates="EquipoTemporalRelacion")
 
-    SolititudId = Column(ForeignKey("Solicitudes.SolicitudId"), nullable=False)
+    SolititudId = Column(ForeignKey("Solicitudes.SolicitudId"))
     SolicitudRelacion = relationship("Solicitud", back_populates="EquipoTemporalRelacion")
 
     OrdenPagoId = Column(ForeignKey("OrdenDePago.OrdenPagoId"), nullable=False)
@@ -21,3 +21,5 @@ class EquipoTemporal(Base):
     
     TipoProcesoId = Column(ForeignKey("CatalogoTipoProceso.TipoProcesoId"), nullable=False)
     TipoProcesoRelacion = relationship("CatalogoTipoProceso", back_populates="EquipoTemporalRelacion")
+
+    EquipoTemporalJugadorRelacion = relationship("EquipoTemporalJugador", back_populates="EquipoTemporalRelacion")

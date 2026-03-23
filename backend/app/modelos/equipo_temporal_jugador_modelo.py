@@ -12,5 +12,5 @@ class EquipoTemporalJugador(Base):
     EquipoTemporalId = Column(ForeignKey("EquipoTemporal.EquipoTemporalId"), nullable=False)
     EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="EquipoTemporalJugadorRelacion")
 
-    PersonaId = Column(ForeignKey("Personas.PersonaId"), nullable=False)
+    PersonaId = Column(ForeignKey("Personas.PersonaId"))
     PersonaRelacion = relationship("Personas", back_populates="EquipoTemporalJugadorRelacion")

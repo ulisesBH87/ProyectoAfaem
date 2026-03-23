@@ -8,7 +8,7 @@ class Usuario(Base):
     UsuarioId = Column(Integer, primary_key=True)
 
     PersonaId = Column(Integer, ForeignKey("Personas.PersonaId"), nullable=False)
-    PersonaRelacion = relationship("Personas")
+    PersonaRelacion = relationship("Personas", back_populates="UsuarioRelacion")
 
     Correo = Column(String(100), unique=True, nullable=False, index=True)
     Contrasena = Column(String(256), nullable=False)
@@ -23,3 +23,5 @@ class Usuario(Base):
     RolRelacion = relationship("Roles", back_populates="UsuarioRelacion")
 
     OrdenPagoRelacion = relationship("OrdenPago", back_populates="UsuarioPagoRelacion")
+
+    EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="UsuarioRelacion")
