@@ -8,10 +8,17 @@ from app.esquemas.pago_esquema import SeguroBase
 from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
 from app.enums.roles_enum import Rol
+from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
+from app.modelos.solicitud_modelo import Solicitud
 from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy.orm import selectinload
+from app.repositorios.solicitud_repositorio import crear_solicitud_repo
+
+#Tipos de afiliación
+def obtener_afiliaciones_repo(db):
+    return db.query(CatalogoTiposAfiliacion).all()
 
 def obtener_tipo_afiliacion_repo(db, tipo_afiliacion_id):
 
@@ -21,6 +28,10 @@ def obtener_tipo_afiliacion_repo(db, tipo_afiliacion_id):
         .first()
     )
     
+#Tipos de seguro
+def obtener_seguros_repo(db):
+    return db.query(Seguro).all()
+
 def obtener_seguro_repo(db, seguro_id):
 
     return (
@@ -29,7 +40,12 @@ def obtener_seguro_repo(db, seguro_id):
         .filter(Seguro.Activo == True)
         .first()
     )
-    
+
+
+#ORDEN DE PAGO
+def obtener_orden_repo(db, orden_id):
+    return (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_id).first())
+
 def crear_orden_pago_repo(db, usuario_id, total):
 
     orden = OrdenPago(
@@ -59,9 +75,15 @@ def crear_detalle_pago_repo(db, orden_pago_id, detalle):
 
     return registro
 
+#PAGOS
+def obtener_pagos_repo(db):
+    return db.query(OrdenPago).all()
 
-def obtener_orden_repo(db, orden_id):
-    return (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_id).first())
+def orden_pago_individual_repo(db, orden_pago_id):
+    orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
+
+    return orden
+
 
 def crear_presidente_equipo_repo(db, usuario_id):
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
@@ -83,6 +105,9 @@ def crear_presidente_equipo_repo(db, usuario_id):
     
     return nuevo_presidente
 
+
+#VALIDACIÓN DE PAGOS
+#Subida de comprobante
 def actualizar_comprobante_repo(db, orden_id, ruta):
     
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_id).first())
@@ -93,37 +118,30 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
 
     return orden
 
-def obtener_seguros_repo(db):
-    return db.query(Seguro).all()
 
-def obtener_afiliaciones_repo(db):
-    return db.query(CatalogoTiposAfiliacion).all()
-
-def obtener_pagos_repo(db):
-    return db.query(OrdenPago).all()
-
-#Admin valida el pago
+#Validación de pago
 def estatus_pago_repo(db, orden_pago_id, estatus):
 
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     orden.EstatusPagoId = estatus
-    print("estatus a: ", estatus)
-    if estatus == 3: #aceptado
-        crear_equipo_temporal_repo(db, orden)
+    
+    if estatus != 3: #si el pago no es aceptado
+        return 0 
+    
+    solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
+
+    crear_equipo_temporal_repo(db, orden, solicitud.SolicitudId)
+
 
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
     persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
 
+    #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
 
     presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
 
     db.commit()
-
-    return orden
-
-def orden_pago_individual_repo(db, orden_pago_id):
-    orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     return orden

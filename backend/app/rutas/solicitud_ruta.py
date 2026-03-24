@@ -23,6 +23,7 @@ router = APIRouter(
     tags=["Solicitudes"]
 )
 
+"""
 @router.post("/enviar-solicitud")
 def solicitud(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuario = Depends(obtener_usuario_actual)):
 
@@ -32,7 +33,7 @@ def solicitud(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuari
         raise HTTPException(status_code=400, detail="Datos de solicitud inválidos")
 
     return {"message": "Solicitud enviada correctamente"}
-
+"""
 
 @router.get("/solicitudes-usuarios", response_model=List[SolicitudesTodas])
 def obtener_solicitudes(db:Session = Depends(get_db)):
@@ -109,4 +110,4 @@ async def descargar_formato(
         return StreamingResponse(output, media_type="application/pdf", headers=headers)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {str(e)}")
