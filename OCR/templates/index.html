@@ -95,51 +95,89 @@
             padding: 40px;
         }
 
+        .upload-boxes-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 768px) {
+            .upload-boxes-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .upload-box {
             border: 3px dashed #dce4ec;
-            padding: 40px 20px;
+            padding: 30px 15px;
             text-align: center;
             border-radius: 12px;
             background-color: #fcfdfe;
             transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .upload-box:hover {
             border-color: var(--corporate-blue);
             background-color: #f0f7ff;
         }
         .upload-icon {
-            font-size: 50px;
+            font-size: 40px;
             color: var(--corporate-blue);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .upload-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             color: #546e7a;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         input[type="file"] { display: none; }
         
         .preview-container {
-            margin-top: 20px;
+            margin-top: 15px;
             display: none;
+            width: 100%;
         }
-        #live-preview {
+        .live-preview {
             max-width: 100%;
-            max-height: 250px;
+            max-height: 150px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             margin: 0 auto;
+            display: block;
         }
+        
+        .file-name-display {
+            margin-top: 10px;
+            color: var(--corporate-blue);
+            font-weight: 500;
+            font-style: italic;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
         .result-image-container {
             background: #f8faff;
             padding: 20px;
             text-align: center;
             border-bottom: 1px solid #e1e8ed;
         }
+        .result-images-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .img-result-box {
+            flex: 1;
+            min-width: 250px;
+        }
         .result-image {
             max-width: 100%;
-            max-height: 250px;
+            max-height: 200px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
@@ -166,6 +204,9 @@
             background: transparent;
             border: 2px solid var(--corporate-blue);
             color: var(--corporate-blue);
+            padding: 8px 20px;
+            font-size: 13px;
+            margin-top: 10px;
         }
         .btn-outline:hover { background: #ebf5ff; }
         
@@ -173,6 +214,10 @@
             background: var(--corporate-blue);
             color: white;
             box-shadow: 0 4px 15px rgba(26, 59, 92, 0.3);
+            width: 100%;
+            justify-content: center;
+            padding: 15px;
+            font-size: 16px;
         }
         .btn-primary:hover {
             background: #2c527a;
@@ -207,7 +252,7 @@
         .valor { color: var(--text-dark); font-weight: 500; text-align: right; }
         
         .estado-badge {
-            padding: 4px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 700;
@@ -215,6 +260,27 @@
         }
         .estado-normal { background: #d4edda; color: #155724; }
         .estado-alerta { background: #f8d7da; color: #721c24; }
+        .estado-verificado { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+        .estado-rechazado { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .comparacion-box {
+            margin: 20px 25px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid;
+        }
+        .comp-exito {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .comp-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
 
         summary {
             padding: 15px 25px;
@@ -224,52 +290,68 @@
             background-color: #f8faff;
             border-top: 1px solid #e1e8ed;
         }
-        pre { margin: 0; padding: 20px; background: #f1f3f4; font-size: 13px; border-top: 1px solid #e1e8ed; }
+        pre { margin: 0; padding: 20px; background: #f1f3f4; font-size: 13px; border-top: 1px solid #e1e8ed; white-space: pre-wrap; word-wrap: break-word;}
     </style>
 </head>
 <body>
 
     <header class="site-header">
-        <img src="{{ url_for('static', filename='header_main.png') }}" alt="Header Institucional" class="banner-img">
+        <img src="{{ url_for('static', filename='header_main.png') }}" alt="Header Institucional" class="banner-img" onerror="this.style.display='none'">
     </header>
 
     <main class="main-content">
         <div class="container">
             <div class="internal-header">
-                <img src="{{ url_for('static', filename='afaem_logo_small.png') }}" alt="Logo AFAEM" class="internal-logo">
+                <img src="{{ url_for('static', filename='afaem_logo_small.png') }}" alt="Logo AFAEM" class="internal-logo" onerror="this.style.display='none'">
                 <div class="title-container">
                     <h1>SISTEMA DE REGISTRO UNIVERSAL</h1>
-                    <p>Plataforma de Procesamiento de Documentos Oficiales</p>
+                    <p>Verificación de Identidad vs Formato de Afiliación</p>
                 </div>
             </div>
 
             <div class="content-body">
                 <form method="POST" enctype="multipart/form-data">
-                    <div class="upload-box">
-                        <div class="upload-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                        </div>
-                        <p class="upload-title">Sube el documento digitalizado aquí</p>
-                        <p style="font-size: 14px; color: #888; margin-bottom: 25px;">Aceptamos: INE, Pasaporte, CURP o Actas de Nacimiento (Imágenes o PDF)</p>
-                        
-                        <input type="file" id="file-upload" name="file" accept="image/*, application/pdf" required onchange="mostrarVistaPrevia(event)">
-                        
-                        <div id="preview-container" class="preview-container">
-                            <img id="live-preview" src="#" alt="Vista previa">
+                    
+                    <div class="upload-boxes-container">
+                        <div class="upload-box">
+                            <div class="upload-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                            </div>
+                            <p class="upload-title">1. Documento de Identidad</p>
+                            <p style="font-size: 12px; color: #888;">INE, Pasaporte o CURP<br>(Requerido)</p>
+                            
+                            <input type="file" id="file-id" name="file_id" accept="image/*, application/pdf" required onchange="mostrarVistaPrevia(event, 'preview-id', 'name-id')">
+                            
+                            <label for="file-id" class="btn btn-outline">Seleccionar ID</label>
+                            <p id="name-id" class="file-name-display"></p>
+                            
+                            <div id="container-preview-id" class="preview-container">
+                                <img id="preview-id" class="live-preview" src="#" alt="Vista previa ID">
+                            </div>
                         </div>
 
-                        <div class="action-buttons">
-                            <label for="file-upload" class="btn btn-outline">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                Seleccionar Archivo
-                            </label>
-                            <button type="submit" class="btn btn-primary">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                Procesar Documento
-                            </button>
+                        <div class="upload-box">
+                            <div class="upload-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M9 14h6"></path><path d="M9 10h6"></path><path d="M9 18h6"></path></svg>
+                            </div>
+                            <p class="upload-title">2. Formato de Afiliación</p>
+                            <p style="font-size: 12px; color: #888;">Documento firmado<br>(Opcional para comparar)</p>
+                            
+                            <input type="file" id="file-formato" name="file_formato" accept="image/*, application/pdf" onchange="mostrarVistaPrevia(event, 'preview-formato', 'name-formato')">
+                            
+                            <label for="file-formato" class="btn btn-outline">Seleccionar Formato</label>
+                            <p id="name-formato" class="file-name-display"></p>
+
+                            <div id="container-preview-formato" class="preview-container">
+                                <img id="preview-formato" class="live-preview" src="#" alt="Vista previa Formato">
+                            </div>
                         </div>
-                        <p id="file-name-display" style="margin-top: 15px; color: var(--corporate-blue); font-weight: 500; font-style: italic;"></p>
                     </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Procesar y Comparar Documentos
+                    </button>
                 </form>
 
                 {% if datos %}
@@ -282,18 +364,42 @@
                         <div class="resultados">
                             <h2 class="resultados-header">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                Datos Extraídos del Documento
+                                Resultados del Procesamiento
                             </h2>
                             
                             <div class="result-image-container">
-                                <span style="display: block; font-size: 13px; color: #888; font-weight: 600; margin-bottom: 10px;">DOCUMENTO ESCANEADO</span>
-                                <img src="data:image/png;base64,{{ datos.imagen_b64 }}" class="result-image" alt="Documento procesado">
+                                <div class="result-images-wrapper">
+                                    <div class="img-result-box">
+                                        <span style="display: block; font-size: 13px; color: #888; font-weight: 600; margin-bottom: 10px;">IDENTIDAD</span>
+                                        <img src="data:image/png;base64,{{ datos.imagen_b64 }}" class="result-image" alt="ID procesada">
+                                    </div>
+                                    {% if datos.imagen_formato_b64 %}
+                                    <div class="img-result-box">
+                                        <span style="display: block; font-size: 13px; color: #888; font-weight: 600; margin-bottom: 10px;">FORMATO</span>
+                                        <img src="data:image/png;base64,{{ datos.imagen_formato_b64 }}" class="result-image" alt="Formato procesado">
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </div>
+
+                            {% if datos.comparacion %}
+                                <div class="comparacion-box {% if datos.comparacion.coinciden %}comp-exito{% else %}comp-error{% endif %}">
+                                    {{ datos.comparacion.mensaje_verificacion }}
+                                </div>
+                            {% endif %}
 
                             <div class="dato-fila"><span class="etiqueta">Documento Detectado:</span> <span class="valor" style="font-weight: 700;">{{ datos.documento }}</span></div>
                             <div class="dato-fila"><span class="etiqueta">Nombre Completo:</span> <span class="valor" style="font-size: 1.1em; color: var(--corporate-blue);">{{ datos.nombre }}</span></div>
                             <div class="dato-fila"><span class="etiqueta">Nacionalidad:</span> <span class="valor">{{ datos.nacionalidad }}</span></div>
-                            <div class="dato-fila"><span class="etiqueta">CURP:</span> <span class="valor" style="font-family: 'Consolas', monospace; letter-spacing: 1px;">{{ datos.curp }}</span></div>
+                            <div class="dato-fila"><span class="etiqueta">CURP (Identidad):</span> <span class="valor" style="font-family: 'Consolas', monospace; letter-spacing: 1px;">{{ datos.curp }}</span></div>
+                            
+                            <div class="dato-fila">
+                                <span class="etiqueta">Verificación RENAPO:</span> 
+                                <span class="estado-badge {% if datos.validacion.verificado %}estado-verificado{% else %}estado-rechazado{% endif %}">
+                                    {{ datos.validacion.mensaje }}
+                                </span>
+                            </div>
+
                             <div class="dato-fila"><span class="etiqueta">Fecha de Nacimiento:</span> <span class="valor">{{ datos.fecha_nac }}</span></div>
                             <div class="dato-fila"><span class="etiqueta">Edad Calculada:</span> <span class="valor">{{ datos.edad }}</span></div>
                             <div class="dato-fila"><span class="etiqueta">Clasificación:</span> 
@@ -303,7 +409,7 @@
                             <details>
                                 <summary>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; vertical-align: middle;"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                                    Ver texto crudo del OCR
+                                    Ver texto crudo del OCR (Identidad)
                                 </summary>
                                 <pre>{{ datos.texto_crudo }}</pre>
                             </details>
@@ -315,18 +421,18 @@
     </main>
 
     <footer class="site-footer">
-        <img src="{{ url_for('static', filename='footer_main.png') }}" alt="Footer Institucional" class="banner-img">
+        <img src="{{ url_for('static', filename='footer_main.png') }}" alt="Footer Institucional" class="banner-img" onerror="this.style.display='none'">
     </footer>
 
     <script>
-        function mostrarVistaPrevia(event) {
+        function mostrarVistaPrevia(event, imgId, nameId) {
             const file = event.target.files[0];
             if (!file) return;
 
-            document.getElementById('file-name-display').innerText = "Seleccionado: " + file.name;
+            document.getElementById(nameId).innerText = file.name;
             
-            const previewContainer = document.getElementById('preview-container');
-            const previewImg = document.getElementById('live-preview');
+            const previewContainer = document.getElementById('container-' + imgId);
+            const previewImg = document.getElementById(imgId);
 
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
@@ -337,7 +443,7 @@
                 reader.readAsDataURL(file);
             } else if (file.type === 'application/pdf') {
                 previewContainer.style.display = 'none';
-                document.getElementById('file-name-display').innerText += " (El PDF será visible tras procesarlo)";
+                document.getElementById(nameId).innerText += " (PDF)";
             }
         }
     </script>
