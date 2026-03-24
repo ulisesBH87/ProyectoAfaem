@@ -13,7 +13,7 @@ class EquipoTemporal(Base):
     UsuarioId = Column(ForeignKey("Usuarios.UsuarioId"), nullable=False)
     UsuarioRelacion = relationship("Usuario", back_populates="EquipoTemporalRelacion")
 
-    SolititudId = Column(ForeignKey("Solicitudes.SolicitudId"))
+    SolicitudId = Column(ForeignKey("Solicitudes.SolicitudId"))
     SolicitudRelacion = relationship("Solicitud", back_populates="EquipoTemporalRelacion")
 
     OrdenPagoId = Column(ForeignKey("OrdenDePago.OrdenPagoId"), nullable=False)
