@@ -144,7 +144,7 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
 
     # Si se aprueba el pago, crear el equipo temporal y los slots de jugadores
     if estatus == 3:
-        crear_equipo_temporal_repo(db, orden)
+        crear_equipo_temporal_repo(db, orden, solicitud.SolicitudId)
 
     db.commit()
 
