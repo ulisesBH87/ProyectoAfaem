@@ -10,6 +10,7 @@ from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
 from app.enums.roles_enum import Rol
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
+from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy.orm import selectinload
 
 def obtener_tipo_afiliacion_repo(db, tipo_afiliacion_id):
@@ -99,7 +100,7 @@ def obtener_afiliaciones_repo(db):
     return db.query(CatalogoTiposAfiliacion).all()
 
 def obtener_pagos_repo(db):
-    return db.query(OrdenPago).all()
+    return db.query(OrdenPago).options(selectinload(OrdenPago.UsuarioPagoRelacion)).all()
 
 #Admin valida el pago
 def estatus_pago_repo(db, orden_pago_id, estatus):
@@ -107,12 +108,16 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     orden.EstatusPagoId = estatus
-    usuario = db.query(Usuario).filter(Usuario.UsuarioId == OrdenPago.UsuarioId).first()
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
     persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
 
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
 
     presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
+
+    # Si se aprueba el pago, crear el equipo temporal y los slots de jugadores
+    if estatus == 3:
+        crear_equipo_temporal_repo(db, orden)
 
     db.commit()
 

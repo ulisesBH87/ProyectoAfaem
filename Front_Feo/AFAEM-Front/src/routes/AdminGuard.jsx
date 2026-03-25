@@ -1,12 +1,15 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-const AdminGuard = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const role = user.rol || user.usuario?.rol || '';
+import { useRBAC } from '../contexts/RBACContext';
 
-  if (!token || (role !== 'ADMIN' && role !== 'ADMINISTRADOR')) {
+const AdminGuard = ({ children }) => {
+  const { hasRole, isLoading } = useRBAC();
+  const token = localStorage.getItem('token');
+
+  if (isLoading) return null;
+
+  if (!token || (!hasRole('ADMIN') && !hasRole('ADMINISTRADOR'))) {
     return <Navigate to="/ingresar" replace />;
   }
 

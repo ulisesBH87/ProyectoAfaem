@@ -52,17 +52,14 @@ export async function registrarAdmin(datos) {
 
 // LOGIN
 export async function login(email, password) {
-  // El backend usa OAuth2PasswordRequestForm: espera username/password en form-urlencoded.
-  const payload = new URLSearchParams({
-    username: email,
-    password,
-  });
-  const headers = {
-    'Content-Type': 'application/x-www-form-urlencoded',
+  // El backend en /auth/iniciar-sesion espera JSON { Correo, Contrasena }
+  const payload = {
+    Correo: email,
+    Contrasena: password,
   };
   
   try {
-    const res = await api.post('/auth/iniciar-sesion', payload.toString(), { headers });
+    const res = await api.post('/auth/iniciar-sesion', payload);
     console.log('✅ Login exitoso:', res.data); // DEBUG
     return res.data;
   } catch (error) {

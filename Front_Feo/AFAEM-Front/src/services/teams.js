@@ -97,6 +97,7 @@ export const createTeam = async (teamData) => {
     formData.append('email', teamData.email);
     formData.append('paymentProof', teamData.paymentProof);
     formData.append('teamLogo', teamData.teamLogo);
+    formData.append('players', JSON.stringify(teamData.players || []));
 
     const response = await api.post('/teams', formData, {
       headers: {
@@ -139,8 +140,15 @@ const saveTeamLocally = (teamData) => {
       paymentProofFile: teamData.paymentProof ? 'stored_locally' : null,
       teamLogo: teamData.teamLogo?.name || 'team_logo',
       teamLogoFile: teamData.teamLogo ? 'stored_locally' : null,
-      players: { current: 0, max: 25 },
-      trainers: 0,
+      players: Array.isArray(teamData.players) ? teamData.players.map(p => ({
+        id: p.id || Date.now() + Math.random(),
+        nombre: `${p.firstName} ${p.lastNamePaterno} ${p.lastNameMaterno}`.trim(),
+        genero: 'M', // mock default
+        edad: p.birthDate ? new Date().getFullYear() - new Date(p.birthDate).getFullYear() : 20,
+        estatus: 'pendiente',
+        foto: p.firstName?.charAt(0) || '👤'
+      })) : [],
+      trainers: [],
       status: "Pendiente de validación",
       status_color: "#ffc107",
       created_at: new Date().toISOString().split('T')[0]

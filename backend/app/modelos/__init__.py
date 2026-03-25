@@ -18,5 +18,13 @@ from .catalogo_estatus_pago import EstatusPago
 from .ordenes_pago_modelo import OrdenPago
 from .orden_pago_detalle_modelo import OrdenPagoDetalle
 from .catalogo_estatus_presidente import EstatusPresidente
-
 from .presidente_equipo_modelo import PresidenteEquipo
+from .catalogo_tipo_proceso import CatalogoTipoProceso
+from .equipo_temporal_modelo import EquipoTemporal
+
+from .equipo_temporal_jugador_modelo import EquipoTemporalJugador
+from .permisos_modelo import Permisos
+from .menus_modelo import Menus
+from .rel_usuario_roles_modelo import RelUsuarioRoles
+from .rel_rol_permisos_modelo import RelRolPermisos
+from .rel_menu_roles_modelo import RelMenuRoles

@@ -8,6 +8,7 @@ import DashboardHeader from '../../components/DashboardHeader';
 import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
 import { validarFotografia } from "../../services/foto";
+import teamsService from "../../services/teams";
 
 export default function ConfigurarEquipo() {
   const navigate = useNavigate();
@@ -446,6 +447,22 @@ export default function ConfigurarEquipo() {
                         He revisado los reglamentos de competencia y acepto que el registro de los jugadores debe cumplir con los seguros pre-pagados.
                       </label>
                     </div>
+                    <div style={{ marginTop: '12px', paddingLeft: '35px' }}>
+                      <a 
+                        href="https://afaem.mx/reglamentos" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ 
+                          fontSize: '13px', color: '#0b4ea6', fontWeight: '700', 
+                          textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          transition: 'color 0.2s'
+                        }}
+                        onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+                        onMouseLeave={e => e.target.style.textDecoration = 'none'}
+                      >
+                        📄 Click aquí para ver los reglamentos de competencia →
+                      </a>
+                    </div>
                     {errors.agreedToTerms && <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '10px', fontWeight: '700' }}>⚠️ {errors.agreedToTerms}</div>}
                   </div>
 
@@ -703,9 +720,23 @@ export default function ConfigurarEquipo() {
                 
                 <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center' }}>
                   <button 
-                    onClick={() => {
-                        setSuccessMessage(`El equipo "${modalData.teamName}" y sus ${players.length} jugadores han sido registrados exitosamente.`);
-                        setShowSuccessModal(true);
+                    onClick={async () => {
+                        try {
+                          const userEmail = localStorage.getItem('email') || '';
+                          await teamsService.createTeam({
+                            teamName: modalData.teamName,
+                            modality: formData.modality,
+                            category: formData.category,
+                            season: formData.season,
+                            email: userEmail,
+                            teamLogo: modalData.teamLogo,
+                            players: players
+                          });
+                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
+                          setShowSuccessModal(true);
+                        } catch (err) {
+                          console.error("Error al guardar equipo:", err);
+                        }
                     }}
                     disabled={players.length === 0}
                     style={{ 

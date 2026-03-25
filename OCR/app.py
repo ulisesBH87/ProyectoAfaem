@@ -1,14 +1,26 @@
 import os
 import re
 import base64
+import logging
 from flask import Flask, render_template, request
 from google.cloud import vision
 from datetime import datetime
 import fitz
 
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "afaem-487315-9fef755ac1dc.json"
 
 app = Flask(__name__)
+
+try:
+    vision_client = vision.ImageAnnotatorClient()
+    logger.info("Cliente de Google Vision inicializado correctamente")
+except Exception as e:
+    logger.error(f"Error al inicializar el cliente de Vision: {e}")
+    vision_client = None
 
 def calcular_datos_curp(curp):
     try:
@@ -194,9 +206,11 @@ def index():
         if archivo:
             try:
                 filename = archivo.filename.lower()
+                logger.info(f"Procesando archivo: {filename}")
                 content = archivo.read()
                 
                 if filename.endswith('.pdf'):
+                    logger.info("Convirtiendo PDF a imagen...")
                     doc = fitz.open(stream=content, filetype="pdf")
                     page = doc.load_page(0) 
                     pix = page.get_pixmap(dpi=200) 
@@ -205,21 +219,29 @@ def index():
                     image_content = content
 
                 img_b64 = base64.b64encode(image_content).decode('utf-8')
-
-                client = vision.ImageAnnotatorClient()
-                image = vision.Image(content=image_content)
-                response = client.document_text_detection(image=image)
+                logger.info("Llamando a Google Vision API (document_text_detection)...")
                 
+                if not vision_client:
+                    raise Exception("El cliente de Google Vision no está inicializado")
+
+                image = vision.Image(content=image_content)
+                response = vision_client.document_text_detection(image=image)
+                
+                logger.info("Respuesta de Vision API recibida")
+
                 if response.text_annotations:
                     texto_full = response.text_annotations[0].description
+                    logger.info("Texto extraído, procesando datos...")
                     datos = procesar_texto(texto_full)
                     datos['imagen_b64'] = img_b64
                 else:
+                    logger.warning("No se detectó texto en el documento")
                     datos = {"error": "No se pudo leer ningún texto del documento."}
             except Exception as e:
+                logger.error(f"Error en el procesamiento OCR: {e}")
                 datos = {"error": f"Error técnico: {str(e)}"}
                 
     return render_template('index.html', datos=datos)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

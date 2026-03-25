@@ -127,8 +127,20 @@ def obtener_afiliaciones_servicio(db):
 
 def obtener_pagos_servicio(db):
     pagos = pagos_repositorio.obtener_pagos_repo(db)
-
-    return [ListaPagos.model_validate(pago) for pago in pagos]
+    result = []
+    for pago in pagos:
+        data = {
+            "OrdenPagoId": pago.OrdenPagoId,
+            "UsuarioId": pago.UsuarioId,
+            "Correo": pago.UsuarioPagoRelacion.Correo if pago.UsuarioPagoRelacion else None,
+            "FechaDePago": pago.FechaDePago,
+            "FechaEnvio": pago.FechaEnvio,
+            "RutaVoucher": pago.RutaVoucher,
+            "EstatusPagoId": pago.EstatusPagoId,
+            "TotalPagar": pago.TotalPagar
+        }
+        result.append(ListaPagos(**data))
+    return result
 
 def estatus_pago_servicio(db, orden_pago_id, estatus):
     response = pagos_repositorio.estatus_pago_repo(db, orden_pago_id, estatus)

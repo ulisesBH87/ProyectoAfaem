@@ -10,6 +10,12 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  React.useEffect(() => {
+    const closeMenu = () => setShowUserMenu(false);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, []);
+
   const notifications = [
     { id: 1, text: 'Nueva solicitud de validación', time: 'hace 5 minutos', type: 'info' },
     { id: 2, text: 'Tu equipo ha sido actualizado', time: 'hace 1 hora', type: 'success' },
@@ -107,8 +113,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
 
         <div 
           className="user-profile"
-          onMouseEnter={() => setShowUserMenu(true)}
-          onMouseLeave={() => setShowUserMenu(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowUserMenu(!showUserMenu);
+          }}
           style={{ position: 'relative', cursor: 'pointer' }}
         >
           <div className="user-avatar">{getInitials(userEmail)}</div>
@@ -120,9 +128,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
           {/* DROPDOWN MENU */}
           {showUserMenu && (
             <div 
+              onClick={(e) => e.stopPropagation()}
               style={{
                 position: 'absolute',
-                top: '65px',
+                top: 'calc(100% + 12px)',
                 right: '0',
                 background: 'white',
                 border: '1px solid var(--border-color)',
@@ -130,7 +139,8 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
                 minWidth: '200px',
                 boxShadow: 'var(--shadow-lg)',
                 zIndex: 1001,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                animation: 'slideIn 0.2s ease'
               }}
             >
               <div
@@ -166,7 +176,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
               </div>
 
               <button
-                onClick={handleLogout}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLogout();
+                }}
                 style={{
                   width: '100%',
                   padding: '12px 16px',

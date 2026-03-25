@@ -26,8 +26,8 @@ def registrar_administrador(data: RegistroAdmin, db:Session = Depends(get_db)):
     }
 
 @router.post("/iniciar-sesion", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
-    usuarioIntentoSesion = iniciar_sesion(db, form_data.username, form_data.password)
+def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
+    usuarioIntentoSesion = iniciar_sesion(db, data.Correo, data.Contrasena)
 
     if not usuarioIntentoSesion:
         raise HTTPException(
@@ -68,3 +68,36 @@ def cambiar_contrasena(data: CambiarContrasena, db: Session = Depends(get_db), u
         )
 
     return {"message": "Contraseña cambiada correctamente"}
+
+
+#oauth2
+@router.post("/iniciar-sesion-oauth", response_model=TokenResponse)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
+    usuarioIntentoSesion = iniciar_sesion(db, form_data.username, form_data.password)
+
+    if not usuarioIntentoSesion:
+        raise HTTPException(
+            status_code = status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales inválidas"
+        )
+
+    datos_token = {
+        "sub": str(usuarioIntentoSesion.UsuarioId),
+        "correo": usuarioIntentoSesion.Correo,
+        "rol": usuarioIntentoSesion.RolRelacion.Nombre
+    }
+
+    token_generado = crear_token(datos_token)
+
+    persona = usuarioIntentoSesion.PersonaRelacion
+    return {
+        "access_token": token_generado,
+        "token_type": "bearer",
+        "usuario": {
+            "id": usuarioIntentoSesion.UsuarioId,
+            "correo": usuarioIntentoSesion.Correo,
+            "rol": usuarioIntentoSesion.RolRelacion.Nombre,
+            "nombre": persona.Nombre if persona else None,
+            "telefono": getattr(persona, "NumeroTelefono", None)
+        }
+    }
