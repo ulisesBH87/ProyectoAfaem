@@ -23,3 +23,8 @@ from .catalogo_tipo_proceso import CatalogoTipoProceso
 from .equipo_temporal_modelo import EquipoTemporal
 
 from .equipo_temporal_jugador_modelo import EquipoTemporalJugador
+from .menus_modelo import Menus
+from .permisos_modelo import Permisos
+from .rel_menu_roles_modelo import RelMenuRoles
+from .rel_rol_permisos_modelo import RelRolPermisos
+from .rel_usuario_roles_modelo import RelUsuarioRoles
