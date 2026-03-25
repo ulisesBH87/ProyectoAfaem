@@ -5,6 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import DashboardHeader from '../../components/DashboardHeader';
+import { API_BASE } from '../../config/config';
 import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
 import { validarFotografia } from "../../services/foto";
@@ -267,45 +268,67 @@ export default function ConfigurarEquipo() {
         didOpen: () => { Swal.showLoading(); }
       });
 
-      const url = '/template_jugador.pdf';
-      const responsePdf = await fetch(url);
-      if (!responsePdf.ok) throw new Error('No se pudo cargar el template');
-      
-      const existingPdfBytes = await responsePdf.arrayBuffer();
+      const templateUrl = '/formato_afiliacion_directivo.pdf';
+      const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
 
       const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate } = currentPlayer;
-      
+
+      // Nombre y Apellidos en sus campos exactos
+      form.getTextField('Nombres')?.setText(firstName || '');
       form.getTextField('Apellido Paterno')?.setText(lastNamePaterno || '');
       form.getTextField('Apellido Materno')?.setText(lastNameMaterno || '');
-      form.getTextField('Nombres')?.setText(firstName || '');
-      
+
+      // CURP
       if (curp) {
         form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       }
+
+      // Fecha de Nacimiento
       if (birthDate) {
         form.getTextField('Fecha de Nacimiento')?.setText(birthDate);
       }
-      
-      const email = localStorage.getItem('email') || '';
-      form.getTextField('Correo electrónico')?.setText(email);
 
+      // Correo electrónico
+      const email = localStorage.getItem('email') || '';
+      if (email) {
+        form.getTextField('Correo electrónico')?.setText(email);
+      }
+
+      // Sexo (extraer de CURP)
+      if (curp && curp.length >= 11) {
+        const sexoChar = curp.charAt(10).toUpperCase();
+        const sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
+        if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
+      }
+
+      // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+      // Descargar usando data URI (evita bugs de Safari con blob URLs)
+      const uint8 = new Uint8Array(pdfBytes);
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, uint8.subarray(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
+      const dataUri = `data:application/pdf;base64,${base64}`;
+
+      const safeNombre = (firstName || 'Jugador').toString().replace(/[^a-zA-Z0-9_\s]/g, '').trim();
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Afiliacion_${firstName || 'Jugador'}.pdf`;
+      link.href = dataUri;
+      link.download = `Afiliacion_${safeNombre}.pdf`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      setTimeout(() => document.body.removeChild(link), 200);
 
       Swal.fire('¡Listo!', 'El formato se ha generado correctamente. Firma el documento y súbelo.', 'success');
     } catch (err) {
       console.error("Error generando PDF:", err);
-      Swal.fire('Info', 'Se descargará el formato base para llenado manual.', 'info');
-      const link = document.createElement('a');
-      link.href = '/template.pdf';
-      link.download = 'Formato_Afiliacion_Jugador.pdf';
-      link.click();
+      Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
     }
   };
 
