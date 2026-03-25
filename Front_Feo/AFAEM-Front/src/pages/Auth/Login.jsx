@@ -68,8 +68,6 @@ export default function Login() {
         navigate('/coach/dashboard');
       } else if (rol === 'PRESIDENTE_EQUIPO') {
         navigate('/pre-registro-presidente');
-      } else if (rol === 'USUARIO') {
-        navigate('/panel');
       } else {
         navigate('/pre-registro-presidente');
       }
