@@ -17,6 +17,7 @@ export default function PresidenteEquipo() {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState(null);
   const [teams, setTeams] = useState([]);
+  const [usingLocalFallback, setUsingLocalFallback] = useState(false);
   const [stats, setStats] = useState({
     totalTeams: 0,
     totalPlayers: 0,
@@ -55,6 +56,7 @@ export default function PresidenteEquipo() {
         try {
           const teamsData = await teamsService.getUserTeams(email);
           const teamsList = teamsData.teams || [];
+          setUsingLocalFallback(Boolean(teamsData.local));
           setTeams(teamsList);
           
           // Calcular estadísticas
@@ -253,7 +255,7 @@ export default function PresidenteEquipo() {
 
                 {/* BOTÓN 4: SOLICITUDES */}
                 <button
-                  onClick={() => navigate('/presidente-equipo/admin-solicitudes')}
+                  onClick={() => navigate('/presidente-equipo/solicitudes')}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -287,6 +289,20 @@ export default function PresidenteEquipo() {
 
             {/* PANEL DE EQUIPOS */}
             <div>
+              {usingLocalFallback && (
+                <div style={{
+                  backgroundColor: '#fff7ed',
+                  border: '1px solid #fdba74',
+                  color: '#9a3412',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  fontSize: '13px',
+                  fontWeight: '600'
+                }}>
+                  Modo local activo: esta vista esta usando datos guardados en el navegador porque los endpoints de equipos/perfil del backend no estan disponibles.
+                </div>
+              )}
               <h3 style={{
                 margin: '0 0 20px 0',
                 color: '#0b2546',

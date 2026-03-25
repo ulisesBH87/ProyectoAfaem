@@ -6,8 +6,19 @@ from app.repositorios import solicitud_repositorio
 from app.core.seguridad import obtener_usuario_actual
 
 def crear_solicitud(db: Session, data, usuario):
-    estatusDefecto =  2
+    # 1. Obtener la persona vinculada al usuario
+    persona = usuario.PersonaRelacion
+    if not persona:
+        raise Exception("El usuario no tiene una persona vinculada")
 
+    # 2. Actualizar los datos de la persona con lo recibido
+    persona.CURP = data.CURP.upper()
+    persona.RFC = data.RFC.upper()
+    persona.SexoId = data.SexoId
+    persona.FechaNacimiento = data.FechaNacimiento
+
+    # 3. Crear el objeto Solicitud
+    estatusDefecto = 2
     solicitud = Solicitud(
         UsuarioId=usuario.UsuarioId,
         FechaSolicitud=data.FechaSolicitud,
@@ -15,14 +26,12 @@ def crear_solicitud(db: Session, data, usuario):
         TipoAfiliacionId=data.TipoAfiliacion
     )
 
-    persona = Personas(
-        CURP=data.CURP,
-        RFC=data.RFC,
-        SexoId=data.SexoId,
-        FechaNacimiento=data.FechaNacimiento
-    )
-
-    return solicitud_repositorio.crear_solicitud_repo(db, solicitud, persona)
+    # 4. Guardar todo
+    db.add(solicitud)
+    db.commit()
+    db.refresh(solicitud)
+    
+    return solicitud
 
 def obtener_solicitudes_servicio(db: Session):
     return solicitud_repositorio.obtener_solicitudes_repo(db)

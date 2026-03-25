@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from sqlalchemy.orm import Session
 from app.db.sesion import get_db
 from typing import List
+from app.core.seguridad import obtener_usuario_actual
 
 from app.esquemas.equipo_esquema import RegistrarJugadorPeticion, JugadorPersona
 from app.servicios.equipo_servicio import registrar_jugador_servicio

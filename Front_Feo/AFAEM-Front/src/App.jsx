@@ -25,6 +25,8 @@ const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPreside
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
 const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
+const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
+const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 
 function App() {
   return (
@@ -64,7 +66,17 @@ function App() {
               <AdminPagos />
             </AdminGuard>
           } />
-          <Route path="/presidente-equipo/admin-solicitudes" element={<AdminSolicitudes />} />
+          <Route path="/admin/usuarios-roles" element={
+            <AdminGuard>
+              <UsuariosRolesAdmin />
+            </AdminGuard>
+          } />
+          <Route path="/admin/configuracion" element={
+            <AdminGuard>
+              <ConfiguracionAdmin />
+            </AdminGuard>
+          } />
+          <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteEquipoSolicitudes />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
           <Route path="/presidente-equipo/configurar-equipo" element={<ConfigurarEquipo />} />

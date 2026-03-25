@@ -36,7 +36,7 @@ export async function postJSON(path, payload = {}, opts = {}) {
 	const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
 	const res = await fetchWithTimeout(url, { method: 'POST', headers, body: JSON.stringify(payload) }, opts.timeout || 7000, opts.retries || 1);
 	let json = null;
-	try { json = await res.json(); } catch (e) { /* NO JSON */ }
+	try { json = await res.json(); } catch { /* NO JSON */ }
 	return { ok: res.ok, status: res.status, json, res };
 }
 
@@ -76,7 +76,7 @@ export function uploadFile(path, file, onProgress = () => {}, extraFields = {}) 
 			xhr.onreadystatechange = () => {
 				if (xhr.readyState === 4) {
 					if (xhr.status >= 200 && xhr.status < 300) {
-						try { resolve(JSON.parse(xhr.responseText)); } catch (err) { resolve({ raw: xhr.responseText }); }
+						try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({ raw: xhr.responseText }); }
 					} else {
 						console.warn(`Upload attempt to ${url} failed with status ${xhr.status}`);
 						if (attempt < candidates.length) tryNext();

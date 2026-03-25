@@ -52,13 +52,11 @@ export async function registrarAdmin(datos) {
 
 // LOGIN
 export async function login(email, password) {
-  // EL SERVIDOR ESPERA 'Correo' Y 'Contrasena' 
-  const payload = { 
-    Correo: email, 
-    Contrasena: password 
+  // El backend en /auth/iniciar-sesion espera JSON { Correo, Contrasena }
+  const payload = {
+    Correo: email,
+    Contrasena: password,
   };
-  
-  console.log('📤 Enviando login payload:', payload); // DEBUG
   
   try {
     const res = await api.post('/auth/iniciar-sesion', payload);
@@ -83,7 +81,7 @@ export async function pingBackend() {
   try {
     const res = await api.get('/');
     return { ok: true, url: api.defaults.baseURL + '/', res: res.data };
-  } catch (e) {
+  } catch {
     return { ok: false, tried: api.defaults.baseURL || API_BASE };
   }
 }

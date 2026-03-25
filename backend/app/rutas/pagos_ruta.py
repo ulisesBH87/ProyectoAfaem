@@ -52,6 +52,23 @@ def estatus_pago(orden_pago_id: int, estatus: int, db:Session=Depends(get_db)):
 
     return response
 
+@router.get("/mi-estado")
+def mi_estado_pago(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    """Devuelve el estatus de pago más reciente del usuario autenticado."""
+    from app.modelos.ordenes_pago_modelo import OrdenPago
+    orden = db.query(OrdenPago).filter(
+        OrdenPago.UsuarioId == usuario.UsuarioId
+    ).order_by(OrdenPago.OrdenPagoId.desc()).first()
+    if not orden:
+        return {"tiene_orden": False, "estatus": None}
+    # 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
+    return {
+        "tiene_orden": True,
+        "orden_pago_id": orden.OrdenPagoId,
+        "estatus": orden.EstatusPagoId,
+        "total": float(orden.TotalPagar) if orden.TotalPagar else 0
+    }
+
 @router.get("/{orden_pago_id}", response_model=OrdenPagoIndividual)
 def orden_pago_individual(orden_pago_id: int, db:Session=Depends(get_db)):
 

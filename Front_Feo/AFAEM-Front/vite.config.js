@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/ocr-api': {
-        target: 'http://localhost:5005',
+        target: 'http://localhost:5001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ocr-api/, ''),
       },

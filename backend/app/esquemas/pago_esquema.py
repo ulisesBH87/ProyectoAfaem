@@ -40,10 +40,12 @@ class AfiliacionesBase(BaseModel):
 class ListaPagos(BaseModel):
     OrdenPagoId: int
     UsuarioId: int
-    #Correo = EmailStr
-    FechaEnvio: datetime
-    RutaVoucher: str
+    Correo: str | None = None
+    FechaDePago: datetime | None = None
+    FechaEnvio: datetime | None = None
+    RutaVoucher: str | None = None
     EstatusPagoId: int
+    TotalPagar: Decimal
 
     class Config:
         from_attributes = True
@@ -63,13 +65,12 @@ class OrdenPagoDetallesIndividual(BaseModel):
 class OrdenPagoIndividual(BaseModel):
     OrdenPagoId: int
     UsuarioId: int
-    FechaDePago: datetime | None
-    FechaEnvio: datetime
-    RutaVoucher: str
+    FechaDePago: datetime | None = None
+    FechaEnvio: datetime | None = None
+    RutaVoucher: str | None = None
     EstatusPagoId: int
     TotalPagar: Decimal
 
     OrdenPagoDetalleRelacion: list[OrdenPagoDetallesIndividual]
     class Config:
         from_attributes = True
-

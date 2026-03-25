@@ -43,6 +43,7 @@ export default function Ingresar() {
       if (token) {
         setAuthToken(token);
         localStorage.setItem('token', token);
+        window.dispatchEvent(new Event('user-logged-in'));
       }
       const userData = {
         email: email,

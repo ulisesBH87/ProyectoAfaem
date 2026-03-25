@@ -1,5 +1,4 @@
 import React from 'react';
-import soccerBall from '../../../assets/amateur-logo.png'; // Using the amateur logo as it has a ball or we can use an emoji/css ball
 
 export default function GlobalLoader({ isLoading, message = "Cargando..." }) {
   if (!isLoading) return null;

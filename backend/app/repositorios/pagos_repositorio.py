@@ -142,6 +142,10 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
 
     presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
 
+    # Si se aprueba el pago, crear el equipo temporal y los slots de jugadores
+    if estatus == 3:
+        crear_equipo_temporal_repo(db, orden)
+
     db.commit()
 
     return orden

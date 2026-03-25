@@ -25,7 +25,7 @@ router = APIRouter(
 
 """
 @router.post("/enviar-solicitud")
-def solicitud(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuario = Depends(obtener_usuario_actual)):
+def enviar_solicitud_presidente(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuario = Depends(obtener_usuario_actual)):
 
     crear_solicitud(db, data, usuario)
 
@@ -63,7 +63,7 @@ def ver_requisitos_afiliacion(tipo_afiliacion_id: int, db:Session=Depends(get_db
     return requisitos
 
 @router.post("/")
-def crear_solicitud(solicitud: CrearSolicitud, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
+def crear_solicitud_endpoint(solicitud: CrearSolicitud, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
     resultado = solicitud_servicio.crear_solicitud_servicio(db, solicitud, usuario.id)
     return resultado
 
@@ -77,8 +77,9 @@ async def descargar_formato(
     equipo: str = Query("")
 ):
     try:
-        # Ruta del template original (Ajustada a la estructura real encontrada)
-        template_path = r"c:\Users\emili\OneDrive\Escritorio\AFAEM\ProyectoAfaem\Front_Feo\Formato de afiliación - Presidente - v2026.pdf"
+        # Ruta del template original (Ajustada para ser multiplataforma)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        template_path = os.path.join(base_dir, "..", "Front_Feo", "Formato de afiliación - Presidente - v2026.pdf")
 
         if not os.path.exists(template_path):
             raise HTTPException(status_code=404, detail=f"No se encontró el archivo de plantilla en {template_path}")

@@ -13,25 +13,25 @@ import {
   FaChevronRight
 } from 'react-icons/fa';
 
+import { useRBAC } from '../../contexts/RBACContext';
+import { getIcon } from '../../utils/IconMapper';
+
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { menus, isLoading } = useRBAC();
 
   useEffect(() => {
     document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '80px' : '280px');
   }, [isCollapsed]);
 
-  const menuItems = [
-    { label: 'Tablero Principal', icon: <FaHome />, path: '/admin/dashboard' },
-    { label: 'Validar Solicitudes', icon: <FaClipboardList />, path: '/admin/solicitudes' },
-    { label: 'Validación de Pagos', icon: <FaShieldAlt />, path: '/admin/pagos' },
-  ];
-
   const handleLogout = () => {
     localStorage.clear();
     navigate('/ingresar');
   };
+
+  if (isLoading) return null;
 
   return (
     <div style={{
@@ -80,45 +80,71 @@ const AdminSidebar = () => {
 
       {/* MENU ITEMS */}
       <nav style={{ flex: 1, padding: '20px 0', overflowY: 'auto' }}>
-        {menuItems.map((item, idx) => {
-          const isActive = location.pathname === item.path;
+        {menus.map((item, idx) => {
+          const isActive = location.pathname === item.Ruta;
+          const hasChildren = item.SubMenus && item.SubMenus.length > 0;
+          
           return (
-            <div 
-              key={idx}
-              onClick={() => navigate(item.path)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '12px 24px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                backgroundColor: isActive ? 'rgba(11, 78, 166, 0.1)' : 'transparent',
-                borderLeft: `4px solid ${isActive ? '#0b4ea6' : 'transparent'}`,
-                color: isActive ? 'white' : '#94a3b8',
-                marginBottom: '4px'
-              }}
-              onMouseEnter={(e) => {
-                if(!isActive) {
-                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
-                  e.currentTarget.style.color = '#e2e8f0';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if(!isActive) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#94a3b8';
-                }
-              }}
-            >
-              <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>
-                {item.icon}
-              </span>
-              {!isCollapsed && (
-                <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '600' }}>
-                  {item.label}
+            <React.Fragment key={idx}>
+              {/* Parent Menu / Section Title */}
+              <div 
+                onClick={() => item.Ruta && navigate(item.Ruta)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 24px',
+                  cursor: item.Ruta ? 'pointer' : 'default',
+                  transition: 'all 0.2s',
+                  backgroundColor: isActive ? 'rgba(11, 78, 166, 0.1)' : 'transparent',
+                  borderLeft: `4px solid ${isActive ? '#0b4ea6' : 'transparent'}`,
+                  color: isActive ? 'white' : '#94a3b8',
+                  marginTop: !item.MenuPadreId && idx > 0 ? '16px' : '4px',
+                  opacity: !item.Ruta && !isCollapsed ? 0.6 : 1
+                }}
+              >
+                <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>
+                  {getIcon(item.Icono)}
                 </span>
-              )}
-            </div>
+                {!isCollapsed && (
+                  <span style={{ marginLeft: '16px', fontSize: item.Ruta ? '14px' : '12px', fontWeight: '700', textTransform: item.Ruta ? 'none' : 'uppercase' }}>
+                    {item.Nombre}
+                  </span>
+                )}
+              </div>
+
+              {/* Children Menus */}
+              {hasChildren && !isCollapsed && item.SubMenus.map((child, cIdx) => {
+                const isChildActive = location.pathname === child.Ruta;
+                return (
+                  <div 
+                    key={`${idx}-${cIdx}`}
+                    onClick={() => navigate(child.Ruta)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 24px 8px 52px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      backgroundColor: isChildActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                      color: isChildActive ? 'white' : '#94a3b8',
+                      fontSize: '13px',
+                      fontWeight: '500'
+                    }}
+                    onMouseEnter={(e) => {
+                      if(!isChildActive) e.currentTarget.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                      if(!isChildActive) e.currentTarget.style.color = '#94a3b8';
+                    }}
+                  >
+                    <span style={{ marginRight: '12px', fontSize: '14px' }}>
+                      {getIcon(child.Icono)}
+                    </span>
+                    {child.Nombre}
+                  </div>
+                );
+              })}
+            </React.Fragment>
           );
         })}
       </nav>

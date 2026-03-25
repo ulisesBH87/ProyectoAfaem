@@ -22,6 +22,9 @@ class Usuario(Base):
     RolId = Column(Integer, ForeignKey("Roles.RolId"), nullable=False)
     RolRelacion = relationship("Roles", back_populates="UsuarioRelacion")
 
+    # Nueva relación para múltiples roles
+    RolesAsignados = relationship("RelUsuarioRoles", back_populates="UsuarioRelacion")
+
     OrdenPagoRelacion = relationship("OrdenPago", back_populates="UsuarioPagoRelacion")
 
     EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="UsuarioRelacion")

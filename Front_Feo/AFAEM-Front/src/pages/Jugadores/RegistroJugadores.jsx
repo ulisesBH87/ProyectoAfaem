@@ -14,6 +14,8 @@ import {
   Cargador,
   ConsejoFlotante
 } from '../../components/partials';
+import Swal from 'sweetalert2';
+import { validarFotografia } from '../../services/foto';
 import '../../styles/dashboard.css';
 
 export default function RegistroJugadores() {
@@ -85,12 +87,106 @@ export default function RegistroJugadores() {
     }
   ];
 
-  const handleFileUpload = (documentKey, file) => {
+  const handleFileUpload = async (documentKey, file) => {
     if (file) {
       setDocuments(prev => ({
         ...prev,
         [documentKey]: file
       }));
+
+      // Si es foto, validar
+      if (documentKey === 'fotografia') {
+        Swal.fire({
+          title: 'Validando Fotografía...',
+          html: 'Verificando formato y calidad.',
+          allowOutsideClick: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+        try {
+          const data = await validarFotografia(file);
+          if (data.valido) {
+            Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
+          } else {
+            Swal.fire('Error en la fotografía', data.mensaje, 'error');
+            setDocuments(prev => ({ ...prev, [documentKey]: null })); // Limpiar si es inválida
+          }
+        } catch (err) {
+          Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+        }
+      }
+
+      // Si es INE o Acta, procesar OCR
+      if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
+        Swal.fire({
+          title: 'Analizando Documento...',
+          html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+          const formDataOcr = new FormData();
+          formDataOcr.append('file', file);
+
+          const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
+          if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+
+          const htmlText = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlText, "text/html");
+          
+          let nombreEncontrado = '';
+          let curpEncontrada = '';
+          let fechaNacEncontrada = '';
+          
+          const rows = doc.querySelectorAll('.dato-fila');
+          rows.forEach(row => {
+            const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
+            const value = row.querySelector('.valor')?.textContent?.trim() || '';
+            if (label.includes('nombre')) nombreEncontrado = value;
+            if (label.includes('curp')) curpEncontrada = value;
+            if (label.includes('fecha de nacimiento')) fechaNacEncontrada = value;
+          });
+
+          if (nombreEncontrado) {
+            const parts = nombreEncontrado.split(' ');
+            let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+            
+            if (parts.length >= 3) {
+              lastNamePaterno = parts[0];
+              lastNameMaterno = parts[1];
+              firstName = parts.slice(2).join(' ');
+            } else if (parts.length === 2) {
+              lastNamePaterno = parts[0];
+              firstName = parts[1];
+            } else {
+              firstName = nombreEncontrado;
+            }
+
+            setExtractedData(prev => ({
+              ...prev,
+              nombreJugador: firstName,
+              apellidoPaterno: lastNamePaterno,
+              apellidoMaterno: lastNameMaterno,
+              fechaNacimiento: fechaNacEncontrada || prev.fechaNacimiento,
+            }));
+
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: `Se detectó a: ${nombreEncontrado}`,
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } else {
+            throw new Error('No se detectaron nombres legibles en este documento.');
+          }
+        } catch (err) {
+          console.error("Error OCR:", err);
+          Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
+        }
+      }
     }
   };
 
@@ -117,23 +213,25 @@ export default function RegistroJugadores() {
   };
 
   const handleSubmit = async () => {
-    // Aquí irá la lógica para enviar los documentos al OCR
-    // Por ahora solo es la vista
+    if (!extractedData.nombreJugador || !extractedData.apellidoPaterno) {
+      Swal.fire('Atención', 'Faltan datos de la identidad del jugador.', 'warning');
+      return;
+    }
+
     setUploading(true);
     
-    // Simulación de carga
+    // Simular que lo guardamos en el Backend/LocalStorage
     setTimeout(() => {
-      // Datos de ejemplo que se mostrarían después del OCR
-      setExtractedData({
-        nombreJugador: 'Pedro',
-        apellidoPaterno: 'Ramírez',
-        apellidoMaterno: 'López',
-        genero: 'Masculino',
-        edad: '25',
-        direccion: 'José María 505, Col. Morelos, Cuautla, Morelos'
-      });
       setUploading(false);
-    }, 2000);
+      Swal.fire({
+        title: '¡Jugador Registrado!',
+        text: 'La documentación ha sido enviada para validación con éxito.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      }).then(() => {
+        navigate(teamId ? `/presidente-equipo/admin-equipo/${teamId}` : '/presidente-equipo/equipos');
+      });
+    }, 1500);
   };
 
   return (

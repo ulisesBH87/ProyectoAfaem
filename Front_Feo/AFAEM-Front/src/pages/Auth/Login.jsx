@@ -62,10 +62,12 @@ export default function Login() {
 
       // Redirigir según el rol
       const rol = data?.usuario?.rol || data?.rol || null;
-      if (rol === 'ADMIN') {
+      if (rol === 'ADMIN' || rol === 'ADMINISTRADOR') {
         navigate('/admin/dashboard');
       } else if (rol === 'ENTRENADOR') {
         navigate('/coach/dashboard');
+      } else if (rol === 'PRESIDENTE_EQUIPO') {
+        navigate('/pre-registro-presidente');
       } else if (rol === 'USUARIO') {
         navigate('/panel');
       } else {
