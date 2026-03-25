@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fa';
 
 import { useRBAC } from '../contexts/RBACContext';
-import { getIcon } from '../utils/IconMapper';
+import { getIcon } from '../utils/IconMapper.jsx';
 
 const DashboardSidebar = () => {
   const navigate = useNavigate();

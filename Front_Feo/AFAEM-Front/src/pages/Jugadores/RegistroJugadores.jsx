@@ -16,6 +16,7 @@ import {
 } from '../../components/partials';
 import Swal from 'sweetalert2';
 import { validarFotografia } from '../../services/foto';
+import { registrarJugadorTemporal } from '../../services/teams';
 import '../../styles/dashboard.css';
 
 export default function RegistroJugadores() {
@@ -34,6 +35,7 @@ export default function RegistroJugadores() {
     nombreJugador: '',
     apellidoPaterno: '',
     apellidoMaterno: '',
+    curp: '',
     genero: '',
     edad: '',
     fechaNacimiento: '',
@@ -169,6 +171,7 @@ export default function RegistroJugadores() {
               nombreJugador: firstName,
               apellidoPaterno: lastNamePaterno,
               apellidoMaterno: lastNameMaterno,
+              curp: curpEncontrada || prev.curp,
               fechaNacimiento: fechaNacEncontrada || prev.fechaNacimiento,
             }));
 
@@ -213,25 +216,73 @@ export default function RegistroJugadores() {
   };
 
   const handleSubmit = async () => {
-    if (!extractedData.nombreJugador || !extractedData.apellidoPaterno) {
-      Swal.fire('Atención', 'Faltan datos de la identidad del jugador.', 'warning');
+    if (!extractedData.nombreJugador || !extractedData.apellidoPaterno || !extractedData.curp) {
+      Swal.fire('Atención', 'Faltan datos de la identidad del jugador o CURP.', 'warning');
+      return;
+    }
+    if (!teamId) {
+      Swal.fire('Error', 'No se detectó el ID del equipo. Intenta regresar y volver a intentarlo.', 'error');
       return;
     }
 
     setUploading(true);
     
-    // Simular que lo guardamos en el Backend/LocalStorage
-    setTimeout(() => {
-      setUploading(false);
+    try {
+      const formData = new FormData();
+      formData.append('equipo_temporal_id', teamId);
+      formData.append('nombre', extractedData.nombreJugador);
+      formData.append('primer_apellido', extractedData.apellidoPaterno);
+      formData.append('segundo_apellido', extractedData.apellidoMaterno);
+      formData.append('curp', extractedData.curp);
+      
+      let sexoId = 3;
+      if (extractedData.genero === 'masculino') sexoId = 1;
+      if (extractedData.genero === 'femenino') sexoId = 2;
+      formData.append('sexo_id', sexoId);
+      
+      let fechaISO = '';
+      if (extractedData.fechaNacimiento) {
+          if (extractedData.fechaNacimiento.includes('-')) {
+             fechaISO = extractedData.fechaNacimiento;
+          } else if (extractedData.fechaNacimiento.includes('/')) {
+             const parts = extractedData.fechaNacimiento.split('/');
+             if (parts.length === 3) fechaISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+      }
+      formData.append('fecha_nacimiento', fechaISO);
+
+      // Los archivos deben ir en el mismo orden con el ID estático temporal solicitado (3)
+      const docsParams = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
+      docsParams.forEach((docKey) => {
+        if (documents[docKey]) {
+          formData.append('documento_afiliacion_ids', '3');
+          formData.append('archivos', documents[docKey]);
+        }
+      });
+
+      // Call Backend
+      await registrarJugadorTemporal(formData);
+      
       Swal.fire({
         title: '¡Jugador Registrado!',
         text: 'La documentación ha sido enviada para validación con éxito.',
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
       }).then(() => {
-        navigate(teamId ? `/presidente-equipo/admin-equipo/${teamId}` : '/presidente-equipo/equipos');
+        navigate(`/presidente-equipo/admin-equipo/${teamId}`);
       });
-    }, 1500);
+    } catch (err) {
+      console.error("Error al registrar: ", err);
+      let msj = 'No se pudo conectar con el servidor';
+      if (err.response && err.response.data && err.response.data.detail) {
+        msj = typeof err.response.data.detail === 'string' 
+          ? err.response.data.detail 
+          : JSON.stringify(err.response.data.detail);
+      }
+      Swal.fire('Error al guardar', msj, 'error');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -480,6 +531,15 @@ export default function RegistroJugadores() {
                     valor={extractedData.apellidoMaterno}
                     alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
                     marcador="Ej. García"
+                  />
+
+                  <EntradaFormulario
+                    etiqueta="CURP"
+                    tipo="text"
+                    nombre="curp"
+                    valor={extractedData.curp}
+                    alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})}
+                    marcador="Ingresa la CURP (18 caracteres)"
                   />
 
                   <EntradaSeleccion

@@ -168,7 +168,9 @@ export default function PresidenteEquipoReportes() {
       elemento.download = `${reporte.nombre}.pdf`;
       document.body.appendChild(elemento);
       elemento.click();
-      document.body.removeChild(elemento);
+      setTimeout(() => {
+        document.body.removeChild(elemento);
+      }, 100);
     }
   };
 

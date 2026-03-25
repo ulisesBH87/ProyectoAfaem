@@ -72,7 +72,7 @@ export default function Ingresar() {
       } else if (role === 'PRESIDENTE_EQUIPO') {
         navigate('/pre-registro-presidente');
       } else {
-        navigate('/panel');
+        navigate('/pre-registro-presidente');
       }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);

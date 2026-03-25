@@ -77,6 +77,9 @@ function PreRegistroPresidente() {
   const [documents, setDocuments] = useState({});
   const [ocrResults, setOcrResults] = useState({});
   const [fotoPreview, setFotoPreview] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState({});
+  const [telefono, setTelefono] = useState('');
+  const [tipoAfiliacion, setTipoAfiliacion] = useState('');
 
   const requisitos = [
     { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
@@ -222,49 +225,96 @@ function PreRegistroPresidente() {
         didOpen: () => { Swal.showLoading(); }
       });
 
-      const url = '/template.pdf';
-      const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer());
+      // Cargar la plantilla real con campos de formulario
+      const templateUrl = '/formato_afiliacion_directivo.pdf';
+      const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
 
-      const { nombre, curp, fecha_nac } = ocrResults;
+      const { nombre, curp, fecha_nac, edad, nacionalidad } = ocrResults;
 
+      // Rellenar Nombre(s), Apellido Paterno, Apellido Materno
       if (nombre && nombre !== "No detectado") {
-          const parts = nombre.split(' ');
-          if (parts.length >= 3) {
-              form.getTextField('Apellido Paterno')?.setText(parts[0]);
-              form.getTextField('Apellido Materno')?.setText(parts[1]);
-              form.getTextField('Nombres')?.setText(parts.slice(2).join(' '));
-          } else if (parts.length === 2) {
-              form.getTextField('Apellido Paterno')?.setText(parts[0]);
-              form.getTextField('Nombres')?.setText(parts[1]);
-          } else {
-              form.getTextField('Nombres')?.setText(nombre);
-          }
+        const parts = nombre.split(' ');
+        if (parts.length >= 3) {
+          form.getTextField('Apellido Paterno')?.setText(parts[0]);
+          form.getTextField('Apellido Materno')?.setText(parts[1]);
+          form.getTextField('Nombres')?.setText(parts.slice(2).join(' '));
+        } else if (parts.length === 2) {
+          form.getTextField('Apellido Paterno')?.setText(parts[0]);
+          form.getTextField('Nombres')?.setText(parts[1]);
+        } else {
+          form.getTextField('Nombres')?.setText(nombre);
+        }
       }
-      
+
+      // CURP
       if (curp && curp !== "No detectado") {
-          form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
+        form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       }
+
+      // Fecha de Nacimiento
       if (fecha_nac && fecha_nac !== "No detectada") {
-          form.getTextField('Fecha de Nacimiento')?.setText(fecha_nac);
-      }
-      
-      if (user.Correo) {
-          form.getTextField('Correo electrónico')?.setText(user.Correo);
+        form.getTextField('Fecha de Nacimiento')?.setText(fecha_nac);
       }
 
+      // Correo electrónico
+      const email = user.Correo || user.correo || user.email || localStorage.getItem('email') || '';
+      if (email) {
+        form.getTextField('Correo electrónico')?.setText(email);
+      }
+
+      // Sexo (extraer de CURP: posición 10, H=Hombre, M=Mujer)
+      if (curp && curp.length >= 11) {
+        const sexoChar = curp.charAt(10).toUpperCase();
+        const sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
+        if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
+      }
+
+      // Nacionalidad
+      if (nacionalidad) {
+        form.getTextField('Lugar de Nacimiento')?.setText(nacionalidad);
+      }
+
+      // Teléfono
+      if (telefono) {
+        form.getTextField('Teléfono')?.setText(telefono);
+      }
+
+      // Tipo de afiliación
+      if (tipoAfiliacion) {
+        form.getTextField('fill_20')?.setText(tipoAfiliacion);
+      }
+
+      // Cargo: Presidente
+      form.getTextField('Cargo')?.setText('PRESIDENTE');
+
+      // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      
+      // Descargar usando data URI (evita el bug de Safari con blob URLs)
+      const uint8 = new Uint8Array(pdfBytes);
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, uint8.subarray(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
+      const dataUri = `data:application/pdf;base64,${base64}`;
+      
+      const safeNombre = (nombre || 'Presidente').toString().replace(/[^a-zA-Z0-9_\s]/g, '').trim();
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Formato_Afiliacion_${nombre || 'Usuario'}.pdf`;
+      link.href = dataUri;
+      link.download = `Formato_Afiliacion_${safeNombre}.pdf`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      setTimeout(() => document.body.removeChild(link), 200);
 
-      Swal.fire('¡Listo!', 'El formato se ha generado correctamente.', 'success');
+      Swal.fire('¡Listo!', 'El formato se ha descargado correctamente.', 'success');
     } catch (err) {
       console.error("Error generando PDF:", err);
-      Swal.fire('Error', 'No se pudo generar el PDF pre-llenado.', 'error');
+      Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
     }
   };
 
@@ -529,7 +579,13 @@ function PreRegistroPresidente() {
         .doc-actions { display: flex; gap: 8px; width: 100%; margin-bottom: 15px; }
         .btn-doc { flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
         .btn-download { flex: 1; background: #0b4ea6; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
-        .link-details { font-size: 11px; color: #64748b; text-decoration: underline; cursor: pointer; }
+        .link-details { font-size: 11px; color: #0b4ea6; text-decoration: underline; cursor: pointer; font-weight: 600; }
+        .link-details:hover { color: #063f82; }
+        .ocr-details-panel { width: 100%; margin-top: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; text-align: left; animation: fadeIn 0.3s ease; }
+        .ocr-details-panel .ocr-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #f0f2f5; }
+        .ocr-details-panel .ocr-row:last-child { border-bottom: none; }
+        .ocr-details-panel .ocr-label { color: #64748b; font-weight: 600; }
+        .ocr-details-panel .ocr-value { color: #1e293b; font-weight: 700; text-align: right; max-width: 60%; word-break: break-all; }
 
         .footer-nav { display: flex; justify-content: center; gap: 20px; margin-top: 40px; flex-wrap: wrap; }
         .btn-nav-blue { background: #5d87e5; color: white; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; }
@@ -763,9 +819,36 @@ function PreRegistroPresidente() {
         {pasoActual === 3 && (
           <div className="content-body">
             <h3 className="section-title-small">Sube tus documentos para completar tu registro</h3>
-            <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', marginBottom: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
+            <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', marginBottom: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
               Asegúrate de que sean legibles. Formatos permitidos: PDF, PNG o JPG
             </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Teléfono *</label>
+                <input
+                  type="tel"
+                  placeholder="Ej: 7771234567"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Tipo de afiliación *</label>
+                <select
+                  value={tipoAfiliacion}
+                  onChange={(e) => setTipoAfiliacion(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: 'white' }}
+                >
+                  <option value="">Selecciona...</option>
+                  <option value="DIRECTIVO">Directivo</option>
+                  <option value="PRESIDENTE">Presidente</option>
+                  <option value="DELEGADO">Delegado</option>
+                  <option value="REPRESENTANTE">Representante</option>
+                </select>
+              </div>
+            </div>
 
             <div className="doc-grid">
               {requisitos.map((doc, idx) => {
@@ -784,7 +867,29 @@ function PreRegistroPresidente() {
                       <button className="btn-doc" onClick={() => document.getElementById(`file-${doc.documento}`).click()}>Seleccionar archivo</button>
                       <input type="file" id={`file-${doc.documento}`} style={{display: 'none'}} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
                     </div>
-                    <span className="link-details">Ver detalles</span>
+                    <span className="link-details" onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}>
+                      {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles'}
+                    </span>
+                    {detailsOpen[doc.documento] && (
+                      <div className="ocr-details-panel">
+                        {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
+                          <>
+                            <div className="ocr-row"><span className="ocr-label">Nombre:</span><span className="ocr-value">{ocrResults.nombre || '—'}</span></div>
+                            <div className="ocr-row"><span className="ocr-label">CURP:</span><span className="ocr-value">{ocrResults.curp || '—'}</span></div>
+                            <div className="ocr-row"><span className="ocr-label">Fecha Nac.:</span><span className="ocr-value">{ocrResults.fecha_nac || '—'}</span></div>
+                            <div className="ocr-row"><span className="ocr-label">Edad:</span><span className="ocr-value">{ocrResults.edad || '—'}</span></div>
+                            <div className="ocr-row"><span className="ocr-label">Nacionalidad:</span><span className="ocr-value">{ocrResults.nacionalidad || '—'}</span></div>
+                            <div className="ocr-row"><span className="ocr-label">Documento:</span><span className="ocr-value">{ocrResults.documento || '—'}</span></div>
+                          </>
+                        ) : doc.documento === 'fotografia' ? (
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>La fotografía se valida automáticamente (rostro, calidad, formato).</div>
+                        ) : doc.documento === 'formatoAfiliacion' ? (
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>Descarga el formato, fírmalo y vuelve a subirlo aquí.</div>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>Sube el documento primero para ver los datos extraídos.</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
