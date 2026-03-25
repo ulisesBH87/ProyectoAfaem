@@ -187,10 +187,30 @@ export const certifyUser = async (email) => {
   }
 };
 
+/**
+ * REGISTRAR JUGADOR TEMPORAL (FormData)
+ */
+export const registrarJugadorTemporal = async (data) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.post('/equipo-temporal/registrar-jugador', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error guardando jugador temporal:', error);
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   getUserTeams,
   getTeamDetail,
   createTeam,
-  certifyUser
+  certifyUser,
+  registrarJugadorTemporal
 };
