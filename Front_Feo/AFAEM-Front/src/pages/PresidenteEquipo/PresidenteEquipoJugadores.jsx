@@ -161,7 +161,13 @@ export default function PresidenteEquipoJugadores() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'jugadores.csv';
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
   };
 
   if (loading) {
