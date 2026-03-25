@@ -2,7 +2,7 @@ from app.modelos.equipo_temporal_modelo import EquipoTemporal
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
 
-def crear_equipo_temporal_repo(db, orden):
+def crear_equipo_temporal_repo(db, orden, solicitud_id):
     #obtener cantidad de jugadores pagados
     detalles = db.query(OrdenPagoDetalle).filter(OrdenPagoDetalle.OrdenPagoId == orden.OrdenPagoId).all()
     existe = db.query(EquipoTemporal).filter(
@@ -23,6 +23,7 @@ def crear_equipo_temporal_repo(db, orden):
     # crear equipo temporal
     equipo = EquipoTemporal(
         UsuarioId=orden.UsuarioId,
+        SolicitudId=solicitud_id,
         OrdenPagoId=orden.OrdenPagoId,
         Activo=True,
         CantidadJugadoresPagados=cantidad_jugadores,
