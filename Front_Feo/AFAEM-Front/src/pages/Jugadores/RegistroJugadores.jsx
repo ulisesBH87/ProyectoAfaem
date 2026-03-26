@@ -129,7 +129,7 @@ export default function RegistroJugadores() {
 
         try {
           const formDataOcr = new FormData();
-          formDataOcr.append('file', file);
+          formDataOcr.append('file_id', file);
 
           const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
           if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
