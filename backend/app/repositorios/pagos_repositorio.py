@@ -103,6 +103,9 @@ def crear_presidente_equipo_repo(db, usuario_id):
 
     db.add(nuevo_presidente)
     
+    # Actualizar el rol del usuario para que deje de ser INVITADO
+    usuario.RolId = Rol.PRESIDENTE_EQUIPO.value
+    
     return nuevo_presidente
 
 

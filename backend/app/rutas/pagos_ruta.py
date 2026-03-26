@@ -61,11 +61,12 @@ def mi_estado_pago(db: Session = Depends(get_db), usuario = Depends(obtener_usua
     ).order_by(OrdenPago.OrdenPagoId.desc()).first()
     if not orden:
         return {"tiene_orden": False, "estatus": None}
-    # 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
+    
     return {
         "tiene_orden": True,
         "orden_pago_id": orden.OrdenPagoId,
         "estatus": orden.EstatusPagoId,
+        "tiene_comprobante": bool(orden.RutaVoucher),
         "total": float(orden.TotalPagar) if orden.TotalPagar else 0
     }
 
