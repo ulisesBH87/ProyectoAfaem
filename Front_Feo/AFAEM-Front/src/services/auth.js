@@ -17,11 +17,6 @@ api.interceptors.response.use(
     // SOLO REDIRIGIR A LOGIN SI ES UN 401 Y NO ESTAMOS EN UNA PÁGINA QUE LO MANEJA
     if (error.response && error.response.status === 401) {
       console.warn('⚠️ Acceso denegado (401). Error presentado al usuario.');
-      // NO limpiar el token automáticamente, dejar que el componente lo maneje
-      // localStorage.removeItem('token');
-      // localStorage.removeItem('user');
-      // localStorage.removeItem('UsuarioId');
-      // NO redirigir automáticamente, dejar que el componente lo maneje
     }
     return Promise.reject(error);
   }
@@ -45,14 +40,12 @@ export async function resetPassword(email, token, nueva_contrasena) {
 
 // REGISTRAR ADMIN
 export async function registrarAdmin(datos) {
-  // EL SERVIDOR ESPERA { Nombre, PrimerApellido, SegundoApellido, Correo, Contrasena, RolId }
   const res = await api.post('/auth/registrar_admin', datos);
   return res.data;
 }
 
 // LOGIN
 export async function login(email, password) {
-  // El backend en /auth/iniciar-sesion espera JSON { Correo, Contrasena }
   const payload = {
     Correo: email,
     Contrasena: password,
@@ -76,13 +69,14 @@ export function setAuthToken(token) {
   else delete api.defaults.headers.common['Authorization'];
 }
 
-// PING SENCILLO PARA DIAGNÓSTICO (COMPATIBLE CON Login.jsx)
+// PING SENCILLO PARA DIAGNÓSTICO
 export async function pingBackend() {
   try {
+    // Volvemos a pedir '/' porque ahora el proxy de Vite lo maneja correctamente para JSON
     const res = await api.get('/');
-    return { ok: true, url: api.defaults.baseURL + '/', res: res.data };
-  } catch {
-    return { ok: false, tried: api.defaults.baseURL || API_BASE };
+    return { ok: true, url: '/', res: res.data };
+  } catch (error) {
+    return { ok: false, tried: '/' };
   }
 }
 
