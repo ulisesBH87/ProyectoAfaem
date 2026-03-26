@@ -19,6 +19,11 @@ backend/*.env
 backend/uploads/
 
 # =========================
+# 🔹 Backend - OCR
+# =========================
+OCR/afaem-487315-9fef755ac1dc.json
+
+# =========================
 # 🔹 Python
 # =========================
 backend/__pycache__/
