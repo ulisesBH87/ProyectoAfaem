@@ -43,9 +43,21 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id):
 
     return equipo
 
-"""
-def obtener_slot_repo(db, slot_id):
-    return db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalJugadorId == slot_id).first()
+
+#Registro de jugadores
+def obtener_solicitud_id(db, equipo_temporal_id):
+    equipo = db.query(EquipoTemporal).filter(
+        EquipoTemporal.EquipoTemporalId == equipo_temporal_id
+    ).first()
+
+    return equipo.SolicitudId
+
+
+def obtener_cantidad_slots(db, equipo_temporal_id):
+    slots = db.query(EquipoTemporalJugador).filter(
+        EquipoTemporalJugador.EquipoTemporalId == equipo_temporal_id
+    ).all()
+    return slots
 
 def actualizar_slot_repo(db, slot, persona_id):
 
@@ -53,4 +65,3 @@ def actualizar_slot_repo(db, slot, persona_id):
     slot.Completo = True
 
     return slot
-"""
