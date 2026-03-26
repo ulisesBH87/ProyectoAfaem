@@ -4,7 +4,7 @@ from app.db.sesion import get_db
 from typing import List
 from app.core.seguridad import obtener_usuario_actual
 
-from app.esquemas.equipo_esquema import RegistrarJugadorPeticion, JugadorPersona
+from app.esquemas.equipo_esquema import JugadorPersona
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])

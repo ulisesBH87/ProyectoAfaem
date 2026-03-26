@@ -48,3 +48,8 @@ def subir_documento_repo2(db, persona_id, documento_afiliacion_id, ruta, solicit
 
     db.add(doc)
     return doc
+
+def obtener_solicitud_borrador(db, usuario_id):
+    solicitud = db.query(Solicitud).filter(Solicitud.UsuarioId == usuario_id and Solicitud.EstatusValidacion == EstatusValidacionSolicitud.BORRADOR)
+    solicitud_id = solicitud.SolicitudId
+    return solicitud_id
