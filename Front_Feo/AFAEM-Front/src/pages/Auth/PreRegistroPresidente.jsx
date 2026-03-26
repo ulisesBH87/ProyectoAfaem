@@ -19,6 +19,7 @@ function PreRegistroPresidente() {
   const [error, setError] = useState(null);
   const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Esperando validación, 3 = Documentos
   const [estadoPago, setEstadoPago] = useState(null); // null, 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
+  const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
   const paymentInputRef = useRef(null);
 
   // Verificar estado de pago al cargar
@@ -52,7 +53,16 @@ function PreRegistroPresidente() {
               // Pago aprobado → mostrar pantalla de validado
               setPasoActual(2);
             } else if (data.estatus === 1) {
-              // Pago pendiente → mostrar pantalla de espera
+              if (data.tiene_comprobante) {
+                // Pago pendiente revisión
+                setPasoActual(2);
+              } else {
+                // Generó orden pero no subió comprobante (Guardar y salir)
+                setOrdenPendienteId(data.orden_pago_id);
+                setPasoActual(1);
+              }
+            } else if (data.estatus === 2) {
+              // Rechazado
               setPasoActual(2);
             }
           }
@@ -84,7 +94,8 @@ function PreRegistroPresidente() {
 
   const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + val, 0);
   const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (asignacionSeguros[seg.id] || 0) * seg.precio, 0);
-  const jugadoresRestantes = numPersonas - totalAsignados;
+  const segurosRequeridos = numPersonas > 0 ? numPersonas + 1 : 0; // Jugadores + Presidente
+  const jugadoresRestantes = segurosRequeridos - totalAsignados;
 
   // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
@@ -105,23 +116,78 @@ function PreRegistroPresidente() {
   ];
 
   // ================== METODOS DE NAVEGACIÓN ==================
-  const handleGuardarYSalir = () => {
-    const dataToSave = {
-      numPersonas,
-      asignacionSeguros,
-      pasoActual: 1,
-      fechaGuardado: new Date().toISOString()
-    };
-    localStorage.setItem('afaem_pre_registro_guardado', JSON.stringify(dataToSave));
-    
-    Swal.fire({
-      title: 'Progreso guardado',
-      text: 'Tus datos se han guardado. Puedes ir a pagar y cuando vuelvas regresarás a este paso para subir tu comprobante.',
-      icon: 'success',
-      confirmButtonColor: '#0b4ea6'
-    }).then(() => {
-      handleLogout();
-    });
+  const handleGuardarYSalir = async () => {
+    if (numPersonas <= 0) {
+      setError('Debes ingresar el número de jugadores para guardar datos.');
+      return;
+    }
+    if (totalAsignados !== segurosRequeridos) {
+      setError(`Debes asignar el seguro a todos los jugadores y a ti mismo (Presidente). Faltan ${jugadoresRestantes} por asignar.`);
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Guardando Orden...',
+        html: 'Generando tu orden de pago. <b>Por favor espere.</b>',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No se encontró autenticación. Por favor inicia sesión.');
+
+      // 1. Crear la Orden de Pago
+      const segurosPayload = [];
+      for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
+        if (cant > 0) {
+          segurosPayload.push({
+            SeguroId: parseInt(idStr, 10),
+            Cantidad: cant
+          });
+        }
+      }
+
+      const ordenPayload = {
+        CantidadJugadores: numPersonas,
+        Seguros: segurosPayload
+      };
+
+      const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(ordenPayload)
+      });
+
+      if (!resOrden.ok) {
+        const errData = await resOrden.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Fallo al procesar la orden de pago en el servidor');
+      }
+
+      // Guardamos la configuración visual de fallback (opcional)
+      const dataToSave = {
+        numPersonas,
+        asignacionSeguros,
+        pasoActual: 1,
+        fechaGuardado: new Date().toISOString()
+      };
+      localStorage.setItem('afaem_pre_registro_guardado', JSON.stringify(dataToSave));
+      
+      Swal.fire({
+        title: 'Progreso guardado',
+        text: 'Tus datos se han guardado. Puedes ir a pagar y cuando vuelvas regresarás a este paso para subir tu comprobante.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      }).then(() => {
+        handleLogout();
+      });
+    } catch (err) {
+      console.error('Error al guardar datos:', err);
+      Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
+    }
   };
 
   const irSiguientePaso = async () => {
@@ -129,14 +195,17 @@ function PreRegistroPresidente() {
     if (pasoActual === 0) {
       setPasoActual(1);
     } else if (pasoActual === 1) {
-      if (numPersonas <= 0) {
-        setError('Debes ingresar el número de personas.');
-        return;
+      if (!ordenPendienteId) {
+        if (numPersonas <= 0) {
+          setError('Debes ingresar el número de jugadores.');
+          return;
+        }
+        if (totalAsignados !== segurosRequeridos) {
+          setError(`Debes asignar el seguro a todos los jugadores y a ti mismo (Presidente). Faltan ${jugadoresRestantes} por asignar.`);
+          return;
+        }
       }
-      if (totalAsignados !== numPersonas) {
-        setError(`Debes asignar el seguro a todos los jugadores. Faltan ${jugadoresRestantes} por asignar.`);
-        return;
-      }
+      
       if (!comprobantePago) {
         setError('Debes subir el comprobante de pago para continuar.');
         return;
@@ -144,8 +213,8 @@ function PreRegistroPresidente() {
       
       try {
         Swal.fire({
-          title: 'Creando Orden...',
-          html: 'Generando tu orden de pago y subiendo el comprobante. <b>Por favor espere.</b>',
+          title: ordenPendienteId ? 'Subiendo comprobante...' : 'Creando Orden...',
+          html: ordenPendienteId ? 'Subiendo tu comprobante de pago. <b>Por favor espere.</b>' : 'Generando tu orden de pago y subiendo el comprobante. <b>Por favor espere.</b>',
           allowOutsideClick: false,
           didOpen: () => { Swal.showLoading(); }
         });
@@ -153,48 +222,44 @@ function PreRegistroPresidente() {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No se encontró autenticación. Por favor inicia sesión.');
 
-        // 1. Crear la Orden de Pago
-        const segurosPayload = [];
-        for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
-          if (cant > 0) {
-            segurosPayload.push({
-              SeguroId: parseInt(idStr, 10),
-              Cantidad: cant
-            });
+        let idParaComprobante = ordenPendienteId;
+
+        // 1. Si no existe la orden, hay que crearla
+        if (!idParaComprobante) {
+          const segurosPayload = [];
+          for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
+            if (cant > 0) {
+              segurosPayload.push({
+                SeguroId: parseInt(idStr, 10),
+                Cantidad: cant
+              });
+            }
           }
+
+          const ordenPayload = {
+            CantidadJugadores: numPersonas,
+            Seguros: segurosPayload
+          };
+
+          const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(ordenPayload)
+          });
+
+          if (!resOrden.ok) {
+            const errData = await resOrden.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Fallo al crear la orden de pago');
+          }
+
+          const ordenData = await resOrden.json();
+          // Extraemos el ID
+          const ordenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
+          idParaComprobante = ordenId || ordenData;
         }
-
-        const ordenPayload = {
-          CantidadJugadores: numPersonas,
-          Seguros: segurosPayload
-        };
-
-        const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(ordenPayload)
-        });
-
-        if (!resOrden.ok) {
-          const errData = await resOrden.json().catch(() => ({}));
-          throw new Error(errData.detail || 'Fallo al crear la orden de pago');
-        }
-
-        const ordenData = await resOrden.json();
-        // Asumiendo que el backend devuelve un objeto con el ID de la orden.
-        // Adaptaremos según la respuesta real. Asumimos `orden_pago_id` o `OrdenPagoId` o similar en message.
-        // Si el backend dict no tiene una llave obvia, asumo "orden_pago_id" basado en el esquema normal.
-        const ordenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
-        
-        if (!ordenId && typeof ordenData === 'number') {
-           // En caso de que haya devuelto el numero directo
-        }
-
-        // Si devuelve algo que no extraemos directo, busquémoslo
-        const idParaComprobante = ordenId || ordenData; // Fallback simple
         
         // 2. Subir Comprobante
         const formData = new FormData();
@@ -498,7 +563,12 @@ function PreRegistroPresidente() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    // Solo borramos las llaves de sesión (no borramos afaem_pre_registro_guardado)
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('UsuarioId');
+    localStorage.removeItem('email');
+    localStorage.removeItem('nombre_usuario');
     navigate('/');
   };
 
@@ -760,7 +830,8 @@ function PreRegistroPresidente() {
         .ocr-details-panel .ocr-value { color: #1e293b; font-weight: 700; text-align: right; max-width: 60%; word-break: break-all; }
 
         .footer-nav { display: flex; justify-content: center; gap: 20px; margin-top: 40px; flex-wrap: wrap; }
-        .btn-nav-blue { background: #5d87e5; color: white; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .btn-nav-blue { background: #5d87e5; color: white; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-nav-blue:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.7; }
         .btn-nav-gray { background: #f1f5f9; color: #475569; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; }
         .btn-nav-test { background: #f59e0b; color: white; border: none; padding: 12px 40px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px; transition: transform 0.2s; }
         .btn-nav-test:hover { transform: scale(1.02); background: #d97706; }
@@ -812,60 +883,73 @@ function PreRegistroPresidente() {
           <div className="content-body">
             <h3 className="section-title-small">Selecciona el tipo de seguro para tu plantilla inicial</h3>
             
-            <div className="input-group">
-              <label className="input-label">¿Cuántas personas tendrá tu equipo inicialmente?</label>
-              <input 
-                type="number" 
-                className="input-number" 
-                value={numPersonas} 
-                onChange={(e) => setNumPersonas(Number(e.target.value))} 
-              />
-            </div>
-
-            <p style={{ fontSize: '12px', fontWeight: '800', textAlign: 'left', marginBottom: '20px' }}>
-              Distribución de Seguros (Obligatorio)
-            </p>
-
-            {catalogoSeguros.map(seg => (
-              <div key={seg.id} className="insurance-card">
-                <div className="insurance-info">
-                  <h4>{seg.nombre} <span style={{fontSize: '14px', color: '#5d87e5'}}>${seg.precio} c/u</span></h4>
-                  <p>{seg.descripcion}</p>
-                </div>
-                <input 
-                  type="number" 
-                  className="insurance-input" 
-                  value={asignacionSeguros[seg.id]} 
-                  onChange={(e) => setAsignacionSeguros({...asignacionSeguros, [seg.id]: Number(e.target.value)})} 
-                />
+            {ordenPendienteId ? (
+              <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '25px', textAlign: 'center' }}>
+                <h4 style={{ color: '#166534', fontWeight: '800', margin: '0 0 10px 0', fontSize: '18px' }}>✅ Orden #{ordenPendienteId} Guardada</h4>
+                <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>Tus datos ya fueron recibidos con éxito. Por favor revisa los datos bancarios y sube tu comprobante para finalizar este paso.</p>
               </div>
-            ))}
+            ) : (
+              <>
+                <div className="input-group" style={{ flexDirection: 'column', gap: '10px' }}>
+                  <label className="input-label" style={{ textAlign: 'center' }}>¿Cuántos jugadores tendrá tu equipo inicialmente?</label>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>(Recuerda: Deberás asignar un seguro por cada jugador, **más un seguro extra para ti como Presidente**)</span>
+                  <input 
+                    type="number" 
+                    className="input-number" 
+                    value={numPersonas} 
+                    onChange={(e) => setNumPersonas(Number(e.target.value))} 
+                    style={{ marginTop: '5px' }}
+                  />
+                </div>
 
-            <div className="assigned-bar">
-              <span>Jugadores asignados: {totalAsignados}/{numPersonas}</span>
-              {totalAsignados === numPersonas ? <span style={{color: '#166534'}}>Todos asignados</span> : <span style={{color: '#ef4444'}}>Pendientes</span>}
-            </div>
+                <p style={{ fontSize: '12px', fontWeight: '800', textAlign: 'left', marginBottom: '20px' }}>
+                  Distribución de Seguros (Obligatorio)
+                </p>
 
-            <p style={{ fontSize: '11px', color: '#64748b', textAlign: 'left' }}>
-              Verifica que la distribución sea correcta antes de continuar. Esta información se utilizará para el registro inicial.
-            </p>
-
-            <div className="summary-grid">
-              <div className="summary-card">
-                <h5>Cuotas correspondientes</h5>
                 {catalogoSeguros.map(seg => (
-                  asignacionSeguros[seg.id] > 0 && (
-                    <div key={seg.id} className="summary-row">
-                      <span>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
-                      <span>${seg.precio * asignacionSeguros[seg.id]}</span>
+                  <div key={seg.id} className="insurance-card">
+                    <div className="insurance-info">
+                      <h4>{seg.nombre} <span style={{fontSize: '14px', color: '#5d87e5'}}>${seg.precio} c/u</span></h4>
+                      <p>{seg.descripcion}</p>
                     </div>
-                  )
+                    <input 
+                      type="number" 
+                      className="insurance-input" 
+                      value={asignacionSeguros[seg.id]} 
+                      onChange={(e) => setAsignacionSeguros({...asignacionSeguros, [seg.id]: Number(e.target.value)})} 
+                    />
+                  </div>
                 ))}
-                <div className="total-row">
-                  <span>Total a pagar:</span>
-                  <span>${totalPagar}</span>
+
+                <div className="assigned-bar">
+                  <span>Seguros asignados (Jugadores + Presid.): {totalAsignados}/{segurosRequeridos}</span>
+                  {numPersonas > 0 && totalAsignados === segurosRequeridos ? <span style={{color: '#166534'}}>Todos asignados</span> : <span style={{color: '#ef4444'}}>Pendientes</span>}
                 </div>
-              </div>
+
+                <p style={{ fontSize: '11px', color: '#64748b', textAlign: 'left' }}>
+                  Verifica que la distribución sea correcta antes de continuar. Esta información se utilizará para el registro inicial.
+                </p>
+              </>
+            )}
+
+            <div className="summary-grid" style={{ marginTop: ordenPendienteId ? '10px' : '40px' }}>
+              {!ordenPendienteId && (
+                <div className="summary-card">
+                  <h5>Cuotas correspondientes</h5>
+                  {catalogoSeguros.map(seg => (
+                    asignacionSeguros[seg.id] > 0 && (
+                      <div key={seg.id} className="summary-row">
+                        <span>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                        <span>${seg.precio * asignacionSeguros[seg.id]}</span>
+                      </div>
+                    )
+                  ))}
+                  <div className="total-row">
+                    <span>Total a pagar:</span>
+                    <span>${totalPagar}</span>
+                  </div>
+                </div>
+              )}
 
               <div className="summary-card">
                 <div style={{display: 'flex', justifyContent: 'space-between'}}>
@@ -891,29 +975,33 @@ function PreRegistroPresidente() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', marginBottom: '10px' }}>
-              <button 
-                onClick={handleGuardarYSalir}
-                style={{
-                  background: 'transparent',
-                  color: '#0b4ea6',
-                  border: '1px solid #0b4ea6',
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  fontWeight: '700',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#f1f7ff'}
-                onMouseOut={(e) => e.target.style.background = 'transparent'}
-              >
-                💾 Guardar y reanudar después
-              </button>
-            </div>
+            {!ordenPendienteId ? (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', marginBottom: '10px' }}>
+                <button 
+                  onClick={handleGuardarYSalir}
+                  style={{
+                    background: 'transparent',
+                    color: '#0b4ea6',
+                    border: '1px solid #0b4ea6',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#f1f7ff'}
+                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                >
+                  💾 Guardar datos
+                </button>
+              </div>
+            ) : (
+              <div style={{ marginTop: '30px' }}></div>
+            )}
 
             <div className="upload-proof">
               <h5 style={{fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0}}>Sube tu comprobante de pago</h5>
@@ -934,7 +1022,7 @@ function PreRegistroPresidente() {
             </div>
 
             <div className="footer-nav">
-              <button className="btn-nav-blue" onClick={irSiguientePaso} disabled={totalAsignados !== numPersonas || !comprobantePago}>Siguiente</button>
+              <button className="btn-nav-blue" onClick={irSiguientePaso} disabled={(!ordenPendienteId && totalAsignados !== segurosRequeridos) || !comprobantePago}>Siguiente</button>
               <button className="btn-nav-test" onClick={() => {
                 const preRegistroData = {
                   numPersonas: numPersonas || 15,
