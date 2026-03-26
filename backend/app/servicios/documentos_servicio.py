@@ -68,14 +68,13 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         "total": len(documentos_creados)
     }
 
-def proceso_presidente(db):
-    usuario_id = obtener_usuario_actual()
+def proceso_presidente(db, usuario):
+    usuario_id = usuario.UsuarioId
     persona_id = personas_repositorio.obtener_persona(db, usuario_id)
     
     return persona_id
 
-def presidente_solicitud(db):
-    usuario = obtener_usuario_actual()
+def presidente_solicitud(db, usuario):
     usuario_id = usuario.UsuarioId
     solicitud_id = obtener_solicitud_borrador(db, usuario_id)
     return solicitud_id
