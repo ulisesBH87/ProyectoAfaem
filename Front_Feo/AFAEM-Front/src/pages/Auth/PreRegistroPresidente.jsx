@@ -27,6 +27,19 @@ function PreRegistroPresidente() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
+
+        // Restaurar progreso guardado si existe
+        const saved = localStorage.getItem('afaem_pre_registro_guardado');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed.numPersonas) setNumPersonas(parsed.numPersonas);
+            if (parsed.asignacionSeguros) setAsignacionSeguros(parsed.asignacionSeguros);
+            if (parsed.pasoActual === 1) setPasoActual(1);
+          } catch (e) {
+            console.error("Error al restaurar progreso", e);
+          }
+        }
         const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -80,6 +93,9 @@ function PreRegistroPresidente() {
   const [detailsOpen, setDetailsOpen] = useState({});
   const [telefono, setTelefono] = useState('');
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
+  const [asociacion, setAsociacion] = useState('');
+  const [liga, setLiga] = useState('');
+  const [equipo, setEquipo] = useState('');
 
   const requisitos = [
     { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
@@ -89,7 +105,26 @@ function PreRegistroPresidente() {
   ];
 
   // ================== METODOS DE NAVEGACIÓN ==================
-  const irSiguientePaso = () => {
+  const handleGuardarYSalir = () => {
+    const dataToSave = {
+      numPersonas,
+      asignacionSeguros,
+      pasoActual: 1,
+      fechaGuardado: new Date().toISOString()
+    };
+    localStorage.setItem('afaem_pre_registro_guardado', JSON.stringify(dataToSave));
+    
+    Swal.fire({
+      title: 'Progreso guardado',
+      text: 'Tus datos se han guardado. Puedes ir a pagar y cuando vuelvas regresarás a este paso para subir tu comprobante.',
+      icon: 'success',
+      confirmButtonColor: '#0b4ea6'
+    }).then(() => {
+      handleLogout();
+    });
+  };
+
+  const irSiguientePaso = async () => {
     setError(null);
     if (pasoActual === 0) {
       setPasoActual(1);
@@ -107,18 +142,105 @@ function PreRegistroPresidente() {
         return;
       }
       
-      // Guardar datos de pre-registro
-      const preRegistroData = {
-        numPersonas,
-        asignacionSeguros,
-        totalPagar,
-        fechaRegistro: new Date().toISOString()
-      };
-      localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
-      
-      // Ir a pantalla de espera
-      setEstadoPago(1); // Pendiente
-      setPasoActual(2);
+      try {
+        Swal.fire({
+          title: 'Creando Orden...',
+          html: 'Generando tu orden de pago y subiendo el comprobante. <b>Por favor espere.</b>',
+          allowOutsideClick: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No se encontró autenticación. Por favor inicia sesión.');
+
+        // 1. Crear la Orden de Pago
+        const segurosPayload = [];
+        for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
+          if (cant > 0) {
+            segurosPayload.push({
+              SeguroId: parseInt(idStr, 10),
+              Cantidad: cant
+            });
+          }
+        }
+
+        const ordenPayload = {
+          CantidadJugadores: numPersonas,
+          Seguros: segurosPayload
+        };
+
+        const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(ordenPayload)
+        });
+
+        if (!resOrden.ok) {
+          const errData = await resOrden.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Fallo al crear la orden de pago');
+        }
+
+        const ordenData = await resOrden.json();
+        // Asumiendo que el backend devuelve un objeto con el ID de la orden.
+        // Adaptaremos según la respuesta real. Asumimos `orden_pago_id` o `OrdenPagoId` o similar en message.
+        // Si el backend dict no tiene una llave obvia, asumo "orden_pago_id" basado en el esquema normal.
+        const ordenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
+        
+        if (!ordenId && typeof ordenData === 'number') {
+           // En caso de que haya devuelto el numero directo
+        }
+
+        // Si devuelve algo que no extraemos directo, busquémoslo
+        const idParaComprobante = ordenId || ordenData; // Fallback simple
+        
+        // 2. Subir Comprobante
+        const formData = new FormData();
+        formData.append('archivo', comprobantePago);
+
+        const resComprobante = await fetch(`${API_BASE}/ordenes-pago/${idParaComprobante}/comprobante`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!resComprobante.ok) {
+          const errData = await resComprobante.json().catch(() => ({}));
+          throw new Error('La orden se creó pero falló al subir el comprobante: ' + (errData.detail || ''));
+        }
+
+        // Guardar para la UI local de front-end
+        const preRegistroData = {
+          numPersonas,
+          asignacionSeguros,
+          totalPagar,
+          fechaRegistro: new Date().toISOString()
+        };
+        localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
+        
+        Swal.fire({
+          title: '¡Evidencia Recibida!',
+          text: 'Se ha creado la orden de pago y enviado tu comprobante a revisión.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        // Ir a pantalla de espera
+        setEstadoPago(1); // Pendiente
+        setPasoActual(2);
+      } catch (err) {
+        console.error('Error al procesar el pago:', err);
+        Swal.fire({
+          title: 'Error',
+          text: err.message,
+          icon: 'error'
+        });
+      }
     }
   };
 
@@ -286,6 +408,22 @@ function PreRegistroPresidente() {
         form.getTextField('fill_20')?.setText(tipoAfiliacion);
       }
 
+      // Asociación, Liga, Equipo
+      if (asociacion) form.getTextField('Asociación')?.setText(asociacion.toUpperCase());
+      if (liga) form.getTextField('Liga')?.setText(liga.toUpperCase());
+      if (equipo) form.getTextField('Equipo')?.setText(equipo.toUpperCase());
+      
+      // Fecha automática (A __ de __ del 20__)
+      const hoy = new Date();
+      const dia = String(hoy.getDate()).padStart(2, '0');
+      const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+      const mes = meses[hoy.getMonth()];
+      const anio = String(hoy.getFullYear()).slice(-2);
+      
+      form.getTextField('A')?.setText(dia);
+      form.getTextField('de')?.setText(mes);
+      form.getTextField('del 20')?.setText(anio);
+
       // Cargo: Presidente
       form.getTextField('Cargo')?.setText('PRESIDENTE');
 
@@ -368,21 +506,54 @@ function PreRegistroPresidente() {
     try {
       setLoading(true);
       setError(null);
-      const curp = ocrResults.curp || '';
-      const rfc = curp ? (curp.substring(0, 10) + 'XXX') : '';
-      const sexoChar = curp ? curp.charAt(10).toUpperCase() : '';
-      const sexoId = sexoChar === 'H' ? 1 : (sexoChar === 'M' ? 2 : 3);
-      
-      let fechaISO = '';
-      if (ocrResults.fecha_nac && ocrResults.fecha_nac.includes('/')) {
-          const parts = ocrResults.fecha_nac.split('/');
-          if (parts.length === 3) {
-              fechaISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          }
+
+      // Verify user/persona ID
+      let personaId = localStorage.getItem('UsuarioId') || user.id || user.usuario_id || user.UsuarioId;
+      if (!personaId) {
+        throw new Error('No se encontró el ID del usuario en la sesión.');
       }
 
-      await solicitudService.sendRegistroSolicitud(curp, rfc, sexoId, fechaISO);
+      // Verify all 4 documents are present
+      const requiredDocs = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
+      for (const docKey of requiredDocs) {
+        if (!documents[docKey]) {
+          throw new Error(`Falta subir el documento: ${requisitos.find(r => r.documento === docKey)?.nombre}`);
+        }
+      }
+
+      Swal.fire({
+        title: 'Subiendo Documentos...',
+        html: 'Enviando archivos al servidor. <b>Por favor espere.</b>',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const token = localStorage.getItem('token');
       
+      // Upload each document
+      for (const docKey of requiredDocs) {
+        const file = documents[docKey];
+        const formData = new FormData();
+        formData.append('persona_id', personaId);
+        formData.append('documento_afiliacion_id', 3); // Hardcoded to 3 as requested
+        formData.append('archivo', file);
+
+        const response = await fetch(`${API_BASE}/documentos/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+            // Note: Do NOT set Content-Type for FormData, the browser handles the multipart boundary automatically
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(`Error subiendo ${docKey}: ${errData.detail || response.statusText}`);
+        }
+      }
+
+      // Save pre-registro data strictly for frontend state tracking
       const preRegistroData = {
         numPersonas,
         asignacionSeguros,
@@ -393,7 +564,7 @@ function PreRegistroPresidente() {
 
       Swal.fire({
         title: '¡Registro Exitoso!',
-        text: 'Tu solicitud de presidente ha sido registrada.',
+        text: 'Tus documentos han sido subidos correctamente.',
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
       }).then(() => {
@@ -401,10 +572,11 @@ function PreRegistroPresidente() {
       });
 
     } catch (err) {
-      setError('Error al enviar la solicitud.');
+      console.error("Error en upload:", err);
+      setError(err.message || 'Error al enviar los documentos.');
       Swal.fire({
         title: 'Error',
-        text: 'No se pudo enviar la solicitud.',
+        text: err.message || 'No se pudieron subir los documentos.',
         icon: 'error'
       });
     } finally {
@@ -719,6 +891,30 @@ function PreRegistroPresidente() {
               </div>
             </div>
 
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', marginBottom: '10px' }}>
+              <button 
+                onClick={handleGuardarYSalir}
+                style={{
+                  background: 'transparent',
+                  color: '#0b4ea6',
+                  border: '1px solid #0b4ea6',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#f1f7ff'}
+                onMouseOut={(e) => e.target.style.background = 'transparent'}
+              >
+                💾 Guardar y reanudar después
+              </button>
+            </div>
+
             <div className="upload-proof">
               <h5 style={{fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0}}>Sube tu comprobante de pago</h5>
               <div className="file-input-custom">
@@ -823,7 +1019,7 @@ function PreRegistroPresidente() {
               Asegúrate de que sean legibles. Formatos permitidos: PDF, PNG o JPG
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '25px', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px', background: '#f8fafc', padding: '20px', borderRadius: '12px 12px 0 0', border: '1px solid #e2e8f0', borderBottom: 'none' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Teléfono *</label>
                 <input
@@ -847,6 +1043,39 @@ function PreRegistroPresidente() {
                   <option value="DELEGADO">Delegado</option>
                   <option value="REPRESENTANTE">Representante</option>
                 </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '25px', background: '#f8fafc', padding: '0 20px 20px 20px', borderRadius: '0 0 12px 12px', border: '1px solid #e2e8f0', borderTop: 'none' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Asociación</label>
+                <input
+                  type="text"
+                  placeholder="Ej: MORELOS"
+                  value={asociacion}
+                  onChange={(e) => setAsociacion(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Liga</label>
+                <input
+                  type="text"
+                  placeholder="Ej: LIGA ESTATAL"
+                  value={liga}
+                  onChange={(e) => setLiga(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Equipo</label>
+                <input
+                  type="text"
+                  placeholder="Ej: ACADEMIA FC"
+                  value={equipo}
+                  onChange={(e) => setEquipo(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+                />
               </div>
             </div>
 
