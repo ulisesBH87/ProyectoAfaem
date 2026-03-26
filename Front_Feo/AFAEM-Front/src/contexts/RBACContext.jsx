@@ -18,6 +18,9 @@ export const RBACProvider = ({ children }) => {
       return;
     }
 
+    // Aseguramos que isLoading sea true mientras pedimos nuevos datos (evita race conditions)
+    setAccess(prev => ({ ...prev, isLoading: true }));
+
     try {
       const response = await api.get('/permisos/mi-acceso', {
         headers: { Authorization: `Bearer ${token}` }
