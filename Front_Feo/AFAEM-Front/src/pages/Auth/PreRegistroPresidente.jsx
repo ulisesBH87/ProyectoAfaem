@@ -350,7 +350,7 @@ function PreRegistroPresidente() {
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file_id', file);
 
       // Usamos el proxy configurado en vite.config.js
       const response = await fetch('/ocr-api', {
@@ -385,13 +385,23 @@ function PreRegistroPresidente() {
         [docKey]: `OCR Procesado: ${extractedData.nombre}`
       }));
 
-      Swal.fire({
-        title: '¡Lectura Exitosa!',
-        text: `Se detectó a: ${extractedData.nombre}`,
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
+      if (extractedData.nombre) {
+        Swal.fire({
+          title: '¡Lectura Exitosa!',
+          text: `Se detectó a: ${extractedData.nombre}`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire({
+          title: 'Documento procesado',
+          text: 'Se leyó el documento pero no se pudo extraer el nombre automáticamente.',
+          icon: 'info',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
 
     } catch (err) {
       console.error("Error OCR:", err);
