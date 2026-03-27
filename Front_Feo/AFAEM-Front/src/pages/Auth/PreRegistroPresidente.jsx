@@ -896,7 +896,18 @@ function PreRegistroPresidente() {
             {ordenPendienteId ? (
               <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '25px', textAlign: 'center' }}>
                 <h4 style={{ color: '#166534', fontWeight: '800', margin: '0 0 10px 0', fontSize: '18px' }}>✅ Orden #{ordenPendienteId} Guardada</h4>
-                <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>Tus datos ya fueron recibidos con éxito. Por favor revisa los datos bancarios y sube tu comprobante para finalizar este paso.</p>
+                <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>
+                  Tu orden de pago ha sido generada con éxito. Realiza el depósito o transferencia y, una vez sea validado tu pago por la asociación, podrás continuar con el registro de sus documentos.
+                </p>
+                <div style={{ marginTop: '20px' }}>
+                   <button 
+                     onClick={handleLogout}
+                     className="btn-nav-gray"
+                     style={{ padding: '10px 30px', fontSize: '13px' }}
+                   >
+                     Cerrar sesión por ahora
+                   </button>
+                </div>
               </div>
             ) : (
               <>
@@ -986,63 +997,40 @@ function PreRegistroPresidente() {
             </div>
 
             {!ordenPendienteId ? (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px', marginBottom: '10px' }}>
                 <button 
                   onClick={handleGuardarYSalir}
                   style={{
-                    background: 'transparent',
-                    color: '#0b4ea6',
-                    border: '1px solid #0b4ea6',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    fontWeight: '700',
-                    fontSize: '14px',
+                    background: '#0b4ea6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '16px 40px',
+                    borderRadius: '12px',
+                    fontWeight: '800',
+                    fontSize: '16px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    transition: 'background 0.2s'
+                    gap: '10px',
+                    boxShadow: '0 4px 12px rgba(11, 78, 166, 0.3)',
+                    transition: 'transform 0.2s, background 0.2s'
                   }}
-                  onMouseOver={(e) => e.target.style.background = '#f1f7ff'}
-                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                  onMouseOver={(e) => {
+                    e.target.style.transform = 'scale(1.02)';
+                    e.target.style.background = '#093d82';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.background = '#0b4ea6';
+                  }}
                 >
-                  💾 Guardar datos
+                  💾 Guardar y reanudar después
                 </button>
               </div>
-            ) : (
-              <div style={{ marginTop: '30px' }}></div>
-            )}
-
-            <div className="upload-proof">
-              <h5 style={{fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0}}>Sube tu comprobante de pago</h5>
-              <div className="file-input-custom">
-                <button className="btn-outline" onClick={() => paymentInputRef.current.click()}>Seleccionar archivo</button>
-                <input 
-                  type="file" 
-                  ref={paymentInputRef} 
-                  style={{display: 'none'}} 
-                  accept="image/*,.pdf" 
-                  onChange={e => setComprobantePago(e.target.files[0])} 
-                />
-                <span style={{fontSize: '11px', color: '#64748b'}}>{comprobantePago ? comprobantePago.name : 'Sin archivos seleccionados'}</span>
-              </div>
-              <p style={{ fontSize: '11px', color: '#475569', marginTop: '20px' }}>
-                Asegúrate de que el comprobante sea legible y contenga la referencia indicada. Tu comprobante será validado en un plazo de 24 a 48 horas hábiles.
-              </p>
-            </div>
+            ) : null}
 
             <div className="footer-nav">
-              <button className="btn-nav-blue" onClick={irSiguientePaso} disabled={(!ordenPendienteId && totalAsignados !== segurosRequeridos) || !comprobantePago}>Siguiente</button>
-              <button className="btn-nav-test" onClick={() => {
-                const preRegistroData = {
-                  numPersonas: numPersonas || 15,
-                  asignacionSeguros,
-                  totalPagar: totalPagar || 2250,
-                  fechaRegistro: new Date().toISOString()
-                };
-                localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
-                setPasoActual(3);
-              }}>Siguiente paso (pruebas) ⚡</button>
+              <button className="btn-nav-gray" onClick={irPasoAnterior}>Anterior</button>
             </div>
           </div>
         )}

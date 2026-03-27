@@ -268,7 +268,7 @@ export default function ConfigurarEquipo() {
         didOpen: () => { Swal.showLoading(); }
       });
 
-      const templateUrl = '/formato_afiliacion_directivo.pdf';
+      const templateUrl = '/formato_afiliacion_jugador.pdf';
       const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
@@ -302,6 +302,20 @@ export default function ConfigurarEquipo() {
         const sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
         if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
       }
+
+      // Fecha automática (A __ de __ del 20__)
+      const hoy = new Date();
+      const dia = String(hoy.getDate()).padStart(2, '0');
+      const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+      const mes = meses[hoy.getMonth()];
+      const anio = String(hoy.getFullYear()).slice(-2);
+      
+      form.getTextField('A')?.setText(dia);
+      form.getTextField('de')?.setText(mes);
+      form.getTextField('del 20')?.setText(anio);
+
+      // Cargo: JUGADOR
+      form.getTextField('Cargo')?.setText('JUGADOR');
 
       // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
