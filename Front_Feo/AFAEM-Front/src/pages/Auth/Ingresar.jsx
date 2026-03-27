@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import StadiumBg from '../../assets/stadium.jpg';
 import { Link, useNavigate } from 'react-router-dom';
-import { login, setAuthToken, pingBackend } from '../../services/auth';
+import { login, setAuthToken, pingBackend, parseJwt } from '../../services/auth';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -60,6 +60,13 @@ export default function Ingresar() {
         localStorage.setItem('UsuarioId', data.usuario_id);
       } else if (data?.id) {
         localStorage.setItem('UsuarioId', data.id);
+      } else {
+        // FALLBACK: Extraer ID del JWT si no viene en el primer nivel del JSON
+        const decoded = parseJwt(token);
+        if (decoded && decoded.sub) {
+          localStorage.setItem('UsuarioId', decoded.sub);
+          console.log('🆔 ID extraído del Token:', decoded.sub);
+        }
       }
       
       const role = data?.usuario?.rol || data?.rol || '';

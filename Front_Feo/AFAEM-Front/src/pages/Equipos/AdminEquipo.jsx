@@ -164,7 +164,7 @@ export default function AdminEquipo() {
     });
   };
 
-  const handleEditarJugador = (jugador) => {
+  const handleEditarJugador = () => {
     Swal.fire({
       title: 'Editar Jugador',
       text: '¿Deseas modificar los datos de este jugador? (Simulación)',

@@ -272,6 +272,32 @@ export default function ConfigurarEquipo() {
       const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
+      const firstPage = pdfDoc.getPages()[0];
+
+      // INCRUSTAR FOTOGRAFÍA SI EXISTE
+      if (currentPlayer.documents.foto) {
+        try {
+          const photoBytes = await currentPlayer.documents.foto.arrayBuffer();
+          let photoImage;
+          const fileName = currentPlayer.documents.foto.name.toLowerCase();
+          
+          if (fileName.endsWith('.png')) {
+            photoImage = await pdfDoc.embedPng(photoBytes);
+          } else {
+            photoImage = await pdfDoc.embedJpg(photoBytes);
+          }
+
+          // Dibujar la foto en la zona Imagen9_af_image (x: 481, y: 678)
+          firstPage.drawImage(photoImage, {
+            x: 481,
+            y: 678,
+            width: 72,
+            height: 87,
+          });
+        } catch (photoErr) {
+          console.error("No se pudo incrustar la foto del jugador:", photoErr);
+        }
+      }
 
       const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate } = currentPlayer;
 

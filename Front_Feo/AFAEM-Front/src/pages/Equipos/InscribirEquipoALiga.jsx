@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import DashboardHeader from '../../components/DashboardHeader';
 import Swal from 'sweetalert2';
@@ -9,7 +9,6 @@ import '../../styles/dashboard.css';
 export default function InscribirEquipoALiga() {
   const navigate = useNavigate();
   const { teamId } = useParams();
-  const _location = useLocation();
   const userEmail = localStorage.getItem('email') || '';
   
   const [selectedTeam, setSelectedTeam] = useState('Cargando...');
@@ -26,7 +25,7 @@ export default function InscribirEquipoALiga() {
         } else {
           setSelectedTeam('Equipo no encontrado');
         }
-      } catch (err) {
+      } catch {
         setSelectedTeam('Equipo Local');
       }
     };

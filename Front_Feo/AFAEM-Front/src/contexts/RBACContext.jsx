@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/auth';
-
-const RBACContext = createContext();
+import { RBACContext } from './RBACContextObject';
 
 export const RBACProvider = ({ children }) => {
   const [access, setAccess] = useState({
@@ -19,7 +18,7 @@ export const RBACProvider = ({ children }) => {
     }
 
     // Aseguramos que isLoading sea true mientras pedimos nuevos datos (evita race conditions)
-    setAccess(prev => ({ ...prev, isLoading: true }));
+    // setAccess(prev => ({ ...prev, isLoading: true }));
 
     try {
       const response = await api.get('/permisos/mi-acceso', {
@@ -43,7 +42,7 @@ export const RBACProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    fetchAccess();
+    const id = setTimeout(fetchAccess, 0);
     
     // Escuchar eventos de login para actualizar inmediatamente
     const handleLogin = () => fetchAccess();
@@ -53,6 +52,7 @@ export const RBACProvider = ({ children }) => {
     const interval = setInterval(fetchAccess, 2 * 60 * 1000);
     
     return () => {
+        clearTimeout(id);
         window.removeEventListener('user-logged-in', handleLogin);
         clearInterval(interval);
     };
@@ -68,4 +68,4 @@ export const RBACProvider = ({ children }) => {
   );
 };
 
-export const useRBAC = () => useContext(RBACContext);
+
