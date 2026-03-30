@@ -434,23 +434,24 @@ function PreRegistroPresidente() {
         try {
           const photoBytes = await documents.fotografia.arrayBuffer();
           let photoImage;
-          const fileName = documents.fotografia.name.toLowerCase();
+          const nameLower = documents.fotografia.name.toLowerCase();
 
-          if (fileName.endsWith('.png')) {
+          if (nameLower.endsWith('.png')) {
             photoImage = await pdfDoc.embedPng(photoBytes);
           } else {
             photoImage = await pdfDoc.embedJpg(photoBytes);
           }
 
-          // Dibujar la foto en la zona Imagen1_af_image (x: 481, y: 679)
+          // Coordenadas calculadas para el recuadro superior derecho
           firstPage.drawImage(photoImage, {
-            x: 481,
-            y: 679,
-            width: 72,
-            height: 86,
+            x: 479,
+            y: 676,
+            width: 76,
+            height: 90,
           });
+          console.log("✅ Fotografía incrustada en el PDF");
         } catch (photoErr) {
-          console.error("No se pudo incrustar la foto:", photoErr);
+          console.warn("⚠️ Error al incrustar foto:", photoErr);
         }
       }
 

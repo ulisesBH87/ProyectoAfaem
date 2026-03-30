@@ -3,15 +3,26 @@ from app.modelos.menus_modelo import Menus
 from app.modelos.rel_usuario_roles_modelo import RelUsuarioRoles
 from app.modelos.rel_menu_roles_modelo import RelMenuRoles
 from app.modelos.rel_rol_permisos_modelo import RelRolPermisos
+from app.modelos.usuario_modelo import Usuario
+from app.modelos.roles_modelo import Roles
 
 def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
-    # 1. Obtener Roles asignados
+    # 1. Obtener Roles asignados (Relación RBAC)
     roles_rels = db.query(RelUsuarioRoles).filter(RelUsuarioRoles.UsuarioId == usuario_id, RelUsuarioRoles.Estatus == True).all()
-    if not roles_rels:
-        return {"Roles": [], "Permisos": [], "Menus": []}
+    
+    # 2. También obtener el RolId primario del usuario (Legacy support / Basic role)
+    usuario_base = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
     
     roles_ids = [r.RolId for r in roles_rels]
     roles_nombres = [r.RolRelacion.Nombre for r in roles_rels]
+    
+    if usuario_base and usuario_base.RolId not in roles_ids:
+        roles_ids.append(usuario_base.RolId)
+        if usuario_base.RolRelacion:
+            roles_nombres.append(usuario_base.RolRelacion.Nombre)
+
+    if not roles_ids:
+        return {"Roles": [], "Permisos": [], "Menus": []}
 
     # 2. Obtener Permisos asociados a esos roles
     permisos_rels = db.query(RelRolPermisos).filter(RelRolPermisos.RolId.in_(roles_ids)).all()
