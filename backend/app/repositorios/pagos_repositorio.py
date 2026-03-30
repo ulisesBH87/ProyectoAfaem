@@ -130,6 +130,7 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     orden.EstatusPagoId = estatus
     
     if estatus != 3: #si el pago no es aceptado
+        db.commit()
         return 0 
     
     solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
