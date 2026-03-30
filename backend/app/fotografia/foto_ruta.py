@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File #|importar las clases
 
 #Importar las funciones de detección de rostros con FACE DETECTOR
-from app.servicios.foto_digitalizacion import (
+from app.fotografia.foto_validacion import (
     validacion_fotografia, 
     detectar_rostro_pdf
 ) 
@@ -11,7 +11,7 @@ import base64 #Importar la biblioteca para codificar y decodificar datos en form
 router = APIRouter() #|crear un enrutador para manejar las rutas de la API
 
 #definir una ruta POST para validar un archivo
-@router.post("/validar/fotografia") 
+@router.post("/validar-fotografia") 
 
 async def validar_archivo(file: UploadFile = File(...)): #|definir una función asincrónica que recibe un archivo como entrada
     

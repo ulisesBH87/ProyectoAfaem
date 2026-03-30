@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta
+from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta
+from app.fotografia import foto_ruta
 
 app = FastAPI(
     title = "BackendAFAEM",

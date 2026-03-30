@@ -5,7 +5,7 @@ import fitz
 
 
 from .foto_detector import *
-from .foto_validaciones import *
+from .foto_criterios import *
 
 
 # FUNCION PRINCIPAL PARA LA DETECCIÓN DE ROSTROS EN IMÁGENES
@@ -18,7 +18,7 @@ def validacion_fotografia(imagen_bytes):
     if imagen_bgr is None:
         return 0, "No se pudo cargar la imagen"
 
-    # VALIDACIONES TECNICAS PRE-RECORTE
+    # CRITERIOS TECNICOS PRE-RECORTE
     for funcion in [resolucion, dimensiones, formato_color]:
         valido, mensaje = funcion(imagen_bgr if funcion != resolucion else imagen_bytes)
         if not valido:
@@ -58,7 +58,7 @@ def validacion_fotografia(imagen_bytes):
     if isinstance(imagen_recortada, tuple):
         return imagen_recortada
 
-    # VALIDACIONES TECNICAS PORST-RECORTE
+    # CRITERIOS TECNICOS PORST-RECORTE
     valido, mensaje = iluminacion(landmarks, imagen_recortada)
     if not valido:
         return 0, mensaje
@@ -66,7 +66,18 @@ def validacion_fotografia(imagen_bytes):
     valido, mensaje = nitidez(imagen_recortada)
     if not valido:
         return 0, mensaje
+    
+    
+    #CRITERIOS DE ACCESORIOS
 
+    valido, mensaje = accesorios(imagen_recortada)
+    if not valido:
+        return 0, mensaje 
+    
+    #valido, mensaje = manchas(imagen_recortada)
+    #if not valido:
+    #    return 0, mensaje
+    
     # REDETECTAR LANDMARKS DEL ROSTRO
     face_imagen_rgb = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2RGB)
 
@@ -126,20 +137,30 @@ def validacion_fotografia(imagen_bytes):
     confidence_mask = segmentacion_result.confidence_masks[0].numpy_view()
 
     # ------------------------------------
-    # --- VALIDACIONES PARA LA FOTO ---
+    # --- CRITERIOS PARA LA FOTO ---
     # ------------------------------------
-
-    # VALIDACIONES DE CABEZA
+    
+    # TAMAÑO DE LA CABEZA
     valido, mensaje = tam_rostro(face_landmarks, imagen_recortada.shape)
     if not valido:
         return 0, mensaje 
     
-    # VALIDACIONES DE POSTURA
+    # POSTURA
     valido, mensaje = postura_recta(pose_landmarks)
     if not valido:
         return 0, mensaje 
     
-    # VALIDACIONES FACIALES
+    # OJOS ABIERTOS
+    valido, mensaje = ojos_abiertos(face_landmarks, imagen_recortada.shape)
+    if not valido:
+        return 0, mensaje 
+    
+    # MIRADA FRONTAL
+    valido, mensaje = mirada_frontal(face_landmarks)
+    if not valido:
+        return 0, mensaje 
+    
+    # EXPRESION NEUTRA
     valido, mensaje = ojos_abiertos(face_landmarks, imagen_recortada.shape)
     if not valido:
         return 0, mensaje 
@@ -149,7 +170,7 @@ def validacion_fotografia(imagen_bytes):
         if not valido:
             return 0, mensaje
         
-    # VALIDACIONES DE SEGMENTACION
+    # CABELLO
     valido, mensaje = cabello(category_mask)
     if not valido:
         return 0, mensaje    
@@ -188,29 +209,8 @@ def validacion_fotografia(imagen_bytes):
     if not expresion_neutra(landmarks, imagen_recortada.shape):
         return 0, "Expresión no neutra"
     """
-    """
-    # --------------------------
-    # --- DETECTOR DE SEGMENTACION DE DEEPLAP ---
-    # --------------------------
-    segmentacion = get_segmentacion_deeplab_detector()
-
-     # DETECTAR LANDMARKS DE LA SEGMENTACION 
-    segmentacion_imagen_rgb = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2RGB)
-    
-    segmentacion_mp_imagen = mp.Image(
-        image_format = mp.ImageFormat.SRGB,
-        data = segmentacion_imagen_rgb
-    )
-
-    segmentacion_result = segmentacion.segment(segmentacion_mp_imagen)
-
-    # VERIFICACION DE MASCARA
-    if segmentacion_result.category_mask is None:
-        return 0, "Error al calcular segmentación de fondo"
-    
-    category_mask = segmentacion_result.category_mask.numpy_view()
-    """
-
+   
+    # FONDO BLANCO
     foto_valida = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
 
 
@@ -218,9 +218,10 @@ def validacion_fotografia(imagen_bytes):
     # --- RESULTADO FINAL ---
     # --------------------------
     _, buffer = cv2.imencode(".jpg", foto_valida)
+    
     return 1, buffer.tobytes()
-
-# FUNCION PARA LA EXTRACCION DE ROSTRO EN PDF
+ 
+ # FUNCION PARA LA EXTRACCION DE ROSTRO EN PDF
 def detectar_rostro_pdf(pdf_bytes):
     
     pdf_documents = fitz.open(stream=pdf_bytes, filetype="pdf")  # Abrir el PDF desde los bytes

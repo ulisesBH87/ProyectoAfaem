@@ -1,7 +1,7 @@
-# =====================================
-# DETECTOR CON LANDMARKER
-# =====================================
 import os
+import torch
+import cv2
+import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -9,6 +9,8 @@ from mediapipe.tasks.python import vision
 face_detector_instance = None
 pose_detector_instance = None
 segmentacion_detector_instance = None
+objects_detector_instance = None
+
 segmentacion_deeplab_detector_instance = None
 
 # =====================================
@@ -20,7 +22,7 @@ def modelo_face():
     # Obtener la ruta absoluta del directorio actual
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     # Construir ruta al modelo
-    face_model_path = os.path.join(BASE_DIR, "..", "modelos", "face_landmarker.task")
+    face_model_path = os.path.join(BASE_DIR, "modelos", "face_landmarker.task")
     # Normalizar la ruta
     face_model_path = os.path.abspath(face_model_path)
     return  face_model_path
@@ -30,7 +32,7 @@ def modelo_pose():
     # Obtener la ruta absoluta del directorio actual
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     # Construir ruta al modelo
-    pose_model_path = os.path.join(BASE_DIR, "..", "modelos", "pose_landmarker_full.task")
+    pose_model_path = os.path.join(BASE_DIR, "modelos", "pose_landmarker_full.task")
     # Normalizar la ruta
     pose_model_path = os.path.abspath(pose_model_path)
     return  pose_model_path
@@ -40,20 +42,16 @@ def modelo_segmentacion():
     # Obtener la ruta absoluta del directorio actual
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     # Construir ruta al modelo
-    segmentacion_model_path = os.path.join(BASE_DIR, "..", "modelos", "selfie_multiclass_256x256.tflite")
+    segmentacion_model_path = os.path.join(BASE_DIR, "modelos", "selfie_multiclass_256x256.tflite")
     # Normalizar la ruta
     segmentacion_model_path = os.path.abspath(segmentacion_model_path)
     return segmentacion_model_path 
 
-# MODELO DE SEGMENTACION DE DEEPLAP
-def modelo_segmentacion_deeplab():
-    # Obtener la ruta absoluta del directorio actual
+# MODELO DE OBJETOS
+def modelo_detector_objetos():  
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    # Construir ruta al modelo
-    segmentacion_model_path = os.path.join(BASE_DIR, "..", "modelos", "deeplab_v3.tflite")
-    # Normalizar la ruta
-    segmentacion_model_path = os.path.abspath(segmentacion_model_path)
-    return segmentacion_model_path 
+    ruta = os.path.join(BASE_DIR, "modelos", "yolov7", "best.pt")
+    return os.path.abspath(ruta)
 
 # =====================================
 # ----- FUNCOONMES DE DETECTORES ----
@@ -120,24 +118,17 @@ def segmentacion_detector():
     )
     return ImageSegmenter.create_from_options(options)
 
-# DECTECTOR DE SEGMENTACION DE SELFIES
-def segmentacion_deeplab_detector():
-    segmentacion_deeplab_model_path = modelo_segmentacion_deeplab()
-
-    # Inicializar detector de segmentacion
-    BaseOptions = mp.tasks.BaseOptions
-    ImageSegmenter = mp.tasks.vision.ImageSegmenter
-    ImageSegmenterOptions = mp.tasks.vision.ImageSegmenterOptions
-    VisionRunningMode = mp.tasks.vision.RunningMode
-
-    # Crear una instancia de detector de segmentacion con el modo de imagen:
-    options = ImageSegmenterOptions (
-        base_options = BaseOptions(model_asset_path=segmentacion_deeplab_model_path),
-        running_mode = VisionRunningMode.IMAGE,
-        output_category_mask=True,
-        output_confidence_masks= True
+# DECTECTOR DE OBJETOS
+def detector_objetos():
+    model_path = modelo_detector_objetos()
+    model = torch.hub.load(
+        os.path.dirname(model_path),
+        'custom', 
+        model_path, 
+        source='local'
     )
-    return ImageSegmenter.create_from_options(options)
+    model.conf = 0.5  # Establecer el umbral de confianza a 0.5
+    return model
 
 # =====================================
 # ----- GETS PARA LOS DETECTORES -----
@@ -164,9 +155,9 @@ def get_segmentacion_detector():
         segmentacion_detector_instance = segmentacion_detector()
     return segmentacion_detector_instance
 
-# GET DE DECTECTOR DE SEGMENTACION DE SELFIES
-def get_segmentacion_deeplab_detector():
-    global segmentacion_deeplab_detector_instance
-    if segmentacion_deeplab_detector_instance is None:
-        segmentacion_deeplab_detector_instance = segmentacion_deeplab_detector()
-    return segmentacion_deeplab_detector_instance
+# GET DE DECTECTOR DE OBJETOS
+def get_detector_objetos():
+    global objects_detector_instance
+    if objects_detector_instance is None:
+        objects_detector_instance = detector_objetos()
+    return objects_detector_instance
