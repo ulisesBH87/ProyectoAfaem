@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-import { useRBAC } from '../contexts/RBACContext';
+import { useRBAC } from '../hooks/useRBAC';
 
 const AdminGuard = ({ children }) => {
   const { hasRole, isLoading } = useRBAC();

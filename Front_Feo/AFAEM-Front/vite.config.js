@@ -7,10 +7,60 @@ export default defineConfig({
   server: {
     proxy: {
       '/ocr-api': {
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/ocr-api/, ''),
       },
+      // Backend Proxies (Usando 127.0.0.1 para mayor estabilidad)
+      '/auth': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/solicitud': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/permisos': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/ordenes-pago': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/equipo-temporal': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/documentos': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/foto': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      // Proxy para la raíz '/' solo para peticiones JSON (evita el 404 del pingBackend)
+      '^/$': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+        bypass: (req) => {
+          // Si es una petición de navegador (HTML), NO proxiar (Vite maneja el frontend)
+          if (req.headers.accept?.includes('text/html')) {
+            return req.url;
+          }
+          return null; // Proxiar al backend
+        }
+      }
     },
   },
 })

@@ -13,7 +13,7 @@ import {
   FaChevronRight
 } from 'react-icons/fa';
 
-import { useRBAC } from '../../contexts/RBACContext';
+import { useRBAC } from '../../hooks/useRBAC';
 import { getIcon } from '../../utils/IconMapper.jsx';
 
 const AdminSidebar = () => {

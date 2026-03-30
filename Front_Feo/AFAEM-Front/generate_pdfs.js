@@ -29,7 +29,7 @@ async function createTemplate(name) {
     try {
       const field = form.createTextField(fieldName);
       field.addToPage(page, { x: 50, y: 700 - (index * 40), width: 300, height: 20 });
-    } catch(e) {
+    } catch {
       // Ignorar si el campo ya existe
     }
   });

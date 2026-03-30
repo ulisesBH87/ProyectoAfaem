@@ -1,26 +1,26 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUpload, FaCheckCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
-import solicitudService from '../../services/solicitud';
 import { validarFotografia } from "../../services/foto";
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { API_BASE } from '../../config/config';
+import { parseJwt } from '../../services/auth';
 
 function PreRegistroPresidente() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   
   // Estados Generales
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [, setLoading] = useState(false);
+  const [, setError] = useState(null);
   const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Esperando validación, 3 = Documentos
   const [estadoPago, setEstadoPago] = useState(null); // null, 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
   const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
-  const paymentInputRef = useRef(null);
+
 
   // Verificar estado de pago al cargar
   useEffect(() => {
@@ -77,7 +77,7 @@ function PreRegistroPresidente() {
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState(0);
   const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': 0, '2': 0, '3': 0 });
-  const [comprobantePago, setComprobantePago] = useState(null);
+  const [comprobantePago] = useState(null);
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
     { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
@@ -100,7 +100,7 @@ function PreRegistroPresidente() {
   // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
   const [ocrResults, setOcrResults] = useState({});
-  const [fotoPreview, setFotoPreview] = useState(null);
+  const [, setFotoPreview] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState({});
   const [telefono, setTelefono] = useState('');
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
@@ -427,8 +427,34 @@ function PreRegistroPresidente() {
       const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
+      const firstPage = pdfDoc.getPages()[0];
 
-      const { nombre, curp, fecha_nac, edad, nacionalidad } = ocrResults;
+      // INCRUSTAR FOTOGRAFÍA SI EXISTE
+      if (documents.fotografia) {
+        try {
+          const photoBytes = await documents.fotografia.arrayBuffer();
+          let photoImage;
+          const fileName = documents.fotografia.name.toLowerCase();
+          
+          if (fileName.endsWith('.png')) {
+            photoImage = await pdfDoc.embedPng(photoBytes);
+          } else {
+            photoImage = await pdfDoc.embedJpg(photoBytes);
+          }
+
+          // Dibujar la foto en la zona Imagen1_af_image (x: 481, y: 679)
+          firstPage.drawImage(photoImage, {
+            x: 481,
+            y: 679,
+            width: 72,
+            height: 86,
+          });
+        } catch (photoErr) {
+          console.error("No se pudo incrustar la foto:", photoErr);
+        }
+      }
+
+      const { nombre, curp, fecha_nac, nacionalidad } = ocrResults;
 
       // Rellenar Nombre(s), Apellido Paterno, Apellido Materno
       if (nombre && nombre !== "No detectado") {
@@ -589,6 +615,17 @@ function PreRegistroPresidente() {
 
       // Verify user/persona ID
       let personaId = localStorage.getItem('UsuarioId') || user.id || user.usuario_id || user.UsuarioId;
+      
+      // Fallback: Si no está en storage, intentar extraerlo del token
+      if (!personaId) {
+        const token = localStorage.getItem('token');
+        const decoded = parseJwt(token);
+        if (decoded && decoded.sub) {
+          personaId = decoded.sub;
+          console.log('🆔 ID recuperado del Token en PreRegistro:', personaId);
+        }
+      }
+
       if (!personaId) {
         throw new Error('No se encontró el ID del usuario en la sesión.');
       }
@@ -810,31 +847,58 @@ function PreRegistroPresidente() {
         .btn-outline { border: 1px solid #cbd5e1; background: white; padding: 8px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
         /* Step 2 Documentos */
-        .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .doc-grid { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 20px; 
+          align-items: start; 
+        }
         .doc-card { 
           border: 1px dashed #cbd5e1; 
           border-radius: 16px; 
-          padding: 24px; 
+          padding: 20px; 
           text-align: center; 
           display: flex; 
           flex-direction: column; 
           align-items: center;
           transition: border-color 0.2s;
+          min-height: 280px;
+          background: #fff;
         }
         .doc-card:hover { border-color: #0b4ea6; }
         .doc-card.success { background: #f0fdf4; border-style: solid; border-color: #10b981; }
         
         .doc-title { font-size: 14px; font-weight: 800; color: #0b4ea6; margin: 15px 0 10px; }
-        .status-badge { padding: 2px 12px; border-radius: 12px; font-size: 10px; font-weight: 800; color: white; margin-bottom: 15px; text-transform: uppercase; }
-        .file-name { font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .status-badge { padding: 2px 12px; border-radius: 12px; font-size: 10px; font-weight: 800; color: white; margin-bottom: 12px; text-transform: uppercase; }
+        .file-name { 
+          font-size: 11px; 
+          font-weight: 700; 
+          color: #1e293b; 
+          margin-bottom: 12px; 
+          white-space: nowrap; 
+          overflow: hidden; 
+          text-overflow: ellipsis; 
+          max-width: 180px; 
+        }
         
         .doc-actions { display: flex; gap: 8px; width: 100%; margin-bottom: 15px; }
         .btn-doc { flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
         .btn-download { flex: 1; background: #0b4ea6; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
         .link-details { font-size: 11px; color: #0b4ea6; text-decoration: underline; cursor: pointer; font-weight: 600; }
         .link-details:hover { color: #063f82; }
-        .ocr-details-panel { width: 100%; margin-top: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; text-align: left; animation: fadeIn 0.3s ease; }
-        .ocr-details-panel .ocr-row { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid #f0f2f5; }
+        .ocr-details-panel { 
+          width: 100%; 
+          margin-top: 8px; 
+          background: #f8fafc; 
+          border: 1px solid #e2e8f0; 
+          border-radius: 8px; 
+          padding: 8px 10px; 
+          text-align: left; 
+          animation: fadeIn 0.3s ease; 
+          max-height: 200px;
+          overflow-y: auto;
+        }
+        .ocr-details-panel .ocr-row { display: flex; justify-content: space-between; font-size: 10px; padding: 4px 0; border-bottom: 1px solid #f0f2f5; }
         .ocr-details-panel .ocr-row:last-child { border-bottom: none; }
         .ocr-details-panel .ocr-label { color: #64748b; font-weight: 600; }
         .ocr-details-panel .ocr-value { color: #1e293b; font-weight: 700; text-align: right; max-width: 60%; word-break: break-all; }
@@ -896,7 +960,18 @@ function PreRegistroPresidente() {
             {ordenPendienteId ? (
               <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '25px', textAlign: 'center' }}>
                 <h4 style={{ color: '#166534', fontWeight: '800', margin: '0 0 10px 0', fontSize: '18px' }}>✅ Orden #{ordenPendienteId} Guardada</h4>
-                <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>Tus datos ya fueron recibidos con éxito. Por favor revisa los datos bancarios y sube tu comprobante para finalizar este paso.</p>
+                <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>
+                  Tu orden de pago ha sido generada con éxito. Realiza el depósito o transferencia y, una vez sea validado tu pago por la asociación, podrás continuar con el registro de sus documentos.
+                </p>
+                <div style={{ marginTop: '20px' }}>
+                   <button 
+                     onClick={handleLogout}
+                     className="btn-nav-gray"
+                     style={{ padding: '10px 30px', fontSize: '13px' }}
+                   >
+                     Cerrar sesión por ahora
+                   </button>
+                </div>
               </div>
             ) : (
               <>
@@ -986,63 +1061,40 @@ function PreRegistroPresidente() {
             </div>
 
             {!ordenPendienteId ? (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px', marginBottom: '10px' }}>
                 <button 
                   onClick={handleGuardarYSalir}
                   style={{
-                    background: 'transparent',
-                    color: '#0b4ea6',
-                    border: '1px solid #0b4ea6',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    fontWeight: '700',
-                    fontSize: '14px',
+                    background: '#0b4ea6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '16px 40px',
+                    borderRadius: '12px',
+                    fontWeight: '800',
+                    fontSize: '16px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    transition: 'background 0.2s'
+                    gap: '10px',
+                    boxShadow: '0 4px 12px rgba(11, 78, 166, 0.3)',
+                    transition: 'transform 0.2s, background 0.2s'
                   }}
-                  onMouseOver={(e) => e.target.style.background = '#f1f7ff'}
-                  onMouseOut={(e) => e.target.style.background = 'transparent'}
+                  onMouseOver={(e) => {
+                    e.target.style.transform = 'scale(1.02)';
+                    e.target.style.background = '#093d82';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.background = '#0b4ea6';
+                  }}
                 >
-                  💾 Guardar datos
+                  💾 Guardar y reanudar después
                 </button>
               </div>
-            ) : (
-              <div style={{ marginTop: '30px' }}></div>
-            )}
-
-            <div className="upload-proof">
-              <h5 style={{fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0}}>Sube tu comprobante de pago</h5>
-              <div className="file-input-custom">
-                <button className="btn-outline" onClick={() => paymentInputRef.current.click()}>Seleccionar archivo</button>
-                <input 
-                  type="file" 
-                  ref={paymentInputRef} 
-                  style={{display: 'none'}} 
-                  accept="image/*,.pdf" 
-                  onChange={e => setComprobantePago(e.target.files[0])} 
-                />
-                <span style={{fontSize: '11px', color: '#64748b'}}>{comprobantePago ? comprobantePago.name : 'Sin archivos seleccionados'}</span>
-              </div>
-              <p style={{ fontSize: '11px', color: '#475569', marginTop: '20px' }}>
-                Asegúrate de que el comprobante sea legible y contenga la referencia indicada. Tu comprobante será validado en un plazo de 24 a 48 horas hábiles.
-              </p>
-            </div>
+            ) : null}
 
             <div className="footer-nav">
-              <button className="btn-nav-blue" onClick={irSiguientePaso} disabled={(!ordenPendienteId && totalAsignados !== segurosRequeridos) || !comprobantePago}>Siguiente</button>
-              <button className="btn-nav-test" onClick={() => {
-                const preRegistroData = {
-                  numPersonas: numPersonas || 15,
-                  asignacionSeguros,
-                  totalPagar: totalPagar || 2250,
-                  fechaRegistro: new Date().toISOString()
-                };
-                localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
-                setPasoActual(3);
-              }}>Siguiente paso (pruebas) ⚡</button>
+              <button className="btn-nav-gray" onClick={irPasoAnterior}>Anterior</button>
             </div>
           </div>
         )}
