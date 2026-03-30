@@ -13,7 +13,7 @@ import { parseJwt } from '../../services/auth';
 function PreRegistroPresidente() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  
+
   // Estados Generales
   const [, setLoading] = useState(false);
   const [, setError] = useState(null);
@@ -73,7 +73,7 @@ function PreRegistroPresidente() {
     };
     verificarEstadoPago();
   }, []);
-  
+
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState(0);
   const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': 0, '2': 0, '3': 0 });
@@ -175,7 +175,7 @@ function PreRegistroPresidente() {
         fechaGuardado: new Date().toISOString()
       };
       localStorage.setItem('afaem_pre_registro_guardado', JSON.stringify(dataToSave));
-      
+
       Swal.fire({
         title: 'Progreso guardado',
         text: 'Tus datos se han guardado. Puedes ir a pagar y cuando vuelvas regresarás a este paso para subir tu comprobante.',
@@ -205,12 +205,12 @@ function PreRegistroPresidente() {
           return;
         }
       }
-      
+
       if (!comprobantePago) {
         setError('Debes subir el comprobante de pago para continuar.');
         return;
       }
-      
+
       try {
         Swal.fire({
           title: ordenPendienteId ? 'Subiendo comprobante...' : 'Creando Orden...',
@@ -260,7 +260,7 @@ function PreRegistroPresidente() {
           const ordenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
           idParaComprobante = ordenId || ordenData;
         }
-        
+
         // 2. Subir Comprobante
         const formData = new FormData();
         formData.append('archivo', comprobantePago);
@@ -286,7 +286,7 @@ function PreRegistroPresidente() {
           fechaRegistro: new Date().toISOString()
         };
         localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
-        
+
         Swal.fire({
           title: '¡Evidencia Recibida!',
           text: 'Se ha creado la orden de pago y enviado tu comprobante a revisión.',
@@ -331,7 +331,7 @@ function PreRegistroPresidente() {
     } else {
       setDocuments(prev => ({ ...prev, [documentKey]: file }));
       // Invocar OCR real al subir
-      if (['actaNacimiento','identificacion'].includes(documentKey)) {
+      if (['actaNacimiento', 'identificacion'].includes(documentKey)) {
         procesarOCRReal(documentKey, file);
       }
     }
@@ -364,10 +364,10 @@ function PreRegistroPresidente() {
       const htmlText = await response.text();
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, "text/html");
-      
+
       const extractedData = {};
       const rows = doc.querySelectorAll('.dato-fila');
-      
+
       rows.forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
         const value = row.querySelector('.valor')?.textContent?.trim() || '';
@@ -435,7 +435,7 @@ function PreRegistroPresidente() {
           const photoBytes = await documents.fotografia.arrayBuffer();
           let photoImage;
           const fileName = documents.fotografia.name.toLowerCase();
-          
+
           if (fileName.endsWith('.png')) {
             photoImage = await pdfDoc.embedPng(photoBytes);
           } else {
@@ -513,14 +513,14 @@ function PreRegistroPresidente() {
       if (asociacion) form.getTextField('Asociación')?.setText(asociacion.toUpperCase());
       if (liga) form.getTextField('Liga')?.setText(liga.toUpperCase());
       if (equipo) form.getTextField('Equipo')?.setText(equipo.toUpperCase());
-      
+
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
       const dia = String(hoy.getDate()).padStart(2, '0');
       const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const mes = meses[hoy.getMonth()];
       const anio = String(hoy.getFullYear()).slice(-2);
-      
+
       form.getTextField('A')?.setText(dia);
       form.getTextField('de')?.setText(mes);
       form.getTextField('del 20')?.setText(anio);
@@ -530,7 +530,7 @@ function PreRegistroPresidente() {
 
       // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
-      
+
       // Descargar usando data URI (evita el bug de Safari con blob URLs)
       const uint8 = new Uint8Array(pdfBytes);
       let binary = '';
@@ -540,7 +540,7 @@ function PreRegistroPresidente() {
       }
       const base64 = btoa(binary);
       const dataUri = `data:application/pdf;base64,${base64}`;
-      
+
       const safeNombre = (nombre || 'Presidente').toString().replace(/[^a-zA-Z0-9_\s]/g, '').trim();
       const link = document.createElement('a');
       link.href = dataUri;
@@ -615,7 +615,7 @@ function PreRegistroPresidente() {
 
       // Verify user/persona ID
       let personaId = localStorage.getItem('UsuarioId') || user.id || user.usuario_id || user.UsuarioId;
-      
+
       // Fallback: Si no está en storage, intentar extraerlo del token
       if (!personaId) {
         const token = localStorage.getItem('token');
@@ -646,7 +646,7 @@ function PreRegistroPresidente() {
       });
 
       const token = localStorage.getItem('token');
-      
+
       // Upload each document
       for (const docKey of requiredDocs) {
         const file = documents[docKey];
@@ -956,45 +956,23 @@ function PreRegistroPresidente() {
         {pasoActual === 1 && (
           <div className="content-body">
             <h3 className="section-title-small">Selecciona el tipo de seguro para tu plantilla inicial</h3>
-            
+
             {ordenPendienteId ? (
               <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '25px', textAlign: 'center' }}>
-                <h4 style={{ color: '#166534', fontWeight: '800', margin: '0 0 10px 0', fontSize: '18px' }}>✅ Orden #{ordenPendienteId} Guardada</h4>
+                <h4 style={{ color: '#166534', fontWeight: '800', margin: '0 0 10px 0', fontSize: '18px' }}>🚀 Orden de Pago #{ordenPendienteId}</h4>
                 <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>
-                  Tu orden de pago ha sido generada con éxito. Realiza el depósito o transferencia y **sube tu comprobante abajo** para que la asociación lo valide.
+                  Ya tienes una orden activa. Para continuar, realiza tu pago y adjunta el comprobante en la sección inferior.
                 </p>
-                <div className="upload-proof" style={{ marginTop: '20px', border: '1px dashed #0b4ea6', background: 'white' }}>
-                  <p style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', marginBottom: '10px' }}>
-                    Adjuntar comprobante de pago:
-                  </p>
-                  <div className="file-input-custom">
-                    <input 
-                      type="file" 
-                      id="comprobante-directo" 
-                      style={{ display: 'none' }} 
-                      onChange={(e) => setComprobantePago(e.target.files[0])}
-                    />
-                    <button 
-                      className="btn-outline" 
-                      onClick={() => document.getElementById('comprobante-directo').click()}
-                    >
-                      {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
-                    </button>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>
-                      {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
-                    </span>
-                  </div>
-                </div>
               </div>
             ) : (
               <>
                 <div className="input-group" style={{ flexDirection: 'column', gap: '10px' }}>
                   <label className="input-label" style={{ textAlign: 'center' }}>¿Cuántos jugadores tendrá tu equipo inicialmente?</label>
-                  <input 
-                    type="number" 
-                    className="input-number" 
-                    value={numPersonas} 
-                    onChange={(e) => setNumPersonas(Number(e.target.value))} 
+                  <input
+                    type="number"
+                    className="input-number"
+                    value={numPersonas}
+                    onChange={(e) => setNumPersonas(Number(e.target.value))}
                     style={{ marginTop: '5px' }}
                   />
                   <span style={{ fontSize: '11px', color: '#64748b' }}>(Recuerda: Deberás asignar un seguro por cada jugador, **más un seguro extra para ti como Presidente**)</span>
@@ -1007,72 +985,44 @@ function PreRegistroPresidente() {
                 {catalogoSeguros.map(seg => (
                   <div key={seg.id} className="insurance-card">
                     <div className="insurance-info">
-                      <h4>{seg.nombre} <span style={{fontSize: '14px', color: '#5d87e5'}}>${seg.precio} c/u</span></h4>
+                      <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
                       <p>{seg.descripcion}</p>
                     </div>
-                    <input 
-                      type="number" 
-                      className="insurance-input" 
-                      value={asignacionSeguros[seg.id]} 
-                      onChange={(e) => setAsignacionSeguros({...asignacionSeguros, [seg.id]: Number(e.target.value)})} 
+                    <input
+                      type="number"
+                      className="insurance-input"
+                      value={asignacionSeguros[seg.id]}
+                      onChange={(e) => setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: Number(e.target.value) })}
                     />
                   </div>
                 ))}
 
                 <div className="assigned-bar">
                   <span>Seguros asignados (Jugadores + Presid.): {totalAsignados}/{segurosRequeridos}</span>
-                  {numPersonas > 0 && totalAsignados === segurosRequeridos ? <span style={{color: '#166534'}}>Todos asignados</span> : <span style={{color: '#ef4444'}}>Pendientes</span>}
-                </div>
-
-                <div className="upload-proof" style={{ border: '1px dashed #cbd5e1' }}>
-                  <p style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '5px' }}>
-                    Paso 2: Sube tu comprobante de pago
-                  </p>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '15px' }}>
-                    Una vez realizado tu depósito o transferencia, adjunta la foto o PDF aquí.
-                  </p>
-                  <div className="file-input-custom">
-                    <input 
-                      type="file" 
-                      id="comprobante" 
-                      style={{ display: 'none' }} 
-                      onChange={(e) => setComprobantePago(e.target.files[0])}
-                    />
-                    <button 
-                      className="btn-outline" 
-                      onClick={() => document.getElementById('comprobante').click()}
-                    >
-                      {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
-                    </button>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>
-                      {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
-                    </span>
-                  </div>
+                  {numPersonas > 0 && totalAsignados === segurosRequeridos ? <span style={{ color: '#166534' }}>Todos asignados</span> : <span style={{ color: '#ef4444' }}>Pendientes</span>}
                 </div>
               </>
             )}
 
-            <div className="summary-grid" style={{ marginTop: ordenPendienteId ? '10px' : '40px' }}>
-              {!ordenPendienteId && (
-                <div className="summary-card">
-                  <h5>Cuotas correspondientes</h5>
-                  {catalogoSeguros.map(seg => (
-                    asignacionSeguros[seg.id] > 0 && (
-                      <div key={seg.id} className="summary-row">
-                        <span>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
-                        <span>${seg.precio * asignacionSeguros[seg.id]}</span>
-                      </div>
-                    )
-                  ))}
-                  <div className="total-row">
-                    <span>Total a pagar:</span>
-                    <span>${totalPagar}</span>
-                  </div>
+            <div className="summary-grid" style={{ marginTop: '20px' }}>
+              <div className="summary-card">
+                <h5>{ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}</h5>
+                {catalogoSeguros.map(seg => (
+                  asignacionSeguros[seg.id] > 0 && (
+                    <div key={seg.id} className="summary-row">
+                      <span>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                      <span>${seg.precio * asignacionSeguros[seg.id]}</span>
+                    </div>
+                  )
+                ))}
+                <div className="total-row">
+                  <span>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
+                  <span>${totalPagar}</span>
                 </div>
-              )}
+              </div>
 
               <div className="summary-card">
-                <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <h5>Depósito o transferencia</h5>
                   <span>📋</span>
                 </div>
@@ -1095,9 +1045,37 @@ function PreRegistroPresidente() {
               </div>
             </div>
 
+            {ordenPendienteId && (
+              <div className="upload-proof" style={{ border: '1px dashed #0b4ea6', background: 'white', marginTop: '30px' }}>
+                <p style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', marginBottom: '5px' }}>
+                  Paso 2: Sube tu comprobante de pago
+                </p>
+                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '15px' }}>
+                  Adjunta el comprobante (PDF o imagen) para procesar tu registro.
+                </p>
+                <div className="file-input-custom">
+                  <input
+                    type="file"
+                    id="comprobante"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setComprobantePago(e.target.files[0])}
+                  />
+                  <button
+                    className="btn-outline"
+                    onClick={() => document.getElementById('comprobante').click()}
+                  >
+                    {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                  </button>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                    {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {!ordenPendienteId ? (
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px', marginBottom: '10px' }}>
-                <button 
+                <button
                   onClick={handleGuardarYSalir}
                   style={{
                     background: '#0b4ea6',
@@ -1130,8 +1108,8 @@ function PreRegistroPresidente() {
 
             <div className="footer-nav">
               <button className="btn-nav-gray" onClick={irPasoAnterior}>Anterior</button>
-              <button 
-                className="btn-nav-blue" 
+              <button
+                className="btn-nav-blue"
                 onClick={irSiguientePaso}
                 disabled={!comprobantePago}
               >
@@ -1170,8 +1148,8 @@ function PreRegistroPresidente() {
               <>
                 <h1 className="title-large">Comprobante enviado correctamente</h1>
                 <div className="welcome-text" style={{ textAlign: 'left' }}>
-                  <p>Hemos recibido tu comprobante de pago. Será validado en un plazo de 3 a 5 días hábiles.<br/>
-                  Una vez validado, podrás continuar con la carga de los siguientes documentos:</p>
+                  <p>Hemos recibido tu comprobante de pago. Será validado en un plazo de 3 a 5 días hábiles.<br />
+                    Una vez validado, podrás continuar con la carga de los siguientes documentos:</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', margin: '20px 0', fontSize: '14px' }}>
                     <span>• Acta de nacimiento</span>
                     <span>• Fotografía</span>
@@ -1182,7 +1160,7 @@ function PreRegistroPresidente() {
                     Asegúrate de contar con estos archivos en formato digital para agilizar tu registro. Formatos permitidos: PDF, PNG o JPG.
                   </p>
                   <p style={{ fontSize: '14px', color: '#64748b', fontStyle: 'italic' }}>
-                    Por el momento, no es posible realizar más acciones hasta que el pago sea validado.<br/>
+                    Por el momento, no es posible realizar más acciones hasta que el pago sea validado.<br />
                     Puedes cerrar sesión o esta ventana y continuar más tarde.
                   </p>
                 </div>
@@ -1279,14 +1257,14 @@ function PreRegistroPresidente() {
 
                 return (
                   <div key={idx} className={`doc-card ${isUploaded ? 'success' : ''}`}>
-                    <div style={{fontSize: '40px', color: '#0b4ea6'}}><FaFileAlt /></div>
+                    <div style={{ fontSize: '40px', color: '#0b4ea6' }}><FaFileAlt /></div>
                     <h4 className="doc-title">{doc.nombre}</h4>
-                    <div className="status-badge" style={{background: color}}>{status}</div>
+                    <div className="status-badge" style={{ background: color }}>{status}</div>
                     <div className="file-name">{isUploaded ? documents[doc.documento].name : 'Nombre del archivo'}</div>
                     <div className="doc-actions">
                       {doc.hasDownload && <button className="btn-download" onClick={handleDownloadFormato}>Descargar formato</button>}
                       <button className="btn-doc" onClick={() => document.getElementById(`file-${doc.documento}`).click()}>Seleccionar archivo</button>
-                      <input type="file" id={`file-${doc.documento}`} style={{display: 'none'}} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
+                      <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
                     </div>
                     <span className="link-details" onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}>
                       {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles'}
