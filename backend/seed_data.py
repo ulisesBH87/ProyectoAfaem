@@ -3,6 +3,8 @@ Script de seed para insertar datos en las tablas:
   - Menus
   - RelMenuRoles
   - RelUsuarioRoles
+  - Permisos
+  - RelRolPermisos
 
 Ejecutar desde la carpeta /backend:
   ./venv/bin/python seed_data.py
@@ -34,7 +36,7 @@ def run():
         # ─────────────────────────────────────────────
         # 1. MENUS  (con IDENTITY_INSERT)
         # ─────────────────────────────────────────────
-        print("\n[1/3] Tabla Menus...")
+        print("\n[1/5] Tabla Menus...")
 
         menus = [
             # (MenuId, Nombre,               Ruta,                               Icono,            Orden, Estatus, MenuPadreId)
@@ -72,7 +74,7 @@ def run():
         # ─────────────────────────────────────────────
         # 2. REL MENU ROLES  (con IDENTITY_INSERT)
         # ─────────────────────────────────────────────
-        print("\n[2/3] Tabla RelMenuRoles...")
+        print("\n[2/5] Tabla RelMenuRoles...")
 
         rel_menu_roles = [
             # (MenuRolId, MenuId, RolId, Estatus)
@@ -114,7 +116,7 @@ def run():
         # ─────────────────────────────────────────────
         # 3. REL USUARIO ROLES  (con IDENTITY_INSERT)
         # ─────────────────────────────────────────────
-        print("\n[3/3] Tabla RelUsuarioRoles...")
+        print("\n[3/5] Tabla RelUsuarioRoles...")
 
         rel_usuario_roles = [
             # (UsuarioRolId, UsuarioId, RolId, Estatus)
@@ -156,6 +158,96 @@ def run():
             else:
                 print(f"  ⏭   RelUsuarioRol {uur_id} ya existe, se omite.")
         conn.execute(text("SET IDENTITY_INSERT RelUsuarioRoles OFF"))
+
+        # ─────────────────────────────────────────────
+        # 4. PERMISOS  (con IDENTITY_INSERT)
+        # ─────────────────────────────────────────────
+        print("\n[4/5] Tabla Permisos...")
+
+        permisos = [
+            # (PermisoId, Nombre,                        Slug,                          Descripcion,                              Estatus)
+            (1,  "Ver Solicitudes",           "solicitudes.ver",             "Puede ver la lista de solicitudes",      1),
+            (2,  "Validar Solicitudes",        "solicitudes.validar",         "Puede aprobar o rechazar solicitudes",   1),
+            (3,  "Ver Pagos",                  "pagos.ver",                   "Puede ver órdenes de pago",              1),
+            (4,  "Validar Pagos",              "pagos.validar",               "Puede aprobar o rechazar pagos",         1),
+            (5,  "Ver Equipos",                "equipos.ver",                 "Puede ver equipos registrados",          1),
+            (6,  "Gestionar Equipo",           "equipos.gestionar",           "Puede crear y editar su equipo",         1),
+            (7,  "Ver Jugadores",              "jugadores.ver",               "Puede ver jugadores del equipo",         1),
+            (8,  "Gestionar Jugadores",        "jugadores.gestionar",         "Puede agregar y editar jugadores",       1),
+            (9,  "Ver Dashboard Admin",        "admin.dashboard",             "Puede acceder al tablero administrativo",1),
+            (10, "Gestionar Usuarios",         "usuarios.gestionar",          "Puede administrar cuentas de usuario",   1),
+        ]
+
+        conn.execute(text("SET IDENTITY_INSERT Permisos ON"))
+        for p in permisos:
+            permiso_id, nombre, slug, descripcion, estatus = p
+            existing = conn.execute(
+                text("SELECT COUNT(*) FROM Permisos WHERE PermisoId = :id"), {"id": permiso_id}
+            ).scalar()
+            if existing == 0:
+                conn.execute(
+                    text("""
+                        INSERT INTO Permisos (PermisoId, Nombre, Slug, Descripcion, Estatus)
+                        VALUES (:id, :nombre, :slug, :desc, :est)
+                    """),
+                    {"id": permiso_id, "nombre": nombre, "slug": slug, "desc": descripcion, "est": estatus}
+                )
+                print(f"  ✅  Permiso {permiso_id} '{slug}' insertado.")
+            else:
+                print(f"  ⏭   Permiso {permiso_id} '{slug}' ya existe, se omite.")
+        conn.execute(text("SET IDENTITY_INSERT Permisos OFF"))
+
+        # ─────────────────────────────────────────────
+        # 5. REL ROL PERMISOS  (con IDENTITY_INSERT)
+        # ─────────────────────────────────────────────
+        print("\n[5/5] Tabla RelRolPermisos...")
+
+        # Rol 1 = ADMINISTRADOR        → todos los permisos (1-10)
+        # Rol 3 = PRESIDENTE_EQUIPO    → permisos de equipo, jugadores y solicitudes (1,5,6,7,8)
+        # Rol 7 = INVITADO             → solo ver solicitudes y equipos (1,5,7)
+        rel_rol_permisos = [
+            # (RolPermisoId, RolId, PermisoId)
+            # ADMINISTRADOR
+            (1,  1, 1),
+            (2,  1, 2),
+            (3,  1, 3),
+            (4,  1, 4),
+            (5,  1, 5),
+            (6,  1, 6),
+            (7,  1, 7),
+            (8,  1, 8),
+            (9,  1, 9),
+            (10, 1, 10),
+            # PRESIDENTE_EQUIPO
+            (11, 3, 1),
+            (12, 3, 5),
+            (13, 3, 6),
+            (14, 3, 7),
+            (15, 3, 8),
+            # INVITADO
+            (16, 7, 1),
+            (17, 7, 5),
+            (18, 7, 7),
+        ]
+
+        conn.execute(text("SET IDENTITY_INSERT RelRolPermisos ON"))
+        for rp in rel_rol_permisos:
+            rp_id, rol_id, permiso_id = rp
+            existing = conn.execute(
+                text("SELECT COUNT(*) FROM RelRolPermisos WHERE RolPermisoId = :id"), {"id": rp_id}
+            ).scalar()
+            if existing == 0:
+                conn.execute(
+                    text("""
+                        INSERT INTO RelRolPermisos (RolPermisoId, RolId, PermisoId)
+                        VALUES (:rpid, :rid, :pid)
+                    """),
+                    {"rpid": rp_id, "rid": rol_id, "pid": permiso_id}
+                )
+                print(f"  ✅  RelRolPermiso {rp_id} (Rol {rol_id} → Permiso {permiso_id}) insertado.")
+            else:
+                print(f"  ⏭   RelRolPermiso {rp_id} ya existe, se omite.")
+        conn.execute(text("SET IDENTITY_INSERT RelRolPermisos OFF"))
 
     print("\n" + "=" * 55)
     print("  ✅  Seed completado exitosamente.")
