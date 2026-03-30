@@ -77,7 +77,7 @@ function PreRegistroPresidente() {
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState(0);
   const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': 0, '2': 0, '3': 0 });
-  const [comprobantePago] = useState(null);
+  const [comprobantePago, setComprobantePago] = useState(null);
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
     { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
@@ -961,23 +961,35 @@ function PreRegistroPresidente() {
               <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '25px', textAlign: 'center' }}>
                 <h4 style={{ color: '#166534', fontWeight: '800', margin: '0 0 10px 0', fontSize: '18px' }}>✅ Orden #{ordenPendienteId} Guardada</h4>
                 <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>
-                  Tu orden de pago ha sido generada con éxito. Realiza el depósito o transferencia y, una vez sea validado tu pago por la asociación, podrás continuar con el registro de sus documentos.
+                  Tu orden de pago ha sido generada con éxito. Realiza el depósito o transferencia y **sube tu comprobante abajo** para que la asociación lo valide.
                 </p>
-                <div style={{ marginTop: '20px' }}>
-                   <button 
-                     onClick={handleLogout}
-                     className="btn-nav-gray"
-                     style={{ padding: '10px 30px', fontSize: '13px' }}
-                   >
-                     Cerrar sesión por ahora
-                   </button>
+                <div className="upload-proof" style={{ marginTop: '20px', border: '1px dashed #0b4ea6', background: 'white' }}>
+                  <p style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', marginBottom: '10px' }}>
+                    Adjuntar comprobante de pago:
+                  </p>
+                  <div className="file-input-custom">
+                    <input 
+                      type="file" 
+                      id="comprobante-directo" 
+                      style={{ display: 'none' }} 
+                      onChange={(e) => setComprobantePago(e.target.files[0])}
+                    />
+                    <button 
+                      className="btn-outline" 
+                      onClick={() => document.getElementById('comprobante-directo').click()}
+                    >
+                      {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                    </button>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
               <>
                 <div className="input-group" style={{ flexDirection: 'column', gap: '10px' }}>
                   <label className="input-label" style={{ textAlign: 'center' }}>¿Cuántos jugadores tendrá tu equipo inicialmente?</label>
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>(Recuerda: Deberás asignar un seguro por cada jugador, **más un seguro extra para ti como Presidente**)</span>
                   <input 
                     type="number" 
                     className="input-number" 
@@ -985,6 +997,7 @@ function PreRegistroPresidente() {
                     onChange={(e) => setNumPersonas(Number(e.target.value))} 
                     style={{ marginTop: '5px' }}
                   />
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>(Recuerda: Deberás asignar un seguro por cada jugador, **más un seguro extra para ti como Presidente**)</span>
                 </div>
 
                 <p style={{ fontSize: '12px', fontWeight: '800', textAlign: 'left', marginBottom: '20px' }}>
@@ -1011,9 +1024,31 @@ function PreRegistroPresidente() {
                   {numPersonas > 0 && totalAsignados === segurosRequeridos ? <span style={{color: '#166534'}}>Todos asignados</span> : <span style={{color: '#ef4444'}}>Pendientes</span>}
                 </div>
 
-                <p style={{ fontSize: '11px', color: '#64748b', textAlign: 'left' }}>
-                  Verifica que la distribución sea correcta antes de continuar. Esta información se utilizará para el registro inicial.
-                </p>
+                <div className="upload-proof" style={{ border: '1px dashed #cbd5e1' }}>
+                  <p style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', marginBottom: '5px' }}>
+                    Paso 2: Sube tu comprobante de pago
+                  </p>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '15px' }}>
+                    Una vez realizado tu depósito o transferencia, adjunta la foto o PDF aquí.
+                  </p>
+                  <div className="file-input-custom">
+                    <input 
+                      type="file" 
+                      id="comprobante" 
+                      style={{ display: 'none' }} 
+                      onChange={(e) => setComprobantePago(e.target.files[0])}
+                    />
+                    <button 
+                      className="btn-outline" 
+                      onClick={() => document.getElementById('comprobante').click()}
+                    >
+                      {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                    </button>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
+                    </span>
+                  </div>
+                </div>
               </>
             )}
 
@@ -1095,6 +1130,13 @@ function PreRegistroPresidente() {
 
             <div className="footer-nav">
               <button className="btn-nav-gray" onClick={irPasoAnterior}>Anterior</button>
+              <button 
+                className="btn-nav-blue" 
+                onClick={irSiguientePaso}
+                disabled={!comprobantePago}
+              >
+                {ordenPendienteId ? 'Subir Comprobante' : 'Siguiente'}
+              </button>
             </div>
           </div>
         )}
