@@ -55,12 +55,7 @@ const AdminDashboard = () => {
     { title: 'Recaudación Total', value: `$${statsData.totalIngreso.toLocaleString()}`, icon: <FaHistory />, color: '#8b5cf6', trend: 'Aprobado' },
   ];
 
-  const recentActivity = [
-    { id: 1, type: 'registration', text: 'Nuevo equipo "Leones FC" registrado', time: 'hace 2 horas', status: 'pending' },
-    { id: 2, type: 'payment', text: 'Pago confirmado: Águilas del Sur', time: 'hace 5 horas', status: 'success' },
-    { id: 3, type: 'error', text: 'Intento de registro fallido: Curp duplicada', time: 'hace 8 horas', status: 'error' },
-    { id: 4, type: 'system', text: 'Backup del sistema completado', time: '18 Mar 2026', status: 'info' },
-  ];
+  const [recentActivity, setRecentActivity] = useState([]); // Iniciamos vacío para datos del backend
 
   return (
     <AdminLayout title="Tablero Principal">
@@ -118,28 +113,34 @@ const AdminDashboard = () => {
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {recentActivity.map((activity) => (
-              <div key={activity.id} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '12px',
-                borderRadius: '12px',
-                transition: 'background 0.2s'
-              }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <div style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: activity.status === 'success' ? '#10b981' : (activity.status === 'pending' ? '#f59e0b' : (activity.status === 'error' ? '#ef4444' : '#3b82f6'))
-                }} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: '#334155', margin: 0 }}>{activity.text}</p>
-                  <p style={{ fontSize: '12px', color: '#94a3b8', margin: '2px 0 0 0' }}>{activity.time}</p>
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity) => (
+                <div key={activity.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  transition: 'background 0.2s'
+                }} onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    background: activity.status === 'success' ? '#10b981' : (activity.status === 'pending' ? '#f59e0b' : (activity.status === 'error' ? '#ef4444' : '#3b82f6'))
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '14px', fontWeight: '600', color: '#334155', margin: 0 }}>{activity.text}</p>
+                    <p style={{ fontSize: '12px', color: '#94a3b8', margin: '2px 0 0 0' }}>{activity.time}</p>
+                  </div>
+                  <FaArrowRight style={{ color: '#cbd5e1', fontSize: '14px' }} />
                 </div>
-                <FaArrowRight style={{ color: '#cbd5e1', fontSize: '14px' }} />
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8' }}>
+                <p style={{ fontSize: '14px', margin: 0 }}>No hay actividad reciente para mostrar</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -194,12 +195,12 @@ const AdminDashboard = () => {
             border: '1px solid #f1f5f9',
             textAlign: 'center'
           }}>
-            <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#64748b', marginBottom: '10px' }}>CAPACIDAD DEL SISTEMA</h4>
-            <div style={{ fontSize: '32px', fontWeight: '800', color: '#1e293b', marginBottom: '5px' }}>85%</div>
-            <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: '85%', height: '100%', background: '#0b4ea6' }} />
+            <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#64748b', marginBottom: '10px' }}>ESTADO DEL SERVIDOR</h4>
+            <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981', marginBottom: '5px' }}>ONLINE</div>
+            <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', marginTop: '10px' }}>
+              <div style={{ width: '100%', height: '100%', background: '#10b981' }} />
             </div>
-            <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '10px' }}>Servidores operando con normalidad</p>
+            <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '10px' }}>Todos los servicios operativos</p>
           </div>
         </div>
       </div>

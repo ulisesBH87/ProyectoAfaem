@@ -125,6 +125,7 @@ def run():
             (3, 5, 7, 1),
             (4, 6, 1, 1),
             (5, 7, 7, 1),
+            (6, 8, 1, 1),
         ]
 
         # Obtener usuarios y roles válidos para validar FK antes de insertar

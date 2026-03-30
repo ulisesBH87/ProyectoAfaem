@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import StadiumBg from '../../assets/stadium.jpg';
 import { Link, useNavigate } from 'react-router-dom';
 import { login, setAuthToken, pingBackend } from '../../services/auth';
+import { useRBAC } from '../../hooks/useRBAC';
+
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -44,6 +46,16 @@ export default function Login() {
         setAuthToken(token);
         localStorage.setItem('token', token);
       }
+      
+      // ESPERAR A RBAC (Backend Strict)
+      try {
+        console.log('🔄 Sincronizando sesión con backend...');
+        const { refreshAccess } = useRBAC(); // Necesitamos usar el hook
+        if (refreshAccess) await refreshAccess();
+      } catch (e) {
+        console.warn('Error al sincronizar RBAC en Login alternativo:', e);
+      }
+
       const userData = {
         email: email,
         correo: email,
