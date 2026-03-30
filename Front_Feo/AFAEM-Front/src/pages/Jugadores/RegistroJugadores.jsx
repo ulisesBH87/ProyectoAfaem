@@ -215,7 +215,9 @@ export default function RegistroJugadores() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    
     if (!extractedData.nombreJugador || !extractedData.apellidoPaterno || !extractedData.curp) {
       Swal.fire('Atención', 'Faltan datos de la identidad del jugador o CURP.', 'warning');
       return;
@@ -255,12 +257,13 @@ export default function RegistroJugadores() {
       const docsParams = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
       docsParams.forEach((docKey) => {
         if (documents[docKey]) {
-          formData.append('documento_afiliacion_ids', '3');
+          // Importante: Mandar como número o string que el backend convierta a lista
+          formData.append('documento_afiliacion_ids', 3); 
           formData.append('archivos', documents[docKey]);
         }
       });
 
-      // Call Backend
+      // Llamada al Backend
       await registrarJugadorTemporal(formData);
       
       Swal.fire({
