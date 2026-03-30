@@ -31,6 +31,7 @@ export const RBACProvider = ({ children }) => {
         roles: finalRoles,
         permissions: data.Permisos || [],
         menus: data.Menus || [],
+        estatusId: data.EstatusId || null,
         isLoading: false
       };
       

@@ -5,6 +5,7 @@ from app.modelos.rel_menu_roles_modelo import RelMenuRoles
 from app.modelos.rel_rol_permisos_modelo import RelRolPermisos
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.roles_modelo import Roles
+from app.modelos.solicitud_modelo import Solicitud
 
 def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
     # 1. Obtener Roles asignados (Relación RBAC)
@@ -21,8 +22,12 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
         if usuario_base.RolRelacion:
             roles_nombres.append(usuario_base.RolRelacion.Nombre)
 
+    # 3. Obtener EstatusId de su solicitud activa (si existe)
+    solicitud = db.query(Solicitud).filter(Solicitud.UsuarioId == usuario_id).order_by(Solicitud.SolicitudId.desc()).first()
+    estatus_id = solicitud.EstatusValidacion if solicitud else (usuario_base.RolId if usuario_base else None)
+
     if not roles_ids:
-        return {"Roles": [], "Permisos": [], "Menus": []}
+        return {"Roles": [], "Permisos": [], "Menus": [], "EstatusId": estatus_id}
 
     # 2. Obtener Permisos asociados a esos roles
     permisos_rels = db.query(RelRolPermisos).filter(RelRolPermisos.RolId.in_(roles_ids)).all()
@@ -73,5 +78,6 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
     return {
         "Roles": roles_nombres,
         "Permisos": permisos_slugs,
-        "Menus": resultado_menus
+        "Menus": resultado_menus,
+        "EstatusId": estatus_id
     }

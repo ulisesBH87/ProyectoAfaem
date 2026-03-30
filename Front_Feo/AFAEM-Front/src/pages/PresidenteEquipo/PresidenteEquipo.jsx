@@ -9,6 +9,13 @@ import DashboardSidebar from '../../components/DashboardSidebar';
 import DashboardHeader from '../../components/DashboardHeader';
 import StatCard from '../../components/StatCard';
 import DashboardTable from '../../components/DashboardTable';
+import { useRBAC } from '../../hooks/useRBAC';
+import { 
+  BotonPrimario, 
+  BotonSecundario, 
+  Tarjeta, 
+  Alerta 
+} from '../../components/partials';
 
 // Servicios
 import teamsService from '../../services/teams';
@@ -105,9 +112,169 @@ export default function PresidenteEquipo() {
     );
   }
 
+  const { roles, estatusId, hasRole } = useRBAC();
   const userEmail = userInfo?.email || '';
   const userName = userInfo?.name || 'Usuario';
+  const roleStr = roles.join(', ') || 'Invitado';
 
+  // --- VISTAS CONDICIONALES POR ESTADO ---
+
+  // 1. VISTA INVITADO (Costos)
+  if (hasRole('Invitado') && !hasRole('Presidente_Equipo')) {
+    return (
+      <div className="dashboard-wrapper">
+        <DashboardSidebar userEmail={userEmail} />
+        <div className="dashboard-container">
+          <DashboardHeader userEmail={userEmail} pageTitle="Información de Costos" />
+          <div className="dashboard-main">
+            <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <Tarjeta titulo="Calculadora de Costos AFAEM">
+                <p>Bienvenido. Para comenzar tu proceso de afiliación como Presidente de Equipo, revisa los costos estimados:</p>
+                <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '20px' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span>Costo por jugador:</span>
+                      <span style={{ fontWeight: '700' }}>$250.00 MXN</span>
+                   </div>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span>Costo anual de franquicia:</span>
+                      <span style={{ fontWeight: '700' }}>$1,500.00 MXN</span>
+                   </div>
+                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px', marginTop: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontWeight: '700' }}>Total estimado (18 jugadores):</span>
+                      <span style={{ fontWeight: '800', color: '#0b4ea6', fontSize: '18px' }}>$6,000.00 MXN</span>
+                   </div>
+                </div>
+                <BotonPrimario etiqueta="Iniciar Pre-Registro" alHacerClick={() => navigate('/proximo-presidente')} />
+              </Tarjeta>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. VISTAS PRESIDENTE POR ESTATUS
+  if (hasRole('Presidente_Equipo')) {
+    
+    // ESTATUS 1: Pago pendiente
+    if (estatusId === 1) {
+      return (
+        <div className="dashboard-wrapper">
+          <DashboardSidebar userEmail={userEmail} />
+          <div className="dashboard-container">
+            <DashboardHeader userEmail={userEmail} pageTitle="Pago Pendiente" />
+            <div className="dashboard-main">
+              <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <Alerta tipo="alerta" titulo="Acción Requerida" mensaje="Tienes un pago pendiente. Realiza el depósito y sube el comprobante para continuar con tu proceso." />
+                <Tarjeta titulo="Detalles del Pago">
+                   <p>Por favor, realiza tu pago a la siguiente cuenta:</p>
+                   <ul style={{ color: '#64748b', fontSize: '14px' }}>
+                      <li><strong>Banco:</strong> BBVA</li>
+                      <li><strong>Cuenta:</strong> 0123 4567 8901 2345</li>
+                      <li><strong>CLABE:</strong> 0123 4567 8901 2345 67</li>
+                      <li><strong>Concepto:</strong> Pago Afiliación AFAEM</li>
+                   </ul>
+                   <BotonPrimario etiqueta="Subir Comprobante" alHacerClick={() => navigate('/pre-registro-presidente')} />
+                </Tarjeta>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ESTATUS 2: Verificando pago
+    if (estatusId === 2) {
+      return (
+        <div className="dashboard-wrapper">
+          <DashboardSidebar userEmail={userEmail} />
+          <div className="dashboard-container">
+            <DashboardHeader userEmail={userEmail} pageTitle="Verificando Pago" />
+            <div className="dashboard-main">
+              <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                   <div style={{ fontSize: '64px', marginBottom: '20px' }}>⏳</div>
+                   <h2 style={{ color: '#0b2546' }}>Tu pago está siendo verificado</h2>
+                   <p style={{ color: '#64748b' }}>Nuestro equipo administrativo está revisando tu comprobante. Recibirás una notificación pronto.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ESTATUS 3: Sube tus documentos
+    if (estatusId === 3) {
+      return (
+        <div className="dashboard-wrapper">
+          <DashboardSidebar userEmail={userEmail} />
+          <div className="dashboard-container">
+            <DashboardHeader userEmail={userEmail} pageTitle="Documentación Requerida" />
+            <div className="dashboard-main">
+              <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <Tarjeta titulo="Sube tus documentos">
+                   <p>Tu pago ha sido aprobado. Ahora es necesario subir la documentación del equipo y jugadores para la afiliación final.</p>
+                   <div style={{ display: 'flex', gap: '10px' }}>
+                     <BotonPrimario etiqueta="Configurar Equipo" alHacerClick={() => navigate('/presidente-equipo/configurar-equipo')} />
+                     <BotonSecundario etiqueta="Registrar Jugadores" alHacerClick={() => navigate('/presidente-equipo/registro-jugadores')} />
+                   </div>
+                </Tarjeta>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ESTATUS 5: Panel con limitaciones
+    if (estatusId === 5) {
+      return (
+        <div className="dashboard-wrapper">
+          <DashboardSidebar userEmail={userEmail} />
+          <div className="dashboard-container">
+            <DashboardHeader userEmail={userEmail} pageTitle="Panel Limitado" />
+            <div className="dashboard-main">
+               <div className="dashboard-content">
+                  <Alerta tipo="info" titulo="Acceso Restringido" mensaje="Tu cuenta tiene acceso limitado. Algunas funcionalidades estarán disponibles una vez que se complete la validación final." />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                    <Tarjeta titulo="Mis Jugadores">
+                       <BotonSecundario etiqueta="Ver lista" alHacerClick={() => navigate('/presidente-equipo/mis-jugadores')} />
+                    </Tarjeta>
+                    <Tarjeta titulo="Reportes">
+                       <p>Próximamente...</p>
+                    </Tarjeta>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ESTATUS 6: Documentos en verificación
+    if (estatusId === 6) {
+      return (
+        <div className="dashboard-wrapper">
+          <DashboardSidebar userEmail={userEmail} />
+          <div className="dashboard-container">
+            <DashboardHeader userEmail={userEmail} pageTitle="Documentos en Revisión" />
+            <div className="dashboard-main">
+              <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                   <div style={{ fontSize: '64px', marginBottom: '20px' }}>📄</div>
+                   <h2 style={{ color: '#0b2546' }}>Documentos en proceso</h2>
+                   <p style={{ color: '#64748b' }}>Tus documentos están siendo verificados, tendrás respuesta en X días. ¡Gracias por tu paciencia!</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // ESTATUS 7: Dashboard Completo (Vista por defecto para Presidente aprobado)
   const obtenerEtiquetaModalidad = (modality) => {
     switch(modality) {
       case 'futbol7': return 'Fútbol 7';
