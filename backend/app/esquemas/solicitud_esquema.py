@@ -112,3 +112,11 @@ class CrearPersonaSolicitud(BaseModel):
 class CrearSolicitud(BaseModel):
     TipoAfiliacionId: int
     Persona: List[CrearPersonaSolicitud]
+
+class PDFData(BaseModel):
+    nombre: str
+    curp: str
+    fecha_nac: str
+    edad: str
+    nacionalidad: str = "MEXICANA"
+    equipo: str = ""

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaBell, FaSignOutAlt } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 import '../styles/dashboard.css';
 
 const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
@@ -8,6 +9,12 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  React.useEffect(() => {
+    const closeMenu = () => setShowUserMenu(false);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, []);
 
   const notifications = [
     { id: 1, text: 'Nueva solicitud de validación', time: 'hace 5 minutos', type: 'info' },
@@ -19,9 +26,22 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('email');
-    navigate('/ingresar');
+    Swal.fire({
+      title: '¿Cerrar sesión?',
+      text: 'Tendrás que ingresar tus credenciales nuevamente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6e7d88',
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('email');
+        navigate('/ingresar');
+      }
+    });
   };
 
   return (
@@ -93,8 +113,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
 
         <div 
           className="user-profile"
-          onMouseEnter={() => setShowUserMenu(true)}
-          onMouseLeave={() => setShowUserMenu(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowUserMenu(!showUserMenu);
+          }}
           style={{ position: 'relative', cursor: 'pointer' }}
         >
           <div className="user-avatar">{getInitials(userEmail)}</div>
@@ -106,9 +128,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
           {/* DROPDOWN MENU */}
           {showUserMenu && (
             <div 
+              onClick={(e) => e.stopPropagation()}
               style={{
                 position: 'absolute',
-                top: '65px',
+                top: 'calc(100% + 12px)',
                 right: '0',
                 background: 'white',
                 border: '1px solid var(--border-color)',
@@ -116,7 +139,8 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
                 minWidth: '200px',
                 boxShadow: 'var(--shadow-lg)',
                 zIndex: 1001,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                animation: 'slideIn 0.2s ease'
               }}
             >
               <div
@@ -152,7 +176,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
               </div>
 
               <button
-                onClick={handleLogout}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLogout();
+                }}
                 style={{
                   width: '100%',
                   padding: '12px 16px',

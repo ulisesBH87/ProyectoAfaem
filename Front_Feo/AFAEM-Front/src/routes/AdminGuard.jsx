@@ -1,0 +1,22 @@
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+
+import { useRBAC } from '../hooks/useRBAC';
+
+const AdminGuard = ({ children }) => {
+  const { hasRole, isLoading } = useRBAC();
+  const token = localStorage.getItem('token');
+
+  if (isLoading) return null;
+
+  const isAuthorized = (hasRole('ADMIN') || hasRole('ADMINISTRADOR'));
+
+  if (!token || !isAuthorized) {
+    console.log('🚫 Acceso no autorizado en AdminGuard (Backend Strict Mode)');
+    return <Navigate to="/ingresar" replace />;
+  }
+
+  return children;
+};
+
+export default AdminGuard;

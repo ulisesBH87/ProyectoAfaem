@@ -17,11 +17,6 @@ api.interceptors.response.use(
     // SOLO REDIRIGIR A LOGIN SI ES UN 401 Y NO ESTAMOS EN UNA PÁGINA QUE LO MANEJA
     if (error.response && error.response.status === 401) {
       console.warn('⚠️ Acceso denegado (401). Error presentado al usuario.');
-      // NO limpiar el token automáticamente, dejar que el componente lo maneje
-      // localStorage.removeItem('token');
-      // localStorage.removeItem('user');
-      // localStorage.removeItem('UsuarioId');
-      // NO redirigir automáticamente, dejar que el componente lo maneje
     }
     return Promise.reject(error);
   }
@@ -43,15 +38,18 @@ export async function resetPassword(email, token, nueva_contrasena) {
   return res.data;
 }
 
+// REGISTRAR ADMIN
+export async function registrarAdmin(datos) {
+  const res = await api.post('/auth/registrar_admin', datos);
+  return res.data;
+}
+
 // LOGIN
 export async function login(email, password) {
-  // EL SERVIDOR ESPERA 'Correo' Y 'Contrasena' 
-  const payload = { 
-    Correo: email, 
-    Contrasena: password 
+  const payload = {
+    Correo: email,
+    Contrasena: password,
   };
-  
-  console.log('📤 Enviando login payload:', payload); // DEBUG
   
   try {
     const res = await api.post('/auth/iniciar-sesion', payload);
@@ -71,13 +69,29 @@ export function setAuthToken(token) {
   else delete api.defaults.headers.common['Authorization'];
 }
 
-// PING SENCILLO PARA DIAGNÓSTICO (COMPATIBLE CON Login.jsx)
+// PING SENCILLO PARA DIAGNÓSTICO
 export async function pingBackend() {
   try {
+    // Volvemos a pedir '/' porque ahora el proxy de Vite lo maneja correctamente para JSON
     const res = await api.get('/');
-    return { ok: true, url: api.defaults.baseURL + '/', res: res.data };
+    return { ok: true, url: '/', res: res.data };
+  } catch {
+     return { ok: false, tried: '/' };
+  }
+}
+
+export function parseJwt(token) {
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
   } catch (e) {
-    return { ok: false, tried: api.defaults.baseURL || API_BASE };
+    console.error("Error parsing JWT:", e);
+    return null;
   }
 }
 

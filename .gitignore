@@ -14,6 +14,16 @@ backend/.env.*
 backend/*.env
 
 # =========================
+# 🔹 Backend - Archivos
+# =========================
+backend/uploads/
+
+# =========================
+# 🔹 Backend - OCR
+# =========================
+OCR/afaem-487315-9fef755ac1dc.json
+
+# =========================
 # 🔹 Python
 # =========================
 backend/__pycache__/
@@ -45,7 +55,9 @@ backend/alembic/__pycache__/
 # =========================
 frontend/node_modules/
 frontend/dist/
-
+node_modules/
+Front_Feo/node_modules
+Front_Feo/afaem-front/node_modules
 # =========================
 # 🔹 IDEs
 # =========================

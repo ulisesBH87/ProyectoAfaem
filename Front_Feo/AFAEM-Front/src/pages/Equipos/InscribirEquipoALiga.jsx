@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import DashboardHeader from '../../components/DashboardHeader';
+import Swal from 'sweetalert2';
+import teamsService from '../../services/teams';
 import '../../styles/dashboard.css';
 
 export default function InscribirEquipoALiga() {
   const navigate = useNavigate();
   const { teamId } = useParams();
-  const _location = useLocation();
-  const userEmail = localStorage.getItem('email');
+  const userEmail = localStorage.getItem('email') || '';
   
-  const [selectedTeam] = useState('Real Huexca');
+  const [selectedTeam, setSelectedTeam] = useState('Cargando...');
   const [selectedLeague, setSelectedLeague] = useState(null);
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        const response = await teamsService.getUserTeams(userEmail);
+        const teams = response.teams || [];
+        const currentTeam = teams.find(t => t.id == teamId);
+        if (currentTeam) {
+          setSelectedTeam(currentTeam.name);
+        } else {
+          setSelectedTeam('Equipo no encontrado');
+        }
+      } catch {
+        setSelectedTeam('Equipo Local');
+      }
+    };
+    fetchTeam();
+  }, [teamId, userEmail]);
 
   const availableLeagues = [
     {
@@ -195,7 +214,21 @@ export default function InscribirEquipoALiga() {
                 justifyContent: 'center'
               }}>
                 <button
-                  onClick={() => {}}
+                  onClick={() => {
+                    if (!selectedLeague) {
+                      Swal.fire('Atención', 'Por favor selecciona una liga primero.', 'warning');
+                      return;
+                    }
+                    Swal.fire({
+                      title: '¡Inscripción Exitosa!',
+                      text: `El equipo ${selectedTeam} ha sido inscrito a la liga seleccionada. (Simulación)`,
+                      icon: 'success',
+                      confirmButtonText: 'Genial',
+                      confirmButtonColor: '#0b4ea6'
+                    }).then(() => {
+                      navigate(`/presidente-equipo/admin-equipo/${teamId}`);
+                    });
+                  }}
                   style={{
                     padding: '12px 32px',
                     backgroundColor: '#0b4ea6',

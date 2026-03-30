@@ -18,6 +18,7 @@ import {
   ConsejoFlotante
 } from '../../components/partials';
 import teamsService from '../../services/teams';
+import Swal from 'sweetalert2';
 
 export default function AdminEquipo() {
   const navigate = useNavigate();
@@ -138,6 +139,45 @@ export default function AdminEquipo() {
       case 'pendiente': return 'Pendiente';
       default: return 'Desconocido';
     }
+  };
+
+  const handleVerJugador = (jugador) => {
+    Swal.fire({
+      title: 'Ficha del Jugador',
+      html: `
+        <div style="text-align: left;">
+          <div style="display:flex; align-items:center; gap: 15px; margin-bottom: 15px;">
+            <div style="font-size: 40px">${jugador.foto || '👤'}</div>
+            <div>
+              <h3 style="margin:0; color:#0b4ea6; font-size:18px;">${jugador.nombre}</h3>
+              <span style="font-size:12px; color:#64748b; text-transform:uppercase;">ID: ${jugador.id}</span>
+            </div>
+          </div>
+          <p><strong>Edad:</strong> ${jugador.edad} años</p>
+          <p><strong>Género:</strong> ${jugador.genero === 'M' ? 'Masculino' : 'Femenino'}</p>
+          <p><strong>Seguro Asignado:</strong> Sí</p>
+          <p><strong>Estado:</strong> <span style="font-weight:bold; color:${_getStatusColor(jugador.estatus)}">${getStatusLabel(jugador.estatus)}</span></p>
+        </div>
+      `,
+      confirmButtonText: 'Cerrar',
+      confirmButtonColor: '#0b4ea6'
+    });
+  };
+
+  const handleEditarJugador = () => {
+    Swal.fire({
+      title: 'Editar Jugador',
+      text: '¿Deseas modificar los datos de este jugador? (Simulación)',
+      showCancelButton: true,
+      confirmButtonText: 'Modificar Datos',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0b4ea6',
+      cancelButtonColor: '#94a3b8'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire('¡Opcion Simulada!', 'En un entorno real aquí se abriría un formulario para editar al jugador.', 'success');
+      }
+    });
   };
 
   return (
@@ -293,12 +333,12 @@ export default function AdminEquipo() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '200px' }}>
                       <BotonPrimario 
                         etiqueta="🏆 Inscribir equipo a liga"
-                        alHacerClick={() => {}}
+                        alHacerClick={() => navigate(`/inscribir-equipo-liga/${teamId}`)}
                         tamanio="medio"
                       />
                       <BotonSecundario
                         etiqueta="⚙ Configurar equipo"
-                        alHacerClick={() => {}}
+                        alHacerClick={() => Swal.fire('Info', 'Configuración de equipo en desarrollo', 'info')}
                         tamanio="medio"
                       />
                     </div>
@@ -516,13 +556,13 @@ export default function AdminEquipo() {
                               }}>
                                 <BotonPrimario 
                                   etiqueta="Ver"
-                                  alHacerClick={() => {}}
+                                  alHacerClick={() => handleVerJugador(player)}
                                   tamanio="pequeno"
                                   estilo={{ flex: 1 }}
                                 />
                                 <BotonSecundario
                                   etiqueta="Editar"
-                                  alHacerClick={() => {}}
+                                  alHacerClick={() => handleEditarJugador(player)}
                                   tamanio="pequeno"
                                   estilo={{ flex: 1 }}
                                 />
@@ -706,13 +746,13 @@ export default function AdminEquipo() {
                               }}>
                                 <BotonPrimario 
                                   etiqueta="Ver"
-                                  alHacerClick={() => {}}
+                                  alHacerClick={() => Swal.fire('Entrenador', 'Funcionalidad en desarrollo', 'info')}
                                   tamanio="pequeno"
                                   estilo={{ flex: 1 }}
                                 />
                                 <BotonSecundario
                                   etiqueta="Editar"
-                                  alHacerClick={() => {}}
+                                  alHacerClick={() => Swal.fire('Entrenador', 'Funcionalidad en desarrollo', 'info')}
                                   tamanio="pequeno"
                                   estilo={{ flex: 1 }}
                                 />

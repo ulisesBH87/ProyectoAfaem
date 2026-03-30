@@ -1,131 +1,190 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaHome, FaFootballBall, FaUsers, FaClipboard, FaChartBar, FaCog } from 'react-icons/fa';
-import '../styles/dashboard.css';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  FaHome, 
+  FaFootballBall, 
+  FaUsers, 
+  FaClipboard, 
+  FaChartBar, 
+  FaCog,
+  FaSignOutAlt,
+  FaChevronLeft,
+  FaChevronRight
+} from 'react-icons/fa';
 
-const DashboardSidebar = ({ userEmail }) => {
+import { useRBAC } from '../hooks/useRBAC';
+import { getIcon } from '../utils/IconMapper.jsx';
+
+const DashboardSidebar = () => {
   const navigate = useNavigate();
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const [isHovering, setIsHovering] = useState(false);
+  const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { menus, isLoading } = useRBAC();
 
-  const menuItems = [
-    { label: 'Inicio', icon: <FaHome />, path: '/presidente-equipo' },
-    { label: 'Equipos', icon: <FaFootballBall />, path: '/presidente-equipo/equipos' },
-    { label: 'Jugadores', icon: <FaUsers />, path: '/presidente-equipo/mis-jugadores' },
-    { label: 'Solicitudes', icon: <FaClipboard />, path: '/presidente-equipo/solicitudes' },
-    { label: 'Reportes', icon: <FaChartBar />, path: '/presidente-equipo/reportes' },
-    { label: 'Configuración', icon: <FaCog />, path: '/presidente-equipo/configuracion' },
-  ];
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '80px' : '280px');
+  }, [isCollapsed]);
 
-  // Determinar si mostrar expandido (por collapse manual o hover)
-  const isExpanded = !isCollapsed || isHovering;
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/ingresar');
+  };
+
+  if (isLoading) return null;
 
   return (
-    <div 
-      className={`dashboard-sidebar ${isCollapsed ? 'collapsed' : ''} ${isHovering ? 'hovering' : ''}`}
-      onMouseEnter={() => isCollapsed && setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      style={{
-        width: isExpanded ? '280px' : '80px',
-        transition: 'width 0.3s ease'
-      }}
-    >
-      {/* HEADER */}
-      <div className="sidebar-header" style={{ 
-        opacity: isExpanded ? 1 : 0,
-        visibility: isExpanded ? 'visible' : 'hidden',
-        transition: 'opacity 0.3s ease'
+    <div style={{
+      width: isCollapsed ? '80px' : '280px',
+      background: 'linear-gradient(180deg, #0b4ea6 0%, #052c61 100%)',
+      height: '100vh',
+      position: 'fixed',
+      left: 0,
+      top: 0,
+      transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      display: 'flex',
+      flexDirection: 'column',
+      color: '#e2e8f0',
+      boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
+      zIndex: 1000
+    }}>
+      {/* HEADER / LOGO */}
+      <div style={{
+        padding: '30px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        borderBottom: '1px solid rgba(255,255,255,0.1)'
       }}>
-        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white' }}>
-          <FaFootballBall style={{ fontSize: '18px', color: '#0b4ea6' }} />
-          AFAEM
+        <div style={{
+          width: '40px',
+          height: '40px',
+          background: 'white',
+          borderRadius: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          color: '#0b4ea6',
+          flexShrink: 0
+        }}>
+          <FaFootballBall />
         </div>
-        <div className="sidebar-subtitle" style={{ color: 'white' }}>PRESIDENTE DE EQUIPO</div>
+        {!isCollapsed && (
+          <div style={{ overflow: 'hidden' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'white', whiteSpace: 'nowrap' }}>AFAEM</h1>
+            <p style={{ fontSize: '10px', fontWeight: '500', margin: 0, color: '#94a3b8', textTransform: 'uppercase' }}>Sistema de Gestión</p>
+          </div>
+        )}
       </div>
 
-      {/* BOTÓN TOGGLE */}
-      <div style={{
-        display: 'flex',
-        justifyContent: isExpanded ? 'flex-end' : 'center',
-        padding: isExpanded ? '12px 16px' : '12px',
-        transition: 'all 0.3s ease'
-      }}>
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+      {/* MENU ITEMS */}
+      <nav style={{ flex: 1, padding: '20px 0', overflowY: 'auto' }}>
+        {menus.map((item, idx) => {
+          const isActive = location.pathname === item.Ruta;
+          const hasChildren = item.SubMenus && item.SubMenus.length > 0;
+          
+          return (
+            <React.Fragment key={idx}>
+              {/* Parent Menu / Section Title */}
+              <div 
+                onClick={() => item.Ruta && navigate(item.Ruta)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 24px',
+                  cursor: item.Ruta ? 'pointer' : 'default',
+                  transition: 'all 0.2s',
+                  backgroundColor: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  borderLeft: `4px solid ${isActive ? 'white' : 'transparent'}`,
+                  color: isActive ? 'white' : '#cbd5e1',
+                  marginTop: !item.MenuPadreId && idx > 0 ? '16px' : '4px',
+                  opacity: !item.Ruta && !isCollapsed ? 0.6 : 1
+                }}
+              >
+                <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>
+                  {getIcon(item.Icono)}
+                </span>
+                {!isCollapsed && (
+                  <span style={{ marginLeft: '16px', fontSize: item.Ruta ? '14px' : '12px', fontWeight: '700', textTransform: item.Ruta ? 'none' : 'uppercase' }}>
+                    {item.Nombre}
+                  </span>
+                )}
+              </div>
+
+              {/* Children Menus */}
+              {hasChildren && !isCollapsed && item.SubMenus.map((child, cIdx) => {
+                const isChildActive = location.pathname === child.Ruta;
+                return (
+                  <div 
+                    key={`${idx}-${cIdx}`}
+                    onClick={() => navigate(child.Ruta)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 24px 8px 52px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      backgroundColor: isChildActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                      color: isChildActive ? 'white' : '#94a3b8',
+                      fontSize: '13px',
+                      fontWeight: '500'
+                    }}
+                    onMouseEnter={(e) => {
+                      if(!isChildActive) e.currentTarget.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                      if(!isChildActive) e.currentTarget.style.color = '#94a3b8';
+                    }}
+                  >
+                    <span style={{ marginRight: '12px', fontSize: '14px' }}>
+                      {getIcon(child.Icono)}
+                    </span>
+                    {child.Nombre}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          );
+        })}
+      </nav>
+
+      {/* FOOTER ACTIONS */}
+      <div style={{ padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <div 
+          onClick={handleLogout}
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
-            backgroundColor: 'white',
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '16px',
-            transition: 'all 0.2s ease',
-            color: '#0b4ea6'
+            padding: '12px 24px',
+            cursor: 'pointer',
+            color: '#ff9494',
+            transition: 'all 0.2s'
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f1f5f9';
-            e.currentTarget.style.borderColor = '#cbd5e1';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'white';
-            e.currentTarget.style.borderColor = '#e2e8f0';
-          }}
-          title={isCollapsed ? 'Expandir' : 'Contraer'}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 148, 148, 0.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          {isCollapsed ? '→' : '←'}
-        </button>
+          <FaSignOutAlt style={{ fontSize: '20px' }} />
+          {!isCollapsed && (
+            <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '600' }}>Cerrar Sesión</span>
+          )}
+        </div>
+
+        <div 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '12px 24px',
+            cursor: 'pointer',
+            color: '#94a3b8'
+          }}
+        >
+          {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+          {!isCollapsed && (
+            <span style={{ marginLeft: '16px', fontSize: '12px', fontWeight: '500' }}>Colapsar Menú</span>
+          )}
+        </div>
       </div>
-
-      {/* MENÚ */}
-      <ul className="sidebar-menu">
-        {menuItems.map((item, idx) => (
-          <li 
-            key={idx} 
-            className="sidebar-menu-item"
-            style={{
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <a 
-              className="sidebar-menu-link"
-              onClick={() => navigate(item.path)}
-              style={{
-                justifyContent: isExpanded ? 'flex-start' : 'center',
-                gap: isExpanded ? '12px' : '0',
-                padding: isExpanded ? '12px 16px' : '12px',
-                transition: 'all 0.3s ease'
-              }}
-              title={!isExpanded ? item.label : ''}
-            >
-              <span 
-                className="sidebar-menu-icon"
-                style={{
-                  fontSize: '20px',
-                  flexShrink: 0
-                }}
-              >
-                {item.icon}
-              </span>
-              <span 
-                style={{
-                  opacity: isExpanded ? 1 : 0,
-                  visibility: isExpanded ? 'visible' : 'hidden',
-                  transition: 'opacity 0.3s ease',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {item.label}
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
-
-
     </div>
   );
 };

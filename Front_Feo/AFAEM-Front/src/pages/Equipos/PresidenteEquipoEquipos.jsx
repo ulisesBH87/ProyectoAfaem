@@ -79,7 +79,7 @@ export default function PresidenteEquipoEquipos() {
             <div className="section-header" style={{ marginBottom: '30px' }}>
               <h2 className="section-title">Equipos Registrados</h2>
               <div className="section-actions">
-                <button className="btn btn-primary" onClick={() => navigate('/presidente-equipo/crear-equipo')}>
+                <button className="btn btn-primary" onClick={() => navigate('/presidente-equipo/configurar-equipo')}>
                   ➕ Nuevo Equipo
                 </button>
               </div>

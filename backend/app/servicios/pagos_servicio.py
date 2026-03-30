@@ -1,11 +1,14 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+import os
+from datetime import date
 
-from app.repositorios.pagos_repositorio import (obtener_tipo_afiliacion_repo, obtener_seguro_repo, crear_orden_pago_repo, crear_detalle_pago_repo)
-
+from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase, ListaPagos
+from app.repositorios import pagos_repositorio
 
 TIPO_AFILIACION_PRESIDENTE = 2
 TIPO_AFILIACION_JUGADOR = 4
+UPLOAD_DIR = "uploads/vouchers"
 
 def crear_orden_pago_servicio(db, usuario_id, orden):
     if orden.CantidadJugadores < 1:
@@ -22,7 +25,7 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
     
     #PRESIDENTE
     
-    afiliacion_presidente = obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_PRESIDENTE)
+    afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_PRESIDENTE)
     
     subtotal = afiliacion_presidente.CostoActual * 1
     
@@ -38,9 +41,9 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
     total += subtotal
     
     #JUGADORES
-    afiliacion_jugador = obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_JUGADOR)
+    afiliacion_jugador = pagos_repositorio.obtener_tipo_afiliacion_repo(db, TIPO_AFILIACION_JUGADOR)
     
-    subtotal = afiliacion_jugador.CostoActual * orden.cantidad_jugadores
+    subtotal = afiliacion_jugador.CostoActual * orden.CantidadJugadores
     
     detalles.append({
         "tipo_concepto": 1,
@@ -56,7 +59,7 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
     #seguros
     
     for s in orden.Seguros:
-        seguro = obtener_seguro_repo(db, s.SeguroId)
+        seguro = pagos_repositorio.obtener_seguro_repo(db, s.SeguroId)
         
         if not seguro:
             raise HTTPException(status_code=404, detail=f"Seguro {s.SeguroId} no existe")
@@ -74,14 +77,79 @@ def crear_orden_pago_servicio(db, usuario_id, orden):
         
         total += subtotal
         
-        orden_pago = crear_orden_pago_repo(db, usuario_id, total)
+    orden_pago = pagos_repositorio.crear_orden_pago_repo(db, usuario_id, total)
         
-        for d in detalles:
-            crear_detalle_pago_repo(db=db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
+    for d in detalles:
+        pagos_repositorio.crear_detalle_pago_repo(db=db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
             
-        db.commit()
+    pagos_repositorio.crear_presidente_equipo_repo(db, usuario_id)
+    db.commit()
+
         
+    return {
+        "orden_pago_id": orden_pago.OrdenPagoId,
+        "total": total
+    }
+        
+    
+async def subir_comprobante_servicio(db, orden_id, archivo):
+    orden = pagos_repositorio.obtener_orden_repo(db, orden_id)
+    
+    if not orden:
+        raise HTTPException(status_code=404, detail="Orden de pago no encontrada")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    extension = archivo.filename.split(".")[-1]
+    
+    nombre_archivo = f"orden_{orden_id}.{extension}"
+
+    ruta = os.path.join(UPLOAD_DIR, nombre_archivo)
+
+    with open(ruta, "wb") as buffer:
+        buffer.write(await archivo.read())
+        pagos_repositorio.actualizar_comprobante_repo(db, orden_id, ruta)
+
+        db.commit()
+
         return {
-            "orden_pago_id": orden_pago.OrdenPagoId,
-            "total": total
+            "mensaje": "Comprobante subido correctamente",
+            "orden_pago_id": orden_id
         }
+
+
+def obtener_seguros_servicio(db):
+    seguros = pagos_repositorio.obtener_seguros_repo(db)
+    return [SeguroBase.model_validate(seguro) for seguro in seguros]
+
+def obtener_afiliaciones_servicio(db):
+    afiliaciones = pagos_repositorio.obtener_afiliaciones_repo(db)
+    return [AfiliacionesBase.model_validate(afiliacion) for afiliacion in afiliaciones]
+
+def obtener_pagos_servicio(db):
+    pagos = pagos_repositorio.obtener_pagos_repo(db)
+    result = []
+    for pago in pagos:
+        data = {
+            "OrdenPagoId": pago.OrdenPagoId,
+            "UsuarioId": pago.UsuarioId,
+            "Correo": pago.UsuarioPagoRelacion.Correo if pago.UsuarioPagoRelacion else None,
+            "FechaDePago": pago.FechaDePago,
+            "FechaEnvio": pago.FechaEnvio,
+            "RutaVoucher": pago.RutaVoucher,
+            "EstatusPagoId": pago.EstatusPagoId,
+            "TotalPagar": pago.TotalPagar
+        }
+        result.append(ListaPagos(**data))
+    return result
+
+def estatus_pago_servicio(db, orden_pago_id, estatus):
+    response = pagos_repositorio.estatus_pago_repo(db, orden_pago_id, estatus)
+
+    return response
+
+def orden_pago_individual_servicio(db, orden_pago_id):
+
+    orden = pagos_repositorio.orden_pago_individual_repo(db, orden_pago_id)
+
+    return orden
+    

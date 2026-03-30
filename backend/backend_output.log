@@ -1,0 +1,45 @@
+INFO:     Started server process [29270]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62459 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62459 - "GET / HTTP/1.1" 200 OK
+2026-03-23 11:32:05,039 INFO sqlalchemy.engine.Engine SELECT CAST(SERVERPROPERTY('ProductVersion') AS VARCHAR)
+2026-03-23 11:32:05,039 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-03-23 11:32:05,043 INFO sqlalchemy.engine.Engine SELECT schema_name()
+2026-03-23 11:32:05,043 INFO sqlalchemy.engine.Engine [generated in 0.00014s] ()
+2026-03-23 11:32:05,049 INFO sqlalchemy.engine.Engine SELECT CAST('test max support' AS NVARCHAR(max))
+2026-03-23 11:32:05,049 INFO sqlalchemy.engine.Engine [generated in 0.00011s] ()
+2026-03-23 11:32:05,054 INFO sqlalchemy.engine.Engine SELECT 1 FROM fn_listextendedproperty(default, default, default, default, default, default, default)
+2026-03-23 11:32:05,054 INFO sqlalchemy.engine.Engine [generated in 0.00009s] ()
+2026-03-23 11:32:05,070 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-03-23 11:32:05,073 INFO sqlalchemy.engine.Engine SELECT TOP 1 [Usuarios].[UsuarioId] AS [Usuarios_UsuarioId], [Usuarios].[PersonaId] AS [Usuarios_PersonaId], [Usuarios].[Correo] AS [Usuarios_Correo], [Usuarios].[Contrasena] AS [Usuarios_Contrasena], [Usuarios].[Salt] AS [Usuarios_Salt], [Usuarios].[Estatus] AS [Usuarios_Estatus], [Usuarios].[Eliminado] AS [Usuarios_Eliminado], [Usuarios].[RolId] AS [Usuarios_RolId] 
+FROM [Usuarios] 
+WHERE [Usuarios].[Correo] = ?
+2026-03-23 11:32:05,073 INFO sqlalchemy.engine.Engine [generated in 0.00019s] ('saaibtest2@example.com',)
+2026-03-23 11:32:05,086 INFO sqlalchemy.engine.Engine SELECT [Roles].[RolId] AS [Roles_RolId], [Roles].[Nombre] AS [Roles_Nombre] 
+FROM [Roles] 
+WHERE [Roles].[RolId] = ?
+2026-03-23 11:32:05,086 INFO sqlalchemy.engine.Engine [generated in 0.00015s] (3,)
+2026-03-23 11:32:05,095 INFO sqlalchemy.engine.Engine SELECT [Personas].[PersonaId] AS [Personas_PersonaId], [Personas].[Nombre] AS [Personas_Nombre], [Personas].[PrimerApellido] AS [Personas_PrimerApellido], [Personas].[SegundoApellido] AS [Personas_SegundoApellido], [Personas].[CURP] AS [Personas_CURP], [Personas].[RFC] AS [Personas_RFC], [Personas].[NUI] AS [Personas_NUI], [Personas].[SexoId] AS [Personas_SexoId], [Personas].[FechaNacimiento] AS [Personas_FechaNacimiento] 
+FROM [Personas] 
+WHERE [Personas].[PersonaId] = ?
+2026-03-23 11:32:05,095 INFO sqlalchemy.engine.Engine [generated in 0.00017s] (3,)
+INFO:     127.0.0.1:62505 - "POST /auth/iniciar-sesion HTTP/1.1" 200 OK
+2026-03-23 11:32:05,100 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:62505 - "OPTIONS /auth/iniciar-sesion HTTP/1.1" 200 OK
+2026-03-23 11:32:09,059 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-03-23 11:32:09,060 INFO sqlalchemy.engine.Engine SELECT TOP 1 [Usuarios].[UsuarioId] AS [Usuarios_UsuarioId], [Usuarios].[PersonaId] AS [Usuarios_PersonaId], [Usuarios].[Correo] AS [Usuarios_Correo], [Usuarios].[Contrasena] AS [Usuarios_Contrasena], [Usuarios].[Salt] AS [Usuarios_Salt], [Usuarios].[Estatus] AS [Usuarios_Estatus], [Usuarios].[Eliminado] AS [Usuarios_Eliminado], [Usuarios].[RolId] AS [Usuarios_RolId] 
+FROM [Usuarios] 
+WHERE [Usuarios].[Correo] = ?
+2026-03-23 11:32:09,060 INFO sqlalchemy.engine.Engine [cached since 3.987s ago] ('saaibtest2@example.com',)
+2026-03-23 11:32:09,063 INFO sqlalchemy.engine.Engine SELECT [Roles].[RolId] AS [Roles_RolId], [Roles].[Nombre] AS [Roles_Nombre] 
+FROM [Roles] 
+WHERE [Roles].[RolId] = ?
+2026-03-23 11:32:09,063 INFO sqlalchemy.engine.Engine [cached since 3.978s ago] (3,)
+2026-03-23 11:32:09,066 INFO sqlalchemy.engine.Engine SELECT [Personas].[PersonaId] AS [Personas_PersonaId], [Personas].[Nombre] AS [Personas_Nombre], [Personas].[PrimerApellido] AS [Personas_PrimerApellido], [Personas].[SegundoApellido] AS [Personas_SegundoApellido], [Personas].[CURP] AS [Personas_CURP], [Personas].[RFC] AS [Personas_RFC], [Personas].[NUI] AS [Personas_NUI], [Personas].[SexoId] AS [Personas_SexoId], [Personas].[FechaNacimiento] AS [Personas_FechaNacimiento] 
+FROM [Personas] 
+WHERE [Personas].[PersonaId] = ?
+2026-03-23 11:32:09,066 INFO sqlalchemy.engine.Engine [cached since 3.971s ago] (3,)
+INFO:     127.0.0.1:62505 - "POST /auth/iniciar-sesion HTTP/1.1" 200 OK
+2026-03-23 11:32:09,069 INFO sqlalchemy.engine.Engine ROLLBACK

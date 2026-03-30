@@ -1,14 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
 
-from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, SolicitudIndividualRespuesta, RequisitosParaAfiliacion, CrearSolicitud
+from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, SolicitudIndividualRespuesta, RequisitosParaAfiliacion, CrearSolicitud, PDFData
 
 from app.servicios.solicitud_servicio import crear_solicitud, obtener_solicitudes_servicio, obtener_solicitud_individual_servicio, agregar_requisitos_servicio
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.solicitud_modelo import Solicitud
 from app.servicios import solicitud_servicio
+
+import fitz
+import io
+import os
 
 from typing import List
 
@@ -18,8 +23,9 @@ router = APIRouter(
     tags=["Solicitudes"]
 )
 
+"""
 @router.post("/enviar-solicitud")
-def solicitud(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuario = Depends(obtener_usuario_actual)):
+def enviar_solicitud_presidente(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuario = Depends(obtener_usuario_actual)):
 
     crear_solicitud(db, data, usuario)
 
@@ -27,7 +33,7 @@ def solicitud(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuari
         raise HTTPException(status_code=400, detail="Datos de solicitud inválidos")
 
     return {"message": "Solicitud enviada correctamente"}
-
+"""
 
 @router.get("/solicitudes-usuarios", response_model=List[SolicitudesTodas])
 def obtener_solicitudes(db:Session = Depends(get_db)):
@@ -57,6 +63,52 @@ def ver_requisitos_afiliacion(tipo_afiliacion_id: int, db:Session=Depends(get_db
     return requisitos
 
 @router.post("/")
-def crear_solicitud(solicitud: CrearSolicitud, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
+def crear_solicitud_endpoint(solicitud: CrearSolicitud, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
     resultado = solicitud_servicio.crear_solicitud_servicio(db, solicitud, usuario.id)
     return resultado
+
+@router.get("/descargar-formato-afiliacion")
+async def descargar_formato(
+    nombre: str = Query(...),
+    curp: str = Query(...),
+    fecha_nac: str = Query(...),
+    edad: str = Query(...),
+    nacionalidad: str = Query("MEXICANA"),
+    equipo: str = Query("")
+):
+    try:
+        # Ruta del template original (Ajustada para ser multiplataforma)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        template_path = os.path.join(base_dir, "..", "Front_Feo", "Formato de afiliación - Presidente - v2026.pdf")
+
+        if not os.path.exists(template_path):
+            raise HTTPException(status_code=404, detail=f"No se encontró el archivo de plantilla en {template_path}")
+
+        doc = fitz.open(template_path)
+        page = doc[0]
+
+        # Insertar textos en posiciones aproximadas (ajustables)
+        # Formato: page.insert_text((x, y), text, fontsize=10, ...)
+        # Estos valores son estimados para una hoja A4/Letter estándar
+        page.insert_text((150, 215), nombre.upper(), fontsize=11)
+        page.insert_text((450, 215), nacionalidad.upper(), fontsize=11)
+        page.insert_text((150, 245), curp.upper(), fontsize=11)
+        page.insert_text((450, 245), fecha_nac, fontsize=11)
+        page.insert_text((150, 275), edad, fontsize=11)
+        page.insert_text((450, 275), equipo.upper(), fontsize=11)
+
+        # Guardar en memoria
+        pdf_bytes = doc.write()
+        doc.close()
+
+        output = io.BytesIO(pdf_bytes)
+        output.seek(0)
+
+        headers = {
+            'Content-Disposition': 'attachment; filename="Formato_Afiliacion_FIRMADO.pdf"'
+        }
+
+        return StreamingResponse(output, media_type="application/pdf", headers=headers)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {str(e)}")

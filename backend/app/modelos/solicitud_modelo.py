@@ -9,7 +9,7 @@ class Solicitud(Base):
     UsuarioId = Column(Integer, ForeignKey("Usuarios.UsuarioId"), nullable=False)
     UsuarioRelacion = relationship("Usuario", back_populates="SolicitudRelacion")
 
-    FechaSolicitud = Column(DateTime, nullable=False)
+    FechaSolicitud = Column(DateTime, nullable=True)
     ObservacionesSolicitud = Column(String(500), nullable=True)
 
     EstatusValidacion = Column(Integer, ForeignKey("CatalogoEstadosValidacion.EstadoValidacionId"), nullable=False)
@@ -17,3 +17,6 @@ class Solicitud(Base):
 
     TipoAfiliacionId = Column(Integer, ForeignKey("CatalogoTiposAfiliacion.TipoAfiliacionId"), nullable=True)
     CatalogoTiposAfiliacionRelacion = relationship("CatalogoTiposAfiliacion", back_populates="SolicitudRelacion")
+
+    EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="SolicitudRelacion")
+    

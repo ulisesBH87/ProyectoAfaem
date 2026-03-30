@@ -12,15 +12,21 @@ const PresidenteEquipoReportes = lazy(() => import('./pages/PresidenteEquipo/Pre
 const PresidenteEquipoConfiguracion = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoConfiguracion'));
 const PresidenteEquipoEquipos = lazy(() => import('./pages/Equipos/PresidenteEquipoEquipos'));
 const PresidenteEquipoMisJugadores = lazy(() => import('./pages/Jugadores/PresidenteEquipoMisJugadores'));
-const CrearEquipo = lazy(() => import('./pages/Equipos/CrearEquipo'));
 const AdminEquipo = lazy(() => import('./pages/Equipos/AdminEquipo'));
 const InscribirEquipoALiga = lazy(() => import('./pages/Equipos/InscribirEquipoALiga'));
 const AdminSolicitudes = lazy(() => import('./pages/Admin/AdminSolicitudes'));
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
+const AdminPagos = lazy(() => import('./pages/Admin/AdminPagos'));
+const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
+const AdminGuard = lazy(() => import('./routes/AdminGuard'));
 const RegistroJugadores = lazy(() => import('./pages/Jugadores/RegistroJugadores'));
 const ProximoPresidente = lazy(() => import('./pages/Auth/ProximoPresidente'));
 const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPresidente'));
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
+const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
+const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
+const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 
 function App() {
   return (
@@ -39,13 +45,41 @@ function App() {
           <Route path="/presidente-equipo/configuracion" element={<PresidenteEquipoConfiguracion />} />
           <Route path="/presidente-equipo/equipos" element={<PresidenteEquipoEquipos />} />
           <Route path="/presidente-equipo/mis-jugadores" element={<PresidenteEquipoMisJugadores />} />
-          <Route path="/presidente-equipo/crear-equipo" element={<CrearEquipo />} />
           <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<AdminEquipo />} />
           <Route path="/presidente-equipo/registro-jugadores" element={<RegistroJugadores />} />
           <Route path="/inscribir-equipo-liga/:equipoId" element={<InscribirEquipoALiga />} />
-          <Route path="/presidente-equipo/admin-solicitudes" element={<AdminSolicitudes />} />
+          
+          {/* RUTAS DE ADMINISTRADOR */}
+          <Route path="/registrar-admin" element={<RegistrarAdmin />} />
+          <Route path="/admin/dashboard" element={
+            <AdminGuard>
+              <AdminDashboard />
+            </AdminGuard>
+          } />
+          <Route path="/admin/solicitudes" element={
+            <AdminGuard>
+              <AdminSolicitudes />
+            </AdminGuard>
+          } />
+          <Route path="/admin/pagos" element={
+            <AdminGuard>
+              <AdminPagos />
+            </AdminGuard>
+          } />
+          <Route path="/admin/usuarios-roles" element={
+            <AdminGuard>
+              <UsuariosRolesAdmin />
+            </AdminGuard>
+          } />
+          <Route path="/admin/configuracion" element={
+            <AdminGuard>
+              <ConfiguracionAdmin />
+            </AdminGuard>
+          } />
+          <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteEquipoSolicitudes />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
+          <Route path="/presidente-equipo/configurar-equipo" element={<ConfigurarEquipo />} />
         </Routes>
       </Suspense>
     </Router>

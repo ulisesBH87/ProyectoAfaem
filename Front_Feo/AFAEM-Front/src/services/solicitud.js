@@ -56,9 +56,9 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
     // 2. SI NO ESTÁ EN localStorage, INTENTAR DECODIFICAR EL TOKEN
     if (!usuarioId) {
       const decoded = decodeToken(token);
-      usuarioId = decoded?.UsuarioId;
+      usuarioId = decoded?.sub;
       if (usuarioId) {
-        console.log('✅ UsuarioId obtenido del token:', usuarioId);
+        console.log('✅ UsuarioId obtenido del token (sub):', usuarioId);
       }
     }
     
@@ -82,12 +82,13 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
     
     // EL PAYLOAD INCLUYE: UsuarioId, CURP, RFC, SexoId, FechaNacimiento, FechaSolicitud, EstatusValidacion
     const payload = {
-      UsuarioId: usuarioId,
+      UsuarioId: Number(usuarioId),
       CURP: curp.toUpperCase(),
       RFC: rfc.toUpperCase(),
       SexoId: sexoId,
       FechaNacimiento: fechaNacimiento,
       FechaSolicitud: fechaSolicitud,
+      TipoAfiliacion: 2,
       EstatusValidacion: 2
     };
 

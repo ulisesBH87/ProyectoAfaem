@@ -14,6 +14,9 @@ import {
   Cargador,
   ConsejoFlotante
 } from '../../components/partials';
+import Swal from 'sweetalert2';
+import { validarFotografia } from '../../services/foto';
+import { registrarJugadorTemporal } from '../../services/teams';
 import '../../styles/dashboard.css';
 
 export default function RegistroJugadores() {
@@ -32,6 +35,7 @@ export default function RegistroJugadores() {
     nombreJugador: '',
     apellidoPaterno: '',
     apellidoMaterno: '',
+    curp: '',
     genero: '',
     edad: '',
     fechaNacimiento: '',
@@ -85,12 +89,107 @@ export default function RegistroJugadores() {
     }
   ];
 
-  const handleFileUpload = (documentKey, file) => {
+  const handleFileUpload = async (documentKey, file) => {
     if (file) {
       setDocuments(prev => ({
         ...prev,
         [documentKey]: file
       }));
+
+      // Si es foto, validar
+      if (documentKey === 'fotografia') {
+        Swal.fire({
+          title: 'Validando Fotografía...',
+          html: 'Verificando formato y calidad.',
+          allowOutsideClick: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+        try {
+          const data = await validarFotografia(file);
+          if (data.valido) {
+            Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
+          } else {
+            Swal.fire('Error en la fotografía', data.mensaje, 'error');
+            setDocuments(prev => ({ ...prev, [documentKey]: null })); // Limpiar si es inválida
+          }
+        } catch (err) {
+          Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+        }
+      }
+
+      // Si es INE o Acta, procesar OCR
+      if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
+        Swal.fire({
+          title: 'Analizando Documento...',
+          html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+          const formDataOcr = new FormData();
+          formDataOcr.append('file_id', file);
+
+          const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
+          if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+
+          const htmlText = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlText, "text/html");
+          
+          let nombreEncontrado = '';
+          let curpEncontrada = '';
+          let fechaNacEncontrada = '';
+          
+          const rows = doc.querySelectorAll('.dato-fila');
+          rows.forEach(row => {
+            const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
+            const value = row.querySelector('.valor')?.textContent?.trim() || '';
+            if (label.includes('nombre')) nombreEncontrado = value;
+            if (label.includes('curp')) curpEncontrada = value;
+            if (label.includes('fecha de nacimiento')) fechaNacEncontrada = value;
+          });
+
+          if (nombreEncontrado) {
+            const parts = nombreEncontrado.split(' ');
+            let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+            
+            if (parts.length >= 3) {
+              lastNamePaterno = parts[0];
+              lastNameMaterno = parts[1];
+              firstName = parts.slice(2).join(' ');
+            } else if (parts.length === 2) {
+              lastNamePaterno = parts[0];
+              firstName = parts[1];
+            } else {
+              firstName = nombreEncontrado;
+            }
+
+            setExtractedData(prev => ({
+              ...prev,
+              nombreJugador: firstName,
+              apellidoPaterno: lastNamePaterno,
+              apellidoMaterno: lastNameMaterno,
+              curp: curpEncontrada || prev.curp,
+              fechaNacimiento: fechaNacEncontrada || prev.fechaNacimiento,
+            }));
+
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: `Se detectó a: ${nombreEncontrado}`,
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } else {
+            throw new Error('No se detectaron nombres legibles en este documento.');
+          }
+        } catch (err) {
+          console.error("Error OCR:", err);
+          Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
+        }
+      }
     }
   };
 
@@ -117,23 +216,73 @@ export default function RegistroJugadores() {
   };
 
   const handleSubmit = async () => {
-    // Aquí irá la lógica para enviar los documentos al OCR
-    // Por ahora solo es la vista
+    if (!extractedData.nombreJugador || !extractedData.apellidoPaterno || !extractedData.curp) {
+      Swal.fire('Atención', 'Faltan datos de la identidad del jugador o CURP.', 'warning');
+      return;
+    }
+    if (!teamId) {
+      Swal.fire('Error', 'No se detectó el ID del equipo. Intenta regresar y volver a intentarlo.', 'error');
+      return;
+    }
+
     setUploading(true);
     
-    // Simulación de carga
-    setTimeout(() => {
-      // Datos de ejemplo que se mostrarían después del OCR
-      setExtractedData({
-        nombreJugador: 'Pedro',
-        apellidoPaterno: 'Ramírez',
-        apellidoMaterno: 'López',
-        genero: 'Masculino',
-        edad: '25',
-        direccion: 'José María 505, Col. Morelos, Cuautla, Morelos'
+    try {
+      const formData = new FormData();
+      formData.append('equipo_temporal_id', teamId);
+      formData.append('nombre', extractedData.nombreJugador);
+      formData.append('primer_apellido', extractedData.apellidoPaterno);
+      formData.append('segundo_apellido', extractedData.apellidoMaterno);
+      formData.append('curp', extractedData.curp);
+      
+      let sexoId = 3;
+      if (extractedData.genero === 'masculino') sexoId = 1;
+      if (extractedData.genero === 'femenino') sexoId = 2;
+      formData.append('sexo_id', sexoId);
+      
+      let fechaISO = '';
+      if (extractedData.fechaNacimiento) {
+          if (extractedData.fechaNacimiento.includes('-')) {
+             fechaISO = extractedData.fechaNacimiento;
+          } else if (extractedData.fechaNacimiento.includes('/')) {
+             const parts = extractedData.fechaNacimiento.split('/');
+             if (parts.length === 3) fechaISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+      }
+      formData.append('fecha_nacimiento', fechaISO);
+
+      // Los archivos deben ir en el mismo orden con el ID estático temporal solicitado (3)
+      const docsParams = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
+      docsParams.forEach((docKey) => {
+        if (documents[docKey]) {
+          formData.append('documento_afiliacion_ids', '3');
+          formData.append('archivos', documents[docKey]);
+        }
       });
+
+      // Call Backend
+      await registrarJugadorTemporal(formData);
+      
+      Swal.fire({
+        title: '¡Jugador Registrado!',
+        text: 'La documentación ha sido enviada para validación con éxito.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      }).then(() => {
+        navigate(`/presidente-equipo/admin-equipo/${teamId}`);
+      });
+    } catch (err) {
+      console.error("Error al registrar: ", err);
+      let msj = 'No se pudo conectar con el servidor';
+      if (err.response && err.response.data && err.response.data.detail) {
+        msj = typeof err.response.data.detail === 'string' 
+          ? err.response.data.detail 
+          : JSON.stringify(err.response.data.detail);
+      }
+      Swal.fire('Error al guardar', msj, 'error');
+    } finally {
       setUploading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -382,6 +531,15 @@ export default function RegistroJugadores() {
                     valor={extractedData.apellidoMaterno}
                     alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
                     marcador="Ej. García"
+                  />
+
+                  <EntradaFormulario
+                    etiqueta="CURP"
+                    tipo="text"
+                    nombre="curp"
+                    valor={extractedData.curp}
+                    alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})}
+                    marcador="Ingresa la CURP (18 caracteres)"
                   />
 
                   <EntradaSeleccion

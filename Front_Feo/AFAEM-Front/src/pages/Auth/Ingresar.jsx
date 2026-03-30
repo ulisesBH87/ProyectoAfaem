@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import StadiumBg from '../../assets/stadium.jpg';
 import { Link, useNavigate } from 'react-router-dom';
-import { login, setAuthToken, pingBackend } from '../../services/auth';
+import { login, setAuthToken, pingBackend, parseJwt } from '../../services/auth';
+import { useRBAC } from '../../hooks/useRBAC';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 
 export default function Ingresar() {
   const navigate = useNavigate();
+  const { refreshAccess } = useRBAC();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +45,9 @@ export default function Ingresar() {
       if (token) {
         setAuthToken(token);
         localStorage.setItem('token', token);
+        console.log('🔄 Sincronizando permisos con el backend...');
+        await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
+        window.dispatchEvent(new Event('user-logged-in'));
       }
       const userData = {
         email: email,
@@ -52,6 +57,9 @@ export default function Ingresar() {
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('email', email); // GUARDAR EMAIL DIRECTAMENTE
       
+      const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
+      console.log('ROL USUARIO (desde respuesta login):', role);
+      
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
         localStorage.setItem('UsuarioId', data.UsuarioId);
@@ -59,9 +67,26 @@ export default function Ingresar() {
         localStorage.setItem('UsuarioId', data.usuario_id);
       } else if (data?.id) {
         localStorage.setItem('UsuarioId', data.id);
+      } else {
+        // FALLBACK: Extraer ID del JWT si no viene en el primer nivel del JSON
+        const decoded = parseJwt(token);
+        if (decoded && decoded.sub) {
+          localStorage.setItem('UsuarioId', decoded.sub);
+          console.log('🆔 ID extraído del Token:', decoded.sub);
+        }
       }
       
-      navigate('/pre-registro-presidente');
+      console.log('ROL USUARIO:', role);
+
+      if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
+        navigate('/admin/dashboard');
+      } else if (role === 'ENTRENADOR') {
+        navigate('/coach/dashboard');
+      } else if (role === 'PRESIDENTE_EQUIPO') {
+        navigate('/pre-registro-presidente');
+      } else {
+        navigate('/pre-registro-presidente');
+      }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);
       setErr(typeof msg === 'object' ? JSON.stringify(msg) : msg);
