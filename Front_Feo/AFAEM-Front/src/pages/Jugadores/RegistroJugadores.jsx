@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaUpload } from 'react-icons/fa';
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FaUpload, FaSyncAlt } from 'react-icons/fa';
 import { 
   BotonPrimario, 
   BotonSecundario, 
@@ -289,14 +289,8 @@ export default function RegistroJugadores() {
   };
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Registrar jugador" />
-        
-        <div className="dashboard-main">
-          <div className="dashboard-content" style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className="dashboard-content">
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
             
             {/* HEADER */}
             <div style={{
@@ -610,8 +604,6 @@ export default function RegistroJugadores() {
               />
             </div>
 
-          </div>
-        </div>
       </div>
     </div>
   );
