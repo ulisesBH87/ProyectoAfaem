@@ -6,6 +6,9 @@ from app.repositorios import documentos_repositorio
 from app.servicios import documentos_servicio
 from app.modelos.catalogo_seguros import Seguro
 
+def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
+    return equipo_repositorio.obtener_equipos_temporales_por_usuario_repo(db, usuario_id)
+
 async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos_afiliacion_ids, archivos, seguro_id):
 
     existe_persona = equipo_repositorio.existe_persona_repo(db, persona.curp)

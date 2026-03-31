@@ -4,6 +4,11 @@ from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
 from app.modelos.persona_modelo import Personas
 from sqlalchemy.orm import joinedload
 
+def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
+    return db.query(EquipoTemporal).filter(
+        EquipoTemporal.UsuarioId == usuario_id
+    ).all()
+
 def crear_equipo_temporal_repo(db, orden, solicitud_id):
     #obtener cantidad de jugadores pagados
     detalles = db.query(OrdenPagoDetalle).filter(OrdenPagoDetalle.OrdenPagoId == orden.OrdenPagoId).all()

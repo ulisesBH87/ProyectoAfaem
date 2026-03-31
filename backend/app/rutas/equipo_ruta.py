@@ -5,10 +5,15 @@ from typing import List
 from app.core.seguridad import obtener_usuario_actual
 
 from app.esquemas.equipo_esquema import JugadorPersona
-from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio
-
+from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
+
+@router.get("/equipos-temporales")
+def obtener_equipos_temporales_por_usuario(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    usuario_id = usuario.UsuarioId
+    equipos = obtener_equipos_temporales_por_usuario_servicio(db, usuario_id)
+    return equipos
 
 @router.get("/slots")
 async def obtener_slots(equipo_temporal_id: int,db: Session = Depends(get_db)):
@@ -38,3 +43,5 @@ async def registrar_jugador(
         fecha_nacimiento=fecha_nacimiento
     )
     return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id)
+
+
