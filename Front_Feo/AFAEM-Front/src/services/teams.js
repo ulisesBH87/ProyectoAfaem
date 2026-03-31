@@ -206,11 +206,50 @@ export const registrarJugadorTemporal = async (data) => {
   }
 };
 
+/**
+ * OBTIENE LOS SLOTS DISPONIBLES PARA UN EQUIPO TEMPORAL
+ */
+export const getAvailableSlots = async (equipoTemporalId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/slots`, {
+      params: { equipo_temporal_id: equipoTemporalId },
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo slots:', error);
+    throw error;
+  }
+};
+
+/**
+ * OBTIENE LA INFORMACIÓN DEL EQUIPO TEMPORAL DEL USUARIO
+ */
+export const getEquipoTemporalInfo = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/equipos-temporales/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo equipo temporal info:', error);
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   getUserTeams,
   getTeamDetail,
   createTeam,
   certifyUser,
-  registrarJugadorTemporal
+  registrarJugadorTemporal,
+  getAvailableSlots,
+  getEquipoTemporalInfo
 };
