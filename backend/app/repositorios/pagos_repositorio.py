@@ -15,6 +15,7 @@ from app.modelos.solicitud_modelo import Solicitud
 from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
+from app.modelos.equipo_temporal_modelo import EquipoTemporal
 
 #Tipos de afiliación
 def obtener_afiliaciones_repo(db):
@@ -83,8 +84,12 @@ def orden_pago_individual_repo(db, orden_pago_id):
     orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     return orden
+"""
+def cantidad_seguros_repo(db, orden_pago_id):
+    orden = (db.query(EquipoTemporal.CantidadJugadoresPagados).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
-
+    return orden
+"""
 def crear_presidente_equipo_repo(db, usuario_id):
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
 

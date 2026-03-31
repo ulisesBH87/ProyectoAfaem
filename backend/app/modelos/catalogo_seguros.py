@@ -10,3 +10,6 @@ class Seguro(Base):
     Precio = Column(DECIMAL(7,2), nullable=False)
 
     OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="SeguroRelacion")
+    EquipoTemporalJugadorRelacion= relationship("EquipoTemporalJugador", back_populates="SeguroRelacion")
+    
+    
