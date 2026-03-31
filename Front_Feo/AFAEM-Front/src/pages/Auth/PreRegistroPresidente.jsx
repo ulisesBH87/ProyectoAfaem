@@ -652,7 +652,6 @@ function PreRegistroPresidente() {
       for (const docKey of requiredDocs) {
         const file = documents[docKey];
         const formData = new FormData();
-        formData.append('persona_id', personaId);
         formData.append('documento_afiliacion_ids', 3); // Hardcoded to 3 as requested
         formData.append('archivo', file);
 
