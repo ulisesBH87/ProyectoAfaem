@@ -15,7 +15,7 @@ const DashboardSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { menus, isLoading } = useRBAC();
+  const { menus, isLoading, hasRole } = useRBAC();
 
   useEffect(() => {
     document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '90px' : '280px');
@@ -28,9 +28,24 @@ const DashboardSidebar = () => {
 
   if (isLoading) return null;
 
+  // DEFINICIÓN DE TEMAS (Glassmorphism)
+  const isAdmin = hasRole('Admin') || hasRole('Administrador');
+  
+  const theme = {
+    bg: isAdmin 
+      ? 'rgba(15, 23, 42, 0.95)' // Black Glass (Deep Navy)
+      : 'rgba(255, 255, 255, 0.85)', // White Glass
+    text: isAdmin ? '#e2e8f0' : '#1e293b',
+    textMuted: isAdmin ? '#94a3b8' : '#64748b',
+    border: isAdmin ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    activeBg: isAdmin ? 'var(--primary)' : '#0b4ea6',
+    activeText: '#ffffff',
+    hoverBg: isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.05)',
+    shadow: isAdmin ? '0 8px 32px 0 rgba(0, 0, 0, 0.8)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+  };
+
   return (
     <aside 
-      className="glass"
       style={{
         width: 'var(--sidebar-width)',
         height: '100vh',
@@ -41,8 +56,12 @@ const DashboardSidebar = () => {
         display: 'flex',
         flexDirection: 'column',
         zIndex: 1000,
-        borderRight: '1px solid var(--border-light)',
-        boxShadow: 'var(--shadow-lg)'
+        backgroundColor: theme.bg,
+        backdropFilter: 'blur(15px)',
+        WebkitBackdropFilter: 'blur(15px)',
+        borderRight: `1px solid ${theme.border}`,
+        boxShadow: theme.shadow,
+        color: theme.text
       }}
     >
       {/* HEADER / LOGO */}
@@ -52,7 +71,7 @@ const DashboardSidebar = () => {
         alignItems: 'center',
         justifyContent: isCollapsed ? 'center' : 'flex-start',
         gap: '12px',
-        borderBottom: '1px solid var(--border-light)'
+        borderBottom: `1px solid ${theme.border}`
       }}>
         <img 
           src={AfaemLogo} 
@@ -62,14 +81,18 @@ const DashboardSidebar = () => {
             height: isCollapsed ? '44px' : '48px',
             objectFit: 'contain',
             flexShrink: 0,
-            filter: 'drop-shadow(0 2px 4px rgba(11, 78, 166, 0.15))',
+            filter: isAdmin ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.1))' : 'drop-shadow(0 2px 4px rgba(11, 78, 166, 0.15))',
             transition: 'all 0.3s'
           }} 
         />
         {!isCollapsed && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--primary)', letterSpacing: '-0.5px' }}>AFAEM</h1>
-            <p style={{ fontSize: '9px', fontWeight: '700', margin: 0, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Management System</p>
+            <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px' }}>
+              AFAEM
+            </h1>
+            <p style={{ fontSize: '9px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase' }}>
+              Management System
+            </p>
           </div>
         )}
       </div>
@@ -92,21 +115,21 @@ const DashboardSidebar = () => {
                   borderRadius: '12px',
                   cursor: item.Ruta ? 'pointer' : 'default',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backgroundColor: isActive ? 'var(--primary)' : 'transparent',
-                  color: isActive ? 'white' : 'var(--text-muted)',
-                  boxShadow: isActive ? '0 4px 12px rgba(11, 78, 166, 0.3)' : 'none',
+                  backgroundColor: isActive ? theme.activeBg : 'transparent',
+                  color: isActive ? theme.activeText : theme.text,
+                  boxShadow: isActive ? (isAdmin ? '0 4px 20px rgba(37, 99, 235, 0.4)' : '0 4px 12px rgba(11, 78, 166, 0.3)') : 'none',
                   justifyContent: isCollapsed ? 'center' : 'flex-start'
                 }}
                 onMouseEnter={(e) => {
                   if(!isActive) {
-                    e.currentTarget.style.backgroundColor = 'rgba(11, 78, 166, 0.05)';
-                    e.currentTarget.style.color = 'var(--primary)';
+                    e.currentTarget.style.backgroundColor = theme.hoverBg;
+                    e.currentTarget.style.color = isAdmin ? '#ffffff' : 'var(--primary)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if(!isActive) {
                     e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = 'var(--text-muted)';
+                    e.currentTarget.style.color = theme.text;
                   }
                 }}
               >
@@ -135,8 +158,8 @@ const DashboardSidebar = () => {
                       borderRadius: '10px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      backgroundColor: isChildActive ? 'rgba(11, 78, 166, 0.08)' : 'transparent',
-                      color: isChildActive ? 'var(--primary)' : 'var(--text-muted)',
+                      backgroundColor: isChildActive ? (isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.08)') : 'transparent',
+                      color: isChildActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.textMuted,
                       fontSize: '13px',
                       fontWeight: '500'
                     }}
@@ -151,7 +174,7 @@ const DashboardSidebar = () => {
       </nav>
 
       {/* FOOTER ACTIONS */}
-      <div style={{ padding: '16px 12px', borderTop: '1px solid var(--border-light)' }}>
+      <div style={{ padding: '16px 12px', borderTop: `1px solid ${theme.border}` }}>
         <div 
           onClick={handleLogout}
           style={{
@@ -184,11 +207,11 @@ const DashboardSidebar = () => {
             padding: '12px',
             borderRadius: '12px',
             backgroundColor: 'transparent',
-            color: 'var(--text-muted)',
+            color: theme.textMuted,
             marginTop: '8px'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+          onMouseEnter={(e) => e.currentTarget.style.color = isAdmin ? '#ffffff' : 'var(--primary)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = theme.textMuted}
         >
           {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
         </button>

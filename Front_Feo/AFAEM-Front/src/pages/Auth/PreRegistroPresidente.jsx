@@ -530,25 +530,21 @@ function PreRegistroPresidente() {
 
       // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
-
-      // Descargar usando data URI (evita el bug de Safari con blob URLs)
-      const uint8 = new Uint8Array(pdfBytes);
-      let binary = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < uint8.length; i += chunkSize) {
-        binary += String.fromCharCode.apply(null, uint8.subarray(i, i + chunkSize));
-      }
-      const base64 = btoa(binary);
-      const dataUri = `data:application/pdf;base64,${base64}`;
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
 
       const safeNombre = (nombre || 'Presidente').toString().replace(/[^a-zA-Z0-9_\s]/g, '').trim();
       const link = document.createElement('a');
-      link.href = dataUri;
+      link.href = url;
       link.download = `Formato_Afiliacion_${safeNombre}.pdf`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      setTimeout(() => document.body.removeChild(link), 200);
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 500);
 
       Swal.fire('¡Listo!', 'El formato se ha descargado correctamente.', 'success');
     } catch (err) {
