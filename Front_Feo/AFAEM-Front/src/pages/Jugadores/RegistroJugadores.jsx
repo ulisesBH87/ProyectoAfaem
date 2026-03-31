@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaUpload } from 'react-icons/fa';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { FaUpload, FaSyncAlt } from 'react-icons/fa';
 import { 
   BotonPrimario, 
