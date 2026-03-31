@@ -16,6 +16,7 @@ from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
+from app.enums.estatus_pago_enum  import EstatusValidacionPago
 
 #Tipos de afiliación
 def obtener_afiliaciones_repo(db):
@@ -78,7 +79,7 @@ def crear_detalle_pago_repo(db, orden_pago_id, detalle):
 
 #PAGOS
 def obtener_pagos_repo(db):
-    return db.query(OrdenPago).all()
+    return db.query(OrdenPago).filter(OrdenPago.EstatusPagoId != EstatusValidacionPago.NOENVIADO).all()
 
 def orden_pago_individual_repo(db, orden_pago_id):
     orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
