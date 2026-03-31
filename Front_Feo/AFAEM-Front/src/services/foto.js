@@ -13,7 +13,7 @@ export const validarFotografia = async (archivo) => {
   const formData = new FormData();
   formData.append("file", archivo);
 
-  const response = await fetch("http://127.0.0.1:8000/validar-fotografia", {
+  const response = await fetch("http://127.0.0.1:8000/fotografia", {
     method: "POST",
     body: formData
   });

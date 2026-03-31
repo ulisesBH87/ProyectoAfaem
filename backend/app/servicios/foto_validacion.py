@@ -25,10 +25,6 @@ def validacion_fotografia(imagen_bytes):
             return 0, mensaje
         
     # --------------------------
-    # --- DETECTOR DE POSICION DE FOTO ---
-    # --------------------------   
-        
-    # --------------------------
     # --- DETECTOR DE LANDMARKS ---
     # --------------------------
     face = get_face_detector()
@@ -57,7 +53,7 @@ def validacion_fotografia(imagen_bytes):
 
     if isinstance(imagen_recortada, tuple):
         return imagen_recortada
-
+    
     # CRITERIOS TECNICOS PORST-RECORTE
     valido, mensaje = iluminacion(landmarks, imagen_recortada)
     if not valido:
@@ -66,52 +62,6 @@ def validacion_fotografia(imagen_bytes):
     valido, mensaje = nitidez(imagen_recortada)
     if not valido:
         return 0, mensaje
-    
-    
-    #CRITERIOS DE ACCESORIOS
-
-    valido, mensaje = accesorios(imagen_recortada)
-    if not valido:
-        return 0, mensaje 
-    
-    #valido, mensaje = manchas(imagen_recortada)
-    #if not valido:
-    #    return 0, mensaje
-    
-    # REDETECTAR LANDMARKS DEL ROSTRO
-    face_imagen_rgb = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2RGB)
-
-    face_mp_imagen = mp.Image(
-        image_format = mp.ImageFormat.SRGB,
-        data = face_imagen_rgb
-    )
-
-    face_result = face.detect(face_mp_imagen)
-
-    if not face_result.face_landmarks:
-        return 0, "Error al recalcular rostro"
-
-    face_landmarks = face_result.face_landmarks[0]
-
-    # --------------------------
-    # --- DETECTOR DE POSTURA ---
-    # --------------------------
-    pose = get_pose_detector()
-
-     # DETECTAR LANDMARKS DE LA POSTURA
-    pose_imagen_rgb = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2RGB)
-    
-    pose_mp_imagen = mp.Image(
-        image_format = mp.ImageFormat.SRGB,
-        data = pose_imagen_rgb
-    )
-
-    pose_result = pose.detect(pose_mp_imagen)
-
-    if not pose_result.pose_landmarks:
-        return 0, "Error al recalcular rostro"
-    
-    pose_landmarks = pose_result.pose_landmarks[0]
     
     # --------------------------
     # --- DETECTOR DE SEGMENTACION ---
@@ -132,26 +82,70 @@ def validacion_fotografia(imagen_bytes):
     if not segmentacion_result.confidence_masks:
         return 0, "Error al calcular segmentación"
     
-
     category_mask = segmentacion_result.category_mask.numpy_view()
     confidence_mask = segmentacion_result.confidence_masks[0].numpy_view()
+
+    # FONDO BLANCO
+    imagen_segmentada = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
+    
+    #CRITERIOS DE ACCESORIOS
+
+    valido, mensaje = accesorios(imagen_segmentada)
+    if not valido:
+        return 0, mensaje 
+    
+    # REDETECTAR LANDMARKS CON LA IMAGEN SEGMENTADA
+    face_imagen_rgb = cv2.cvtColor(imagen_segmentada, cv2.COLOR_BGR2RGB)
+
+    face_mp_imagen = mp.Image(
+        image_format = mp.ImageFormat.SRGB,
+        data = face_imagen_rgb
+    )
+
+    face_result = face.detect(face_mp_imagen)
+
+    if not face_result.face_landmarks:
+        return 0, "Error al recalcular rostro"
+
+    face_landmarks = face_result.face_landmarks[0]
+
+    # --------------------------
+    # --- DETECTOR DE POSTURA ---
+    # --------------------------
+    pose = get_pose_detector()
+
+     # DETECTAR LANDMARKS DE LA POSTURA
+    pose_imagen_rgb = cv2.cvtColor(imagen_segmentada, cv2.COLOR_BGR2RGB)
+    
+    pose_mp_imagen = mp.Image(
+        image_format = mp.ImageFormat.SRGB,
+        data = pose_imagen_rgb
+    )
+
+    pose_result = pose.detect(pose_mp_imagen)
+
+    if not pose_result.pose_landmarks:
+        return 0, "Error al recalcular rostro"
+    
+    pose_landmarks = pose_result.pose_landmarks[0]
+    
 
     # ------------------------------------
     # --- CRITERIOS PARA LA FOTO ---
     # ------------------------------------
     
     # TAMAÑO DE LA CABEZA
-    valido, mensaje = tam_rostro(face_landmarks, imagen_recortada.shape)
+    valido, mensaje = tam_rostro(face_landmarks, imagen_segmentada.shape)
     if not valido:
         return 0, mensaje 
     
     # POSTURA
-    valido, mensaje = postura_recta(pose_landmarks)
-    if not valido:
-        return 0, mensaje 
+    #valido, mensaje = postura_recta(pose_landmarks)
+    #if not valido:
+    #    return 0, mensaje 
     
     # OJOS ABIERTOS
-    valido, mensaje = ojos_abiertos(face_landmarks, imagen_recortada.shape)
+    valido, mensaje = ojos_abiertos(face_landmarks, imagen_segmentada.shape)
     if not valido:
         return 0, mensaje 
     
@@ -160,20 +154,15 @@ def validacion_fotografia(imagen_bytes):
     if not valido:
         return 0, mensaje 
     
-    # EXPRESION NEUTRA
-    valido, mensaje = ojos_abiertos(face_landmarks, imagen_recortada.shape)
+    # MIRADA FRONTAL
+    valido, mensaje = expresion_neutral(face_landmarks, imagen_segmentada.shape)
     if not valido:
         return 0, mensaje 
     
-    for funcion in []:
-        valido, mensaje = funcion(face_landmarks)
-        if not valido:
-            return 0, mensaje
-        
     # CABELLO
-    valido, mensaje = cabello(category_mask)
-    if not valido:
-        return 0, mensaje    
+    #valido, mensaje = cabello(category_mask)
+    #if not valido:
+    #    return 0, mensaje    
      
     """
     for funcion in []:
@@ -211,13 +200,13 @@ def validacion_fotografia(imagen_bytes):
     """
    
     # FONDO BLANCO
-    foto_valida = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
+    #foto_valida = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
 
 
     # --------------------------
     # --- RESULTADO FINAL ---
     # --------------------------
-    _, buffer = cv2.imencode(".jpg", foto_valida)
+    _, buffer = cv2.imencode(".jpg", imagen_segmentada)
     
     return 1, buffer.tobytes()
  

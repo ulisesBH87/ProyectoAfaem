@@ -39,6 +39,7 @@ def EAR(landmarks, indices, image_shape):
 
     # Distancias verticales
     a = np.linalg.norm(np.array(ojo[1]) - np.array(ojo[5]))
+
     b = np.linalg.norm(np.array(ojo[2]) - np.array(ojo[4]))
 
     # Distancia horizontal
@@ -49,64 +50,65 @@ def EAR(landmarks, indices, image_shape):
 
     return ear
 
-# FUNCION RELACION  DE ASPECTO DE LA BOCA (MAR)
+# FUNCION RELACION DE ASPECTO DE LA BOCA (MAR)
 def MAR(landmarks, image_shape):
     """
     Calcula la relación apertura/cierre de la boca (Mouth Aspect Ratio).
     
-    indices: lista de 8-10 índices de la boca según MediaPipe
-    """
-    """
-    h, w = image_shape[:2]
-    boca = [(int (landmarks[i].x * w), int(landmarks[i].y * h)) for i in indices]
-
-    #Distacia vetical
-    a = np.linalg.norm(np.array(boca[2]) - np.array(boca[6]))
-    b = np.linalg.norm(np.array(boca[3]) - np.array(boca[5]))
-
-    #Dictancia horizontal
-    c = np.linalg.norm(np.array(boca[0]) - np.array(boca[4]))
-
-    if c < 1e-6:
-        return 0, 0
-    
-    mar = (a+b) / (2.0 * c)
+    indices: lista de 8 índices de la boca según MediaPipe
     """
     h, w = image_shape[:2]
 
     # === PUNTOS CLAVE DE LA BOCA ===
 
     #Horizontal
-    comisura_izq = landmarks[61]
-    comisura_der = landmarks[291]
+    comisura_izq = landmarks[61] # P1
+    comisura_der = landmarks[291] # P4
 
     #Vertical principal
-    labio_sup = landmarks[13]
-    labio_inf = landmarks[14]
+    labio_sup_centro = landmarks[13] # P3
+    labio_inf_centro = landmarks[14] # P5
 
-    #Vertical secundaria
-    labio_sup_sec = landmarks[82]
-    labio_inf_sec = landmarks[87]
+    #Vertical secundaria izquierda
+    labio_sup_izq = landmarks[82] # P2
+    labio_inf_izq = landmarks[87] # P8
+
+    #Vertical secundaria izquierda
+    labio_sup_der = landmarks[312] # P4
+    labio_inf_der = landmarks[317] # P6
+
 
     # === Convertir coordenadas normalizadas a píxeles ===
     comisura_izq = np.array([comisura_izq.x * w, comisura_izq.y * h])
     comisura_der = np.array([comisura_der.x * w, comisura_der.y * h])
-    labio_sup = np.array([labio_sup.x * w, labio_sup.y * h])
-    labio_inf = np.array([labio_inf.x * w, labio_inf.y * h])
-    labio_sup_sec = np.array([labio_sup_sec.x * w, labio_sup_sec.y * h])
-    labio_inf_sec = np.array([labio_inf_sec.x * w, labio_inf_sec.y * h])
+
+    labio_sup_centro = np.array([labio_sup_centro.x * w, labio_sup_centro.y * h])
+    labio_inf_centro = np.array([labio_inf_centro.x * w, labio_inf_centro.y * h])
+
+    labio_sup_izq = np.array([labio_sup_izq.x * w, labio_sup_izq.y * h])
+    labio_inf_izq = np.array([labio_inf_izq.x * w, labio_inf_izq.y * h])
+
+    labio_sup_der = np.array([labio_sup_der.x * w, labio_sup_der.y * h])
+    labio_inf_der = np.array([labio_inf_der.x * w, labio_inf_der.y * h])
 
      # === Cálculo de distancias ===
-    vertical1 = np.linalg.norm(labio_sup - labio_inf)
-    vertical2 = np.linalg.norm(labio_sup_sec - labio_inf_sec)
+
+    vertical_izq = np.linalg.norm(labio_sup_izq - labio_inf_izq)
+
+    vertical_centro = np.linalg.norm(labio_sup_centro - labio_inf_centro)
+
+    vertical_der = np.linalg.norm(labio_sup_der - labio_inf_der)
+    
     horizontal = np.linalg.norm(comisura_izq - comisura_der)
 
+    
+    # Evitar división por cero
     if horizontal < 1e-6:
-        return False
+        return 0.0
     
 
      # Promedio de distancias
-    mar = (vertical1 + vertical2) / (2 * horizontal)
+    mar = (vertical_izq + vertical_centro + vertical_der) / (3 * horizontal)
     
     return mar
 
@@ -129,7 +131,7 @@ def resolucion(contenido_bytes):
 
         # Si no tiene DPI, no rechazar automáticamente
         if dpi is None:
-            return True, "La imagen no tiene DPI definidos, se omite validación"
+            return True, "La imagen no tiene DPI definidos, se omite validación."
         
         dpi_x, dpi_y = dpi
 
@@ -150,8 +152,8 @@ def dimensiones(imagen):
 
     h, w = imagen.shape[:2]
 
-    if w < 400 or h < 400:
-        return False, "La imagen es demasiado pequeña. Mínimo recomendado 400x400 px."
+    if w < 350 or h < 400:
+        return False, "La imagen es demasiado pequeña. Mínimo recomendado 350x400 px."
 
     return True, ""
 
@@ -207,7 +209,7 @@ def recortar_foto(imagen_bgr, landmarks, target_size=(400, 500)):
     ancho_cara = x_max - x_min
 
     # Expandir
-    y_min = max(int(y_min - 0.5 * altura_cara), 0)
+    y_min = max(int(y_min - 1 * altura_cara), 0)
     y_max = min(int(y_max + 0.8 * altura_cara), h)
 
     x_min = max(int(x_min - 0.5 * ancho_cara), 0)
@@ -289,14 +291,13 @@ def iluminacion(landmarks, imagen_recortada):
     if contraste < 10:
         return False, "La foto tiene bajo contraste"
     
-    """
+    
     # ----------- LUZ DESIGUAL EN EL ROSTRO -----------
     mitad_izq = gris_rostro[:, :gris_rostro.shape[1]//2]
     mitad_der = gris_rostro[:, gris_rostro.shape[1]//2:]
 
     if abs(np.mean(mitad_izq) - np.mean(mitad_der)) > 35:
         return False, "La iluminación del rostro es desigual"
-    """
     
     return True, ""
 
@@ -313,7 +314,7 @@ def nitidez(imagen_recortada):
     varianza = laplacian.var()
 
     # Umbrales recomendados
-    if varianza < 100:
+    if varianza < 50:
         return False, "El rostro es borroso al momento del recorte"
     
     return True, ""
@@ -339,7 +340,7 @@ def accesorios(imagen_recortada):
         confianza = obj[4]
 
         if confianza > 0.5 and nombre in OBJETOS_PROHIBIDOS:
-            return False, f"No se permite el uso de {nombre}"
+            return False, f"No se permite el uso de cubrebocas, lentes, sombreros y gorras en la foto"
 
     return True, ""
 
@@ -360,16 +361,13 @@ def tam_rostro(landmarks, image_shape):
     proporcion = altura_rostro / h
 
     MIN_TAM = 0.3
-    MAX_TAM = 0.55
 
     if  proporcion < MIN_TAM: 
         return False, "El rostro esta muy lejos"
-    elif proporcion > MAX_TAM:
-        return False, "El rostro esta muy cerca "
 
     return True, ""
 
-# FUNCION PARA LA CABEZA: PENDIENTE ----
+# FUNCION PARA LA CABEZA: PENDIENTE
 def tam_cabeza():
     return
 
@@ -386,7 +384,7 @@ def postura_recta(pose_landmarks, tolerancia_hombros=0.04, tolerancia_centro=0.0
 
     # Validar visibilidad
     if hombro_izq.visibility < 0.3 or hombro_der.visibility < 0.3:
-        return False, "No se detectan bien los hombros"
+        return False, "Los hombros no son claramente visibles"
 
     # Hombros al mismo nivel (horizontal)
     diferencia_altura = abs(hombro_izq.y - hombro_der.y)
@@ -399,9 +397,9 @@ def postura_recta(pose_landmarks, tolerancia_hombros=0.04, tolerancia_centro=0.0
     desviacion_centro = abs(nariz.x - centro_hombros_x)
 
     if desviacion_centro > tolerancia_centro:
-        return False, "La cabeza no esta alineada con los hombros"
+        return False, "Los hombros y la cabeza no están alineadoss"
 
-    return True, "Postura recta"
+    return True, ""
 
 # =====================================
 # ----- VALIDACIONES FACIALES -----
@@ -533,54 +531,16 @@ def mirada_frontal(landmarks):
     return False, "La mirada no esta al frente"
 
 # FUNCION PARA LA EXPRESION DEL ROSTRO: PENDIENTE
-def expresion(landmarks, image_shape):
+def expresion_neutral(landmarks, image_shape):
 
     mar = MAR(landmarks, image_shape)
-
-    # ===== Boca cerrada =====
-    boca_cerrada = mar < 0.42
-
-    # ===== Detectar sonrisa =====
-    h, w = image_shape[:2]
-
-    # ===== Comisuras =====
-    comisura_izq = np.array([landmarks[61].x * w, landmarks[61].y * h])
-
-    comisura_der = np.array([landmarks[291].x * w, landmarks[291].y * h])
-
-    ancho_boca = np.linalg.norm(comisura_izq - comisura_der)
-
-    # ===== Ancho del rostro =====
-    mejilla_izq = np.array([landmarks[234].x * w, landmarks[234].y * h])
-
-    mejilla_der = np.array([landmarks[454].x * w, landmarks[454].y * h])
-
-    ancho_rostro = np.linalg.norm(mejilla_izq - mejilla_der)
-
-    if ancho_rostro < 1e-6:
-        return False
     
+    boca_cerrada = mar
     
-    sonrisa = ancho_boca / ancho_rostro
-    #no_sonrisa = sonrisa < 0.48  # Ajustable
-
-    #no_sonrisa = sonrisa < 0.48  # Ajustable
-
-     # ========= UMBRALES =========
-    MAR_MAX_NEUTRO = 0.38       # Boca cerrada o apenas abierta
-    SONRISA_MAX = 0.48          # No ensanchamiento de sonrisa
-
-    boca_cerrada = mar < MAR_MAX_NEUTRO
-    no_sonrisa = sonrisa < SONRISA_MAX
-
-    return boca_cerrada and no_sonrisa
+    if boca_cerrada > 0.05:
+        return False, "La boca debe estar cerrada y sin sonrisa"
     
-    # ====== Resultado final ======
-    #expresion_neutra = boca_cerrada and no_sonrisa
-
-    #return expresion_neutra
-    
-    #return False
+    return True, ""
 
 # FUNCION PARA DETECTAR EL ROSTRO FRONTAL: PENDIENTE
 def cabeza_ladeada(landmarks, tolerancia_grados = 2):
