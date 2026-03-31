@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import DashboardSidebar from '../../components/Admin/AdminSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { 
   TablaSimple, 
   BotonPrimario, 
@@ -140,12 +138,7 @@ export default function UsuariosRolesAdmin() {
   ];
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar />
-      <div className="dashboard-container">
-        <DashboardHeader pageTitle="Usuarios y Roles" />
-        
-        <div className="dashboard-main">
+    <div className="dashboard-content">
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
               <Cargador tamanio="grande" mensaje="Cargando usuarios..." />
@@ -165,8 +158,6 @@ export default function UsuariosRolesAdmin() {
               </div>
             </>
           )}
-        </div>
-      </div>
     </div>
   );
 }

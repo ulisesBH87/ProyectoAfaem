@@ -4,7 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import DashboardTable from '../../components/DashboardTable';
 import { getSolicitudes } from '../../services/solicitud';
-import AdminLayout from '../../components/Admin/AdminLayout';
+import { getSolicitudDetalle } from '../../services/admin';
 import { getSolicitudDetalle } from '../../services/admin';
 import Swal from 'sweetalert2';
 
@@ -281,83 +281,79 @@ export default function AdminSolicitudes() {
 
   if (loading) {
     return (
-      <AdminLayout title="Gestión de Solicitudes">
-        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Cargando...</span>
-            </div>
-            <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando solicitudes...</p>
+      <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Cargando...</span>
           </div>
+          <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando solicitudes...</p>
         </div>
-      </AdminLayout>
+      </div>
     );
   }
 
   return (
-    <AdminLayout title="Gestión de Solicitudes">
-      <div className="dashboard-content">
-        {error && (
-          <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
-            <span className="alert-icon">⚠️</span>
-            <div className="alert-content">
-              <p className="alert-message">{error}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Solicitudes de Registro</h2>
-          <div className="section-actions">
-            <button 
-              className="btn btn-primary"
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#0b4ea6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}
-            >
-              🔄 Actualizar
-            </button>
+    <div className="dashboard-content">
+      {error && (
+        <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
+          <span className="alert-icon">⚠️</span>
+          <div className="alert-content">
+            <p className="alert-message">{error}</p>
           </div>
         </div>
+      )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
-          </div>
-          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', marginBottom: '5px' }}>⏳</div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>PENDIENTES</div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
-          </div>
-          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>APROBADAS</div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.aprobadas}</div>
-          </div>
-          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', marginBottom: '5px' }}>❌</div>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>RECHAZADAS</div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.rechazadas}</div>
-          </div>
+      <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Solicitudes de Registro</h2>
+        <div className="section-actions">
+          <button 
+            className="btn btn-primary"
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#0b4ea6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '14px'
+            }}
+          >
+            🔄 Actualizar
+          </button>
         </div>
-
-        <DashboardTable
-          columns={columns}
-          data={solicitudes}
-          isLoading={loading}
-          emptyMessage="No hay solicitudes registradas"
-        />
       </div>
-    </AdminLayout>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+        </div>
+        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>⏳</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>PENDIENTES</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
+        </div>
+        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>APROBADAS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.aprobadas}</div>
+        </div>
+        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>❌</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>RECHAZADAS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.rechazadas}</div>
+        </div>
+      </div>
+
+      <DashboardTable
+        columns={columns}
+        data={solicitudes}
+        isLoading={loading}
+        emptyMessage="No hay solicitudes registradas"
+      />
+    </div>
   );
 }

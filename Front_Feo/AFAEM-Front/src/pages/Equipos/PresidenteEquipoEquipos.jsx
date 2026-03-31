@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/dashboard.css';
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import StatCard from '../../components/StatCard';
 import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
@@ -61,20 +59,15 @@ export default function PresidenteEquipoEquipos() {
   ];
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Mis Equipos" />
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            {error && (
-              <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
-                <span className="alert-icon">⚠️</span>
-                <div className="alert-content">
-                  <p className="alert-message">{error}</p>
-                </div>
-              </div>
-            )}
+    <div className="dashboard-content">
+      {error && (
+        <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
+          <span className="alert-icon">⚠️</span>
+          <div className="alert-content">
+            <p className="alert-message">{error}</p>
+          </div>
+        </div>
+      )}
 
             <div className="section-header" style={{ marginBottom: '30px' }}>
               <h2 className="section-title">Equipos Registrados</h2>
@@ -105,9 +98,6 @@ export default function PresidenteEquipoEquipos() {
               emptyMessage="No has registrado equipos aún"
               onRowClick={(team) => navigate(`/presidente-equipo/admin-equipo/${team.id}`)}
             />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

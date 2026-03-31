@@ -15,8 +15,8 @@ function PreRegistroPresidente() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   // Estados Generales
-  const [, setLoading] = useState(false);
-  const [, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Esperando validación, 3 = Documentos
   const [estadoPago, setEstadoPago] = useState(null); // null, 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
   const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
@@ -117,6 +117,12 @@ function PreRegistroPresidente() {
 
   // ================== METODOS DE NAVEGACIÓN ==================
   const handleGuardarYSalir = async () => {
+    // Si el usuario ya subió su comprobante, el botón de "Guardar y Reanudar"
+    // ahora funcionará como un envío oficial para validación por el admin.
+    if (comprobantePago) {
+      return irSiguientePaso();
+    }
+
     if (numPersonas <= 0) {
       setError('Debes ingresar el número de jugadores para guardar datos.');
       return;
@@ -138,8 +144,8 @@ function PreRegistroPresidente() {
 
       Swal.fire({
         title: 'Progreso guardado localmente',
-        text: 'Tus datos se han guardado en este navegador. Cuando tengas tu comprobante de pago, regresa para subirlo y generar tu orden oficial.',
-        icon: 'success',
+        text: 'Tus datos se han guardado en este navegador. Nota: Al no subir comprobante, aún NO se ha enviado a revisión por el administrador.',
+        icon: 'info',
         confirmButtonColor: '#0b4ea6'
       }).then(() => {
         handleLogout();
@@ -279,6 +285,7 @@ function PreRegistroPresidente() {
   // ================== MANEJADORES PASO 2 (OCR Y FOTO) ==================
   const handleFileUpload = (documentKey, file) => {
     if (!file) return;
+    setError(null); // Clear previous errors
 
     if (documentKey === "fotografia") {
       setFotoPreview(null);
@@ -544,17 +551,22 @@ function PreRegistroPresidente() {
         setFotoPreview(null);
         setError(data.mensaje);
         Swal.fire({
-          title: 'Error en la fotografía',
+          title: 'Error de validación',
           text: data.mensaje,
-          icon: 'error'
+          icon: 'error',
+          confirmButtonText: 'Intentar de nuevo',
+          confirmButtonColor: '#ef4444'
         });
       }
     } catch (err) {
       setFotoPreview(null);
+      console.error("Error validando foto:", err);
       Swal.fire({
         title: 'Error de validación',
         text: err.message || 'No se pudo procesar la foto.',
-        icon: 'error'
+        icon: 'error',
+        confirmButtonText: 'Reintentar subir foto',
+        confirmButtonColor: '#ef3030'
       });
     }
   };
@@ -662,251 +674,315 @@ function PreRegistroPresidente() {
   };
 
   return (
-    <div className="pre-registro-container">
+    <div className="fade-in prereg-dark-page" style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #060f2e 0%, #0b2a6b 40%, #1e1b4b 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '40px 20px',
+      position: 'relative',
+    }}>
       <style>{`
-        .pre-registro-container {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 40px 20px;
-          font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        /* ====== DARK MODE SCOPE: Override global light vars for this page ====== */
+        .prereg-dark-page {
+          --text-main: rgba(255,255,255,0.92);
+          --text-muted: rgba(255,255,255,0.45);
+          --border-light: rgba(255,255,255,0.08);
+          --card-bg: rgba(255,255,255,0.04);
+          --bg-main: rgba(11,78,166,0.04);
+          --bg-surface: rgba(255,255,255,0.06);
+          --bg-glass: rgba(255,255,255,0.05);
         }
-        
-        .header-logos {
-          width: 100%;
-          max-width: 1000px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 40px;
+        /* Force the card to be dark/transparent on this page */
+        .prereg-dark-page .card {
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
         }
-
-        .afaem-logo { height: 60px; }
-        .fmf-logos { height: 40px; display: flex; gap: 20px; }
-        
-        .card-main {
-          background: white;
-          border-radius: 20px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-          width: 100%;
-          max-width: 800px;
-          overflow: hidden;
-          animation: fadeIn 0.5s ease;
+        .prereg-dark-page .glass {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.09);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
         }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+        /* Summary/bank cards also need dark treatment */
+        .prereg-dark-page .summary-card {
+          background: rgba(255,255,255,0.04);
+          border-color: rgba(255,255,255,0.08);
         }
-
-        .welcome-content {
-          padding: 60px 40px;
-          text-align: center;
-        }
-
-        .title-large { font-size: 32px; font-weight: 800; color: #1e293b; margin-bottom: 10px; }
-        .subtitle { font-size: 18px; font-weight: 600; color: #475569; margin-bottom: 30px; }
-        .welcome-text { font-size: 16px; color: #64748b; line-height: 1.6; margin: 30px 0; border-top: 1px solid #e2e8f0; padding-top: 30px; }
-
-        .btn-blue {
-          background: #5d87e5;
+        .prereg-dark-page .summary-card h5 { color: rgba(255,255,255,0.85); }
+        .prereg-dark-page .summary-row { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.06); }
+        .prereg-dark-page .total-row { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.08); }
+        .prereg-dark-page .bank-info-label { color: rgba(255,255,255,0.45); }
+        .prereg-dark-page .bank-info-value { color: rgba(255,255,255,0.88); }
+        .prereg-dark-page .referencia-badge { background: rgba(93,135,229,0.15); color: #5d87e5; border: 1px solid rgba(93,135,229,0.25); }
+        .prereg-dark-page .assigned-bar { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+        .prereg-dark-page .input-label { color: rgba(255,255,255,0.6); }
+        .prereg-dark-page .section-title-small { color: rgba(255,255,255,0.88); }
+        .prereg-dark-page .input-number {
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.12);
           color: white;
-          border: none;
-          padding: 14px 60px;
           border-radius: 12px;
-          font-weight: 700;
-          font-size: 16px;
-          cursor: pointer;
-          transition: transform 0.2s;
+          padding: 12px 16px;
         }
-        .btn-blue:hover { transform: scale(1.02); background: #4a74d1; }
-
-        .link-logout { color: #64748b; text-decoration: none; font-size: 14px; margin-top: 20px; display: inline-block; }
-        
-        /* Proceso Header */
-        .process-header {
-          background: #f8fafc;
-          padding: 20px;
-          text-align: center;
-          border-bottom: 1px solid #e2e8f0;
+        .prereg-dark-page .insurance-input {
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: white; border-radius: 10px;
+          padding: 10px 14px; width: 80px; text-align: center;
         }
-        .process-title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 20px; }
-        .step-icons { display: flex; justify-content: center; gap: 60px; }
-        .step-icon-item { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #94a3b8; }
-        .step-icon-item.active { color: #1e293b; }
-        .icon-circle { width: 44px; height: 44px; border-radius: 50%; background: #94a3b8; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-        .step-icon-item.active .icon-circle { background: #0b4ea6; }
-
-        .content-body { padding: 30px 40px; }
-        .section-title-small { font-size: 16px; font-weight: 800; color: #1e293b; text-align: center; margin-bottom: 25px; }
-        
-        /* Ocultar flechas de numero */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
+        .prereg-dark-page .btn-nav-gray {
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.6);
+          border-radius: 12px; padding: 12px 28px; font-weight: 700;
         }
-        input[type=number] {
-          -moz-appearance: textfield;
+        .prereg-dark-page .btn-nav-gray:hover {
+          background: rgba(255,255,255,0.1);
+        }
+        .prereg-dark-page .btn-nav-blue {
+          background: linear-gradient(135deg, #3d79ff, #0b4ea6);
+          color: white; border: none;
+          border-radius: 12px; padding: 12px 28px; font-weight: 700;
+          box-shadow: 0 4px 16px rgba(11,78,166,0.35);
+        }
+        .prereg-dark-page .btn-nav-blue:disabled { opacity: 0.4; }
+        .prereg-dark-page .footer-nav {
+          display: flex; justify-content: space-between;
+          padding-top: 20px; margin-top: 10px;
+          border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .prereg-dark-page .welcome-content {
+          background: transparent;
         }
 
-        .input-group { 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          gap: 20px; 
-          margin-bottom: 30px; 
-          background: #f8fafc;
-          padding: 15px;
-          border-radius: 12px;
+        @keyframes glowPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+          50% { box-shadow: 0 0 18px 5px rgba(16,185,129,0.18); }
         }
-        .input-label { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0; }
-        .input-number { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 16px; width: 80px; text-align: center; }
+        @keyframes connectorFill {
+          from { width: 0%; } to { width: 100%; }
+        }
 
+        /* Insurance Cards */
         .insurance-card {
-          background: #f1f7ff;
-          border-radius: 12px;
-          padding: 15px 20px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px; padding: 20px;
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 15px; transition: all 0.3s ease;
+        }
+        .insurance-card:hover {
+          background: rgba(255,255,255,0.06);
+          border-color: rgba(93,135,229,0.35);
+          transform: translateX(4px);
+          box-shadow: 0 4px 20px rgba(11,78,166,0.15);
+        }
+        .insurance-info h4 { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
+        .insurance-info p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+        /* GLASS DOC CARDS */
+        .doc-glass-card {
+          background: rgba(255,255,255,0.03);
+          border: 1px dashed rgba(255,255,255,0.12);
+          border-radius: 22px; padding: 26px 20px;
+          display: flex; flex-direction: column; align-items: center; text-align: center;
+          position: relative; overflow: hidden;
+          transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+          backdrop-filter: blur(8px);
+        }
+        .doc-glass-card:hover {
+          transform: translateY(-6px);
+          background: rgba(255,255,255,0.06);
+          border-color: rgba(93,135,229,0.3); border-style: solid;
+          box-shadow: 0 16px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(93,135,229,0.1);
+        }
+        .doc-glass-card.uploaded {
+          background: rgba(16,185,129,0.05);
+          border: 1px solid rgba(16,185,129,0.3);
+          animation: glowPulse 2s ease-in-out 1;
+        }
+        .doc-glass-card.uploaded:hover { border-color: rgba(16,185,129,0.5); box-shadow: 0 16px 40px rgba(16,185,129,0.12); }
+        .doc-glass-card .top-sheen {
+          position: absolute; top: 0; left: 0; right: 0; height: 1px;
+        }
+        .doc-glass-icon {
+          width: 68px; height: 68px; border-radius: 20px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 30px; margin-bottom: 14px;
+          transition: transform 0.3s ease;
+        }
+        .doc-glass-card:hover .doc-glass-icon { transform: scale(1.08); }
+        .doc-status-pill {
+          position: absolute; top: 14px; right: 14px;
+          padding: 4px 10px; border-radius: 20px;
+          font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+          display: flex; align-items: center; gap: 5px;
+        }
+        .doc-status-dot { width: 5px; height: 5px; border-radius: 50%; }
+        .doc-action-btn {
+          flex: 1; padding: 10px 12px; border-radius: 12px;
+          font-size: 12px; font-weight: 700; cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .doc-action-btn:hover { transform: translateY(-1px); }
+        .doc-download-btn {
+          flex: 1; padding: 10px 12px; border-radius: 12px;
+          font-size: 12px; font-weight: 700; cursor: pointer;
+          background: rgba(93,135,229,0.08); border: 1px solid rgba(93,135,229,0.2);
+          color: #5d87e5; transition: all 0.2s ease;
+          display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .doc-download-btn:hover {
+          background: rgba(93,135,229,0.16); border-color: rgba(93,135,229,0.4);
+          transform: translateY(-1px); box-shadow: 0 4px 12px rgba(93,135,229,0.2);
+        }
+        .ocr-panel {
+          width: 100%; margin-top: 12px;
+          background: rgba(11,78,166,0.06); border: 1px solid rgba(93,135,229,0.12);
+          border-radius: 14px; padding: 14px; animation: fadeIn 0.3s ease;
+        }
+
+        /* PREMIUM INPUTS */
+        .premium-input-group { display: flex; flex-direction: column; gap: 6px; }
+        .premium-label {
+          font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.4);
+          text-transform: uppercase; letter-spacing: 1.2px;
+        }
+        .premium-input {
+          width: 100%; box-sizing: border-box;
+          padding: 13px 16px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px; font-size: 14px; font-weight: 600;
+          color: var(--text-main); outline: none;
+          transition: all 0.25s ease; backdrop-filter: blur(4px);
+        }
+        .premium-input:focus {
+          background: rgba(93,135,229,0.1);
+          border-color: rgba(93,135,229,0.5);
+          box-shadow: 0 0 0 3px rgba(93,135,229,0.12);
+        }
+        .premium-input::placeholder { color: rgba(255,255,255,0.25); }
+        .premium-input option { background: #1e1b4b; color: white; }
+
+        /* PILL progress dots for Paso 3 */
+        .progress-pill {
+          height: 8px; border-radius: 4px;
+          transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        /* LOGO CONSTRAINTS */
+        .afaem-logo {
+          height: 75px;
+          width: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 0 12px rgba(255,255,255,0.2));
+        }
+        .fmf-logos {
           display: flex;
-          justify-content: space-between;
+          gap: 15px;
           align-items: center;
-          margin-bottom: 12px;
         }
-        .insurance-info h4 { font-size: 15px; font-weight: 800; color: #0b4ea6; margin-bottom: 2px; }
-        .insurance-info p { font-size: 11px; color: #64748b; margin: 0; }
-        .insurance-input { width: 60px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; }
-
-        .assigned-bar {
-          background: #f0fdf4;
-          border-radius: 8px;
-          padding: 10px 20px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 13px;
-          font-weight: 700;
-          color: #166534;
-          margin: 20px 0;
+        .fmf-logos img {
+          height: 48px;
+          width: auto;
+          object-fit: contain;
+          opacity: 0.85;
+          transition: opacity 0.3s;
         }
-
-        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
-        .summary-card { border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; }
-        .summary-card h5 { font-size: 15px; font-weight: 800; color: #0b4ea6; margin-bottom: 20px; }
-        .summary-row { display: flex; justify-content: space-between; font-size: 13px; color: #475569; margin-bottom: 12px; }
-        .total-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; color: #0b4ea6; border-top: 1px solid #e2e8f0; padding-top: 15px; }
-
-        .bank-info-item { font-size: 13px; margin-bottom: 12px; }
-        .bank-info-label { color: #64748b; display: block; margin-bottom: 2px; }
-        .bank-info-value { font-weight: 700; color: #1e293b; }
-        .referencia-badge { background: #fffbeb; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
-
-        .upload-proof { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 30px; margin-top: 30px; text-align: left; }
-        .file-input-custom { margin-top: 15px; display: flex; gap: 10px; align-items: center; }
-        .btn-outline { border: 1px solid #cbd5e1; background: white; padding: 8px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-
-        /* Step 2 Documentos */
-        .doc-grid { 
-          display: grid; 
-          grid-template-columns: 1fr 1fr; 
-          gap: 20px; 
-          align-items: start; 
+        .fmf-logos img:hover {
+          opacity: 1;
         }
-        .doc-card { 
-          border: 1px dashed #cbd5e1; 
-          border-radius: 16px; 
-          padding: 20px; 
-          text-align: center; 
-          display: flex; 
-          flex-direction: column; 
-          align-items: center;
-          transition: border-color 0.2s;
-          min-height: 280px;
-          background: #fff;
-        }
-        .doc-card:hover { border-color: #0b4ea6; }
-        .doc-card.success { background: #f0fdf4; border-style: solid; border-color: #10b981; }
-        
-        .doc-title { font-size: 14px; font-weight: 800; color: #0b4ea6; margin: 15px 0 10px; }
-        .status-badge { padding: 2px 12px; border-radius: 12px; font-size: 10px; font-weight: 800; color: white; margin-bottom: 12px; text-transform: uppercase; }
-        .file-name { 
-          font-size: 11px; 
-          font-weight: 700; 
-          color: #1e293b; 
-          margin-bottom: 12px; 
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis; 
-          max-width: 180px; 
-        }
-        
-        .doc-actions { display: flex; gap: 8px; width: 100%; margin-bottom: 15px; }
-        .btn-doc { flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
-        .btn-download { flex: 1; background: #0b4ea6; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; }
-        .link-details { font-size: 11px; color: #0b4ea6; text-decoration: underline; cursor: pointer; font-weight: 600; }
-        .link-details:hover { color: #063f82; }
-        .ocr-details-panel { 
-          width: 100%; 
-          margin-top: 8px; 
-          background: #f8fafc; 
-          border: 1px solid #e2e8f0; 
-          border-radius: 8px; 
-          padding: 8px 10px; 
-          text-align: left; 
-          animation: fadeIn 0.3s ease; 
-          max-height: 200px;
-          overflow-y: auto;
-        }
-        .ocr-details-panel .ocr-row { display: flex; justify-content: space-between; font-size: 10px; padding: 4px 0; border-bottom: 1px solid #f0f2f5; }
-        .ocr-details-panel .ocr-row:last-child { border-bottom: none; }
-        .ocr-details-panel .ocr-label { color: #64748b; font-weight: 600; }
-        .ocr-details-panel .ocr-value { color: #1e293b; font-weight: 700; text-align: right; max-width: 60%; word-break: break-all; }
-
-        .footer-nav { display: flex; justify-content: center; gap: 20px; margin-top: 40px; flex-wrap: wrap; }
-        .btn-nav-blue { background: #5d87e5; color: white; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-nav-blue:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.7; }
-        .btn-nav-gray { background: #f1f5f9; color: #475569; border: none; padding: 12px 60px; border-radius: 12px; font-weight: 700; cursor: pointer; }
-        .btn-nav-test { background: #f59e0b; color: white; border: none; padding: 12px 40px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px; transition: transform 0.2s; }
-        .btn-nav-test:hover { transform: scale(1.02); background: #d97706; }
       `}</style>
 
       {/* HEADER LOGOS */}
-      <div className="header-logos">
-        <img src={AfaemLogo} alt="AFAEM" className="afaem-logo" />
-        <div className="fmf-logos">
-          <img src={FmfLogo} alt="FMF" />
-          <img src={AmateurLogo} alt="Amateur" />
+      <div style={{ width: '100%', maxWidth: '1000px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <img 
+          src={AfaemLogo} 
+          alt="AFAEM" 
+          style={{ height: '70px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }} 
+        />
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <img src={FmfLogo} alt="FMF" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
+          <img src={AmateurLogo} alt="Amateur" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
         </div>
       </div>
 
-      <div className="card-main">
+      <div className="card glass" style={{ width: '100%', maxWidth: '850px', padding: 0, overflow: 'hidden' }}>
         {/* PASO 0: BIENVENIDA */}
         {pasoActual === 0 && (
-          <div className="welcome-content">
-            <h1 className="title-large">Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}</h1>
-            <p className="subtitle">Comencemos con tu registro inicial</p>
-            <p className="welcome-text">
+          <div style={{ padding: '60px 40px', textAlign: 'center' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '10px' }}>Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}</h1>
+            <p style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '30px' }}>Comencemos con tu registro inicial</p>
+            <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', margin: '30px 0', borderTop: '1px solid var(--border-light)', paddingTop: '30px' }}>
               Para activar tu cuenta y comenzar a gestionar tu equipo, necesitamos completar dos pasos.
             </p>
-            <button className="btn-blue" onClick={irSiguientePaso}>Continuar</button>
+            <button className="btn-premium" onClick={irSiguientePaso} style={{ padding: '14px 60px' }}>Continuar</button>
             <br />
-            <a href="#" className="link-logout" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
+            <a href="#" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '14px', marginTop: '20px', display: 'inline-block' }} onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
           </div>
         )}
 
-        {/* PROCESO HEADER (PASO 1 Y 2) */}
+        {/* ===== GLASS STEPPER HEADER (PASO 1 Y 3) ===== */}
         {(pasoActual === 1 || pasoActual === 3) && (
-          <div className="process-header">
-            <h2 className="process-title">Proceso de activación</h2>
-            <div className="step-icons">
-              <div className={`step-icon-item ${pasoActual === 1 ? 'active' : ''}`}>
-                <div className="icon-circle"><FaMoneyBillWave /></div>
-                CUOTAS
+          <div style={{
+            padding: '28px 40px 24px',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(10px)',
+          }}>
+            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 20px' }}>
+              PROCESO DE ACTIVACIÓN
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* STEP 1 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '16px',
+                  background: pasoActual === 1 ? 'linear-gradient(135deg, #0b4ea6, #1e40af)' : 'rgba(16,185,129,0.12)',
+                  border: pasoActual === 1 ? '1px solid rgba(93,135,229,0.5)' : '1px solid rgba(16,185,129,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px',
+                  boxShadow: pasoActual === 1 ? '0 8px 20px rgba(11,78,166,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
+                  transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                }}>
+                  {pasoActual === 3 ? <span style={{ color: '#34d399', fontSize: '18px' }}>✓</span> : <FaMoneyBillWave style={{ color: 'white' }} />}
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 1 ? '#5d87e5' : 'rgba(52,211,153,0.8)' }}>
+                  Paso 1: Cuotas
+                </span>
               </div>
-              <div className={`step-icon-item ${pasoActual === 3 ? 'active' : ''}`}>
-                <div className="icon-circle"><FaFileAlt /></div>
-                DOCUMENTOS
+
+              {/* Connector */}
+              <div style={{ position: 'relative', width: '130px', height: '2px', margin: '0 10px', marginBottom: '28px' }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }} />
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, height: '100%',
+                  width: pasoActual === 3 ? '100%' : '0%',
+                  background: 'linear-gradient(90deg, #10b981, #34d399)',
+                  borderRadius: '2px', transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
+                  boxShadow: '0 0 8px rgba(16,185,129,0.5)',
+                }} />
+              </div>
+
+              {/* STEP 2 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '48px', height: '48px', borderRadius: '16px',
+                  background: pasoActual === 3 ? 'linear-gradient(135deg, #0b4ea6, #1e40af)' : 'rgba(255,255,255,0.04)',
+                  border: pasoActual === 3 ? '1px solid rgba(93,135,229,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px',
+                  boxShadow: pasoActual === 3 ? '0 8px 20px rgba(11,78,166,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
+                  transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                }}>
+                  <FaFileAlt style={{ color: pasoActual === 3 ? 'white' : 'rgba(255,255,255,0.25)' }} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 3 ? '#5d87e5' : 'rgba(255,255,255,0.25)' }}>
+                  Paso 2: Documentos
+                </span>
               </div>
             </div>
           </div>
@@ -914,14 +990,34 @@ function PreRegistroPresidente() {
 
         {/* PASO 1: CUOTAS */}
         {pasoActual === 1 && (
-          <div className="content-body">
-            <h3 className="section-title-small">Selecciona el tipo de seguro para tu plantilla inicial</h3>
+          <div className="content-body" style={{ padding: '40px' }}>
+            <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '30px' }}>Selecciona el tipo de seguro para tu plantilla inicial</h3>
 
             {ordenPendienteId ? (
-              <div style={{ background: '#f0fdf4', padding: '20px', borderRadius: '12px', border: '1px solid #bbf7d0', marginBottom: '25px', textAlign: 'center' }}>
-                <h4 style={{ color: '#166534', fontWeight: '800', margin: '0 0 10px 0', fontSize: '18px' }}>🚀 Orden de Pago #{ordenPendienteId}</h4>
-                <p style={{ color: '#15803d', fontSize: '14px', margin: 0 }}>
-                  Ya tienes una orden activa. Para continuar, realiza tu pago y adjunta el comprobante en la sección inferior.
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(5,150,105,0.04) 100%)',
+                padding: '26px',
+                borderRadius: '20px',
+                border: '1px solid rgba(16,185,129,0.25)',
+                marginBottom: '30px',
+                textAlign: 'center',
+                backdropFilter: 'blur(8px)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(52,211,153,0.4), transparent)' }} />
+                <div style={{
+                  display: 'inline-flex', padding: '5px 16px',
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.3))',
+                  color: '#34d399', borderRadius: '30px', fontSize: '10px', fontWeight: '800', marginBottom: '12px',
+                  border: '1px solid rgba(16,185,129,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase',
+                  boxShadow: '0 4px 12px rgba(16,185,129,0.15)',
+                }}>
+                  ● ORDEN ACTIVA #{ordenPendienteId}
+                </div>
+                <h4 style={{ color: 'var(--text-main)', fontWeight: '800', margin: '0 0 8px 0', fontSize: '18px' }}>Validación en curso</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
+                  Ya tienes una orden activa en el sistema. Para continuar, adjunta tu comprobante de pago.
                 </p>
               </div>
             ) : (
@@ -935,12 +1031,16 @@ function PreRegistroPresidente() {
                     onChange={(e) => setNumPersonas(Number(e.target.value))}
                     style={{ marginTop: '5px' }}
                   />
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>(Recuerda: Deberás asignar un seguro por cada jugador, **más un seguro extra para ti como Presidente**)</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>(Recuerda: Deberás asignar un seguro por cada jugador, más un seguro extra para ti como Presidente)</span>
                 </div>
 
-                <p style={{ fontSize: '12px', fontWeight: '800', textAlign: 'left', marginBottom: '20px' }}>
-                  Distribución de Seguros (Obligatorio)
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '24px 0 16px' }}>
+                  <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
+                  <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Distribución de Seguros
+                  </p>
+                  <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
+                </div>
 
                 {catalogoSeguros.map(seg => (
                   <div key={seg.id} className="insurance-card">
@@ -959,58 +1059,88 @@ function PreRegistroPresidente() {
 
                 <div className="assigned-bar">
                   <span>Seguros asignados (Jugadores + Presid.): {totalAsignados}/{segurosRequeridos}</span>
-                  {numPersonas > 0 && totalAsignados === segurosRequeridos ? <span style={{ color: '#166534' }}>Todos asignados</span> : <span style={{ color: '#ef4444' }}>Pendientes</span>}
+                  {numPersonas > 0 && totalAsignados === segurosRequeridos
+                    ? <span style={{ color: '#34d399', fontWeight: '800' }}>✓ Todos asignados</span>
+                    : <span style={{ color: '#f87171', fontWeight: '800' }}>● Pendientes</span>}
                 </div>
               </>
             )}
 
-            <div className="summary-grid" style={{ marginTop: '20px' }}>
-              <div className="summary-card">
-                <h5>{ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}</h5>
-                {catalogoSeguros.map(seg => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px' }}>
+              {/* Resumen de cuotas */}
+              <div style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px', padding: '22px',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(93,135,229,0.4),transparent)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                  <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#5d87e5,#0b4ea6)', borderRadius: '4px' }} />
+                  <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>
+                    {ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}
+                  </h5>
+                </div>
+                {catalogoSeguros.map(seg =>
                   asignacionSeguros[seg.id] > 0 && (
-                    <div key={seg.id} className="summary-row">
-                      <span>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
-                      <span>${seg.precio * asignacionSeguros[seg.id]}</span>
+                    <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.55)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                      <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
                     </div>
                   )
-                ))}
-                <div className="total-row">
-                  <span>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
-                  <span>${totalPagar}</span>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
+                  <span style={{ color: '#5d87e5' }}>${totalPagar}</span>
                 </div>
               </div>
 
-              <div className="summary-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <h5>Depósito o transferencia</h5>
-                  <span>📋</span>
+              {/* Datos bancarios */}
+              <div style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px', padding: '22px',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#10b981,#059669)', borderRadius: '4px' }} />
+                    <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>Depósito o transferencia</h5>
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(`${bankInfo.banco} | ${bankInfo.cuenta} | ${bankInfo.clabe}`)}
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}
+                  >📋 Copiar</button>
                 </div>
-                <div className="bank-info-item">
-                  <span className="bank-info-label">Banco:</span>
-                  <span className="bank-info-value">{bankInfo.banco}</span>
-                </div>
-                <div className="bank-info-item">
-                  <span className="bank-info-label">Cuenta:</span>
-                  <span className="bank-info-value">{bankInfo.cuenta}</span>
-                </div>
-                <div className="bank-info-item">
-                  <span className="bank-info-label">CLABE:</span>
-                  <span className="bank-info-value">{bankInfo.clabe}</span>
-                </div>
-                <div className="bank-info-item">
-                  <span className="bank-info-label">Referencia obligatoria:</span>
-                  <span className="referencia-badge">{bankInfo.referencia}</span>
+                {[['Banco', bankInfo.banco], ['Cuenta', bankInfo.cuenta], ['CLABE', bankInfo.clabe]].map(([label, val]) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{label}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700', fontFamily: 'monospace' }}>{val}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: '12px' }}>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>Referencia obligatoria</span>
+                  <div style={{ marginTop: '6px', background: 'rgba(93,135,229,0.12)', border: '1px solid rgba(93,135,229,0.25)', borderRadius: '10px', padding: '8px 14px', fontFamily: 'monospace', fontWeight: '800', fontSize: '14px', color: '#5d87e5', letterSpacing: '1px' }}>
+                    {bankInfo.referencia}
+                  </div>
                 </div>
               </div>
             </div>
 
             {ordenPendienteId && (
-              <div className="upload-proof" style={{ border: '1px dashed #0b4ea6', background: 'white', marginTop: '30px' }}>
-                <p style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', marginBottom: '5px' }}>
+              <div style={{
+                marginTop: '30px',
+                background: 'rgba(11,78,166,0.06)',
+                border: '1.5px dashed rgba(93,135,229,0.35)',
+                borderRadius: '20px',
+                padding: '28px',
+                backdropFilter: 'blur(8px)',
+              }}>
+                <p style={{ fontSize: '14px', fontWeight: '800', color: '#5d87e5', marginBottom: '5px' }}>
                   Paso 2: Sube tu comprobante de pago
                 </p>
-                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '15px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '18px' }}>
                   Adjunta el comprobante (PDF o imagen) para procesar tu registro.
                 </p>
                 <div className="file-input-custom">
@@ -1026,7 +1156,7 @@ function PreRegistroPresidente() {
                   >
                     {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
                   </button>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
                   </span>
                 </div>
@@ -1038,27 +1168,21 @@ function PreRegistroPresidente() {
                 <button
                   onClick={handleGuardarYSalir}
                   style={{
-                    background: '#0b4ea6',
-                    color: 'white',
-                    border: 'none',
-                    padding: '16px 40px',
-                    borderRadius: '12px',
-                    fontWeight: '800',
-                    fontSize: '16px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    boxShadow: '0 4px 12px rgba(11, 78, 166, 0.3)',
-                    transition: 'transform 0.2s, background 0.2s'
+                    background: 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
+                    color: 'white', border: 'none',
+                    padding: '16px 40px', borderRadius: '14px',
+                    fontWeight: '800', fontSize: '15px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    boxShadow: '0 6px 20px rgba(11,78,166,0.35)',
+                    transition: 'transform 0.2s, box-shadow 0.2s'
                   }}
                   onMouseOver={(e) => {
-                    e.target.style.transform = 'scale(1.02)';
-                    e.target.style.background = '#093d82';
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                    e.currentTarget.style.boxShadow = '0 10px 28px rgba(11,78,166,0.5)';
                   }}
                   onMouseOut={(e) => {
-                    e.target.style.transform = 'scale(1)';
-                    e.target.style.background = '#0b4ea6';
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(11,78,166,0.35)';
                   }}
                 >
                   💾 Guardar y reanudar después
@@ -1084,168 +1208,301 @@ function PreRegistroPresidente() {
           <div className="welcome-content">
             {estadoPago === 3 ? (
               /* PAGO VALIDADO */
-              <>
-                <h1 className="title-large">Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}</h1>
-                <div style={{
-                  display: 'inline-block',
-                  background: '#10b981',
-                  color: 'white',
-                  padding: '6px 24px',
-                  borderRadius: '20px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  marginBottom: '10px'
-                }}>Pago validado</div>
-                <p className="welcome-text">
-                  Tu comprobante de pago ha sido verificado correctamente. Ahora puedes continuar con la carga de los documentos.
-                </p>
-                <button className="btn-blue" onClick={() => setPasoActual(3)}>Continuar con documentos</button>
-                <br />
-                <a href="#" className="link-logout" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
-              </>
+              <div className="fade-in" style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                padding: '40px 20px',
+                textAlign: 'center',
+                minHeight: '400px'
+              }}>
+                <div style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '32px', 
+                  background: 'rgba(16, 185, 129, 0.1)', 
+                  color: 'var(--secondary)', 
+                  marginBottom: '25px',
+                  border: '2px solid rgba(16, 185, 129, 0.2)'
+                }}>
+                  <FaCheckCircle />
+                </div>
+
+                <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
+                  ¡Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}!
+                </h1>
+                
+                <div style={{ maxWidth: '500px' }}>
+                  <div style={{ 
+                    display: 'inline-block',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    color: 'var(--secondary)',
+                    padding: '8px 20px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    marginBottom: '20px',
+                    border: '1px solid rgba(16, 185, 129, 0.2)'
+                  }}>
+                    PAGO VALIDADO
+                  </div>
+                  <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
+                    Tu comprobante de pago ha sido verificado correctamente. Ahora puedes continuar con la carga de los documentos.
+                  </p>
+                  <button className="btn-premium" style={{ padding: '16px 60px' }} onClick={() => setPasoActual(3)}>
+                    Continuar con documentos
+                  </button>
+                  <br />
+                  <button style={{ 
+                    marginTop: '20px', 
+                    background: 'none', 
+                    border: 'none', 
+                    color: 'var(--text-muted)', 
+                    cursor: 'pointer', 
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }} onClick={handleLogout}>Cerrar sesión</button>
+                </div>
+              </div>
             ) : (
               /* ESPERANDO VALIDACIÓN */
-              <>
-                <h1 className="title-large">Comprobante enviado correctamente</h1>
-                <div className="welcome-text" style={{ textAlign: 'left' }}>
-                  <p>Hemos recibido tu comprobante de pago. Será validado en un plazo de 3 a 5 días hábiles.<br />
-                    Una vez validado, podrás continuar con la carga de los siguientes documentos:</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', margin: '20px 0', fontSize: '14px' }}>
-                    <span>• Acta de nacimiento</span>
-                    <span>• Fotografía</span>
-                    <span>• Identificación oficial</span>
-                    <span>• Formato de afiliación firmado</span>
-                  </div>
-                  <p style={{ fontSize: '14px', color: '#475569' }}>
-                    Asegúrate de contar con estos archivos en formato digital para agilizar tu registro. Formatos permitidos: PDF, PNG o JPG.
-                  </p>
-                  <p style={{ fontSize: '14px', color: '#64748b', fontStyle: 'italic' }}>
-                    Por el momento, no es posible realizar más acciones hasta que el pago sea validado.<br />
-                    Puedes cerrar sesión o esta ventana y continuar más tarde.
-                  </p>
+              <div className="fade-in" style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                padding: '40px 20px',
+                textAlign: 'center',
+                minHeight: '400px'
+              }}>
+                <div style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '32px', 
+                  background: 'rgba(245, 158, 11, 0.1)', 
+                  color: 'var(--warning)', 
+                  marginBottom: '25px',
+                  border: '2px solid rgba(245, 158, 11, 0.2)'
+                }}>
+                  <FaClock />
                 </div>
-                <button style={{
-                  background: '#64748b',
-                  color: 'white',
-                  border: 'none',
-                  padding: '14px 60px',
-                  borderRadius: '12px',
-                  fontWeight: '700',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }} onClick={handleLogout}>Cerrar sesión</button>
-                <br />
-                <button className="btn-nav-test" style={{ marginTop: '15px' }} onClick={() => setPasoActual(3)}>Siguiente paso (pruebas) ⚡</button>
-              </>
+
+                <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
+                  Esperando Validación
+                </h1>
+                
+                <div style={{ maxWidth: '500px' }}>
+                  <div style={{ 
+                    display: 'inline-block',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    color: 'var(--warning)',
+                    padding: '8px 20px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    marginBottom: '20px',
+                    border: '1px solid rgba(245, 158, 11, 0.2)'
+                  }}>
+                    PAGO EN REVISIÓN
+                  </div>
+                  <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
+                    Hemos recibido tu comprobante de pago. Será validado en un plazo de 24 a 48 horas hábiles. 
+                    Una vez validado, podrás continuar con la carga de documentos necesarios para tu afiliación oficial.
+                  </p>
+                  
+                  <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>📄 Documentos a preparar:</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <span>• Acta de nacimiento</span>
+                      <span>• Fotografía reciente</span>
+                      <span>• Identificación oficial</span>
+                      <span>• Formato de afiliación</span>
+                    </div>
+                  </div>
+
+                  <button className="btn-premium" style={{ padding: '14px 40px', background: 'var(--text-muted)', boxShadow: 'none' }} onClick={handleLogout}>
+                    Cerrar sesión
+                  </button>
+                  <br />
+                  <button className="btn-nav-test" style={{ marginTop: '25px', opacity: 0.4, border: 'none', background: 'none', fontSize: '11px', cursor: 'pointer' }} onClick={() => setPasoActual(3)}>
+                    Saltar a documentos (modo prueba) ⚡
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
 
         {/* PASO 3: DOCUMENTOS */}
         {pasoActual === 3 && (
-          <div className="content-body">
-            <h3 className="section-title-small">Sube tus documentos para completar tu registro</h3>
-            <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', marginBottom: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
-              Asegúrate de que sean legibles. Formatos permitidos: PDF, PNG o JPG
-            </p>
+          <div className="content-body" style={{ padding: '40px' }}>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px', background: '#f8fafc', padding: '20px', borderRadius: '12px 12px 0 0', border: '1px solid #e2e8f0', borderBottom: 'none' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Teléfono *</label>
-                <input
-                  type="tel"
-                  placeholder="Ej: 7771234567"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                />
+            {/* HEADER DE SECCIÓN */}
+            <div style={{ textAlign: 'center', marginBottom: '35px' }}>
+              <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-main)', margin: '0 0 8px' }}>
+                Sube tus documentos
+              </h3>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+                Asegúrate de que sean legibles. Formatos: PDF, PNG o JPG
+              </p>
+            </div>
+
+            {/* DATOS DE REGISTRO — PREMIUM GLASS */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(11,78,166,0.07) 0%, rgba(30,27,75,0.09) 100%)',
+              border: '1px solid rgba(93,135,229,0.15)',
+              borderRadius: '24px',
+              padding: '28px',
+              marginBottom: '35px',
+              backdropFilter: 'blur(8px)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* Top accent */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, rgba(93,135,229,0.5), transparent)' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <div style={{ width: '5px', height: '24px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Datos de Registro</h4>
               </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Tipo de afiliación *</label>
-                <select
-                  value={tipoAfiliacion}
-                  onChange={(e) => setTipoAfiliacion(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: 'white' }}
-                >
-                  <option value="">Selecciona...</option>
-                  <option value="DIRECTIVO">Directivo</option>
-                  <option value="PRESIDENTE">Presidente</option>
-                  <option value="DELEGADO">Delegado</option>
-                  <option value="REPRESENTANTE">Representante</option>
-                </select>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="premium-input-group">
+                  <label className="premium-label">Teléfono *</label>
+                  <input type="tel" placeholder="Ej: 7771234567" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="premium-input" />
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Tipo de afiliación *</label>
+                  <select value={tipoAfiliacion} onChange={(e) => setTipoAfiliacion(e.target.value)} className="premium-input">
+                    <option value="">Selecciona...</option>
+                    <option value="DIRECTIVO">Directivo</option>
+                    <option value="PRESIDENTE">Presidente</option>
+                    <option value="DELEGADO">Delegado</option>
+                    <option value="REPRESENTANTE">Representante</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                <div className="premium-input-group">
+                  <label className="premium-label">Asociación</label>
+                  <input type="text" placeholder="Ej: MORELOS" value={asociacion} onChange={(e) => setAsociacion(e.target.value)} className="premium-input" />
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Liga</label>
+                  <input type="text" placeholder="Ej: LIGA ESTATAL" value={liga} onChange={(e) => setLiga(e.target.value)} className="premium-input" />
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Equipo</label>
+                  <input type="text" placeholder="Ej: ACADEMIA FC" value={equipo} onChange={(e) => setEquipo(e.target.value)} className="premium-input" />
+                </div>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '25px', background: '#f8fafc', padding: '0 20px 20px 20px', borderRadius: '0 0 12px 12px', border: '1px solid #e2e8f0', borderTop: 'none' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Asociación</label>
-                <input
-                  type="text"
-                  placeholder="Ej: MORELOS"
-                  value={asociacion}
-                  onChange={(e) => setAsociacion(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Liga</label>
-                <input
-                  type="text"
-                  placeholder="Ej: LIGA ESTATAL"
-                  value={liga}
-                  onChange={(e) => setLiga(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', display: 'block', marginBottom: '6px' }}>Equipo</label>
-                <input
-                  type="text"
-                  placeholder="Ej: ACADEMIA FC"
-                  value={equipo}
-                  onChange={(e) => setEquipo(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
-            </div>
-
-            <div className="doc-grid">
+            {/* TARJETAS DE DOCUMENTOS */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '35px' }}>
               {requisitos.map((doc, idx) => {
                 const isUploaded = !!documents[doc.documento];
-                const status = isUploaded ? 'En Revisión' : 'Pendiente';
-                const color = isUploaded ? '#10b981' : '#f59e0b';
+                const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
+                const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
+                const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
+
+                let statusLabel, statusColor, statusDotColor, statusBg;
+                if (ocrProcessed) {
+                  statusLabel = 'Procesado'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                } else if (isUploaded) {
+                  statusLabel = 'Listo'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                } else {
+                  statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDotColor = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
+                }
 
                 return (
-                  <div key={idx} className={`doc-card ${isUploaded ? 'success' : ''}`}>
-                    <div style={{ fontSize: '40px', color: '#0b4ea6' }}><FaFileAlt /></div>
-                    <h4 className="doc-title">{doc.nombre}</h4>
-                    <div className="status-badge" style={{ background: color }}>{status}</div>
-                    <div className="file-name">{isUploaded ? documents[doc.documento].name : 'Nombre del archivo'}</div>
-                    <div className="doc-actions">
-                      {doc.hasDownload && <button className="btn-download" onClick={handleDownloadFormato}>Descargar formato</button>}
-                      <button className="btn-doc" onClick={() => document.getElementById(`file-${doc.documento}`).click()}>Seleccionar archivo</button>
+                  <div key={idx} className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}>
+                    {/* Top sheen */}
+                    <div className="top-sheen" style={{ background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)' }} />
+                    {/* Status pill */}
+                    <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
+                      <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
+                      {statusLabel}
+                    </div>
+                    {/* Icon */}
+                    <div className="doc-glass-icon" style={{
+                      background: isUploaded ? 'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.08))' : 'linear-gradient(135deg,rgba(11,78,166,0.1),rgba(30,27,75,0.08))',
+                      border: isUploaded ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(93,135,229,0.12)',
+                    }}>
+                      <span>{icons[doc.documento]}</span>
+                    </div>
+                    {/* Title */}
+                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
+                      {doc.nombre}
+                    </h4>
+                    {/* Filename */}
+                    <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+                      {isUploaded ? `📎 ${documents[doc.documento].name}` : 'Sin archivo seleccionado'}
+                    </p>
+                    {/* Photo error */}
+                    {error && doc.documento === 'fotografia' && (
+                      <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }}>
+                        ⚠️ {error}
+                      </div>
+                    )}
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                      {doc.hasDownload && (
+                        <button onClick={handleDownloadFormato} className="doc-download-btn">⬇ Descargar</button>
+                      )}
+                      <button
+                        onClick={() => document.getElementById(`file-${doc.documento}`).click()}
+                        className="doc-action-btn"
+                        style={{
+                          border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                          background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                          color: isUploaded ? '#34d399' : 'var(--text-muted)',
+                        }}
+                      >
+                        {isUploaded ? '🔄 Cambiar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir')}
+                      </button>
                       <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
                     </div>
-                    <span className="link-details" onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}>
-                      {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles'}
-                    </span>
+                    {/* OCR toggle */}
+                    <button
+                      onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}
+                      style={{ marginTop: '12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
+                    >
+                      {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
+                    </button>
                     {detailsOpen[doc.documento] && (
-                      <div className="ocr-details-panel">
+                      <div className="ocr-panel">
                         {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
-                          <>
-                            <div className="ocr-row"><span className="ocr-label">Nombre:</span><span className="ocr-value">{ocrResults.nombre || '—'}</span></div>
-                            <div className="ocr-row"><span className="ocr-label">CURP:</span><span className="ocr-value">{ocrResults.curp || '—'}</span></div>
-                            <div className="ocr-row"><span className="ocr-label">Fecha Nac.:</span><span className="ocr-value">{ocrResults.fecha_nac || '—'}</span></div>
-                            <div className="ocr-row"><span className="ocr-label">Edad:</span><span className="ocr-value">{ocrResults.edad || '—'}</span></div>
-                            <div className="ocr-row"><span className="ocr-label">Nacionalidad:</span><span className="ocr-value">{ocrResults.nacionalidad || '—'}</span></div>
-                            <div className="ocr-row"><span className="ocr-label">Documento:</span><span className="ocr-value">{ocrResults.documento || '—'}</span></div>
-                          </>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {[
+                              { label: 'Nombre', value: ocrResults.nombre },
+                              { label: 'CURP', value: ocrResults.curp },
+                              { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
+                              { label: 'Edad', value: ocrResults.edad },
+                              { label: 'Nacionalidad', value: ocrResults.nacionalidad },
+                            ].map((row, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
+                                <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{row.value || '—'}</span>
+                              </div>
+                            ))}
+                          </div>
                         ) : doc.documento === 'fotografia' ? (
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>La fotografía se valida automáticamente (rostro, calidad, formato).</div>
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📸 Validación automática de rostro, calidad y formato.</p>
                         ) : doc.documento === 'formatoAfiliacion' ? (
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>Descarga el formato, fírmalo y vuelve a subirlo aquí.</div>
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📝 Descarga el formato, fírmalo físicamente y súbelo aquí.</p>
                         ) : (
-                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>Sube el documento primero para ver los datos extraídos.</div>
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>Sube el documento primero para ver los datos extraídos.</p>
                         )}
                       </div>
                     )}
@@ -1254,9 +1511,36 @@ function PreRegistroPresidente() {
               })}
             </div>
 
-            <div className="footer-nav">
-              <button className="btn-nav-gray" onClick={() => setPasoActual(2)}>Anterior</button>
-              <button className="btn-nav-blue" onClick={handleSolicitarRegistro}>Finalizar</button>
+            {/* BOTONES DE NAVEGACIÓN */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', padding: '12px 30px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onClick={() => setPasoActual(2)}
+              >
+                ← Anterior
+              </button>
+
+              {/* Pill progress indicator */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {requisitos.map((doc, i) => (
+                  <div key={i} className="progress-pill" style={{
+                    width: documents[doc.documento] ? '22px' : '8px',
+                    background: documents[doc.documento] ? '#10b981' : 'rgba(255,255,255,0.12)',
+                    boxShadow: documents[doc.documento] ? '0 0 6px rgba(16,185,129,0.5)' : 'none',
+                  }} />
+                ))}
+              </div>
+
+              <button
+                className="btn-premium"
+                onClick={handleSolicitarRegistro}
+                disabled={loading}
+                style={{ padding: '12px 50px', opacity: loading ? 0.7 : 1 }}
+              >
+                {loading ? 'Enviando...' : 'Finalizar Registro ✓'}
+              </button>
             </div>
           </div>
         )}

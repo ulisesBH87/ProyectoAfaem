@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import Swal from 'sweetalert2';
 import teamsService from '../../services/teams';
 import '../../styles/dashboard.css';
@@ -46,14 +44,8 @@ export default function InscribirEquipoALiga() {
   ];
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Administración de Equipo" />
-        
-        <div className="dashboard-main">
-          <div style={{
+    <div className="dashboard-content">
+      <div style={{
             position: 'fixed',
             top: 0,
             left: 0,
@@ -280,8 +272,6 @@ export default function InscribirEquipoALiga() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 }

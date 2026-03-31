@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/dashboard.css';
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import StatCard from '../../components/StatCard';
 import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
@@ -81,13 +79,8 @@ export default function PresidenteEquipoMisJugadores() {
   ];
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Gestión de Jugadores" />
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            <div className="section-header" style={{ marginBottom: '30px' }}>
+    <div className="dashboard-content">
+      <div className="section-header" style={{ marginBottom: '30px' }}>
               <h2 className="section-title">Todos mis Jugadores</h2>
               <div className="section-actions">
                 <button className="btn btn-primary" onClick={() => navigate('/presidente-equipo/registro-jugadores')}>
@@ -122,9 +115,6 @@ export default function PresidenteEquipoMisJugadores() {
               isLoading={loading}
               emptyMessage="No tienes jugadores registrados aún"
             />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

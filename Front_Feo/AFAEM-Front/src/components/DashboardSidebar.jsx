@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  FaHome, 
   FaFootballBall, 
-  FaUsers, 
-  FaClipboard, 
-  FaChartBar, 
-  FaCog,
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight
@@ -14,6 +9,7 @@ import {
 
 import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
+import AfaemLogo from '../assets/afaem-logo@4x.png';
 
 const DashboardSidebar = () => {
   const navigate = useNavigate();
@@ -22,7 +18,7 @@ const DashboardSidebar = () => {
   const { menus, isLoading } = useRBAC();
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '80px' : '280px');
+    document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '90px' : '280px');
   }, [isCollapsed]);
 
   const handleLogout = () => {
@@ -33,85 +29,98 @@ const DashboardSidebar = () => {
   if (isLoading) return null;
 
   return (
-    <div style={{
-      width: isCollapsed ? '80px' : '280px',
-      background: 'linear-gradient(180deg, #0b4ea6 0%, #052c61 100%)',
-      height: '100vh',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      display: 'flex',
-      flexDirection: 'column',
-      color: '#e2e8f0',
-      boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
-      zIndex: 1000
-    }}>
+    <aside 
+      className="glass"
+      style={{
+        width: 'var(--sidebar-width)',
+        height: '100vh',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 1000,
+        borderRight: '1px solid var(--border-light)',
+        boxShadow: 'var(--shadow-lg)'
+      }}
+    >
       {/* HEADER / LOGO */}
       <div style={{
-        padding: '30px 20px',
+        padding: '25px 20px',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: isCollapsed ? 'center' : 'flex-start',
         gap: '12px',
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
+        borderBottom: '1px solid var(--border-light)'
       }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          background: 'white',
-          borderRadius: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '20px',
-          color: '#0b4ea6',
-          flexShrink: 0
-        }}>
-          <FaFootballBall />
-        </div>
+        <img 
+          src={AfaemLogo} 
+          alt="AFAEM" 
+          style={{
+            width: isCollapsed ? '44px' : '48px',
+            height: isCollapsed ? '44px' : '48px',
+            objectFit: 'contain',
+            flexShrink: 0,
+            filter: 'drop-shadow(0 2px 4px rgba(11, 78, 166, 0.15))',
+            transition: 'all 0.3s'
+          }} 
+        />
         {!isCollapsed && (
-          <div style={{ overflow: 'hidden' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'white', whiteSpace: 'nowrap' }}>AFAEM</h1>
-            <p style={{ fontSize: '10px', fontWeight: '500', margin: 0, color: '#94a3b8', textTransform: 'uppercase' }}>Sistema de Gestión</p>
+          <div style={{ animation: 'fadeIn 0.3s ease' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--primary)', letterSpacing: '-0.5px' }}>AFAEM</h1>
+            <p style={{ fontSize: '9px', fontWeight: '700', margin: 0, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Management System</p>
           </div>
         )}
       </div>
 
       {/* MENU ITEMS */}
-      <nav style={{ flex: 1, padding: '20px 0', overflowY: 'auto' }}>
+      <nav style={{ flex: 1, padding: '24px 12px', overflowY: 'auto' }}>
         {menus.map((item, idx) => {
           const isActive = location.pathname === item.Ruta;
           const hasChildren = item.SubMenus && item.SubMenus.length > 0;
           
           return (
             <React.Fragment key={idx}>
-              {/* Parent Menu / Section Title */}
               <div 
                 onClick={() => item.Ruta && navigate(item.Ruta)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '12px 24px',
+                  padding: '12px 16px',
+                  margin: '4px 0',
+                  borderRadius: '12px',
                   cursor: item.Ruta ? 'pointer' : 'default',
-                  transition: 'all 0.2s',
-                  backgroundColor: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                  borderLeft: `4px solid ${isActive ? 'white' : 'transparent'}`,
-                  color: isActive ? 'white' : '#cbd5e1',
-                  marginTop: !item.MenuPadreId && idx > 0 ? '16px' : '4px',
-                  opacity: !item.Ruta && !isCollapsed ? 0.6 : 1
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backgroundColor: isActive ? 'var(--primary)' : 'transparent',
+                  color: isActive ? 'white' : 'var(--text-muted)',
+                  boxShadow: isActive ? '0 4px 12px rgba(11, 78, 166, 0.3)' : 'none',
+                  justifyContent: isCollapsed ? 'center' : 'flex-start'
+                }}
+                onMouseEnter={(e) => {
+                  if(!isActive) {
+                    e.currentTarget.style.backgroundColor = 'rgba(11, 78, 166, 0.05)';
+                    e.currentTarget.style.color = 'var(--primary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if(!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-muted)';
+                  }
                 }}
               >
                 <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>
                   {getIcon(item.Icono)}
                 </span>
                 {!isCollapsed && (
-                  <span style={{ marginLeft: '16px', fontSize: item.Ruta ? '14px' : '12px', fontWeight: '700', textTransform: item.Ruta ? 'none' : 'uppercase' }}>
+                  <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '600' }}>
                     {item.Nombre}
                   </span>
                 )}
               </div>
 
-              {/* Children Menus */}
+              {/* Submenus if present */}
               {hasChildren && !isCollapsed && item.SubMenus.map((child, cIdx) => {
                 const isChildActive = location.pathname === child.Ruta;
                 return (
@@ -121,24 +130,17 @@ const DashboardSidebar = () => {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      padding: '8px 24px 8px 52px',
+                      padding: '10px 16px 10px 52px',
+                      margin: '2px 0',
+                      borderRadius: '10px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      backgroundColor: isChildActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-                      color: isChildActive ? 'white' : '#94a3b8',
+                      backgroundColor: isChildActive ? 'rgba(11, 78, 166, 0.08)' : 'transparent',
+                      color: isChildActive ? 'var(--primary)' : 'var(--text-muted)',
                       fontSize: '13px',
                       fontWeight: '500'
                     }}
-                    onMouseEnter={(e) => {
-                      if(!isChildActive) e.currentTarget.style.color = 'white';
-                    }}
-                    onMouseLeave={(e) => {
-                      if(!isChildActive) e.currentTarget.style.color = '#94a3b8';
-                    }}
                   >
-                    <span style={{ marginRight: '12px', fontSize: '14px' }}>
-                      {getIcon(child.Icono)}
-                    </span>
                     {child.Nombre}
                   </div>
                 );
@@ -149,43 +151,49 @@ const DashboardSidebar = () => {
       </nav>
 
       {/* FOOTER ACTIONS */}
-      <div style={{ padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+      <div style={{ padding: '16px 12px', borderTop: '1px solid var(--border-light)' }}>
         <div 
           onClick={handleLogout}
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '12px 24px',
+            padding: '12px 16px',
+            margin: '4px 0',
+            borderRadius: '12px',
             cursor: 'pointer',
-            color: '#ff9494',
-            transition: 'all 0.2s'
+            color: 'var(--danger)',
+            transition: 'all 0.2s',
+            justifyContent: isCollapsed ? 'center' : 'flex-start'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 148, 148, 0.1)'}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <FaSignOutAlt style={{ fontSize: '20px' }} />
           {!isCollapsed && (
-            <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '600' }}>Cerrar Sesión</span>
+            <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '700' }}>Sign Out</span>
           )}
         </div>
 
-        <div 
+        <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '12px 24px',
-            cursor: 'pointer',
-            color: '#94a3b8'
+            justifyContent: 'center',
+            width: '100%',
+            padding: '12px',
+            borderRadius: '12px',
+            backgroundColor: 'transparent',
+            color: 'var(--text-muted)',
+            marginTop: '8px'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
         >
           {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-          {!isCollapsed && (
-            <span style={{ marginLeft: '16px', fontSize: '12px', fontWeight: '500' }}>Colapsar Menú</span>
-          )}
-        </div>
+        </button>
       </div>
-    </div>
+    </aside>
   );
 };
 

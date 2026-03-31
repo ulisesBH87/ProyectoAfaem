@@ -105,349 +105,202 @@ export default function Ingresar() {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-container fade-in">
       <style>{`
         .login-container {
           min-height: 100vh;
-          background-image: url('${StadiumBg}');
+          background: linear-gradient(135deg, rgba(11, 78, 166, 0.8) 0%, rgba(6, 63, 130, 0.9) 100%), url('${StadiumBg}');
           background-position: center;
           background-size: cover;
-          background-attachment: fixed;
+          background-blend-mode: overlay;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 20px;
-          position: relative;
-          overflow: hidden;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-        }
-        
-        .login-container::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.35);
-          pointer-events: none;
-          z-index: 5;
-        }
-        
-        .login-wrapper {
-          position: relative;
-          z-index: 10;
-          width: 100%;
-          max-width: 450px;
+          font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
         
         .login-card {
-          background: white;
-          border-radius: 14px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-          overflow: hidden;
+          width: 100%;
+          max-width: 480px;
+          padding: 50px 40px;
+          animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         
         .login-header {
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-          padding: 24px 32px 16px;
           text-align: center;
-          position: relative;
+          margin-bottom: 40px;
+        }
+
+        .logo-main {
+          height: 80px;
+          margin-bottom: 20px;
+          filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
         }
         
         .logo-group {
           display: flex;
           justify-content: center;
-          gap: 12px;
-          margin-bottom: 12px;
+          gap: 15px;
+          margin-top: 25px;
+          opacity: 0.7;
           align-items: center;
-          flex-wrap: wrap;
         }
         
-        .logo-item {
-          width: 45px;
-          height: 45px;
-          background: rgba(255, 255, 255, 0.12);
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4px;
-          backdrop-filter: blur(10px);
-        }
-        
-        .logo-item img {
-          max-width: 100%;
-          max-height: 100%;
+        .logo-group img {
+          height: 28px;
           object-fit: contain;
-          filter: brightness(1.1);
         }
         
         .login-title {
           color: white;
-          font-size: 22px;
-          font-weight: 700;
+          font-size: 32px;
+          font-weight: 800;
           margin: 0;
-          letter-spacing: 0.6px;
+          letter-spacing: -0.5px;
         }
         
-        .login-body {
-          padding: 24px 32px;
-        }
-        
-        .form-group {
-          margin-bottom: 14px;
+        .login-subtitle {
+          color: rgba(255,255,255,0.7);
+          font-size: 16px;
+          margin-top: 10px;
         }
         
         .form-label {
           display: block;
-          font-weight: 600;
-          color: #2c3e50;
-          margin-bottom: 6px;
+          font-weight: 700;
+          color: rgba(255,255,255,0.9);
+          margin-bottom: 10px;
           font-size: 13px;
-          letter-spacing: 0.5px;
-          text-transform: capitalize;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
         
         .form-input {
           width: 100%;
-          padding: 10px 14px;
-          border: 2px solid #e0e6ed;
-          border-radius: 9px;
-          font-size: 14px;
+          padding: 15px 18px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 12px;
+          font-size: 15px;
+          color: white;
           transition: all 0.3s ease;
-          font-family: inherit;
-          background: #f8fafb;
           box-sizing: border-box;
+          backdrop-filter: blur(5px);
         }
         
         .form-input:focus {
           outline: none;
-          border-color: #0b4ea6;
-          box-shadow: 0 0 0 4px rgba(11, 78, 166, 0.12);
-          background-color: #ffffff;
+          background: rgba(255, 255, 255, 0.2);
+          border-color: var(--primary-light, #5d87e5);
+          box-shadow: 0 0 0 4px rgba(93, 135, 229, 0.2);
         }
-        
+
         .form-input::placeholder {
-          color: #cbd5e0;
+          color: rgba(255,255,255,0.4);
         }
         
-        .password-group {
+        .password-container {
           position: relative;
         }
         
         .toggle-password {
           position: absolute;
-          right: 14px;
-          top: 32px;
+          right: 15px;
+          top: 50%;
+          transform: translateY(-50%);
           background: none;
           border: none;
           cursor: pointer;
-          color: #718096;
-          font-size: 18px;
-          padding: 8px;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          color: rgba(255,255,255,0.6);
+          font-size: 20px;
+          padding: 5px;
+          transition: color 0.2s;
         }
+        .toggle-password:hover { color: white; }
         
-        .toggle-password:hover {
-          color: #0b4ea6;
-          transform: scale(1.1);
-        }
-        
-        .error-message {
-          background: linear-gradient(135deg, #fee 0%, #fdd 100%);
-          color: #d32f2f;
-          padding: 10px 14px;
-          border-radius: 9px;
-          margin-bottom: 14px;
-          font-size: 13px;
-          border-left: 4px solid #d32f2f;
-          animation: slideIn 0.3s ease;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
+        .error-box {
+          background: rgba(239, 68, 68, 0.2);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          color: #fecaca;
+          padding: 15px;
+          border-radius: 12px;
+          margin-bottom: 25px;
+          font-size: 14px;
+          text-align: center;
+          font-weight: 500;
         }
         
         .backend-warning {
-          background: linear-gradient(135deg, #fff3cd 0%, #ffe8a6 100%);
-          color: #856404;
-          padding: 10px 14px;
-          border-radius: 9px;
-          margin-bottom: 14px;
+          background: rgba(245, 158, 11, 0.2);
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          color: #fef3c7;
+          padding: 15px;
+          border-radius: 12px;
+          margin-bottom: 25px;
           font-size: 13px;
-          border-left: 4px solid #ffc107;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-        }
-        
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .submit-btn {
-          width: 100%;
-          padding: 11px;
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-          color: white;
-          border: none;
-          border-radius: 9px;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          letter-spacing: 0.5px;
-          margin-top: 8px;
-          box-shadow: 0 4px 15px rgba(11, 78, 166, 0.25);
-        }
-        
-        .submit-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(11, 78, 166, 0.35);
-        }
-        
-        .submit-btn:active:not(:disabled) {
-          transform: translateY(0);
-        }
-        
-        .submit-btn:disabled {
-          opacity: 0.65;
-          cursor: not-allowed;
-        }
-        
-        .signup-link {
           text-align: center;
-          margin-top: 16px;
-          padding-top: 12px;
-          border-top: 1px solid #e0e6ed;
-          font-size: 13px;
-          color: #718096;
         }
-        
-        .signup-link a {
-          color: #0b4ea6;
+
+        .footer-links {
+          margin-top: 30px;
+          text-align: center;
+          color: rgba(255,255,255,0.6);
+          font-size: 14px;
+        }
+        .footer-links a {
+          color: white;
           text-decoration: none;
           font-weight: 700;
-          transition: all 0.3s ease;
+          margin-left: 5px;
         }
-        
-        .signup-link a:hover {
-          color: #063f82;
-        }
-        
-        .forgot-password-link {
-          font-size: 12px;
-          color: #0b4ea6;
-          text-decoration: none;
-          font-weight: 500;
-          transition: all 0.3s ease;
-          display: inline-block;
-          margin-top: 4px;
-        }
-        
-        .forgot-password-link:hover {
-          color: #063f82;
-        }
-        
-        .backend-diag {
-          font-size: 12px;
-          color: #666;
-          margin-top: 6px;
-          word-break: break-word;
-        }
-        
-        @media (max-width: 768px) {
-          .login-header {
-            padding: 20px 24px 12px;
-          }
-          
-          .login-body {
-            padding: 20px 24px;
-          }
-          
-          .login-title {
-            font-size: 20px;
-          }
-          
-          .logo-group {
-            gap: 10px;
-          }
-          
-          .logo-item {
-            width: 40px;
-            height: 40px;
-          }
+        .footer-links a:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+          .login-card { padding: 40px 25px; }
+          .login-title { font-size: 26px; }
         }
       `}</style>
       
-      <div className="login-wrapper">
-        <div className="login-card">
-          <div className="login-header">
-            <div className="logo-group">
-              <div className="logo-item">
-                <img src={AfaemLogo} alt="AFAEM" title="AFAEM" />
-              </div>
-              <div className="logo-item">
-                <img src={FmfLogo} alt="FMF" title="Federación Mexicana de Fútbol" />
-              </div>
-              <div className="logo-item">
-                <img src={AmateurLogo} alt="Sector Amateur" title="Sector Amateur" />
-              </div>
+      <div className="login-card card glass">
+        <div className="login-header">
+          <img src={AfaemLogo} alt="AFAEM" className="logo-main" />
+          <h1 className="login-title">Inicia Sesión</h1>
+          <p className="login-subtitle">Bienvenido a la plataforma AFAEM</p>
+        </div>
+        
+        <form onSubmit={handleSubmit}>
+          {!backendOk && (
+            <div className="backend-warning">
+              <strong>⚠️ Servidor no disponible</strong>
+              <div style={{ opacity: 0.8, marginTop: '4px' }}>{backendDiag}</div>
             </div>
-            <h1 className="login-title">Inicia Sesión</h1>
+          )}
+          
+          {err && <div className="error-box">{err}</div>}
+          
+          <div style={{ marginBottom: '25px' }}>
+            <label className="form-label">Correo electrónico</label>
+            <input
+              type="email"
+              className="form-input"
+              placeholder="ejemplo@correo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              required
+            />
           </div>
           
-          <form className="login-body" onSubmit={handleSubmit}>
-            {!backendOk && (
-              <div className="backend-warning">
-                <span>⚠️</span>
-                <div>
-                  <strong>Conexión con servidor no disponible</strong>
-                  <div className="backend-diag">Verifica URL / que el servidor esté activo: {backendDiag}</div>
-                </div>
-              </div>
-            )}
-            
-            {err && (
-              <div className="error-message">
-                <span>❌</span>
-                <span>{err}</span>
-              </div>
-            )}
-            
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                Correo electrónico
-              </label>
+          <div style={{ marginBottom: '15px' }}>
+            <label className="form-label">Contraseña</label>
+            <div className="password-container">
               <input
-                id="email"
-                type="email"
-                className="form-input"
-                placeholder="ejemplo@correo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                required
-                aria-label="Correo electrónico"
-              />
-            </div>
-            
-            <div className="form-group password-group">
-              <label htmlFor="password" className="form-label">
-                Contraseña
-              </label>
-              <input
-                id="password"
                 type={showPassword ? 'text' : 'password'}
                 className="form-input"
                 placeholder="••••••••"
@@ -455,37 +308,39 @@ export default function Ingresar() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 required
-                aria-label="Contraseña"
               />
               <button
                 type="button"
                 className="toggle-password"
                 onClick={() => setShowPassword(!showPassword)}
-                title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
-              <div style={{ textAlign: 'right', marginTop: '6px' }}>
-                <Link to="/olvide-contrasena" className="forgot-password-link">
-                  ¿Olvidó su contraseña?
-                </Link>
-              </div>
             </div>
-            
-            <button
-              type="submit"
-              className="submit-btn"
-              disabled={loading}
-              aria-busy={loading}
-            >
-              {loading ? '⏳ Ingresando...' : 'Ingresar'}
-            </button>
-          </form>
-          
-          <div className="signup-link">
-            ¿No tienes cuenta? <Link to="/registrarse-cuenta">Regístrate</Link>
+            <div style={{ textAlign: 'right', marginTop: '10px' }}>
+              <Link to="/olvide-contrasena" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '12px' }}>
+                ¿Olvidó su contraseña?
+              </Link>
+            </div>
           </div>
+          
+          <button
+            type="submit"
+            className="btn-premium"
+            disabled={loading}
+            style={{ width: '100%', marginTop: '15px', padding: '16px' }}
+          >
+            {loading ? '⏳ Validando acceso...' : 'Ingresar al sistema'}
+          </button>
+        </form>
+        
+        <div className="footer-links">
+          ¿No tienes cuenta? <Link to="/registrarse-cuenta">Regístrate ahora</Link>
+        </div>
+
+        <div className="logo-group">
+          <img src={FmfLogo} alt="FMF" />
+          <img src={AmateurLogo} alt="Sector Amateur" />
         </div>
       </div>
     </div>

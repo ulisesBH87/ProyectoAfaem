@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaSearch, FaBell, FaSignOutAlt } from 'react-icons/fa';
+import { FaSearch, FaBell, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
-import '../styles/dashboard.css';
 
 const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
   const navigate = useNavigate();
@@ -10,19 +9,19 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const closeMenu = () => setShowUserMenu(false);
     window.addEventListener('click', closeMenu);
     return () => window.removeEventListener('click', closeMenu);
   }, []);
 
   const notifications = [
-    { id: 1, text: 'Nueva solicitud de validación', time: 'hace 5 minutos', type: 'info' },
-    { id: 2, text: 'Tu equipo ha sido actualizado', time: 'hace 1 hora', type: 'success' },
+    { id: 1, text: 'Nueva solicitud de validación', time: 'hace 5 min', type: 'info' },
+    { id: 2, text: 'Actualización de equipo exitosa', time: 'hace 1 h', type: 'success' },
   ];
 
   const getInitials = (email) => {
-    return email.split('@')[0].substring(0, 2).toUpperCase();
+    return email ? email.split('@')[0].substring(0, 2).toUpperCase() : 'US';
   };
 
   const handleLogout = () => {
@@ -31,185 +30,154 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
       text: 'Tendrás que ingresar tus credenciales nuevamente.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#6e7d88',
+      confirmButtonColor: 'var(--danger)',
+      cancelButtonColor: 'var(--text-muted)',
       confirmButtonText: 'Sí, cerrar sesión',
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('email');
+        localStorage.clear();
         navigate('/ingresar');
       }
     });
   };
 
   return (
-    <div className="dashboard-header">
-      <div className="header-left">
-        <h1 className="header-title" style={{
-          background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          fontSize: pageTitle.includes('Bienvenido') ? '28px' : '24px',
-          fontWeight: pageTitle.includes('Bienvenido') ? '700' : '600',
-          margin: '0',
-          transition: 'all 0.3s ease'
+    <header 
+      className="glass"
+      style={{
+        height: 'var(--header-height)',
+        padding: '0 30px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'fixed',
+        top: 0,
+        right: 0,
+        width: 'calc(100% - var(--sidebar-width))',
+        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        zIndex: 999,
+        borderBottom: '1px solid var(--border-light)',
+        boxShadow: 'var(--shadow-sm)'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <h2 style={{ 
+          fontSize: '22px', 
+          fontWeight: '800', 
+          color: 'var(--primary)', 
+          margin: 0,
+          letterSpacing: '-0.5px'
         }}>
           {pageTitle}
-        </h1>
+        </h2>
       </div>
 
-      <div className="header-right">
-        <div className="search-box">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        {/* Search Bar */}
+        <div style={{ position: 'relative' }}>
+          <FaSearch style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '14px' }} />
           <input 
             type="text" 
-            placeholder="Buscar..." 
+            placeholder="Search everything..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              padding: '10px 16px 10px 40px',
+              width: '280px',
+              background: 'rgba(11, 78, 166, 0.05)',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: '500',
+              border: '1px solid transparent'
+            }}
+            onFocus={(e) => e.target.style.borderColor = 'var(--primary-light)'}
+            onBlur={(e) => e.target.style.borderColor = 'transparent'}
           />
-          <FaSearch style={{ fontSize: '16px' }} />
         </div>
 
+        {/* Notifications */}
         <div 
-          className="header-notifications"
+          style={{ position: 'relative', cursor: 'pointer' }}
           onMouseEnter={() => setShowNotifications(true)}
           onMouseLeave={() => setShowNotifications(false)}
-          style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
         >
-          <FaBell style={{ fontSize: '18px' }} />
-          {notifications.length > 0 && (
-            <div className="notification-badge">{notifications.length}</div>
-          )}
+          <div style={{ 
+            width: '40px', height: '40px', borderRadius: '10px', 
+            background: 'white', display: 'flex', alignItems: 'center', 
+            justifyContent: 'center', color: 'var(--text-muted)', border: '1px solid var(--border-light)'
+          }}>
+            <FaBell style={{ fontSize: '18px' }} />
+            {notifications.length > 0 && (
+              <span style={{
+                position: 'absolute', top: '-4px', right: '-4px',
+                width: '18px', height: '18px', borderRadius: '50%',
+                backgroundColor: 'var(--danger)', color: 'white',
+                fontSize: '10px', fontWeight: 'bold', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', border: '2px solid white'
+              }}>{notifications.length}</span>
+            )}
+          </div>
           
           {showNotifications && (
-            <div style={{
-              position: 'absolute',
-              top: '50px',
-              right: '0',
-              background: 'white',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              width: '300px',
-              maxHeight: '300px',
-              overflowY: 'auto',
-              boxShadow: 'var(--shadow-lg)',
-              zIndex: 1000
+            <div className="fade-in glass" style={{
+              position: 'absolute', top: '50px', right: '0',
+              width: '320px', borderRadius: 'var(--radius-md)', 
+              boxShadow: 'var(--shadow-xl)', padding: '16px', zIndex: 1000
             }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px' }}>Notifications</h4>
               {notifications.map(notif => (
-                <div key={notif.id} style={{
-                  padding: '12px',
-                  borderBottom: '1px solid var(--border-color)',
-                  fontSize: '13px'
+                <div key={notif.id} style={{ 
+                  padding: '10px', borderRadius: '8px', marginBottom: '8px',
+                  background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border-light)'
                 }}>
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>{notif.text}</div>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>{notif.time}</div>
+                  <div style={{ fontSize: '13px', fontWeight: '600' }}>{notif.text}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{notif.time}</div>
                 </div>
               ))}
             </div>
           )}
         </div>
 
+        {/* User Profile */}
         <div 
-          className="user-profile"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowUserMenu(!showUserMenu);
-          }}
-          style={{ position: 'relative', cursor: 'pointer' }}
+          onClick={(e) => { e.stopPropagation(); setShowUserMenu(!showUserMenu); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
         >
-          <div className="user-avatar">{getInitials(userEmail)}</div>
-          <div className="user-info">
-            <p className="user-name">Usuario</p>
-            <p className="user-role">Entrenador Certificado</p>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>{userEmail ? userEmail.split('@')[0] : 'User'}</div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>Administrator</div>
+          </div>
+          <div style={{
+            width: '44px', height: '44px', borderRadius: '12px',
+            background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%)',
+            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'
+          }}>
+            {getInitials(userEmail)}
           </div>
 
-          {/* DROPDOWN MENU */}
           {showUserMenu && (
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 12px)',
-                right: '0',
-                background: 'white',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                minWidth: '200px',
-                boxShadow: 'var(--shadow-lg)',
-                zIndex: 1001,
-                overflow: 'hidden',
-                animation: 'slideIn 0.2s ease'
-              }}
-            >
-              <div
-                style={{
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  borderBottom: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)'
-                }}
-              >
-                <div 
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '6px',
-                    background: 'linear-gradient(135deg, #3d79ff 0%, #1e5be6 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '12px'
-                  }}
-                >
-                  {getInitials(userEmail)}
-                </div>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>Usuario</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>{userEmail}</div>
-                </div>
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLogout();
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: 'none',
-                  border: 'none',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  color: '#ef4444',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#fee2e2';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                <FaSignOutAlt style={{ fontSize: '14px' }} />
-                <span>Cerrar sesión</span>
-              </button>
+            <div className="fade-in glass" style={{
+              position: 'absolute', top: '70px', right: '30px', minWidth: '200px',
+              borderRadius: 'var(--radius-md)', padding: '8px', boxShadow: 'var(--shadow-xl)'
+            }}>
+               <button 
+                 onClick={handleLogout}
+                 style={{ 
+                   width: '100%', padding: '12px', borderRadius: '8px',
+                   display: 'flex', alignItems: 'center', gap: '10px',
+                   color: 'var(--danger)', background: 'transparent', fontWeight: '600'
+                 }}
+                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
+                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+               >
+                 <FaSignOutAlt /> Sign Out
+               </button>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 

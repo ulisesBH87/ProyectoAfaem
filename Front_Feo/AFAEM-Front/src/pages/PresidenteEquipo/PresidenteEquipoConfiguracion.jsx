@@ -5,8 +5,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 
 // Componentes
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { EntradaFormulario, BotonPrimario, BotonSecundario, Alerta } from '../../components/partials';
 import { createTeam } from '../../services/teams';
 
@@ -142,10 +140,14 @@ export default function PresidenteEquipoConfiguracion() {
     }
   };
 
-  if (loading) return <div>Cargando...</div>;
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ color: 'var(--text-muted)' }}>Cargando...</div>
+    </div>
+  );
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="dashboard-content">
       <style>{`
         .config-card {
           background: white;
@@ -189,13 +191,11 @@ export default function PresidenteEquipoConfiguracion() {
         }
       `}</style>
 
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Configurar Equipo" />
-        
-        <div className="dashboard-main">
-          <div className="dashboard-content">
+      <style>{`
+        /* ... existing styles ... */
+      `}</style>
+
+      {/* VISTA 1: CREAR EQUIPO SI NO HAY UNO */}
 
             {/* VISTA 1: CREAR EQUIPO SI NO HAY UNO */}
             {!hasTeam && (
@@ -365,9 +365,6 @@ export default function PresidenteEquipoConfiguracion() {
               </>
             )}
 
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

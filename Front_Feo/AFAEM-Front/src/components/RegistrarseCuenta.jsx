@@ -188,10 +188,10 @@ function RegistrarseCuenta() {
 			<div className="container position-relative" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
 				{/* LOGOS */}
 				<div className="d-none d-md-flex justify-content-between align-items-center position-absolute w-100" style={{ top: '0px', left: 0, right: 0, pointerEvents: 'none', zIndex: 10 }}>
-					<img src={AfaemLogo} alt="AFAEM" style={{ height: 72, maxWidth: 180, objectFit: 'contain', opacity: 0.95 }} />
+					<img src={AfaemLogo} alt="AFAEM" style={{ height: 60, maxWidth: 150, objectFit: 'contain', opacity: 0.95 }} />
 					<div className="d-flex gap-4 align-items-center">
-						<img src={AmateurLogo} alt="Amateur" style={{ height: 56, maxWidth: 120, objectFit: 'contain', opacity: 0.95 }} />
-						<img src={FmfLogo} alt="FMF" style={{ height: 56, maxWidth: 120, objectFit: 'contain', opacity: 0.95 }} />
+						<img src={AmateurLogo} alt="Amateur" style={{ height: 44, maxWidth: 100, objectFit: 'contain', opacity: 0.95 }} />
+						<img src={FmfLogo} alt="FMF" style={{ height: 44, maxWidth: 100, objectFit: 'contain', opacity: 0.95 }} />
 					</div>
 				</div>
 				
