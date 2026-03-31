@@ -156,65 +156,74 @@ export default function ProximoPresidente() {
   };
 
   return (
-    <div style={{
+    <div className="fade-in" style={{
       minHeight: '100vh',
+      background: 'linear-gradient(135deg, var(--primary-dark) 0%, #1e1b4b 100%)',
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
-      padding: 20,
-      boxSizing: 'border-box',
-      background: 'linear-gradient(180deg, #f5f8fb 0%, #eaf3ff 100%)'
+      padding: '40px 20px',
+      boxSizing: 'border-box'
     }}>
-      <div style={{
-        width: '100%',
-        maxWidth: 1000,
-        background: '#fff',
-        borderRadius: 14,
-        padding: 40,
-        boxShadow: '0 18px 50px rgba(11,78,166,0.08)',
-        color: '#0b2546'
-      }}>
-        <h2 style={{ marginTop: 0, marginBottom: 8 }}>Solicitud de Certificación</h2>
-        <p style={{ color: '#5b6b87', marginBottom: 28 }}>
-          {userInfo ? (
-            <>Hola <strong>{userInfo.email || userInfo.correo || userInfo.nombre}</strong>. Por favor sube tus documentos para la validación.</>
-          ) : (
-            <>Por favor carga los documentos requeridos para continuar.</>
-          )}
-        </p>
+      {/* HEADER LOGOS */}
+      <div style={{ width: '100%', maxWidth: '1000px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <img src={AfaemLogo} alt="AFAEM" style={{ height: '60px' }} />
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <img src={FmfLogo} alt="FMF" style={{ height: '40px' }} />
+          <img src={AmateurLogo} alt="Amateur" style={{ height: '40px' }} />
+        </div>
+      </div>
 
-        <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div className="card glass" style={{
+        width: '100%',
+        maxWidth: '900px',
+        padding: '50px',
+        color: 'var(--text-main)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: '800', margin: '0 0 10px', color: 'var(--primary)' }}>Solicitud de Certificación</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '16px', fontWeight: '500' }}>
+            {userInfo ? (
+              <>Hola <strong>{userInfo.email || userInfo.correo || userInfo.nombre}</strong>. Por favor sube tus documentos para la validación.</>
+            ) : (
+              <>Por favor carga los documentos requeridos para continuar con el proceso de activación.</>
+            )}
+          </p>
+        </div>
+
+        <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
           
           {/* SECCIÓN: DOCUMENTOS REQUERIDOS */}
-          <div style={{ borderTop: '1px solid #eef2f7', paddingTop: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#0b2546' }}>
-              📄 Documentos Requeridos
+          <section>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '24px' }}>📄</span> Documentos Requeridos
             </h3>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: 12,
-              marginBottom: 20
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '15px',
+              marginBottom: '25px'
             }}>
               {REQUIRED_DOCUMENTS.map(doc => (
-                <div key={doc.id} style={{
-                  padding: 14,
-                  borderRadius: 8,
-                  background: '#f8fbff',
-                  border: '1px solid #d6e6ff',
+                <div key={doc.id} className="card" style={{
+                  padding: '16px',
+                  background: 'var(--bg-main)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  border: '1px solid var(--border-light)'
                 }}>
-                  <span style={{ fontSize: 14, fontWeight: 500 }}>{doc.name}</span>
+                  <span style={{ fontSize: '14px', fontWeight: '600' }}>{doc.name}</span>
                   <span style={{
-                    fontSize: 12,
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    background: files.length > 0 ? '#e8f5e9' : '#ffebee',
-                    color: files.length > 0 ? '#2e7d32' : '#c62828'
+                    fontSize: '11px',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    fontWeight: '800',
+                    textTransform: 'uppercase',
+                    background: files.length > 0 ? 'var(--secondary)' : 'var(--warning)',
+                    color: 'white'
                   }}>
-                    {files.length > 0 ? '✓ Pendiente' : '✗ Requerido'}
+                    {files.length > 0 ? 'Pendiente' : 'Requerido'}
                   </span>
                 </div>
               ))}
@@ -222,14 +231,16 @@ export default function ProximoPresidente() {
 
             {/* INPUT DE CARGA */}
             <div style={{
-              padding: 20,
-              borderRadius: 10,
-              background: '#f0f6ff',
-              border: '2px dashed #2b7be6',
+              padding: '40px',
+              borderRadius: '16px',
+              background: 'rgba(59, 130, 246, 0.05)',
+              border: '2px dashed var(--primary)',
               textAlign: 'center',
               cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}>
+              transition: 'all 0.3s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)'}>
               <label style={{ display: 'block', cursor: 'pointer' }}>
                 <input
                   type="file"
@@ -238,10 +249,10 @@ export default function ProximoPresidente() {
                   multiple
                   accept=".pdf,.png,.jpg,.jpeg,.xlsx"
                 />
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#2b7be6', marginBottom: 8 }}>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--primary)', marginBottom: '8px' }}>
                   📁 Haz clic para seleccionar archivos
                 </div>
-                <div style={{ fontSize: 12, color: '#5b6b87' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                   Formatos permitidos: PDF, PNG, JPG, XLSX
                 </div>
               </label>
@@ -249,284 +260,190 @@ export default function ProximoPresidente() {
 
             {/* LISTA DE ARCHIVOS CARGADOS */}
             {files.length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: '#0b2546', textTransform: 'uppercase' }}>
-                  Archivos cargados ({files.length})
+              <div style={{ marginTop: '30px' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: '800', marginBottom: '15px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  Archivos en cola ({files.length})
                 </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {files.map(f => (
-                    <div key={f.id} style={{
-                      padding: 12,
-                      borderRadius: 8,
-                      background: '#fafbfc',
-                      border: '1px solid #e3eaf5',
+                    <div key={f.id} className="card" style={{
+                      padding: '15px',
+                      background: 'white',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 12
+                      gap: '15px',
+                      border: '1px solid var(--border-light)'
                     }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: '#0b2546', marginBottom: 6 }}>
-                          {f.name}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '700' }}>{f.name}</span>
+                          <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{f.progress}%</span>
                         </div>
-                        <div style={{ height: 6, background: '#e6eefc', borderRadius: 6, overflow: 'hidden' }}>
+                        <div style={{ height: '6px', background: 'var(--bg-main)', borderRadius: '10px', overflow: 'hidden' }}>
                           <div style={{
                             width: `${Math.max(4, f.progress || 0)}%`,
                             height: '100%',
-                            background: '#2b7be6',
-                            transition: 'width 0.25s linear'
+                            background: 'var(--primary)',
+                            transition: 'width 0.3s ease'
                           }} />
-                        </div>
-                        <div style={{ fontSize: 11, color: '#5b6b87', marginTop: 4 }}>
-                          {f.progress}%
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(f.id)}
                         style={{
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          background: '#ffebee',
-                          color: '#c62828',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          background: '#fee2e2',
+                          color: '#b91c1c',
                           border: 'none',
                           cursor: 'pointer',
-                          fontSize: 12,
-                          fontWeight: 500
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          transition: 'background 0.2s'
                         }}
+                        onMouseOver={(e) => e.currentTarget.style.background = '#fecaca'}
+                        onMouseOut={(e) => e.currentTarget.style.background = '#fee2e2'}
                       >
-                        ✕ Eliminar
+                        ✕
                       </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-          </div>
+          </section>
 
-          {/* SECCIÓN: DATOS PERSONALES (se llenarán con OCR) */}
-          <div style={{ borderTop: '1px solid #eef2f7', paddingTop: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#0b2546' }}>
-              👤 Datos Personales
+          {/* SECCIÓN: DATOS PERSONALES */}
+          <section style={{ borderTop: '1px solid var(--border-light)', paddingTop: '30px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '10px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '24px' }}>👤</span> Datos Personales
             </h3>
-            <p style={{ fontSize: 12, color: '#5b6b87', marginBottom: 16, fontStyle: 'italic' }}>
-              Estos campos se completarán automáticamente cuando valides los documentos con OCR
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              ℹ️ Los campos se auto-completan mediante validación OCR de tus documentos.
             </p>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 16
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '20px'
             }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6, color: '#0b2546', textTransform: 'uppercase' }}>
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  name="Nombre"
-                  value={documentData.Nombre}
-                  onChange={handleDataChange}
-                  placeholder="Se llenará con OCR"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #d6e6ff',
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                    background: '#f8fbff'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6, color: '#0b2546', textTransform: 'uppercase' }}>
-                  Primer Apellido
-                </label>
-                <input
-                  type="text"
-                  name="PrimerApellido"
-                  value={documentData.PrimerApellido}
-                  onChange={handleDataChange}
-                  placeholder="Se llenará con OCR"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #d6e6ff',
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                    background: '#f8fbff'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6, color: '#0b2546', textTransform: 'uppercase' }}>
-                  Segundo Apellido
-                </label>
-                <input
-                  type="text"
-                  name="SegundoApellido"
-                  value={documentData.SegundoApellido}
-                  onChange={handleDataChange}
-                  placeholder="Se llenará con OCR"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #d6e6ff',
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                    background: '#f8fbff'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6, color: '#0b2546', textTransform: 'uppercase' }}>
-                  Correo
-                </label>
-                <input
-                  type="email"
-                  name="Correo"
-                  value={documentData.Correo}
-                  onChange={handleDataChange}
-                  placeholder="Se llenará con OCR"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #d6e6ff',
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                    background: '#f8fbff'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6, color: '#0b2546', textTransform: 'uppercase' }}>
-                  Teléfono
-                </label>
-                <input
-                  type="tel"
-                  name="Telefono"
-                  value={documentData.Telefono}
-                  onChange={handleDataChange}
-                  placeholder="Se llenará con OCR"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #d6e6ff',
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                    background: '#f8fbff'
-                  }}
-                />
-              </div>
+              {[
+                { label: 'Nombre', name: 'Nombre' },
+                { label: 'Primer Apellido', name: 'PrimerApellido' },
+                { label: 'Segundo Apellido', name: 'SegundoApellido' },
+                { label: 'Correo', name: 'Correo', type: 'email' },
+                { label: 'Teléfono', name: 'Telefono', type: 'tel' }
+              ].map(field => (
+                <div key={field.name}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.type || 'text'}
+                    name={field.name}
+                    value={documentData[field.name]}
+                    onChange={handleDataChange}
+                    placeholder={`Pendiente validación...`}
+                    style={{
+                      width: '100%',
+                      padding: '12px 15px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-light)',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                      background: 'var(--bg-main)',
+                      color: 'var(--text-main)',
+                      fontWeight: '600'
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-          </div>
+          </section>
 
           {/* SECCIÓN: ACCIONES */}
           <div style={{
-            borderTop: '1px solid #eef2f7',
-            paddingTop: 24,
+            borderTop: '1px solid var(--border-light)',
+            paddingTop: '30px',
             display: 'flex',
-            gap: 12,
+            gap: '15px',
+            justifyContent: 'center',
             flexWrap: 'wrap'
           }}>
             <button
               type="submit"
-              className="btn-primary"
+              className="btn-premium"
               style={{
-                padding: '12px 24px',
-                borderRadius: 10,
-                background: '#0b4ea6',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: 14,
-                flex: 1,
-                minWidth: 180
+                padding: '16px 40px',
+                fontSize: '16px',
+                flex: '1',
+                maxWidth: '300px'
               }}
             >
-              ✓ Enviar Documentos
+              ✓ Enviar Solicitud
             </button>
-
-            {files.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setFiles([])}
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: 10,
-                  background: '#fff',
-                  color: '#0b2546',
-                  border: '1px solid #d6e6ff',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 14
-                }}
-              >
-                🗑 Limpiar Archivos
-              </button>
-            )}
 
             <button
               type="button"
               onClick={forceCertified}
               style={{
-                padding: '12px 24px',
-                borderRadius: 10,
-                background: '#27ae60',
+                padding: '16px 30px',
+                borderRadius: '12px',
+                background: 'var(--secondary)',
                 color: '#fff',
                 border: 'none',
                 cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: 14
+                fontWeight: '800',
+                fontSize: '14px',
+                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)',
+                transition: 'all 0.3s ease'
               }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
-              ✓ Marcar como Certificado
+              ✓ Validación Rápida
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/presidente-equipo')}
               style={{
-                padding: '12px 24px',
-                borderRadius: 10,
-                background: '#eef4ff',
-                color: '#0b2546',
-                border: '1px solid #d6e6ff',
+                padding: '16px 30px',
+                borderRadius: '12px',
+                background: 'var(--bg-main)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-light)',
                 cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: 14
+                fontWeight: '700',
+                fontSize: '14px',
+                transition: 'all 0.2s'
               }}
+              onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
             >
-              → Ver Panel
+              Ir al Panel
             </button>
           </div>
 
           {message && (
-            <div style={{
-              padding: 12,
-              borderRadius: 8,
-              background: message.includes('error') ? '#ffebee' : '#e8f5e9',
-              color: message.includes('error') ? '#c62828' : '#2e7d32',
-              fontSize: 13,
-              fontWeight: 500,
-              textAlign: 'center'
+            <div className="fade-in" style={{
+              padding: '15px',
+              borderRadius: '12px',
+              background: message.includes('Error') || message.includes('error') ? '#fee2e2' : 'rgba(16, 185, 129, 0.1)',
+              color: message.includes('Error') || message.includes('error') ? '#b91c1c' : 'var(--secondary)',
+              fontSize: '14px',
+              fontWeight: '700',
+              textAlign: 'center',
+              border: `1px solid ${message.includes('Error') || message.includes('error') ? '#fecaca' : 'rgba(16, 185, 129, 0.2)'}`
             }}>
               {message}
             </div>
           )}
         </form>
 
-        <div style={{ marginTop: 28, padding: 16, borderRadius: 8, background: '#f8fbff', border: '1px solid #d6e6ff' }}>
-          <div style={{ fontSize: 12, color: '#5b6b87', fontStyle: 'italic' }}>
-            📝 <strong>Nota:</strong> Los documentos se cargan de forma local. Cuando implementemos OCR, los campos de datos personales se llenarán automáticamente.
+        <div style={{ marginTop: '40px', padding: '20px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: '1.5' }}>
+             <strong>Nota de Proceso:</strong> Los documentos son validados por nuestro sistema inteligente. Una vez aprobados, tu cuenta será habilitada para la gestión deportiva completa.
           </div>
         </div>
       </div>

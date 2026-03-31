@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FaFootballBall, FaTags, FaCalendar } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { API_BASE } from '../../config/config';
 import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
@@ -54,6 +52,60 @@ export default function ConfigurarEquipo() {
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Lógica de Borradores
+  const saveDraft = () => {
+    const draftData = {
+      formData,
+      activeStep,
+      players,
+      modalData,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('afaem_draft_equipo', JSON.stringify(draftData));
+    Swal.fire({
+      title: 'Borrador guardado',
+      text: 'Tu progreso se ha guardado localmente en este navegador.',
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem('afaem_draft_equipo');
+  };
+
+  // Cargar borrador al montar
+  useEffect(() => {
+    const draft = localStorage.getItem('afaem_draft_equipo');
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        Swal.fire({
+          title: '¿Recuperar borrador?',
+          text: `Se encontró un borrador guardado el ${new Date(parsed.timestamp).toLocaleString()}. ¿Deseas continuar donde te quedaste?`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, recuperar',
+          cancelButtonText: 'No, empezar de nuevo',
+          confirmButtonColor: '#0b4ea6'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            if (parsed.formData) setFormData(parsed.formData);
+            if (parsed.activeStep) setActiveStep(parsed.activeStep);
+            if (parsed.players) setPlayers(parsed.players);
+            if (parsed.modalData) setModalData(parsed.modalData);
+            Swal.fire('¡Recuperado!', 'Tu progreso ha sido restaurado.', 'success');
+          } else {
+            clearDraft();
+          }
+        });
+      } catch (e) {
+        console.error("Error al cargar borrador:", e);
+      }
+    }
+  }, []);
 
   const modalities = [
     { id: 'futbol7', name: 'Fútbol 7', description: 'Hasta 14 jugadores', min: 7 },
@@ -134,6 +186,7 @@ export default function ConfigurarEquipo() {
   };
 
   const handleSuccessModalContinue = () => {
+    clearDraft();
     setShowSuccessModal(false);
     navigate('/presidente-equipo');
   };
@@ -398,21 +451,15 @@ export default function ConfigurarEquipo() {
           .dashboard-main { animation: slideUp 0.4s ease; }
         `}
       </style>
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail={userEmail} />
-        
-        <div className="dashboard-container">
-          <DashboardHeader userEmail={userEmail} pageTitle={activeStep === 1 ? "Configurar Equipo" : "Registrar Jugadores"} />
-        
-          <div className="dashboard-main">
-            {/* STEP INDICATOR */}
+      <div className="dashboard-content">
+        {/* STEP INDICATOR */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '25px', padding: '10px' }}>
               <div className={`step-pill ${activeStep === 1 ? 'active' : ''}`}>1. Configuración</div>
               <div style={{ color: '#cbd5e1', alignSelf: 'center' }}>→</div>
               <div className={`step-pill ${activeStep === 2 ? 'active' : ''}`}>2. Jugadores</div>
             </div>
 
-            <div className="dashboard-content">
+            <div>
               {activeStep === 1 && (
                 <div style={{ animation: 'slideUp 0.4s ease' }}>
                   {/* HEADER DEL FORMULARIO */}
@@ -531,6 +578,7 @@ export default function ConfigurarEquipo() {
 
                   {/* BOTONES STEP 1 */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                    <button type="button" onClick={saveDraft} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid #0b4ea6', background: '#eff6ff', color: '#0b4ea6', fontWeight: '700', cursor: 'pointer' }}>💾 Guardar Borrador</button>
                     <button type="button" onClick={() => navigate('/presidente-equipo')} style={{ padding: '12px 30px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}>Cancelar</button>
                     <button type="button" onClick={handleSubmit} style={{ padding: '12px 40px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)' }}>Continuar a Jugadores →</button>
                   </div>
@@ -781,7 +829,13 @@ export default function ConfigurarEquipo() {
                   </div>
                 </div>
                 
-                <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
+                  <button 
+                    onClick={saveDraft}
+                    style={{ padding: '14px 30px', background: '#f8fafc', color: '#0b4ea6', border: '1.5px solid #0b4ea6', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}
+                  >
+                    💾 Guardar Borrador
+                  </button>
                   <button 
                     onClick={async () => {
                         try {
@@ -814,8 +868,6 @@ export default function ConfigurarEquipo() {
               </div>
             )}
           </div>
-        </div>
-      </div>
 
       {/* MODAL CONFIGURACIÓN EQUIPO */}
       {showModal && (
@@ -875,7 +927,7 @@ export default function ConfigurarEquipo() {
           </div>
         </div>
       )}
-    </div>
+      </div>
     </>
   );
 }

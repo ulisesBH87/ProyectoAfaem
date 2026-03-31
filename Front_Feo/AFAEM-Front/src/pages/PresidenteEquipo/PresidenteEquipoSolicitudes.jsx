@@ -4,8 +4,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 
 // Componentes
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
 
 export default function PresidenteEquipoSolicitudes() {
@@ -195,39 +193,26 @@ export default function PresidenteEquipoSolicitudes() {
 
   if (loading) {
     return (
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail={userEmail} />
-        <div className="dashboard-container">
-          <DashboardHeader userEmail={userEmail} pageTitle="Cargando..." />
-          <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div>Cargando solicitudes...</div>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ color: 'var(--text-muted)' }}>Cargando solicitudes...</div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Gestión de Solicitudes" />
-        
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            {error && (
-              <div style={{
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                color: '#991b1b',
-                padding: '12px 16px',
-                borderRadius: '6px',
-                marginBottom: '20px'
-              }}>
-                {error}
-              </div>
-            )}
+    <div className="dashboard-content">
+      {error && (
+        <div style={{
+          backgroundColor: '#fee2e2',
+          border: '1px solid #fecaca',
+          color: '#991b1b',
+          padding: '12px 16px',
+          borderRadius: '6px',
+          marginBottom: '20px'
+        }}>
+          {error}
+        </div>
+      )}
 
             {/* TARJETAS DE ESTADÍSTICAS */}
             <div style={{
@@ -352,9 +337,6 @@ export default function PresidenteEquipoSolicitudes() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

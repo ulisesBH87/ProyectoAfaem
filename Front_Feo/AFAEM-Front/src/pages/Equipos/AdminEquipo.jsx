@@ -3,8 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FaFootballBall, FaCog } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { 
   BotonPrimario, 
   BotonSecundario, 
@@ -101,14 +99,8 @@ export default function AdminEquipo() {
 
   if (loading) {
     return (
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail="" />
-        <div className="dashboard-container">
-          <DashboardHeader userEmail="" pageTitle="Cargando..." />
-          <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Cargador tamanio="grande" mensaje="Cargando equipo..." />
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <Cargador tamanio="grande" mensaje="Cargando equipo..." />
       </div>
     );
   }
@@ -181,15 +173,8 @@ export default function AdminEquipo() {
   };
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Administración de Equipo" />
-        
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            {/* MIGAS DE PAN */}
+    <div className="dashboard-content">
+      {/* MIGAS DE PAN */}
             <MigasDePan
               elementos={[
                 { etiqueta: 'Mis equipos', ruta: '/presidente-equipo/equipos' },
@@ -780,9 +765,6 @@ export default function AdminEquipo() {
                 )}
               </>
             )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

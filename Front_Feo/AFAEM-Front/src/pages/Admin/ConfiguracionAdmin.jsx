@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import DashboardSidebar from '../../components/Admin/AdminSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { 
   TablaSimple, 
   BotonPrimario, 
@@ -93,13 +91,8 @@ export default function ConfiguracionAdmin() {
   ];
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar />
-      <div className="dashboard-container">
-        <DashboardHeader pageTitle="Configuración del Sistema" />
-        
-        <div className="dashboard-main">
-          {/* TABS */}
+    <div className="dashboard-content">
+      {/* TABS */}
           <div style={{
             borderBottom: '2px solid #e2e8f0',
             marginBottom: '30px',
@@ -168,8 +161,6 @@ export default function ConfiguracionAdmin() {
               </>
             )}
           </div>
-        </div>
-      </div>
     </div>
   );
 }

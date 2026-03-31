@@ -152,10 +152,10 @@ export default function Login() {
         }
         
         .logo-item {
-          width: 45px;
-          height: 45px;
-          background: rgba(255, 255, 255, 0.12);
-          border-radius: 10px;
+          width: 38px;
+          height: 38px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;

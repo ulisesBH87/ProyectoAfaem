@@ -4,8 +4,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 
 // Componentes
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
 
 export default function PresidenteEquipoJugadores() {
@@ -172,41 +170,28 @@ export default function PresidenteEquipoJugadores() {
 
   if (loading) {
     return (
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail={userEmail} />
-        <div className="dashboard-container">
-          <DashboardHeader userEmail={userEmail} pageTitle="Cargando..." />
-          <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div>Cargando jugadores...</div>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ color: 'var(--text-muted)' }}>Cargando jugadores...</div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Gestión de Jugadores" />
-        
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            {error && (
-              <div style={{
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                color: '#991b1b',
-                padding: '12px 16px',
-                borderRadius: '6px',
-                marginBottom: '20px'
-              }}>
-                {error}
-              </div>
-            )}
+    <div className="dashboard-content">
+      {error && (
+        <div style={{
+          backgroundColor: '#fee2e2',
+          border: '1px solid #fecaca',
+          color: '#991b1b',
+          padding: '12px 16px',
+          borderRadius: '6px',
+          marginBottom: '20px'
+        }}>
+          {error}
+        </div>
+      )}
 
-            {/* TARJETAS DE ESTADÍSTICAS */}
+      {/* TARJETAS DE ESTADÍSTICAS */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -324,9 +309,6 @@ export default function PresidenteEquipoJugadores() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
