@@ -117,12 +117,6 @@ function PreRegistroPresidente() {
 
   // ================== METODOS DE NAVEGACIÓN ==================
   const handleGuardarYSalir = async () => {
-    // Si el usuario ya subió su comprobante, el botón de "Guardar y Reanudar"
-    // ahora funcionará como un envío oficial para validación por el admin.
-    if (comprobantePago) {
-      return irSiguientePaso();
-    }
-
     if (numPersonas <= 0) {
       setError('Debes ingresar el número de jugadores para guardar datos.');
       return;
@@ -133,19 +127,62 @@ function PreRegistroPresidente() {
     }
 
     try {
-      // Guardamos la configuración visual de forma local
-      const dataToSave = {
-        numPersonas,
-        asignacionSeguros,
-        pasoActual: 1,
-        fechaGuardado: new Date().toISOString()
-      };
-      localStorage.setItem('afaem_pre_registro_guardado', JSON.stringify(dataToSave));
+      Swal.fire({
+        title: 'Guardando Progreso...',
+        text: 'Generando tu orden de pago y actualizando tu perfil. Por favor espera.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No se encontró autenticación. Por favor inicia sesión.');
+
+      // 1. Crear Orden si no existe
+      let ordenId = ordenPendienteId;
+      if (!ordenId) {
+        const segurosPayload = [];
+        for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
+          if (cant > 0) {
+            segurosPayload.push({
+              SeguroId: parseInt(idStr, 10),
+              Cantidad: cant
+            });
+          }
+        }
+
+        const ordenPayload = {
+          CantidadJugadores: numPersonas,
+          Seguros: segurosPayload
+        };
+
+        const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(ordenPayload)
+        });
+
+        if (!resOrden.ok) {
+          const errData = await resOrden.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Fallo al crear la orden de pago');
+        }
+
+        const ordenData = await resOrden.json();
+        ordenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
+      }
+
+      // 2. Actualizar Rol Locamente
+      localStorage.setItem('rol', 'PRESIDENTE_EQUIPO');
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      currentUser.Rol = 'PRESIDENTE_EQUIPO';
+      localStorage.setItem('user', JSON.stringify(currentUser));
 
       Swal.fire({
-        title: 'Progreso guardado localmente',
-        text: 'Tus datos se han guardado en este navegador. Nota: Al no subir comprobante, aún NO se ha enviado a revisión por el administrador.',
-        icon: 'info',
+        title: '¡Progreso Guardado!',
+        text: 'Tu orden ha sido generada y tu rol se ha actualizado a Presidente de Equipo. Podrás subir el comprobante cuando inicies sesión de nuevo.',
+        icon: 'success',
         confirmButtonColor: '#0b4ea6'
       }).then(() => {
         handleLogout();
@@ -244,15 +281,6 @@ function PreRegistroPresidente() {
           throw new Error('La orden se creó pero falló al subir el comprobante: ' + (errData.detail || ''));
         }
 
-        // Guardar para la UI local de front-end
-        const preRegistroData = {
-          numPersonas,
-          asignacionSeguros,
-          totalPagar,
-          fechaRegistro: new Date().toISOString()
-        };
-        localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
-
         Swal.fire({
           title: '¡Evidencia Recibida!',
           text: 'Se ha creado la orden de pago y enviado tu comprobante a revisión.',
@@ -261,6 +289,10 @@ function PreRegistroPresidente() {
           showConfirmButton: false
         });
 
+        // Actualizar el rol del usuario en la sesión local
+        // para que la interfaz sepa que ya es Presidente (o está en proceso).
+        localStorage.setItem('rol', 'PRESIDENTE_EQUIPO');
+        
         // Ir a pantalla de espera
         setEstadoPago(1); // Pendiente
         setPasoActual(2);
@@ -1186,7 +1218,7 @@ function PreRegistroPresidente() {
                     e.currentTarget.style.boxShadow = '0 6px 20px rgba(11,78,166,0.35)';
                   }}
                 >
-                  💾 Guardar y reanudar después
+                  {comprobantePago ? '✅ Enviar para Validación' : '💾 Guardar para después'}
                 </button>
               </div>
             ) : null}
