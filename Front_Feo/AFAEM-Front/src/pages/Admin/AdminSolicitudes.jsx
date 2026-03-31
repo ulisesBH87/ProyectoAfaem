@@ -5,7 +5,6 @@ import '../../styles/dashboard.css';
 import DashboardTable from '../../components/DashboardTable';
 import { getSolicitudes } from '../../services/solicitud';
 import { getSolicitudDetalle } from '../../services/admin';
-import { getSolicitudDetalle } from '../../services/admin';
 import Swal from 'sweetalert2';
 
 export default function AdminSolicitudes() {
