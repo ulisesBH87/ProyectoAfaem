@@ -53,7 +53,7 @@ def crear_orden_pago_repo(db, usuario_id, total):
     orden = OrdenPago(
         UsuarioId=usuario_id,
         TotalPagar=total,
-        EstatusPagoId=1  # PENDIENTE
+        EstatusPagoId=EstatusValidacionPago.NOENVIADO
     )
 
     db.add(orden)
