@@ -42,13 +42,16 @@ export default function Ingresar() {
       const data = await login(email, password);
       const token = data?.token || data?.access || data?.access_token || null;
       console.log('TOKEN RECIBIDO:', token);
+      let currentEstatusId = null;
       if (token) {
         setAuthToken(token);
         localStorage.setItem('token', token);
         console.log('🔄 Sincronizando permisos con el backend...');
-        await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
+        const accessData = await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
+        currentEstatusId = accessData?.estatusId;
         window.dispatchEvent(new Event('user-logged-in'));
       }
+
       const userData = {
         email: email,
         correo: email,
@@ -59,6 +62,7 @@ export default function Ingresar() {
       
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
       console.log('ROL USUARIO (desde respuesta login):', role);
+      console.log('ESTATUS ID detectado:', currentEstatusId);
       
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
@@ -83,7 +87,12 @@ export default function Ingresar() {
       } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
       } else if (role === 'PRESIDENTE_EQUIPO') {
-        navigate('/pre-registro-presidente');
+        // Si ya tiene un estatus (solicitud iniciada), ir al dashboard directamente
+        if (currentEstatusId && currentEstatusId >= 1) {
+          navigate('/presidente-equipo');
+        } else {
+          navigate('/pre-registro-presidente');
+        }
       } else {
         navigate('/pre-registro-presidente');
       }

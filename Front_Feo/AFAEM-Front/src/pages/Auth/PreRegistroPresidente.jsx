@@ -127,47 +127,7 @@ function PreRegistroPresidente() {
     }
 
     try {
-      Swal.fire({
-        title: 'Guardando Orden...',
-        html: 'Generando tu orden de pago. <b>Por favor espere.</b>',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-      });
-
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No se encontró autenticación. Por favor inicia sesión.');
-
-      // 1. Crear la Orden de Pago
-      const segurosPayload = [];
-      for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
-        if (cant > 0) {
-          segurosPayload.push({
-            SeguroId: parseInt(idStr, 10),
-            Cantidad: cant
-          });
-        }
-      }
-
-      const ordenPayload = {
-        CantidadJugadores: numPersonas,
-        Seguros: segurosPayload
-      };
-
-      const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(ordenPayload)
-      });
-
-      if (!resOrden.ok) {
-        const errData = await resOrden.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Fallo al procesar la orden de pago en el servidor');
-      }
-
-      // Guardamos la configuración visual de fallback (opcional)
+      // Guardamos la configuración visual de forma local
       const dataToSave = {
         numPersonas,
         asignacionSeguros,
@@ -177,8 +137,8 @@ function PreRegistroPresidente() {
       localStorage.setItem('afaem_pre_registro_guardado', JSON.stringify(dataToSave));
 
       Swal.fire({
-        title: 'Progreso guardado',
-        text: 'Tus datos se han guardado. Puedes ir a pagar y cuando vuelvas regresarás a este paso para subir tu comprobante.',
+        title: 'Progreso guardado localmente',
+        text: 'Tus datos se han guardado en este navegador. Cuando tengas tu comprobante de pago, regresa para subirlo y generar tu orden oficial.',
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
       }).then(() => {

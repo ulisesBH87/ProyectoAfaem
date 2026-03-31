@@ -5,6 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Evita reinicios automáticos por cambios en archivos del backend o subidas
+    watch: {
+      ignored: ['**/backend/**', '**/uploads/**', '**/.git/**'],
+    },
     proxy: {
       '/ocr-api': {
         target: 'http://127.0.0.1:5001',

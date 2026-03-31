@@ -8,6 +8,8 @@ const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
 
   const fetchPagos = async () => {
     setLoading(true);
@@ -60,11 +62,6 @@ const AdminPagos = () => {
   const rechazados = pagos.filter(p => p.EstatusPagoId === 2).length;
   const montoTotal = pagos.reduce((sum, p) => sum + parseFloat(p.TotalPagar || 0), 0);
 
-  // Filter
-  const pagosFiltrados = filtroEstatus === 'todos' 
-    ? pagos 
-    : pagos.filter(p => p.EstatusPagoId === Number(filtroEstatus));
-
   const formatDate = (val) => {
     if (!val) return '—';
     return new Date(val).toLocaleDateString('es-MX', { 
@@ -72,6 +69,36 @@ const AdminPagos = () => {
       hour: '2-digit', minute: '2-digit' 
     });
   };
+
+  // Filter & Search & Sort
+  const pagosProcesados = React.useMemo(() => {
+    let result = [...pagos];
+
+    // 1. Filter by status
+    if (filtroEstatus !== 'todos') {
+      result = result.filter(p => p.EstatusPagoId === Number(filtroEstatus));
+    }
+
+    // 2. Search
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
+      result = result.filter(p => {
+        const dateStr = p.FechaEnvio ? formatDate(p.FechaEnvio).toLowerCase() : '';
+        return (p.Correo && p.Correo.toLowerCase().includes(query)) ||
+               (p.UsuarioId && String(p.UsuarioId).includes(query)) ||
+               (p.OrdenPagoId && String(p.OrdenPagoId).includes(query)) ||
+               (dateStr.includes(query));
+      });
+    }
+
+    // 3. Sort (Ascending/Descending by Order ID)
+    result.sort((a, b) => {
+      if (sortOrder === 'asc') return a.OrdenPagoId - b.OrdenPagoId;
+      return b.OrdenPagoId - a.OrdenPagoId;
+    });
+
+    return result;
+  }, [pagos, filtroEstatus, searchTerm, sortOrder]);
 
   const columns = [
     { key: 'OrdenPagoId', label: '# Orden' },
@@ -215,50 +242,98 @@ const AdminPagos = () => {
 
       {/* TABLE SECTION */}
       <div style={{ background: 'white', padding: '24px 28px', borderRadius: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-        <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>
             Órdenes de Pago
-            {filtroEstatus !== 'todos' && (
+            {pagosProcesados.length !== totalPagos && (
               <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginLeft: '10px' }}>
-                ({pagosFiltrados.length} resultados)
+                ({pagosProcesados.length} resultados)
               </span>
             )}
           </h3>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {/* Filter buttons */}
-            {[
-              { value: 'todos', label: 'Todos', color: '#0b4ea6' },
-              { value: '1', label: 'Pendientes', color: '#f59e0b' },
-              { value: '3', label: 'Aprobados', color: '#10b981' },
-              { value: '2', label: 'Rechazados', color: '#ef4444' }
-            ].map(f => (
-              <button 
-                key={f.value}
-                onClick={() => setFiltroEstatus(f.value)}
+          
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Search Input */}
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>🔍</span>
+              <input 
+                type="text" 
+                placeholder="Buscar por correo, ID o fecha..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  border: filtroEstatus === f.value ? `2px solid ${f.color}` : '1px solid #e2e8f0',
-                  background: filtroEstatus === f.value ? `${f.color}15` : 'white',
-                  color: filtroEstatus === f.value ? f.color : '#64748b',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
+                  padding: '8px 12px 8px 35px',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
+                  fontSize: '13px',
+                  width: '220px',
+                  outline: 'none',
                   transition: 'all 0.2s'
                 }}
-              >
-                {f.label}
-              </button>
-            ))}
+                onFocus={(e) => e.target.style.borderColor = '#0b4ea6'}
+                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+              />
+            </div>
+
+            {/* Sort Toggle */}
+            <button 
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: '700',
+                color: '#475569',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              {sortOrder === 'asc' ? '🔼 Ascendente' : '🔽 Descendente'}
+            </button>
+
+            {/* Filter buttons */}
+            <div style={{ display: 'flex', gap: '8px', background: '#f8fafc', padding: '4px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              {[
+                { value: 'todos', label: 'Todos', color: '#0b4ea6' },
+                { value: '1', label: 'Pendientes', color: '#f59e0b' },
+                { value: '3', label: 'Aprobados', color: '#10b981' },
+                { value: '2', label: 'Rechazados', color: '#ef4444' }
+              ].map(f => (
+                <button 
+                  key={f.value}
+                  onClick={() => setFiltroEstatus(f.value)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: filtroEstatus === f.value ? 'white' : 'transparent',
+                    color: filtroEstatus === f.value ? f.color : '#64748b',
+                    boxShadow: filtroEstatus === f.value ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
 
             <button 
               onClick={fetchPagos}
               style={{ 
-                background: '#f1f5f9', border: 'none', padding: '8px 16px', 
-                borderRadius: '8px', cursor: 'pointer', fontWeight: '700',
-                fontSize: '13px', color: '#475569', transition: 'all 0.2s',
-                marginLeft: '8px'
+                background: '#0b4ea6', border: 'none', padding: '9px 16px', 
+                borderRadius: '10px', cursor: 'pointer', fontWeight: '700',
+                fontSize: '12px', color: 'white', transition: 'all 0.2s',
+                boxShadow: '0 4px 6px rgba(11,78,166,0.2)'
               }}
+              onMouseOver={e => e.target.style.backgroundColor = '#063f82'}
+              onMouseOut={e => e.target.style.backgroundColor = '#0b4ea6'}
             >
               🔄 Actualizar
             </button>
@@ -266,7 +341,7 @@ const AdminPagos = () => {
         </div>
         <DashboardTable 
           columns={columns} 
-          data={pagosFiltrados} 
+          data={pagosProcesados} 
           isLoading={loading}
           emptyMessage="No hay órdenes de pago con este filtro"
         />
