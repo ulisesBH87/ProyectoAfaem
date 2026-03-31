@@ -16,8 +16,9 @@ import {
 } from '../../components/partials';
 import Swal from 'sweetalert2';
 import { validarFotografia } from '../../services/foto';
-import { registrarJugadorTemporal } from '../../services/teams';
+import { registrarJugadorTemporal, getAvailableSlots } from '../../services/teams';
 import '../../styles/dashboard.css';
+import { useRBAC } from '../../hooks/useRBAC';
 
 export default function RegistroJugadores() {
   const navigate = useNavigate();
@@ -36,13 +37,34 @@ export default function RegistroJugadores() {
     apellidoPaterno: '',
     apellidoMaterno: '',
     curp: '',
-    genero: '',
+    genero: 'masculino',
     edad: '',
     fechaNacimiento: '',
     direccion: ''
   });
 
   const [uploading, setUploading] = useState(false);
+  const [slotsInfo, setSlotsInfo] = useState({ disponibles: 0, total: 0 });
+  const [loadingSlots, setLoadingSlots] = useState(true);
+
+  React.useEffect(() => {
+    const fetchSlots = async () => {
+      if (!teamId) return;
+      try {
+        setLoadingSlots(true);
+        const data = await getAvailableSlots(teamId);
+        setSlotsInfo({
+          disponibles: data.slots_disponibles || 0,
+          total: data.total_slots || 0
+        });
+      } catch (err) {
+        console.error("Error al obtener slots:", err);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+    fetchSlots();
+  }, [teamId]);
 
   const documentTypes = [
     {
@@ -218,10 +240,41 @@ export default function RegistroJugadores() {
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     
-    if (!extractedData.nombreJugador || !extractedData.apellidoPaterno || !extractedData.curp) {
-      Swal.fire('Atención', 'Faltan datos de la identidad del jugador o CURP.', 'warning');
+    // Validaciones
+    const curpRegex = /^[A-Z]{4}\d{6}[A-Z]{6}[A-Z0-0]\d$/;
+    
+    if (!extractedData.nombreJugador?.trim()) {
+      Swal.fire('Atención', 'El nombre del jugador es obligatorio.', 'warning');
       return;
     }
+    if (!extractedData.apellidoPaterno?.trim()) {
+      Swal.fire('Atención', 'El apellido paterno es obligatorio.', 'warning');
+      return;
+    }
+    if (!extractedData.curp?.trim() || extractedData.curp.length !== 18) {
+      Swal.fire('Atención', 'La CURP debe tener exactamente 18 caracteres.', 'warning');
+      return;
+    }
+    if (!curpRegex.test(extractedData.curp)) {
+      Swal.fire('Atención', 'El formato de la CURP no es válido.', 'warning');
+      return;
+    }
+    if (!extractedData.fechaNacimiento) {
+      Swal.fire('Atención', 'La fecha de nacimiento es obligatoria.', 'warning');
+      return;
+    }
+    
+    // Verificar que al menos los documentos esenciales estén presentes
+    const missingDocs = [];
+    if (!documents.actaNacimiento) missingDocs.push('Acta de Nacimiento');
+    if (!documents.identificacion) missingDocs.push('Identificación');
+    if (!documents.fotografia) missingDocs.push('Fotografía');
+    
+    if (missingDocs.length > 0) {
+      Swal.fire('Documentación Incompleta', `Faltan los siguientes documentos: ${missingDocs.join(', ')}`, 'warning');
+      return;
+    }
+
     if (!teamId) {
       Swal.fire('Error', 'No se detectó el ID del equipo. Intenta regresar y volver a intentarlo.', 'error');
       return;
@@ -235,13 +288,14 @@ export default function RegistroJugadores() {
       formData.append('nombre', extractedData.nombreJugador);
       formData.append('primer_apellido', extractedData.apellidoPaterno);
       formData.append('segundo_apellido', extractedData.apellidoMaterno);
-      formData.append('curp', extractedData.curp);
+      formData.append('CURP', extractedData.curp);
       
-      let sexoId = 3;
+      let sexoId = 3; // No Binario
       if (extractedData.genero === 'masculino') sexoId = 1;
-      if (extractedData.genero === 'femenino') sexoId = 2;
+      else if (extractedData.genero === 'femenino') sexoId = 2;
       formData.append('sexo_id', sexoId);
       
+      // Asegurar formato YYYY-MM-DD
       let fechaISO = '';
       if (extractedData.fechaNacimiento) {
           if (extractedData.fechaNacimiento.includes('-')) {
@@ -252,12 +306,15 @@ export default function RegistroJugadores() {
           }
       }
       formData.append('fecha_nacimiento', fechaISO);
+      
+      // seguro_id (Valor por defecto o dinámico si es necesario)
+      formData.append('seguro_id', 1);
 
       // Los archivos deben ir en el mismo orden con el ID estático temporal solicitado (3)
+      // El backend espera una lista de archivos y una lista de IDs que coincidan en índice
       const docsParams = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
       docsParams.forEach((docKey) => {
         if (documents[docKey]) {
-          // Importante: Mandar como número o string que el backend convierta a lista
           formData.append('documento_afiliacion_ids', 3); 
           formData.append('archivos', documents[docKey]);
         }
@@ -328,15 +385,31 @@ export default function RegistroJugadores() {
                   }}>
                     Registrar jugador
                   </h1>
-                  <p style={{
-                    margin: '0',
-                    color: '#64748b',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    lineHeight: '1.5'
-                  }}>
-                    Sube el documento oficial para completar automáticamente la información del jugador.
-                  </p>
+                  <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '10px' }}>
+                    <p style={{
+                      margin: '0',
+                      color: '#64748b',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}>
+                      Sube el documento oficial para completar automáticamente la información.
+                    </p>
+                    {loadingSlots ? (
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>⏳ Cargando slots...</span>
+                    ) : (
+                      <span style={{ 
+                        backgroundColor: slotsInfo.disponibles > 0 ? '#dcfce7' : '#fee2e2',
+                        color: slotsInfo.disponibles > 0 ? '#166534' : '#991b1b',
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        border: `1px solid ${slotsInfo.disponibles > 0 ? '#86efac' : '#fecaca'}`
+                      }}>
+                        {slotsInfo.disponibles} / {slotsInfo.total} Slots disponibles
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -504,7 +577,7 @@ export default function RegistroJugadores() {
                   gap: '20px'
                 }}>
                   <EntradaFormulario
-                    etiqueta="Nombre del jugador"
+                    etiqueta="Nombre del jugador *"
                     tipo="text"
                     nombre="nombreJugador"
                     valor={extractedData.nombreJugador}
@@ -513,7 +586,7 @@ export default function RegistroJugadores() {
                   />
 
                   <EntradaFormulario
-                    etiqueta="Apellido paterno"
+                    etiqueta="Apellido paterno *"
                     tipo="text"
                     nombre="apellidoPaterno"
                     valor={extractedData.apellidoPaterno}
@@ -531,16 +604,17 @@ export default function RegistroJugadores() {
                   />
 
                   <EntradaFormulario
-                    etiqueta="CURP"
+                    etiqueta="CURP *"
                     tipo="text"
                     nombre="curp"
                     valor={extractedData.curp}
                     alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})}
-                    marcador="Ingresa la CURP (18 caracteres)"
+                    marcador="18 caracteres"
+                    longitudMaxima={18}
                   />
 
                   <EntradaSeleccion
-                    etiqueta="Género"
+                    etiqueta="Género *"
                     nombre="genero"
                     valor={extractedData.genero}
                     alCambiar={(e) => setExtractedData({...extractedData, genero: e.target.value})}
@@ -549,7 +623,6 @@ export default function RegistroJugadores() {
                       { valor: 'femenino', etiqueta: 'Femenino' },
                       { valor: 'otro', etiqueta: 'Otro' }
                     ]}
-                    marcador="Selecciona género"
                   />
 
                   <EntradaFormulario
@@ -562,7 +635,7 @@ export default function RegistroJugadores() {
                   />
 
                   <EntradaFormulario
-                    etiqueta="Fecha de nacimiento"
+                    etiqueta="Fecha de nacimiento *"
                     tipo="date"
                     nombre="fechaNacimiento"
                     valor={extractedData.fechaNacimiento || ''}

@@ -55,6 +55,22 @@ export default function PresidenteEquipo() {
           setUserInfo({ email });
         }
 
+        let availableSlots = null;
+        try {
+          // 1. Obtener ID de equipo temporal
+          const tempTeamInfo = await teamsService.getEquipoTemporalInfo();
+          if (tempTeamInfo && (Array.isArray(tempTeamInfo) ? tempTeamInfo.length > 0 : tempTeamInfo.id)) {
+            const teamId = Array.isArray(tempTeamInfo) ? tempTeamInfo[0].id : tempTeamInfo.id;
+            
+            // 2. Obtener slots con ese ID
+            const slotsData = await teamsService.getAvailableSlots(teamId);
+            availableSlots = slotsData.slots_disponibles;
+            console.log('✅ Slots disponibles:', availableSlots);
+          }
+        } catch (err) {
+          console.warn('No se pudo obtener información de slots temporales:', err);
+        }
+
         try {
           const teamsData = await teamsService.getUserTeams(email);
           const teamsList = teamsData.teams || [];
@@ -70,7 +86,8 @@ export default function PresidenteEquipo() {
             totalTeams: teamsList.length,
             totalPlayers: totalPlayers,
             pendingRequests: 0,
-            certifications: 1
+            certifications: 1,
+            slotsDisponibles: availableSlots // Agregado a stats
           });
         } catch (err) {
           console.warn('No se pudo obtener equipos:', err);
@@ -235,6 +252,39 @@ export default function PresidenteEquipo() {
 
   return (
     <div className="dashboard-content">
+      {/* SECCIÓN DE ESTADÍSTICAS */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+        gap: '20px', 
+        marginBottom: '40px' 
+      }}>
+        <StatCard 
+          title="Equipos Propios" 
+          value={stats.totalTeams} 
+          icon={<FaFootballBall />} 
+          iconType="primary" 
+        />
+        <StatCard 
+          title="Jugadores Registrados" 
+          value={stats.totalPlayers} 
+          icon={<FaUsers />} 
+          iconType="secondary" 
+        />
+        <StatCard 
+          title="Slots Disponibles" 
+          value={stats.slotsDisponibles !== null ? stats.slotsDisponibles : '...'} 
+          icon={<FaClipboard />} 
+          iconType="warning" 
+        />
+        <StatCard 
+          title="Certificaciones" 
+          value={stats.certifications} 
+          icon={<FaAward />} 
+          iconType="success" 
+        />
+      </div>
+
       {/* SECCIÓN "¿QUÉ QUIERES HACER HOY?" + SOLICITUDES PENDIENTES */}
       <div style={{ marginBottom: '40px' }}>
         <h3 style={{ margin: '0 0 20px 0', color: 'var(--text-main)', fontSize: '16px', fontWeight: '600' }}>
