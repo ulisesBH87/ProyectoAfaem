@@ -91,7 +91,7 @@ const DashboardSidebar = () => {
               AFAEM
             </h1>
             <p style={{ fontSize: '9px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase' }}>
-              Management System
+              Sistema de Gestión
             </p>
           </div>
         )}
@@ -193,7 +193,7 @@ const DashboardSidebar = () => {
         >
           <FaSignOutAlt style={{ fontSize: '20px' }} />
           {!isCollapsed && (
-            <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '700' }}>Sign Out</span>
+            <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '700' }}>Cerrar Sesión</span>
           )}
         </div>
 
