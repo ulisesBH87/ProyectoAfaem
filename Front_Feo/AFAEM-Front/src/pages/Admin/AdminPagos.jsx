@@ -65,9 +65,9 @@ const AdminPagos = () => {
 
   // Stats
   const totalPagos = pagos.length;
-  const pendientes = pagos.filter(p => p.EstatusPagoId === 1).length;
+  const pendientes = pagos.filter(p => p.EstatusPagoId === 2).length;
   const aprobados = pagos.filter(p => p.EstatusPagoId === 3).length;
-  const rechazados = pagos.filter(p => p.EstatusPagoId === 2).length;
+  const rechazados = pagos.filter(p => p.EstatusPagoId === 4).length;
   const montoTotal = pagos.reduce((sum, p) => sum + parseFloat(p.TotalPagar || 0), 0);
 
   const formatDate = (val) => {
@@ -139,9 +139,9 @@ const AdminPagos = () => {
       label: 'Estatus',
       render: (val) => {
         const config = { 
-          1: { label: 'Pendiente', bg: '#fef3c7', color: '#92400e', icon: <FaClock /> }, 
+          2: { label: 'Pendiente', bg: '#fef3c7', color: '#92400e', icon: <FaClock /> }, 
           3: { label: 'Aprobado', bg: '#dcfce7', color: '#166534', icon: <FaCheckCircle /> }, 
-          2: { label: 'Rechazado', bg: '#fee2e2', color: '#991b1b', icon: <FaTimesCircle /> } 
+          4: { label: 'Rechazado', bg: '#fee2e2', color: '#991b1b', icon: <FaTimesCircle /> } 
         };
         const c = config[val] || { label: 'Desconocido', bg: '#f1f5f9', color: '#64748b', icon: null };
         return (
@@ -159,7 +159,7 @@ const AdminPagos = () => {
       label: 'Acciones',
       render: (_, row) => (
         <div style={{ display: 'flex', gap: '8px' }}>
-          {row.EstatusPagoId === 1 && (
+          {row.EstatusPagoId === 2 && (
             <>
               <button 
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 3, 'Aprobar')}
@@ -169,7 +169,7 @@ const AdminPagos = () => {
                 Aprobar
               </button>
               <button 
-                onClick={() => handleUpdateEstatus(row.OrdenPagoId, 2, 'Rechazar')}
+                onClick={() => handleUpdateEstatus(row.OrdenPagoId, 4, 'Rechazar')}
                 style={{ 
                   background: 'white', color: 'var(--danger)', border: '1.5px solid var(--danger)33',
                   padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700'
@@ -180,7 +180,7 @@ const AdminPagos = () => {
             </>
           )}
           {row.EstatusPagoId === 3 && <span style={{ fontSize: '12px', color: 'var(--secondary)', fontWeight: '700' }}>Validado ✓</span>}
-          {row.EstatusPagoId === 2 && <span style={{ fontSize: '12px', color: 'var(--danger)', fontWeight: '700' }}>Rechazado</span>}
+          {row.EstatusPagoId === 4 && <span style={{ fontSize: '12px', color: 'var(--danger)', fontWeight: '700' }}>Rechazado</span>}
         </div>
       )
     }
@@ -230,9 +230,9 @@ const AdminPagos = () => {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
-              {['todos', '1', '3', '2'].map((val) => (
+              {['todos', '2', '3', '4'].map((val) => (
                 <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
-                  {val === 'todos' ? 'TODOS' : (val === '1' ? 'PENDIENTES' : (val === '3' ? 'APROBADOS' : 'RECHAZADOS'))}
+                  {val === 'todos' ? 'TODOS' : (val === '2' ? 'PENDIENTES' : (val === '3' ? 'APROBADOS' : 'RECHAZADOS'))}
                 </button>
               ))}
             </div>
