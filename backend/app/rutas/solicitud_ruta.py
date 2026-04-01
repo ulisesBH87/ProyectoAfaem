@@ -112,3 +112,9 @@ async def descargar_formato(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {str(e)}")
+
+
+@router.post("/solicitud-completa")
+def enviar_solicitud_completa(solicitud_id: int, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
+    resultado = solicitud_servicio.enviar_solicitud_completa_servicio(db, solicitud_id, usuario.UsuarioId)
+    return resultado

@@ -4,7 +4,9 @@ from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.repositorios import solicitud_repositorio
 from app.core.seguridad import obtener_usuario_actual
+from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 
+#Se crea la solicitud parcialmente, aún no se envía a administrador
 def crear_solicitud(db: Session, data, usuario):
     # 1. Obtener la persona vinculada al usuario
     persona = usuario.PersonaRelacion
@@ -82,3 +84,23 @@ def crear_solicitud_servicio(db, solicitud, usuarioid):
     db.commit()
 
     return {"solicitud_id": nueva_solicitud.SolicitudId, "mensaje": "Solicitud enviada correctamente"}
+
+def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
+
+    solicitud = solicitud_repositorio.obtener_solicitud_por_id(db, solicitud_id)
+
+    if not solicitud:
+        raise Exception("Solicitud no encontrada")
+
+    if solicitud.UsuarioId != usuario_id:
+        raise Exception("No tienes permiso para enviar esta solicitud")
+
+    if solicitud.EstatusValidacion == EstatusValidacionSolicitud.ESPERA:
+        raise Exception("La solicitud ya ha sido enviada")
+
+    #enviio
+    solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)
+    if not solicitud_completa:
+        raise Exception("Error al enviar la solicitud")
+    
+    return {"mensaje": "Solicitud enviada correctamente"}

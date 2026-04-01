@@ -1,6 +1,10 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas
 from app.modelos import CatalogoDocumentosPersonas, DocumentosEntregados
+from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
+from app.modelos.equipo_temporal_modelo import EquipoTemporal
+from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 
 
 #REQUISITOS
@@ -120,3 +124,43 @@ def obtener_solicitud_individual_repo(db:Session, solicitud_id: int):
         "EstatusSolicitud": estatus.Nombre,
         "TipoSolicitud": tipoSolicitud.NombreAfiliacion
     }
+
+
+def obtener_solicitud_por_id(db: Session, solicitud_id: int):
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+
+    if not solicitud:
+        return None
+
+    return solicitud
+
+def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+
+    if not solicitud:
+        return None
+
+    solicitud.EstatusValidacion = EstatusValidacionSolicitud.ESPERA
+    solicitud.FechaSolicitud = datetime.now()
+
+    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
+
+    #verificar que los slots estén completos
+    slots = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalId == equipo_temporal.EquipoTemporalId).all()
+    for slot in slots:
+        if not slot.Completo:
+            raise Exception("No se puede enviar la solicitud, hay jugadores sin registrar")
+    
+    #documentos del presidente y jugadores
+    todos_documentos = db.query(DocumentosEntregados).filter(DocumentosEntregados.SolicitudId == solicitud_id).all()
+    for doc in todos_documentos:
+        if not doc.RutaArchivo:
+            raise Exception("No se puede enviar la solicitud, hay documentos sin subir")
+        doc.FechaEntrega = datetime.now()
+        doc.EstadoValidacionId = EstatusValidacionSolicitud.ESPERA
+
+    db.commit()
+    db.refresh(solicitud)
+    db.refresh(equipo_temporal)
+
+    return solicitud
