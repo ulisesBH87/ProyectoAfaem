@@ -61,7 +61,8 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         )
 
         documentos_creados.append(doc)
-
+    
+    db.commit()
 
     return {
         "mensaje": "Documentos subidos",

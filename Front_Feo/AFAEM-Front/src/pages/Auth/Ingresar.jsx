@@ -49,7 +49,8 @@ export default function Ingresar() {
         localStorage.setItem('token', token);
         console.log('🔄 Sincronizando permisos con el backend...');
         const accessData = await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
-        currentEstatusId = accessData?.estatusId;
+        // Fallback: Prioridad a la respuesta del login, luego al servicio de permisos
+        currentEstatusId = data?.usuario?.estatusId || accessData?.estatusId;
         window.dispatchEvent(new Event('user-logged-in'));
       }
 
@@ -88,8 +89,8 @@ export default function Ingresar() {
         navigate('/admin/dashboard');
       } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
-      } else if (currentEstatusId && currentEstatusId >= 5) {
-        // Solo entra al dashboard si ya está aprobado/activo (Estatus 5, 6 o 7)
+      } else if (currentEstatusId && currentEstatusId >= 4) {
+        // Solo entra al dashboard si ya está aprobado/activo o en revisión (Estatus 4, 5, 6 o 7)
         navigate('/presidente-equipo');
       } else {
         // En cualquier otro caso (Estatus 1, 2, 3, 4 o nuevo), al pre-registro
