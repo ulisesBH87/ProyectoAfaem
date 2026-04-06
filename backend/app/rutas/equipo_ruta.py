@@ -12,7 +12,8 @@ from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroR
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, MiembrosEquipo, Personas, RolesDeEquipo, LigaModalidadCategoriaRama, 
-    CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro
+    CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
+    EquipoTemporal, Usuario
 )
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
@@ -173,12 +174,16 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             CatalogoModalidad.NombreModalidad.label("Modalidad"),
             CatalogoRamas.Nombre.label("Rama"),
             Equipos.NumeroJugadores,
-            Equipos.Estatus
+            Equipos.Estatus,
+            EquipoTemporal.SolicitudId
         ).join(LigaModalidadCategoriaRama, Equipos.LigaModalidadCategoriaRamaId == LigaModalidadCategoriaRama.LigaModalidadCategoriaRamaId)\
          .join(CatalogoCategorias, LigaModalidadCategoriaRama.CategoriaId == CatalogoCategorias.CategoriaId)\
          .join(Ligas, LigaModalidadCategoriaRama.LigaId == Ligas.LigaId)\
          .join(CatalogoModalidad, LigaModalidadCategoriaRama.ModalidadId == CatalogoModalidad.ModalidadId)\
-         .join(CatalogoRamas, LigaModalidadCategoriaRama.RamaId == CatalogoRamas.RamaId)
+         .join(CatalogoRamas, LigaModalidadCategoriaRama.RamaId == CatalogoRamas.RamaId)\
+         .join(PresidenteEquipo, Equipos.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+         .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
+         .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)
 
         # 2. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
@@ -201,7 +206,8 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
                "Modalidad": r.Modalidad,
                "Rama": r.Rama,
                "NumeroJugadores": r.NumeroJugadores,
-               "Estatus": bool(r.Estatus)
+               "Estatus": bool(r.Estatus),
+               "SolicitudId": r.SolicitudId
            } for r in resultados
         ]
     except Exception as e:

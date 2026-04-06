@@ -22,3 +22,4 @@ class UserAccessEsquema(BaseModel):
     Roles: List[str]
     Permisos: List[str]
     Menus: List[MenuEsquema]
+    EstatusId: Optional[int] = None

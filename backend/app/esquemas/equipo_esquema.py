@@ -22,6 +22,7 @@ class EquipoResponse(BaseModel):
     Rama: str
     NumeroJugadores: int
     Estatus: bool
+    SolicitudId: Optional[int] = None
 
     class Config:
         from_attributes = True
