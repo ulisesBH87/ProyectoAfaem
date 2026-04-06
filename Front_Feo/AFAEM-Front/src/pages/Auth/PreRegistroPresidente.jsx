@@ -10,8 +10,11 @@ import { PDFDocument } from 'pdf-lib';
 import { API_BASE } from '../../config/config';
 import { parseJwt } from '../../services/auth';
 
+import { useRBAC } from '../../hooks/useRBAC';
+
 function PreRegistroPresidente() {
   const navigate = useNavigate();
+  const { estatusId, refreshAccess } = useRBAC();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   // Estados Generales
@@ -73,6 +76,31 @@ function PreRegistroPresidente() {
     };
     verificarEstadoPago();
   }, []);
+
+  // SINCRONIZAR PASO ACTUAL CON EL ESTATUS REAL DEL BACKEND
+  useEffect(() => {
+    if (estatusId) {
+      console.log('🔄 Sincronizando Pre-Registro con estatusId:', estatusId);
+      if (estatusId >= 5) {
+        // Ya está aprobado completamente
+        navigate('/presidente-equipo');
+      } else if (estatusId === 4) {
+        // Documentos personales en revisión por el admin
+        setEstadoPago(3); // Para que sepa que el pago ya fue validado
+        setPasoActual(4); // Nuevo paso: Revisión de documentos
+      } else if (estatusId === 3) {
+        // Ya pagó, falta subir los documentos personales (INE, Acta, etc)
+        setPasoActual(3);
+      } else if (estatusId === 2) {
+        // Pago en revisión
+        setEstadoPago(1); // 1 = En espera en la UI local
+        setPasoActual(2);
+      } else if (estatusId === 1) {
+        // Pago pendiente
+        setPasoActual(1);
+      }
+    }
+  }, [estatusId, navigate]);
 
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState(0);
@@ -680,13 +708,16 @@ function PreRegistroPresidente() {
       };
       localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
 
+      // Refresh RBAC permissions before navigating
+      if (refreshAccess) await refreshAccess();
+      
       Swal.fire({
         title: '¡Registro Exitoso!',
-        text: 'Tus documentos han sido subidos correctamente.',
+        text: 'Tus documentos han sido subidos correctamente. El administrador procederá a validarlos.',
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
       }).then(() => {
-        navigate('/presidente-equipo');
+        setPasoActual(4); // Ir a la pantalla de revisión
       });
 
     } catch (err) {
@@ -1570,6 +1601,29 @@ function PreRegistroPresidente() {
               >
                 {loading ? 'Enviando...' : 'Finalizar Registro ✓'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 4: DOCUMENTOS EN REVISION */}
+        {pasoActual === 4 && (
+          <div className="pre-registro-section">
+            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <div style={{ fontSize: '80px', marginBottom: '30px' }}>⏳</div>
+              <h2 style={{ color: 'var(--text-main)', fontSize: '28px', fontWeight: '800', marginBottom: '15px' }}>
+                Documentos en Revisión
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto 40px', lineHeight: '1.6' }}>
+                Excelente. Tus documentos han sido recibidos correctamente. El administrador está validando tu identidad y acreditación.
+              </p>
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '25px', display: 'inline-block', textAlign: 'left' }}>
+                <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#34d399', fontWeight: '700' }}>✓ Pago Validado</p>
+                <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#f59e0b', fontWeight: '700' }}>⏳ Revisión de Documentos: EN PROCESO</p>
+                <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>○ Acceso al Dashboard: PENDIENTE</p>
+              </div>
+              <div style={{ marginTop: '40px' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Puedes cerrar sesión y volver más tarde para revisar tu estado.</p>
+              </div>
             </div>
           </div>
         )}

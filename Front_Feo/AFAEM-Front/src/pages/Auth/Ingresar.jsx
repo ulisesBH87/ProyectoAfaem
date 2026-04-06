@@ -82,18 +82,16 @@ export default function Ingresar() {
       
       console.log('ROL USUARIO:', role);
 
+      // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---
       if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
         navigate('/admin/dashboard');
       } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
-      } else if (role === 'PRESIDENTE_EQUIPO') {
-        // Si ya tiene un estatus (solicitud iniciada), ir al dashboard directamente
-        if (currentEstatusId && currentEstatusId >= 1) {
-          navigate('/presidente-equipo');
-        } else {
-          navigate('/pre-registro-presidente');
-        }
+      } else if (currentEstatusId && currentEstatusId >= 5) {
+        // Solo entra al dashboard si ya está aprobado/activo (Estatus 5, 6 o 7)
+        navigate('/presidente-equipo');
       } else {
+        // En cualquier otro caso (Estatus 1, 2, 3, 4 o nuevo), al pre-registro
         navigate('/pre-registro-presidente');
       }
     } catch (error) {
