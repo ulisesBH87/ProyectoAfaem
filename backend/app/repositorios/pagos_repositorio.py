@@ -126,12 +126,14 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
 def estatus_pago_repo(db, orden_pago_id, estatus):
 
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
+    if not orden:
+        return None
 
     orden.EstatusPagoId = estatus
     
     if estatus != 3: #si el pago no es aceptado
         db.commit()
-        return 0 
+        return orden 
     
     solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
 
@@ -143,12 +145,9 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
 
     #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
-
-    presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
-
-    # Si se aprueba el pago, crear el equipo temporal y los slots de jugadores
-    if estatus == 3:
-        crear_equipo_temporal_repo(db, orden, solicitud.SolicitudId)
+    
+    if presidente:
+        presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
 
     db.commit()
 

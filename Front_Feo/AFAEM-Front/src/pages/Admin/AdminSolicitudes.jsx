@@ -7,6 +7,7 @@ import { getSolicitudes } from '../../services/solicitud';
 import { getSolicitudDetalle, getSolicitudDocumentosMock, updateSolicitudEstatus } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DetalleSolicitudModal from '../../components/Admin/DetalleSolicitudModal';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 
 export default function AdminSolicitudes() {
   const navigate = useNavigate();
@@ -24,6 +25,13 @@ export default function AdminSolicitudes() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [datosRevision, setDatosRevision] = useState(null);
   const [cargandoRevision, setCargandoRevision] = useState(false);
+
+  // Estados para filtros, búsqueda y paginación
+  const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const loadSolicitudes = async () => {
@@ -114,6 +122,44 @@ export default function AdminSolicitudes() {
 
     loadSolicitudes();
   }, [navigate]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtroEstatus, searchTerm, sortOrder]);
+
+  const filteredSolicitudes = React.useMemo(() => {
+    let result = [...solicitudes];
+    
+    // Filtro por estatus
+    if (filtroEstatus !== 'todos') {
+      result = result.filter(s => s.EstatusValidacion === Number(filtroEstatus));
+    }
+    
+    // Búsqueda
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
+      result = result.filter(s => 
+        (s.Nombre && s.Nombre.toLowerCase().includes(query)) ||
+        (s.PrimerApellido && s.PrimerApellido.toLowerCase().includes(query)) ||
+        (s.Correo && s.Correo.toLowerCase().includes(query)) ||
+        (s.Equipo && s.Equipo.toLowerCase().includes(query)) ||
+        (s.SolicitudId && String(s.SolicitudId).includes(query))
+      );
+    }
+    
+    // Ordenamiento
+    result.sort((a, b) => {
+      if (sortOrder === 'asc') return a.SolicitudId - b.SolicitudId;
+      return b.SolicitudId - a.SolicitudId;
+    });
+    
+    return result;
+  }, [solicitudes, filtroEstatus, searchTerm, sortOrder]);
+
+  const paginatedSolicitudes = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredSolicitudes.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredSolicitudes, currentPage]);
 
   const handleVerDetalles = async (id) => {
     try {
@@ -514,12 +560,45 @@ export default function AdminSolicitudes() {
         </div>
       </div>
 
-      <DashboardTable
-        columns={columns}
-        data={solicitudes}
-        isLoading={loading}
-        emptyMessage="No hay solicitudes registradas"
-      />
+      <div className="card" style={{ padding: '32px' }}>
+        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de Solicitudes</h3>
+          
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input type="text" placeholder="Buscar solicitud..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="form-input" style={{ paddingLeft: '40px', width: '240px' }} />
+            </div>
+
+            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
+            </button>
+
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
+              {['todos', '2', '4', '1', '0'].map((val) => (
+                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
+                  {val === 'todos' ? 'TODAS' : (val === '2' ? 'PENDIENTES' : (val === '4' ? 'DOCS' : (val === '1' ? 'APROBADAS' : 'RECHAZADAS')))}
+                </button>
+              ))}
+            </div>
+
+            <button onClick={() => window.location.reload()} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
+              <FaSyncAlt />
+            </button>
+          </div>
+        </div>
+
+        <DashboardTable
+          columns={columns}
+          data={paginatedSolicitudes}
+          isLoading={loading}
+          totalItems={filteredSolicitudes.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          emptyMessage="No hay solicitudes que coincidan con la búsqueda."
+        />
+      </div>
 
       <DetalleSolicitudModal 
         estaAbierto={modalAbierto}
