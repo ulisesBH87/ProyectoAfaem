@@ -124,7 +124,7 @@ async def crear_equipo_completo(
                     with open(ruta_archivo, "wb") as buffer:
                         buffer.write(await archivo.read())
                     
-                    # Aquí podrías registrar la ruta en la tabla de documentos si fuera necesario.
+                    # Aquí podrías registrar la ruta en la tabla de documentos si fuera necesario parse.
                     # Por ahora el usuario sólo solicitó guardarlos físicamente.
 
         # 4. Actualizar Estatus del Presidente y Rol del Usuario (Automatización Final)
