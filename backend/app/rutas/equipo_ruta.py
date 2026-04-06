@@ -261,3 +261,51 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
         print(f"Error en get_mis_jugadores_reales: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
+
+# --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
+
+from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
+from app.repositorios.equipo_repositorio import obtener_directorio_equipos_repo, obtener_directorio_jugadores_repo, obtener_documentos_jugador_repo
+
+@router.get("/directorio-equipos", response_model=List[DirectorioEquipoResponse])
+def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    # Protección, idealmente verificar si es admin (RolId == 1)
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        return obtener_directorio_equipos_repo(db)
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.get("/directorio-jugadores", response_model=List[DirectorioJugadorResponse])
+def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        return obtener_directorio_jugadores_repo(db)
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.get("/jugador/{persona_id}/documentos")
+def get_documentos_jugador(persona_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+    
+    try:
+        docs = obtener_documentos_jugador_repo(db, persona_id)
+        # Formatear la URL completa si RutaArchivo es relativa
+        for doc in docs:
+            ruta = doc["RutaArchivo"]
+            # Fix if the route is a local path
+            doc["url"] = f"/{ruta}" if not ruta.startswith("http") else ruta
+        return docs
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

@@ -129,6 +129,25 @@ export const updateSolicitudEstatus = async (solicitudId, estatus) => {
   });
 };
 
+// ==============================================================
+//           DIRECTORIO GLOBAL (NUEVO REQUERIMIENTO)
+// ==============================================================
+
+export const getEquiposDirectorio = async () => {
+  const response = await api.get('/equipo-temporal/directorio-equipos');
+  return response.data;
+};
+
+export const getJugadoresDirectorio = async () => {
+  const response = await api.get('/equipo-temporal/directorio-jugadores');
+  return response.data;
+};
+
+export const getJugadorDocumentos = async (personaId) => {
+  const response = await api.get(`/equipo-temporal/jugador/${personaId}/documentos`);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -137,5 +156,8 @@ export default {
   getAfiliaciones,
   getRequisitosPorTipo,
   getSolicitudDocumentosMock,
-  updateSolicitudEstatus
+  updateSolicitudEstatus,
+  getEquiposDirectorio,
+  getJugadoresDirectorio,
+  getJugadorDocumentos
 };
