@@ -27,6 +27,7 @@ export default function ConfigurarEquipo() {
     modality: '',
     category: '',
     season: '',
+    rama: '',
     agreedToTerms: false
   });
 
@@ -39,6 +40,7 @@ export default function ConfigurarEquipo() {
     lastNameMaterno: '',
     curp: '',
     birthDate: '',
+    sexo_id: 1, // 1: Masculino, 2: Femenino (según tu catálogo)
     insuranceType: '',
     documents: {}
   });
@@ -107,33 +109,38 @@ export default function ConfigurarEquipo() {
     }
   }, []);
 
-  const modalities = [
-    { id: 'futbol7', name: 'Fútbol 7', description: 'Hasta 14 jugadores', min: 7 },
-    { id: 'futbol9', name: 'Fútbol 9', description: 'Hasta 18 jugadores', min: 9 },
-    { id: 'futbol11', name: 'Fútbol 11', description: 'Hasta 25 jugadores', min: 11 }
-  ].map(m => ({
-    ...m,
-    disabled: false
-  }));
+  const [catalogs, setCatalogs] = useState({
+    ligas: [],
+    categorias: [],
+    modalidades: [],
+    ramas: [],
+    seguros: [],
+    combinaciones: []
+  });
 
-  const categories = [
-    { id: 'infantil', name: 'Infantil (2012-2013)' },
-    { id: 'juvenil', name: 'Juvenil (2008-2011)' },
-    { id: 'mayor', name: 'Mayor Libre' },
-    { id: 'femenil', name: 'Femenil' },
-    { id: 'veteranos', name: 'Veteranos +35' }
-  ];
+  const [loadingCatalogs, setLoadingCatalogs] = useState(true);
 
-  const seasons = [
-    { id: 'clausura2026', name: 'Clausura 2026' },
-    { id: 'apertura2026', name: 'Apertura 2026' },
-    { id: 'anual2026', name: 'Temporada Anual 2026' }
-  ];
+  // Cargar catálogos al montar
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      try {
+        setLoadingCatalogs(true);
+        const data = await teamsService.getCatalogs();
+        setCatalogs(data);
+      } catch (error) {
+        console.error("Error al cargar catálogos:", error);
+        Swal.fire('Error', 'No se pudieron cargar los catálogos del servidor.', 'error');
+      } finally {
+        setLoadingCatalogs(false);
+      }
+    };
+    loadCatalogs();
+  }, []);
 
   const handleOptionChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: parseInt(value)
     }));
     setErrors(prev => ({
       ...prev,
@@ -153,6 +160,7 @@ export default function ConfigurarEquipo() {
     if (!formData.modality) newErrors.modality = 'Selecciona una modalidad';
     if (!formData.category) newErrors.category = 'Selecciona una categoría';
     if (!formData.season) newErrors.season = 'Selecciona una temporada';
+    if (!formData.rama) newErrors.rama = 'Selecciona una rama';
     if (!formData.agreedToTerms) newErrors.agreedToTerms = 'Debes revisar y aceptar los términos';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -164,6 +172,21 @@ export default function ConfigurarEquipo() {
       Swal.fire('Atención', 'Por favor completa todos los campos requeridos', 'warning');
       return;
     }
+    
+    // Buscar la combinación válida de LigaModalidadCategoriaRamaId
+    const combinacion = catalogs.combinaciones.find(c => 
+      c.liga_id === formData.season && 
+      c.modalidad_id === formData.modality && 
+      c.categoria_id === formData.category &&
+      c.rama_id === formData.rama
+    );
+
+    if (!combinacion) {
+      Swal.fire('Atención', 'La combinación de Liga, Modalidad, Categoría y Rama seleccionada no está disponible actualmente.', 'info');
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, liga_mod_cat_ram_id: combinacion.id }));
     setShowModal(true);
   };
 
@@ -253,6 +276,13 @@ export default function ConfigurarEquipo() {
           firstName = extractedData.nombre;
         }
 
+        // Inferir sexo desde CURP si está disponible
+        let inferredSexo = 1;
+        if (extractedData.curp && extractedData.curp.length >= 11) {
+          const char = extractedData.curp.charAt(10).toUpperCase();
+          if (char === 'M') inferredSexo = 2;
+        }
+
         setCurrentPlayer(prev => ({
           ...prev,
           firstName,
@@ -260,6 +290,7 @@ export default function ConfigurarEquipo() {
           lastNameMaterno,
           curp: extractedData.curp || prev.curp,
           birthDate: extractedData.fecha_nac || prev.birthDate,
+          sexo_id: inferredSexo,
           documents: { ...prev.documents, [docKey]: file }
         }));
 
@@ -486,18 +517,18 @@ export default function ConfigurarEquipo() {
                         <FaFootballBall /> Modalidad
                       </h5>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {modalities.map((mod) => (
+                        {catalogs.modalidades.map((mod) => (
                           <label key={mod.id} style={{
-                            display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px', borderRadius: '12px', cursor: mod.disabled ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s', border: '1px solid',
+                            display: 'flex', alignItems: 'center', gap: '15px', padding: '18px', borderRadius: '16px', cursor: 'pointer',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', border: '2px solid',
                             borderColor: formData.modality === mod.id ? '#0b4ea6' : '#f1f5f9',
-                            backgroundColor: formData.modality === mod.id ? '#eff6ff' : (mod.disabled ? '#f8fafc' : 'white'),
-                            opacity: mod.disabled ? 0.6 : 1
+                            backgroundColor: formData.modality === mod.id ? '#eff6ff' : 'white',
+                            position: 'relative', overflow: 'hidden'
                           }}>
-                            <input type="radio" name="modality" value={mod.id} checked={formData.modality === mod.id} disabled={mod.disabled} onChange={(e) => handleOptionChange('modality', e.target.value)} style={{ marginTop: '4px' }} />
-                            <div>
-                              <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{mod.name}</div>
-                              <small style={{ color: '#64748b', display: 'block', fontSize: '12px' }}>{mod.description}</small>
+                            {formData.modality === mod.id && <div style={{ position: 'absolute', top: 0, right: 0, width: '40px', height: '40px', background: '#0b4ea6', clipPath: 'polygon(100% 0, 0 0, 100% 100%)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', padding: '5px' }}><div style={{ color: 'white', fontSize: '10px' }}>✓</div></div>}
+                            <input type="radio" name="modality" value={mod.id} checked={formData.modality === mod.id} onChange={(e) => handleOptionChange('modality', e.target.value)} style={{ width: '20px', height: '20px', accentColor: '#0b4ea6' }} />
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontWeight: '800', display: 'block', color: '#1e293b', fontSize: '15px' }}>{mod.nombre}</span>
                             </div>
                           </label>
                         ))}
@@ -510,7 +541,7 @@ export default function ConfigurarEquipo() {
                         <FaTags /> Categoría
                       </h5>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {categories.map((cat) => (
+                        {catalogs.categorias.map((cat) => (
                           <label key={cat.id} style={{
                             display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer',
                             transition: 'all 0.2s', border: '1px solid',
@@ -518,7 +549,7 @@ export default function ConfigurarEquipo() {
                             backgroundColor: formData.category === cat.id ? '#eff6ff' : 'white'
                           }}>
                             <input type="radio" name="category" value={cat.id} checked={formData.category === cat.id} onChange={(e) => handleOptionChange('category', e.target.value)} />
-                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{cat.name}</span>
+                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{cat.nombre}</span>
                           </label>
                         ))}
                       </div>
@@ -530,7 +561,7 @@ export default function ConfigurarEquipo() {
                         <FaCalendar /> Temporada
                       </h5>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {seasons.map((s) => (
+                        {catalogs.ligas.map((s) => (
                           <label key={s.id} style={{
                             display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer',
                             transition: 'all 0.2s', border: '1px solid',
@@ -538,7 +569,27 @@ export default function ConfigurarEquipo() {
                             backgroundColor: formData.season === s.id ? '#eff6ff' : 'white'
                           }}>
                             <input type="radio" name="season" value={s.id} checked={formData.season === s.id} onChange={(e) => handleOptionChange('season', e.target.value)} />
-                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{s.name}</span>
+                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{s.nombre}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* RAMA */}
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                      <h5 style={{ marginBottom: '20px', color: '#0b4ea6', fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <FaTags /> Rama
+                      </h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {catalogs.ramas.map((r) => (
+                          <label key={r.id} style={{
+                            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer',
+                            transition: 'all 0.2s', border: '1px solid',
+                            borderColor: formData.rama === r.id ? '#0b4ea6' : '#f1f5f9',
+                            backgroundColor: formData.rama === r.id ? '#eff6ff' : 'white'
+                          }}>
+                            <input type="radio" name="rama" value={r.id} checked={formData.rama === r.id} onChange={(e) => handleOptionChange('rama', e.target.value)} />
+                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{r.nombre}</span>
                           </label>
                         ))}
                       </div>
@@ -640,11 +691,54 @@ export default function ConfigurarEquipo() {
                        </div>
                     </div>
 
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP</label>
+                         <input 
+                           type="text" 
+                           value={currentPlayer.curp}
+                           onChange={(e) => {
+                             const val = e.target.value.toUpperCase();
+                             let sId = currentPlayer.sexo_id;
+                             if (val.length >= 11) {
+                               const char = val.charAt(10);
+                               if (char === 'M') sId = 2;
+                               else if (char === 'H') sId = 1;
+                             }
+                             setCurrentPlayer({...currentPlayer, curp: val, sexo_id: sId});
+                           }}
+                           placeholder="ABCD..." 
+                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                         />
+                       </div>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac.</label>
+                         <input 
+                           type="text" 
+                           value={currentPlayer.birthDate}
+                           onChange={e => setCurrentPlayer({...currentPlayer, birthDate: e.target.value})}
+                           placeholder="DD/MM/AAAA" 
+                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                         />
+                       </div>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo</label>
+                         <select 
+                           value={currentPlayer.sexo_id}
+                           onChange={e => setCurrentPlayer({...currentPlayer, sexo_id: parseInt(e.target.value)})}
+                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
+                         >
+                           <option value={1}>MASCULINO</option>
+                           <option value={2}>FEMENINO</option>
+                         </select>
+                       </div>
+                    </div>
+
                     <div style={{ marginBottom: '25px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Asignar Seguro</label>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
-                        {Object.keys(asignacionSeguros).map(id => {
-                          const seg = catalogoSeguros.find(s => s.id === id);
+                        {catalogs.seguros.map(seg => {
+                          const id = seg.id.toString();
                           const count = players.filter(p => p.insuranceType === id).length;
                           const available = (asignacionSeguros[id] || 0) - count;
                           return (
@@ -761,6 +855,7 @@ export default function ConfigurarEquipo() {
                             lastNameMaterno: '',
                             curp: '',
                             birthDate: '',
+                            sexo_id: 1,
                             insuranceType: '',
                             documents: {}
                           });
@@ -777,12 +872,11 @@ export default function ConfigurarEquipo() {
                     <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
                       <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>Resumen de Seguros</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                        {Object.keys(asignacionSeguros).map(id => {
-                          const seg = catalogoSeguros.find(s => s.id === id);
-                          if (!seg) return null;
+                        {catalogs.seguros.map(seg => {
+                          const id = seg.id.toString();
                           const count = players.filter(p => p.insuranceType === id).length;
-                          const total = asignacionSeguros[id];
-                          const percent = (count / total) * 100;
+                          const total = asignacionSeguros[id] || 0;
+                          const percent = total > 0 ? (count / total) * 100 : 0;
                           return (
                             <div key={id}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
@@ -814,7 +908,7 @@ export default function ConfigurarEquipo() {
                                </div>
                                <div style={{ flex: 1 }}>
                                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{p.firstName} {p.lastNamePaterno}</div>
-                                 <div style={{ fontSize: '11px', color: '#64748b' }}>{catalogoSeguros.find(s => s.id === p.insuranceType)?.nombre}</div>
+                                 <div style={{ fontSize: '11px', color: '#64748b' }}>{catalogs.seguros.find(s => s.id.toString() === p.insuranceType)?.nombre}</div>
                                </div>
                                <button onClick={() => setPlayers(players.filter(pl => pl.id !== p.id))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                             </div>
@@ -835,20 +929,25 @@ export default function ConfigurarEquipo() {
                   <button 
                     onClick={async () => {
                         try {
-                          const userEmail = localStorage.getItem('email') || '';
-                          await teamsService.createTeam({
+                          Swal.fire({
+                            title: 'Guardando Equipo...',
+                            text: 'Por favor espere mientras procesamos el registro y documentos.',
+                            allowOutsideClick: false,
+                            didOpen: () => { Swal.showLoading(); }
+                          });
+
+                          await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
-                            modality: formData.modality,
-                            category: formData.category,
-                            season: formData.season,
-                            email: userEmail,
-                            teamLogo: modalData.teamLogo,
+                            liga_mod_cat_ram_id: formData.liga_mod_cat_ram_id,
                             players: players
                           });
-                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
+
+                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente en la base de datos.`);
                           setShowSuccessModal(true);
+                          Swal.close();
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
+                          Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
                     }}
                     disabled={players.length === 0}
@@ -895,8 +994,9 @@ export default function ConfigurarEquipo() {
             </div>
 
             <div style={{ background: '#f1f5f9', padding: '20px', borderRadius: '16px', marginBottom: '30px' }}>
-              <div style={{ fontSize: '14px', marginBottom: '6px' }}><strong style={{ color: '#475569' }}>Modalidad:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{modalities.find(m => m.id === formData.modality)?.name}</span></div>
-              <div style={{ fontSize: '14px' }}><strong style={{ color: '#475569' }}>Categoría:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{categories.find(c => c.id === formData.category)?.name}</span></div>
+              <div style={{ fontSize: '14px', marginBottom: '6px' }}><strong style={{ color: '#475569' }}>Modalidad:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.modalidades.find(m => m.id === formData.modality)?.nombre}</span></div>
+              <div style={{ fontSize: '14px', marginBottom: '6px' }}><strong style={{ color: '#475569' }}>Categoría:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.categorias.find(c => c.id === formData.category)?.nombre}</span></div>
+              <div style={{ fontSize: '14px' }}><strong style={{ color: '#475569' }}>Rama:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.ramas.find(r => r.id === formData.rama)?.nombre}</span></div>
             </div>
 
             <div style={{ display: 'flex', gap: '15px' }}>

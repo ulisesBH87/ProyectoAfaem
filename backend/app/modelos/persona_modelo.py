@@ -29,3 +29,4 @@ class Personas(Base):
     UsuarioRelacion = relationship("Usuario", back_populates="PersonaRelacion")
     
     EquipoTemporalJugadorRelacion = relationship("EquipoTemporalJugador", back_populates="PersonaRelacion")
+    MiembrosRelacion = relationship("MiembrosEquipo", back_populates="PersonaRelacion")

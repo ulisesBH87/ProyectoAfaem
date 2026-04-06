@@ -38,6 +38,9 @@ def crear_solicitud(db: Session, data, usuario):
     return solicitud
 
 #Todas las solicitudes
+def obtener_solicitudes_usuarios_servicio(db: Session):
+    return solicitud_repositorio.obtener_solicitudes_usuarios_repo(db)
+
 def obtener_solicitudes_servicio(db: Session):
 
     solicitudes = solicitud_repositorio.obtener_solicitudes_repo(db)

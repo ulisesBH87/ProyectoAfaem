@@ -184,46 +184,44 @@ export default function PresidenteEquipo() {
       );
     }
 
-    // ESTATUS 3: Sube tus documentos
+    // ESTATUS 3: Falta subir documentos PERSONALES del presidente
     if (estatusId === 3) {
       return (
         <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <Tarjeta titulo="Sube tus documentos">
-             <p>Tu pago ha sido aprobado. Ahora es necesario subir la documentación del equipo y jugadores para la afiliación final.</p>
+          <Alerta tipo="alerta" titulo="Documentación Personal Pendiente" mensaje="Tu pago fue aprobado, pero aún falta que subas tus documentos personales (INE, Acta de Nacimiento, etc.) para completar tu perfil." />
+          <Tarjeta titulo="Completa tu Perfil de Presidente">
+             <p>Para poder comenzar a registrar tu equipo y jugadores, el sistema requiere validar tu identidad primero.</p>
              <div style={{ display: 'flex', gap: '10px' }}>
-               <BotonPrimario etiqueta="Configurar Equipo" alHacerClick={() => navigate('/presidente-equipo/configurar-equipo')} />
-               <BotonSecundario etiqueta="Registrar Jugadores" alHacerClick={() => navigate('/presidente-equipo/registro-jugadores')} />
+               <BotonPrimario etiqueta="Subir mis Documentos" alHacerClick={() => navigate('/pre-registro-presidente')} />
              </div>
           </Tarjeta>
         </div>
       );
     }
 
-    // ESTATUS 5: Panel con limitaciones
-    if (estatusId === 5) {
+    // ESTATUS 4: Documentos en revisión por el Administrador
+    if (estatusId === 4) {
       return (
-        <div className="dashboard-content">
-          <Alerta tipo="info" titulo="Acceso Restringido" mensaje="Tu cuenta tiene acceso limitado. Algunas funcionalidades estarán disponibles una vez que se complete la validación final." />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-            <Tarjeta titulo="Mis Jugadores">
-               <BotonSecundario etiqueta="Ver lista" alHacerClick={() => navigate('/presidente-equipo/mis-jugadores')} />
-            </Tarjeta>
-            <Tarjeta titulo="Reportes">
-               <p>Próximamente...</p>
-            </Tarjeta>
+        <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+             <div style={{ fontSize: '64px', marginBottom: '20px' }}>📄</div>
+             <h2 style={{ color: '#0b2546' }}>Documentos en Revisión</h2>
+             <p style={{ color: '#64748b' }}>Tu documentación personal ya fue recibida y está siendo validada por un administrador. Recibirás respuesta pronto para poder continuar con el registro de tu equipo.</p>
           </div>
         </div>
       );
     }
 
-    // ESTATUS 6 (y 4): Documentos en verificación
-    if (estatusId === 4 || estatusId === 6) {
+    // ESTATUS 5: Pre-aprobado (Panel con limitaciones o preparativos)
+    if (estatusId === 5) {
       return (
-        <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-             <div style={{ fontSize: '64px', marginBottom: '20px' }}>📄</div>
-             <h2 style={{ color: '#0b2546' }}>Documentos en proceso</h2>
-             <p style={{ color: '#64748b' }}>Tus documentos están siendo verificados, tendrás respuesta en X días. ¡Gracias por tu paciencia!</p>
+        <div className="dashboard-content">
+          <Alerta tipo="info" titulo="Pre-Aprobación Exitosa" mensaje="Tus documentos fueron validados satisfactoriamente. Ahora puedes comenzar con la configuración preliminar de tu equipo." />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', maxWidth: '600px', margin: '0 auto' }}>
+            <Tarjeta titulo="Mi Equipo">
+               <p>Ya puedes comenzar a configurar los detalles de tu liga y equipo.</p>
+               <BotonPrimario etiqueta="Configurar Equipo" alHacerClick={() => navigate('/presidente-equipo/configuracion')} />
+            </Tarjeta>
           </div>
         </div>
       );

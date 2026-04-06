@@ -22,6 +22,11 @@ from .presidente_equipo_modelo import PresidenteEquipo
 from .catalogo_tipo_proceso import CatalogoTipoProceso
 from .equipo_temporal_modelo import EquipoTemporal
 from .equipo_temporal_jugador_modelo import EquipoTemporalJugador
+from .rol_equipo_modelo import RolesDeEquipo
+from .catalogos_liga_modelo import CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas
+from .liga_modelo import LigaModalidadCategoriaRama
+from .equipo_modelo import Equipos
+from .miembro_equipo_modelo import MiembrosEquipo
 
 from .menus_modelo import Menus
 from .permisos_modelo import Permisos

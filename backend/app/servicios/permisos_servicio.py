@@ -52,7 +52,7 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
                 estatus_id = 0
 
     if not roles_ids:
-        return {"Roles": [], "Permisos": [], "Menus": [], "EstatusId": estatus_id}
+        return {"Roles": [], "Permisos": [], "Menus": [], "estatusId": estatus_id}
 
     # 4. Obtener Permisos asociados a esos roles
     permisos_rels = db.query(RelRolPermisos).filter(RelRolPermisos.RolId.in_(roles_ids)).all()
@@ -104,5 +104,5 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
         "Roles": roles_nombres,
         "Permisos": permisos_slugs,
         "Menus": resultado_menus,
-        "EstatusId": estatus_id
+        "estatusId": estatus_id
     }

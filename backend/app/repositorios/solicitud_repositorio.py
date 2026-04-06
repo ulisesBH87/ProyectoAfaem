@@ -6,6 +6,10 @@ from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from fastapi import HTTPException
+from app.modelos import (
+    CatalogoDocumentosPersonas, DocumentosEntregados, EquipoTemporal, 
+    OrdenPago, Equipos, PresidenteEquipo
+)
 
 #REQUISITOS
 def crear_requisito_repo(db: Session, tipo_afiliacion_id: int, documento_persona_id: int):
@@ -102,6 +106,28 @@ def crear_documento_solicitud_repo(db, solicitud_id, persona_id, documento_afili
 
 #OBTENER SOLICITUDES
 #Todas
+
+def obtener_solicitudes_usuarios_repo(db: Session):
+    return (
+        db.query(
+            Solicitud.SolicitudId,
+            Solicitud.FechaSolicitud,
+            Solicitud.EstatusValidacion,
+            Personas.Nombre,
+            Personas.PrimerApellido,
+            Usuario.Correo,
+            Equipos.NombreEquipo.label("Equipo"),
+            OrdenPago.TotalPagar.label("Monto")
+        )
+        .join(Usuario, Solicitud.UsuarioId == Usuario.UsuarioId)
+        .join(Personas, Usuario.PersonaId == Personas.PersonaId)
+        .outerjoin(EquipoTemporal, Solicitud.SolicitudId == EquipoTemporal.SolicitudId)
+        .outerjoin(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
+        .outerjoin(PresidenteEquipo, Personas.PersonaId == PresidenteEquipo.PersonaId)
+        .outerjoin(Equipos, PresidenteEquipo.PresidenteEquipoId == Equipos.PresidenteEquipoId)
+        .all()
+    )
+
 def obtener_solicitudes_repo(db: Session):
 
     solicitudes = db.query(Solicitud).options(
@@ -182,41 +208,18 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
 
 
     return {
-        "solicitud": {
-            "id": solicitud.SolicitudId,
-            "fecha": solicitud.FechaSolicitud,
-            "estatus": solicitud.EstatusValidacion,
-            "tipo_afiliacion": solicitud.TipoAfiliacionId
-        },
-        "usuario": {
-            "correo": usuario.Correo,
-            "rol_id": usuario.RolId
-        },
-        "persona": {
-            "persona_id": persona.PersonaId,
-            "nombre": persona.Nombre,
-            "primer_apellido": persona.PrimerApellido,
-            "segundo_apellido": persona.SegundoApellido,
-            "curp": persona.CURP,
-            "sexo_id": persona.SexoId,
-            "fecha_nacimiento": persona.FechaNacimiento
-        },
-        "equipo": {
-            "equipo_temporal_id": equipo.EquipoTemporalId,
-            "cantidad_jugadores": equipo.CantidadJugadoresPagados,
-            "orden_pago_id": equipo.OrdenPagoId,
-            "tipo_proceso_id": equipo.TipoProcesoId
-        },
-        "presidente_documentos": [
-            {
-                "documento_id": d.DocumentoAfiliacionId,
-                "ruta": d.RutaArchivo,
-                "fecha": d.FechaEntrega,
-                "estatus": d.EstadoValidacionId
-            }
-            for d in docs_presidente
-        ],
-        "jugadores": jugadores
+        "Nombre": persona.Nombre if persona else "",
+        "PrimerApellido": persona.PrimerApellido if persona else "",
+        "SegundoApellido": persona.SegundoApellido if persona else "",
+        "CURP": persona.CURP if persona else "",
+        "RFC": persona.RFC if persona else "",
+        "Sexo": sexo.Nombre if sexo else "",
+        "FechaNacimiento": persona.FechaNacimiento if persona else None,
+        "Email": usuario.Correo,
+        "FechaSolicitud": SolicitudUsuario.FechaSolicitud,
+        "EstatusSolicitud": estatus.Nombre if estatus else "",
+        "TipoSolicitud": tipoSolicitud.NombreAfiliacion if tipoSolicitud else "",
+        "SolicitudId": SolicitudUsuario.SolicitudId
     }
 
 def obtener_solicitud_por_id(db: Session, solicitud_id: int):

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
 from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena, RegistroAdmin
+from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.esquemas.auth_esquema import TokenResponse
 from app.servicios.autenticacion_servicio import CorreoYaRegistradoError
 from app.servicios.autenticacion_servicio import registrar_usuario_servicio, iniciar_sesion, cambiar_contrasena_servicio, registrar_admin_servicio
@@ -53,6 +54,14 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
     token_generado = crear_token(datos_token)
 
     persona = usuarioIntentoSesion.PersonaRelacion
+    
+    # Obtener EstatusId (solo para Presidentes de Equipo)
+    estatus_id = None
+    if persona:
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+        if presidente:
+            estatus_id = presidente.EstatusId
+
     return {
         "access_token": token_generado,
         "token_type": "bearer",
@@ -61,7 +70,8 @@ def login(data: InicioSesion, db:Session = Depends(get_db)) -> TokenResponse:
             "correo": usuarioIntentoSesion.Correo,
             "rol": usuarioIntentoSesion.RolRelacion.Nombre,
             "nombre": persona.Nombre if persona else None,
-            "telefono": getattr(persona, "NumeroTelefono", None)
+            "telefono": getattr(persona, "NumeroTelefono", None),
+            "estatusId": estatus_id
         }
     }
 
@@ -81,7 +91,7 @@ def cambiar_contrasena(data: CambiarContrasena, db: Session = Depends(get_db), u
 
 #oauth2
 @router.post("/iniciar-sesion-oauth", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
+def login_oauth(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
     usuarioIntentoSesion = iniciar_sesion(db, form_data.username, form_data.password)
 
     if not usuarioIntentoSesion:
@@ -99,6 +109,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     token_generado = crear_token(datos_token)
 
     persona = usuarioIntentoSesion.PersonaRelacion
+
+    # Obtener EstatusId (solo para Presidentes de Equipo)
+    estatus_id = None
+    if persona:
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+        if presidente:
+            estatus_id = presidente.EstatusId
+
     return {
         "access_token": token_generado,
         "token_type": "bearer",
@@ -107,6 +125,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             "correo": usuarioIntentoSesion.Correo,
             "rol": usuarioIntentoSesion.RolRelacion.Nombre,
             "nombre": persona.Nombre if persona else None,
-            "telefono": getattr(persona, "NumeroTelefono", None)
+            "telefono": getattr(persona, "NumeroTelefono", None),
+            "estatusId": estatus_id
         }
     }

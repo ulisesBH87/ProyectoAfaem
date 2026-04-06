@@ -3,6 +3,7 @@ import StadiumBg from '../../assets/stadium.jpg';
 import { Link, useNavigate } from 'react-router-dom';
 import { login, setAuthToken, pingBackend, parseJwt } from '../../services/auth';
 import { useRBAC } from '../../hooks/useRBAC';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -48,7 +49,8 @@ export default function Ingresar() {
         localStorage.setItem('token', token);
         console.log('🔄 Sincronizando permisos con el backend...');
         const accessData = await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
-        currentEstatusId = accessData?.estatusId;
+        // Fallback: Prioridad a la respuesta del login, luego al servicio de permisos
+        currentEstatusId = data?.usuario?.estatusId || accessData?.estatusId;
         window.dispatchEvent(new Event('user-logged-in'));
       }
 
@@ -82,18 +84,16 @@ export default function Ingresar() {
       
       console.log('ROL USUARIO:', role);
 
+      // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---
       if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
         navigate('/admin/dashboard');
       } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
-      } else if (role === 'PRESIDENTE_EQUIPO') {
-        // Si ya tiene un estatus (solicitud iniciada), ir al dashboard directamente
-        if (currentEstatusId && currentEstatusId >= 1) {
-          navigate('/presidente-equipo');
-        } else {
-          navigate('/pre-registro-presidente');
-        }
+      } else if (currentEstatusId && currentEstatusId >= 4) {
+        // Solo entra al dashboard si ya está aprobado/activo o en revisión (Estatus 4, 5, 6 o 7)
+        navigate('/presidente-equipo');
       } else {
+        // En cualquier otro caso (Estatus 1, 2, 3, 4 o nuevo), al pre-registro
         navigate('/pre-registro-presidente');
       }
     } catch (error) {
@@ -218,8 +218,11 @@ export default function Ingresar() {
           border: none;
           cursor: pointer;
           color: rgba(255,255,255,0.6);
-          font-size: 20px;
+          font-size: 18px;
           padding: 5px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           transition: color 0.2s;
         }
         .toggle-password:hover { color: white; }
@@ -314,7 +317,7 @@ export default function Ingresar() {
                 className="toggle-password"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
             <div style={{ textAlign: 'right', marginTop: '10px' }}>
