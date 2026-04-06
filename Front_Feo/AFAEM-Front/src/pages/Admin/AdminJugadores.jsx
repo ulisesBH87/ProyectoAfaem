@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getJugadoresDirectorio, getJugadorDocumentos } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaPlus, FaEdit } from 'react-icons/fa';
 
 export default function AdminJugadores() {
   const navigate = useNavigate();
@@ -118,6 +118,52 @@ export default function AdminJugadores() {
     }
   };
 
+  const handleEditarJugador = (jugador) => {
+    Swal.fire({
+      title: 'Editar Jugador',
+      html: `
+        <div style="text-align: left; display: flex; flex-direction: column; gap: 15px;">
+          <div>
+            <label style="font-weight: 600; font-size: 13px;">Nombre Completo</label>
+            <input id="swal-jg-nombre" class="swal2-input" value="${jugador.NombreCompleto}" style="margin-top: 5px; width: 90%;">
+          </div>
+          <div>
+            <label style="font-weight: 600; font-size: 13px;">CURP</label>
+            <input id="swal-jg-curp" class="swal2-input" value="${jugador.CURP}" style="margin-top: 5px; width: 90%;">
+          </div>
+          <div>
+            <label style="font-weight: 600; font-size: 13px;">Estatus</label>
+            <select id="swal-jg-estatus" class="swal2-select" style="margin-top: 5px; width: 90%; padding: 10px;">
+              <option value="1" ${jugador.Estatus ? 'selected' : ''}>Activo (Aprobado)</option>
+              <option value="0" ${!jugador.Estatus ? 'selected' : ''}>Baja (Inactivo)</option>
+            </select>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar Cambios',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0b4ea6',
+      preConfirm: () => {
+        const nombre = document.getElementById('swal-jg-nombre').value;
+        const curp = document.getElementById('swal-jg-curp').value;
+        const estatus = document.getElementById('swal-jg-estatus').value;
+        if (!nombre || !curp) {
+          Swal.showValidationMessage('El nombre y el CURP son obligatorios');
+        }
+        return { nombre, curp, estatus };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Funcionalidad de Backend Pendiente',
+          text: `Se simuló la actualización del jugador ${result.value.nombre}`
+        });
+      }
+    });
+  };
+
   const columns = [
     { key: "MiembroEquipoId", label: "ID" },
     { key: "NombreCompleto", label: "Jugador" },
@@ -156,6 +202,13 @@ export default function AdminJugadores() {
         >
           <FaFileDownload /> Docs
         </button>
+        <button 
+          className="btn btn-sm btn-outline-secondary"
+          style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#f1f5f9', color: '#334155', border: 'none' }}
+          onClick={() => handleEditarJugador(j)}
+        >
+          <FaEdit /> Editar
+        </button>
       </div>
     )
   }));
@@ -190,13 +243,20 @@ export default function AdminJugadores() {
           <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de Jugadores Aprobados</h2>
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Visualiza y descarga documentos de toda la matrícula activa de la liga.</p>
         </div>
-        <div className="section-actions">
+        <div className="section-actions" style={{ display: 'flex', gap: '10px' }}>
           <button 
             className="btn btn-primary"
             onClick={() => window.location.reload()}
-            style={{ padding: '10px 20px', backgroundColor: '#0b4ea6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}
+            style={{ padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            🔄 Actualizar
+            <FaSyncAlt />
+          </button>
+          <button 
+            className="btn btn-primary"
+            onClick={() => navigate('/admin/jugadores/crear')}
+            style={{ padding: '10px 20px', backgroundColor: '#0b4ea6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FaPlus /> Registrar Jugador
           </button>
         </div>
       </div>

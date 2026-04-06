@@ -18,7 +18,9 @@ const AdminSolicitudes = lazy(() => import('./pages/Admin/AdminSolicitudes'));
 const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 const AdminPagos = lazy(() => import('./pages/Admin/AdminPagos'));
 const AdminEquipos = lazy(() => import('./pages/Admin/AdminEquipos'));
+const AdminCrearEquipo = lazy(() => import('./pages/Admin/AdminCrearEquipo'));
 const AdminJugadores = lazy(() => import('./pages/Admin/AdminJugadores'));
+const AdminCrearJugador = lazy(() => import('./pages/Admin/AdminCrearJugador'));
 const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
 const AdminGuard = lazy(() => import('./routes/AdminGuard'));
 const RegistroJugadores = lazy(() => import('./pages/Jugadores/RegistroJugadores'));
@@ -72,7 +74,9 @@ function App() {
             <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
             <Route path="/admin/pagos" element={<AdminGuard><AdminPagos /></AdminGuard>} />
             <Route path="/admin/equipos" element={<AdminGuard><AdminEquipos /></AdminGuard>} />
+            <Route path="/admin/equipos/crear" element={<AdminGuard><AdminCrearEquipo /></AdminGuard>} />
             <Route path="/admin/jugadores" element={<AdminGuard><AdminJugadores /></AdminGuard>} />
+            <Route path="/admin/jugadores/crear" element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
             <Route path="/admin/usuarios-roles" element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path="/admin/configuracion" element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
           </Route>

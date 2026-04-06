@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getEquiposDirectorio } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye } from 'react-icons/fa';
 
 export default function AdminEquipos() {
   const navigate = useNavigate();
@@ -110,6 +110,47 @@ export default function AdminEquipos() {
     });
   };
 
+  const handleEditarEquipo = (equipo) => {
+    Swal.fire({
+      title: 'Editar Equipo',
+      html: `
+        <div style="text-align: left; display: flex; flex-direction: column; gap: 15px;">
+          <div>
+            <label style="font-weight: 600; font-size: 13px;">Nombre del Equipo</label>
+            <input id="swal-eq-nombre" class="swal2-input" value="${equipo.NombreEquipo}" style="margin-top: 5px; width: 90%;">
+          </div>
+          <div>
+            <label style="font-weight: 600; font-size: 13px;">Estatus de Operación</label>
+            <select id="swal-eq-estatus" class="swal2-select" style="margin-top: 5px; width: 90%; padding: 10px;">
+              <option value="1" ${equipo.Estatus ? 'selected' : ''}>Activo</option>
+              <option value="0" ${!equipo.Estatus ? 'selected' : ''}>Inactivo</option>
+            </select>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar Cambios',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0b4ea6',
+      preConfirm: () => {
+        const nombre = document.getElementById('swal-eq-nombre').value;
+        const estatus = document.getElementById('swal-eq-estatus').value;
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre es obligatorio');
+        }
+        return { nombre, estatus };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Funcionalidad de Backend Pendiente',
+          text: `Se solicitó actualizar ${result.value.nombre} a Estatus ${result.value.estatus}`
+        });
+      }
+    });
+  };
+
   const columns = [
     { key: "EquipoId", label: "ID" },
     { key: "NombreEquipo", label: "Equipo" },
@@ -143,10 +184,17 @@ export default function AdminEquipos() {
       <div style={{ display: 'flex', gap: '8px' }}>
         <button 
           className="btn btn-sm btn-outline-primary"
-          style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px' }}
+          style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
           onClick={() => handleVerDetalles(eq)}
         >
-          🔍 Ver
+          <FaEye /> Ver
+        </button>
+        <button 
+          className="btn btn-sm btn-outline-secondary"
+          style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#f1f5f9', color: '#334155', border: 'none' }}
+          onClick={() => handleEditarEquipo(eq)}
+        >
+          <FaEdit /> Editar
         </button>
       </div>
     )
@@ -182,10 +230,29 @@ export default function AdminEquipos() {
           <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Directorio de Equipos</h2>
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Visualiza todos los equipos que ya completaron su registro.</p>
         </div>
-        <div className="section-actions">
+        <div className="section-actions" style={{ display: 'flex', gap: '10px' }}>
           <button 
             className="btn btn-primary"
             onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#f1f5f9',
+              color: '#334155',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <FaSyncAlt />
+          </button>
+          <button 
+            className="btn btn-primary"
+            onClick={() => navigate('/admin/equipos/crear')}
             style={{
               padding: '10px 20px',
               backgroundColor: '#0b4ea6',
@@ -194,10 +261,13 @@ export default function AdminEquipos() {
               borderRadius: '6px',
               cursor: 'pointer',
               fontWeight: '600',
-              fontSize: '14px'
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            🔄 Actualizar
+            <FaPlus /> Crear Equipo
           </button>
         </div>
       </div>
