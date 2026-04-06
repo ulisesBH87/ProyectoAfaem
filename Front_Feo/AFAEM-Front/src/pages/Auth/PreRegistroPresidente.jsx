@@ -681,7 +681,6 @@ function PreRegistroPresidente() {
         fechaRegistro: new Date().toISOString()
       };
       localStorage.setItem('afaem_pre_registro', JSON.stringify(preRegistroData));
-
       Swal.fire({
         title: '¡Registro Exitoso!',
         text: 'Tus documentos han sido subidos correctamente.',
