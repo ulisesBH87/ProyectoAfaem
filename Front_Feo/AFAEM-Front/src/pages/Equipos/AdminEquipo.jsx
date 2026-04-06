@@ -165,11 +165,46 @@ export default function AdminEquipo() {
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#0b4ea6',
       cancelButtonColor: '#94a3b8'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        Swal.fire('¡Opcion Simulada!', 'En un entorno real aquí se abriría un formulario para editar al jugador.', 'success');
-      }
     });
+  };
+  
+  const handleFinalizarRegistro = async () => {
+    if (!team?.SolicitudId) {
+      Swal.fire('Error', 'No se encontró una solicitud vinculada a este equipo.', 'error');
+      return;
+    }
+
+    const { isConfirmed } = await Swal.fire({
+      title: '¿Finalizar registro de equipo?',
+      text: "Se enviará toda la documentación de tus jugadores al administrador para su validación final. Ya no podrás editar datos hasta que sean revisados.",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, finalizar y enviar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0b4ea6',
+      cancelButtonColor: '#94a3b8'
+    });
+
+    if (isConfirmed) {
+      try {
+        setLoading(true);
+        await teamsService.finalizarSolicitudCompleta(team.SolicitudId);
+        
+        await Swal.fire({
+          title: '¡Registro Enviado!',
+          text: 'La documentación del equipo ha sido enviada correctamente. El administrador revisará los datos pronto.',
+          icon: 'success',
+          confirmButtonColor: '#0b4ea6'
+        });
+        
+        // Recargar datos para actualizar la UI
+        window.location.reload();
+      } catch (error) {
+        Swal.fire('Error', 'Hubo un problema al finalizar el registro. Por favor intenta de nuevo.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
@@ -316,6 +351,14 @@ export default function AdminEquipo() {
 
                     {/* BOTONES */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '200px' }}>
+                      {team.status !== 'activo' && team.SolicitudId && (
+                        <BotonPrimario 
+                          etiqueta="✅ Finalizar Registro"
+                          alHacerClick={handleFinalizarRegistro}
+                          tamanio="medio"
+                          estilo={{ backgroundColor: '#166534', borderColor: '#166534' }}
+                        />
+                      )}
                       <BotonPrimario 
                         etiqueta="🏆 Inscribir equipo a liga"
                         alHacerClick={() => navigate(`/inscribir-equipo-liga/${teamId}`)}

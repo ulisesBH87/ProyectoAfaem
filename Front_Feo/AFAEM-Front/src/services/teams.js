@@ -339,6 +339,22 @@ export const createTeamCompleto = async (data) => {
   }
 };
 
+/**
+ * FINALIZA LA SOLICITUD COMPLETA (ENVÍA AL ADMIN)
+ */
+export const finalizarSolicitudCompleta = async (solicitudId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.post(`/solicitud/solicitud-completa?solicitud_id=${solicitudId}`, null, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error finalizando solicitud:', error);
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   getUserTeams,
@@ -351,5 +367,6 @@ export default {
   certifyUser,
   registrarJugadorTemporal,
   getAvailableSlots,
-  getEquipoTemporalInfo
+  getEquipoTemporalInfo,
+  finalizarSolicitudCompleta
 };
