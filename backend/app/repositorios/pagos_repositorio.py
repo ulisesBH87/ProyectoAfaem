@@ -123,7 +123,7 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
     
     orden.RutaVoucher = ruta
     orden.FechaEnvio = datetime.now()
-    orden.EstatusPagoId = 1 #comprobante subido
+    orden.EstatusPagoId = EstatusValidacionPago.ESPERA #ENVIADO (ESPERA)
 
     return orden
 
