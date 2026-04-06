@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.db.sesion import get_db
 from typing import List, Optional
 import traceback
@@ -101,16 +102,28 @@ async def crear_equipo_completo(
         # 3. Procesar Jugadores
         for index, p_data in enumerate(players_info):
             # a. Crear Persona
-            nueva_persona = Personas(
-                Nombre=p_data["nombre"],
-                PrimerApellido=p_data["primer_apellido"],
-                SegundoApellido=p_data.get("segundo_apellido"),
-                CURP=p_data["curp"],
-                SexoId=p_data["sexo_id"],
-                FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None
-            )
-            db.add(nueva_persona)
-            db.flush()
+            try:
+                nueva_persona = Personas(
+                    Nombre=p_data["nombre"],
+                    PrimerApellido=p_data["primer_apellido"],
+                    SegundoApellido=p_data.get("segundo_apellido"),
+                    CURP=p_data["curp"],
+                    SexoId=p_data["sexo_id"],
+                    FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None
+                )
+                db.add(nueva_persona)
+                db.flush()
+            except IntegrityError as e:
+                if "check_curp_persona_longitud" in str(e):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"La CURP '{p_data['curp']}' del jugador {p_data['nombre']} {p_data['primer_apellido']} debe tener exactamente 18 caracteres."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Error al registrar al jugador {p_data['nombre']} {p_data['primer_apellido']}: {str(e)}"
+                    )
 
             # b. Crear MiembroEquipo (Rol Jugador = 3)
             nuevo_miembro = MiembrosEquipo(

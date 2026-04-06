@@ -1,5 +1,7 @@
 from datetime import datetime
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException
 from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas
 from app.modelos import CatalogoDocumentosPersonas, DocumentosEntregados
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
@@ -75,18 +77,34 @@ def crear_solicitud_repo(db, usuario_id, estatus_validacion_id, tipo_afiliacion_
     return nueva
 
 def crear_solicitud_repos(db: Session, solicitud: Solicitud, usuario: Usuario, persona: Personas):
-    db.add(solicitud)
+    try:
+        db.add(solicitud)
 
-    usuariosolicitud = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
-    
-    persona.CURP = usuariosolicitud.CURP
-    persona.RFC = usuariosolicitud.RFC
-    persona.SexoId = usuariosolicitud.SexoId
-    persona.FechaNacimiento = usuariosolicitud.FechaNacimiento
+        usuariosolicitud = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
+        
+        persona.CURP = usuariosolicitud.CURP
+        persona.RFC = usuariosolicitud.RFC
+        persona.SexoId = usuariosolicitud.SexoId
+        persona.FechaNacimiento = usuariosolicitud.FechaNacimiento
 
-    db.commit()
-    db.refresh(solicitud)
-    return solicitud
+        db.commit()
+        db.refresh(solicitud)
+        return solicitud
+    except IntegrityError as e:
+        db.rollback()
+        if "check_curp_persona_longitud" in str(e):
+            raise HTTPException(
+                status_code=400,
+                detail="La CURP proporcionado no tiene el formato correcto. Debe tener exactamente 18 caracteres alfanuméricos."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error al procesar la solicitud: {str(e)}"
+            )
+    except Exception as e:
+        db.rollback()
+        raise e
 
 
 #DOCUMENTOS
