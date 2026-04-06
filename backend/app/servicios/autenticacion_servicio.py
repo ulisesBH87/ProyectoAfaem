@@ -4,9 +4,15 @@ from app.modelos.persona_modelo import Personas
 from app.repositorios.usuario_repositorio import registrar_usuario_repo, obtener_por_correo, obtener_usuario_por_id, cambiar_contrasena_repo, registrar_admin_repo
 from app.core.seguridad import generar_hash, verificar_contrasena, generar_salt
 
-
+class CorreoYaRegistradoError(Exception):
+    pass
 
 def registrar_usuario_servicio(data, db: Session):
+    
+    correo_existente = obtener_por_correo(db, data.Correo)
+    if correo_existente:
+        raise CorreoYaRegistradoError()
+    
     salt = generar_salt()
     hashed_password = generar_hash(salt, data.Contrasena)
 

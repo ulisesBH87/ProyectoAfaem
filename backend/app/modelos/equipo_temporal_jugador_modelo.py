@@ -14,3 +14,6 @@ class EquipoTemporalJugador(Base):
 
     PersonaId = Column(ForeignKey("Personas.PersonaId"))
     PersonaRelacion = relationship("Personas", back_populates="EquipoTemporalJugadorRelacion")
+
+    SeguroId = Column(Integer, ForeignKey("CatalogoSeguros.SeguroId"))
+    SeguroRelacion = relationship("Seguro", back_populates="EquipoTemporalJugadorRelacion")

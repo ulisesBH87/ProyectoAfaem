@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.enums.roles_enum import Rol
@@ -29,6 +31,18 @@ def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
 
         return persona, usuario
 
+    except IntegrityError as e:
+        db.rollback()
+        if "check_curp_persona_longitud" in str(e):
+            raise HTTPException(
+                status_code=400,
+                detail="La CURP proporcionada no tiene el formato correcto. Debe tener exactamente 18 caracteres alfanuméricos."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error al registrar el usuario: {str(e)}"
+            )
     except Exception as e:
         db.rollback()
         raise e
@@ -50,6 +64,18 @@ def registrar_admin_repo(db: Session, persona: Personas, usuario: Usuario):
 
         return persona, usuario
 
+    except IntegrityError as e:
+        db.rollback()
+        if "check_curp_persona_longitud" in str(e):
+            raise HTTPException(
+                status_code=400,
+                detail="La CURP proporcionada no tiene el formato correcto. Debe tener exactamente 18 caracteres alfanuméricos."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error al registrar el administrador: {str(e)}"
+            )
     except Exception as e:
         db.rollback()
         raise e

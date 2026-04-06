@@ -34,12 +34,12 @@ const AdminDashboard = () => {
         const pagosList = Array.isArray(pagos) ? pagos : [];
 
         const totalIngreso = pagosList
-          .filter(p => p.EstatusValidacion === 1)
-          .reduce((acc, curr) => acc + parseFloat(curr.MontoTotal), 0);
+          .filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 3)
+          .reduce((acc, curr) => acc + parseFloat(curr.MontoTotal || curr.TotalPagar || 0), 0);
 
         setStatsData({
           solicitudes: solicitudesList.length,
-          pagosPendientes: pagosList.filter(p => p.EstatusValidacion === 2).length,
+          pagosPendientes: pagosList.filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 2).length,
           totalIngreso: totalIngreso,
           equipos: solicitudesList.filter(s => s.EstatusValidacion === 1).length
         });
@@ -64,10 +64,10 @@ const AdminDashboard = () => {
       {/* WELCOME SECTION */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
-          Dashboard Overview
+          Resumen del Panel
         </h1>
         <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>
-          Welcome back, Admin. Here is what's happening today.
+          Bienvenido de nuevo, Administrador. Esto es lo que está sucediendo hoy.
         </p>
       </div>
 
@@ -115,9 +115,9 @@ const AdminDashboard = () => {
         {/* RECENT ACTIVITY */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Recent Activity</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Actividad Reciente</h3>
             <button style={{ background: 'none', color: 'var(--primary)', fontWeight: '700', fontSize: '14px' }}>
-              View All
+              Ver Todo
             </button>
           </div>
           
@@ -131,7 +131,7 @@ const AdminDashboard = () => {
               ))
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-                <p style={{ fontSize: '14px', fontWeight: '500' }}>No recent activity to show</p>
+                <p style={{ fontSize: '14px', fontWeight: '500' }}>No hay actividad reciente para mostrar</p>
               </div>
             )}
           </div>
@@ -144,24 +144,24 @@ const AdminDashboard = () => {
             color: 'white',
             border: 'none'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px' }}>Quick Actions</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px' }}>Acciones Rápidas</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button className="btn-premium" style={{ width: '100%', background: 'rgba(255,255,255,0.1)', boxShadow: 'none' }}>
-                <FaTrophy style={{ marginRight: '10px' }} /> Create New Tournament
+                <FaTrophy style={{ marginRight: '10px' }} /> Crear Nuevo Torneo
               </button>
               <button className="btn-premium" style={{ width: '100%', background: 'rgba(255,255,255,0.1)', boxShadow: 'none' }}>
-                📣 Send Global Announcement
+                📣 Enviar Anuncio Global
               </button>
             </div>
           </div>
 
           <div className="card" style={{ textAlign: 'center' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>Server Health</h4>
-            <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--secondary)', marginBottom: '8px' }}>SYSTEM OPERATIONAL</div>
+            <h4 style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>Estado del Servidor</h4>
+            <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--secondary)', marginBottom: '8px' }}>SISTEMA EN OPERACIÓN</div>
             <div style={{ height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ width: '100%', height: '100%', background: 'var(--secondary)' }} className="skeleton" />
             </div>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px', fontWeight: '600' }}>Last check: Just now</p>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px', fontWeight: '600' }}>Última revisión: Justo ahora</p>
           </div>
         </div>
       </div>

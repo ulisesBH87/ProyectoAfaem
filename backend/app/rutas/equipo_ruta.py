@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.db.sesion import get_db
 from typing import List, Optional
 import traceback
@@ -8,6 +9,7 @@ import os
 from datetime import datetime
 from app.core.seguridad import obtener_usuario_actual
 
+from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio
 from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
@@ -17,6 +19,17 @@ from app.modelos import (
 )
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
+
+@router.get("/equipos-temporales")
+def obtener_equipos_temporales_por_usuario(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    usuario_id = usuario.UsuarioId
+    equipos = obtener_equipos_temporales_por_usuario_servicio(db, usuario_id)
+    return equipos
+
+@router.get("/slots")
+async def obtener_slots(equipo_temporal_id: int,db: Session = Depends(get_db)):
+    slots = obtener_equipo_temporal_servicio(db, equipo_temporal_id)
+    return slots
 
 UPLOAD_DIR = "uploads"
 DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
@@ -89,16 +102,28 @@ async def crear_equipo_completo(
         # 3. Procesar Jugadores
         for index, p_data in enumerate(players_info):
             # a. Crear Persona
-            nueva_persona = Personas(
-                Nombre=p_data["nombre"],
-                PrimerApellido=p_data["primer_apellido"],
-                SegundoApellido=p_data.get("segundo_apellido"),
-                CURP=p_data["curp"],
-                SexoId=p_data["sexo_id"],
-                FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None
-            )
-            db.add(nueva_persona)
-            db.flush()
+            try:
+                nueva_persona = Personas(
+                    Nombre=p_data["nombre"],
+                    PrimerApellido=p_data["primer_apellido"],
+                    SegundoApellido=p_data.get("segundo_apellido"),
+                    CURP=p_data["curp"],
+                    SexoId=p_data["sexo_id"],
+                    FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None
+                )
+                db.add(nueva_persona)
+                db.flush()
+            except IntegrityError as e:
+                if "check_curp_persona_longitud" in str(e):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"La CURP '{p_data['curp']}' del jugador {p_data['nombre']} {p_data['primer_apellido']} debe tener exactamente 18 caracteres."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Error al registrar al jugador {p_data['nombre']} {p_data['primer_apellido']}: {str(e)}"
+                    )
 
             # b. Crear MiembroEquipo (Rol Jugador = 3)
             nuevo_miembro = MiembrosEquipo(
@@ -148,22 +173,23 @@ async def registrar_jugador(
     nombre: str = Form(...),
     primer_apellido: str = Form(...),
     segundo_apellido: str = Form(...),
-    curp: str = Form(...),
+    CURP: str = Form(...),
     sexo_id: int = Form(...),
     fecha_nacimiento: str = Form(...),
     documento_afiliacion_ids: List[int] = Form(...),
-    archivos: list[UploadFile] = File(...), 
+    archivos: list[UploadFile] = File(...),
+    seguro_id: int = Form(...),
     db: Session = Depends(get_db)
 ):
     persona = JugadorPersona(
         nombre=nombre,
         primer_apellido=primer_apellido,
         segundo_apellido=segundo_apellido,
-        curp=curp,
+        curp=CURP,
         sexo_id=sexo_id,
         fecha_nacimiento=fecha_nacimiento
     )
-    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos)
+    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id)
 
 # --- NUEVOS ENDPOINTS PARA TABLAS REALES (PRESIDENTE Y ADMIN) ---
 

@@ -1,11 +1,17 @@
-from sqlalchemy.orm import Session
+from datetime import datetime
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException
+from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas
+from app.modelos import CatalogoDocumentosPersonas, DocumentosEntregados
+from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
+from app.modelos.equipo_temporal_modelo import EquipoTemporal
+from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
+from fastapi import HTTPException
 from app.modelos import (
-    Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, 
-    Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas,
     CatalogoDocumentosPersonas, DocumentosEntregados, EquipoTemporal, 
     OrdenPago, Equipos, PresidenteEquipo
 )
-
 
 #REQUISITOS
 def crear_requisito_repo(db: Session, tipo_afiliacion_id: int, documento_persona_id: int):
@@ -71,18 +77,34 @@ def crear_solicitud_repo(db, usuario_id, estatus_validacion_id, tipo_afiliacion_
     return nueva
 
 def crear_solicitud_repos(db: Session, solicitud: Solicitud, usuario: Usuario, persona: Personas):
-    db.add(solicitud)
+    try:
+        db.add(solicitud)
 
-    usuariosolicitud = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
-    
-    persona.CURP = usuariosolicitud.CURP
-    persona.RFC = usuariosolicitud.RFC
-    persona.SexoId = usuariosolicitud.SexoId
-    persona.FechaNacimiento = usuariosolicitud.FechaNacimiento
+        usuariosolicitud = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
+        
+        persona.CURP = usuariosolicitud.CURP
+        persona.RFC = usuariosolicitud.RFC
+        persona.SexoId = usuariosolicitud.SexoId
+        persona.FechaNacimiento = usuariosolicitud.FechaNacimiento
 
-    db.commit()
-    db.refresh(solicitud)
-    return solicitud
+        db.commit()
+        db.refresh(solicitud)
+        return solicitud
+    except IntegrityError as e:
+        db.rollback()
+        if "check_curp_persona_longitud" in str(e):
+            raise HTTPException(
+                status_code=400,
+                detail="La CURP proporcionado no tiene el formato correcto. Debe tener exactamente 18 caracteres alfanuméricos."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error al procesar la solicitud: {str(e)}"
+            )
+    except Exception as e:
+        db.rollback()
+        raise e
 
 
 #DOCUMENTOS
@@ -101,6 +123,7 @@ def crear_documento_solicitud_repo(db, solicitud_id, persona_id, documento_afili
 
 
 #OBTENER SOLICITUDES
+#Todas
 
 def obtener_solicitudes_usuarios_repo(db: Session):
     return (
@@ -124,19 +147,84 @@ def obtener_solicitudes_usuarios_repo(db: Session):
     )
 
 def obtener_solicitudes_repo(db: Session):
-    return db.query(Solicitud).all()
 
-def obtener_solicitud_individual_repo(db: Session, solicitud_id: int):
-    SolicitudUsuario = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
-    if not SolicitudUsuario:
+    solicitudes = db.query(Solicitud).options(
+        joinedload(Solicitud.UsuarioRelacion),
+        joinedload(Solicitud.TipoAfiliacionRelacion)
+    ).filter(
+        Solicitud.EstatusValidacionId != EstatusValidacionSolicitud.BORRADOR
+    ).all()
+
+    return solicitudes
+
+def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
+    solicitud = db.query(Solicitud).filter(
+        Solicitud.SolicitudId == solicitud_id
+    ).first()
+
+    if not solicitud:
         return None
     
-    usuario = SolicitudUsuario.UsuarioRelacion
-    persona = usuario.PersonaRelacion
-    sexo = persona.SexoRelacion  # Sexo está en Personas, no en Usuario
-    tipoSolicitud = SolicitudUsuario.CatalogoTiposAfiliacionRelacion
-    estatus = SolicitudUsuario.CatalogoEstadosValidacion
-    
+    #Usuario que hizo la solicitud
+    usuario = db.query(Usuario).filter(
+        Usuario.UsuarioId == solicitud.UsuarioId
+    ).first()
+
+    persona = db.query(Personas).filter(
+        Personas.PersonaId == usuario.PersonaId
+    ).first()
+
+    equipo = db.query(EquipoTemporal).filter(
+        EquipoTemporal.SolicitudId == solicitud_id
+    ).first()
+
+    slots = db.query(EquipoTemporalJugador).filter(
+        EquipoTemporalJugador.EquipoTemporalId == equipo.EquipoTemporalId
+    ).all()
+
+    jugadores = []
+
+    for slot in slots:
+
+        if not slot.PersonaId:
+            continue
+
+        jugador = db.query(Personas).filter(
+            Personas.PersonaId == slot.PersonaId
+        ).first()
+
+        documentos = db.query(DocumentosEntregados).filter(
+            DocumentosEntregados.PersonaId == jugador.PersonaId,
+            DocumentosEntregados.SolicitudId == solicitud_id
+        ).all()
+
+        jugadores.append({
+            "persona_id": jugador.PersonaId,
+            "nombre": jugador.Nombre,
+            "primer_apellido": jugador.PrimerApellido,
+            "segundo_apellido": jugador.SegundoApellido,
+            "curp": jugador.CURP,
+            "sexo_id": jugador.SexoId,
+            "fecha_nacimiento": jugador.FechaNacimiento,
+            "seguro_id": slot.SeguroId,  # importante
+            "documentos": [
+                {
+                    "documento_id": d.DocumentoAfiliacionId,
+                    "ruta": d.RutaArchivo,
+                    "fecha": d.FechaEntrega,
+                    "estatus": d.EstadoValidacionId
+                }
+                for d in documentos
+            ]
+        })
+
+    #Documentos del presidente
+    docs_presidente = db.query(DocumentosEntregados).filter(
+        DocumentosEntregados.PersonaId == persona.PersonaId,
+        DocumentosEntregados.SolicitudId == solicitud_id
+    ).all()
+
+
     return {
         "Nombre": persona.Nombre if persona else "",
         "PrimerApellido": persona.PrimerApellido if persona else "",
@@ -151,3 +239,62 @@ def obtener_solicitud_individual_repo(db: Session, solicitud_id: int):
         "TipoSolicitud": tipoSolicitud.NombreAfiliacion if tipoSolicitud else "",
         "SolicitudId": SolicitudUsuario.SolicitudId
     }
+
+def obtener_solicitud_por_id(db: Session, solicitud_id: int):
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+
+    if not solicitud:
+        return None
+
+    return solicitud
+
+def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+
+    if not solicitud:
+        return None
+
+    solicitud.EstatusValidacion = EstatusValidacionSolicitud.ESPERA
+    solicitud.FechaSolicitud = datetime.now()
+
+    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
+    if not equipo_temporal:
+        raise HTTPException(400, "No se puede enviar la solicitud, no hay un equipo asociado")
+
+
+    #verificar que los slots estén completos
+    slots = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalId == equipo_temporal.EquipoTemporalId).all()
+    for slot in slots:
+        if not slot.Completo:
+            raise HTTPException(400, "No se puede enviar la solicitud, hay jugadores sin registrar en el equipo temporal")
+    
+
+    #Validación de seguros
+    #seguros_pagados = obtener_seguros_pagados(db, equipo_temporal.OrdenPagoId)
+    #seguros_usados = contar_seguros_usados(slots)
+
+    #for seguro_id, total in seguros_pagados.items():
+     #   usados = seguros_usados.get(seguro_id, 0)
+
+    #if usados != total:
+     #   raise HTTPException(400, f"Faltan asignar seguros (Seguro {seguro_id})")
+
+
+    #documentos del presidente y jugadores
+    personas = set([slot.PersonaId for slot in slots])
+
+    for persona_id in personas:
+        docs = db.query(DocumentosEntregados).filter(
+            DocumentosEntregados.PersonaId == persona_id,
+            DocumentosEntregados.SolicitudId == solicitud_id
+        ).all()
+
+    if not docs:
+        raise HTTPException(400, f"Faltan documentos para persona {persona_id}")
+
+    db.commit()
+    db.refresh(solicitud)
+    db.refresh(equipo_temporal)
+
+    return solicitud
+

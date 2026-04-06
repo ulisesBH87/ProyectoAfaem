@@ -79,7 +79,7 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
           <FaSearch style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '14px' }} />
           <input 
             type="text" 
-            placeholder="Search everything..." 
+            placeholder="Buscar..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -125,7 +125,7 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
               width: '320px', borderRadius: 'var(--radius-md)', 
               boxShadow: 'var(--shadow-xl)', padding: '16px', zIndex: 1000
             }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px' }}>Notifications</h4>
+              <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '12px' }}>Notificaciones</h4>
               {notifications.map(notif => (
                 <div key={notif.id} style={{ 
                   padding: '10px', borderRadius: '8px', marginBottom: '8px',
@@ -145,8 +145,8 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
           style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
         >
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>{userEmail ? userEmail.split('@')[0] : 'User'}</div>
-            <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>Administrator</div>
+            <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>{userEmail ? userEmail.split('@')[0] : 'Usuario'}</div>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>Administrador</div>
           </div>
           <div style={{
             width: '44px', height: '44px', borderRadius: '12px',
@@ -171,7 +171,7 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                >
-                 <FaSignOutAlt /> Sign Out
+                 <FaSignOutAlt /> Cerrar Sesión
                </button>
             </div>
           )}

@@ -128,3 +128,20 @@ def finalizar_solicitud_completa(solicitud_id: int, db: Session = Depends(get_db
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+#Hacer el envío de la solicitud al administrador
+@router.post("/solicitud-completa")
+def enviar_solicitud_completa(solicitud_id: int, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
+    resultado = solicitud_servicio.enviar_solicitud_completa_servicio(db, solicitud_id, usuario.UsuarioId)
+    return resultado
+
+#Administrador
+#Ver todas las solicitudes
+@router.get("/")
+def ver_solicitudes(db:Session=Depends(get_db)):
+    return solicitud_servicio.obtener_solicitudes_servicio(db)
+
+@router.get("/detalles/{solicitud_id}")
+def obtener_solicitud_detalle(solicitud_id: int,db: Session = Depends(get_db)):
+    return solicitud_servicio.obtener_solicitud_detalle_servicio(db, solicitud_id)
