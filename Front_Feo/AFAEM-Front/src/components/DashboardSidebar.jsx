@@ -90,10 +90,6 @@ const DashboardSidebar = () => {
             <h1 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px' }}>
               AFAEM
             </h1>
-<<<<<<< HEAD
-            <p style={{ fontSize: '9px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase' }}>
-              Sistema de Gestión
-=======
             <p style={{ fontSize: '7.5px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase' }}>
               Management System
 >>>>>>> origin/Saaib-Cambios5
@@ -179,30 +175,6 @@ const DashboardSidebar = () => {
       </nav>
 
       {/* FOOTER ACTIONS */}
-<<<<<<< HEAD
-      <div style={{ padding: '16px 12px', borderTop: `1px solid ${theme.border}` }}>
-        <div 
-          onClick={handleLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '12px 16px',
-            margin: '4px 0',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            color: 'var(--danger)',
-            transition: 'all 0.2s',
-            justifyContent: isCollapsed ? 'center' : 'flex-start'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          <FaSignOutAlt style={{ fontSize: '20px' }} />
-          {!isCollapsed && (
-            <span style={{ marginLeft: '16px', fontSize: '14px', fontWeight: '700' }}>Cerrar Sesión</span>
-          )}
-        </div>
-=======
       <div style={{ padding: '8px 10px', borderTop: `1px solid ${theme.border}` }}>
           <div 
             onClick={handleLogout}
@@ -225,7 +197,6 @@ const DashboardSidebar = () => {
               <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Sign Out</span>
             )}
           </div>
->>>>>>> origin/Saaib-Cambios5
 
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
