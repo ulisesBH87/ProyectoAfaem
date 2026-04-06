@@ -35,31 +35,65 @@ const AdminPagos = () => {
   }, [filtroEstatus, searchTerm, sortOrder]);
 
   const handleUpdateEstatus = async (id, estatus, label) => {
-    const result = await Swal.fire({
-      title: `¿${label} este pago?`,
-      text: `Estás a punto de ${label.toLowerCase()} la orden de pago #${id}.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: `Sí, ${label.toLowerCase()}`,
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: estatus === 3 ? 'var(--secondary)' : 'var(--danger)',
-      cancelButtonColor: 'var(--text-muted)'
-    });
+    let motivoRechazo = '';
 
-    if (result.isConfirmed) {
-      try {
-        await updateEstatusPago(id, estatus);
-        Swal.fire({
-          title: '¡Actualizado!',
-          text: `Pago ${label.toLowerCase()} correctamente.`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
-        fetchPagos();
-      } catch {
-        Swal.fire('Error', 'No se pudo actualizar el estatus del pago.', 'error');
+    if (estatus === 4) {
+      const result = await Swal.fire({
+        title: `¿Rechazar este pago?`,
+        text: `Explica el por qué fue rechazado el pago #${id}.`,
+        icon: 'warning',
+        input: 'textarea',
+        inputPlaceholder: 'Escribe el motivo del rechazo aquí...',
+        inputAttributes: {
+          'aria-label': 'Motivo de rechazo'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Enviar y Rechazar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: 'var(--danger)',
+        cancelButtonColor: 'var(--text-muted)',
+        preConfirm: (text) => {
+          if (!text) {
+            Swal.showValidationMessage('Debes ingresar un motivo para rechazar el pago');
+          }
+          return text;
+        }
+      });
+
+      if (result.isConfirmed) {
+        motivoRechazo = result.value;
+      } else {
+        return;
       }
+    } else {
+      const result = await Swal.fire({
+        title: `¿${label} este pago?`,
+        text: `Estás a punto de ${label.toLowerCase()} la orden de pago #${id}.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: `Sí, ${label.toLowerCase()}`,
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: estatus === 3 ? 'var(--secondary)' : 'var(--danger)',
+        cancelButtonColor: 'var(--text-muted)'
+      });
+      if (!result.isConfirmed) return;
+    }
+
+    try {
+      if (estatus === 4) {
+        localStorage.setItem(`motivo_rechazo_${id}`, motivoRechazo);
+      }
+      await updateEstatusPago(id, estatus);
+      Swal.fire({
+        title: '¡Actualizado!',
+        text: `Pago ${label.toLowerCase()} correctamente.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      fetchPagos();
+    } catch {
+      Swal.fire('Error', 'No se pudo actualizar el estatus del pago.', 'error');
     }
   };
 

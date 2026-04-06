@@ -216,8 +216,8 @@ export default function PresidenteEquipo() {
       );
     }
 
-    // ESTATUS 6: Documentos en verificación
-    if (estatusId === 6) {
+    // ESTATUS 6 (y 4): Documentos en verificación
+    if (estatusId === 4 || estatusId === 6) {
       return (
         <div className="dashboard-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
