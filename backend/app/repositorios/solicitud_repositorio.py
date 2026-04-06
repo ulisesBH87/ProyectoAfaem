@@ -1,6 +1,10 @@
 from sqlalchemy.orm import Session
-from app.modelos import Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas
-from app.modelos import CatalogoDocumentosPersonas, DocumentosEntregados
+from app.modelos import (
+    Solicitud, Usuario, CatalogoTiposAfiliacion, CatalogoEstadosValidacion, 
+    Personas, DocumentoAfiliacion, CatalogoDocumentos, CatalogoRolesPersonas,
+    CatalogoDocumentosPersonas, DocumentosEntregados, EquipoTemporal, 
+    OrdenPago, Equipos, PresidenteEquipo
+)
 
 
 #REQUISITOS
@@ -98,25 +102,52 @@ def crear_documento_solicitud_repo(db, solicitud_id, persona_id, documento_afili
 
 #OBTENER SOLICITUDES
 
+def obtener_solicitudes_usuarios_repo(db: Session):
+    return (
+        db.query(
+            Solicitud.SolicitudId,
+            Solicitud.FechaSolicitud,
+            Solicitud.EstatusValidacion,
+            Personas.Nombre,
+            Personas.PrimerApellido,
+            Usuario.Correo,
+            Equipos.NombreEquipo.label("Equipo"),
+            OrdenPago.TotalPagar.label("Monto")
+        )
+        .join(Usuario, Solicitud.UsuarioId == Usuario.UsuarioId)
+        .join(Personas, Usuario.PersonaId == Personas.PersonaId)
+        .outerjoin(EquipoTemporal, Solicitud.SolicitudId == EquipoTemporal.SolicitudId)
+        .outerjoin(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
+        .outerjoin(PresidenteEquipo, Personas.PersonaId == PresidenteEquipo.PersonaId)
+        .outerjoin(Equipos, PresidenteEquipo.PresidenteEquipoId == Equipos.PresidenteEquipoId)
+        .all()
+    )
+
 def obtener_solicitudes_repo(db: Session):
     return db.query(Solicitud).all()
 
-def obtener_solicitud_individual_repo(db:Session, solicitud_id: int):
+def obtener_solicitud_individual_repo(db: Session, solicitud_id: int):
     SolicitudUsuario = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+    if not SolicitudUsuario:
+        return None
     
     usuario = SolicitudUsuario.UsuarioRelacion
-    sexo = SolicitudUsuario.UsuarioRelacion.SexoFk
+    persona = usuario.PersonaRelacion
+    sexo = persona.SexoRelacion  # Sexo está en Personas, no en Usuario
     tipoSolicitud = SolicitudUsuario.CatalogoTiposAfiliacionRelacion
     estatus = SolicitudUsuario.CatalogoEstadosValidacion
     
     return {
-        #"Nombre": usuario.Nombre,
-        #"PrimerApellido": usuario.PrimerApellido,
-        #"SegundoApellido": usuario.SegundoApellido,
-        #"CURP": usuario.CURP,
-        #"Sexo": sexo.Nombre,
-        #"FechaNacimiento": usuario.FechaNacimiento,
+        "Nombre": persona.Nombre if persona else "",
+        "PrimerApellido": persona.PrimerApellido if persona else "",
+        "SegundoApellido": persona.SegundoApellido if persona else "",
+        "CURP": persona.CURP if persona else "",
+        "RFC": persona.RFC if persona else "",
+        "Sexo": sexo.Nombre if sexo else "",
+        "FechaNacimiento": persona.FechaNacimiento if persona else None,
+        "Email": usuario.Correo,
         "FechaSolicitud": SolicitudUsuario.FechaSolicitud,
-        "EstatusSolicitud": estatus.Nombre,
-        "TipoSolicitud": tipoSolicitud.NombreAfiliacion
+        "EstatusSolicitud": estatus.Nombre if estatus else "",
+        "TipoSolicitud": tipoSolicitud.NombreAfiliacion if tipoSolicitud else "",
+        "SolicitudId": SolicitudUsuario.SolicitudId
     }

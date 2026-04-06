@@ -37,7 +37,8 @@ def enviar_solicitud_presidente(data: SolicitudCrear, db:Session = Depends(get_d
 
 @router.get("/solicitudes-usuarios", response_model=List[SolicitudesTodas])
 def obtener_solicitudes(db:Session = Depends(get_db)):
-    return obtener_solicitudes_servicio(db)
+    return solicitud_servicio.obtener_solicitudes_usuarios_servicio(db)
+
 
 
 @router.get("/solicitud-usuario/{solicitud_id}", response_model=SolicitudIndividualRespuesta)
@@ -112,3 +113,18 @@ async def descargar_formato(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {str(e)}")
+@router.post("/solicitud-completa")
+def finalizar_solicitud_completa(solicitud_id: int, db: Session = Depends(get_db)):
+    try:
+        solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+        if not solicitud:
+            raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+        
+        # Estatus 4 = DOCUMENTOS_EN_REVISION (según proceso discutido)
+        solicitud.EstatusValidacion = 4
+        db.commit()
+        
+        return {"mensaje": "Solicitud enviada correctamente", "solicitud_id": solicitud_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
