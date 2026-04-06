@@ -5,6 +5,8 @@ from app.modelos.persona_modelo import Personas
 from app.repositorios import solicitud_repositorio
 from app.core.seguridad import obtener_usuario_actual
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
+from fastapi import HTTPException
+from app.modelos.equipo_temporal_modelo import EquipoTemporal
 
 #Se crea la solicitud parcialmente, aún no se envía a administrador
 def crear_solicitud(db: Session, data, usuario):
@@ -35,8 +37,43 @@ def crear_solicitud(db: Session, data, usuario):
     
     return solicitud
 
+#Todas las solicitudes
 def obtener_solicitudes_servicio(db: Session):
-    return solicitud_repositorio.obtener_solicitudes_repo(db)
+
+    solicitudes = solicitud_repositorio.obtener_solicitudes_repo(db)
+
+    resultado = []
+
+    for s in solicitudes:
+
+        equipo = db.query(EquipoTemporal).filter(
+            EquipoTemporal.SolicitudId == s.SolicitudId
+        ).first()
+
+        jugadores = 0
+        if equipo:
+            jugadores = equipo.CantidadJugadoresPagados
+
+        resultado.append({
+            "solicitud_id": s.SolicitudId,
+            "usuario": s.UsuarioRelacion.Correo,
+            "tipo_afiliacion": s.TipoAfiliacionRelacion.NombreAfiliacion,
+            "estatus": s.EstatusValidacionId,
+            "fecha": s.FechaSolicitud,
+            "jugadores": jugadores
+        })
+
+    return resultado
+
+#Solicitud individual
+def obtener_solicitud_detalle_servicio(db, solicitud_id):
+
+    data = solicitud_repositorio.obtener_solicitud_detalle_repo(db, solicitud_id)
+
+    if not data:
+        raise HTTPException(404, "Solicitud no encontrada")
+
+    return data
 
 def obtener_solicitud_individual_servicio(db: Session, solicitud_id: int):
     return solicitud_repositorio.obtener_solicitud_individual_repo(db, solicitud_id)
@@ -90,17 +127,18 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
     solicitud = solicitud_repositorio.obtener_solicitud_por_id(db, solicitud_id)
 
     if not solicitud:
-        raise Exception("Solicitud no encontrada")
+        raise HTTPException(404, "No se encontró la solicitud")
 
     if solicitud.UsuarioId != usuario_id:
-        raise Exception("No tienes permiso para enviar esta solicitud")
+        raise HTTPException(403, "No tienes permiso para enviar esta solicitud")
 
     if solicitud.EstatusValidacion == EstatusValidacionSolicitud.ESPERA:
-        raise Exception("La solicitud ya ha sido enviada")
+        raise HTTPException(400, "La solicitud ya ha sido enviada")
 
     #enviio
     solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)
     if not solicitud_completa:
-        raise Exception("Error al enviar la solicitud")
+        raise HTTPException(400, "Error al enviar la solicitud")
     
     return {"mensaje": "Solicitud enviada correctamente"}
+
