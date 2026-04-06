@@ -33,7 +33,7 @@ export const RBACProvider = ({ children }) => {
         roles: finalRoles,
         permissions: data.Permisos || [],
         menus: data.Menus || [],
-        estatusId: data.EstatusId || null,
+        estatusId: data.estatusId || null,
         isLoading: false
       };
       

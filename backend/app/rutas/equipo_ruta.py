@@ -127,6 +127,12 @@ async def crear_equipo_completo(
                     # Aquí podrías registrar la ruta en la tabla de documentos si fuera necesario.
                     # Por ahora el usuario sólo solicitó guardarlos físicamente.
 
+        # 4. Actualizar Estatus del Presidente y Rol del Usuario (Automatización Final)
+        presidente.EstatusId = 4  # En Revisión
+        usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario.UsuarioId).first()
+        if usuario_db:
+            usuario_db.RolId = 3  # Presidente de Equipo
+
         db.commit()
         return {"mensaje": "Equipo y jugadores creados exitosamente", "equipo_id": nuevo_equipo.EquipoId}
 
