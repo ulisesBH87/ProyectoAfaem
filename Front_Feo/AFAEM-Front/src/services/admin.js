@@ -148,6 +148,31 @@ export const getJugadorDocumentos = async (personaId) => {
   return response.data;
 };
 
+/**
+ * ACTUALIZA UN EQUIPO (NOMBRE Y ESTATUS)
+ */
+export const updateEquipo = async (equipoId, nombre, estatus) => {
+  const response = await api.patch(`/equipo-temporal/update-equipo/${equipoId}`, {
+    NombreEquipo: nombre,
+    Estatus: estatus === "1" || estatus === 1 || estatus === true
+  });
+  return response.data;
+};
+
+/**
+ * ACTUALIZA UN JUGADOR (NOMBRE, APELLIDOS, CURP Y ESTATUS)
+ */
+export const updateJugador = async (miembroEquipoId, data) => {
+  const response = await api.patch(`/equipo-temporal/update-jugador/${miembroEquipoId}`, {
+    Nombre: data.nombre,
+    PrimerApellido: data.primerApellido,
+    SegundoApellido: data.segundoApellido,
+    CURP: data.curp,
+    Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true
+  });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -159,5 +184,7 @@ export default {
   updateSolicitudEstatus,
   getEquiposDirectorio,
   getJugadoresDirectorio,
-  getJugadorDocumentos
+  getJugadorDocumentos,
+  updateEquipo,
+  updateJugador
 };

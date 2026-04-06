@@ -10,7 +10,7 @@ from datetime import datetime
 from app.core.seguridad import obtener_usuario_actual
 
 from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio
-from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem
+from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, MiembrosEquipo, Personas, RolesDeEquipo, LigaModalidadCategoriaRama, 
@@ -291,7 +291,6 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
 # --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
 
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
-from app.repositorios.equipo_repositorio import obtener_directorio_equipos_repo, obtener_directorio_jugadores_repo, obtener_documentos_jugador_repo
 
 @router.get("/directorio-equipos", response_model=List[DirectorioEquipoResponse])
 def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -301,6 +300,7 @@ def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obte
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
     
     try:
+        from app.repositorios.equipo_repositorio import obtener_directorio_equipos_repo
         return obtener_directorio_equipos_repo(db)
     except Exception as e:
         print(traceback.format_exc())
@@ -313,6 +313,7 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
     
     try:
+        from app.repositorios.equipo_repositorio import obtener_directorio_jugadores_repo
         return obtener_directorio_jugadores_repo(db)
     except Exception as e:
         print(traceback.format_exc())
@@ -325,6 +326,7 @@ def get_documentos_jugador(persona_id: int, db: Session = Depends(get_db), usuar
         raise HTTPException(status_code=403, detail="Acceso denegado")
     
     try:
+        from app.repositorios.equipo_repositorio import obtener_documentos_jugador_repo
         docs = obtener_documentos_jugador_repo(db, persona_id)
         # Formatear la URL completa si RutaArchivo es relativa
         for doc in docs:
@@ -332,6 +334,46 @@ def get_documentos_jugador(persona_id: int, db: Session = Depends(get_db), usuar
             # Fix if the route is a local path
             doc["url"] = f"/{ruta}" if not ruta.startswith("http") else ruta
         return docs
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.patch("/update-equipo/{equipo_id}")
+def update_equipo(equipo_id: int, equipo_data: EquipoUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        from app.repositorios.equipo_repositorio import actualizar_equipo_repo
+        equipo = actualizar_equipo_repo(db, equipo_id, equipo_data.NombreEquipo, equipo_data.Estatus)
+        if not equipo:
+            raise HTTPException(status_code=404, detail="Equipo no encontrado")
+        return {"mensaje": "Equipo actualizado correctamente", "equipo_id": equipo.EquipoId}
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.patch("/update-jugador/{miembro_equipo_id}")
+def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        from app.repositorios.equipo_repositorio import actualizar_jugador_repo
+        miembro = actualizar_jugador_repo(
+            db, 
+            miembro_equipo_id, 
+            jugador_data.Nombre, 
+            jugador_data.PrimerApellido, 
+            jugador_data.SegundoApellido, 
+            jugador_data.CURP, 
+            jugador_data.Estatus
+        )
+        if not miembro:
+            raise HTTPException(status_code=404, detail="Jugador no encontrado")
+        return {"mensaje": "Jugador actualizado correctamente", "miembro_equipo_id": miembro.MiembroEquipoId}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

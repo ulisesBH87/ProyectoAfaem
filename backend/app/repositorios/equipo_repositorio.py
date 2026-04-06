@@ -153,8 +153,6 @@ def obtener_directorio_equipos_repo(db):
         Personas, PresidenteEquipo.PersonaId == Personas.PersonaId
     ).join(
         Usuario, Personas.PersonaId == Usuario.PersonaId
-    ).filter(
-        Equipos.Estatus == True
     ).all()
 
     equipos_response = []
@@ -196,7 +194,6 @@ def obtener_directorio_jugadores_repo(db):
     ).outerjoin(
         CatalogoSexo, Personas.SexoId == CatalogoSexo.SexoId
     ).filter(
-        MiembrosEquipo.Estatus == True,
         MiembrosEquipo.Eliminado == False
     ).all()
 
@@ -206,6 +203,9 @@ def obtener_directorio_jugadores_repo(db):
         jugadores_response.append({
             "MiembroEquipoId": miembro.MiembroEquipoId,
             "NombreCompleto": f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip(),
+            "Nombre": persona.Nombre,
+            "PrimerApellido": persona.PrimerApellido,
+            "SegundoApellido": persona.SegundoApellido,
             "CURP": persona.CURP or "N/A",
             "Sexo": sexo_nombre or "N/A",
             "EquipoNombre": equipo_nombre,
@@ -230,3 +230,47 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
             "EstadoValidacionId": d.EstadoValidacionId
         } for d in docs
     ]
+
+def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool):
+    from app.modelos.equipo_modelo import Equipos
+    equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo_id).first()
+    if not equipo:
+        return None
+    
+    if nombre is not None:
+        equipo.NombreEquipo = nombre
+    if estatus is not None:
+        equipo.Estatus = estatus
+        
+    db.commit()
+    db.refresh(equipo)
+    return equipo
+
+def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apellido: str, segundo_apellido: str, curp: str, estatus: bool):
+    from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+    from app.modelos.persona_modelo import Personas
+    
+    miembro = db.query(MiembrosEquipo).filter(MiembrosEquipo.MiembroEquipoId == miembro_equipo_id).first()
+    if not miembro:
+        return None
+    
+    persona = db.query(Personas).filter(Personas.PersonaId == miembro.PersonaId).first()
+    if not persona:
+        return None
+    
+    if nombre is not None:
+        persona.Nombre = nombre
+    if primer_apellido is not None:
+        persona.PrimerApellido = primer_apellido
+    if segundo_apellido is not None:
+        persona.SegundoApellido = segundo_apellido
+    if curp is not None:
+        persona.CURP = curp
+        
+    if estatus is not None:
+        miembro.Estatus = estatus
+        
+    db.commit()
+    db.refresh(persona)
+    db.refresh(miembro)
+    return miembro
