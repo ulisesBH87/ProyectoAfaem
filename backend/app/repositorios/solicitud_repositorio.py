@@ -240,61 +240,108 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
         "SolicitudId": SolicitudUsuario.SolicitudId
     }
 
-def obtener_solicitud_por_id(db: Session, solicitud_id: int):
-    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
-
-    if not solicitud:
-        return None
-
-    return solicitud
-
-def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):
-    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
-
-    if not solicitud:
-        return None
-
-    solicitud.EstatusValidacion = EstatusValidacionSolicitud.ESPERA
-    solicitud.FechaSolicitud = datetime.now()
-
-    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
-    if not equipo_temporal:
-        raise HTTPException(400, "No se puede enviar la solicitud, no hay un equipo asociado")
-
-
-    #verificar que los slots estén completos
-    slots = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalId == equipo_temporal.EquipoTemporalId).all()
-    for slot in slots:
-        if not slot.Completo:
-            raise HTTPException(400, "No se puede enviar la solicitud, hay jugadores sin registrar en el equipo temporal")
-    
-
-    #Validación de seguros
-    #seguros_pagados = obtener_seguros_pagados(db, equipo_temporal.OrdenPagoId)
-    #seguros_usados = contar_seguros_usados(slots)
-
-    #for seguro_id, total in seguros_pagados.items():
-     #   usados = seguros_usados.get(seguro_id, 0)
-
-    #if usados != total:
-     #   raise HTTPException(400, f"Faltan asignar seguros (Seguro {seguro_id})")
-
-
-    #documentos del presidente y jugadores
-    personas = set([slot.PersonaId for slot in slots])
-
-    for persona_id in personas:
-        docs = db.query(DocumentosEntregados).filter(
-            DocumentosEntregados.PersonaId == persona_id,
-            DocumentosEntregados.SolicitudId == solicitud_id
-        ).all()
-
-    if not docs:
-        raise HTTPException(400, f"Faltan documentos para persona {persona_id}")
-
     db.commit()
     db.refresh(solicitud)
     db.refresh(equipo_temporal)
 
     return solicitud
+
+# --- NUEVOS MÉTODOS PARA VALIDACIÓN (ADMIN) ---
+
+def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
+    """
+    Obtiene todas las personas asociadas a una solicitud 
+    (solicitante/presidente y jugadores temporales) junto con sus documentos.
+    """
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+    if not solicitud:
+        return None
+    
+    # Base URL para archivos estáticos (Ajustar si el puerto cambia)
+    BASE_URL = "http://localhost:8000"
+    
+    # 1. Obtener el solicitante (Presidente)
+    usuario_solicitante = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
+    persona_solicitante = usuario_solicitante.PersonaRelacion if usuario_solicitante else None
+    
+    # 2. Obtener jugadores temporales
+    equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
+    jugadores_ids = []
+    if equipo_temp:
+        jugadores_ids = [j.PersonaId for j in equipo_temp.EquipoTemporalJugadorRelacion if j.PersonaId]
+
+    # Lista consolidada de personas a revisar documentos
+    personas_a_revisar = []
+    if persona_solicitante:
+        personas_a_revisar.append(persona_solicitante)
+    
+    if jugadores_ids:
+        jugadores = db.query(Personas).filter(Personas.PersonaId.in_(jugadores_ids)).all()
+        personas_a_revisar.extend(jugadores)
+
+    resultado = []
+    for p in personas_a_revisar:
+        documentos = db.query(
+            DocumentosEntregados, DocumentoAfiliacion, CatalogoDocumentosPersonas, CatalogoDocumentos
+        ).join(
+            DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId
+        ).join(
+            CatalogoDocumentosPersonas, DocumentoAfiliacion.DocumentoPersonaId == CatalogoDocumentosPersonas.DocumentosPersonasId
+        ).join(
+            CatalogoDocumentos, CatalogoDocumentosPersonas.DocumentoId == CatalogoDocumentos.DocumentoId
+        ).filter(
+            DocumentosEntregados.SolicitudId == solicitud_id,
+            DocumentosEntregados.PersonaId == p.PersonaId
+        ).all()
+
+        docs_list = []
+        for d, da, cdp, cd in documentos:
+            # Construir URL absoluta
+            nombre_archivo = d.RutaArchivo.replace("\\", "/").split("/")[-1]
+            docs_list.append({
+                "Tipo": cd.NombreDocumento,
+                "Url": f"{BASE_URL}/uploads/documentos/{nombre_archivo}",
+                "Estado": "entregado"
+            })
+            
+        resultado.append({
+            "Id": p.PersonaId,
+            "Nombre": f"{p.Nombre} {p.PrimerApellido} {p.SegundoApellido or ''}".strip(),
+            "CURP": p.CURP,
+            "Documentos": docs_list
+        })
+        
+    return {
+        "Equipo": f"{persona_solicitante.Nombre} {persona_solicitante.PrimerApellido}" if persona_solicitante else "SOLICITANTE DESCONOCIDO",
+        "SolicitudId": solicitud_id,
+        "Jugadores": resultado
+    }
+
+def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus_db: int, observaciones: str = None):
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+    if solicitud:
+        solicitud.EstatusValidacion = estatus_db
+        if observaciones:
+            solicitud.ObservacionesSolicitud = observaciones
+        return solicitud
+    return None
+
+def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
+    """
+    Busca al presidente vinculado a la solicitud y activa su cuenta.
+    EstatusId 7 = ACTIVO.
+    """
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+    if not solicitud:
+        return False
+        
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
+    if not usuario or not usuario.PersonaId:
+        return False
+        
+    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+    if presidente:
+        presidente.EstatusId = 7 # ACTIVO
+        return True
+    return False
 

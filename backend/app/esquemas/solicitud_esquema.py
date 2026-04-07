@@ -128,3 +128,25 @@ class PDFData(BaseModel):
     edad: str
     nacionalidad: str = "MEXICANA"
     equipo: str = ""
+
+# --- NUEVOS ESQUEMAS PARA VALIDACIÓN (ADMIN) ---
+
+class ValidarSolicitudPayload(BaseModel):
+    Estatus: int  # 1: Aprobado, 0: Rechazado
+    Observaciones: Optional[str] = None
+
+class DocumentoInfo(BaseModel):
+    Tipo: str
+    Url: str
+    Estado: str = "entregado"
+
+class JugadorConDocumentos(BaseModel):
+    Id: int
+    Nombre: str
+    CURP: Optional[str] = None
+    Documentos: List[DocumentoInfo]
+
+class SolicitudDocumentosResponse(BaseModel):
+    Equipo: str
+    SolicitudId: int
+    Jugadores: List[JugadorConDocumentos]

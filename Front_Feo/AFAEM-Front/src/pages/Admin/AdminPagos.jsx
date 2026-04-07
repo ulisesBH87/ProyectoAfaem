@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import DashboardTable from '../../components/DashboardTable';
 import { getPagosGenerales, updateEstatusPago } from '../../services/admin';
+import { API_BASE } from '../../config/config';
 import Swal from 'sweetalert2';
 import Skeleton from '../../components/Common/Skeleton';
-import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWallet, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWallet, FaCheckCircle, FaTimesCircle, FaClock, FaFileInvoice } from 'react-icons/fa';
 
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
@@ -95,6 +96,23 @@ const AdminPagos = () => {
     } catch {
       Swal.fire('Error', 'No se pudo actualizar el estatus del pago.', 'error');
     }
+  };
+
+  const handleVerVoucher = (rutaVoucher, ordenId) => {
+    if (!rutaVoucher) {
+      Swal.fire({
+        title: 'Sin comprobante',
+        text: `La orden #${ordenId} aún no tiene un comprobante de pago adjunto.`,
+        icon: 'info',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    // Construir la URL del archivo estático desde el backend
+    // RutaVoucher viene como "uploads/vouchers/orden_XX.ext"
+    const url = `/${rutaVoucher}`;
+    window.open(url, '_blank');
   };
 
   // Stats
@@ -192,7 +210,34 @@ const AdminPagos = () => {
       key: 'Acciones',
       label: 'Acciones',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            onClick={() => handleVerVoucher(row.RutaVoucher, row.OrdenPagoId)}
+            style={{ 
+              padding: '6px 12px', 
+              fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(37, 99, 235, 0.08)',
+              color: 'var(--primary)',
+              border: '1px solid rgba(37, 99, 235, 0.2)',
+              borderRadius: '8px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
+            }}
+            title="Ver comprobante adjunto"
+          >
+            <FaFileInvoice /> Ver
+          </button>
+
           {row.EstatusPagoId === 2 && (
             <>
               <button 
