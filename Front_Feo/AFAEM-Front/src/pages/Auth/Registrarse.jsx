@@ -140,6 +140,17 @@ function Registrarse() {
 			if (!String(value || '').trim()) return 'La fecha de nacimiento es obligatoria';
 			return '';
 		}
+		if (name === 'Contrasena') {
+			const pw = value || '';
+			if (!pw) return 'La contraseña es obligatoria';
+			if (pw.length < 6) return 'Debe tener mínimo 6 caracteres';
+			return '';
+		}
+		if (name === 'ConfirmarContrasena') {
+			if (!value) return 'Confirma tu contraseña';
+			if (value !== formData.Contrasena) return 'Las contraseñas no coinciden';
+			return '';
+		}
 		return '';
 	};
 
