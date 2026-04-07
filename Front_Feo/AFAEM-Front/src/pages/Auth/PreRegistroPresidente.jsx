@@ -105,8 +105,8 @@ function PreRegistroPresidente() {
   }, [estatusId, navigate]);
 
   // PASO 1: Pago y Seguros
-  const [numPersonas, setNumPersonas] = useState(0);
-  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': 0, '2': 0, '3': 0 });
+  const [numPersonas, setNumPersonas] = useState('');
+  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
   const [comprobantePago, setComprobantePago] = useState(null);
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
@@ -122,9 +122,9 @@ function PreRegistroPresidente() {
     referencia: 'RHX-CL26-001'
   };
 
-  const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + val, 0);
-  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (asignacionSeguros[seg.id] || 0) * seg.precio, 0);
-  const segurosRequeridos = numPersonas > 0 ? numPersonas + 1 : 0; // Jugadores + Presidente
+  const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + Number(val || 0), 0);
+  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas || 0) + 1 : 0; // Jugadores + Presidente
   const jugadoresRestantes = segurosRequeridos - totalAsignados;
 
   // PASO 2: Documentos
@@ -1086,7 +1086,10 @@ function PreRegistroPresidente() {
                     type="number"
                     className="input-number"
                     value={numPersonas}
-                    onChange={(e) => setNumPersonas(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                      setNumPersonas(val);
+                    }}
                     style={{ marginTop: '5px' }}
                   />
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>(Recuerda: Deberás asignar un seguro por cada jugador, más un seguro extra para ti como Presidente)</span>
@@ -1109,8 +1112,11 @@ function PreRegistroPresidente() {
                     <input
                       type="number"
                       className="insurance-input"
-                      value={asignacionSeguros[seg.id]}
-                      onChange={(e) => setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: Number(e.target.value) })}
+                    value={asignacionSeguros[seg.id]}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                      setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                    }}
                     />
                   </div>
                 ))}
