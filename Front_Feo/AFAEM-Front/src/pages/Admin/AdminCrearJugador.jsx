@@ -68,8 +68,6 @@ export default function AdminCrearJugador() {
     genero: '1', 
     fechaNacimiento: '',
     lugarNacimiento: '',
-    estatura: '',
-    peso: '',
     direccion: '',
     
     // DATOS DE AFILIADO (NUEVOS)
