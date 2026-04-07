@@ -59,6 +59,14 @@ export default function AdminCrearJugador() {
     formatoAfiliacion: null
   });
 
+  // Previsualizaciones (URLs locales)
+  const [previews, setPreviews] = useState({
+    actaNacimiento: null,
+    identificacion: null,
+    fotografia: null,
+    formatoAfiliacion: null
+  });
+
   const [extractedData, setExtractedData] = useState({
     equipoSeleccionado: '',
     nombreJugador: '',
@@ -142,6 +150,17 @@ export default function AdminCrearJugador() {
     if (!file) return;
 
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
+
+    // Generar Previsualización
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => ({ ...prev, [documentKey]: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      setPreviews(prev => ({ ...prev, [documentKey]: 'pdf_icon' }));
+    }
 
     // VALIDACIÓN DE FOTOGRAFÍA
     if (documentKey === 'fotografia') {
@@ -326,9 +345,20 @@ export default function AdminCrearJugador() {
         safeSetField(form, 'Nacionalidades del abuelo materno', extractedData.nacAbueloMaterno);
         safeSetField(form, 'Nacionalidades de la abuela materna', extractedData.nacAbuelaMaterna);
         
-        safeSetField(form, 'El jugador ha sido registrado por la Asociación Nacional de Fútbol...', extractedData.registroAsociacionExtranjera);
         safeSetField(form, 'El jugador ha jugado en un Club extranjero...', extractedData.juegoClubExtranjero);
       }
+
+      // 3. FECHA DE DESCARGA AUTOMÁTICA
+      const now = new Date();
+      const fechaDescarga = now.toLocaleDateString('es-MX', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      safeSetField(form, 'Fecha de descarga', fechaDescarga);
+      // Fallback por si el nombre del campo en el PDF es diferente
+      safeSetField(form, 'Fecha descarga', fechaDescarga);
+      safeSetField(form, 'Fecha', fechaDescarga);
 
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -435,82 +465,110 @@ export default function AdminCrearJugador() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <div className="premium-card fade-in" style={{ maxWidth: '1000px', margin: '0 auto', background: 'white', borderRadius: '24px', padding: '40px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
+        <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px' }}>
+          <p className="required-legend" style={{ margin: 0 }}>
+            <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial en la liga.
+          </p>
+        </div>
         
         {/* PASO 1: SELECCION DE EQUIPO */}
-        <section style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+        <section style={{ marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
             <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-            <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Elección de Equipo Destino</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Elección de Equipo Destino</h3>
           </div>
           
-          <Tarjeta estilo={{ 
-            border: isStep1Done ? '1px solid #dcfce7' : '1px solid #e2e8f0',
-            backgroundColor: isStep1Done ? '#f8fafc' : 'white'
+          <div style={{ 
+            padding: '25px',
+            borderRadius: '16px',
+            border: isStep1Done ? '2px solid #10b981' : '2px solid #e2e8f0',
+            backgroundColor: isStep1Done ? '#f0fdf4' : '#f8fafc',
+            transition: 'all 0.3s'
           }}>
             <div className="form-group">
-              <label style={{ fontWeight: '700', fontSize: '14px', color: isStep1Done ? '#64748b' : '#1e293b', marginBottom: '10px', display: 'block' }}>
-                ¿A qué equipo quieres agregar este jugador? *
+              <label style={{ fontWeight: '700', fontSize: '14px', color: '#334155', marginBottom: '12px', display: 'block' }}>
+                Busca y elige el equipo donde se inscribirá el jugador <span className="required-star">*</span>
               </label>
-              <select 
-                className="form-select" 
-                value={extractedData.equipoSeleccionado} 
-                onChange={(e) => setExtractedData({...extractedData, equipoSeleccionado: e.target.value})}
-                style={{ 
-                  borderRadius: '12px', 
-                  padding: '12px 15px', 
-                  border: isStep1Done ? '2px solid #10b981' : '2px solid #e2e8f0', 
-                  fontSize: '15px',
-                  boxShadow: isStep1Done ? '0 4px 12px rgba(16, 185, 129, 0.05)' : 'none'
-                }}
-                disabled={loadingTeams}
-              >
-                <option value="">-- Elige un Trámite/Equipo Activo --</option>
-                {equiposDb.map(eq => (
-                  <option key={eq.SolicitudId} value={eq.SolicitudId}>
-                    {eq.Equipo} (Solicitud #{eq.SolicitudId}) - {eq.Correo}
-                  </option>
-                ))}
-              </select>
+              
+              <div style={{ position: 'relative' }}>
+                <select 
+                  className="form-select form-input-lg" 
+                  value={extractedData.equipoSeleccionado} 
+                  onChange={(e) => setExtractedData({...extractedData, equipoSeleccionado: e.target.value})}
+                  style={{ 
+                    border: 'none',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                    paddingRight: '40px'
+                  }}
+                  disabled={loadingTeams}
+                >
+                  <option value="">-- Escribe para buscar equipo --</option>
+                  {equiposDb.map(eq => (
+                    <option key={eq.SolicitudId} value={eq.SolicitudId}>
+                      {eq.Equipo} (Solicitud #{eq.SolicitudId}) - {eq.Correo}
+                    </option>
+                  ))}
+                </select>
+                {loadingTeams && (
+                  <div style={{ position: 'absolute', right: '15px', top: '15px' }}>
+                    <div className="spinner-border spinner-border-sm text-primary"></div>
+                  </div>
+                )}
+              </div>
             </div>
-          </Tarjeta>
+          </div>
         </section>
 
         {/* PASO 2: CARGA DE DOCUMENTOS */}
         {showStep2 && (
-          <section className="fade-in" style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+          <section className="fade-in" style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
               <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-              <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
             </div>
 
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
               gap: '20px' 
             }}>
               {[
-                { key: 'actaNacimiento', title: 'Acta de nacimiento', icon: null },
-                { key: 'identificacion', title: 'Identificación', icon: null },
-                { key: 'fotografia', title: 'Fotografía', icon: null },
-                { key: 'formatoAfiliacion', title: 'Formato Firmado', icon: null }
+                { key: 'actaNacimiento', title: 'Acta de Nacimiento' },
+                { key: 'identificacion', title: 'Identificación (INE/Pasaporte)' },
+                { key: 'fotografia', title: 'Fotografía Infantil' },
+                { key: 'formatoAfiliacion', title: 'Formato de Afiliación Firmado' }
               ].map(doc => (
                 <div 
                   key={doc.key}
                   style={{
                     backgroundColor: 'white',
-                    borderRadius: '16px',
+                    borderRadius: '20px',
                     border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                    padding: '24px 20px',
+                    padding: '20px',
                     textAlign: 'center',
                     cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: documents[doc.key] ? '0 10px 20px rgba(16, 185, 129, 0.08)' : 'none'
+                    transition: 'all 0.3s',
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}
                   onClick={() => document.getElementById(`file-${doc.key}`).click()}
                 >
-                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>{doc.icon}</div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', margin: '0 0 8px 0', color: '#1e293b' }}>{doc.title}</h4>
+                  {previews[doc.key] ? (
+                    previews[doc.key] === 'pdf_icon' ? (
+                      <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', fontSize: '40px' }}>
+                        <FaFilePdf />
+                      </div>
+                    ) : (
+                      <img src={previews[doc.key]} alt="Preview" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '12px', marginBottom: '10px' }} />
+                    )
+                  ) : (
+                    <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '30px' }}>
+                      <FaUpload />
+                    </div>
+                  )}
+                  
+                  <h4 style={{ fontSize: '13px', fontWeight: '700', margin: '8px 0', color: '#1e293b' }}>{doc.title}</h4>
                   <div style={{ 
                     display: 'inline-flex', 
                     alignItems: 'center', 
@@ -522,7 +580,7 @@ export default function AdminCrearJugador() {
                     fontSize: '11px',
                     fontWeight: '700'
                   }}>
-                    {documents[doc.key] ? <><FaCheckCircle /> Cargado</> : 'Pendiente'}
+                    {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Subir archivo'}
                   </div>
                   <input 
                     type="file" 
@@ -536,12 +594,12 @@ export default function AdminCrearJugador() {
             </div>
 
             {!isStep2Done && (
-              <div style={{ textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ textAlign: 'center', marginTop: '25px' }}>
                 <button 
                   onClick={() => setFillManually(true)}
-                  style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '600', background: 'none', border: 'none', textDecoration: 'underline' }}
+                  style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline' }}
                 >
-                  O prefiero llenar los datos manualmente ahora
+                  Omitir carga y llenar datos manualmente
                 </button>
               </div>
             )}
@@ -564,73 +622,68 @@ export default function AdminCrearJugador() {
               />
             </div>
 
-            {/* SECCIÓN 1: DATOS PERSONALES */}
-            <Tarjeta titulo="1. Datos Personales (Detectados por OCR)" estilo={{ marginBottom: '20px' }}>
+            {/* SECCIÓN 1: DATOS DEL AFILIADO */}
+            <Tarjeta titulo="1. Datos del afiliado" estilo={{ marginBottom: '20px' }}>
                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                 <EntradaFormulario
-                  etiqueta="Nombre(s) *"
+                  etiqueta={<>Nombre(s) <span className="required-star">*</span></>}
                   valor={extractedData.nombreJugador}
                   alCambiar={(e) => setExtractedData({...extractedData, nombreJugador: e.target.value})}
                 />
                 <EntradaFormulario
-                  etiqueta="Apellido Paterno *"
+                  etiqueta={<>Apellido paterno <span className="required-star">*</span></>}
                   valor={extractedData.apellidoPaterno}
                   alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
                 />
                 <EntradaFormulario
-                  etiqueta="Apellido Materno"
+                  etiqueta={<>Apellido materno <span className="required-star">*</span></>}
                   valor={extractedData.apellidoMaterno}
                   alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
                 />
                 <EntradaFormulario
-                  etiqueta="CURP Oficial *"
+                  etiqueta={<>CURP <span className="required-star">*</span></>}
                   valor={extractedData.curp}
                   alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})}
                   maxLength={18}
                 />
                 <EntradaFormulario
-                  etiqueta="Fecha de Nacimiento *"
+                  etiqueta={<>Lugar de nacimiento <span className="required-star">*</span></>}
+                  valor={extractedData.lugarNacimiento}
+                  alCambiar={(e) => setExtractedData({...extractedData, lugarNacimiento: e.target.value})}
+                />
+                <EntradaFormulario
+                  etiqueta={<>Fecha de nacimiento <span className="required-star">*</span></>}
                   tipo="date"
                   valor={extractedData.fechaNacimiento}
                   alCambiar={(e) => setExtractedData({...extractedData, fechaNacimiento: e.target.value})}
                 />
-                <EntradaFormulario
-                  etiqueta="Lugar de Nacimiento *"
-                  valor={extractedData.lugarNacimiento}
-                  alCambiar={(e) => setExtractedData({...extractedData, lugarNacimiento: e.target.value})}
-                  marcador="Ciudad y Estado"
-                />
                 <EntradaSeleccion
-                  etiqueta="Género *"
+                  etiqueta={<>Sexo <span className="required-star">*</span></>}
                   valor={extractedData.genero}
                   alCambiar={(e) => setExtractedData({...extractedData, genero: e.target.value})}
                   opciones={[{ valor: '1', etiqueta: 'Masculino' }, { valor: '2', etiqueta: 'Femenino' }]}
                 />
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <AreaTexto
-                    etiqueta="Dirección Completa (Calle, Col, Municipio)"
-                    valor={extractedData.direccion}
-                    alCambiar={(e) => setExtractedData({...extractedData, direccion: e.target.value})}
-                    filas={2}
-                  />
-                </div>
-              </div>
-            </Tarjeta>
-
-            {/* SECCIÓN 2: DATOS DE CONTACTO Y EQUIPO */}
-            <Tarjeta titulo="2. Contacto y Detalles del Jugador" estilo={{ marginBottom: '20px' }}>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                 <EntradaFormulario
-                  etiqueta="Correo Electrónico"
+                  etiqueta={<>Correo electrónico <span className="required-star">*</span></>}
                   tipo="email"
                   valor={extractedData.correo}
                   alCambiar={(e) => setExtractedData({...extractedData, correo: e.target.value})}
                 />
+                <EntradaSeleccion
+                  etiqueta="Tipo de afiliación"
+                  valor={extractedData.tipoAfiliacion}
+                  alCambiar={(e) => setExtractedData({...extractedData, tipoAfiliacion: e.target.value})}
+                  opciones={[{ valor: 'JUGADOR', etiqueta: 'Jugador' }, { valor: 'CUERPO_TECNICO', etiqueta: 'Cuerpo Técnico' }]}
+                />
                 <EntradaFormulario
-                  etiqueta="Teléfono Contacto"
+                  etiqueta="Teléfono"
                   valor={extractedData.telefono}
                   alCambiar={(e) => setExtractedData({...extractedData, telefono: e.target.value})}
                 />
+                <EntradaFormulario etiqueta="Asociación" valor={extractedData.asociacion} deshabilitado />
+                <EntradaFormulario etiqueta="Liga" valor={extractedData.liga} deshabilitado />
+                <EntradaFormulario etiqueta="Equipo" valor={extractedData.equipo} deshabilitado />
+                <EntradaFormulario etiqueta="Categoría" valor={extractedData.categoria} deshabilitado />
                 <EntradaSeleccion
                   etiqueta="Posición"
                   valor={extractedData.posicion}
@@ -644,21 +697,27 @@ export default function AdminCrearJugador() {
                   ]}
                 />
                 <EntradaFormulario
-                  etiqueta="Número Camiseta"
+                  etiqueta="Camiseta"
                   tipo="number"
                   valor={extractedData.numCamiseta}
                   alCambiar={(e) => setExtractedData({...extractedData, numCamiseta: e.target.value})}
                 />
-                <EntradaFormulario etiqueta="Categoría (Auto)" valor={extractedData.categoria} deshabilitado />
-                <EntradaFormulario etiqueta="Equipo (Auto)" valor={extractedData.equipo} deshabilitado />
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <AreaTexto
+                    etiqueta="Dirección completa"
+                    valor={extractedData.direccion}
+                    alCambiar={(e) => setExtractedData({...extractedData, direccion: e.target.value})}
+                    filas={2}
+                  />
+                </div>
               </div>
             </Tarjeta>
 
-            {/* SECCIÓN 3: FORÁNEO / INTERNACIONAL */}
+            {/* SECCIÓN 2: ANTECEDENTES INTERNACIONALES */}
             <Tarjeta estilo={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', marginBottom: '30px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
                 <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#9a3412' }}>
-                  Antecedentes Internacionales
+                  2. Antecedentes internacionales
                 </h4>
                 <div className="form-check form-switch">
                   <input 
@@ -669,7 +728,7 @@ export default function AdminCrearJugador() {
                     onChange={(e) => setExtractedData({...extractedData, esForaneo: e.target.checked})}
                   />
                   <label className="form-check-label" htmlFor="switchForaneo" style={{ fontSize: '13px', fontWeight: '700' }}>
-                    ¿Jugador Foráneo?
+                    ¿Jugador foráneo?
                   </label>
                 </div>
               </div>
@@ -677,17 +736,17 @@ export default function AdminCrearJugador() {
               {extractedData.esForaneo ? (
                 <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                   <EntradaFormulario
-                    etiqueta="Nacionalidad Jugador"
+                    etiqueta="Nacionalidad del jugador"
                     valor={extractedData.nacionalidadJugador}
                     alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})}
                   />
                   <EntradaFormulario
-                    etiqueta="País Residencia Actual"
+                    etiqueta="País de residencia actual"
                     valor={extractedData.paisResidencia}
                     alCambiar={(e) => setExtractedData({...extractedData, paisResidencia: e.target.value})}
                   />
                   <EntradaSeleccion
-                    etiqueta="¿Ha vivido en el extranjero?"
+                    etiqueta="¿El jugador ha vivido en el extranjero?"
                     valor={extractedData.haVividoExtranjero ? '1' : '0'}
                     alCambiar={(e) => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})}
                     opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
@@ -700,70 +759,75 @@ export default function AdminCrearJugador() {
                     />
                   )}
                   <EntradaFormulario
-                    etiqueta="Nacionalidad del Padre"
+                    etiqueta="Nacionalidades del padre"
                     valor={extractedData.nacionalidadPadre}
                     alCambiar={(e) => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})}
                   />
                   <EntradaFormulario
-                    etiqueta="Nacionalidad de la Madre"
+                    etiqueta="Nacionalidades de la madre"
                     valor={extractedData.nacionalidadMadre}
                     alCambiar={(e) => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})}
                   />
                   
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <AreaTexto
+                      etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF."
+                      valor={extractedData.registroAsociacionExtranjera}
+                      alCambiar={(e) => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})}
+                      filas={2}
+                    />
+                  </div>
+
                   <EntradaFormulario
-                    etiqueta="Nacionalidad Abuelo Paterno"
+                    etiqueta="Nacionalidades del abuelo paterno"
                     valor={extractedData.nacAbueloPaterno}
                     alCambiar={(e) => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})}
                   />
                   <EntradaFormulario
-                    etiqueta="Nacionalidad Abuela Paterna"
+                    etiqueta="Nacionalidades de la abuela paterna"
                     valor={extractedData.nacAbuelaPaterna}
                     alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})}
                   />
                   <EntradaFormulario
-                    etiqueta="Nacionalidad Abuelo Materno"
+                    etiqueta="Nacionalidades del abuelo materno"
                     valor={extractedData.nacAbueloMaterno}
                     alCambiar={(e) => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})}
                   />
                   <EntradaFormulario
-                    etiqueta="Nacionalidad Abuela Materna"
+                    etiqueta="Nacionalidades de la abuela materna"
                     valor={extractedData.nacAbuelaMaterna}
                     alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})}
                   />
 
                   <div style={{ gridColumn: '1 / -1' }}>
                     <AreaTexto
-                      etiqueta="Registro en Asociación Extranjera (Detalles)"
-                      valor={extractedData.registroAsociacionExtranjera}
-                      alCambiar={(e) => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})}
-                      filas={2}
-                    />
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <AreaTexto
-                      etiqueta="Participación en Clubes/Competencias Extranjeras"
+                      etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?"
                       valor={extractedData.juegoClubExtranjero}
                       alCambiar={(e) => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})}
-                      filas={2}
+                      filas={3}
                     />
                   </div>
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                  El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar campos adicionales.
+                   El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos de antecedentes internacionales.
                 </p>
               )}
             </Tarjeta>
 
             {/* ACCIONES FINALES */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-              <BotonSecundario etiqueta="Cancelar" alHacerClick={() => navigate('/admin/jugadores')} />
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+              <BotonSecundario 
+                etiqueta="Cancelar y volver" 
+                alHacerClick={() => navigate('/admin/jugadores')} 
+                estilo={{ minWidth: '200px' }}
+              />
               <BotonPrimario 
-                etiqueta={uploading ? "Procesando..." : "Autorizar e Inscribir Jugador Ahora"} 
+                etiqueta={uploading ? "Procesando..." : "Autorizar e Inscribir Jugador"} 
                 icono={<FaSave />} 
                 alHacerClick={handleGuardar} 
                 deshabilitado={uploading}
-                estilo={{ minWidth: '280px' }}
+                estilo={{ minWidth: '300px' }}
               />
             </div>
           </section>

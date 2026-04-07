@@ -19,7 +19,6 @@ const MainLayout = ({ userEmail }) => {
         
         <main className="fade-in" style={{ 
           padding: '30px', 
-          marginTop: 'var(--header-height)',
           flex: 1
         }}>
           <Outlet />

@@ -59,12 +59,12 @@ export default function AdminCrearEquipo() {
 
           <div style={{ marginBottom: '24px' }}>
             <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '20px' }}>
-              Datos Principales del Club
+              Datos principales del club
             </h4>
             
             <div className="row">
               <div className="col-md-6 mb-3">
-                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Nombre Oficial del Equipo *</label>
+                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Nombre oficial del equipo <span className="required-star">*</span></label>
                 <input 
                   type="text" 
                   className="form-control" 
@@ -99,7 +99,7 @@ export default function AdminCrearEquipo() {
             
             <div className="row">
               <div className="col-md-4 mb-3">
-                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Liga Destino *</label>
+                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Liga destino <span className="required-star">*</span></label>
                 <select 
                   className="form-select" 
                   name="liga" 
@@ -114,7 +114,7 @@ export default function AdminCrearEquipo() {
               </div>
 
               <div className="col-md-4 mb-3">
-                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Categoría *</label>
+                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Categoría <span className="required-star">*</span></label>
                 <select 
                   className="form-select" 
                   name="categoria" 
@@ -129,7 +129,7 @@ export default function AdminCrearEquipo() {
               </div>
 
               <div className="col-md-4 mb-3">
-                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Rama *</label>
+                <label style={{ fontWeight: '600', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Rama <span className="required-star">*</span></label>
                 <select 
                   className="form-select" 
                   name="rama" 

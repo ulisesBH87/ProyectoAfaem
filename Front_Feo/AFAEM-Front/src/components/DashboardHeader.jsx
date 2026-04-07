@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaBell, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import SearchBar from './Common/SearchBar';
 
 const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
   const navigate = useNavigate();
@@ -44,21 +45,19 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
 
   return (
     <header 
-      className="glass"
+      className="main-header-fixed"
       style={{
         height: 'var(--header-height)',
         padding: '0 30px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        position: 'fixed',
+        position: 'sticky',
         top: 0,
-        right: 0,
-        width: 'calc(100% - var(--sidebar-width))',
-        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        zIndex: 999,
-        borderBottom: '1px solid var(--border-light)',
-        boxShadow: 'var(--shadow-sm)'
+        backgroundColor: '#ffffff', // Fondo sólido
+        borderBottom: '1px solid #e2e8f0',
+        zIndex: 1000,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -75,26 +74,12 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         {/* Search Bar */}
-        <div style={{ position: 'relative' }}>
-          <FaSearch style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '14px' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              padding: '10px 16px 10px 40px',
-              width: '280px',
-              background: 'rgba(11, 78, 166, 0.05)',
-              borderRadius: '12px',
-              fontSize: '13px',
-              fontWeight: '500',
-              border: '1px solid transparent'
-            }}
-            onFocus={(e) => e.target.style.borderColor = 'var(--primary-light)'}
-            onBlur={(e) => e.target.style.borderColor = 'transparent'}
-          />
-        </div>
+        <SearchBar 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar..."
+          width="280px"
+        />
 
         {/* Notifications */}
         <div 
