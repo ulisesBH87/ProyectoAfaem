@@ -4,7 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import DashboardTable from '../../components/DashboardTable';
 import { getSolicitudes } from '../../services/solicitud';
-import { getSolicitudDetalle, getSolicitudDocumentosMock, updateSolicitudEstatus } from '../../services/admin';
+import { getSolicitudDetalle, getSolicitudDocumentos, updateSolicitudEstatus } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DetalleSolicitudModal from '../../components/Admin/DetalleSolicitudModal';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
@@ -221,7 +221,7 @@ export default function AdminSolicitudes() {
     try {
       setCargandoRevision(true);
       setModalAbierto(true);
-      const docs = await getSolicitudDocumentosMock(id);
+      const docs = await getSolicitudDocumentos(id);
       setDatosRevision(docs);
     } catch (error) {
       Swal.fire('Error', 'No se pudieron cargar los documentos para revisión.', 'error');
@@ -277,7 +277,7 @@ export default function AdminSolicitudes() {
     if (motivo) {
       try {
         setLoading(true);
-        await updateSolicitudEstatus(id, 0); // 0 = Rechazado
+        await updateSolicitudEstatus(id, 0, motivo); // 0 = Rechazado, con motivo
         setModalAbierto(false);
         Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info');
         window.location.reload();

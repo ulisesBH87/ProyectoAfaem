@@ -11,6 +11,7 @@ import React from 'react';
  */
 export default function Tarjeta({
   hijos,
+  children,
   titulo = '',
   subtitulo = '',
   alHacerClick,
@@ -19,6 +20,7 @@ export default function Tarjeta({
   conveEnlace = false,
   ...accesorios
 }) {
+  const content = children || hijos;
   return (
     <div
       onClick={alHacerClick}
@@ -75,7 +77,8 @@ export default function Tarjeta({
           </p>
         </div>
       )}
-      {hijos}
+      {content}
     </div>
+
   );
 }
