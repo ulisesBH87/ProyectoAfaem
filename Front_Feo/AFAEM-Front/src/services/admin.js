@@ -79,17 +79,16 @@ export const getSolicitudDocumentos = async (solicitudId) => {
     console.warn(`Backend no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
     // FALLBACK MOCK (Para que el front siga funcionando mientras el back implementa)
     return {
-      equipo: "Galgos de Tijuana",
-      solicitudId: solicitudId,
-      jugadores: [
+      Equipo: "Galgos de Tijuana (Mock)",
+      SolicitudId: solicitudId,
+      Jugadores: [
         {
-          id: 101,
-          nombre: "Juan Pérez",
-          curp: "PERJ880101HDFRRN01",
-          documentos: [
-            { tipo: "Acta de Nacimiento", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", estado: "entregado" },
-            { tipo: "INE", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", estado: "entregado" },
-            { tipo: "CURP", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", estado: "entregado" }
+          Id: 101,
+          Nombre: "Juan Pérez",
+          CURP: "PERJ880101HDFRRN01",
+          Documentos: [
+            { Tipo: "Acta de Nacimiento", Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", Estado: "entregado" },
+            { Tipo: "INE", Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", Estado: "entregado" }
           ]
         }
       ]
@@ -104,8 +103,8 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
   // estatus: 1 = Aprobado, 0 = Rechazado
   try {
     const response = await api.post(`/solicitud/${solicitudId}/validar`, {
-      estatus: estatus,
-      observaciones: observaciones
+      Estatus: estatus,
+      Observaciones: observaciones
     });
     return response.data;
   } catch (error) {
@@ -113,7 +112,7 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ mensaje: "Estatus actualizado correctamente (Simulado)", solicitud_id: solicitudId });
-      }, 800);
+      }, 8000);
     });
   }
 };

@@ -145,3 +145,49 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
     
     return {"mensaje": "Solicitud enviada correctamente"}
 
+# --- SECCIÓN ADMINISTRADORA: VALIDACIÓN DE SOLICITUDES ---
+
+def obtener_documentos_para_revision_servicio(db: Session, solicitud_id: int):
+    resultado = solicitud_repositorio.obtener_personas_con_documentos_repo(db, solicitud_id)
+    if not resultado:
+         raise HTTPException(status_code=404, detail="No se encontró la solicitud o no tiene documentos asociados")
+    return resultado
+
+def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
+    """
+    Lógica para aprobar o rechazar una solicitud.
+    """
+    try:
+        # Iniciamos transaccion explícita
+        with db.begin_nested(): # Usamos nested para asegurar que si falla algo, todo regrese
+            
+            # Mapeo de Estatus desde el Payload (1: Aprobado, 0: Rechazado)
+            # A la base de datos (2: ACEPTADO, 3: RECHAZADO)
+            estatus_db = 2 if payload.Estatus == 1 else 3
+            
+            # 1. Actualizar estatus de la solicitud
+            solicitud = solicitud_repositorio.actualizar_validacion_solicitud_repo(
+                db, solicitud_id, estatus_db, payload.Observaciones
+            )
+            
+            if not solicitud:
+                raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+            
+            # 2. Si es aprobado, activar al presidente
+            if payload.Estatus == 1:
+                activado = solicitud_repositorio.activar_presidente_solicitud_repo(db, solicitud_id)
+                if not activado:
+                    # Si no pudimos activar al presidente, lanzamos error para hacer rollback
+                    raise Exception("No se pudo activar el registro de Presidente de Equipo. Verifique que el usuario esté vinculado correctamente.")
+            
+        db.commit()
+        mensaje = "Solicitud aprobada y presidente activado" if payload.Estatus == 1 else "Solicitud rechazada correctamente"
+        return {"mensaje": mensaje, "solicitud_id": solicitud_id}
+
+    except HTTPException as he:
+        db.rollback()
+        raise he
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en la validación: {str(e)}")
+
