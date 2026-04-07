@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException
+
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
+
+from app.excepciones import usuario_excepciones
 from app.enums.roles_enum import Rol
 
-# Métodos para obtener el usuario
+# Métodos para obtener el usuario   
 def obtener_por_correo(db: Session, correo: str):
     return db.query(Usuario).filter(Usuario.Correo == correo).first()
 
@@ -34,18 +36,9 @@ def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
     except IntegrityError as e:
         db.rollback()
         if "check_curp_persona_longitud" in str(e):
-            raise HTTPException(
-                status_code=400,
-                detail="La CURP proporcionada no tiene el formato correcto. Debe tener exactamente 18 caracteres alfanuméricos."
-            )
+            raise usuario_excepciones.CurpInvalidaError()
         else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Error al registrar el usuario: {str(e)}"
-            )
-    except Exception as e:
-        db.rollback()
-        raise e
+            raise usuario_excepciones.ErrorRegistroUsuario(str(e))
 
 # Registro
 def registrar_admin_repo(db: Session, persona: Personas, usuario: Usuario):
@@ -67,29 +60,25 @@ def registrar_admin_repo(db: Session, persona: Personas, usuario: Usuario):
     except IntegrityError as e:
         db.rollback()
         if "check_curp_persona_longitud" in str(e):
-            raise HTTPException(
-                status_code=400,
-                detail="La CURP proporcionada no tiene el formato correcto. Debe tener exactamente 18 caracteres alfanuméricos."
-            )
+            raise usuario_excepciones.CurpInvalidaError()
         else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Error al registrar el administrador: {str(e)}"
-            )
-    except Exception as e:
-        db.rollback()
-        raise e
+            raise usuario_excepciones.ErrorRegistroUsuario(str(e))
 
 # Contraseña
 def cambiar_contrasena_repo(db: Session, usuario_id: int, hash: str, salt: str):
+    try:
+        usuario = obtener_usuario_por_id(db, usuario_id)
 
-    usuario = obtener_usuario_por_id(db, usuario_id)
+        if not usuario:
+            return False
 
-    if not usuario:
-        return False
+        usuario.Contrasena = hash
+        usuario.Salt = salt
 
-    usuario.Contrasena = hash
-    usuario.Salt = salt
+        db.commit()
 
-    db.commit()
+    except Exception as e:
+        db.rollback()
+        raise usuario_excepciones.ContraseñaError(str(e))
+    
     return True

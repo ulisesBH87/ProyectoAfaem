@@ -1,14 +1,14 @@
-import hashlib
 import hmac
+import hashlib
 import secrets
 
-from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from app.db.sesion import get_db
-from app.modelos.usuario_modelo import Usuario
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from app.modelos.usuario_modelo import Usuario
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status
+from datetime import datetime, timedelta, timezone
 from app.repositorios.usuario_repositorio import obtener_usuario_por_id
 
 from app.core.config import obtener_configuracion
@@ -17,6 +17,8 @@ config = obtener_configuracion()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/iniciar-sesion")
 
+
+#Contraseñas
 def generar_salt():
     return secrets.token_hex(16)
 
@@ -42,11 +44,10 @@ def crear_token(data: dict) -> str:
         minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
-    #fecha de expiración agregada al payload del token
     datos.update(
         {
             "sub": str(data["sub"]),
-            "exp": expire,
+            "exp": expire,      #fecha de expiración agregada al payload del token
             "type": "access"
         }
     )
@@ -56,6 +57,7 @@ def crear_token(data: dict) -> str:
         config.SECRET_KEY,
         algorithm=config.ALGORITHM
     )
+
     return token
 
 def verificar_token(token: str):
@@ -74,6 +76,10 @@ def verificar_token(token: str):
             detail="Token inválido o expirado"
         )
 
+
+#Usuarios
+
+#Obtener desde token
 def obtener_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     payload = verificar_token(token)
     if payload is None:
