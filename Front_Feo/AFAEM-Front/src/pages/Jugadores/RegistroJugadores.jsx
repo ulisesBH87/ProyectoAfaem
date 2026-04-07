@@ -262,12 +262,20 @@ export default function RegistroJugadores() {
 
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
+      link.href = url;
       link.download = `Formato_Afiliacion_${extractedData.nombreJugador || 'Jugador'}.pdf`;
+      document.body.appendChild(link);
       link.click();
-      Swal.fire('¡Listo!', 'El formato se ha descargado correctamente.', 'success');
-    } catch (err) { Swal.fire('Error', 'No se pudo generar el PDF.', 'error'); }
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      Swal.fire('Listo!', 'El formato se ha descargado correctamente.', 'success');
+    } catch (err) { 
+      console.error(err);
+      Swal.fire('Error', 'No se pudo generar el PDF.', 'error'); 
+    }
   };
 
   const handleGuardar = async (e) => {
