@@ -148,7 +148,7 @@ export default function RegistroJugadores() {
       try {
         const data = await validarFotografia(file);
         if (data.valido) {
-          Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
+          Swal.fire({ title: 'Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
         } else {
           Swal.fire('Error en la fotografía', data.mensaje, 'error');
           setDocuments(prev => ({ ...prev, [documentKey]: null }));
@@ -198,7 +198,7 @@ export default function RegistroJugadores() {
             fechaNacimiento: fnac || prev.fechaNacimiento,
             lugarNacimiento: lnac || prev.lugarNacimiento
           }));
-          Swal.fire({ title: '¡Lectura Exitosa!', icon: 'success', timer: 1500, showConfirmButton: false });
+          Swal.fire({ title: 'Lectura Exitosa!', icon: 'success', timer: 1500, showConfirmButton: false });
         }
       } catch (err) { Swal.fire('Aviso', 'OCR no disponible. Favor de completar manualmente.', 'info'); }
     }
@@ -309,7 +309,7 @@ export default function RegistroJugadores() {
       });
 
       await registrarJugadorTemporal(formData);
-      Swal.fire({ title: '¡Registro Exitoso!', text: 'El jugador ha sido enviado a revisión por el administrador.', icon: 'success' })
+      Swal.fire({ title: 'Registro Exitoso!', text: 'El jugador ha sido enviado a revisión por el administrador.', icon: 'success' })
         .then(() => navigate(`/presidente-equipo/admin-equipo/${teamId}`));
     } catch (err) { 
       console.error(err);
@@ -368,10 +368,10 @@ export default function RegistroJugadores() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
               {[
-                { key: 'actaNacimiento', title: 'Acta Nacimiento', icon: '📋' },
-                { key: 'identificacion', title: 'Identificación', icon: '🆔' },
-                { key: 'fotografia', title: 'Fotografía', icon: '📸' },
-                { key: 'formatoAfiliacion', title: 'Formato Firmado', icon: '📝' }
+                { key: 'actaNacimiento', title: 'Acta Nacimiento', icon: null },
+                { key: 'identificacion', title: 'Identificación', icon: null },
+                { key: 'fotografia', title: 'Fotografía', icon: null },
+                { key: 'formatoAfiliacion', title: 'Formato Firmado', icon: null }
               ].map(doc => (
                 <div 
                   key={doc.key}
