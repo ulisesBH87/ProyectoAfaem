@@ -18,7 +18,7 @@ export default function Ingresar() {
   const [err, setErr] = useState(null);
   const [backendOk, setBackendOk] = useState(true);
   const [backendDiag, setBackendDiag] = useState('');
-  
+
   React.useEffect(() => {
     (async () => {
       try {
@@ -61,11 +61,11 @@ export default function Ingresar() {
       };
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('email', email); // GUARDAR EMAIL DIRECTAMENTE
-      
+
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
       console.log('ROL USUARIO (desde respuesta login):', role);
       console.log('ESTATUS ID detectado:', currentEstatusId);
-      
+
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
         localStorage.setItem('UsuarioId', data.UsuarioId);
@@ -81,7 +81,7 @@ export default function Ingresar() {
           console.log('🆔 ID extraído del Token:', decoded.sub);
         }
       }
-      
+
       console.log('ROL USUARIO:', role);
 
       // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---
@@ -269,14 +269,14 @@ export default function Ingresar() {
           .login-title { font-size: 26px; }
         }
       `}</style>
-      
+
       <div className="login-card card glass">
         <div className="login-header">
           <img src={AfaemLogo} alt="AFAEM" className="logo-main" />
           <h1 className="login-title">Inicia Sesión</h1>
           <p className="login-subtitle">Bienvenido a la plataforma AFAEM</p>
         </div>
-        
+
         <form onSubmit={handleSubmit}>
           {!backendOk && (
             <div className="backend-warning">
@@ -284,9 +284,9 @@ export default function Ingresar() {
               <div style={{ opacity: 0.8, marginTop: '4px' }}>{backendDiag}</div>
             </div>
           )}
-          
-          {err && <div className="error-box">{err}</div>}
-          
+          {/* {err} */}
+          {err && <div className="error-box">El correo electronico o la contraseña no son correctos</div>}
+
           <div style={{ marginBottom: '25px' }}>
             <label className="form-label">Correo electrónico</label>
             <input
@@ -299,7 +299,7 @@ export default function Ingresar() {
               required
             />
           </div>
-          
+
           <div style={{ marginBottom: '15px' }}>
             <label className="form-label">Contraseña</label>
             <div className="password-container">
@@ -326,7 +326,7 @@ export default function Ingresar() {
               </Link>
             </div>
           </div>
-          
+
           <button
             type="submit"
             className="btn-premium"
@@ -336,7 +336,7 @@ export default function Ingresar() {
             {loading ? 'Validando acceso...' : 'Ingresar al sistema'}
           </button>
         </form>
-        
+
         <div className="footer-links">
           ¿No tienes cuenta? <Link to="/registrarse-cuenta">Regístrate ahora</Link>
         </div>
