@@ -2,6 +2,7 @@ from enum import Enum
 
 #Estatus de documentos
 class DocumentoEstatus(str, Enum):
-    APROBADO = 1
-    PENDIENTE = 2
+    ESPERA = 1
+    ACEPTADO = 2
     RECHAZADO = 3
+    BORRADOR = 4

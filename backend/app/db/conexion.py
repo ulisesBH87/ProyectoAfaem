@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine
 import pyodbc
+from sqlalchemy import create_engine
 from app.core.config import obtener_configuracion
 
 config = obtener_configuracion()
