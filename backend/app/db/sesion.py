@@ -1,4 +1,4 @@
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import text
 from app.db.conexion import engine
 from fastapi import Depends, HTTPException
@@ -23,3 +23,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+#Autenticación
+def get_autenticacion_servicio(db: Session = Depends(get_db)):
+    from app.servicios.autenticacion_servicio import AutenticacionServicio
+    return AutenticacionServicio(db)
