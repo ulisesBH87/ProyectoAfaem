@@ -5,6 +5,7 @@ import '../../styles/dashboard.css';
 
 // Componentes
 import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
+import { getMisSolicitudes } from '../../services/solicitud';
 
 export default function PresidenteEquipoSolicitudes() {
   const userEmail = localStorage.getItem('email');
@@ -26,47 +27,22 @@ export default function PresidenteEquipoSolicitudes() {
     const cargarSolicitudes = async () => {
       try {
         setLoading(true);
-        // Aquí iría la llamada a API para obtener solicitudes
-        const datosEjemplo = [
-          {
-            id: 1,
-            tipo: 'Afiliación de jugador',
-            jugador: 'Juan Pérez',
-            equipo: 'Equipo A',
-            fechaSolicitud: '2026-02-25',
-            estado: 'pendiente',
-            prioridad: 'alta'
-          },
-          {
-            id: 2,
-            tipo: 'Cambio de entrenador',
-            equipo: 'Equipo B',
-            entrenador: 'Carlos López',
-            fechaSolicitud: '2026-02-24',
-            estado: 'en_revision',
-            prioridad: 'media'
-          },
-          {
-            id: 3,
-            tipo: 'Afiliación de equipo',
-            equipo: 'Equipo C',
-            fechaSolicitud: '2026-02-20',
-            estado: 'completada',
-            prioridad: 'baja'
-          },
-          {
-            id: 4,
-            tipo: 'Cambio de datos',
-            jugador: 'Luis Martínez',
-            equipo: 'Equipo A',
-            fechaSolicitud: '2026-02-23',
-            estado: 'pendiente',
-            prioridad: 'media'
-          }
-        ];
+        const datos = await getMisSolicitudes();
         
-        setSolicitudes(datosEjemplo);
-        calcularEstadisticas(datosEjemplo);
+        // Mapear datos del backend al formato de la tabla
+        const solicitudesMapeadas = (Array.isArray(datos) ? datos : []).map(s => ({
+          id: s.SolicitudId,
+          tipo: s.TipoSolicitud || 'Registro de Presidente',
+          equipo: s.Equipo || 'N/A',
+          fechaSolicitud: s.FechaSolicitud,
+          estado: s.EstatusValidacion === 1 ? 'completada' : 
+                  s.EstatusValidacion === 0 ? 'rechazada' : 
+                  s.EstatusValidacion === 4 ? 'en_revision' : 'pendiente',
+          prioridad: 'media'
+        }));
+
+        setSolicitudes(solicitudesMapeadas);
+        calcularEstadisticas(solicitudesMapeadas);
         setError(null);
       } catch (err) {
         console.error('Error al cargar solicitudes:', err);

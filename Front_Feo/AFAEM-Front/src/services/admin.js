@@ -76,7 +76,7 @@ export const getSolicitudDocumentos = async (solicitudId) => {
     const response = await api.get(`/solicitud/${solicitudId}/documentos`);
     return response.data;
   } catch (error) {
-    console.warn(`⚠️ Backend no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
+    console.warn(`Backend no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
     // FALLBACK MOCK (Para que el front siga funcionando mientras el back implementa)
     return {
       equipo: "Galgos de Tijuana",
@@ -109,7 +109,7 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
     });
     return response.data;
   } catch (error) {
-    console.warn(`⚠️ Backend no listo para POST /solicitud/${solicitudId}/validar. Simulando éxito.`);
+    console.warn(`Backend no listo para POST /solicitud/${solicitudId}/validar. Simulando éxito.`);
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ mensaje: "Estatus actualizado correctamente (Simulado)", solicitud_id: solicitudId });
