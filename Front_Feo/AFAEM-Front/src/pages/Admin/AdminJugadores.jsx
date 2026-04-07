@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getJugadoresDirectorio, getJugadorDocumentos, updateJugador } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
+import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaPlus, FaEdit } from 'react-icons/fa';
 
 export default function AdminJugadores() {
@@ -39,9 +40,7 @@ export default function AdminJugadores() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filtroEstatus, searchTerm, sortOrder]);
-
-  const filteredJugadores = React.useMemo(() => {
+  }, [filtroEstatus, searchTerm, sortOrder]);  const filteredJugadores = React.useMemo(() => {
     let result = [...jugadores];
     
     if (filtroEstatus !== 'todos') {
@@ -54,6 +53,7 @@ export default function AdminJugadores() {
       result = result.filter(s => 
         (s.NombreCompleto && s.NombreCompleto.toLowerCase().includes(query)) ||
         (s.CURP && s.CURP.toLowerCase().includes(query)) ||
+        (s.Email && s.Email.toLowerCase().includes(query)) || // Búsqueda por email añadida
         (s.EquipoNombre && s.EquipoNombre.toLowerCase().includes(query)) ||
         (s.Liga && s.Liga.toLowerCase().includes(query))
       );
@@ -73,8 +73,8 @@ export default function AdminJugadores() {
   }, [filteredJugadores, currentPage]);
 
   const stats = React.useMemo(() => {
-    const masculinos = jugadores.filter(j => j.Sexo.toLowerCase().includes('masculino') || j.Sexo.toLowerCase() === 'h').length;
-    const femeninos = jugadores.filter(j => j.Sexo.toLowerCase().includes('femenino') || j.Sexo.toLowerCase() === 'm').length;
+    const masculinos = jugadores.filter(j => j.Sexo?.toLowerCase().includes('masculino') || j.Sexo?.toLowerCase() === 'h').length;
+    const femeninos = jugadores.filter(j => j.Sexo?.toLowerCase().includes('femenino') || j.Sexo?.toLowerCase() === 'm').length;
     
     return {
       total: jugadores.length,
@@ -93,23 +93,24 @@ export default function AdminJugadores() {
         didOpen: () => Swal.showLoading()
       });
 
-      const docs = await getJugadorDocumentos(jugador.MiembroEquipoId); // Idealmente PersonaId
+      const docs = await getJugadorDocumentos(jugador.MiembroEquipoId);
       
       if (!docs || docs.length === 0) {
-        Swal.fire('Sin Documentos', 'Este jugador no tiene documentos PDF subidos en el sistema o están dañados.', 'warning');
+        Swal.fire('Sin documentos', 'Este jugador no tiene documentos PDF subidos en el sistema o están dañados.', 'warning');
         return;
       }
 
       let htmlBotones = '';
       docs.forEach((doc, idx) => {
-        htmlBotones += `<a href="${doc.url}" target="_blank" class="btn btn-primary m-1" style="display:block; text-align:center;">📄 Ver Documento ${idx + 1} (${new Date(doc.FechaEntrega).toLocaleDateString()})</a>`;
+        htmlBotones += `<a href="${doc.url}" target="_blank" class="btn btn-primary m-1" style="display:block; text-align:center; padding: 12px; border-radius: 8px; font-weight: 600;">📄 Ver documento ${idx + 1} (${new Date(doc.FechaEntrega).toLocaleDateString()})</a>`;
       });
 
       Swal.fire({
         title: `Documentos de ${jugador.NombreCompleto}`,
-        html: `<div>${htmlBotones}</div>`,
+        html: `<div style="max-height: 400px; overflow-y: auto;">${htmlBotones}</div>`,
         showConfirmButton: true,
-        confirmButtonText: 'Cerrar'
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: '#94a3b8'
       });
 
     } catch (err) {
@@ -119,42 +120,65 @@ export default function AdminJugadores() {
   };
 
   const handleEditarJugador = (jugador) => {
+    // Marcador de cambios para la advertencia al salir
+    let haCambiado = false;
+
+    const setupListeners = () => {
+      const inputs = ['swal-jg-nombre', 'swal-jg-apellido1', 'swal-jg-apellido2', 'swal-jg-curp', 'swal-jg-estatus'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', () => { haCambiado = true; });
+      });
+    };
+
     Swal.fire({
-      title: 'Editar Jugador',
+      title: 'Información detallada del jugador',
+      width: '850px',
+      padding: '2rem',
       html: `
-        <div style="text-align: left; display: flex; flex-direction: column; gap: 10px;">
-          <div>
-            <label style="font-weight: 600; font-size: 12px;">Nombre(s)</label>
-            <input id="swal-jg-nombre" class="swal2-input" value="${jugador.Nombre || ''}" style="margin-top: 2px; width: 90%; height: 35px; font-size: 14px;">
+        <div style="text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <div style="grid-column: span 2; background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #e2e8f0;">
+             <p style="margin:0; font-size: 13px; color: #64748b;">Puedes editar la información y guardar los cambios directamente aquí.</p>
           </div>
-          <div style="display: flex; gap: 10px;">
+          <div>
+            <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Nombre(s) <span class="required-star">*</span></label>
+            <input id="swal-jg-nombre" class="swal2-input form-input-lg" value="${jugador.Nombre || ''}" style="margin: 0; width: 100%;">
+          </div>
+          <div style="display: flex; gap: 16px;">
             <div style="flex: 1;">
-              <label style="font-weight: 600; font-size: 12px;">Primer Apellido</label>
-              <input id="swal-jg-apellido1" class="swal2-input" value="${jugador.PrimerApellido || ''}" style="margin-top: 2px; width: 100%; height: 35px; font-size: 14px;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Primer apellido <span class="required-star">*</span></label>
+              <input id="swal-jg-apellido1" class="swal2-input form-input-lg" value="${jugador.PrimerApellido || ''}" style="margin: 0; width: 100%;">
             </div>
             <div style="flex: 1;">
-              <label style="font-weight: 600; font-size: 12px;">Segundo Apellido</label>
-              <input id="swal-jg-apellido2" class="swal2-input" value="${jugador.SegundoApellido || ''}" style="margin-top: 2px; width: 100%; height: 35px; font-size: 14px;">
+              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Segundo apellido</label>
+              <input id="swal-jg-apellido2" class="swal2-input form-input-lg" value="${jugador.SegundoApellido || ''}" style="margin: 0; width: 100%;">
             </div>
           </div>
           <div>
-            <label style="font-weight: 600; font-size: 12px;">CURP</label>
-            <input id="swal-jg-curp" class="swal2-input" value="${jugador.CURP || ''}" style="margin-top: 2px; width: 90%; height: 35px; font-size: 14px;">
+            <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">CURP <span class="required-star">*</span></label>
+            <input id="swal-jg-curp" class="swal2-input form-input-lg" value="${jugador.CURP || ''}" style="margin: 0; width: 100%;">
           </div>
           <div>
-            <label style="font-weight: 600; font-size: 12px;">Estatus</label>
-            <select id="swal-jg-estatus" class="swal2-select" style="margin-top: 2px; width: 95%; padding: 5px; height: 35px; font-size: 14px;">
+            <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Estatus de validación</label>
+            <select id="swal-jg-estatus" class="swal2-select form-input-lg" style="margin: 0; width: 100%; height: 56px;">
               <option value="1" ${jugador.Estatus ? 'selected' : ''}>Activo (Aprobado)</option>
               <option value="0" ${!jugador.Estatus ? 'selected' : ''}>Baja (Inactivo)</option>
             </select>
           </div>
+          <div style="grid-column: span 2;">
+            <p class="required-legend">* Campos obligatorios para la integridad de la matrícula.</p>
+          </div>
         </div>
       `,
+      didOpen: setupListeners,
       showCancelButton: true,
-      confirmButtonText: 'Guardar Cambios',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cerrar',
       confirmButtonColor: '#0b4ea6',
+      cancelButtonColor: '#64748b',
+      reverseButtons: true,
       showLoaderOnConfirm: true,
+      allowOutsideClick: () => !haCambiado,
       preConfirm: async () => {
         const nombre = document.getElementById('swal-jg-nombre').value;
         const primerApellido = document.getElementById('swal-jg-apellido1').value;
@@ -163,7 +187,7 @@ export default function AdminJugadores() {
         const estatus = document.getElementById('swal-jg-estatus').value;
 
         if (!nombre || !primerApellido || !curp) {
-          Swal.showValidationMessage('Nombre, Primer Apellido y CURP son obligatorios');
+          Swal.showValidationMessage('Nombre, primer apellido y CURP son obligatorios');
           return false;
         }
 
@@ -177,7 +201,7 @@ export default function AdminJugadores() {
           });
           return { nombre, primerApellido, segundoApellido, curp, estatus };
         } catch (error) {
-          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || error.message}`);
+          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo guardar la información'}`);
         }
       }
     }).then((result) => {
@@ -185,9 +209,25 @@ export default function AdminJugadores() {
         Swal.fire({
           icon: 'success',
           title: 'Actualizado',
-          text: `El jugador ${result.value.nombre} ha sido actualizado correctamente.`
+          text: `La información de ${result.value.nombre} se ha guardado correctamente.`,
+          confirmButtonColor: '#0b4ea6'
         });
         loadJugadores();
+      } else if (result.dismiss === Swal.DismissReason.cancel && haCambiado) {
+        Swal.fire({
+          title: '¿Estás seguro de salir?',
+          text: "Tienes cambios sin guardar que se perderán.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Sí, salir sin guardar',
+          cancelButtonText: 'Volver a la edición'
+        }).then((exitResult) => {
+          if (!exitResult.isConfirmed) {
+            handleEditarJugador(jugador);
+          }
+        });
       }
     });
   };
@@ -195,26 +235,26 @@ export default function AdminJugadores() {
   const columns = [
     { key: "MiembroEquipoId", label: "ID" },
     { key: "NombreCompleto", label: "Jugador" },
-    { key: "DatosPersonales", label: "Datos Personales" },
-    { key: "EquipoLiga", label: "Equipo Actual" },
-    { key: "FechaIngreso", label: "F. Ingreso" },
+    { key: "Sexo", label: "Sexo" },
+    { key: "EquipoLiga", label: "Equipo actual", style: { width: '400px' } }, // Aumentado espacio para equipo
+    { key: "FechaIngreso", label: "Fecha ingreso" },
     { key: "Estatus", label: "Estatus" },
-    { key: "Acciones", label: "Documentos" }
+    { key: "Acciones", label: "Acciones" }
   ];
 
   const dataTransformada = paginatedJugadores.map(j => ({
     MiembroEquipoId: <span style={{ fontWeight: '700', color: '#64748b' }}>#{j.MiembroEquipoId}</span>,
-    NombreCompleto: <span style={{ fontWeight: '800', color: '#1e293b' }}>{j.NombreCompleto}</span>,
-    DatosPersonales: (
+    NombreCompleto: (
       <div>
-        <div style={{ fontWeight: '700', fontSize: '13px' }}>CURP: {j.CURP}</div>
-        <div style={{ fontSize: '11px', color: '#64748b' }}>Sexo: {j.Sexo}</div>
+        <div style={{ fontWeight: '800', color: '#1e293b' }}>{j.NombreCompleto}</div>
+        <div style={{ fontSize: '11px', color: '#64748b' }}>{j.Email || 'Sin correo registrado'}</div>
       </div>
     ),
+    Sexo: <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>{j.Sexo || 'N/A'}</span>,
     EquipoLiga: (
-      <div>
-        <div style={{ fontWeight: '600', fontSize: '13px' }}>{j.EquipoNombre}</div>
-        <div style={{ fontSize: '11px', color: '#64748b' }}>{j.Liga}</div>
+      <div style={{ maxWidth: '340px' }}>
+        <div style={{ fontWeight: '700', fontSize: '14px', color: '#0b4ea6' }}>{j.EquipoNombre}</div>
+        <div style={{ fontSize: '12px', color: '#64748b' }}>{j.Liga}</div>
       </div>
     ),
     FechaIngreso: <span style={{ fontSize: '12px' }}>{new Date(j.FechaIngreso).toLocaleDateString()}</span>,
@@ -224,18 +264,19 @@ export default function AdminJugadores() {
     Acciones: (
       <div style={{ display: 'flex', gap: '8px' }}>
         <button 
-          className="btn btn-sm btn-outline-primary"
-          style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}
+          className="btn btn-sm"
+          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: '700' }}
           onClick={() => handleDescargarDocs(j)}
+          title="Ver documentos"
         >
           <FaFileDownload /> Docs
         </button>
         <button 
-          className="btn btn-sm btn-outline-secondary"
-          style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#f1f5f9', color: '#334155', border: 'none' }}
+          className="btn btn-sm btn-primary"
+          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
           onClick={() => handleEditarJugador(j)}
         >
-          <FaEdit /> Editar
+          <FaEdit /> Ver / Editar
         </button>
       </div>
     )
@@ -268,75 +309,74 @@ export default function AdminJugadores() {
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de Jugadores Aprobados</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Visualiza y descarga documentos de toda la matrícula activa de la liga.</p>
+          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores aprobados</h2>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona la matrícula activa de la liga.</p>
         </div>
-        <div className="section-actions" style={{ display: 'flex', gap: '10px' }}>
+        <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button 
             className="btn btn-primary"
             onClick={() => window.location.reload()}
-            style={{ padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
           </button>
           <button 
-            className="btn btn-primary"
+            className="btn btn-premium"
             onClick={() => navigate('/admin/jugadores/crear')}
-            style={{ padding: '10px 20px', backgroundColor: '#0b4ea6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
-            <FaPlus /> Registrar Jugador
+            <FaPlus /> Registrar jugador
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>👥</div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL JUGADORES</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '40px' }}>
+        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Total jugadores</div>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            {stats.total} <span style={{ fontSize: '14px', fontWeight: '600', color: '#94a3b8' }}>registros</span>
+          </div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🟢</div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES ACTIVOS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
+        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Jugadores activos</div>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>👨</div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>MASCULINO</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#2563eb' }}>{stats.hombres}</div>
+        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Masculino</div>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#3b82f6' }}>{stats.hombres}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🙎‍♀️</div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>FEMENINO</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#ec4899' }}>{stats.mujeres}</div>
+        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Femenino</div>
+          <div style={{ fontSize: '28px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
         </div>
       </div>
 
-      <div className="card" style={{ padding: '32px' }}>
-        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de Jugadores</h3>
+      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
+        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de jugadores</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
+          </div>
           
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
-              <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input type="text" placeholder="Buscar jugador..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="form-input" style={{ paddingLeft: '40px', width: '240px' }} />
-            </div>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <SearchBar 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Nombre, CURP o correo..."
+              width="280px"
+            />
 
-            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
+            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569' }}>
+              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
             </button>
 
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
               {['todos', 'activos', 'inactivos'].map((val) => (
-                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
-                  {val.toUpperCase()}
+                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
+                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : 'Inactivos')}
                 </button>
               ))}
             </div>
-
-            <button onClick={() => window.location.reload()} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
-              <FaSyncAlt />
-            </button>
           </div>
         </div>
 
@@ -348,7 +388,7 @@ export default function AdminJugadores() {
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
-          emptyMessage="No hay jugadores que coincidan con la búsqueda."
+          emptyMessage="No se encontraron jugadores con los criterios de búsqueda."
         />
       </div>
     </div>

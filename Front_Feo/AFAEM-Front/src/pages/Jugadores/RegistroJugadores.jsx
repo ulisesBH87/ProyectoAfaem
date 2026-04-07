@@ -260,6 +260,17 @@ export default function RegistroJugadores() {
         safeSetField(form, 'El jugador ha jugado en un Club extranjero...', extractedData.juegoClubExtranjero);
       }
 
+      // 3. FECHA DE DESCARGA AUTOMÁTICA
+      const now = new Date();
+      const fechaDescarga = now.toLocaleDateString('es-MX', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      safeSetField(form, 'Fecha de descarga', fechaDescarga);
+      safeSetField(form, 'Fecha descarga', fechaDescarga);
+      safeSetField(form, 'Fecha', fechaDescarga);
+
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
@@ -345,6 +356,9 @@ export default function RegistroJugadores() {
       </div>
 
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <p className="required-legend" style={{ marginBottom: '20px' }}>
+          <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial.
+        </p>
         
         {/* PASO 1: CONFIRMACIÓN DE EQUIPO */}
         <section style={{ marginBottom: '32px' }}>
@@ -376,20 +390,22 @@ export default function RegistroJugadores() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
               {[
-                { key: 'actaNacimiento', title: 'Acta Nacimiento', icon: null },
-                { key: 'identificacion', title: 'Identificación', icon: null },
-                { key: 'fotografia', title: 'Fotografía', icon: null },
-                { key: 'formatoAfiliacion', title: 'Formato Firmado', icon: null }
+                { key: 'actaNacimiento', title: 'Acta de Nacimiento' },
+                { key: 'identificacion', title: 'Identificación (INE/Pasaporte)' },
+                { key: 'fotografia', title: 'Fotografía Infantil' },
+                { key: 'formatoAfiliacion', title: 'Formato de Afiliación Firmado' }
               ].map(doc => (
                 <div 
                   key={doc.key}
                   onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                  style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer' }}
+                  style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s' }}
                 >
-                  <div style={{ fontSize: '30px', marginBottom: '10px' }}>{doc.icon}</div>
+                  <div style={{ fontSize: '30px', marginBottom: '10px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
+                    {documents[doc.key] ? <FaCheckCircle /> : <FaUpload />}
+                  </div>
                   <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '5px' }}>{doc.title}</h4>
-                  <div style={{ fontSize: '11px', color: documents[doc.key] ? '#166534' : '#64748b' }}>{documents[doc.key] ? '✓ Cargado' : 'Pendiente'}</div>
-                  <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+                  <div style={{ fontSize: '11px', color: documents[doc.key] ? '#166534' : '#64748b' }}>{documents[doc.key] ? 'Listo' : 'Hacer clic para subir'}</div>
+                  <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
                 </div>
               ))}
             </div>
@@ -411,63 +427,74 @@ export default function RegistroJugadores() {
                 <StepBadge number="3" isActive={true} isDone={false} />
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de Afiliación</h3>
               </div>
-              <BotonSecundario etiqueta="Descargar PDF Pre-llenado" icono={<FaFilePdf />} alHacerClick={handleDownloadFormato} estilo={{ fontSize: '12px' }} />
+              <BotonSecundario etiqueta="Descargar PDF Pre-llenado" icono={<FaFilePdf />} alHacerClick={handleDownloadFormato} estilo={{ fontSize: '12px', backgroundColor: '#f59e0b', color: 'white', border: 'none' }} />
             </div>
 
-            <Tarjeta titulo="1. Datos Personales" estilo={{ marginBottom: '20px' }}>
+            {/* SECCIÓN 1: DATOS DEL AFILIADO */}
+            <Tarjeta titulo="1. Datos del afiliado" estilo={{ marginBottom: '20px' }}>
                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                 <EntradaFormulario etiqueta="Nombre(s) *" valor={extractedData.nombreJugador} alCambiar={(e) => setExtractedData({...extractedData, nombreJugador: e.target.value})} />
-                <EntradaFormulario etiqueta="Apellido Paterno *" valor={extractedData.apellidoPaterno} alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})} />
-                <EntradaFormulario etiqueta="Apellido Materno" valor={extractedData.apellidoMaterno} alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})} />
+                <EntradaFormulario etiqueta="Apellido paterno *" valor={extractedData.apellidoPaterno} alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})} />
+                <EntradaFormulario etiqueta="Apellido materno *" valor={extractedData.apellidoMaterno} alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})} />
                 <EntradaFormulario etiqueta="CURP *" valor={extractedData.curp} alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})} maxLength={18} />
-                <EntradaFormulario etiqueta="Fecha Nacimiento *" tipo="date" valor={extractedData.fechaNacimiento} alCambiar={(e) => setExtractedData({...extractedData, fechaNacimiento: e.target.value})} />
-                <EntradaFormulario etiqueta="Lugar de Nacimiento *" valor={extractedData.lugarNacimiento} alCambiar={(e) => setExtractedData({...extractedData, lugarNacimiento: e.target.value})} marcador="Ciudad y Estado" />
-                <EntradaSeleccion etiqueta="Género *" valor={extractedData.genero} alCambiar={(e) => setExtractedData({...extractedData, genero: e.target.value})} opciones={[{ valor: '1', etiqueta: 'Masculino' }, { valor: '2', etiqueta: 'Femenino' }]} />
+                <EntradaFormulario etiqueta="Lugar de nacimiento *" valor={extractedData.lugarNacimiento} alCambiar={(e) => setExtractedData({...extractedData, lugarNacimiento: e.target.value})} marcador="Ciudad y Estado" />
+                <EntradaFormulario etiqueta="Fecha de nacimiento *" tipo="date" valor={extractedData.fechaNacimiento} alCambiar={(e) => setExtractedData({...extractedData, fechaNacimiento: e.target.value})} />
+                <EntradaSeleccion etiqueta="Sexo *" valor={extractedData.genero} alCambiar={(e) => setExtractedData({...extractedData, genero: e.target.value})} opciones={[{ valor: '1', etiqueta: 'Masculino' }, { valor: '2', etiqueta: 'Femenino' }]} />
+                <EntradaFormulario etiqueta="Correo electrónico *" tipo="email" valor={extractedData.correo} alCambiar={(e) => setExtractedData({...extractedData, correo: e.target.value})} />
+                <EntradaSeleccion etiqueta="Tipo de afiliación" valor={extractedData.tipoAfiliacion} alCambiar={(e) => setExtractedData({...extractedData, tipoAfiliacion: e.target.value})} opciones={[{ valor: 'JUGADOR', etiqueta: 'Jugador' }, { valor: 'CUERPO_TECNICO', etiqueta: 'Cuerpo Técnico' }]} />
+                <EntradaFormulario etiqueta="Teléfono" valor={extractedData.telefono} alCambiar={(e) => setExtractedData({...extractedData, telefono: e.target.value})} />
+                <EntradaFormulario etiqueta="Asociación" valor={extractedData.asociacion} deshabilitado />
+                <EntradaFormulario etiqueta="Liga" valor={extractedData.liga} deshabilitado />
+                <EntradaFormulario etiqueta="Equipo" valor={extractedData.equipo} deshabilitado />
+                <EntradaFormulario etiqueta="Categoría" valor={extractedData.categoria} deshabilitado />
+                <EntradaSeleccion etiqueta="Posición" valor={extractedData.posicion} alCambiar={(e) => setExtractedData({...extractedData, posicion: e.target.value})} opciones={[{ valor: 'PORTERO', etiqueta: 'Portero' }, { valor: 'DEFENSA', etiqueta: 'Defensa' }, { valor: 'MEDIO', etiqueta: 'Medio' }, { valor: 'DELANTERO', etiqueta: 'Delantero' }]} />
+                <EntradaFormulario etiqueta="Camiseta" tipo="number" valor={extractedData.numCamiseta} alCambiar={(e) => setExtractedData({...extractedData, numCamiseta: e.target.value})} />
                 <div style={{ gridColumn: '1 / -1' }}>
                   <AreaTexto etiqueta="Dirección completa" valor={extractedData.direccion} alCambiar={(e) => setExtractedData({...extractedData, direccion: e.target.value})} filas={2} />
                 </div>
               </div>
             </Tarjeta>
 
-            <Tarjeta titulo="2. Contacto y Detalles" estilo={{ marginBottom: '20px' }}>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                <EntradaFormulario etiqueta="Correo *" tipo="email" valor={extractedData.correo} alCambiar={(e) => setExtractedData({...extractedData, correo: e.target.value})} />
-                <EntradaFormulario etiqueta="Teléfono *" valor={extractedData.telefono} alCambiar={(e) => setExtractedData({...extractedData, telefono: e.target.value})} />
-                <EntradaSeleccion etiqueta="Posición" valor={extractedData.posicion} alCambiar={(e) => setExtractedData({...extractedData, posicion: e.target.value})} opciones={[{ valor: 'PORTERO', etiqueta: 'Portero' }, { valor: 'DEFENSA', etiqueta: 'Defensa' }, { valor: 'MEDIO', etiqueta: 'Medio' }, { valor: 'DELANTERO', etiqueta: 'Delantero' }]} />
-                <EntradaFormulario etiqueta="Camiseta" tipo="number" valor={extractedData.numCamiseta} alCambiar={(e) => setExtractedData({...extractedData, numCamiseta: e.target.value})} />
-              </div>
-            </Tarjeta>
-
+            {/* SECCIÓN 2: ANTECEDENTES INTERNACIONALES */}
             <Tarjeta estilo={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', marginBottom: '30px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#9a3412' }}>Antecedentes Internacionales</h4>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#9a3412' }}>2. Antecedentes internacionales</h4>
                 <div className="form-check form-switch">
-                  <input className="form-check-input" type="checkbox" checked={extractedData.esForaneo} onChange={(e) => setExtractedData({...extractedData, esForaneo: e.target.checked})} />
-                  <label className="form-check-label" style={{ fontSize: '13px', fontWeight: '700' }}>¿Jugador Foráneo?</label>
+                  <input className="form-check-input" type="checkbox" id="switchForaneo" checked={extractedData.esForaneo} onChange={(e) => setExtractedData({...extractedData, esForaneo: e.target.checked})} />
+                  <label className="form-check-label" htmlFor="switchForaneo" style={{ fontSize: '13px', fontWeight: '700' }}>¿Jugador foráneo?</label>
                 </div>
               </div>
 
               {extractedData.esForaneo && (
                 <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                  <EntradaFormulario etiqueta="Nacionalidad Jugador" valor={extractedData.nacionalidadJugador} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})} />
-                  <EntradaFormulario etiqueta="País Residencia" valor={extractedData.paisResidencia} alCambiar={(e) => setExtractedData({...extractedData, paisResidencia: e.target.value})} />
-                  <EntradaSeleccion etiqueta="¿Ha vivido en el extranjero?" valor={extractedData.haVividoExtranjero ? '1' : '0'} alCambiar={(e) => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})} opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]} />
+                  <EntradaFormulario etiqueta="Nacionalidad del jugador" valor={extractedData.nacionalidadJugador} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})} />
+                  <EntradaFormulario etiqueta="País de residencia actual" valor={extractedData.paisResidencia} alCambiar={(e) => setExtractedData({...extractedData, paisResidencia: e.target.value})} />
+                  <EntradaSeleccion etiqueta="¿El jugador ha vivido en el extranjero?" valor={extractedData.haVividoExtranjero ? '1' : '0'} alCambiar={(e) => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})} opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]} />
                   {extractedData.haVividoExtranjero && <EntradaFormulario etiqueta="¿En qué país?" valor={extractedData.dondeVividoExtranjero} alCambiar={(e) => setExtractedData({...extractedData, dondeVividoExtranjero: e.target.value})} />}
-                  <EntradaFormulario etiqueta="Nacionalidad Padre" valor={extractedData.nacionalidadPadre} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nacionalidad Madre" valor={extractedData.nacionalidadMadre} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={(e) => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={(e) => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})} />
-                  <div style={{ gridColumn: '1 / -1' }}><AreaTexto etiqueta="Registro Asociación Extranjera" valor={extractedData.registroAsociacionExtranjera} alCambiar={(e) => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})} filas={2} /></div>
-                  <div style={{ gridColumn: '1 / -1' }}><AreaTexto etiqueta="Clubes/Competencias Extranjeras" valor={extractedData.juegoClubExtranjero} alCambiar={(e) => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})} filas={2} /></div>
+                  <EntradaFormulario etiqueta="Nacionalidades del padre" valor={extractedData.nacionalidadPadre} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})} />
+                  <EntradaFormulario etiqueta="Nacionalidades de la madre" valor={extractedData.nacionalidadMadre} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})} />
+                  
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <AreaTexto etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF." valor={extractedData.registroAsociacionExtranjera} alCambiar={(e) => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})} filas={2} />
+                  </div>
+
+                  <EntradaFormulario etiqueta="Nacionalidades del abuelo paterno" valor={extractedData.nacAbueloPaterno} alCambiar={(e) => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})} />
+                  <EntradaFormulario etiqueta="Nacionalidades de la abuela paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})} />
+                  <EntradaFormulario etiqueta="Nacionalidades del abuelo materno" valor={extractedData.nacAbueloMaterno} alCambiar={(e) => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})} />
+                  <EntradaFormulario etiqueta="Nacionalidades de la abuela materna" valor={extractedData.nacAbuelaMaterna} alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})} />
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <AreaTexto etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?" valor={extractedData.juegoClubExtranjero} alCambiar={(e) => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})} filas={3} />
+                  </div>
                 </div>
+              )}
+              {!extractedData.esForaneo && (
+                <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos de antecedentes internacionales.</p>
               )}
             </Tarjeta>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-              <BotonSecundario etiqueta="Cancelar" alHacerClick={() => navigate(-1)} />
-              <BotonPrimario etiqueta={uploading ? "Procesando..." : "Finalizar y Registrar Jugador"} icono={<FaSave />} alHacerClick={handleGuardar} deshabilitado={uploading} estilo={{ minWidth: '250px' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+              <BotonSecundario etiqueta="Cancelar y volver" alHacerClick={() => navigate(-1)} estilo={{ minWidth: '200px' }} />
+              <BotonPrimario etiqueta={uploading ? "Procesando..." : "Finalizar y Registrar Jugador"} icono={<FaSave />} alHacerClick={handleGuardar} deshabilitado={uploading} estilo={{ minWidth: '300px' }} />
             </div>
           </section>
         )}

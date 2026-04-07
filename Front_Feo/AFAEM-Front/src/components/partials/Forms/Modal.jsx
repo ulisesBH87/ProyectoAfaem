@@ -24,6 +24,7 @@ export default function Modal({
     pequeno: { maxWidth: '400px' },
     medio: { maxWidth: '600px' },
     grande: { maxWidth: '800px' },
+    pantallaFull: { maxWidth: '1400px', width: '95vw' },
   };
 
   return (

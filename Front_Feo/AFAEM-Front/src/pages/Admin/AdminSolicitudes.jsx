@@ -7,6 +7,7 @@ import { getSolicitudes } from '../../services/solicitud';
 import { getSolicitudDetalle, getSolicitudDocumentos, updateSolicitudEstatus } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DetalleSolicitudModal from '../../components/Admin/DetalleSolicitudModal';
+import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 
 export default function AdminSolicitudes() {
@@ -232,25 +233,41 @@ export default function AdminSolicitudes() {
   };
 
 
-  const handleAprobarSolicitud = async (id) => {
+  const handleAprobarSolicitud = async (id, reporteValidacion = null) => {
+    // Si hay reporte, verificamos si hay algún rechazo
+    const tieneRechazos = reporteValidacion && Object.values(reporteValidacion).some(v => v.estado === 'rechazado');
+    
     const { isConfirmed } = await Swal.fire({
-      title: 'Aprobar Solicitud de Presidente',
-      text: "Al aprobar, el usuario recibirá acceso completo a su dashboard de Presidente de Equipo.",
-      icon: 'question',
+      title: tieneRechazos ? 'Solicitud con Observaciones' : 'Aprobar solicitud',
+      text: tieneRechazos 
+        ? "Has rechazado algunos documentos. La solicitud se marcará como 'Revisada con Observaciones' y el usuario deberá corregirlos."
+        : "Al aprobar, el usuario recibirá acceso completo a su dashboard de AFAEM.",
+      icon: tieneRechazos ? 'warning' : 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, otorgar acceso',
+      confirmButtonText: tieneRechazos ? 'Enviar observaciones' : 'Sí, aprobar',
+      cancelButtonText: 'Volver',
       cancelButtonColor: '#94a3b8',
-      confirmButtonColor: '#0b4ea6'
+      confirmButtonColor: tieneRechazos ? '#f59e0b' : '#10b981'
     });
 
     if (isConfirmed) {
       try {
         setLoading(true);
-        await updateSolicitudEstatus(id, 1); // 1 = Aprobado / Acceso
+        
+        // El estatus final dependerá de si hubo rechazos
+        // 1 = Aprobado total, 4 = Revisado con observaciones (Docs pendientes)
+        const estatusFinal = tieneRechazos ? 4 : 1;
+        
+        await updateSolicitudEstatus(id, estatusFinal, JSON.stringify(reporteValidacion)); 
+        
         setModalAbierto(false);
-        Swal.fire('¡Éxito!', 'La solicitud ha sido aprobada correctamente.', 'success');
-        // Recargar la lista
-        window.location.reload();
+        Swal.fire({
+          title: '¡Éxito!',
+          text: tieneRechazos ? 'Se han enviado las observaciones al usuario.' : 'La solicitud ha sido aprobada correctamente.',
+          icon: 'success'
+        }).then(() => {
+          window.location.reload();
+        });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
       } finally {
@@ -411,7 +428,7 @@ export default function AdminSolicitudes() {
           >
             Ver
           </button>
-          {row.EstatusValidacion === 4 && (
+          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4) && (
             <button 
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
@@ -531,7 +548,7 @@ export default function AdminSolicitudes() {
       )}
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Solicitudes de Registro</h2>
+        <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Solicitudes de registro</h2>
         <div className="section-actions">
           <button 
             className="btn btn-primary"
@@ -580,10 +597,12 @@ export default function AdminSolicitudes() {
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de Solicitudes</h3>
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
-              <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input type="text" placeholder="Buscar solicitud..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="form-input" style={{ paddingLeft: '40px', width: '240px' }} />
-            </div>
+            <SearchBar 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar solicitud..."
+              width="280px"
+            />
 
             <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
@@ -592,7 +611,7 @@ export default function AdminSolicitudes() {
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
               {['todos', '2', '4', '1', '0'].map((val) => (
                 <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
-                  {val === 'todos' ? 'TODAS' : (val === '2' ? 'PENDIENTES' : (val === '4' ? 'DOCS' : (val === '1' ? 'APROBADAS' : 'RECHAZADAS')))}
+                  {val === 'todos' ? 'Todas' : (val === '2' ? 'Pendientes' : (val === '4' ? 'Docs' : (val === '1' ? 'Aprobadas' : 'Rechazadas')))}
                 </button>
               ))}
             </div>
