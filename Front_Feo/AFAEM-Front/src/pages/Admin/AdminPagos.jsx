@@ -4,6 +4,7 @@ import { getPagosGenerales, updateEstatusPago } from '../../services/admin';
 import { API_BASE } from '../../config/config';
 import Swal from 'sweetalert2';
 import Skeleton from '../../components/Common/Skeleton';
+import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWallet, FaCheckCircle, FaTimesCircle, FaClock, FaFileInvoice } from 'react-icons/fa';
 
 const AdminPagos = () => {
@@ -268,7 +269,7 @@ const AdminPagos = () => {
   return (
     <div className="fade-in">
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Validación de Pagos</h1>
+        <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Validación de pagos</h1>
         <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Gestiona y verifica los comprobantes de pago recibidos.</p>
       </div>
 
@@ -299,10 +300,12 @@ const AdminPagos = () => {
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Órdenes de Pago</h3>
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
-              <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="form-input" style={{ paddingLeft: '40px', width: '240px' }} />
-            </div>
+            <SearchBar 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar..."
+              width="280px"
+            />
 
             <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
@@ -311,7 +314,7 @@ const AdminPagos = () => {
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
               {['todos', '2', '3', '4'].map((val) => (
                 <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
-                  {val === 'todos' ? 'TODOS' : (val === '2' ? 'PENDIENTES' : (val === '3' ? 'APROBADOS' : 'RECHAZADOS'))}
+                  {val === 'todos' ? 'Todos' : (val === '2' ? 'Pendientes' : (val === '3' ? 'Aprobados' : 'Rechazados'))}
                 </button>
               ))}
             </div>

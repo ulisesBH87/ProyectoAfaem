@@ -17,6 +17,26 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Interceptor para mensajes de error amigables
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Si el error es una respuesta del servidor con un detalle específico, lo dejamos pasar
+    if (error.response && error.response.data && (error.response.data.detail || error.response.data.message)) {
+      return Promise.reject(error);
+    }
+
+    // Para errores desconocidos o de red, personalizamos el mensaje
+    const friendlyError = {
+      ...error,
+      message: "Ha ocurrido un error inesperado. Por favor, contacta al equipo de sistemas de AFAEM.",
+      isFriendly: true
+    };
+
+    return Promise.reject(friendlyError);
+  }
+);
+
 /**
  * OBTIENE EL DETALLE INDIVIDUAL DE UNA SOLICITUD
  */
