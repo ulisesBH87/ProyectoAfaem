@@ -366,6 +366,62 @@ function PreRegistroPresidente() {
     }
   };
 
+  const mejorarExtraccionActa = (rawText, currentData) => {
+    if (!rawText) return currentData;
+    const data = { ...currentData };
+    
+    // 1. RESCATE DE NOMBRE (Especialmente para actas digitales mexicanas)
+    // Buscamos patrones de etiquetas seguidas de valores en líneas subsecuentes
+    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2) {
+      // Intento 1: Formato "Nombre(s) \n VALOR \n Primer Apellido \n VALOR ..."
+      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+      let nombres = '', ap1 = '', ap2 = '';
+      
+      for(let i=0; i<lines.length; i++) {
+        const l = lines[i].toUpperCase();
+        if (l.includes('NOMBRE(S)') && i+1 < lines.length) nombres = lines[i+1];
+        if (l.includes('PRIMER APELLIDO') && i+1 < lines.length) ap1 = lines[i+1];
+        if (l.includes('SEGUNDO APELLIDO') && i+1 < lines.length) ap2 = lines[i+1];
+      }
+      
+      if (nombres && ap1) {
+        data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
+      }
+    }
+
+    // 2. RESCATE DE FECHA DE NACIMIENTO (Soporte para formatos de texto: "15 de Mayo de 1990")
+    if (!data.fecha_nac || data.fecha_nac === 'No detectada') {
+      const meses = {
+        'ENERO': '01', 'FEBRERO': '02', 'MARZO': '03', 'ABRIL': '04', 'MAYO': '05', 'JUNIO': '06',
+        'JULIO': '07', 'AGOSTO': '08', 'SEPTIEMBRE': '09', 'OCTUBRE': '10', 'NOVIEMBRE': '11', 'DICIEMBRE': '12'
+      };
+      
+      const regexFechaTexto = /(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i;
+      const matchFecha = rawText.match(regexFechaTexto);
+      
+      if (matchFecha) {
+        const dia = matchFecha[1].padStart(2, '0');
+        const mesNombre = matchFecha[2].toUpperCase();
+        const anio = matchFecha[3];
+        
+        if (meses[mesNombre]) {
+          data.fecha_nac = `${dia}/${meses[mesNombre]}/${anio}`;
+          
+          // Intentar recalcular edad
+          try {
+            const hoy = new Date();
+            const d = parseInt(dia), m = parseInt(meses[mesNombre]), a = parseInt(anio);
+            let edad = hoy.getFullYear() - a;
+            if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
+            data.edad = `${edad} años`;
+          } catch(e) {}
+        }
+      }
+    }
+
+    return data;
+  };
+
   const procesarOCRReal = async (docKey, file) => {
     Swal.fire({
       title: 'Analizando Documento...',
@@ -394,7 +450,7 @@ function PreRegistroPresidente() {
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, "text/html");
 
-      const extractedData = {};
+      let extractedData = {};
       const rows = doc.querySelectorAll('.dato-fila');
 
       rows.forEach(row => {
@@ -407,6 +463,13 @@ function PreRegistroPresidente() {
         if (label.includes('edad')) extractedData.edad = value;
         if (label.includes('documento')) extractedData.documento = value;
       });
+
+      // --- REFUERZO DESDE EL FRONTEND (RESCATE DE TEXTO CRUDO) ---
+      const rawText = doc.querySelector('pre')?.textContent;
+      if (rawText && (docKey === 'actaNacimiento' || extractedData.documento?.includes('ACTA'))) {
+        console.log("🔍 Aplicando lógica de rescate para Acta de Nacimiento...");
+        extractedData = mejorarExtraccionActa(rawText, extractedData);
+      }
 
       setOcrResults(prev => ({
         ...prev,
