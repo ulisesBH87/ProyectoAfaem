@@ -15,6 +15,8 @@ from app.modelos.solicitud_modelo import Solicitud
 from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
+from app.modelos.equipo_temporal_modelo import EquipoTemporal
+from app.enums.estatus_pago_enum  import EstatusValidacionPago
 
 #Tipos de afiliación
 def obtener_afiliaciones_repo(db):
@@ -51,7 +53,7 @@ def crear_orden_pago_repo(db, usuario_id, total):
     orden = OrdenPago(
         UsuarioId=usuario_id,
         TotalPagar=total,
-        EstatusPagoId=1  # PENDIENTE
+        EstatusPagoId=EstatusValidacionPago.NOENVIADO
     )
 
     db.add(orden)
@@ -77,14 +79,18 @@ def crear_detalle_pago_repo(db, orden_pago_id, detalle):
 
 #PAGOS
 def obtener_pagos_repo(db):
-    return db.query(OrdenPago).all()
+    return db.query(OrdenPago).filter(OrdenPago.EstatusPagoId != EstatusValidacionPago.NOENVIADO).all()
 
 def orden_pago_individual_repo(db, orden_pago_id):
     orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     return orden
+"""
+def cantidad_seguros_repo(db, orden_pago_id):
+    orden = (db.query(EquipoTemporal.CantidadJugadoresPagados).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
-
+    return orden
+"""
 def crear_presidente_equipo_repo(db, usuario_id):
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
 
@@ -117,7 +123,7 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
     
     orden.RutaVoucher = ruta
     orden.FechaEnvio = datetime.now()
-    orden.EstatusPagoId = 1 #comprobante subido
+    orden.EstatusPagoId = EstatusValidacionPago.ESPERA #ENVIADO (ESPERA)
 
     return orden
 

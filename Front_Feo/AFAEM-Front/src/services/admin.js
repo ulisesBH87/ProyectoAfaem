@@ -79,17 +79,16 @@ export const getSolicitudDocumentos = async (solicitudId) => {
     console.warn(`Backend no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
     // FALLBACK MOCK (Para que el front siga funcionando mientras el back implementa)
     return {
-      equipo: "Galgos de Tijuana",
-      solicitudId: solicitudId,
-      jugadores: [
+      Equipo: "Galgos de Tijuana (Mock)",
+      SolicitudId: solicitudId,
+      Jugadores: [
         {
-          id: 101,
-          nombre: "Juan Pérez",
-          curp: "PERJ880101HDFRRN01",
-          documentos: [
-            { tipo: "Acta de Nacimiento", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", estado: "entregado" },
-            { tipo: "INE", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", estado: "entregado" },
-            { tipo: "CURP", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", estado: "entregado" }
+          Id: 101,
+          Nombre: "Juan Pérez",
+          CURP: "PERJ880101HDFRRN01",
+          Documentos: [
+            { Tipo: "Acta de Nacimiento", Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", Estado: "entregado" },
+            { Tipo: "INE", Url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", Estado: "entregado" }
           ]
         }
       ]
@@ -104,8 +103,8 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
   // estatus: 1 = Aprobado, 0 = Rechazado
   try {
     const response = await api.post(`/solicitud/${solicitudId}/validar`, {
-      estatus: estatus,
-      observaciones: observaciones
+      Estatus: estatus,
+      Observaciones: observaciones
     });
     return response.data;
   } catch (error) {
@@ -113,7 +112,7 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ mensaje: "Estatus actualizado correctamente (Simulado)", solicitud_id: solicitudId });
-      }, 800);
+      }, 8000);
     });
   }
 };
@@ -137,6 +136,31 @@ export const getJugadorDocumentos = async (personaId) => {
   return response.data;
 };
 
+/**
+ * ACTUALIZA UN EQUIPO (NOMBRE Y ESTATUS)
+ */
+export const updateEquipo = async (equipoId, nombre, estatus) => {
+  const response = await api.patch(`/equipo-temporal/update-equipo/${equipoId}`, {
+    NombreEquipo: nombre,
+    Estatus: estatus === "1" || estatus === 1 || estatus === true
+  });
+  return response.data;
+};
+
+/**
+ * ACTUALIZA UN JUGADOR (NOMBRE, APELLIDOS, CURP Y ESTATUS)
+ */
+export const updateJugador = async (miembroEquipoId, data) => {
+  const response = await api.patch(`/equipo-temporal/update-jugador/${miembroEquipoId}`, {
+    Nombre: data.nombre,
+    PrimerApellido: data.primerApellido,
+    SegundoApellido: data.segundoApellido,
+    CURP: data.curp,
+    Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true
+  });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -148,5 +172,7 @@ export default {
   updateSolicitudEstatus,
   getEquiposDirectorio,
   getJugadoresDirectorio,
-  getJugadorDocumentos
+  getJugadorDocumentos,
+  updateEquipo,
+  updateJugador
 };

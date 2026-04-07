@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getEquiposDirectorio } from '../../services/admin';
+import { getEquiposDirectorio, updateEquipo } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye } from 'react-icons/fa';
@@ -20,22 +20,22 @@ export default function AdminEquipos() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    const loadEquipos = async () => {
-      try {
-        setLoading(true);
-        const data = await getEquiposDirectorio();
-        setEquipos(data);
-        setError(null);
-      } catch (err) {
-        console.error("Error al cargar equipos:", err);
-        setError("Error al cargar el directorio de equipos.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadEquipos();
   }, [navigate]);
+
+  const loadEquipos = async () => {
+    try {
+      setLoading(true);
+      const data = await getEquiposDirectorio();
+      setEquipos(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error al cargar equipos:", err);
+      setError("Error al cargar el directorio de equipos.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -140,13 +140,36 @@ export default function AdminEquipos() {
         }
         return { nombre, estatus };
       }
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Funcionalidad de Backend Pendiente',
-          text: `Se solicitó actualizar ${result.value.nombre} a Estatus ${result.value.estatus}`
-        });
+        try {
+          Swal.fire({
+            title: 'Actualizando equipo...',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          await updateEquipo(equipo.EquipoId, result.value.nombre, result.value.estatus);
+          
+          await loadEquipos();
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Equipo Actualizado',
+            text: 'Los cambios se han guardado correctamente.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } catch (error) {
+          console.error("Error al actualizar equipo:", error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo actualizar el equipo. Inténtalo de nuevo.'
+          });
+        }
       }
     });
   };

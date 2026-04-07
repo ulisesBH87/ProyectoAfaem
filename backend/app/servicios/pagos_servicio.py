@@ -109,6 +109,20 @@ async def subir_comprobante_servicio(db, orden_id, archivo):
         buffer.write(await archivo.read())
         pagos_repositorio.actualizar_comprobante_repo(db, orden_id, ruta)
 
+        # Actualizar Estatus Presidente a PAGO_EN_REVISION
+        try:
+            from app.modelos.usuario_modelo import Usuario
+            from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+            from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
+            
+            usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
+            if usuario:
+                presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+                if presidente:
+                    presidente.EstatusId = PresidenteEquipoEstatus.PAGO_EN_REVISION
+        except Exception as e:
+            pass # Si falla actualización del estatus, que no rompa la subida.
+
         db.commit()
 
         return {

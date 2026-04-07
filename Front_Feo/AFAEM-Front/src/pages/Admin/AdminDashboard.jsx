@@ -52,12 +52,12 @@ const AdminDashboard = () => {
         const pagosList = Array.isArray(pagos) ? pagos : [];
 
         const totalIngreso = pagosList
-          .filter(p => p.EstatusValidacion === 1)
-          .reduce((acc, curr) => acc + parseFloat(curr.MontoTotal), 0);
+          .filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 3)
+          .reduce((acc, curr) => acc + parseFloat(curr.MontoTotal || curr.TotalPagar || 0), 0);
 
         setStatsData({
           solicitudes: solicitudesList.length,
-          pagosPendientes: pagosList.filter(p => p.EstatusValidacion === 2).length,
+          pagosPendientes: pagosList.filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 2).length,
           totalIngreso: totalIngreso,
           equipos: solicitudesList.filter(s => s.EstatusValidacion === 1).length
         });

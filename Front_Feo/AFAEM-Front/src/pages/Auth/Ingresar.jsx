@@ -18,7 +18,7 @@ export default function Ingresar() {
   const [err, setErr] = useState(null);
   const [backendOk, setBackendOk] = useState(true);
   const [backendDiag, setBackendDiag] = useState('');
-  
+
   React.useEffect(() => {
     (async () => {
       try {
@@ -61,11 +61,11 @@ export default function Ingresar() {
       };
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('email', email); // GUARDAR EMAIL DIRECTAMENTE
-      
+
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
       console.log('ROL USUARIO (desde respuesta login):', role);
       console.log('ESTATUS ID detectado:', currentEstatusId);
-      
+
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
         localStorage.setItem('UsuarioId', data.UsuarioId);
@@ -81,7 +81,7 @@ export default function Ingresar() {
           console.log('🆔 ID extraído del Token:', decoded.sub);
         }
       }
-      
+
       console.log('ROL USUARIO:', role);
 
       // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---

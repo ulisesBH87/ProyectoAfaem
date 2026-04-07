@@ -87,6 +87,9 @@ class DirectorioEquipoResponse(BaseModel):
 class DirectorioJugadorResponse(BaseModel):
     MiembroEquipoId: int
     NombreCompleto: str
+    Nombre: str
+    PrimerApellido: str
+    SegundoApellido: Optional[str] = None
     CURP: str
     Sexo: str
     EquipoNombre: str
@@ -96,3 +99,14 @@ class DirectorioJugadorResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class EquipoUpdate(BaseModel):
+    NombreEquipo: Optional[str] = None
+    Estatus: Optional[bool] = None
+
+class JugadorUpdate(BaseModel):
+    Nombre: Optional[str] = None
+    PrimerApellido: Optional[str] = None
+    SegundoApellido: Optional[str] = None
+    CURP: Optional[str] = None
+    Estatus: Optional[bool] = None

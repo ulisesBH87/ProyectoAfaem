@@ -6,17 +6,26 @@ from app.db.sesion import get_db
 from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena, RegistroAdmin
 from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.esquemas.auth_esquema import TokenResponse
+from app.servicios.autenticacion_servicio import CorreoYaRegistradoError
 from app.servicios.autenticacion_servicio import registrar_usuario_servicio, iniciar_sesion, cambiar_contrasena_servicio, registrar_admin_servicio
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
 @router.post("/registro")
 def register(data: RegistroUsuario, db:Session = Depends(get_db)):
-    persona, usuario = registrar_usuario_servicio(data, db)
-    return {
-        "message": "Usuario registrado correctamente",
-        "usuario_id": usuario.UsuarioId
-    }
+    try:
+        persona, usuario = registrar_usuario_servicio(data, db)
+
+    
+        return {
+            "message": "Usuario registrado correctamente",
+            "usuario_id": usuario.UsuarioId
+        }
+    except CorreoYaRegistradoError:
+        raise HTTPException(
+            status_code=409,
+            detail="Correo ya registrado"
+        )
 
 @router.post("/registrar_admin")
 def registrar_administrador(data: RegistroAdmin, db:Session = Depends(get_db)):

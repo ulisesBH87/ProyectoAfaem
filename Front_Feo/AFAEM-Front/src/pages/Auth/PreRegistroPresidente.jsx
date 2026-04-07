@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUpload, FaCheckCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
@@ -55,17 +55,19 @@ function PreRegistroPresidente() {
             if (data.estatus === 3) {
               // Pago aprobado → mostrar pantalla de validado
               setPasoActual(2);
-            } else if (data.estatus === 1) {
+            } else if (data.estatus === 1 || data.estatus === 2) {
               if (data.tiene_comprobante) {
                 // Pago pendiente revisión
+                setOrdenPendienteId(data.orden_pago_id);
                 setPasoActual(2);
               } else {
                 // Generó orden pero no subió comprobante (Guardar y salir)
                 setOrdenPendienteId(data.orden_pago_id);
                 setPasoActual(1);
               }
-            } else if (data.estatus === 2) {
+            } else if (data.estatus === 4) {
               // Rechazado
+              setOrdenPendienteId(data.orden_pago_id);
               setPasoActual(2);
             }
           }
@@ -676,7 +678,7 @@ function PreRegistroPresidente() {
       for (const docKey of requiredDocs) {
         const file = documents[docKey];
         const formData = new FormData();
-        formData.append('persona_id', personaId);
+        // Removemos persona_id para que el backend lo obtenga dinámicamente usando el token
         formData.append('documento_afiliacion_ids', 3); // Hardcoded to 3 as requested
         formData.append('archivo', file);
 
@@ -1312,6 +1314,76 @@ function PreRegistroPresidente() {
                   </p>
                   <button className="btn-premium" style={{ padding: '16px 60px' }} onClick={() => setPasoActual(3)}>
                     Continuar con documentos
+                  </button>
+                  <br />
+                  <button style={{ 
+                    marginTop: '20px', 
+                    background: 'none', 
+                    border: 'none', 
+                    color: 'var(--text-muted)', 
+                    cursor: 'pointer', 
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }} onClick={handleLogout}>Cerrar sesión</button>
+                </div>
+              </div>
+            ) : estadoPago === 4 || estadoPago === 2 ? (
+              /* PAGO RECHAZADO */
+              <div className="fade-in" style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                padding: '40px 20px',
+                textAlign: 'center',
+                minHeight: '400px'
+              }}>
+                <div style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '32px', 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  color: 'var(--danger)', 
+                  marginBottom: '25px',
+                  border: '2px solid rgba(239, 68, 68, 0.2)'
+                }}>
+                  <FaTimesCircle />
+                </div>
+
+                <h1 style={{ fontSize: '30px', fontWeight: '800', color: 'var(--danger)', marginBottom: '15px' }}>
+                  Un administrador ha revisado el pago y haz sido rechazado
+                </h1>
+                
+                <div style={{ maxWidth: '500px' }}>
+                  <div style={{ 
+                    display: 'inline-block',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--danger)',
+                    padding: '8px 20px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    marginBottom: '20px',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}>
+                    PAGO DENEGADO
+                  </div>
+                  <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: 'var(--danger)' }}>Administrador: haz sido rechazado por este motivo:</h4>
+                    <p style={{ fontSize: '14px', color: 'var(--text-main)', fontStyle: 'italic', margin: 0 }}>
+                      "{localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
+                    </p>
+                  </div>
+
+                  <button className="btn-premium" style={{ padding: '16px 60px' }} onClick={() => {
+                     setEstadoPago(null);
+                     setPasoActual(1);
+                  }}>
+                    Subir nuevo comprobante
                   </button>
                   <br />
                   <button style={{ 

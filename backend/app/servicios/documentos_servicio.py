@@ -64,6 +64,19 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
     
     db.commit()
 
+    # Actualizar Estatus Presidente a DOCUMENTOS_EN_REVISION
+    try:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
+        
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona_id).first()
+        if presidente:
+            presidente.EstatusId = PresidenteEquipoEstatus.PRE_APROBADO
+    except Exception as e:
+        pass # Si falla actualización del estatus, que no rompa la subida.
+
+    db.commit()
+
     return {
         "mensaje": "Documentos subidos",
         "total": len(documentos_creados)

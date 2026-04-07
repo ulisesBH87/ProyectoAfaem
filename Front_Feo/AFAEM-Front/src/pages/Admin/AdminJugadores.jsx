@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getJugadoresDirectorio, getJugadorDocumentos } from '../../services/admin';
+import { getJugadoresDirectorio, getJugadorDocumentos, updateJugador } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaPlus, FaEdit } from 'react-icons/fa';
@@ -19,21 +19,21 @@ export default function AdminJugadores() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    const loadJugadores = async () => {
-      try {
-        setLoading(true);
-        const data = await getJugadoresDirectorio();
-        setJugadores(data);
-        setError(null);
-      } catch (err) {
-        console.error("Error al cargar jugadores:", err);
-        setError("Error al cargar el directorio de jugadores.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadJugadores = async () => {
+    try {
+      setLoading(true);
+      const data = await getJugadoresDirectorio();
+      setJugadores(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error al cargar jugadores:", err);
+      setError("Error al cargar el directorio de jugadores.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadJugadores();
   }, [navigate]);
 
@@ -122,18 +122,28 @@ export default function AdminJugadores() {
     Swal.fire({
       title: 'Editar Jugador',
       html: `
-        <div style="text-align: left; display: flex; flex-direction: column; gap: 15px;">
+        <div style="text-align: left; display: flex; flex-direction: column; gap: 10px;">
           <div>
-            <label style="font-weight: 600; font-size: 13px;">Nombre Completo</label>
-            <input id="swal-jg-nombre" class="swal2-input" value="${jugador.NombreCompleto}" style="margin-top: 5px; width: 90%;">
+            <label style="font-weight: 600; font-size: 12px;">Nombre(s)</label>
+            <input id="swal-jg-nombre" class="swal2-input" value="${jugador.Nombre || ''}" style="margin-top: 2px; width: 90%; height: 35px; font-size: 14px;">
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="font-weight: 600; font-size: 12px;">Primer Apellido</label>
+              <input id="swal-jg-apellido1" class="swal2-input" value="${jugador.PrimerApellido || ''}" style="margin-top: 2px; width: 100%; height: 35px; font-size: 14px;">
+            </div>
+            <div style="flex: 1;">
+              <label style="font-weight: 600; font-size: 12px;">Segundo Apellido</label>
+              <input id="swal-jg-apellido2" class="swal2-input" value="${jugador.SegundoApellido || ''}" style="margin-top: 2px; width: 100%; height: 35px; font-size: 14px;">
+            </div>
           </div>
           <div>
-            <label style="font-weight: 600; font-size: 13px;">CURP</label>
-            <input id="swal-jg-curp" class="swal2-input" value="${jugador.CURP}" style="margin-top: 5px; width: 90%;">
+            <label style="font-weight: 600; font-size: 12px;">CURP</label>
+            <input id="swal-jg-curp" class="swal2-input" value="${jugador.CURP || ''}" style="margin-top: 2px; width: 90%; height: 35px; font-size: 14px;">
           </div>
           <div>
-            <label style="font-weight: 600; font-size: 13px;">Estatus</label>
-            <select id="swal-jg-estatus" class="swal2-select" style="margin-top: 5px; width: 90%; padding: 10px;">
+            <label style="font-weight: 600; font-size: 12px;">Estatus</label>
+            <select id="swal-jg-estatus" class="swal2-select" style="margin-top: 2px; width: 95%; padding: 5px; height: 35px; font-size: 14px;">
               <option value="1" ${jugador.Estatus ? 'selected' : ''}>Activo (Aprobado)</option>
               <option value="0" ${!jugador.Estatus ? 'selected' : ''}>Baja (Inactivo)</option>
             </select>
@@ -144,22 +154,40 @@ export default function AdminJugadores() {
       confirmButtonText: 'Guardar Cambios',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#0b4ea6',
-      preConfirm: () => {
+      showLoaderOnConfirm: true,
+      preConfirm: async () => {
         const nombre = document.getElementById('swal-jg-nombre').value;
+        const primerApellido = document.getElementById('swal-jg-apellido1').value;
+        const segundoApellido = document.getElementById('swal-jg-apellido2').value;
         const curp = document.getElementById('swal-jg-curp').value;
         const estatus = document.getElementById('swal-jg-estatus').value;
-        if (!nombre || !curp) {
-          Swal.showValidationMessage('El nombre y el CURP son obligatorios');
+
+        if (!nombre || !primerApellido || !curp) {
+          Swal.showValidationMessage('Nombre, Primer Apellido y CURP son obligatorios');
+          return false;
         }
-        return { nombre, curp, estatus };
+
+        try {
+          await updateJugador(jugador.MiembroEquipoId, {
+            nombre,
+            primerApellido,
+            segundoApellido,
+            curp,
+            estatus
+          });
+          return { nombre, primerApellido, segundoApellido, curp, estatus };
+        } catch (error) {
+          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || error.message}`);
+        }
       }
     }).then((result) => {
       if (result.isConfirmed) {
         Swal.fire({
           icon: 'success',
-          title: 'Funcionalidad de Backend Pendiente',
-          text: `Se simuló la actualización del jugador ${result.value.nombre}`
+          title: 'Actualizado',
+          text: `El jugador ${result.value.nombre} ha sido actualizado correctamente.`
         });
+        loadJugadores();
       }
     });
   };
