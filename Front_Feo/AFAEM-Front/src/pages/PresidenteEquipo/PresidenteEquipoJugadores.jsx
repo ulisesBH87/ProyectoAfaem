@@ -5,6 +5,7 @@ import '../../styles/dashboard.css';
 
 // Componentes
 import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
+import SearchBar from '../../components/Common/SearchBar';
 
 export default function PresidenteEquipoJugadores() {
   const userEmail = localStorage.getItem('email');
@@ -250,13 +251,17 @@ export default function PresidenteEquipoJugadores() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '16px'
               }}>
-                <EntradaFormulario
-                  etiqueta="Buscar por nombre"
-                  tipo="text"
-                  valor={filtroBusqueda}
-                  alCambiar={(e) => setFiltroBusqueda(e.target.value)}
-                  marcador="Escribe el nombre del jugador..."
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#25303b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Buscar por nombre
+                  </label>
+                  <SearchBar
+                    value={filtroBusqueda}
+                    onChange={(e) => setFiltroBusqueda(e.target.value)}
+                    placeholder="Escribe el nombre del jugador..."
+                    width="280px"
+                  />
+                </div>
                 
                 <EntradaSeleccion
                   etiqueta="Filtrar por estado"
