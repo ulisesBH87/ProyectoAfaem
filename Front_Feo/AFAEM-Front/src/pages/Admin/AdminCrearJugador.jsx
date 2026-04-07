@@ -179,7 +179,7 @@ export default function AdminCrearJugador() {
     if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
       Swal.fire({
         title: 'Analizando Documento...',
-        html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>',
+        html: 'Extrayendo información vía OCR. Por favor espere.',
         allowOutsideClick: false,
         allowEscapeKey: false,
         didOpen: () => { Swal.showLoading(); }
@@ -497,10 +497,10 @@ export default function AdminCrearJugador() {
               gap: '20px' 
             }}>
               {[
-                { key: 'actaNacimiento', title: 'Acta de nacimiento', icon: '📋' },
-                { key: 'identificacion', title: 'Identificación', icon: '🆔' },
-                { key: 'fotografia', title: 'Fotografía', icon: '📸' },
-                { key: 'formatoAfiliacion', title: 'Formato Firmado', icon: '📝' }
+                { key: 'actaNacimiento', title: 'Acta de nacimiento', icon: null },
+                { key: 'identificacion', title: 'Identificación', icon: null },
+                { key: 'fotografia', title: 'Fotografía', icon: null },
+                { key: 'formatoAfiliacion', title: 'Formato Firmado', icon: null }
               ].map(doc => (
                 <div 
                   key={doc.key}

@@ -280,7 +280,7 @@ export default function Ingresar() {
         <form onSubmit={handleSubmit}>
           {!backendOk && (
             <div className="backend-warning">
-              <strong>⚠️ Servidor no disponible</strong>
+              <strong>Servidor no disponible</strong>
               <div style={{ opacity: 0.8, marginTop: '4px' }}>{backendDiag}</div>
             </div>
           )}
@@ -333,7 +333,7 @@ export default function Ingresar() {
             disabled={loading}
             style={{ width: '100%', marginTop: '15px', padding: '16px' }}
           >
-            {loading ? '⏳ Validando acceso...' : 'Ingresar al sistema'}
+            {loading ? 'Validando acceso...' : 'Ingresar al sistema'}
           </button>
         </form>
         

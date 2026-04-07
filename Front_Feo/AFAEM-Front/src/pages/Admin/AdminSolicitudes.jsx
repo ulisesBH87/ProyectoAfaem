@@ -39,9 +39,9 @@ export default function AdminSolicitudes() {
         const email = localStorage.getItem('email');
         const token = localStorage.getItem('token');
 
-        console.log('📋 Cargando solicitudes...');
-        console.log('✅ Email:', email);
-        console.log('✅ Token existe:', !!token);
+        console.log('Cargando solicitudes...');
+        console.log('Email:', email);
+        console.log('Token existe:', !!token);
 
         if (!email) {
           console.warn('❌ No hay email en localStorage');
@@ -60,11 +60,11 @@ export default function AdminSolicitudes() {
 
         setLoading(true);
 
-        console.log('🚀 Haciendo petición a /solicitud/solicitudes-usuarios...');
+        console.log('Haciendo petición a /solicitud/solicitudes-usuarios...');
         
         // Obtener solicitudes del servidor
         const response = await getSolicitudes();
-        console.log('✅ Respuesta de solicitudes:', response);
+        console.log('Respuesta de solicitudes:', response);
 
         // Manejar diferentes estructuras de respuesta
         let solicitudesList = [];
@@ -77,10 +77,10 @@ export default function AdminSolicitudes() {
         }
 
         // Log para verificar estructura de datos
-        console.log('📊 Estructura de primer solicitud:', solicitudesList[0]);
+        console.log('Estructura de primer solicitud:', solicitudesList[0]);
         const primerasSolicitud = solicitudesList[0];
         const claves = Object.keys(primerasSolicitud || {});
-        console.log('📊 Todas las claves disponibles:', claves);
+        console.log('Todas las claves disponibles:', claves);
 
         // Usar los datos tal como vienen del backend
         setSolicitudes(solicitudesList);
@@ -93,10 +93,10 @@ export default function AdminSolicitudes() {
           rechazadas: solicitudesList.filter(s => s.EstatusValidacion === 0).length
         });
         
-        console.log('✅ Solicitudes cargadas:', solicitudesList.length);
+        console.log('Solicitudes cargadas:', solicitudesList.length);
         setError(null);
       } catch (err) {
-        console.error('❌ Error cargando solicitudes:', err);
+        console.error('Error cargando solicitudes:', err);
         console.error('Response status:', err.response?.status);
         console.error('Response data:', err.response?.data);
         
@@ -178,7 +178,7 @@ export default function AdminSolicitudes() {
         html: `
           <div style="text-align: left; font-size: 14px;">
             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
-              <p style="margin-bottom: 8px; font-weight:700; color:#0b4ea6;">👤 Datos del Solicitante</p>
+              <p style="margin-bottom: 8px; font-weight:700; color:#0b4ea6;">Datos del Solicitante</p>
               <p style="margin-bottom: 6px;"><strong>Nombre:</strong> ${detalle.Nombre || ''} ${detalle.PrimerApellido || ''} ${detalle.SegundoApellido || ''}</p>
               <p style="margin-bottom: 6px;"><strong>Email:</strong> ${detalle.Email || 'N/A'}</p>
               <p style="margin-bottom: 6px;"><strong>CURP:</strong> <code>${detalle.CURP || 'N/A'}</code></p>
@@ -186,7 +186,7 @@ export default function AdminSolicitudes() {
               <p style="margin-bottom: 0;"><strong>Fecha Nacimiento:</strong> ${detalle.FechaNacimiento ? new Date(detalle.FechaNacimiento).toLocaleDateString('es-MX') : 'N/A'}</p>
             </div>
             <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-              <p style="margin-bottom: 8px; font-weight:700; color:#0b4ea6;">📋 Datos de la Solicitud</p>
+              <p style="margin-bottom: 8px; font-weight:700; color:#0b4ea6;">Datos de la Solicitud</p>
               <p style="margin-bottom: 6px;"><strong>Tipo:</strong> ${detalle.TipoSolicitud || 'N/A'}</p>
               <p style="margin-bottom: 6px;"><strong>Estatus:</strong> ${detalle.EstatusSolicitud || 'N/A'}</p>
               <p style="margin-bottom: 0;"><strong>Fecha:</strong> ${detalle.FechaSolicitud ? new Date(detalle.FechaSolicitud).toLocaleString('es-MX') : 'Sin fecha'}</p>
@@ -234,11 +234,11 @@ export default function AdminSolicitudes() {
 
   const handleAprobarSolicitud = async (id) => {
     const { isConfirmed } = await Swal.fire({
-      title: '¿Aprobar solicitud?',
-      text: "El presidente de equipo tendrá acceso completo al dashboard a partir de ahora.",
+      title: 'Aprobar Solicitud de Presidente',
+      text: "Al aprobar, el usuario recibirá acceso completo a su dashboard de Presidente de Equipo.",
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, aprobar equipo',
+      confirmButtonText: 'Sí, otorgar acceso',
       cancelButtonColor: '#94a3b8',
       confirmButtonColor: '#0b4ea6'
     });
@@ -315,7 +315,22 @@ export default function AdminSolicitudes() {
       label: 'Equipo / Usuario',
       render: (value, row) => (
         <div>
-          <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{value || row.TipoSolicitud || 'Usuario Registrado'}</div>
+          <div style={{ fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {value || row.TipoSolicitud || 'Usuario Registrado'}
+            {row.TipoAfiliacion === 2 && (
+              <span style={{ 
+                fontSize: '10px', 
+                backgroundColor: '#eff6ff', 
+                color: '#1e40af', 
+                padding: '2px 8px', 
+                borderRadius: '12px', 
+                border: '1px solid #bfdbfe',
+                fontWeight: '800'
+              }}>
+                PRESIDENTE
+              </span>
+            )}
+          </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.Correo || `ID Usuario: ${row.UsuarioId}`}</div>
         </div>
       )
@@ -410,7 +425,7 @@ export default function AdminSolicitudes() {
                 fontWeight: '600'
               }}
             >
-              📄 Docs
+              Docs
             </button>
           )}
           <button 

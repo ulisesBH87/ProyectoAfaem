@@ -150,7 +150,7 @@ const AdminDashboard = () => {
                 <FaTrophy style={{ marginRight: '10px' }} /> Create New Tournament
               </button>
               <button className="btn-premium" style={{ width: '100%', background: 'rgba(255,255,255,0.1)', boxShadow: 'none' }}>
-                📣 Send Global Announcement
+                Send Global Announcement
               </button>
             </div>
           </div>
