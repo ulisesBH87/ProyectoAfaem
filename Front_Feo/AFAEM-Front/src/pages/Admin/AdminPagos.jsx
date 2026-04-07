@@ -238,7 +238,7 @@ const AdminPagos = () => {
             <FaFileInvoice /> Ver
           </button>
 
-          {row.EstatusPagoId === 1 && (
+          {row.EstatusPagoId === 2 && (
             <>
               <button 
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 3, 'Aprobar')}
