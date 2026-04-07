@@ -158,3 +158,8 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     db.commit()
 
     return orden
+
+def mi_estado_pago_repo(db, usuario_id):
+    orden = db.query(OrdenPago).filter(OrdenPago.UsuarioId == usuario_id).order_by(OrdenPago.OrdenPagoId.desc()).first()
+
+    return orden
