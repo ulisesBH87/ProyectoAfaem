@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles # Importación necesaria
-from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta
+from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta
 import traceback
 import os
 
@@ -40,6 +40,7 @@ app.include_router(pagos_ruta.router)
 app.include_router(foto_ruta.router)
 app.include_router(equipo_ruta.router)
 app.include_router(permisos_ruta.router)
+app.include_router(gestion_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
 @app.exception_handler(Exception)

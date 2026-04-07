@@ -34,3 +34,8 @@ def get_autenticacion_servicio(db: Session = Depends(get_db)):
 def get_pagos_servicio(db: Session = Depends(get_db)):
     from app.servicios.pagos_servicio import PagosServicio
     return PagosServicio(db)
+
+#Gestion
+def get_gestion_servicio(db: Session = Depends(get_db)):
+    from app.servicios.gestion_servicio import GestionServicio
+    return GestionServicio(db)
