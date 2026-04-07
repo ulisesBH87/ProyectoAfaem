@@ -64,3 +64,10 @@ Front_Feo/afaem-front/node_modules
 .vscode/
 .idea/
 .vs/
+
+# =========================
+# 🔹 Antigravity / Agentes AI
+# =========================
+.agent/
+.gemini/
+antigravity-skill-creator.md

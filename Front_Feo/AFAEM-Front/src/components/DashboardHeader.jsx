@@ -142,16 +142,46 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
         {/* User Profile */}
         <div 
           onClick={(e) => { e.stopPropagation(); setShowUserMenu(!showUserMenu); }}
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px', 
+            cursor: 'pointer',
+            padding: '6px 12px',
+            borderRadius: '12px',
+            transition: 'background 0.2s',
+            minWidth: '160px',
+            justifyContent: 'flex-end',
+            flexShrink: 0
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(11, 78, 166, 0.05)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
         >
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>{userEmail ? userEmail.split('@')[0] : 'User'}</div>
+          <div style={{ textAlign: 'right', flexShrink: 1, minWidth: 0 }}>
+            <div style={{ 
+              fontSize: '13px', 
+              fontWeight: '700', 
+              color: 'var(--text-main)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {userEmail ? userEmail.split('@')[0] : 'User'}
+            </div>
             <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>Administrator</div>
           </div>
           <div style={{
-            width: '44px', height: '44px', borderRadius: '12px',
+            width: '44px', 
+            height: '44px', 
+            borderRadius: '12px',
             background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%)',
-            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'
+            color: 'white', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            fontWeight: 'bold',
+            flexShrink: 0,
+            boxShadow: '0 4px 10px rgba(37, 99, 235, 0.2)'
           }}>
             {getInitials(userEmail)}
           </div>

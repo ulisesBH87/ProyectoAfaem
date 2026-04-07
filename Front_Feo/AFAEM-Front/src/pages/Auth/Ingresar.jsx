@@ -40,7 +40,7 @@ export default function Ingresar() {
     if (!email || !password) { setErr('Ingresa correo y contraseña'); return; }
     setLoading(true);
     try {
-      const data = await login(email, password);
+      const data = await login(email.toLowerCase(), password);
       const token = data?.token || data?.access || data?.access_token || null;
       console.log('TOKEN RECIBIDO:', token);
       let currentEstatusId = null;
@@ -105,245 +105,89 @@ export default function Ingresar() {
   };
 
   return (
-    <div className="login-container fade-in">
-      <style>{`
-        .login-container {
-          min-height: 100vh;
-          background: linear-gradient(135deg, rgba(11, 78, 166, 0.8) 0%, rgba(6, 63, 130, 0.9) 100%), url('${StadiumBg}');
-          background-position: center;
-          background-size: cover;
-          background-blend-mode: overlay;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        
-        .login-card {
-          width: 100%;
-          max-width: 480px;
-          padding: 50px 40px;
-          animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .login-header {
-          text-align: center;
-          margin-bottom: 40px;
-        }
-
-        .logo-main {
-          height: 80px;
-          margin-bottom: 20px;
-          filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
-        }
-        
-        .logo-group {
-          display: flex;
-          justify-content: center;
-          gap: 15px;
-          margin-top: 25px;
-          opacity: 0.7;
-          align-items: center;
-        }
-        
-        .logo-group img {
-          height: 28px;
-          object-fit: contain;
-        }
-        
-        .login-title {
-          color: white;
-          font-size: 32px;
-          font-weight: 800;
-          margin: 0;
-          letter-spacing: -0.5px;
-        }
-        
-        .login-subtitle {
-          color: rgba(255,255,255,0.7);
-          font-size: 16px;
-          margin-top: 10px;
-        }
-        
-        .form-label {
-          display: block;
-          font-weight: 700;
-          color: rgba(255,255,255,0.9);
-          margin-bottom: 10px;
-          font-size: 13px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        
-        .form-input {
-          width: 100%;
-          padding: 15px 18px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 12px;
-          font-size: 15px;
-          color: white;
-          transition: all 0.3s ease;
-          box-sizing: border-box;
-          backdrop-filter: blur(5px);
-        }
-        
-        .form-input:focus {
-          outline: none;
-          background: rgba(255, 255, 255, 0.2);
-          border-color: var(--primary-light, #5d87e5);
-          box-shadow: 0 0 0 4px rgba(93, 135, 229, 0.2);
-        }
-
-        .form-input::placeholder {
-          color: rgba(255,255,255,0.4);
-        }
-        
-        .password-container {
-          position: relative;
-        }
-        
-        .toggle-password {
-          position: absolute;
-          right: 15px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: rgba(255,255,255,0.6);
-          font-size: 18px;
-          padding: 5px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: color 0.2s;
-        }
-        .toggle-password:hover { color: white; }
-        
-        .error-box {
-          background: rgba(239, 68, 68, 0.2);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          color: #fecaca;
-          padding: 15px;
-          border-radius: 12px;
-          margin-bottom: 25px;
-          font-size: 14px;
-          text-align: center;
-          font-weight: 500;
-        }
-        
-        .backend-warning {
-          background: rgba(245, 158, 11, 0.2);
-          border: 1px solid rgba(245, 158, 11, 0.3);
-          color: #fef3c7;
-          padding: 15px;
-          border-radius: 12px;
-          margin-bottom: 25px;
-          font-size: 13px;
-          text-align: center;
-        }
-
-        .footer-links {
-          margin-top: 30px;
-          text-align: center;
-          color: rgba(255,255,255,0.6);
-          font-size: 14px;
-        }
-        .footer-links a {
-          color: white;
-          text-decoration: none;
-          font-weight: 700;
-          margin-left: 5px;
-        }
-        .footer-links a:hover { text-decoration: underline; }
-
-        @media (max-width: 480px) {
-          .login-card { padding: 40px 25px; }
-          .login-title { font-size: 26px; }
-        }
-      `}</style>
+    <div className="auth-page fade-in-up">
+      <div className="auth-overlay"></div>
       
-      <div className="login-card card glass">
-        <div className="login-header">
-          <img src={AfaemLogo} alt="AFAEM" className="logo-main" />
-          <h1 className="login-title">Inicia Sesión</h1>
-          <p className="login-subtitle">Bienvenido a la plataforma AFAEM</p>
-        </div>
-        
-        <form onSubmit={handleSubmit}>
-          {!backendOk && (
-            <div className="backend-warning">
-              <strong>Servidor no disponible</strong>
-              <div style={{ opacity: 0.8, marginTop: '4px' }}>{backendDiag}</div>
-            </div>
-          )}
-          
-          {err && <div className="error-box">{err}</div>}
-          
-          <div style={{ marginBottom: '25px' }}>
-            <label className="form-label">Correo electrónico</label>
-            <input
-              type="email"
-              className="form-input"
-              placeholder="ejemplo@correo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              required
-            />
+      <div className="auth-content">
+        <div className="glass-dark auth-card-refined" style={{ maxWidth: '440px', margin: '0 auto', padding: '48px 40px', borderRadius: '24px', position: 'relative' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <img src={AfaemLogo} alt="AFAEM" style={{ height: '84px', marginBottom: '24px', filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.3))' }} />
+            <h1 className="heading-outfit" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px', color: 'white' }}>Inicia Sesión</h1>
+            <p className="glass-subtitle" style={{ fontWeight: '500', color: 'rgba(255,255,255,0.7)' }}>Bienvenido a la plataforma AFAEM</p>
           </div>
           
-          <div style={{ marginBottom: '15px' }}>
-            <label className="form-label">Contraseña</label>
-            <div className="password-container">
+          <form onSubmit={handleSubmit}>
+            {!backendOk && (
+              <div style={{ background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fef3c7', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', textAlign: 'center' }}>
+                <strong>Servidor no disponible</strong>
+                <div style={{ opacity: 0.8, marginTop: '4px' }}>{backendDiag}</div>
+              </div>
+            )}
+            
+            {err && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fecaca', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', textAlign: 'center', fontWeight: '600' }}>
+                {err}
+              </div>
+            )}
+            
+            <div style={{ marginBottom: '24px' }}>
+              <label className="auth-label">Correo electrónico</label>
               <input
-                type={showPassword ? 'text' : 'password'}
-                className="form-input"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="email"
+                className="auth-input"
+                placeholder="ejemplo@correo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value.toLowerCase())}
                 disabled={loading}
                 required
               />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
             </div>
-            <div style={{ textAlign: 'right', marginTop: '10px' }}>
-              <Link to="/olvide-contrasena" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '12px' }}>
-                ¿Olvidó su contraseña?
-              </Link>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label className="auth-label">Contraseña</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="auth-input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', background: 'none', color: 'rgba(255,255,255,0.5)', fontSize: '18px' }}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              <div style={{ textAlign: 'right', marginTop: '12px' }}>
+                <Link to="/olvide-contrasena" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '12px', fontWeight: '600' }}>
+                  ¿Olvidó su contraseña?
+                </Link>
+              </div>
             </div>
-          </div>
+            
+            <button
+              type="submit"
+              className="btn-premium"
+              disabled={loading}
+              style={{ width: '100%', marginTop: '20px', padding: '16px' }}
+            >
+              {loading ? 'Validando acceso...' : 'Ingresar al sistema'}
+            </button>
+          </form>
           
-          <button
-            type="submit"
-            className="btn-premium"
-            disabled={loading}
-            style={{ width: '100%', marginTop: '15px', padding: '16px' }}
-          >
-            {loading ? 'Validando acceso...' : 'Ingresar al sistema'}
-          </button>
-        </form>
-        
-        <div className="footer-links">
-          ¿No tienes cuenta? <Link to="/registrarse-cuenta">Regístrate ahora</Link>
-        </div>
+          <div style={{ marginTop: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
+            ¿No tienes cuenta? <Link to="/registrarse-cuenta" style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Regístrate ahora</Link>
+          </div>
 
-        <div className="logo-group">
-          <img src={FmfLogo} alt="FMF" />
-          <img src={AmateurLogo} alt="Sector Amateur" />
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '32px', opacity: 0.6 }}>
+            <img src={FmfLogo} alt="FMF" style={{ height: '24px', objectFit: 'contain' }} />
+            <img src={AmateurLogo} alt="Sector Amateur" style={{ height: '24px', objectFit: 'contain' }} />
+          </div>
         </div>
       </div>
     </div>

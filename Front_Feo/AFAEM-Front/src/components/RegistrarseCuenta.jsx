@@ -43,9 +43,10 @@ function RegistrarseCuenta() {
 	// MANEJAR CAMBIOS EN INPUTS
 	const handleChange = (e) => {
 		const { name, value, type, checked } = e.target;
+		const finalValue = name === 'Correo' ? value.toLowerCase() : value;
 		setFormData((prev) => ({
 			...prev,
-			[name]: type === 'checkbox' ? checked : value
+			[name]: type === 'checkbox' ? checked : finalValue
 		}));
 		
 		// VALIDAR CAMPO EN TIEMPO REAL 
@@ -76,7 +77,7 @@ function RegistrarseCuenta() {
 				Nombre: formData.Nombre,
 				PrimerApellido: formData.PrimerApellido,
 				SegundoApellido: formData.SegundoApellido,
-				Correo: formData.Correo,
+				Correo: formData.Correo.toLowerCase(),
 				Contrasena: formData.Contrasena,
 				NumeroTelefono: formData.NumeroTelefono,
 				Rol: 'responsable'
@@ -104,336 +105,172 @@ function RegistrarseCuenta() {
 	};
 
 	return (
-		<div className="signup">
-			<style>{`
-				.signup { display:flex; justify-content:center; padding:12px; box-sizing:border-box; background: linear-gradient(180deg, #3d79ff 0%, #1e5be6 100%); min-height: 100vh; }
-				.card {
-					position:relative;
-					overflow:visible;
-					width:100%;
-					max-width:920px;
-					background:transparent;
-					border-radius:14px;
-					padding:40px;
-					padding-bottom:0;
-					box-shadow: none;
-					position: relative;
-					z-index: 100;
-				}
-				.card-body {
-					position: relative;
-					z-index: 101;
-					background: #fff;
-					border-radius: 14px;
-					padding: 40px;
-					box-shadow: 0 18px 50px rgba(11,78,166,0.08);
-				}
-				.card-logos{ position:absolute; top:28px; left:28px; right:28px; display:flex; justify-content:space-between; align-items:center; pointer-events:none; user-select:none; z-index:10003; }
-				.left-logo{ height:72px; max-width:180px; object-fit:contain; opacity:0.95; } 
-				.right-logos{ display:flex; gap:16px; align-items:center; pointer-events:none; }
-				.right-logos img { height:56px; max-height:64px; object-fit:contain; opacity:0.95; } 
-				.form-grid{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px 16px; }
-				.form-field{ grid-column: span 6; }
-				.form-field.full{ grid-column: span 12; }
-				.form-field.col-span-3{ grid-column: span 9; }
-				.form-label{ font-size:12px; margin-bottom:8px; font-weight:700; color:#0b2546; text-transform:uppercase; letter-spacing:0.5px; }
-				.form-input, .form-select{ width:100%; padding:10px 12px; border-radius:8px; height:40px; border:1px solid #d6e6ff; box-sizing:border-box; font-size:14px; transition: all 0.2s; }
-				.form-input:focus, .form-select:focus{ outline:none; border-color:#2b7be6; box-shadow: 0 0 0 3px rgba(43,123,230,0.1); }
-				.form-input.is-invalid, .form-select.is-invalid { border-color:#c62828; }
-				.password-wrapper{ position: relative; display: flex; align-items: center; }
-				.password-input{ padding-right: 40px; }
-				.password-toggle{ position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #5b6b87; font-size: 18px; padding: 4px 8px; display: flex; align-items: center; justify-content: center; }
-				.password-toggle:hover{ color: #2b7be6; }
-				.form-error{ color:#c62828; font-size:12px; margin-top:6px; display:block; animation: fadeIn 0.3s; }
-				.alert{ padding: 14px 16px; border-radius: 8px; font-size: 14px; margin-top: 16px; animation: fadeIn 0.3s; }
-				.alert-danger{ background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-				.alert-success{ background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-				.password-strength{ margin-top: 12px; }
-				.strength-bar{ height: 6px; background: #e6eefc; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
-				.strength-bar-fill{ height: 100%; background: linear-gradient(90deg, #1e5be6, #3d79ff); transition: width 0.3s; }
-				.strength-items{ display: flex; flex-wrap: wrap; gap: 8px; }
-				.strength-item{ font-size: 12px; color: #5b6b87; }
-				.strength-item.met{ color: #2e7d32; }
-				.btn-primary{ display:block; width:100%; padding:12px 16px; font-weight:700; background:linear-gradient(180deg,#3d79ff,#1e5be6); color:#fff; border-radius:10px; border:none; cursor:pointer; font-size:15px; margin-top:20px; transition: all 0.2s; }
-				.btn-primary:hover:not(:disabled){ transform: translateY(-2px); box-shadow: 0 8px 20px rgba(61, 121, 255, 0.3); }
-				.btn-primary:disabled{ opacity: 0.7; cursor: not-allowed; }
-				.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top: 2px solid #3d79ff; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
-				@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-				@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-				.checkbox-wrapper{ display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; }
-				.checkbox-input{ width: 18px; height: 18px; cursor: pointer; accent-color: #3d79ff; margin-top: 2px; }
-				.checkbox-label{ font-size: 13px; color: #5b6b87; line-height: 1.5; }
-				.checkbox-label a{ color: #2b7be6; text-decoration: none; font-weight: 600; }
-				.checkbox-label a:hover{ text-decoration: underline; }
-				.success-card{ background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); padding: 40px; border-radius: 12px; text-align: center; animation: slideUp 0.5s ease-out; }
-				@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-				.success-icon{ font-size: 64px; margin-bottom: 16px; animation: scaleIn 0.5s ease-out; }
-				@keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
-				.success-title{ font-size: 24px; font-weight: 700; color: #2e7d32; margin-bottom: 8px; }
-				.success-subtitle{ font-size: 14px; color: #558b2f; margin-bottom: 24px; }
-				.btn-login{ display: inline-block; padding: 12px 32px; background: #2e7d32; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
-				.btn-login:hover{ background: #1b5e20; transform: translateY(-2px); }
-				.text-center-link{ text-align: center; margin-top: 24px; font-size: 14px; color: #5b6b87; }
-				.text-center-link a{ color: #2b7be6; text-decoration: none; font-weight: 600; }
-				.text-center-link a:hover{ text-decoration: underline; }
-				@media (max-width:900px){ 
-					.card-logos{ display:none !important; }
-					.form-field, .form-field.full{ grid-column: span 12; }
-					.card { padding: 24px; }
-					.white-bg-card { display: none; }
-					.card-body { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-				}
-			`}</style>
-			
-			<div className="container position-relative" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
-				{/* LOGOS */}
-				<div className="d-none d-md-flex justify-content-between align-items-center position-absolute w-100" style={{ top: '0px', left: 0, right: 0, pointerEvents: 'none', zIndex: 10 }}>
-					<img src={AfaemLogo} alt="AFAEM" style={{ height: 60, maxWidth: 150, objectFit: 'contain', opacity: 0.95 }} />
-					<div className="d-flex gap-4 align-items-center">
-						<img src={AmateurLogo} alt="Amateur" style={{ height: 44, maxWidth: 100, objectFit: 'contain', opacity: 0.95 }} />
-						<img src={FmfLogo} alt="FMF" style={{ height: 44, maxWidth: 100, objectFit: 'contain', opacity: 0.95 }} />
+		<div className="auth-page fade-in-up">
+			<div className="auth-overlay"></div>
+
+			<div className="auth-content">
+				<div className="glass-dark" style={{ maxWidth: '800px', margin: '0 auto', padding: '40px', borderRadius: '24px', position: 'relative' }}>
+					{/* LOGOS CABECERA */}
+					<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+						<img src={AfaemLogo} alt="AFAEM" style={{ height: '60px', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.2))' }} />
+						<div style={{ display: 'flex', gap: '15px' }}>
+							<img src={FmfLogo} alt="FMF" style={{ height: '32px', opacity: 0.8 }} />
+							<img src={AmateurLogo} alt="Amateur" style={{ height: '32px', opacity: 0.8 }} />
+						</div>
 					</div>
-				</div>
-				
-				{/* CARD PRINCIPAL */}
-				<div className="card mx-auto" style={{ maxWidth: 720, marginTop: '30px' }}>
+
 					{success ? (
-						// PANTALLA DE ÉXITO
-						<div className="success-card">
-							<div className="success-icon">✅</div>
-							<h2 className="success-title">Registro exitoso</h2>
-							<p className="success-subtitle">Puedes iniciar sesión con tu cuenta</p>
-							<button 
-								onClick={() => navigate('/ingresar')}
-								className="btn-login"
-							>
+						<div style={{ textAlign: 'center', padding: '40px 0' }}>
+							<div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
+							<h2 className="heading-outfit" style={{ fontSize: '28px', color: 'var(--secondary)', marginBottom: '12px' }}>Registro exitoso</h2>
+							<p className="glass-subtitle" style={{ marginBottom: '32px' }}>Tu cuenta ha sido creada correctamente. Serás redirigido al inicio de sesión.</p>
+							<button onClick={() => navigate('/ingresar')} className="btn-premium">
 								Ir al inicio de sesión
 							</button>
 						</div>
 					) : (
-						// FORMULARIO DE REGISTRO
-						<div className="card-body">
-							<h2 className="text-center mb-3" style={{ fontWeight: 700, fontSize: 28, color: '#0b2546' }}>
-								REGISTRO DE USUARIO
-							</h2>
-							<p className="text-center mb-4" style={{ fontSize: 14, color: '#5b6b87' }}>
-								Completa el formulario para crear tu cuenta en AFAEM
-							</p>
-							
+						<div>
+							<div style={{ textAlign: 'center', marginBottom: '32px' }}>
+								<h2 className="heading-outfit" style={{ fontSize: '28px', fontWeight: '800', marginBottom: '8px' }}>Registro de Usuario</h2>
+								<p className="glass-subtitle">Completa el formulario para unirte a la plataforma AFAEM</p>
+							</div>
+
 							<form onSubmit={handleSubmit}>
-								<div className="form-grid">
-									{/* NOMBRE */}
-									<div className="form-field">
-										<label className="form-label" htmlFor="nombreInput">Nombre *</label>
+								<div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+									
+									<div style={{ gridColumn: 'span 1' }}>
+										<label className="auth-label">Nombre *</label>
 										<input 
-											id="nombreInput" 
 											name="Nombre" 
 											value={formData.Nombre} 
 											onChange={handleChange} 
-											className={`form-input${errors.Nombre ? ' is-invalid' : ''}`}
+											className="auth-input"
 											placeholder="Tu nombre"
-											aria-required="true" 
-											aria-invalid={!!errors.Nombre} 
+											required
 										/>
-										{errors.Nombre && <div className="form-error">{errors.Nombre}</div>}
+										{errors.Nombre && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px' }}>{errors.Nombre}</div>}
 									</div>
-									
-									{/* PRIMER APELLIDO */}
-									<div className="form-field">
-										<label className="form-label" htmlFor="primerApellidoInput">Primer Apellido *</label>
+
+									<div style={{ gridColumn: 'span 1' }}>
+										<label className="auth-label">Primer Apellido *</label>
 										<input 
-											id="primerApellidoInput" 
 											name="PrimerApellido" 
 											value={formData.PrimerApellido} 
 											onChange={handleChange} 
-											className={`form-input${errors.PrimerApellido ? ' is-invalid' : ''}`}
-											placeholder="Tu primer apellido"
-											aria-required="true" 
-											aria-invalid={!!errors.PrimerApellido} 
+											className="auth-input"
+											placeholder="Apellido paterno"
+											required
 										/>
-										{errors.PrimerApellido && <div className="form-error">{errors.PrimerApellido}</div>}
+										{errors.PrimerApellido && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px' }}>{errors.PrimerApellido}</div>}
 									</div>
-									
-									{/* SEGUNDO APELLIDO */}
-									<div className="form-field">
-										<label className="form-label" htmlFor="segundoApellidoInput">Segundo Apellido</label>
+
+									<div style={{ gridColumn: 'span 1' }}>
+										<label className="auth-label">Segundo Apellido</label>
 										<input 
-											id="segundoApellidoInput" 
 											name="SegundoApellido" 
 											value={formData.SegundoApellido} 
 											onChange={handleChange} 
-											className="form-input"
-											placeholder="Tu segundo apellido (opcional)"
+											className="auth-input"
+											placeholder="Apellido materno (opcional)"
 										/>
 									</div>
-									
-									{/* CORREO */}
-									<div className="form-field">
-										<label className="form-label" htmlFor="correoInput">Correo *</label>
+
+									<div style={{ gridColumn: 'span 1' }}>
+										<label className="auth-label">Correo electrónico *</label>
 										<input 
-											id="correoInput" 
 											name="Correo" 
 											type="email"
 											value={formData.Correo} 
 											onChange={handleChange} 
-											className={`form-input${errors.Correo ? ' is-invalid' : ''}`}
-											placeholder="tu.correo@ejemplo.com"
-											aria-required="true" 
-											aria-invalid={!!errors.Correo} 
-											autoComplete="email" 
+											className="auth-input"
+											placeholder="ejemplo@correo.com"
+											required
 										/>
-										{errors.Correo && <div className="form-error">{errors.Correo}</div>}
+										{errors.Correo && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px' }}>{errors.Correo}</div>}
 									</div>
-									
-									{/* TELÉFONO */}
-									<div className="form-field">
-										<label className="form-label" htmlFor="telefonoInput">Teléfono *</label>
+
+									<div style={{ gridColumn: 'span 1' }}>
+										<label className="auth-label">Teléfono *</label>
 										<input 
-											id="telefonoInput" 
 											name="NumeroTelefono" 
 											value={formData.NumeroTelefono} 
 											onChange={handleChange} 
-											className={`form-input${errors.NumeroTelefono ? ' is-invalid' : ''}`}
-											placeholder="1234567890"
-											aria-required="true" 
-											aria-invalid={!!errors.NumeroTelefono} 
-											autoComplete="tel" 
+											className="auth-input"
+											placeholder="10 dígitos"
+											required
 										/>
-										{errors.NumeroTelefono && <div className="form-error">{errors.NumeroTelefono}</div>}
+										{errors.NumeroTelefono && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px' }}>{errors.NumeroTelefono}</div>}
 									</div>
-									
-									{/* CONTRASEÑA */}
-									<div className="form-field full">
-										<label className="form-label" htmlFor="contrasenaInput">Contraseña *</label>
-										<div className="password-wrapper">
+
+									<div style={{ gridColumn: 'span 1' }}>
+										<label className="auth-label">Contraseña *</label>
+										<div style={{ position: 'relative' }}>
 											<input 
-												id="contrasenaInput" 
 												type={showPassword ? "text" : "password"}
 												name="Contrasena" 
 												value={formData.Contrasena} 
 												onChange={handleChange} 
-												className={`form-input password-input${errors.Contrasena ? ' is-invalid' : ''}`}
-												placeholder="Crea una contraseña segura"
-												aria-required="true" 
-												aria-invalid={!!errors.Contrasena}
-												autoComplete="new-password" 
+												className="auth-input"
+												placeholder="••••••••"
+												required
 											/>
 											<button
 												type="button"
-												className="password-toggle"
 												onClick={() => setShowPassword(!showPassword)}
-												aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+												style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', background: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}
 											>
 												{showPassword ? '👁️‍🗨️' : '👁️'}
 											</button>
 										</div>
-										{errors.Contrasena && <div className="form-error">{errors.Contrasena}</div>}
-										
-										{/* INDICADOR DE FORTALEZA */}
-										<div className="password-strength">
-											<div className="strength-bar">
-												<div 
-													className="strength-bar-fill" 
-													style={{ width: `${(pwInfo.score / 5) * 100}%` }}
-												/>
-											</div>
-											<div className="strength-items">
-												<span className={`strength-item ${pwInfo.rules.minLen ? 'met' : ''}`}>
-													{pwInfo.rules.minLen ? '✅' : '⬜'} 6+ caracteres
-												</span>
-												<span className={`strength-item ${pwInfo.rules.hasLower ? 'met' : ''}`}>
-													{pwInfo.rules.hasLower ? '✅' : '⬜'} minúscula
-												</span>
-												<span className={`strength-item ${pwInfo.rules.hasUpper ? 'met' : ''}`}>
-													{pwInfo.rules.hasUpper ? '✅' : '⬜'} mayúscula
-												</span>
-												<span className={`strength-item ${pwInfo.rules.hasDigit ? 'met' : ''}`}>
-													{pwInfo.rules.hasDigit ? '✅' : '⬜'} número
-												</span>
-												<span className={`strength-item ${pwInfo.rules.hasSpecial ? 'met' : ''}`}>
-													{pwInfo.rules.hasSpecial ? '✅' : '⬜'} símbolo
-												</span>
-											</div>
+										<div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '10px', overflow: 'hidden' }}>
+											<div style={{ height: '100%', width: `${(pwInfo.score / 5) * 100}%`, background: 'var(--primary)', transition: 'width 0.3s' }} />
 										</div>
 									</div>
-									
-									{/* CONFIRMAR CONTRASEÑA */}
-									<div className="form-field full">
-										<label className="form-label" htmlFor="confirmarContrasenaInput">Confirmar Contraseña *</label>
-										<div className="password-wrapper">
-											<input 
-												id="confirmarContrasenaInput" 
-												type={showConfirmPassword ? "text" : "password"}
-												name="confirmarContrasena" 
-												value={formData.confirmarContrasena} 
-												onChange={handleChange} 
-												className={`form-input password-input${errors.confirmarContrasena ? ' is-invalid' : ''}`}
-												placeholder="Confirma tu contraseña"
-												aria-required="true" 
-												aria-invalid={!!errors.confirmarContrasena}
-												autoComplete="new-password" 
-											/>
-											<button
-												type="button"
-												className="password-toggle"
-												onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-												aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-											>
-												{showConfirmPassword ? '👁️‍🗨️' : '👁️'}
-											</button>
+
+									<div style={{ gridColumn: 'span 2' }}>
+										<div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+											{Object.entries(pwInfo.rules).map(([key, met]) => (
+												<span key={key} style={{ fontSize: '10px', color: met ? 'var(--secondary)' : 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+													{met ? '✅' : '⬜'} {key === 'minLen' ? '6+ car.' : key.replace('has', '').toLowerCase()}
+												</span>
+											))}
 										</div>
-										{errors.confirmarContrasena && <div className="form-error">{errors.confirmarContrasena}</div>}
 									</div>
-									
-									{/* POLÍTICAS */}
-									<div className="form-field full">
-										<div className="checkbox-wrapper">
+
+									<div style={{ gridColumn: 'span 2' }}>
+										<div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
 											<input
 												id="aceptaPoliticas"
 												type="checkbox"
 												name="aceptaPoliticas"
 												checked={formData.aceptaPoliticas}
 												onChange={handleChange}
-												className="checkbox-input"
-												aria-required="true"
+												style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: 'var(--primary)' }}
+												required
 											/>
-											<label htmlFor="aceptaPoliticas" className="checkbox-label">
-												He leído y acepto la 
-												<a href="/privacidad" target="_blank" rel="noopener noreferrer"> Política de Privacidad</a>,
-												<a href="/terminos" target="_blank" rel="noopener noreferrer"> Términos y Condiciones</a>
-												{' '}y la
-												<a href="/responsabilidad" target="_blank" rel="noopener noreferrer"> Responsabilidad Limitada de AFAEM</a>
+											<label htmlFor="aceptaPoliticas" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4' }}>
+												He leído y acepto la <Link to="/privacidad" style={{ color: 'white' }}>Política de Privacidad</Link> y los <Link to="/terminos" style={{ color: 'white' }}>Términos y Condiciones</Link>
 											</label>
 										</div>
-										{errors.aceptaPoliticas && <div className="form-error" style={{ marginTop: '8px' }}>{errors.aceptaPoliticas}</div>}
+										{errors.aceptaPoliticas && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px' }}>{errors.aceptaPoliticas}</div>}
 									</div>
-									
-									{/* ERRORES */}
+
 									{err && (
-										<div className="form-field full">
-											<div className="alert alert-danger">
-												⚠️ {err}
-											</div>
+										<div style={{ gridColumn: 'span 2', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px', color: '#fca5a5', fontSize: '13px', textAlign: 'center' }}>
+											⚠️ {err}
 										</div>
 									)}
-									
-									{/* BOTÓN ENVÍO */}
-									<div className="form-field full">
-										<button 
-											className="btn-primary" 
-											type="submit" 
-											disabled={loading}
-										>
-											{loading && <span className="spinner" />}
-											{loading ? 'Registrando...' : 'Regístrate'}
+
+									<div style={{ gridColumn: 'span 2', marginTop: '10px' }}>
+										<button className="btn-premium" type="submit" disabled={loading} style={{ width: '100%', padding: '16px' }}>
+											{loading ? 'Registrando...' : 'Finalizar Registro'}
 										</button>
 									</div>
 								</div>
 							</form>
-							
-							{/* ENLACE A LOGIN */}
-							<div className="text-center-link">
-								¿Ya tienes cuenta? <Link to="/ingresar">Inicia sesión aquí</Link>
+
+							<div style={{ textAlign: 'center', marginTop: '32px', fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>
+								¿Ya tienes cuenta? <Link to="/ingresar" style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Inicia sesión aquí</Link>
 							</div>
 						</div>
 					)}

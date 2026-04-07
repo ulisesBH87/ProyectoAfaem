@@ -436,14 +436,10 @@ export default function ConfigurarEquipo() {
       const link = document.createElement('a');
       link.href = url;
       link.download = `Afiliacion_${safeNombre}.pdf`;
-      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-      
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 500);
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       Swal.fire('¡Listo!', 'El formato se ha generado correctamente. Firma el documento y súbelo.', 'success');
     } catch (err) {

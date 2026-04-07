@@ -10,7 +10,7 @@ import {
   FaCheckCircle
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
-import { getEquiposDirectorio } from '../../services/admin';
+import { getSolicitudes } from '../../services/solicitud';
 import { validarFotografia } from '../../services/foto';
 import { registrarJugadorTemporal } from '../../services/teams';
 import { 
@@ -106,24 +106,11 @@ export default function AdminCrearJugador() {
   // EFECTO PARA AUTO-LLENAR LIGA Y EQUIPO AL CAMBIAR EQUIPO SELECCIONADO
   useEffect(() => {
     if (extractedData.equipoSeleccionado && equiposDb.length > 0) {
-      const selected = equiposDb.find(e => e.EquipoId === parseInt(extractedData.equipoSeleccionado));
+      const selected = equiposDb.find(e => String(e.SolicitudId) === String(extractedData.equipoSeleccionado));
       if (selected) {
         setExtractedData(prev => ({
           ...prev,
-          equipo: selected.NombreEquipo || '',
-          liga: selected.Liga || '',
-          categoria: selected.Categoria || 'LIBRE'
-        }));
-      }
-    }
-  }, [extractedData.equipoSeleccionado, equiposDb])  // EFECTO PARA AUTO-LLENAR LIGA Y EQUIPO AL CAMBIAR EQUIPO SELECCIONADO
-  useEffect(() => {
-    if (extractedData.equipoSeleccionado && equiposDb.length > 0) {
-      const selected = equiposDb.find(e => e.EquipoId === parseInt(extractedData.equipoSeleccionado));
-      if (selected) {
-        setExtractedData(prev => ({
-          ...prev,
-          equipo: selected.NombreEquipo || '',
+          equipo: selected.Equipo || selected.NombreEquipo || '',
           liga: selected.Liga || '',
           categoria: selected.Categoria || 'LIBRE'
         }));
@@ -131,16 +118,18 @@ export default function AdminCrearJugador() {
     }
   }, [extractedData.equipoSeleccionado, equiposDb]);
 
-  // CARGAR CATÁLOGO DE EQUIPOS
+  // CARGAR CATÁLOGO DE SOLICITUDES ACTIVAS PARA REGISTRO
   useEffect(() => {
     const fetchTeamCatalog = async () => {
       try {
         setLoadingTeams(true);
-        const fetchEquipos = await getEquiposDirectorio();
-        setEquiposDb(fetchEquipos);
+        const data = await getSolicitudes();
+        // Filtramos solo las solicitudes aprobadas o en revisión que tengan equipo
+        const listaEquipos = (Array.isArray(data) ? data : (data.solicitudes || [])).filter(s => s.Equipo);
+        setEquiposDb(listaEquipos);
       } catch (e) {
         console.error("No se pudieron cargar los equipos:", e);
-        Swal.fire('Error', 'No se pudo cargar el catálogo de equipos activos.', 'error');
+        Swal.fire('Error', 'No se pudo cargar el catálogo de trámites activos.', 'error');
       } finally {
         setLoadingTeams(false);
       }
@@ -344,12 +333,16 @@ export default function AdminCrearJugador() {
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
       link.href = url;
       link.download = `Formato_Afiliacion_${extractedData.nombreJugador || 'Jugador'}.pdf`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-      Swal.fire('¡Listo!', 'El formato se ha descargado correctamente.', 'success');
+      Swal.fire('Listo!', 'El formato se ha descargado correctamente.', 'success');
     } catch (err) {
       console.error("Error PDF:", err);
       Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
@@ -375,18 +368,18 @@ export default function AdminCrearJugador() {
 
     try {
       const formData = new FormData();
-      formData.append('equipo_temporal_id', extractedData.equipoSeleccionado);
-      formData.append('nombre', extractedData.nombreJugador);
-      formData.append('primer_apellido', extractedData.apellidoPaterno);
-      formData.append('segundo_apellido', extractedData.apellidoMaterno);
-      formData.append('CURP', extractedData.curp);
+      formData.append('equipo_temporal_id', parseInt(extractedData.equipoSeleccionado, 10));
+      formData.append('nombre', (extractedData.nombreJugador || '').toString().trim());
+      formData.append('primer_apellido', (extractedData.apellidoPaterno || '').toString().trim());
+      formData.append('segundo_apellido', (extractedData.apellidoMaterno || '').toString().trim()); // Evitar null/undefined
+      formData.append('curp', (extractedData.curp || '').toString().toUpperCase());
       formData.append('sexo_id', parseInt(extractedData.genero, 10));
       formData.append('fecha_nacimiento', extractedData.fechaNacimiento);
-      formData.append('lugar_nacimiento', extractedData.lugarNacimiento);
-      formData.append('correo', extractedData.correo);
-      formData.append('telefono', extractedData.telefono);
-      formData.append('posicion', extractedData.posicion);
-      formData.append('num_camiseta', extractedData.numCamiseta);
+      formData.append('lugar_nacimiento', extractedData.lugarNacimiento || 'MÉXICO');
+      formData.append('correo', extractedData.correo || '');
+      formData.append('telefono', extractedData.telefono || '');
+      formData.append('posicion', extractedData.posicion || 'JUGADOR');
+      formData.append('num_camiseta', extractedData.numCamiseta || '0');
       formData.append('seguro_id', 1);
 
       if (extractedData.esForaneo) {
@@ -472,10 +465,10 @@ export default function AdminCrearJugador() {
                 }}
                 disabled={loadingTeams}
               >
-                <option value="">-- Elige un Equipo Validado --</option>
+                <option value="">-- Elige un Trámite/Equipo Activo --</option>
                 {equiposDb.map(eq => (
-                  <option key={eq.EquipoId} value={eq.EquipoId}>
-                    {eq.NombreEquipo} - {eq.Liga} ({eq.PresidenteNombreCompleto})
+                  <option key={eq.SolicitudId} value={eq.SolicitudId}>
+                    {eq.Equipo} (Solicitud #{eq.SolicitudId}) - {eq.Correo}
                   </option>
                 ))}
               </select>
