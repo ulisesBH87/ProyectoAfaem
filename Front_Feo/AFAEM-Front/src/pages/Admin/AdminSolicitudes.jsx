@@ -21,7 +21,7 @@ export default function AdminSolicitudes() {
     aprobadas: 0,
     rechazadas: 0
   });
-  
+
   // Estado para el modal de revisión
   const [modalAbierto, setModalAbierto] = useState(false);
   const [datosRevision, setDatosRevision] = useState(null);
@@ -34,93 +34,62 @@ export default function AdminSolicitudes() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    const loadSolicitudes = async () => {
-      try {
-        const email = localStorage.getItem('email');
-        const token = localStorage.getItem('token');
+  const loadSolicitudes = async () => {
+    try {
+      const email = localStorage.getItem('email');
+      const token = localStorage.getItem('token');
 
-        console.log('Cargando solicitudes...');
-        console.log('Email:', email);
-        console.log('Token existe:', !!token);
-
-        if (!email) {
-          console.warn('❌ No hay email en localStorage');
-          setError('No se encontró email. Por favor inicia sesión.');
-          setTimeout(() => navigate('/ingresar'), 2000);
-          return;
-        }
-
-        // VERIFICAR QUE HAY TOKEN
-        if (!token) {
-          console.warn('❌ No hay token en localStorage');
-          setError('Sesión expirada. Por favor inicia sesión de nuevo.');
-          setTimeout(() => navigate('/ingresar'), 2000);
-          return;
-        }
-
-        setLoading(true);
-
-        console.log('Haciendo petición a /solicitud/solicitudes-usuarios...');
-        
-        // Obtener solicitudes del servidor
-        const response = await getSolicitudes();
-        console.log('Respuesta de solicitudes:', response);
-
-        // Manejar diferentes estructuras de respuesta
-        let solicitudesList = [];
-        if (Array.isArray(response)) {
-          solicitudesList = response;
-        } else if (response?.solicitudes && Array.isArray(response.solicitudes)) {
-          solicitudesList = response.solicitudes;
-        } else if (response?.data && Array.isArray(response.data)) {
-          solicitudesList = response.data;
-        }
-
-        // Log para verificar estructura de datos
-        console.log('Estructura de primer solicitud:', solicitudesList[0]);
-        const primerasSolicitud = solicitudesList[0];
-        const claves = Object.keys(primerasSolicitud || {});
-        console.log('Todas las claves disponibles:', claves);
-
-        // Usar los datos tal como vienen del backend
-        setSolicitudes(solicitudesList);
-
-        // Calcular estadísticas basadas en EstatusValidacion
-        setStats({
-          total: solicitudesList.length,
-          pendientes: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
-          aprobadas: solicitudesList.filter(s => s.EstatusValidacion === 1).length,
-          rechazadas: solicitudesList.filter(s => s.EstatusValidacion === 0).length
-        });
-        
-        console.log('Solicitudes cargadas:', solicitudesList.length);
-        setError(null);
-      } catch (err) {
-        console.error('Error cargando solicitudes:', err);
-        console.error('Response status:', err.response?.status);
-        console.error('Response data:', err.response?.data);
-        
-        // Verificar si es error de autenticación
-        if (err.response?.status === 401) {
-          console.warn('⚠️ Error 401: Token no válido o expirado');
-          setError('Token no válido. Por favor inicia sesión nuevamente.');
-          localStorage.removeItem('token');
-          localStorage.removeItem('UsuarioId');
-          setTimeout(() => {
-            navigate('/ingresar');
-          }, 3000);
-        } else if (err.response?.status === 403) {
-          console.warn('⚠️ Error 403: No tienes permisos para acceder a esto');
-          setError('No tienes permisos para acceder a las solicitudes.');
-        } else {
-          setError(`Error al cargar solicitudes: ${err.response?.data?.detail || err.message}`);
-        }
-      } finally {
-        setLoading(false);
+      console.log('Cargando solicitudes...');
+      
+      if (!email || !token) {
+        console.warn('❌ Sesión no válida');
+        setError('Sesión expirada. Por favor inicia sesión.');
+        setTimeout(() => navigate('/ingresar'), 2000);
+        return;
       }
-    };
 
+      setLoading(true);
+
+      // Obtener solicitudes del servidor
+      const response = await getSolicitudes();
+      console.log('Respuesta de solicitudes:', response);
+
+      // Manejar diferentes estructuras de respuesta
+      let solicitudesList = [];
+      if (Array.isArray(response)) {
+        solicitudesList = response;
+      } else if (response?.solicitudes && Array.isArray(response.solicitudes)) {
+        solicitudesList = response.solicitudes;
+      } else if (response?.data && Array.isArray(response.data)) {
+        solicitudesList = response.data;
+      }
+
+      setSolicitudes(solicitudesList);
+
+      // Calcular estadísticas basadas en EstatusValidacion
+      // IDs del Backend: 1=Pendiente (Espera), 2=Aprobado (Aceptado), 3=Rechazado
+      setStats({
+        total: solicitudesList.length,
+        pendientes: solicitudesList.filter(s => s.EstatusValidacion === 1).length,
+        aprobadas: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
+        rechazadas: solicitudesList.filter(s => s.EstatusValidacion === 3).length
+      });
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error cargando solicitudes:', err);
+      if (err.response?.status === 401) {
+        setError('Token no válido. Por favor inicia sesión nuevamente.');
+        setTimeout(() => navigate('/ingresar'), 3000);
+      } else {
+        setError(`Error al cargar solicitudes: ${err.response?.data?.detail || err.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadSolicitudes();
   }, [navigate]);
 
@@ -130,16 +99,16 @@ export default function AdminSolicitudes() {
 
   const filteredSolicitudes = React.useMemo(() => {
     let result = [...solicitudes];
-    
+
     // Filtro por estatus
     if (filtroEstatus !== 'todos') {
       result = result.filter(s => s.EstatusValidacion === Number(filtroEstatus));
     }
-    
+
     // Búsqueda
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(s => 
+      result = result.filter(s =>
         (s.Nombre && s.Nombre.toLowerCase().includes(query)) ||
         (s.PrimerApellido && s.PrimerApellido.toLowerCase().includes(query)) ||
         (s.Correo && s.Correo.toLowerCase().includes(query)) ||
@@ -147,13 +116,13 @@ export default function AdminSolicitudes() {
         (s.SolicitudId && String(s.SolicitudId).includes(query))
       );
     }
-    
+
     // Ordenamiento
     result.sort((a, b) => {
       if (sortOrder === 'asc') return a.SolicitudId - b.SolicitudId;
       return b.SolicitudId - a.SolicitudId;
     });
-    
+
     return result;
   }, [solicitudes, filtroEstatus, searchTerm, sortOrder]);
 
@@ -173,7 +142,7 @@ export default function AdminSolicitudes() {
       });
 
       const detalle = await getSolicitudDetalle(id);
-      
+
       Swal.fire({
         title: `Solicitud #${id}`,
         html: `
@@ -201,7 +170,7 @@ export default function AdminSolicitudes() {
     } catch (error) {
       console.warn('⚠️ Error cargando detalle:', error);
       const row = solicitudes.find(s => s.SolicitudId === id) || {};
-      
+
       Swal.fire({
         title: `Solicitud #${id}`,
         html: `
@@ -209,7 +178,7 @@ export default function AdminSolicitudes() {
             <p><strong>Nombre:</strong> ${row.Nombre || ''} ${row.PrimerApellido || ''}</p>
             <p><strong>Correo:</strong> ${row.Correo || 'N/A'}</p>
             <p><strong>Equipo:</strong> ${row.Equipo || 'N/A'}</p>
-            <p><strong>Monto:</strong> ${row.Monto ? `$${parseFloat(row.Monto).toLocaleString('es-MX', {minimumFractionDigits: 2})}` : 'N/A'}</p>
+            <p><strong>Monto:</strong> ${row.Monto ? `$${parseFloat(row.Monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : 'N/A'}</p>
           </div>
         `,
         confirmButtonText: 'Cerrar',
@@ -236,10 +205,10 @@ export default function AdminSolicitudes() {
   const handleAprobarSolicitud = async (id, reporteValidacion = null) => {
     // Si hay reporte, verificamos si hay algún rechazo
     const tieneRechazos = reporteValidacion && Object.values(reporteValidacion).some(v => v.estado === 'rechazado');
-    
+
     const { isConfirmed } = await Swal.fire({
       title: tieneRechazos ? 'Solicitud con Observaciones' : 'Aprobar solicitud',
-      text: tieneRechazos 
+      text: tieneRechazos
         ? "Has rechazado algunos documentos. La solicitud se marcará como 'Revisada con Observaciones' y el usuario deberá corregirlos."
         : "Al aprobar, el usuario recibirá acceso completo a su dashboard de AFAEM.",
       icon: tieneRechazos ? 'warning' : 'question',
@@ -253,20 +222,20 @@ export default function AdminSolicitudes() {
     if (isConfirmed) {
       try {
         setLoading(true);
-        
+
         // El estatus final dependerá de si hubo rechazos
-        // 1 = Aprobado total, 4 = Revisado con observaciones (Docs pendientes)
-        const estatusFinal = tieneRechazos ? 4 : 1;
-        
-        await updateSolicitudEstatus(id, estatusFinal, JSON.stringify(reporteValidacion)); 
-        
+        // 2 = Aprobado total, 4 = Revisado con observaciones (Docs pendientes)
+        const estatusFinal = tieneRechazos ? 4 : 2;
+
+        await updateSolicitudEstatus(id, estatusFinal, JSON.stringify(reporteValidacion));
+
         setModalAbierto(false);
         Swal.fire({
           title: '¡Éxito!',
           text: tieneRechazos ? 'Se han enviado las observaciones al usuario.' : 'La solicitud ha sido aprobada correctamente.',
           icon: 'success'
         }).then(() => {
-          window.location.reload();
+          loadSolicitudes(); // Recargar datos sin refrescar toda la página
         });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
@@ -294,10 +263,10 @@ export default function AdminSolicitudes() {
     if (motivo) {
       try {
         setLoading(true);
-        await updateSolicitudEstatus(id, 0, motivo); // 0 = Rechazado, con motivo
+        await updateSolicitudEstatus(id, 3, motivo); // 3 = Rechazado (Backend Sync)
         setModalAbierto(false);
         Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info');
-        window.location.reload();
+        loadSolicitudes(); // Recargar datos localmente
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
       } finally {
@@ -317,8 +286,8 @@ export default function AdminSolicitudes() {
   };
 
   const columns = [
-    { 
-      key: 'SolicitudId', 
+    {
+      key: 'SolicitudId',
       label: 'ID Solicitud',
       render: (value, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -327,20 +296,20 @@ export default function AdminSolicitudes() {
         </div>
       )
     },
-    { 
-      key: 'Equipo', 
+    {
+      key: 'Equipo',
       label: 'Equipo / Usuario',
       render: (value, row) => (
         <div>
           <div style={{ fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             {value || row.TipoSolicitud || 'Usuario Registrado'}
             {row.TipoAfiliacion === 2 && (
-              <span style={{ 
-                fontSize: '10px', 
-                backgroundColor: '#eff6ff', 
-                color: '#1e40af', 
-                padding: '2px 8px', 
-                borderRadius: '12px', 
+              <span style={{
+                fontSize: '10px',
+                backgroundColor: '#eff6ff',
+                color: '#1e40af',
+                padding: '2px 8px',
+                borderRadius: '12px',
                 border: '1px solid #bfdbfe',
                 fontWeight: '800'
               }}>
@@ -352,16 +321,16 @@ export default function AdminSolicitudes() {
         </div>
       )
     },
-    { 
-      key: 'FechaSolicitud', 
+    {
+      key: 'FechaSolicitud',
       label: 'Fecha de Solicitud',
       render: (fecha) => {
         if (!fecha) return '-';
         try {
           const date = new Date(fecha);
-          return date.toLocaleDateString('es-MX', { 
-            year: 'numeric', 
-            month: 'long', 
+          return date.toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -371,8 +340,8 @@ export default function AdminSolicitudes() {
         }
       }
     },
-    { 
-      key: 'Monto', 
+    {
+      key: 'Monto',
       label: 'Monto',
       render: (value) => value ? (
         <span style={{ fontWeight: '700', color: 'var(--primary)' }}>
@@ -380,24 +349,24 @@ export default function AdminSolicitudes() {
         </span>
       ) : '-'
     },
-    { 
-      key: 'EstatusValidacion', 
+    {
+      key: 'EstatusValidacion',
       label: 'Estado',
       render: (estatus) => {
         let badgeClass = 'badge-warning';
         let label = 'Pendiente';
 
-        if (estatus === 1) {
+        if (estatus === 2) {
           badgeClass = 'badge-success';
           label = 'Aprobado';
-        } else if (estatus === 0) {
+        } else if (estatus === 3) {
           badgeClass = 'badge-danger';
           label = 'Rechazado';
-        } else if (estatus === 2) {
+        } else if (estatus === 1) {
           badgeClass = 'badge-warning';
           label = 'Pendiente';
         } else if (estatus === 4) {
-          badgeClass = 'badge-info';
+          badgeClass = 'badge-primary'; // Usamos badge-primary que sí existe en dashboard.css
           label = 'Revisión Docs';
         }
 
@@ -408,12 +377,12 @@ export default function AdminSolicitudes() {
         );
       }
     },
-    { 
+    {
       key: 'acciones',
       label: 'Acciones',
       render: (_, row) => (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          <button 
+          <button
             onClick={() => handleVerDetalles(row.SolicitudId)}
             style={{
               padding: '6px 12px',
@@ -429,7 +398,7 @@ export default function AdminSolicitudes() {
             Ver
           </button>
           {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4) && (
-            <button 
+            <button
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
                 padding: '6px 12px',
@@ -445,7 +414,7 @@ export default function AdminSolicitudes() {
               Docs
             </button>
           )}
-          <button 
+          <button
             onClick={() => handleAprobarSolicitud(row.SolicitudId)}
             style={{
               padding: '6px 12px',
@@ -460,7 +429,7 @@ export default function AdminSolicitudes() {
           >
             Aprobar
           </button>
-          <button 
+          <button
             onClick={() => handleRechazarSolicitud(row.SolicitudId)}
             style={{
               padding: '6px 12px',
@@ -502,11 +471,11 @@ export default function AdminSolicitudes() {
   return (
     <div className="dashboard-content">
       {tieneMock && (
-        <div style={{ 
-          background: '#fffbeb', 
-          border: '1px solid #fde68a', 
-          padding: '16px 20px', 
-          borderRadius: '12px', 
+        <div style={{
+          background: '#fffbeb',
+          border: '1px solid #fde68a',
+          padding: '16px 20px',
+          borderRadius: '12px',
           marginBottom: '24px',
           display: 'flex',
           flexDirection: 'column',
@@ -524,10 +493,10 @@ export default function AdminSolicitudes() {
             </div>
           </div>
           {errorServidor && (
-            <div style={{ 
-              marginTop: '10px', 
-              padding: '10px', 
-              background: 'rgba(0,0,0,0.05)', 
+            <div style={{
+              marginTop: '10px',
+              padding: '10px',
+              background: 'rgba(0,0,0,0.05)',
               borderRadius: '6px',
               fontFamily: 'monospace',
               fontSize: '11px',
@@ -550,7 +519,7 @@ export default function AdminSolicitudes() {
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Solicitudes de registro</h2>
         <div className="section-actions">
-          <button 
+          <button
             className="btn btn-primary"
             onClick={() => window.location.reload()}
             style={{
@@ -570,22 +539,81 @@ export default function AdminSolicitudes() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+        {/* TARJETA TOTAL */}
+        <div
+          onClick={() => setFiltroEstatus('todos')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+
+        {/* TARJETA PENDIENTES */}
+        <div
+          onClick={() => setFiltroEstatus('1')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === '1' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === '1' ? '0 4px 12px rgba(245, 158, 11, 0.15)' : 'none',
+            transform: filtroEstatus === '1' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>⏳</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>PENDIENTES</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+
+        {/* TARJETA APROBADAS */}
+        <div
+          onClick={() => setFiltroEstatus('2')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === '2' ? '2px solid #10b981' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === '2' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
+            transform: filtroEstatus === '2' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>APROBADAS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.aprobadas}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+
+        {/* TARJETA RECHAZADAS */}
+        <div
+          onClick={() => setFiltroEstatus('3')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === '3' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === '3' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
+            transform: filtroEstatus === '3' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>❌</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>RECHAZADAS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.rechazadas}</div>
@@ -594,10 +622,10 @@ export default function AdminSolicitudes() {
 
       <div className="card" style={{ padding: '32px' }}>
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de Solicitudes</h3>
-          
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de solicitudes</h3>
+
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <SearchBar 
+            <SearchBar
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar solicitud..."
@@ -609,9 +637,9 @@ export default function AdminSolicitudes() {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
-              {['todos', '2', '4', '1', '0'].map((val) => (
+              {['todos', '1', '4', '2', '3'].map((val) => (
                 <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
-                  {val === 'todos' ? 'Todas' : (val === '2' ? 'Pendientes' : (val === '4' ? 'Docs' : (val === '1' ? 'Aprobadas' : 'Rechazadas')))}
+                  {val === 'todos' ? 'Todas' : (val === '1' ? 'Pendientes' : (val === '4' ? 'Docs' : (val === '2' ? 'Aprobadas' : 'Rechazadas')))}
                 </button>
               ))}
             </div>
@@ -634,7 +662,7 @@ export default function AdminSolicitudes() {
         />
       </div>
 
-      <DetalleSolicitudModal 
+      <DetalleSolicitudModal
         estaAbierto={modalAbierto}
         alCerrar={() => setModalAbierto(false)}
         datos={datosRevision}

@@ -1,6 +1,8 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import MainLayout from './layouts/MainLayout';
+import Loader from './components/Loader';
 
 const Ingresar = lazy(() => import('./pages/Auth/Ingresar'));
 const Registrarse = lazy(() =>  import('./pages/Auth/Registrarse'));
@@ -31,20 +33,46 @@ const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContras
 const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
-import MainLayout from './layouts/MainLayout';
+import SplashScreen from './components/Common/SplashScreen';
 
 function App() {
+  const [cargandoApp, setCargandoApp] = useState(true);
+  const [estaSaliendo, setEstaSaliendo] = useState(false);
   const userEmail = localStorage.getItem('email') || 'usuario@afaem.com';
+
+  // CONTROL DE SESIÓN (5 HORAS)
+  useEffect(() => {
+    const verificarSesion = () => {
+      const token = localStorage.getItem('token');
+      const timestamp = localStorage.getItem('token_timestamp');
+      
+      if (token && timestamp) {
+        const cincoHoras = 5 * 60 * 60 * 1000;
+        const ahora = Date.now();
+        
+        if (ahora - parseInt(timestamp) > cincoHoras) {
+          console.warn('⚠️ Sesión expirada después de 5 horas.');
+          localStorage.clear();
+          window.location.href = '/ingresar';
+        }
+      }
+    };
+
+    verificarSesion();
+    
+    // Simular carga de la aplicación (Splash Screen)
+    const timerCarga = setTimeout(() => {
+      setEstaSaliendo(true);
+      setTimeout(() => setCargandoApp(false), 600); // Dar tiempo al fade-out de 0.6s
+    }, 2000);
+
+    return () => clearTimeout(timerCarga);
+  }, []);
 
   return (
     <Router>
-      <Suspense fallback={
-        <div style={{ padding: '40px', textAlign: 'center' }}>
-          <div className="skeleton" style={{ width: '100%', height: '80px', marginBottom: '20px' }} />
-          <div className="skeleton" style={{ width: '280px', height: '100vh', position: 'fixed', left: 0, top: 0 }} />
-          <div className="skeleton" style={{ width: 'calc(100% - 280px)', height: '100vh', marginLeft: '280px' }} />
-        </div>
-      }>
+      {cargandoApp && <SplashScreen isExiting={estaSaliendo} />}
+      <Suspense fallback={<Loader text="AFAEM DIGITAL" />}>
         <Routes>
           <Route path="/" element={<Ingresar />} />
           <Route path="/ingresar" element={<Ingresar />} />

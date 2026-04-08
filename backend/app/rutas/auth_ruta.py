@@ -81,14 +81,13 @@ def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_auten
 
     persona = usuarioIntentoSesion.PersonaRelacion
 
-    """    
     # Obtener EstatusId (solo para Presidentes de Equipo)
     estatus_id = None
     if persona:
-        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+        presidente = service.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
         if presidente:
             estatus_id = presidente.EstatusId
-    """
+
     return {
         "access_token": token_generado,
         "token_type": "bearer",
@@ -98,7 +97,7 @@ def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_auten
             "rol": usuarioIntentoSesion.RolRelacion.Nombre,
             "nombre": persona.Nombre if persona else None,
             "telefono": getattr(persona, "NumeroTelefono", None),
-            #"estatusId": estatus_id
+            "estatusId": estatus_id
         }
     }
 
@@ -142,14 +141,13 @@ def login_oauth(form_data: OAuth2PasswordRequestForm = Depends(), service: Auten
     token_generado = seguridad.crear_token(datos_token)
 
     persona = usuarioIntentoSesion.PersonaRelacion
-    """
     # Obtener EstatusId (solo para Presidentes de Equipo)
     estatus_id = None
     if persona:
-        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+        presidente = service.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
         if presidente:
             estatus_id = presidente.EstatusId
-    """
+
     return {
         "access_token": token_generado,
         "token_type": "bearer",
@@ -159,6 +157,6 @@ def login_oauth(form_data: OAuth2PasswordRequestForm = Depends(), service: Auten
             "rol": usuarioIntentoSesion.RolRelacion.Nombre,
             "nombre": persona.Nombre if persona else None,
             "telefono": getattr(persona, "NumeroTelefono", None),
-           # "estatusId": estatus_id
+            "estatusId": estatus_id
         }
     }

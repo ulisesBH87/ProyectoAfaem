@@ -4,7 +4,8 @@ import { getJugadoresDirectorio, getJugadorDocumentos, updateJugador } from '../
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaPlus, FaEdit } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
+import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 
 export default function AdminJugadores() {
   const navigate = useNavigate();
@@ -19,6 +20,13 @@ export default function AdminJugadores() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // ESTADO PARA EDICIÓN (MODAL PROFESIONAL)
+  const [modalEdicion, setModalEdicion] = useState(false);
+  const [jugadorEdicion, setJugadorEdicion] = useState(null);
+  const [datosEditables, setDatosEditables] = useState({});
+  const [haCambiado, setHaCambiado] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   const loadJugadores = async () => {
     try {
@@ -120,116 +128,76 @@ export default function AdminJugadores() {
   };
 
   const handleEditarJugador = (jugador) => {
-    // Marcador de cambios para la advertencia al salir
-    let haCambiado = false;
-
-    const setupListeners = () => {
-      const inputs = ['swal-jg-nombre', 'swal-jg-apellido1', 'swal-jg-apellido2', 'swal-jg-curp', 'swal-jg-estatus'];
-      inputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', () => { haCambiado = true; });
-      });
-    };
-
-    Swal.fire({
-      title: 'Información detallada del jugador',
-      width: '850px',
-      padding: '2rem',
-      html: `
-        <div style="text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-          <div style="grid-column: span 2; background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #e2e8f0;">
-             <p style="margin:0; font-size: 13px; color: #64748b;">Puedes editar la información y guardar los cambios directamente aquí.</p>
-          </div>
-          <div>
-            <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Nombre(s) <span class="required-star">*</span></label>
-            <input id="swal-jg-nombre" class="swal2-input form-input-lg" value="${jugador.Nombre || ''}" style="margin: 0; width: 100%;">
-          </div>
-          <div style="display: flex; gap: 16px;">
-            <div style="flex: 1;">
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Primer apellido <span class="required-star">*</span></label>
-              <input id="swal-jg-apellido1" class="swal2-input form-input-lg" value="${jugador.PrimerApellido || ''}" style="margin: 0; width: 100%;">
-            </div>
-            <div style="flex: 1;">
-              <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Segundo apellido</label>
-              <input id="swal-jg-apellido2" class="swal2-input form-input-lg" value="${jugador.SegundoApellido || ''}" style="margin: 0; width: 100%;">
-            </div>
-          </div>
-          <div>
-            <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">CURP <span class="required-star">*</span></label>
-            <input id="swal-jg-curp" class="swal2-input form-input-lg" value="${jugador.CURP || ''}" style="margin: 0; width: 100%;">
-          </div>
-          <div>
-            <label style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">Estatus de validación</label>
-            <select id="swal-jg-estatus" class="swal2-select form-input-lg" style="margin: 0; width: 100%; height: 56px;">
-              <option value="1" ${jugador.Estatus ? 'selected' : ''}>Activo (Aprobado)</option>
-              <option value="0" ${!jugador.Estatus ? 'selected' : ''}>Baja (Inactivo)</option>
-            </select>
-          </div>
-          <div style="grid-column: span 2;">
-            <p class="required-legend">* Campos obligatorios para la integridad de la matrícula.</p>
-          </div>
-        </div>
-      `,
-      didOpen: setupListeners,
-      showCancelButton: true,
-      confirmButtonText: 'Guardar cambios',
-      cancelButtonText: 'Cerrar',
-      confirmButtonColor: '#0b4ea6',
-      cancelButtonColor: '#64748b',
-      reverseButtons: true,
-      showLoaderOnConfirm: true,
-      allowOutsideClick: () => !haCambiado,
-      preConfirm: async () => {
-        const nombre = document.getElementById('swal-jg-nombre').value;
-        const primerApellido = document.getElementById('swal-jg-apellido1').value;
-        const segundoApellido = document.getElementById('swal-jg-apellido2').value;
-        const curp = document.getElementById('swal-jg-curp').value;
-        const estatus = document.getElementById('swal-jg-estatus').value;
-
-        if (!nombre || !primerApellido || !curp) {
-          Swal.showValidationMessage('Nombre, primer apellido y CURP son obligatorios');
-          return false;
-        }
-
-        try {
-          await updateJugador(jugador.MiembroEquipoId, {
-            nombre,
-            primerApellido,
-            segundoApellido,
-            curp,
-            estatus
-          });
-          return { nombre, primerApellido, segundoApellido, curp, estatus };
-        } catch (error) {
-          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo guardar la información'}`);
-        }
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Actualizado',
-          text: `La información de ${result.value.nombre} se ha guardado correctamente.`,
-          confirmButtonColor: '#0b4ea6'
-        });
-        loadJugadores();
-      } else if (result.dismiss === Swal.DismissReason.cancel && haCambiado) {
-        Swal.fire({
-          title: '¿Estás seguro de salir?',
-          text: "Tienes cambios sin guardar que se perderán.",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#ef4444',
-          cancelButtonColor: '#64748b',
-          confirmButtonText: 'Sí, salir sin guardar',
-          cancelButtonText: 'Volver a la edición'
-        }).then((exitResult) => {
-          if (!exitResult.isConfirmed) {
-            handleEditarJugador(jugador);
-          }
-        });
-      }
+    setJugadorEdicion(jugador);
+    setDatosEditables({
+      nombre: jugador.Nombre || '',
+      primerApellido: jugador.PrimerApellido || '',
+      segundoApellido: jugador.SegundoApellido || '',
+      curp: jugador.CURP || '',
+      email: jugador.Email || '',
+      sexo: jugador.Sexo || '',
+      fechaNacimiento: jugador.FechaNacimiento ? jugador.FechaNacimiento.split('T')[0] : '',
+      estatus: jugador.Estatus ? '1' : '0'
     });
+    setHaCambiado(false);
+    setModalEdicion(true);
+  };
+
+  const handleCerrarModal = () => {
+    if (haCambiado) {
+      Swal.fire({
+        title: '¿Estás seguro de salir?',
+        text: "Tienes cambios sin guardar que se perderán.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, salir sin guardar',
+        cancelButtonText: 'Volver a la edición'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setModalEdicion(false);
+        }
+      });
+    } else {
+      setModalEdicion(false);
+    }
+  };
+
+  const manejarCambioInput = (e) => {
+    const { name, value } = e.target;
+    setDatosEditables(prev => ({ ...prev, [name]: value }));
+    setHaCambiado(true);
+  };
+
+  const manejarGuardarJugador = async () => {
+    if (!datosEditables.nombre || !datosEditables.primerApellido || !datosEditables.curp) {
+      Swal.fire('Campos obligatorios', 'Nombre, primer apellido y CURP son requeridos.', 'warning');
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      await updateJugador(jugadorEdicion.MiembroEquipoId, {
+        nombre: datosEditables.nombre,
+        primerApellido: datosEditables.primerApellido,
+        segundoApellido: datosEditables.segundoApellido,
+        curp: datosEditables.curp,
+        email: datosEditables.email,
+        sexo: datosEditables.sexo,
+        fechaNacimiento: datosEditables.fechaNacimiento,
+        estatus: datosEditables.estatus
+      });
+      
+      Swal.fire('¡Éxito!', 'Información del jugador actualizada correctamente.', 'success');
+      setModalEdicion(false);
+      loadJugadores();
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'No se pudieron guardar los cambios.', 'error');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const columns = [
@@ -391,6 +359,110 @@ export default function AdminJugadores() {
           emptyMessage="No se encontraron jugadores con los criterios de búsqueda."
         />
       </div>
+
+      {/* MODAL DE EDICIÓN PROFESIONAL */}
+      <Modal
+        estaAbierto={modalEdicion}
+        alCerrar={handleCerrarModal}
+        titulo="Detalle y edición del jugador"
+        tamanio="pantallaFull"
+        pie={
+          <>
+            <BotonSecundario texto="Cancelar" onClick={handleCerrarModal} />
+            <BotonPrimario 
+              texto={guardando ? 'Guardando...' : 'Guardar cambios'} 
+              onClick={manejarGuardarJugador} 
+              deshabilitado={guardando}
+              icono={<FaSave />}
+            />
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px' }}>
+          <div style={{ gridColumn: 'span 3', background: 'var(--primary-light)', padding: '15px 25px', borderRadius: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+             <div style={{ fontSize: '24px' }}>🛡️</div>
+             <div>
+                <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--primary)', fontWeight: '800' }}>Expediente del Jugador</h4>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>La información modificada actualizará automáticamente el acta digital del afiliado.</p>
+             </div>
+          </div>
+
+          <EntradaFormulario
+            etiqueta="Nombre(s)"
+            valor={datosEditables.nombre}
+            onChange={manejarCambioInput}
+            nombre="nombre"
+            obligatorio
+            placeholder="Ej: Juan Antonio"
+          />
+          <EntradaFormulario
+            etiqueta="Primer apellido"
+            valor={datosEditables.primerApellido}
+            onChange={manejarCambioInput}
+            nombre="primerApellido"
+            obligatorio
+            placeholder="Apellido paterno"
+          />
+          <EntradaFormulario
+            etiqueta="Segundo apellido"
+            valor={datosEditables.segundoApellido}
+            onChange={manejarCambioInput}
+            nombre="segundoApellido"
+            placeholder="Apellido materno"
+          />
+          
+          <EntradaFormulario
+            etiqueta="CURP"
+            valor={datosEditables.curp}
+            onChange={manejarCambioInput}
+            nombre="curp"
+            obligatorio
+            placeholder="Clave única de registro"
+          />
+          <EntradaFormulario
+            etiqueta="Correo electrónico"
+            valor={datosEditables.email}
+            onChange={manejarCambioInput}
+            nombre="email"
+            tipo="email"
+            placeholder="correo@ejemplo.com"
+          />
+          <EntradaSeleccion
+            etiqueta="Sexo"
+            valor={datosEditables.sexo}
+            onChange={manejarCambioInput}
+            nombre="sexo"
+            opciones={[
+              { valor: 'Masculino', etiqueta: 'Masculino' },
+              { valor: 'Femenino', etiqueta: 'Femenino' }
+            ]}
+          />
+
+          <EntradaFormulario
+            etiqueta="Fecha de nacimiento"
+            valor={datosEditables.fechaNacimiento}
+            onChange={manejarCambioInput}
+            nombre="fechaNacimiento"
+            tipo="date"
+          />
+          <EntradaSeleccion
+            etiqueta="Estatus del jugador"
+            valor={datosEditables.estatus}
+            onChange={manejarCambioInput}
+            nombre="estatus"
+            opciones={[
+              { valor: '1', etiqueta: 'Aprobado (Matrícula Activa)' },
+              { valor: '0', etiqueta: 'Baja (Inactivo)' }
+            ]}
+          />
+          
+          <div style={{ gridColumn: 'span 3', marginTop: '10px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+             <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                * Los campos marcados con asterisco son esenciales para la validez de los reportes de juego.
+             </p>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -273,17 +273,31 @@ const AdminPagos = () => {
         <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Gestiona y verifica los comprobantes de pago recibidos.</p>
       </div>
 
-      {/* STATS CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
         {[
-          { label: 'Total Órdenes', value: totalPagos, color: 'var(--primary)', icon: <FaWallet /> },
-          { label: 'Pendientes', value: pendientes, color: 'var(--warning)', icon: <FaClock /> },
-          { label: 'Aprobados', value: aprobados, color: 'var(--secondary)', icon: <FaCheckCircle /> },
-          { label: 'Rechazados', value: rechazados, color: 'var(--danger)', icon: <FaTimesCircle /> },
-          { label: 'Monto Total', value: `$${montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, color: 'var(--primary)', icon: <FaWallet /> }
+          { label: 'Total Órdenes', value: totalPagos, filter: 'todos', color: 'var(--primary)', icon: <FaWallet /> },
+          { label: 'Pendientes', value: pendientes, filter: '2', color: 'var(--warning)', icon: <FaClock /> },
+          { label: 'Aprobados', value: aprobados, filter: '3', color: 'var(--secondary)', icon: <FaCheckCircle /> },
+          { label: 'Rechazados', value: rechazados, filter: '4', color: 'var(--danger)', icon: <FaTimesCircle /> },
+          { label: 'Monto Total', value: `$${montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, color: 'var(--primary)', icon: <FaWallet />, isMetricOnly: true }
         ].map((stat, i) => (
-          <div key={i} className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `${stat.color}15`, color: stat.color, display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: '18px' }}>
+          <div 
+            key={i} 
+            onClick={() => stat.filter && setFiltroEstatus(stat.filter)}
+            className="card" 
+            style={{ 
+              padding: '20px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '16px',
+              cursor: stat.isMetricOnly ? 'default' : 'pointer',
+              transition: 'all 0.2s ease',
+              border: filtroEstatus === stat.filter ? `2px solid ${stat.color}` : '1.5px solid var(--border-light)',
+              transform: filtroEstatus === stat.filter ? 'translateY(-3px)' : 'none',
+              boxShadow: filtroEstatus === stat.filter ? `0 8px 15px ${stat.color}15` : 'none'
+            }}
+          >
+            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `${stat.color}15`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
               <div style={{ margin: '0 auto' }}>{stat.icon}</div>
             </div>
             <div>
@@ -297,7 +311,7 @@ const AdminPagos = () => {
       {/* TABLE SECTION */}
       <div className="card" style={{ padding: '32px' }}>
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Órdenes de Pago</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Órdenes de pago</h3>
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <SearchBar 

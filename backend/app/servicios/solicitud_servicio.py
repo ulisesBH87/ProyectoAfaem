@@ -161,9 +161,8 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
         # Iniciamos transaccion explícita
         with db.begin_nested(): # Usamos nested para asegurar que si falla algo, todo regrese
             
-            # Mapeo de Estatus desde el Payload (1: Aprobado, 0: Rechazado)
-            # A la base de datos (2: ACEPTADO, 3: RECHAZADO)
-            estatus_db = 2 if payload.Estatus == 1 else 3
+            # Mapeo de Estatus desde el Payload (Sincronizado: 2: Aprobado, 3: Rechazado)
+            estatus_db = payload.Estatus
             
             # 1. Actualizar estatus de la solicitud
             solicitud = solicitud_repositorio.actualizar_validacion_solicitud_repo(
@@ -173,8 +172,8 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
             if not solicitud:
                 raise HTTPException(status_code=404, detail="Solicitud no encontrada")
             
-            # 2. Si es aprobado, activar al presidente
-            if payload.Estatus == 1:
+            # 2. Si es aprobado (ID 2), activar al presidente
+            if payload.Estatus == 2:
                 activado = solicitud_repositorio.activar_presidente_solicitud_repo(db, solicitud_id)
                 if not activado:
                     # Si no pudimos activar al presidente, lanzamos error para hacer rollback
