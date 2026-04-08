@@ -106,7 +106,7 @@ export default function AdminCrearJugador() {
     esForaneo: false,
     nacionalidadJugador: 'MEXICANA',
     paisResidencia: 'MÉXICO',
-    haVividoExtranjero: false,
+    HaVividoExtranjero: false,
     dondeVividoExtranjero: '',
     nacionalidadPadre: '',
     nacionalidadMadre: '',
@@ -117,6 +117,9 @@ export default function AdminCrearJugador() {
     nacAbuelaMaterna: '',
     juegoClubExtranjero: ''
   });
+
+  // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
+  const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
@@ -264,14 +267,20 @@ export default function AdminCrearJugador() {
             firstName = nombreEncontrado;
           }
 
+          const ocrResult = {
+            nombreJugador: firstName || '',
+            apellidoPaterno: lastNamePaterno || '',
+            apellidoMaterno: lastNameMaterno || '',
+            curp: curpEncontrada || '',
+            fechaNacimiento: fechaNacEncontrada || '',
+            lugarNacimiento: lugarNacEncontrado || ''
+          };
+
+          setOcrDataOriginal(ocrResult);
+
           setExtractedData(prev => ({
             ...prev,
-            nombreJugador: firstName || prev.nombreJugador,
-            apellidoPaterno: lastNamePaterno || prev.apellidoPaterno,
-            apellidoMaterno: lastNameMaterno || prev.apellidoMaterno,
-            curp: curpEncontrada || prev.curp,
-            fechaNacimiento: fechaNacEncontrada || prev.fechaNacimiento,
-            lugarNacimiento: lugarNacEncontrado || prev.lugarNacimiento,
+            ...ocrResult
           }));
 
           Swal.fire({
@@ -503,14 +512,32 @@ export default function AdminCrearJugador() {
       <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <button 
-            onClick={() => navigate('/admin/jugadores')}
+            onClick={() => {
+              const tieneDatos = Object.values(documents).some(d => d !== null) || extractedData.nombreJugador;
+              if (tieneDatos) {
+                Swal.fire({
+                  title: '¿Abandonar registro?',
+                  text: "Se perderán los documentos subidos y el progreso actual.",
+                  icon: 'warning',
+                  showCancelButton: true,
+                  confirmButtonColor: '#ef4444',
+                  cancelButtonColor: '#64748b',
+                  confirmButtonText: 'Sí, salir',
+                  cancelButtonText: 'Continuar registro'
+                }).then((result) => {
+                  if (result.isConfirmed) navigate('/admin/jugadores');
+                });
+              } else {
+                navigate('/admin/jugadores');
+              }
+            }}
             className="btn btn-outline-secondary"
             style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center' }}
           >
             <FaArrowLeft />
           </button>
           <div>
-            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Alta Rápida de Jugador</h2>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Alta rápida de jugador</h2>
             <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Inscripción administrativa directa en equipos de liga.</p>
           </div>
         </div>
@@ -527,7 +554,7 @@ export default function AdminCrearJugador() {
         <section style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
             <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Elección de Equipo Destino</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Elección de equipo destino</h3>
           </div>
           
           <div style={{ 
@@ -741,9 +768,47 @@ export default function AdminCrearJugador() {
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <StepBadge number="3" isActive={true} isDone={false} />
-                <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de Afiliación Completo</h3>
+                <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
               </div>
             </div>
+
+            {/* AVISO DE DISCREPANCIA OCR */}
+            {ocrDataOriginal && (
+              <div className="fade-in" style={{ 
+                marginBottom: '20px', 
+                padding: '16px', 
+                borderRadius: '12px', 
+                background: (
+                  extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                  extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+                ) ? '#fff7ed' : '#f0fdf4',
+                border: (
+                  extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                  extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+                ) ? '1px solid #ffedd5' : '1px solid #dcfce7',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{ fontSize: '20px' }}>
+                  {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
+                    {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? 
+                      'Discrepancia detectada' : 'Datos validados con OCR'}
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
+                    {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? 
+                      'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' : 
+                      'La información coincide correctamente con la extracción inteligente de tus documentos.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* SECCIÓN 1: DATOS DEL AFILIADO */}
             {/* ... (Tarjeta content remains same, I'm just fixing the structure here) ... */}
