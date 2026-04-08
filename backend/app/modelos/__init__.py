@@ -33,3 +33,6 @@ from .permisos_modelo import Permisos
 from .rel_menu_roles_modelo import RelMenuRoles
 from .rel_rol_permisos_modelo import RelRolPermisos
 from .rel_usuario_roles_modelo import RelUsuarioRoles
+
+from .catalogo_accion import CatalogoAccion
+from .auditoria import Auditoria
