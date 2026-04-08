@@ -59,7 +59,8 @@ export default function Ingresar() {
         ...data
       };
       localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('email', email); // GUARDAR EMAIL DIRECTAMENTE
+      localStorage.setItem('email', email); 
+      localStorage.setItem('token_timestamp', Date.now().toString()); // CONTROL DE 5 HORAS
 
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
       console.log('ROL USUARIO (desde respuesta login):', role);

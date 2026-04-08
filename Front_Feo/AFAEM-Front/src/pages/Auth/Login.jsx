@@ -62,7 +62,8 @@ export default function Login() {
         ...data
       };
       localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('email', email); // GUARDAR EMAIL DIRECTAMENTE
+      localStorage.setItem('email', email);
+      localStorage.setItem('token_timestamp', Date.now().toString());
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
         localStorage.setItem('UsuarioId', data.UsuarioId);
