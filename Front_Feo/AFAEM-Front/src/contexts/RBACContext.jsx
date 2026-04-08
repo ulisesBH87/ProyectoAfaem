@@ -28,11 +28,31 @@ export const RBACProvider = ({ children }) => {
       });
       const data = response.data || {};
       const finalRoles = data.Roles || [];
+      const finalMenus = data.Menus ? [...data.Menus] : [];
       
+      const isAdmin = finalRoles.map(r => r.toUpperCase()).includes('ADMINISTRADOR') || finalRoles.map(r => r.toUpperCase()).includes('ADMIN');
+      
+      if (isAdmin) {
+        if (!finalMenus.find(m => m.Nombre === 'Catálogos')) {
+          finalMenus.push({
+            Nombre: 'Catálogos',
+            Icono: 'FaListAlt',
+            Ruta: '/admin/catalogos'
+          });
+        }
+        if (!finalMenus.find(m => m.Nombre === 'Presidentes')) {
+          finalMenus.push({
+            Nombre: 'Presidentes',
+            Icono: 'FaUserTie',
+            Ruta: '/admin/presidentes'
+          });
+        }
+      }
+
       const newState = {
         roles: finalRoles,
         permissions: data.Permisos || [],
-        menus: data.Menus || [],
+        menus: finalMenus,
         estatusId: data.estatusId || null,
         isLoading: false
       };

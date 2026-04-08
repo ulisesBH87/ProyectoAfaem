@@ -55,8 +55,11 @@ export default function AdminEquipos() {
     
     // Filtro por estatus
     if (filtroEstatus !== 'todos') {
-      const boolFiltro = filtroEstatus === 'activos';
-      result = result.filter(s => !!s.Estatus === boolFiltro);
+      if (filtroEstatus === 'activos') {
+        result = result.filter(s => !!s.Estatus);
+      } else if (filtroEstatus === 'inactivos') {
+        result = result.filter(s => !s.Estatus);
+      }
     }
     
     // Búsqueda
@@ -267,18 +270,65 @@ export default function AdminEquipos() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '40px' }}>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Total equipos</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        {/* TARJETA TOTAL */}
+        <div
+          onClick={() => setFiltroEstatus('todos')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL EQUIPOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Equipos activos</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
+
+        {/* TARJETA ACTIVOS */}
+        <div
+          onClick={() => setFiltroEstatus('activos')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'activos' ? '2px solid #10b981' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'activos' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
+            transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>EQUIPOS ACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
         </div>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Promedio jugadores</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#6366f1' }}>{stats.avgJugadores}</div>
+
+        {/* TARJETA INACTIVOS */}
+        <div
+          onClick={() => setFiltroEstatus('inactivos')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'inactivos' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'inactivos' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
+            transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🔴</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>EQUIPOS INACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
         </div>
       </div>
 
@@ -328,9 +378,9 @@ export default function AdminEquipos() {
         tamanio="grande"
         pie={
           <>
-            <BotonSecundario texto="Cancelar" onClick={handleCerrarModal} />
+            <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
             <BotonPrimario 
-              texto={guardando ? 'Guardando...' : 'Guardar cambios'} 
+              etiqueta={guardando ? 'Guardando...' : 'Guardar cambios'} 
               onClick={manejarGuardarEquipo} 
               deshabilitado={guardando}
               icono={<FaSave />}
