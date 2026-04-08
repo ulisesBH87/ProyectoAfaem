@@ -24,7 +24,10 @@ const MainLayout = ({ userEmail }) => {
         marginLeft: 'var(--sidebar-width)', 
         transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        minWidth: 0,
+        maxWidth: '100vw',
+        overflowX: 'hidden'
       }}>
         <DashboardHeader userEmail={userEmail} />
         
