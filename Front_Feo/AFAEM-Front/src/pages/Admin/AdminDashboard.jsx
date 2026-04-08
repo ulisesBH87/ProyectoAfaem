@@ -76,7 +76,7 @@ const AdminDashboard = () => {
       <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <h1 className="heading-outfit" style={{ fontSize: '36px', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-1px' }}>
-            Panel de Control
+            Panel de control
           </h1>
           <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '16px' }}>
             Bienvenido, Administrador. Visualiza el pulso de la liga en tiempo real.
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
             <FaHistory style={{ marginRight: '8px' }} /> Historial
           </button>
           <button className="btn-premium">
-            <FaBolt style={{ marginRight: '8px' }} /> Acción Rápida
+            <FaBolt style={{ marginRight: '8px' }} /> Acción rápida
           </button>
         </div>
       </header>
@@ -115,14 +115,14 @@ const AdminDashboard = () => {
             </div>
             <span className="data-fira" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--secondary)' }}>ACTIVO</span>
           </div>
-          <h3 className="heading-outfit" style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Equipos Aprobados</h3>
+          <h3 className="heading-outfit" style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Equipos aprobados</h3>
           {loading ? <Skeleton width="80px" height="32px" /> : <h2 className="data-fira" style={{ fontSize: '32px', fontWeight: '800' }}>{statsData.equipos}</h2>}
         </div>
 
         {/* CHART 1: RECAUDACIÓN (2x2) */}
         <div className="card glass" style={{ gridColumn: 'span 2', gridRow: 'span 2', display: 'flex', flexDirection: 'column' }}>
           <div style={{ marginBottom: '24px' }}>
-            <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700' }}>Tendencia de Ingresos</h3>
+            <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700' }}>Tendencia de ingresos</h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Histórico de los últimos 4 meses ($ MXN)</p>
           </div>
           <div style={{ flex: 1, minHeight: '200px' }}>
@@ -163,10 +163,10 @@ const AdminDashboard = () => {
 
         {/* QUICK ACTIONS (1x1) */}
         <div className="glass-dark" style={{ gridColumn: 'span 1', borderRadius: 'var(--radius-lg)', padding: '24px', display: 'flex', flexDirection: 'column' }}>
-          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Acciones Rápidas</h3>
+          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Acciones rápidas</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button className="btn-premium" style={{ width: '100%', padding: '12px', fontSize: '13px' }}>
-              <FaTrophy style={{ marginRight: '8px' }} /> Nuevo Torneo
+              <FaTrophy style={{ marginRight: '8px' }} /> Nuevo torneo
             </button>
             <button className="btn-ghost" style={{ width: '100%', padding: '12px' }}>
               Anuncio Global
@@ -176,7 +176,7 @@ const AdminDashboard = () => {
 
         {/* CHART 2: STATUS DISTRIBUTION (2x1) */}
         <div className="card glass" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column' }}>
-          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Distribución de Estatus</h3>
+          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Distribución de estatus</h3>
           <div style={{ flex: 1 }}>
             <ResponsiveContainer width="100%" height={100}>
               <BarChart data={statusData} layout="vertical">
@@ -196,7 +196,7 @@ const AdminDashboard = () => {
         {/* SYSTEM STATUS (2x1) */}
         <div className="card glass" style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h4 className="heading-outfit" style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Estado del Sistema</h4>
+            <h4 className="heading-outfit" style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Estado del sistema</h4>
             <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FaCheckCircle /> OPERATIVO
             </div>
