@@ -1,0 +1,2 @@
+class NUIExcepcion(Exception):
+    pass

@@ -231,18 +231,25 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
         "SegundoApellido": persona.SegundoApellido if persona else "",
         "CURP": persona.CURP if persona else "",
         "RFC": persona.RFC if persona else "",
-        "Sexo": sexo.Nombre if sexo else "",
+        "Sexo": persona.SexoRelacion.Nombre if persona and persona.SexoRelacion else "",
         "FechaNacimiento": persona.FechaNacimiento if persona else None,
-        "Email": usuario.Correo,
-        "FechaSolicitud": SolicitudUsuario.FechaSolicitud,
-        "EstatusSolicitud": estatus.Nombre if estatus else "",
-        "TipoSolicitud": tipoSolicitud.NombreAfiliacion if tipoSolicitud else "",
-        "SolicitudId": SolicitudUsuario.SolicitudId
+        "Email": usuario.Correo if usuario else "",
+        "FechaSolicitud": solicitud.FechaSolicitud,
+        "EstatusSolicitud": solicitud.EstatusValidacionRelacion.Nombre if solicitud and solicitud.EstatusValidacionRelacion else "",
+        "TipoSolicitud": solicitud.TipoAfiliacionRelacion.NombreAfiliacion if solicitud and solicitud.TipoAfiliacionRelacion else "",
+        "SolicitudId": solicitud.SolicitudId,
+        "Jugadores": jugadores,
+        "DocumentosPresidente": [
+            {
+                "documento_id": d.DocumentoAfiliacionId,
+                "ruta": d.RutaArchivo,
+                "fecha": d.FechaEntrega,
+                "estatus": d.EstadoValidacionId
+            }
+            for d in docs_presidente
+        ]
     }
 
-    db.commit()
-    db.refresh(solicitud)
-    db.refresh(equipo_temporal)
 
     return solicitud
 
@@ -330,6 +337,7 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
     """
     Busca al presidente vinculado a la solicitud y activa su cuenta.
     EstatusId 7 = ACTIVO.
+    Si no existe el registro de PresidenteEquipo, lo crea.
     """
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     if not solicitud:
@@ -340,8 +348,16 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
         return False
         
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+    
     if presidente:
         presidente.EstatusId = 7 # ACTIVO
-        return True
-    return False
+    else:
+        # Si no existe, lo creamos directamente como Activo
+        nuevo_presidente = PresidenteEquipo(
+            PersonaId=usuario.PersonaId,
+            EstatusId=7
+        )
+        db.add(nuevo_presidente)
+        
+    return True
 
