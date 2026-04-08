@@ -44,15 +44,21 @@ def construir_descripcion(auditoria, usuario_nombre):
 
     nombre = ""
 
+    
+    fuente = despues if accion == "CREATE" else antes
+
     if entidad == "Personas":
-        nombre = f"{antes.get('Nombre', '')} {antes.get('PrimerApellido', '')}".strip()
+        nombre = f"{fuente.get('Nombre', '')} {fuente.get('PrimerApellido', '')}".strip()
+
+    elif entidad == "Equipos":
+        nombre = fuente.get("NombreEquipo", "")
 
     if accion == "CREATE":
         return f"{usuario_nombre} creó {entidad} {nombre}"
 
     elif accion == "UPDATE":
         campos = ", ".join(despues.keys())
-        return f"{usuario_nombre} editó {entidad} ({campos})"
+        return f"{usuario_nombre} editó {entidad} {nombre} ({campos})"
 
     elif accion == "DELETE":
         return f"{usuario_nombre} eliminó {entidad} {nombre}"
@@ -82,6 +88,9 @@ def obtener_auditorias(db: Session):
 
         descripcion = construir_descripcion(a, usuario_nombre)
 
+        antes = json.loads(a.ValoresAntes) if a.ValoresAntes else None
+        despues = json.loads(a.ValoresDespues) if a.ValoresDespues else None
+
         resultado.append({
             "AuditoriaId": a.AuditoriaId,
             "EntidadAfectada": a.EntidadAfectada,
@@ -89,7 +98,9 @@ def obtener_auditorias(db: Session):
             "Accion": a.CatalogoAccion.Accion,
             "Usuario": usuario_nombre,
             "FechaAccion": a.FechaAccion,
-            "Descripcion": descripcion
+            "Descripcion": descripcion,
+            "ValoresAntes": antes,
+            "ValoresDespues": despues
         })
 
     return resultado
