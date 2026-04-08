@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles # Importación necesaria
-from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta
+from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta, auditoria_ruta
 from app.utilidades.context import usuario_actual_id, ip_actual
 import traceback
 from app.db.sesion import SessionLocal
@@ -57,7 +57,6 @@ async def auditoria_contexto_middleware(request: Request, call_next):
                 user_id = user.UsuarioId
 
     except Exception as e:
-        print("⚠️ Error obteniendo usuario:", str(e))
         user_id = None
 
     finally:
@@ -77,6 +76,7 @@ app.include_router(equipo_ruta.router)
 app.include_router(permisos_ruta.router)
 app.include_router(gestion_ruta.router)
 app.include_router(personas_ruta.router)
+app.include_router(auditoria_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
 @app.exception_handler(Exception)

@@ -2,8 +2,15 @@ import json
 from datetime import datetime
 from app.utilidades.context import usuario_actual_id, ip_actual
 
+from sqlalchemy.orm import Session
+from app.modelos.auditoria import Auditoria
+from app.modelos.usuario_modelo import Usuario
+from app.modelos.persona_modelo import Personas
+from app.modelos.catalogo_accion import CatalogoAccion
+
 SYSTEM_USER_ID = 0
 
+#CREACIÓN DE REGISTRO
 def build_audit_entry(
     entidad,
     registro_id,
@@ -24,3 +31,65 @@ def build_audit_entry(
         "ValoresDespues": json.dumps(valores_despues) if valores_despues else None,
         "Ip": ip
     }
+
+#Visualización de registros
+def construir_descripcion(auditoria, usuario_nombre):
+
+    accion = auditoria.CatalogoAccion.Accion
+
+    antes = json.loads(auditoria.ValoresAntes) if auditoria.ValoresAntes else {}
+    despues = json.loads(auditoria.ValoresDespues) if auditoria.ValoresDespues else {}
+
+    entidad = auditoria.EntidadAfectada
+
+    nombre = ""
+
+    if entidad == "Personas":
+        nombre = f"{antes.get('Nombre', '')} {antes.get('PrimerApellido', '')}".strip()
+
+    if accion == "CREATE":
+        return f"{usuario_nombre} creó {entidad} {nombre}"
+
+    elif accion == "UPDATE":
+        campos = ", ".join(despues.keys())
+        return f"{usuario_nombre} editó {entidad} ({campos})"
+
+    elif accion == "DELETE":
+        return f"{usuario_nombre} eliminó {entidad} {nombre}"
+
+    return "Acción desconocida"
+
+
+def obtener_auditorias(db: Session):
+
+    auditorias = (
+        db.query(Auditoria)
+        .join(CatalogoAccion)
+        .all()
+    )
+
+    resultado = []
+
+    for a in auditorias:
+
+        usuario = db.query(Usuario).get(a.UsuarioId)
+
+        if usuario:
+            persona = db.query(Personas).get(usuario.PersonaId)
+            usuario_nombre = persona.Nombre if persona else "SYSTEM"
+        else:
+            usuario_nombre = "SYSTEM"
+
+        descripcion = construir_descripcion(a, usuario_nombre)
+
+        resultado.append({
+            "AuditoriaId": a.AuditoriaId,
+            "EntidadAfectada": a.EntidadAfectada,
+            "RegistroId": a.RegistroId,
+            "Accion": a.CatalogoAccion.Accion,
+            "Usuario": usuario_nombre,
+            "FechaAccion": a.FechaAccion,
+            "Descripcion": descripcion
+        })
+
+    return resultado
