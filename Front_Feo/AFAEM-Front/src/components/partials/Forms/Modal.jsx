@@ -12,6 +12,7 @@ export default function Modal({
   estaAbierto = false,
   titulo = '',
   hijos,
+  children,
   alCerrar,
   pie,
   tamanio = 'medio',
@@ -19,6 +20,8 @@ export default function Modal({
   ...accesorios
 }) {
   if (!estaAbierto) return null;
+
+  const content = children || hijos;
 
   const estilosPorTamanio = {
     pequeno: { maxWidth: '400px' },
@@ -102,7 +105,7 @@ export default function Modal({
           </div>
 
           {/* CUERPO */}
-          <div style={{ padding: '24px' }}>{hijos}</div>
+          <div style={{ padding: '24px' }}>{content}</div>
 
           {/* PIE */}
           {pie && (
