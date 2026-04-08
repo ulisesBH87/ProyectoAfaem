@@ -39,7 +39,6 @@ def crear_persona(db, persona: JugadorPersona):
 
     return nueva_persona.PersonaId
 
-
 def obtener_persona(db, usuario_id):
     
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
@@ -48,3 +47,9 @@ def obtener_persona(db, usuario_id):
         return None
     
     return usuario.PersonaId
+
+def obtener_persona_por_id(db, persona_id: int):
+    return db.get(Personas, persona_id)
+
+def guardar(db):
+    db.commit()
