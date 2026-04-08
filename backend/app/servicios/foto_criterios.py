@@ -2,20 +2,19 @@ import cv2
 import io
 import numpy as np
 from PIL import Image
-from math import acos, degrees
-from .foto_detector import get_detector_objetos 
+import math
 
+from .foto_detector import *
 
 # FUNCION PARA ENCUADRAR EL ROSTRO
-def bbox_rostro(landmarks, image_shape):
-
-    if not landmarks:
+def bbox_rostro(imagen_shape, face_landmarks):
+    if not face_landmarks:
         return None
 
-    h, w = image_shape[:2]
+    h, w = imagen_shape[:2]
 
-    xs = [int(p.x * w) for p in landmarks]
-    ys = [int(p.y * h) for p in landmarks]
+    xs = [int(p.x * w) for p in face_landmarks]
+    ys = [int(p.y * h) for p in face_landmarks]
 
     #Liminaciones del rostro
     x_min, x_max = min(xs), max(xs)
@@ -24,7 +23,7 @@ def bbox_rostro(landmarks, image_shape):
     return x_min, y_min, x_max, y_max
 
 # FUNCION RELACION DE ASPECTO OCULAR (EAR)
-def EAR(landmarks, indices, image_shape):
+def EAR(image_shape, face_landmarks, indices):
     """
     Calcula la relación altura/ancho del ojo (Eye Aspect Ratio) para detectar ojos cerrados.
 
@@ -33,9 +32,9 @@ def EAR(landmarks, indices, image_shape):
     """
 
     h, w = image_shape[:2] # convertir normalizado a píxeles
-
+    
     # Convertir coordenadas normalizadas a píxeles
-    ojo = [(int(landmarks[i].x * w), int(landmarks[i].y * h)) for i in indices]
+    ojo = [(int(face_landmarks[i].x * w), int(face_landmarks[i].y * h)) for i in indices]
 
     # Distancias verticales
     a = np.linalg.norm(np.array(ojo[1]) - np.array(ojo[5]))
@@ -51,7 +50,7 @@ def EAR(landmarks, indices, image_shape):
     return ear
 
 # FUNCION RELACION DE ASPECTO DE LA BOCA (MAR)
-def MAR(landmarks, image_shape):
+def MAR(image_shape, face_landmarks):
     """
     Calcula la relación apertura/cierre de la boca (Mouth Aspect Ratio).
     
@@ -59,26 +58,26 @@ def MAR(landmarks, image_shape):
     """
     h, w = image_shape[:2]
 
-    # === PUNTOS CLAVE DE LA BOCA ===
+    # Puntos clave de la boca
 
     #Horizontal
-    comisura_izq = landmarks[61] # P1
-    comisura_der = landmarks[291] # P4
+    comisura_izq = face_landmarks[61] # P1
+    comisura_der = face_landmarks[291] # P4
 
     #Vertical principal
-    labio_sup_centro = landmarks[13] # P3
-    labio_inf_centro = landmarks[14] # P5
+    labio_sup_centro = face_landmarks[13] # P3
+    labio_inf_centro = face_landmarks[14] # P5
 
     #Vertical secundaria izquierda
-    labio_sup_izq = landmarks[82] # P2
-    labio_inf_izq = landmarks[87] # P8
+    labio_sup_izq = face_landmarks[82] # P2
+    labio_inf_izq = face_landmarks[87] # P8
 
     #Vertical secundaria izquierda
-    labio_sup_der = landmarks[312] # P4
-    labio_inf_der = landmarks[317] # P6
+    labio_sup_der = face_landmarks[312] # P4
+    labio_inf_der = face_landmarks[317] # P6
 
 
-    # === Convertir coordenadas normalizadas a píxeles ===
+    # Convertir coordenadas normalizadas a píxeles
     comisura_izq = np.array([comisura_izq.x * w, comisura_izq.y * h])
     comisura_der = np.array([comisura_der.x * w, comisura_der.y * h])
 
@@ -91,7 +90,7 @@ def MAR(landmarks, image_shape):
     labio_sup_der = np.array([labio_sup_der.x * w, labio_sup_der.y * h])
     labio_inf_der = np.array([labio_inf_der.x * w, labio_inf_der.y * h])
 
-     # === Cálculo de distancias ===
+     # Cálculo de distancias ===
 
     vertical_izq = np.linalg.norm(labio_sup_izq - labio_inf_izq)
 
@@ -112,20 +111,15 @@ def MAR(landmarks, image_shape):
     
     return mar
 
-# =====================================
-# ----- POSICION DE LA FOTO -----
-# =====================================
-
-
-# =====================================
-# ----- CRITERIOS PRE-RECORTE -----
-# =====================================
+# =============================
+# --- CRITERIOS PRE-RECORTE ---
+# =============================
 
 # FUNCION PARA DETECTAR LA RESOLUCION DE LA IMAGEN
-def resolucion(contenido_bytes):
+def resolucion(imagen_bytes):
     try:
 
-        imagen = Image.open(io.BytesIO(contenido_bytes))
+        imagen = Image.open(io.BytesIO(imagen_bytes))
 
         dpi = imagen.info.get("dpi", None)
 
@@ -148,9 +142,9 @@ def resolucion(contenido_bytes):
         return False, "No se pudo leer la resolución de la imagen."
     
 # FUNCION PARA DETECTAR TAMAÑO DE LA IMAGEN
-def dimensiones(imagen):
+def dimensiones(imagen_bgr):
 
-    h, w = imagen.shape[:2]
+    h, w = imagen_bgr.shape[:2]
 
     if w < 350 or h < 400:
         return False, "La imagen es demasiado pequeña. Mínimo recomendado 350x400 px."
@@ -158,22 +152,22 @@ def dimensiones(imagen):
     return True, ""
 
 # FUNCION PARA DETECTAR LOS BITS
-def formato_color(imagen):
+def formato_color(imagen_bgr):
 
     # Debe ser 8 bits
-    if imagen.dtype != np.uint8:
+    if imagen_bgr.dtype != np.uint8:
         return False, "La imagen debe ser de 8 bits."
 
     # Escala de grises válida
-    if len(imagen.shape) == 2:
+    if len(imagen_bgr.shape) == 2:
         return True, ""
 
     # Imagen a color válida
-    if len(imagen.shape) == 3 and imagen.shape[2] == 3:
+    if len(imagen_bgr.shape) == 3 and imagen_bgr.shape[2] == 3:
         return True, ""
 
     # Rechazar imágenes con canal alfa (RGBA)
-    if len(imagen.shape) == 3 and imagen.shape[2] == 4:
+    if len(imagen_bgr.shape) == 3 and imagen_bgr.shape[2] == 4:
         return False, "La imagen no debe tener transparencia."
 
     return False, "Formato de imagen no válido."
@@ -190,37 +184,146 @@ def formato_color(imagen):
     return True
     """
 
-# =====================================
-# ----- RECORTE DE FOTO -----
-# =====================================
-def recortar_foto(imagen_bgr, landmarks, target_size=(400, 500)):
+# ===========================
+# --- POSICION DEL ROSTRO ---
+# ===========================
+
+# FUNCION PARA DETECTAR ORIENTACION DE LA FOTO
+def rotar(imagen, pose_landmarks):
+
+    h, w = imagen.shape[:2]
+
+    # Obtener puntos clave (índices aproximados para centro de ojos)
+    ojo_izq = pose_landmarks[2]
+    ojo_der = pose_landmarks[5]
+    nariz = pose_landmarks[0]
+    
+     # Convertir coordenadas normalizadas a píxeles
+    ojo_der = (int(ojo_der.x * w), int(ojo_der.y * h))
+    ojo_izq = (int(ojo_izq.x * w), int(ojo_izq.y * h))
+    nariz = (int(nariz.x * w), int(nariz.y * h))
+
+    # Detectar 180°
+    y_ojos = (ojo_izq[1] + ojo_der[1]) / 2   # SOLO eje Y
+    y_nariz = nariz[1]
+
+    if y_ojos > y_nariz:
+        imagen = cv2.rotate(imagen, cv2.ROTATE_180)
+
+    # Detectar 90°
+    dx = abs(ojo_der[0] - ojo_izq[0])
+    dy = abs(ojo_der[1] - ojo_izq[1])
+
+    if dy > dx:
+        if ojo_der[1] < ojo_izq[1]:
+            imagen = cv2.rotate(imagen, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        else:
+            imagen = cv2.rotate(imagen, cv2.ROTATE_90_CLOCKWISE)
+    
+    return imagen
+
+# FUNCION PARA LA POSE DE LA PERSONA (PENDIENTE)
+def postura(pose_landmarks):
+
+    hombro_izq = pose_landmarks[11]
+    hombro_der = pose_landmarks[12]
+    nariz = pose_landmarks[0]
+
+    return True, ""
+
+# FUNCION PARA DETECTAR SI EL ROSTRO ESTA EN LA FOTO
+def rostro_completo(imagen_bgr, face_landmarks,):
 
     #Dimensiones demlo alto y lo ancho de la imagen
     h, w = imagen_bgr.shape[:2]
 
     # Convetirlo a pixeles
-    xs = np.array([int(p.x * w) for p in landmarks])
-    ys = np.array([int(p.y * h) for p in landmarks])
+    xs = np.array([int(p.x * w) for p in face_landmarks])
+    ys = np.array([int(p.y * h) for p in face_landmarks])
 
-    x_min, x_max = min(xs), max(xs)
-    y_min, y_max = min(ys), max(ys)
+    # Bounding box cara
+    x_min, x_max = np.min(xs), np.max(xs)
+    y_min, y_max = np.min(ys), np.max(ys)
 
-    altura_cara = y_max - y_min
-    ancho_cara = x_max - x_min
+    # Validar el rostro
+    margen = int(0.05 * h)
 
-    # Expandir
-    y_min = max(int(y_min - 1 * altura_cara), 0)
-    y_max = min(int(y_max + 0.8 * altura_cara), h)
+    if y_min <= margen:
+        return 0, "La frente está cortada"
 
-    x_min = max(int(x_min - 0.5 * ancho_cara), 0)
-    x_max = min(int(x_max + 0.5 * ancho_cara), w)
+    if y_max >= (h - margen):
+        return 0, "El mentón está cortado"
 
-    rostro = imagen_bgr[y_min:y_max, x_min:x_max]
+    if x_min <= margen:
+        return 0, "El lado izquierdo del rostro está cortado"
 
+    if x_max >= (w - margen):
+        return 0, "El lado derecho del rostro está cortado"
+
+    # Validacion de landmarks
+    puntos_clave = [10, 152, 234, 454] # Frente, menton, mejilla_izq, mejilla_der
+
+    for i in puntos_clave:
+        px = int(face_landmarks[i].x * w)
+        py = int(face_landmarks[i].y * h)
+
+        if px <= 0 or px >= w or py <= 0 or py >= h:
+            return False, "El rostro no está completo"
+    """    
+    puntos_clave = {
+        10: (0,0,255),    # frente
+        152: (255,0,0),   # mentón
+        234: (0,255,255), # lado izquierdo
+        454: (255,0,255)  # lado derecho
+    }
+
+    for i, color in puntos_clave.items():
+        x = int(face_landmarks[i].x * w)
+        y = int(face_landmarks[i].y * h)
+        cv2.circle(imagen_bgr, (x, y), 5, color, -1)
+    """
+   
+    return True, ""
+
+# =======================
+# --- RECORTE DE FOTO ---
+# =======================
+
+# FUNCION PARA RECORTAR LA FOTO AL ROSTRO
+def recortar_foto(imagen_bgr, face_landmarks, target_size = (400, 500)):
+
+    #Dimensiones demlo alto y lo ancho de la imagen
+    h, w = imagen_bgr.shape[:2]
+
+    # Convetirlo a pixeles
+    xs = np.array([int(p.x * w) for p in face_landmarks])
+    ys = np.array([int(p.y * h) for p in face_landmarks])
+
+    # Bounding box cara
+    x_min_cara, x_max_cara = min(xs), max(xs)
+    y_min_cara, y_max_cara = min(ys), max(ys)
+
+    altura_cara = y_max_cara - y_min_cara
+    ancho_cara = x_max_cara - x_min_cara
+    
+    # Expansion
+    y_min_final = max(int(y_min_cara - 2.0 * altura_cara), 0)
+    y_max_final = min(int(y_max_cara + 1.0 * altura_cara), h)
+
+    x_min_jaw = int(min(face_landmarks[i].x * w for i in [234, 454]))
+    x_max_jaw = int(max(face_landmarks[i].x * w for i in [234, 454]))
+
+    margen_lateral = int(0.5 * ancho_cara)
+
+    x_min_final = max(min(x_min_cara, x_min_jaw) - margen_lateral, 0)
+    x_max_final = min(max(x_max_cara, x_max_jaw) + margen_lateral, w)
+        
+    rostro = imagen_bgr[y_min_final:y_max_final, x_min_final:x_max_final]
+    
     if rostro.size == 0:
-        return None
-
-    # 🔹 Ajustar a 4:5
+        return 0, "El rostro no esta completo"
+    
+    # Ajustar a 4:5
     h_crop, w_crop = rostro.shape[:2]
     target_ratio = 4 / 5
 
@@ -233,17 +336,17 @@ def recortar_foto(imagen_bgr, landmarks, target_size=(400, 500)):
         y1 = (h_crop - new_h) // 2
         rostro = rostro[y1:y1 + new_h, :]
 
-    # 🔹 Redimensionar final
+    # Redimensionar final
     rostro = cv2.resize(rostro, target_size)
-
+    
     return rostro
 
-# =====================================
-# ----- CRITERIOS POST-RECORTE -----
-# =====================================
+# ==============================
+# --- CRITERIOS POST-RECORTE ---
+# ==============================
 
-# FUNCION PARA LA ILUMINACION DEL ROSTRO
-def iluminacion(landmarks, imagen_recortada):
+# FUNCION PARA LA ILUMINACION DE LA FOTO (PENDIENTE)
+def iluminacion_foto(imagen_recortada):
     
     h, w, _ = imagen_recortada.shape
 
@@ -258,6 +361,7 @@ def iluminacion(landmarks, imagen_recortada):
     if brillo_img > 210:
         return False, "La foto está muy brillante" #sobreexpuesta
     
+    """
     # ----------- ILUMINACIÓN DEL ROSTRO -----------
 
     # Obtener bounding box del rostro usando landmarks
@@ -290,14 +394,14 @@ def iluminacion(landmarks, imagen_recortada):
     # Poco contraste
     if contraste < 10:
         return False, "La foto tiene bajo contraste"
-    
-    
+
     # ----------- LUZ DESIGUAL EN EL ROSTRO -----------
     mitad_izq = gris_rostro[:, :gris_rostro.shape[1]//2]
     mitad_der = gris_rostro[:, gris_rostro.shape[1]//2:]
 
     if abs(np.mean(mitad_izq) - np.mean(mitad_der)) > 35:
         return False, "La iluminación del rostro es desigual"
+        """
     
     return True, ""
 
@@ -314,19 +418,124 @@ def nitidez(imagen_recortada):
     varianza = laplacian.var()
 
     # Umbrales recomendados
-    if varianza < 50:
-        return False, "El rostro es borroso al momento del recorte"
+    if varianza > 10:
+        return False, f"El rostro es borroso al momento del recortem{varianza}"
     
     return True, ""
 
-# =====================================
-# ----- DETECTAR ACCESORIOS -----
-# =====================================
-def accesorios(imagen_recortada):
+# FUNCION PARA EL TAMAÑO DEL ROSTRO
+def tam_rostro(imagen_shape, face_landmarks):
+    
+    h, w = imagen_shape[:2]
 
-    model = get_detector_objetos()
+    #Limites de rostro
+    _, y_min, _, y_max = bbox_rostro(imagen_shape, face_landmarks)
 
-    imagen = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2RGB)
+    # ----- Tamaño del rostro -----
+    
+    altura_rostro = y_max - y_min
+    proporcion = altura_rostro / h
+
+    MIN_TAM = 0.2
+    MAX_TAM = 0.55
+
+    if  proporcion < MIN_TAM: 
+        return False, "El rostro esta muy lejos"
+    elif proporcion > MAX_TAM:
+        return False, "El rostro esta muy cerca"
+
+    return True, ""
+
+# FUNCION PARA CENTRAR EL ROSTRO (DUDA)
+def rostro_centrado(imagen_shape, face_landmarks, margen = 0.3, tolerancia = 0.5):
+
+    h, w = imagen_shape[:2]
+
+    x_min, y_min, x_max, y_max = bbox_rostro(imagen_shape, face_landmarks)
+
+    # Aplicar margen
+    ancho = x_max - x_min
+    alto = y_max - y_min
+
+    mx = int(ancho * margen)
+    my = int(alto * margen)
+
+    x1 = max(0, x_min - mx)
+    y1 = max(0, y_min - my)
+    x2 = min(w, x_max + mx)
+    y2 = min(h, y_max + my)
+    
+    # Calcular centros
+    cx_rostro = (x1 + x2) / 2
+    cy_rostro =  (y1 + y2) / 2
+    
+    cx_imagen = w / 2
+    cy_imagen = h / 2
+
+    # Comparar (Normalizado por el tamaño de la imagen)
+    dx = abs(cx_rostro - cx_imagen) / w
+    dy = abs(cy_rostro - cy_imagen) / h
+
+    if dx < tolerancia or dy < tolerancia:
+        return False, f"El rostro no esta centrado{dx} y {dy}"
+    
+    return True, ""
+
+# ===============================
+# --- SEGMENTACION DE LA FOTO ---
+# ===============================
+
+# FUNCION PARA LA SEGMENTACION DE CABELLO
+def cabello(category_mask, limite = 0.20):
+    
+    # Total de pixeles de la imagen
+    total_pixeles = category_mask.size
+
+    # Pixeles que pertenecen a la categoria cabello
+    pixeles_persona = np.sum(category_mask == 1)
+
+    porcentaje = pixeles_persona / total_pixeles
+
+    if porcentaje > limite:
+        return False, "El cabello debe ir amarrado y atras del rostro"
+
+    return True, ""
+
+# FUNCION PARA LA SEGMENTACION DEL FONDO BLANCO
+def fondo_blanco(imagen_recortada, category_mask, confidence_mask, conf = 0.6):
+
+    category_mask = np.squeeze(category_mask)
+    confidence_mask = np.squeeze(confidence_mask)
+
+    imagen = imagen_recortada.copy()
+    
+    # fondo con suficiente confianza
+    fondo_mask = (category_mask == 0) & (confidence_mask > conf)
+
+    imagen[fondo_mask] = [255,255,255]
+    
+    #fondo_pixeles = imagen[fondo_mask]
+
+    #if fondo_pixeles.size == 0:
+    #    return imagen
+    
+    #promedio = np.mean(fondo_pixeles)
+
+    #if promedio < limite:
+    #    imagen[fondo_mask] = [255,255,255]
+
+    return imagen
+
+# ===========================
+# --- DETECTAR ACCESORIOS ---
+# ===========================
+
+# FUNCION PARA DETECTAR ACCESORIOS PROHIBIDOS
+def accesorios(imagen_segmentada):
+
+    model = get_objetos_detector()
+
+    imagen = cv2.cvtColor(imagen_segmentada, cv2.COLOR_BGR2RGB)
 
     resultados = model(imagen)
 
@@ -344,124 +553,26 @@ def accesorios(imagen_recortada):
 
     return True, ""
 
-# =====================================
-# ----- CRITERIOS DE POSICION-----
-# =====================================
-
-# FUNCION PARA EL TAMAÑO DEL ROSTRO
-def tam_rostro(landmarks, image_shape):
-
-    h, w = image_shape[:2]
-
-
-    #Limites de rostro
-    _, y_min, _, y_max = bbox_rostro(landmarks, image_shape)
-
-    altura_rostro = y_max - y_min
-    proporcion = altura_rostro / h
-
-    MIN_TAM = 0.3
-
-    if  proporcion < MIN_TAM: 
-        return False, "El rostro esta muy lejos"
-
-    return True, ""
-
-# FUNCION PARA LA CABEZA: PENDIENTE
-def tam_cabeza():
-    return
-
-# =====================================
-# ----- VALIDACIONES DE POSTURA -----
-# =====================================
-
-# FUNCION PARA LA POSE DE LA PERSONA
-def postura_recta(pose_landmarks, tolerancia_hombros=0.04, tolerancia_centro=0.05):
-
-    hombro_izq = pose_landmarks[11]
-    hombro_der = pose_landmarks[12]
-    nariz = pose_landmarks[0]
-
-    # Validar visibilidad
-    if hombro_izq.visibility < 0.3 or hombro_der.visibility < 0.3:
-        return False, "Los hombros no son claramente visibles"
-
-    # Hombros al mismo nivel (horizontal)
-    diferencia_altura = abs(hombro_izq.y - hombro_der.y)
-
-    if diferencia_altura > tolerancia_hombros:
-        return False, "No se detecto una postura recta"
-
-    # Nariz centrada entre hombros
-    centro_hombros_x = (hombro_izq.x + hombro_der.x) / 2
-    desviacion_centro = abs(nariz.x - centro_hombros_x)
-
-    if desviacion_centro > tolerancia_centro:
-        return False, "Los hombros y la cabeza no están alineadoss"
-
-    return True, ""
-
-# =====================================
-# ----- VALIDACIONES FACIALES -----
-# =====================================
+# =============================
+# --- CRITERIOS FACIALES ---
+# =============================
 
 # FUNCION PARA DETECTAR OJOS ABIERTOS
-def ojos_abiertos(landmarks, image_shape):
+def ojos_abiertos(image_shape, face_landmarks):
 
     # Indices MediaPipe para cada ojo (ajustar si es necesario)
     indice_izq = [362, 385, 387, 263, 373, 380]
+    
     indice_der = [33, 160, 158, 133, 153, 144]
 
-    ear_izq = EAR(landmarks, indice_izq, image_shape)
-    ear_der = EAR(landmarks, indice_der, image_shape)
+    ear_izq = EAR(image_shape, face_landmarks, indice_izq)
+
+    ear_der = EAR(image_shape, face_landmarks, indice_der)
 
     ear_prom = (ear_izq + ear_der) / 2
 
     diferencia = abs(ear_izq - ear_der)
-
-    #Validacion por ejo
-    #if debug_image is not None:
-    #    h, w = image_shape[:2]
-    #    for idx in indice_izquierdo + indice_derecho:
-    #        x, y = int(landmarks[idx].x * w), int(landmarks[idx].y * h)
-    #        cv2.circle(debug_image, (x, y), 2, (0, 255, 0), -1)
     
-    #Validación en total (mas facil)
-    # ear_promedio = (ear_izq + ear_der) / 2
-    # ear_val = ear_promedio > 0.2 #Umbral de ojos cerrados
-    # return ear_val
-
-    """
-    UMBRAL = 0.21
-    DIF_MAXIMA = 0.08
-
-    ojo_izq_abierto = ear_izq > UMBRAL
-    ojo_der_abierto = ear_der > UMBRAL
-
-    # diferencia entre ojos
-    diferencia = abs(ear_izq - ear_der)
-
-    if ojo_izq_abierto and ojo_der_abierto:
-        return True
-
-    # Si solo uno está abierto pero la diferencia es pequeña
-    if (ojo_izq_abierto or ojo_der_abierto) and diferencia < DIF_MAXIMA:
-        return True
-
-    return False
-    """
-    """
-    UMBRAL  = 0.20  # puedes ajustar entre 0.20 y 0.22
-
-    ojo_izq_abierto = ear_izq > UMBRAL
-    ojo_der_abierto = ear_der > UMBRAL
-
-    # Aceptar si al menos un ojo está abierto
-    if ojo_izq_abierto or ojo_der_abierto:
-        return True
-    else:
-        return False
-    """
     EAR_MIN = 0.15          # Solo si está prácticamente cerrado
     EAR_MAX = 0.45          # Evita ojos exageradamente abiertos
     DIF_MAX = 0.15         # Permite asimetría natural
@@ -482,9 +593,9 @@ def ojos_abiertos(landmarks, image_shape):
     return True, ""
 
 # FUNCION PARA DETECTAR DIRECCION DE LOS OJOS
-def mirada_frontal(landmarks):
+def mirada_frontal(face_landmarks):
 
-    if len(landmarks) < 474:
+    if len(face_landmarks) < 474:
         return True, "" # Si no hay iris, no bloquear validación
 
     def horizontal(ojo_izq, ojo_der, iris):
@@ -494,14 +605,14 @@ def mirada_frontal(landmarks):
         return (iris[0] - ojo_izq[0]) / ancho
 
     # OJO DERECHO
-    ojo_der_izq = np.array([landmarks[33].x, landmarks[33].y])
-    ojo_der_der = np.array([landmarks[133].x, landmarks[133].y])
-    iris_der = np.array([landmarks[468].x, landmarks[468].y])
+    ojo_der_izq = np.array([face_landmarks[33].x, face_landmarks[33].y])
+    ojo_der_der = np.array([face_landmarks[133].x, face_landmarks[133].y])
+    iris_der = np.array([face_landmarks[468].x, face_landmarks[468].y])
 
     # OJO IZQUIERDO
-    ojo_izq_izq = np.array([landmarks[362].x, landmarks[362].y])
-    ojo_izq_der = np.array([landmarks[263].x, landmarks[263].y])
-    iris_izq = np.array([landmarks[473].x, landmarks[473].y])
+    ojo_izq_izq = np.array([face_landmarks[362].x, face_landmarks[362].y])
+    ojo_izq_der = np.array([face_landmarks[263].x, face_landmarks[263].y])
+    iris_izq = np.array([face_landmarks[473].x, face_landmarks[473].y])
 
     derecho = horizontal(ojo_der_izq, ojo_der_der, iris_der)
     izquierdo = horizontal(ojo_izq_izq, ojo_izq_der, iris_izq)
@@ -530,19 +641,49 @@ def mirada_frontal(landmarks):
 
     return False, "La mirada no esta al frente"
 
-# FUNCION PARA LA EXPRESION DEL ROSTRO: PENDIENTE
-def expresion_neutral(landmarks, image_shape):
+# FUNCION PARA LA EXPRESION DEL ROSTRO
+def expresion_neutral(image_shape, face_landmarks):
 
-    mar = MAR(landmarks, image_shape)
+    mar = MAR(image_shape, face_landmarks)
     
     boca_cerrada = mar
     
     if boca_cerrada > 0.05:
-        return False, "La boca debe estar cerrada y sin sonrisa"
+        return False, "La boca debe estar cerrada"
+    
+    # --- PUNTOS CLAVE ---
+    labio_sup = face_landmarks[13]
+    labio_inf = face_landmarks[14]
+
+    boca_izq = face_landmarks[61]
+    boca_der = face_landmarks[291]
+
+    # Para normalizar
+    ojo_izq = face_landmarks[33]
+    ojo_der = face_landmarks[263]
+
+    ancho_cara = abs(ojo_der.x - ojo_izq.x)
+
+    # Estiramiento 
+    boca_ancho = abs(boca_der.x - boca_izq.x) / ancho_cara
+
+     # Comisuras
+    altura_prom_labios = (labio_sup.y + labio_inf.y) / 2
+    comisuras_altas = (
+        boca_izq.y < altura_prom_labios and
+        boca_der.y < altura_prom_labios
+    )
+
+     # Detectar sonrisa (aunque esté cerrada)
+    if boca_ancho > 0.6 or comisuras_altas:
+        return False, f"Evita sonreír, mantén expresión seria"
+
     
     return True, ""
 
-# FUNCION PARA DETECTAR EL ROSTRO FRONTAL: PENDIENTE
+
+
+# FUNCION PARA DETECTAR EL ROSTRO FRONTAL (PENDIENTE)
 def cabeza_ladeada(landmarks, tolerancia_grados = 2):
 
      # Ojo derecho externo
@@ -563,8 +704,8 @@ def cabeza_ladeada(landmarks, tolerancia_grados = 2):
     
     return True, ""
     
-# FUNCION PARA LA INCLINACION DEL ROSTRO:PENDIENTE
-def inclinacion_vertical(landmarks, tolerancia=0.08):
+# FUNCION PARA LA INCLINACION DEL ROSTRO (PENDIENTE)
+def inclinacion_vertical(landmarks, tolerancia = 0.08):
 
     # Punto frente
     frente = np.array([landmarks[10].x, landmarks[10].y])
@@ -595,8 +736,8 @@ def inclinacion_vertical(landmarks, tolerancia=0.08):
     # Validar tolerancia
     return True, ""
 
-# FUNCION PARA DETECTAR SI LA CABEZA ESTA DE ENFRENTE:PENDIENTE
-def frontal(landmarks, tolerancia_nariz_ratio=0.06):
+# FUNCION PARA DETECTAR SI LA CABEZA ESTA DE ENFRENTE (PENDIENTE)
+def frontal(landmarks, tolerancia_nariz_ratio = 0.06):
 
     # Promedio ojo izquierdo
     ojo_izq = np.mean([[landmarks[i].x, landmarks[i].y] 
@@ -625,96 +766,4 @@ def frontal(landmarks, tolerancia_nariz_ratio=0.06):
         return False, "El rostro no esta de frente"
 
     # Si la nariz está cerca del centro → rostro frontal
-    return True, ""
-
-# =====================================
-# ----- VALIDACIONES DE SEGMENTACION -----
-# =====================================
-
-# FUNCION PARA LA SEGMENTACION DE CABELLO
-def cabello( category_mask, limite=0.20):
-
-
-    # Total de pixeles de la imagen
-    total_pixeles = category_mask.size
-
-    # Pixeles que pertenecen a la categoria cabello (1)
-    pixeles_persona = np.sum(category_mask == 1)
-
-    porcentaje = pixeles_persona / total_pixeles
-
-    if porcentaje > limite:
-        return False, F"El cabello debe ir amarrado y atras del rostro {porcentaje}"
-
-    return True, ""
-
-# FUNCION PARA LA SEGMENTAVION DEL FONDO BLANCO
-def fondo_blanco(imagen_bgr, category_mask, confidence_mask, conf=0.6):
-
-    category_mask = np.squeeze(category_mask)
-    confidence_mask = np.squeeze(confidence_mask)
-
-    imagen = imagen_bgr.copy()
-    
-    # fondo con suficiente confianza
-    fondo_mask = (category_mask == 0) & (confidence_mask > conf)
-
-    imagen[fondo_mask] = [255,255,255]
-    
-    #fondo_pixeles = imagen[fondo_mask]
-
-    #if fondo_pixeles.size == 0:
-    #    return imagen
-    
-    #promedio = np.mean(fondo_pixeles)
-
-    #if promedio < limite:
-    #    imagen[fondo_mask] = [255,255,255]
-
-    return imagen
-
-
-
-
-
-
-
-
-
-
-
-
-#-----------------------
-
-# FUNCION PARA DETECTAR IMAGEN MANCHADA: PENDIENTE -----
-def manchas(imagen_recortada):
-
-    # convertir a float para cálculos
-    img = imagen_recortada.astype(np.float32)
-
-    # calcular color promedio
-    promedio = np.mean(img, axis=(0,1))
-
-    # calcular distancia de cada pixel al promedio
-    distancia = np.sqrt(np.sum((img - promedio) ** 2, axis=2))
-
-    # detectar píxeles muy diferentes
-    mascara_manchas = distancia > 80
-    
-    pixeles_manchas = np.sum(mascara_manchas)
-    total_pixeles = imagen_recortada.shape[0] * imagen_recortada.shape[1]
-
-    porcentaje = pixeles_manchas / total_pixeles
-
-    if porcentaje > 0.01:
-        return False, f"La fotografía contiene manchas o ruido ({porcentaje:.3f})"
-
-    return True, ""
-
-def imagen_afectada(imagen_recortada):
-    img = cv2.imread 
-    return True, ""
-
-# FUNCION PARA DETECTAR ARRIGAS: PENDIENTE ------
-def arrugas(imagen_recortada):
     return True, ""

@@ -1,10 +1,7 @@
 from fastapi import APIRouter, UploadFile, File #|importar las clases
 
 #Importar las funciones de detección de rostros con FACE DETECTOR
-from app.servicios.foto_validacion import (
-    validacion_fotografia, 
-    detectar_rostro_pdf
-) 
+from app.servicios.foto_validacion import validacion_fotografia
 
 import base64 #Importar la biblioteca para codificar y decodificar datos en formato base64
 
@@ -27,20 +24,17 @@ async def validar_archivo(file: UploadFile = File(...)): #|definir una función 
             "mensaje": f"El archivo supera el peso máximo permitido ({MAX_MB} MB)"
         }
 
-    #Detección de rostros segun el tipo de archivo
-    if file.content_type == "application/pdf": #Verificar si el archivo no es un PDF 
-        rostros_detectados, imagen_base64, tipo_imagen, razon = detectar_rostro_pdf(contenido)
-    else: 
-        rostros_detectados, resultado = validacion_fotografia(contenido) #Llamar a la función de detección de rostros y almacenar el resultado en una variable 
-        #imagen_base64 = base64.b64encode(contenido).decode('utf-8') #Codificar la imagen a base64 para enviarla al frontend
-        tipo_imagen = file.content_type #Definir el tipo de imagen para archivos que no son PDF
+    #Detección de archivo
+    rostros_detectados, resultado = validacion_fotografia(contenido) #Llamar a la función de detección de rostros y almacenar el resultado en una variable 
+    #imagen_base64 = base64.b64encode(contenido).decode('utf-8') #Codificar la imagen a base64 para enviarla al frontend
+    tipo_imagen = file.content_type #Definir el tipo de imagen para archivos que no son PDF
 
-        if rostros_detectados == 1:
-            imagen_base64 = base64.b64encode(resultado).decode('utf-8')
-            razon = None
-        else:
-            imagen_base64 = None
-            razon = resultado
+    if rostros_detectados == 1:
+        imagen_base64 = base64.b64encode(resultado).decode('utf-8')
+        razon = None
+    else:
+        imagen_base64 = None
+        razon = resultado
 
     # ===== REGLA DE VALIDACIÓN =====
     if rostros_detectados == 1:

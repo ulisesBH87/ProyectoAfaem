@@ -100,7 +100,7 @@ function PreRegistroPresidente() {
   // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
   const [ocrResults, setOcrResults] = useState({});
-  const [, setFotoPreview] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState({});
   const [telefono, setTelefono] = useState('');
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
@@ -114,6 +114,43 @@ function PreRegistroPresidente() {
     { documento: 'fotografia', nombre: 'Fotografía (Imagen)' },
     { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', hasDownload: true }
   ];
+
+
+
+
+  const verFotoEnGrande = () => {
+  if (!fotoPreview) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Sin imagen',
+      text: 'Primero sube una fotografía'
+    });
+    return;
+  }
+
+  Swal.fire({
+    title: 'Vista previa de la fotografía',
+    html: `
+      <img 
+        src="${fotoPreview}" 
+        style="
+        width:100%;
+          max-height:100%;
+          object-fit:contain;
+          border-radius:12px;
+          border:3px solid #0b4ea6;
+          box-shadow:0 4px 15px rgba(0,0,0,0.2);
+        "        
+      />
+    `,
+    showConfirmButton: false,
+    showCloseButton: true,
+    width: 500
+  });
+};
+
+
+
 
   // ================== METODOS DE NAVEGACIÓN ==================
   const handleGuardarYSalir = async () => {
@@ -1262,6 +1299,17 @@ function PreRegistroPresidente() {
                     <div className="status-badge" style={{ background: color }}>{status}</div>
                     <div className="file-name">{isUploaded ? documents[doc.documento].name : 'Nombre del archivo'}</div>
                     <div className="doc-actions">
+
+                      {doc.documento === 'fotografia' && (
+                        <button 
+                          className="btn-doc"
+                          onClick={verFotoEnGrande}
+                        >
+                          Ver foto
+                        </button>
+                      )}
+
+
                       {doc.hasDownload && <button className="btn-download" onClick={handleDownloadFormato}>Descargar formato</button>}
                       <button className="btn-doc" onClick={() => document.getElementById(`file-${doc.documento}`).click()}>Seleccionar archivo</button>
                       <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
