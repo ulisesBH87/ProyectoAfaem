@@ -4,7 +4,8 @@ import { getEquiposDirectorio, updateEquipo } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave } from 'react-icons/fa';
+import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 
 export default function AdminEquipos() {
   const navigate = useNavigate();
@@ -19,6 +20,13 @@ export default function AdminEquipos() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // ESTADO PARA EDICIÓN (MODAL PROFESIONAL)
+  const [modalEdicion, setModalEdicion] = useState(false);
+  const [equipoEdicion, setEquipoEdicion] = useState(null);
+  const [datosEditables, setDatosEditables] = useState({});
+  const [haCambiado, setHaCambiado] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     loadEquipos();
@@ -112,67 +120,61 @@ export default function AdminEquipos() {
   };
 
   const handleEditarEquipo = (equipo) => {
-    Swal.fire({
-      title: 'Editar Equipo',
-      html: `
-        <div style="text-align: left; display: flex; flex-direction: column; gap: 15px;">
-          <div>
-            <label style="font-weight: 600; font-size: 13px;">Nombre del Equipo</label>
-            <input id="swal-eq-nombre" class="swal2-input" value="${equipo.NombreEquipo}" style="margin-top: 5px; width: 90%;">
-          </div>
-          <div>
-            <label style="font-weight: 600; font-size: 13px;">Estatus de Operación</label>
-            <select id="swal-eq-estatus" class="swal2-select" style="margin-top: 5px; width: 90%; padding: 10px;">
-              <option value="1" ${equipo.Estatus ? 'selected' : ''}>Activo</option>
-              <option value="0" ${!equipo.Estatus ? 'selected' : ''}>Inactivo</option>
-            </select>
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Guardar Cambios',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#0b4ea6',
-      preConfirm: () => {
-        const nombre = document.getElementById('swal-eq-nombre').value;
-        const estatus = document.getElementById('swal-eq-estatus').value;
-        if (!nombre) {
-          Swal.showValidationMessage('El nombre es obligatorio');
-        }
-        return { nombre, estatus };
-      }
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          Swal.fire({
-            title: 'Actualizando equipo...',
-            allowOutsideClick: false,
-            didOpen: () => {
-              Swal.showLoading();
-            }
-          });
-
-          await updateEquipo(equipo.EquipoId, result.value.nombre, result.value.estatus);
-          
-          await loadEquipos();
-
-          Swal.fire({
-            icon: 'success',
-            title: 'Equipo Actualizado',
-            text: 'Los cambios se han guardado correctamente.',
-            timer: 2000,
-            showConfirmButton: false
-          });
-        } catch (error) {
-          console.error("Error al actualizar equipo:", error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo actualizar el equipo. Inténtalo de nuevo.'
-          });
-        }
-      }
+    setEquipoEdicion(equipo);
+    setDatosEditables({
+      nombre: equipo.NombreEquipo || '',
+      estatus: equipo.Estatus ? '1' : '0'
     });
+    setHaCambiado(false);
+    setModalEdicion(true);
+  };
+
+  const handleCerrarModal = () => {
+    if (haCambiado) {
+      Swal.fire({
+        title: '¿Estás seguro de salir?',
+        text: "Tienes cambios sin guardar que se perderán.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, salir sin guardar',
+        cancelButtonText: 'Volver a la edición'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setModalEdicion(false);
+        }
+      });
+    } else {
+      setModalEdicion(false);
+    }
+  };
+
+  const manejarCambioInput = (e) => {
+    const { name, value } = e.target;
+    setDatosEditables(prev => ({ ...prev, [name]: value }));
+    setHaCambiado(true);
+  };
+
+  const manejarGuardarEquipo = async () => {
+    if (!datosEditables.nombre) {
+      Swal.fire('Error', 'El nombre del equipo es obligatorio.', 'warning');
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      await updateEquipo(equipoEdicion.EquipoId, datosEditables.nombre, datosEditables.estatus);
+      
+      Swal.fire('¡Éxito!', 'Información del equipo actualizada correctamente.', 'success');
+      setModalEdicion(false);
+      loadEquipos();
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'No se pudieron guardar los cambios.', 'error');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const columns = [
@@ -317,6 +319,67 @@ export default function AdminEquipos() {
           emptyMessage="No se encontraron equipos con los criterios de búsqueda."
         />
       </div>
+
+      {/* MODAL DE EDICIÓN PROFESIONAL */}
+      <Modal
+        estaAbierto={modalEdicion}
+        alCerrar={handleCerrarModal}
+        titulo="Detalles y gestión del equipo"
+        tamanio="grande"
+        pie={
+          <>
+            <BotonSecundario texto="Cancelar" onClick={handleCerrarModal} />
+            <BotonPrimario 
+              texto={guardando ? 'Guardando...' : 'Guardar cambios'} 
+              onClick={manejarGuardarEquipo} 
+              deshabilitado={guardando}
+              icono={<FaSave />}
+            />
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+          <div style={{ gridColumn: 'span 2', background: 'var(--primary-light)', padding: '15px 20px', borderRadius: '12px', marginBottom: '10px', border: '1px solid var(--border-light)' }}>
+             <p style={{ margin: 0, fontSize: '14px', color: 'var(--primary)', fontWeight: '700' }}>⚠️ Estás editando la ficha oficial del equipo.</p>
+             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>Cualquier cambio afectará la visibilidad en torneos y cédulas oficiales.</p>
+          </div>
+
+          <EntradaFormulario
+            etiqueta="Nombre del equipo"
+            valor={datosEditables.nombre}
+            onChange={manejarCambioInput}
+            nombre="nombre"
+            obligatorio
+            placeholder="Ej: Rayados de Monterrey"
+          />
+
+          <EntradaSeleccion
+            etiqueta="Estatus operativo"
+            valor={datosEditables.estatus}
+            onChange={manejarCambioInput}
+            nombre="estatus"
+            opciones={[
+              { valor: '1', etiqueta: 'Activo (Habilitado para Torneos)' },
+              { valor: '0', etiqueta: 'Inactivo (Baja Temporal)' }
+            ]}
+          />
+
+          {equipoEdicion && (
+            <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '10px', padding: '15px', background: '#f8fafc', borderRadius: '10px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Presidente responsable</label>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>{equipoEdicion.PresidenteNombreCompleto}</div>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>{equipoEdicion.PresidenteEmail}</div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Vigencia Matricula</label>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>Temporada 2024 - 2025</div>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>{equipoEdicion.Liga}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

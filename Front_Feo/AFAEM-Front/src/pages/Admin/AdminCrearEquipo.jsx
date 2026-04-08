@@ -12,9 +12,11 @@ export default function AdminCrearEquipo() {
     rama: '1',
     presidenteId: ''
   });
+  const [haCambiado, setHaCambiado] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setHaCambiado(true);
   };
 
   const handleGuardar = (e) => {
@@ -42,15 +44,32 @@ export default function AdminCrearEquipo() {
     <div className="dashboard-content">
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '15px' }}>
         <button 
-          onClick={() => navigate('/admin/equipos')}
+          onClick={() => {
+            if (haCambiado) {
+              Swal.fire({
+                title: '¿Estás seguro de salir?',
+                text: "Tienes cambios sin guardar que se perderán.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Sí, salir sin guardar',
+                cancelButtonText: 'Volver a la edición'
+              }).then((result) => {
+                if (result.isConfirmed) navigate('/admin/equipos');
+              });
+            } else {
+              navigate('/admin/equipos');
+            }
+          }}
           className="btn btn-outline-secondary"
           style={{ padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <FaArrowLeft />
         </button>
         <div>
-          <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Creación Directa de Equipo</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Módulo Administrativo (Sin validación de pago comercial)</p>
+          <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Creación directa de equipo</h2>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Módulo administrativo (Sin validación de pago comercial)</p>
         </div>
       </div>
 
@@ -94,7 +113,7 @@ export default function AdminCrearEquipo() {
 
           <div style={{ marginBottom: '24px' }}>
             <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '20px' }}>
-              Clasificación Competitiva
+              Clasificación competitiva
             </h4>
             
             <div className="row">
@@ -149,7 +168,24 @@ export default function AdminCrearEquipo() {
             <button 
               type="button"
               className="btn btn-outline-secondary" 
-              onClick={() => navigate('/admin/equipos')}
+              onClick={() => {
+                if (haCambiado) {
+                  Swal.fire({
+                    title: '¿Estás seguro de salir?',
+                    text: "Tienes cambios sin guardar que se perderán.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Sí, salir sin guardar',
+                    cancelButtonText: 'Volver a la edición'
+                  }).then((result) => {
+                    if (result.isConfirmed) navigate('/admin/equipos');
+                  });
+                } else {
+                  navigate('/admin/equipos');
+                }
+              }}
               style={{ padding: '10px 24px', fontWeight: '600', borderRadius: '8px' }}
             >
               Cancelar
@@ -159,7 +195,7 @@ export default function AdminCrearEquipo() {
               className="btn btn-primary"
               style={{ padding: '10px 24px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#0b4ea6', border: 'none' }}
             >
-              <FaSave /> Autorizar y Crear Equipo
+              <FaSave /> Autorizar y crear equipo
             </button>
           </div>
 

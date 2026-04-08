@@ -570,22 +570,81 @@ export default function AdminSolicitudes() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+        {/* TARJETA TOTAL */}
+        <div 
+          onClick={() => setFiltroEstatus('todos')}
+          style={{ 
+            background: 'white', 
+            padding: '20px', 
+            borderRadius: '12px', 
+            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0', 
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+
+        {/* TARJETA PENDIENTES */}
+        <div 
+          onClick={() => setFiltroEstatus('2')}
+          style={{ 
+            background: 'white', 
+            padding: '20px', 
+            borderRadius: '12px', 
+            border: filtroEstatus === '2' ? '2px solid #f59e0b' : '1px solid #e2e8f0', 
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === '2' ? '0 4px 12px rgba(245, 158, 11, 0.15)' : 'none',
+            transform: filtroEstatus === '2' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>⏳</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>PENDIENTES</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+
+        {/* TARJETA APROBADAS */}
+        <div 
+          onClick={() => setFiltroEstatus('1')}
+          style={{ 
+            background: 'white', 
+            padding: '20px', 
+            borderRadius: '12px', 
+            border: filtroEstatus === '1' ? '2px solid #10b981' : '1px solid #e2e8f0', 
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === '1' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
+            transform: filtroEstatus === '1' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>APROBADAS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.aprobadas}</div>
         </div>
-        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+
+        {/* TARJETA RECHAZADAS */}
+        <div 
+          onClick={() => setFiltroEstatus('0')}
+          style={{ 
+            background: 'white', 
+            padding: '20px', 
+            borderRadius: '12px', 
+            border: filtroEstatus === '0' ? '2px solid #ef4444' : '1px solid #e2e8f0', 
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === '0' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
+            transform: filtroEstatus === '0' ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <div style={{ fontSize: '24px', marginBottom: '5px' }}>❌</div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>RECHAZADAS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.rechazadas}</div>
@@ -594,7 +653,7 @@ export default function AdminSolicitudes() {
 
       <div className="card" style={{ padding: '32px' }}>
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de Solicitudes</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de solicitudes</h3>
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <SearchBar 
