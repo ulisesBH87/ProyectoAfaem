@@ -132,3 +132,32 @@ def requerir_roles(*roles_permitidos):
         return usuario
 
     return verificador
+
+def obtener_usuario_desde_token(token: str, db: Session):
+    payload = verificar_token(token)
+
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tipo de token inválido"
+        )
+
+    usuario_id = payload.get("sub")
+
+    if usuario_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido"
+        )
+
+    usuario_id = int(usuario_id)
+
+    usuario = obtener_usuario_por_id(db, usuario_id)
+
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado"
+        )
+
+    return usuario
