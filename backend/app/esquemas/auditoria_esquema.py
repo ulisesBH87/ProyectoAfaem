@@ -9,3 +9,5 @@ class AuditoriaResponse(BaseModel):
     Usuario: str
     FechaAccion: datetime
     Descripcion: str
+    ValoresAntes: dict | None
+    ValoresDespues: dict | None
