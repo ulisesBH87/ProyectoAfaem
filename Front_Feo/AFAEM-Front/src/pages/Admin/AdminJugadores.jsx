@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getJugadoresDirectorio, getJugadorDocumentos, updateJugador } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
@@ -9,6 +9,7 @@ import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSelecc
 
 export default function AdminJugadores() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [jugadores, setJugadores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,9 +47,23 @@ export default function AdminJugadores() {
     loadJugadores();
   }, [navigate]);
 
+  // EFECTO PARA ABRIR EDICIÓN AUTOMÁTICA DESDE BÚSQUEDA
+  useEffect(() => {
+    if (!loading && jugadores.length > 0 && location.state?.editPlayerId) {
+      const playerToEdit = jugadores.find(j => j.MiembroEquipoId === location.state.editPlayerId);
+      if (playerToEdit) {
+        handleEditarJugador(playerToEdit);
+        // Limpiar el estado para que no se abra de nuevo al recargar
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [loading, jugadores, location.state]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [filtroEstatus, searchTerm, sortOrder]);  const filteredJugadores = React.useMemo(() => {
+  }, [filtroEstatus, searchTerm, sortOrder]);
+
+  const filteredJugadores = React.useMemo(() => {
     let result = [...jugadores];
     
     if (filtroEstatus !== 'todos') {
