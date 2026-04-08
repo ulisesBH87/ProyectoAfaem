@@ -7,7 +7,8 @@ import {
   FaUpload, 
   FaFilePdf, 
   FaSyncAlt,
-  FaCheckCircle
+  FaCheckCircle,
+  FaSearchPlus
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { getSolicitudes } from '../../services/solicitud';
@@ -20,7 +21,8 @@ import {
   EntradaFormulario, 
   EntradaSeleccion, 
   AreaTexto,
-  Cargador
+  Cargador,
+  Modal
 } from '../../components/partials';
 
 // Badge Estilizado para los pasos
@@ -45,6 +47,17 @@ const StepBadge = ({ number, isActive, isDone }) => (
 
 export default function AdminCrearJugador() {
   const navigate = useNavigate();
+
+  // ESTILO DINÁMICO PARA HOVER
+  const hoverStyles = `
+    .document-card:hover .overlay-actions {
+      opacity: 1 !important;
+    }
+    .document-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+  `;
   
   // ESTADOS
   const [equiposDb, setEquiposDb] = useState([]);
@@ -105,6 +118,11 @@ export default function AdminCrearJugador() {
     juegoClubExtranjero: ''
   });
 
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [signedForm, setSignedForm] = useState(null);
+  const [signedFormPreview, setSignedFormPreview] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!extractedData.equipoSeleccionado;
   const isStep2Done = Object.values(documents).some(d => d !== null);
@@ -159,7 +177,8 @@ export default function AdminCrearJugador() {
       };
       reader.readAsDataURL(file);
     } else if (file.type === 'application/pdf') {
-      setPreviews(prev => ({ ...prev, [documentKey]: 'pdf_icon' }));
+      const url = URL.createObjectURL(file);
+      setPreviews(prev => ({ ...prev, [documentKey]: url }));
     }
 
     // VALIDACIÓN DE FOTOGRAFÍA
@@ -348,17 +367,26 @@ export default function AdminCrearJugador() {
         safeSetField(form, 'El jugador ha jugado en un Club extranjero...', extractedData.juegoClubExtranjero);
       }
 
-      // 3. FECHA DE DESCARGA AUTOMÁTICA
+      // 3. FECHA DE DESCARGA AUTOMÁTICA (Desglosada)
       const now = new Date();
-      const fechaDescarga = now.toLocaleDateString('es-MX', { 
-        day: '2-digit', 
-        month: 'long', 
-        year: 'numeric' 
-      });
-      safeSetField(form, 'Fecha de descarga', fechaDescarga);
-      // Fallback por si el nombre del campo en el PDF es diferente
-      safeSetField(form, 'Fecha descarga', fechaDescarga);
-      safeSetField(form, 'Fecha', fechaDescarga);
+      const dia = now.getDate().toString().padStart(2, '0');
+      const mes = now.toLocaleDateString('es-MX', { month: 'long' }).toUpperCase();
+      const anio = now.getFullYear().toString().slice(-2); // Solo los últimos 2 dígitos (24, 25, 26, etc.)
+
+      // Intentar varios nombres comunes para los campos de fecha
+      const diaFields = ['Dia', 'Día', 'dia', 'day', 'Fecha Dia'];
+      const mesFields = ['Mes', 'mes', 'month', 'Fecha Mes'];
+      const anioFields = ['Anio', 'Año', 'anio', 'año', 'year', 'Anio_2', 'Año_2', 'Fecha Anio'];
+
+      diaFields.forEach(f => safeSetField(form, f, dia));
+      mesFields.forEach(f => safeSetField(form, f, mes));
+      anioFields.forEach(f => safeSetField(form, f, anio));
+
+      // Mantener el campo completo por si acaso
+      const fechaCompleta = `${dia} DE ${mes} DE 20${anio}`;
+      safeSetField(form, 'Fecha de descarga', fechaCompleta);
+      safeSetField(form, 'Fecha descarga', fechaCompleta);
+      safeSetField(form, 'Fecha', fechaCompleta);
 
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -372,26 +400,44 @@ export default function AdminCrearJugador() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      Swal.fire('Listo!', 'El formato se ha descargado correctamente.', 'success');
+      Swal.close(); 
+      return true; // Indicar éxito
     } catch (err) {
       console.error("Error PDF:", err);
       Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
+      return false;
     }
   };
 
-  // GUARDAR JUGADOR
+  // GUARDAR JUGADOR (Ahora abre el modal final)
   const handleGuardar = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (!extractedData.nombreJugador || !extractedData.curp) {
       Swal.fire('Atención', 'Los campos Nombre y CURP son obligatorios.', 'warning');
       return;
     }
 
+    // 1. Descargar el formato automáticamente
+    const success = await handleDownloadFormato();
+    
+    if (success) {
+      // 2. Abrir el modal de finalización
+      setShowFinishModal(true);
+    }
+  };
+
+  // ENVÍO FINAL A BACKEND
+  const handleFinalizarInscripcion = async () => {
+    if (!signedForm) {
+      Swal.fire('Archivo requerido', 'Por favor, suba el formato de afiliación firmado para finalizar.', 'warning');
+      return;
+    }
+
     setUploading(true);
     Swal.fire({
-      title: 'Inscribiendo Jugador',
-      text: 'Comunicando con el servidor...',
+      title: 'Finalizando Inscripción',
+      text: 'Enviando información y documentos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -401,7 +447,7 @@ export default function AdminCrearJugador() {
       formData.append('equipo_temporal_id', parseInt(extractedData.equipoSeleccionado, 10));
       formData.append('nombre', (extractedData.nombreJugador || '').toString().trim());
       formData.append('primer_apellido', (extractedData.apellidoPaterno || '').toString().trim());
-      formData.append('segundo_apellido', (extractedData.apellidoMaterno || '').toString().trim()); // Evitar null/undefined
+      formData.append('segundo_apellido', (extractedData.apellidoMaterno || '').toString().trim());
       formData.append('curp', (extractedData.curp || '').toString().toUpperCase());
       formData.append('sexo_id', parseInt(extractedData.genero, 10));
       formData.append('fecha_nacimiento', extractedData.fechaNacimiento);
@@ -418,23 +464,27 @@ export default function AdminCrearJugador() {
         formData.append('pais_resid_actual', extractedData.paisResidencia);
         formData.append('ha_vivido_extranjero', extractedData.haVividoExtranjero ? '1' : '0');
         formData.append('donde_vivido', extractedData.dondeVividoExtranjero);
-        // ... otros campos si el backend los soporta
       }
 
-      const docsParams = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
-      docsParams.forEach(key => {
+      // Otros documentos
+      ['actaNacimiento', 'identificacion', 'fotografia'].forEach(key => {
         if (documents[key]) {
           formData.append('documento_afiliacion_ids', 3);
           formData.append('archivos', documents[key]);
         }
       });
 
+      // El formato firmado desde el modal
+      formData.append('documento_afiliacion_ids', 3);
+      formData.append('archivos', signedForm);
+
       await registrarJugadorTemporal(formData);
 
+      setShowFinishModal(false);
       Swal.fire({
         icon: 'success',
-        title: 'Jugador Inscrito',
-        text: 'El jugador ha sido añadido directamente al equipo solicitado.'
+        title: 'Jugador Inscrito Correctamente',
+        text: 'El expediente se ha completado con el formato firmado.'
       }).then(() => {
         navigate('/admin/jugadores');
       });
@@ -448,6 +498,7 @@ export default function AdminCrearJugador() {
 
   return (
     <div className="dashboard-content">
+      <style>{hoverStyles}</style>
       {/* HEADER */}
       <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -536,39 +587,117 @@ export default function AdminCrearJugador() {
               {[
                 { key: 'actaNacimiento', title: 'Acta de Nacimiento' },
                 { key: 'identificacion', title: 'Identificación (INE/Pasaporte)' },
-                { key: 'fotografia', title: 'Fotografía Infantil' },
-                { key: 'formatoAfiliacion', title: 'Formato de Afiliación Firmado' }
+                { key: 'fotografia', title: 'Fotografía Infantil' }
               ].map(doc => (
                 <div 
                   key={doc.key}
+                  className="document-card"
                   style={{
                     backgroundColor: 'white',
                     borderRadius: '20px',
                     border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                    padding: '20px',
+                    padding: '15px',
                     textAlign: 'center',
-                    cursor: 'pointer',
                     transition: 'all 0.3s',
                     position: 'relative',
                     overflow: 'hidden'
                   }}
-                  onClick={() => document.getElementById(`file-${doc.key}`).click()}
                 >
-                  {previews[doc.key] ? (
-                    previews[doc.key] === 'pdf_icon' ? (
-                      <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', fontSize: '40px' }}>
-                        <FaFilePdf />
+                  <div style={{
+                    height: '140px',
+                    width: '100%',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '12px',
+                    marginBottom: '10px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #f1f5f9'
+                  }}>
+                    {previews[doc.key] ? (
+                      <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                        {/* MINIATURA */}
+                        {(previews[doc.key].startsWith('blob:') && documents[doc.key]?.type === 'application/pdf') || previews[doc.key] === 'pdf_icon' ? (
+                          <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                            <FaFilePdf />
+                            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                          </div>
+                        ) : (
+                          <img 
+                            src={previews[doc.key]} 
+                            alt="Preview" 
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                          />
+                        )}
+
+                        {/* OVERLAY (Se controla via CSS en index.css o inline hover si fuera necesario) */}
+                        <div className="overlay-actions" style={{
+                          position: 'absolute',
+                          top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '12px',
+                          opacity: 0,
+                          transition: 'opacity 0.2s ease',
+                          backdropFilter: 'blur(2px)'
+                        }}>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isPdf = documents[doc.key]?.type === 'application/pdf';
+                              setPreviewDoc({
+                                open: true,
+                                url: previews[doc.key],
+                                type: isPdf ? 'pdf' : 'image',
+                                title: doc.title
+                              });
+                            }}
+                            className="btn-zoom"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '50%',
+                              backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                            }}
+                          >
+                            <FaSearchPlus />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              document.getElementById(`file-${doc.key}`).click();
+                            }}
+                            className="btn-change"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '50%',
+                              backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                            }}
+                          >
+                            <FaSyncAlt />
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <img src={previews[doc.key]} alt="Preview" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '12px', marginBottom: '10px' }} />
-                    )
-                  ) : (
-                    <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '30px' }}>
-                      <FaUpload />
-                    </div>
-                  )}
+                      /* ESTADO VACÍO */
+                      <div 
+                        onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                        style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                      >
+                        <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                      </div>
+                    )}
+                  </div>
                   
-                  <h4 style={{ fontSize: '13px', fontWeight: '700', margin: '8px 0', color: '#1e293b' }}>{doc.title}</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
                   <div style={{ 
                     display: 'inline-flex', 
                     alignItems: 'center', 
@@ -577,10 +706,10 @@ export default function AdminCrearJugador() {
                     borderRadius: '20px',
                     backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9',
                     color: documents[doc.key] ? '#166534' : '#64748b',
-                    fontSize: '11px',
-                    fontWeight: '700'
+                    fontSize: '10px',
+                    fontWeight: '800'
                   }}>
-                    {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Subir archivo'}
+                    {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                   </div>
                   <input 
                     type="file" 
@@ -609,20 +738,15 @@ export default function AdminCrearJugador() {
         {/* PASO 3: INFORMACIÓN DEL JUGADOR */}
         {showStep3 && (
           <section className="fade-in" style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <StepBadge number="3" isActive={true} isDone={false} />
                 <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de Afiliación Completo</h3>
               </div>
-              <BotonSecundario 
-                etiqueta="Descargar Formato Pre-llenado" 
-                icono={<FaFilePdf />} 
-                alHacerClick={handleDownloadFormato} 
-                estilo={{ height: '38px', fontSize: '13px', backgroundColor: '#f59e0b', color: 'white', border: 'none' }}
-              />
             </div>
 
             {/* SECCIÓN 1: DATOS DEL AFILIADO */}
+            {/* ... (Tarjeta content remains same, I'm just fixing the structure here) ... */}
             <Tarjeta titulo="1. Datos del afiliado" estilo={{ marginBottom: '20px' }}>
                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                 <EntradaFormulario
@@ -833,6 +957,116 @@ export default function AdminCrearJugador() {
           </section>
         )}
       </div>
+
+      {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
+      <Modal
+        estaAbierto={previewDoc.open}
+        titulo={previewDoc.title}
+        alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+        tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+        pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+      >
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '300px',
+          backgroundColor: '#f1f5f9',
+          borderRadius: '12px',
+          overflow: 'hidden'
+        }}>
+          {previewDoc.type === 'pdf' ? (
+            <iframe 
+              src={previewDoc.url} 
+              style={{ width: '100%', height: '70vh', border: 'none' }} 
+              title="Visor de PDF"
+            />
+          ) : (
+            <img 
+              src={previewDoc.url} 
+              alt="Preview Grande" 
+              style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }} 
+            />
+          )}
+        </div>
+      </Modal>
+
+      {/* MODAL DE FINALIZACIÓN Y CARGA DE FORMATO */}
+      <Modal
+        estaAbierto={showFinishModal}
+        titulo="Finalizar Inscripción de Jugador"
+        alCerrar={() => setShowFinishModal(false)}
+        tamanio="medio"
+        pie={
+          <>
+            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setShowFinishModal(false)} />
+            <BotonPrimario 
+              etiqueta={uploading ? "Enviando..." : "Finalizar Inscripción"} 
+              icono={<FaCheckCircle />} 
+              alHacerClick={handleFinalizarInscripcion}
+              deshabilitado={uploading || !signedForm}
+            />
+          </>
+        }
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            backgroundColor: '#f0f9ff', 
+            border: '1px solid #bae6fd', 
+            borderRadius: '16px', 
+            padding: '20px', 
+            marginBottom: '25px',
+            color: '#0369a1',
+            fontSize: '14px',
+            lineHeight: '1.6'
+          }}>
+            <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
+               ¡Formato descargado con éxito!
+            </p>
+            <p style={{ margin: 0 }}>
+              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada. 
+              <strong> A continuación debe subir el formato ya firmado</strong> para finalizar con la inscripción de este nuevo jugador al equipo.
+            </p>
+          </div>
+
+          <div 
+            onClick={() => document.getElementById('final-signed-form').click()}
+            style={{ 
+              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+              borderRadius: '20px',
+              padding: '40px 20px',
+              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+          >
+            {signedForm ? (
+              <div style={{ color: '#10b981' }}>
+                <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+              </div>
+            ) : (
+              <div style={{ color: '#0ea5e9' }}>
+                <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+              </div>
+            )}
+            <input 
+              type="file" 
+              id="final-signed-form" 
+              style={{ display: 'none' }} 
+              accept=".pdf"
+              onChange={(e) => {
+                if (e.target.files[0]) {
+                  setSignedForm(e.target.files[0]);
+                }
+              }} 
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

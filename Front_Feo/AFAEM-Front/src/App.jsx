@@ -32,19 +32,14 @@ const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 import MainLayout from './layouts/MainLayout';
+import Loader from './components/Loader';
 
 function App() {
   const userEmail = localStorage.getItem('email') || 'usuario@afaem.com';
 
   return (
     <Router>
-      <Suspense fallback={
-        <div style={{ padding: '40px', textAlign: 'center' }}>
-          <div className="skeleton" style={{ width: '100%', height: '80px', marginBottom: '20px' }} />
-          <div className="skeleton" style={{ width: '280px', height: '100vh', position: 'fixed', left: 0, top: 0 }} />
-          <div className="skeleton" style={{ width: 'calc(100% - 280px)', height: '100vh', marginLeft: '280px' }} />
-        </div>
-      }>
+      <Suspense fallback={<Loader text="AFAEM DIGITAL" />}>
         <Routes>
           <Route path="/" element={<Ingresar />} />
           <Route path="/ingresar" element={<Ingresar />} />
