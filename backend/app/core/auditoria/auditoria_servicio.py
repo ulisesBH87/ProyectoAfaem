@@ -33,38 +33,45 @@ def build_audit_entry(
     }
 
 #Visualización de registros
-def construir_descripcion(auditoria, usuario_nombre):
+def construir_descripcion(auditoria, usuario_nombre, antes, despues):
 
     accion = auditoria.CatalogoAccion.Accion
-
-    antes = json.loads(auditoria.ValoresAntes) if auditoria.ValoresAntes else {}
-    despues = json.loads(auditoria.ValoresDespues) if auditoria.ValoresDespues else {}
-
     entidad = auditoria.EntidadAfectada
 
-    nombre = ""
-
-    
     fuente = despues if accion == "CREATE" else antes
+
+    nombre = ""
 
     if entidad == "Personas":
         nombre = f"{fuente.get('Nombre', '')} {fuente.get('PrimerApellido', '')}".strip()
 
+        if not nombre:
+            nombre = f"{despues.get('Nombre', '')} {despues.get('PrimerApellido', '')}".strip()
+
     elif entidad == "Equipos":
-        nombre = fuente.get("NombreEquipo", "")
+        nombre = fuente.get("NombreEquipo", "") or despues.get("NombreEquipo", "")
 
     if accion == "CREATE":
-        return f"{usuario_nombre} creó {entidad} {nombre}"
+        return f"{usuario_nombre} creó {entidad} {nombre}".strip()
 
     elif accion == "UPDATE":
-        campos = ", ".join(despues.keys())
-        return f"{usuario_nombre} editó {entidad} {nombre} ({campos})"
+
+        cambios = []
+
+        for campo in despues:
+            valor_antes = antes.get(campo)
+            valor_despues = despues.get(campo)
+
+            cambios.append(f"{campo}: '{valor_antes}' → '{valor_despues}'")
+
+        detalle = ", ".join(cambios)
+
+        return f"{usuario_nombre} editó {entidad} {nombre} ({detalle})".strip()
 
     elif accion == "DELETE":
-        return f"{usuario_nombre} eliminó {entidad} {nombre}"
+        return f"{usuario_nombre} eliminó {entidad} {nombre}".strip()
 
     return "Acción desconocida"
-
 
 def obtener_auditorias(db: Session):
 
@@ -82,21 +89,34 @@ def obtener_auditorias(db: Session):
 
         if usuario:
             persona = db.query(Personas).get(usuario.PersonaId)
-            usuario_nombre = persona.Nombre if persona else "SYSTEM"
+            if persona:
+                usuario_nombre = persona.Nombre
+                usuario_pa = persona.PrimerApellido
+                usuario_ma = persona.SegundoApellido
+
+                nombre_completo = usuario_nombre + " " + usuario_pa + " " + usuario_ma
+            else:
+                usuario_nombre = "SYSTEM"
+                nombre_completo = usuario_nombre
         else:
             usuario_nombre = "SYSTEM"
-
-        descripcion = construir_descripcion(a, usuario_nombre)
+            nombre_completo = usuario_nombre
 
         antes = json.loads(a.ValoresAntes) if a.ValoresAntes else None
         despues = json.loads(a.ValoresDespues) if a.ValoresDespues else None
+
+        
+        if despues:
+            despues.pop("PersonaId", None)
+
+        descripcion = construir_descripcion(a, nombre_completo, antes or {}, despues or {})
 
         resultado.append({
             "AuditoriaId": a.AuditoriaId,
             "EntidadAfectada": a.EntidadAfectada,
             "RegistroId": a.RegistroId,
             "Accion": a.CatalogoAccion.Accion,
-            "Usuario": usuario_nombre,
+            "Usuario": nombre_completo,
             "FechaAccion": a.FechaAccion,
             "Descripcion": descripcion,
             "ValoresAntes": antes,
