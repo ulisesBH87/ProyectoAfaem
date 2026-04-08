@@ -738,18 +738,18 @@ function PreRegistroPresidente() {
       const token = localStorage.getItem('token');
 
       // Upload each document
+      /* 
+      // TODO: Rehabilitar este bloque cuando se cuente con un servidor de almacenamiento de archivos.
       for (const docKey of requiredDocs) {
         const file = documents[docKey];
         const formData = new FormData();
-        // Removemos persona_id para que el backend lo obtenga dinámicamente usando el token
-        formData.append('documento_afiliacion_ids', 3); // Hardcoded to 3 as requested
+        formData.append('documento_afiliacion_ids', 3); 
         formData.append('archivo', file);
 
         const response = await fetch(`${API_BASE}/documentos/`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
-            // Note: Do NOT set Content-Type for FormData, the browser handles the multipart boundary automatically
           },
           body: formData
         });
@@ -757,6 +757,35 @@ function PreRegistroPresidente() {
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           throw new Error(`Error subiendo ${docKey}: ${errData.detail || response.statusText}`);
+        }
+      }
+      */
+
+      // --- BYPASS DE DOCUMENTOS ---
+      // Obtenemos la solicitud actual del usuario para marcarla como completa
+      console.log('🔄 Marcando solicitud como completa (Bypass de archivos)...');
+      
+      const resMisSolicitudes = await fetch(`${API_BASE}/solicitud/solicitudes-usuarios`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!resMisSolicitudes.ok) throw new Error('No se pudo verificar el estado de la solicitud.');
+      const solicitudesData = await resMisSolicitudes.json();
+      
+      // Buscamos la solicitud del usuario (usualmente es la más reciente o la única pendiente)
+      const miSolicitud = Array.isArray(solicitudesData) 
+        ? solicitudesData.find(s => String(s.UsuarioId) === String(personaId)) 
+        : null;
+
+      if (miSolicitud && miSolicitud.SolicitudId) {
+        // Marcamos la solicitud como completa (Status 4 - Revisión)
+        const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?solicitud_id=${miSolicitud.SolicitudId}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!resCompleta.ok) {
+          console.warn('⚠️ No se pudo marcar la solicitud como completa en el backend.');
         }
       }
 
