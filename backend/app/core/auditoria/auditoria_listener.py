@@ -2,7 +2,7 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 
 from app.core.auditoria.auditoria_servicio import build_audit_entry
-from app.core.auditoria.serializadores import model_to_dict
+from app.core.auditoria.serializadores import EXCLUIR, model_to_dict
 from app.enums.entidades import EntidadAuditable
 from app.modelos.auditoria import Auditoria
 
@@ -36,11 +36,11 @@ def obtener_registro_id(obj):
 @event.listens_for(Session, "before_flush")
 def audit_before_flush(session, flush_context, instances):
     buffer = session.info.setdefault(BUFFER_AUDITORIA_KEY, [])
-    
+
     for obj in session.new:
         if es_registro_auditoria(obj) or not es_auditable(obj):
             continue
-
+        
         buffer.append({
             "tipo": "CREATE",
             "obj": obj,
@@ -59,6 +59,9 @@ def audit_before_flush(session, flush_context, instances):
         for attr in state.attrs:
             hist = attr.history
             if not hist.has_changes():
+                continue
+
+            if attr.key in EXCLUIR:
                 continue
 
             anteriores[attr.key] = hist.deleted[0] if hist.deleted else None

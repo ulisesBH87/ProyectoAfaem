@@ -64,23 +64,39 @@ def construir_descripcion(auditoria, usuario_nombre, antes, despues):
 
     nombre = ""
 
+    # === PERSONAS ===
     if entidad == "Personas":
         nombre = f"{fuente.get('Nombre', '')} {fuente.get('PrimerApellido', '')}".strip()
 
         if not nombre:
             nombre = f"{despues.get('Nombre', '')} {despues.get('PrimerApellido', '')}".strip()
 
+
+    # === EQUIPOS ===
     elif entidad == "Equipos":
         nombre = fuente.get("NombreEquipo", "") or despues.get("NombreEquipo", "")
 
+    # === USUARIOS ===
+    elif entidad == "Usuarios":
+        fuente = despues if accion == "CREATE" else antes
+        correo = fuente.get("Correo", "")
+
+        if not correo:
+            correo = despues.get("Correo", "")
+
+        nombre = correo
+
+    # === ACCIONES ===
     if accion == "CREATE":
         return f"{usuario_nombre} creó {entidad} {nombre}".strip()
 
     elif accion == "UPDATE":
+        
 
         cambios = []
 
         for campo in despues:
+
             valor_antes = antes.get(campo)
             valor_despues = despues.get(campo)
 
