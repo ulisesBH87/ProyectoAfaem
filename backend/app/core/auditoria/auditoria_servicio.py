@@ -10,6 +10,53 @@ from app.modelos.catalogo_accion import CatalogoAccion
 
 SYSTEM_USER_ID = 0
 
+#Traducciones para frontend
+MAPEO_ENTIDADES = {
+    "Personas": "Persona",
+    "Usuarios": "Usuario",
+    "Equipos": "Equipo"
+}
+
+MAPEO_ACCIONES = {
+    "CREATE": "creado",
+    "UPDATE": "actualizado",
+    "DELETE": "eliminado"
+}
+
+#Traducción de acciones
+def construir_cambios(antes, despues):
+    cambios = []
+
+    for campo in despues:
+        cambios.append({
+            "campo": campo,
+            "antes": antes.get(campo),
+            "despues": despues.get(campo)
+        })
+
+    return cambios
+
+def construir_resumen(entidad, antes, despues, accion):
+
+    fuente = despues if accion == "CREATE" else antes
+
+    if entidad == "Personas":
+        nombre_antes = f"{antes.get('Nombre', '')} {antes.get('PrimerApellido', '')}".strip()
+        nombre_despues = f"{despues.get('Nombre', '')} {despues.get('PrimerApellido', '')}".strip()
+
+        if accion == "UPDATE":
+            return f"{nombre_antes} → {nombre_despues}"
+
+        return nombre_despues
+
+    elif entidad == "Equipos":
+        return despues.get("NombreEquipo") or antes.get("NombreEquipo")
+
+    elif entidad == "Usuarios":
+        return despues.get("Correo") or antes.get("Correo")
+
+    return ""
+
 #CREACIÓN DE REGISTRO
 def build_audit_entry(
     db,
@@ -140,16 +187,26 @@ def obtener_auditorias(db: Session, page: int, size: int):
 
         descripcion = construir_descripcion(a, nombre_completo, antes, despues)
 
+        entidad_legible = MAPEO_ENTIDADES.get(a.EntidadAfectada, a.EntidadAfectada)
+
+        cambios = construir_cambios(antes, despues) if a.CatalogoAccion.Accion == "UPDATE" else []
+
+        resumen = construir_resumen(
+            a.EntidadAfectada,
+            antes,
+            despues,
+            a.CatalogoAccion.Accion
+        )
+
         resultado.append({
             "AuditoriaId": a.AuditoriaId,
-            "EntidadAfectada": a.EntidadAfectada,
-            "RegistroId": a.RegistroId,
-            "Accion": a.CatalogoAccion.Accion,
-            "Usuario": nombre_completo,
-            "FechaAccion": a.FechaAccion,
-            "Descripcion": descripcion,
-            "ValoresAntes": antes,
-            "ValoresDespues": despues
+            "titulo": f"{entidad_legible} {MAPEO_ACCIONES.get(a.CatalogoAccion.Accion)}",
+            "usuario_que_realizo_la_accion": nombre_completo,
+            "fecha": a.FechaAccion,
+            "entidad": entidad_legible,
+            "accion": a.CatalogoAccion.Accion,
+            "resumen": resumen,
+            "cambios": cambios
         })
 
     return {
