@@ -112,11 +112,17 @@ def construir_descripcion(auditoria, usuario_nombre, antes, despues):
     return "Acción desconocida"
 
 
-def obtener_auditorias(db: Session):
+def obtener_auditorias(db: Session, page: int, size: int):
+
+    offset = (page - 1) * size
+    total = db.query(Auditoria).count()
 
     auditorias = (
         db.query(Auditoria)
         .join(CatalogoAccion)
+        .order_by(Auditoria.FechaAccion.desc())
+        .offset(offset)
+        .limit(size)
         .all()
     )
 
@@ -146,4 +152,10 @@ def obtener_auditorias(db: Session):
             "ValoresDespues": despues
         })
 
-    return resultado
+    return {
+        "page": page,
+        "size": size,
+        "total": total,
+        "total_pages": (total + size - 1) // size,
+        "data": resultado
+    }
