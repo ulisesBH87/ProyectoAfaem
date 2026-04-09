@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFootballBall, FaTags, FaCalendar } from 'react-icons/fa';
+import { FaFootballBall, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -8,6 +8,7 @@ import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
 import { validarFotografia } from "../../services/foto";
 import teamsService from "../../services/teams";
+import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 
 export default function ConfigurarEquipo() {
   const navigate = useNavigate();
@@ -68,6 +69,9 @@ export default function ConfigurarEquipo() {
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [signedForm, setSignedForm] = useState(null);
+  const [pendingPlayer, setPendingPlayer] = useState(null);
 
   // Lógica de Borradores
   const saveDraft = () => {
@@ -954,62 +958,12 @@ export default function ConfigurarEquipo() {
                             Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona seguro y sube INE y Foto para continuar.', 'warning');
                             return;
                           }
-                          
                           // 1. Descargamos el PDF
                           await handleDownloadPlayerPDF();
-                          
-                          // 2. Mostramos el Swal alert para pedir que suban el documento firmado
-                          const { value: fileFormato } = await Swal.fire({
-                             title: '¡Formato descargado con éxito!',
-                             html: `
-                               <p style="font-size:14px; margin-bottom:15px; color:#0369a1;">Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada. <strong>A continuación debe subir el formato ya firmado</strong> para finalizar.</p>
-                               <input type="file" id="formato-swal" class="swal2-file" accept=".pdf">
-                             `,
-                             showCancelButton: true,
-                             confirmButtonText: 'Guardar y Finalizar',
-                             cancelButtonText: 'Cancelar',
-                             preConfirm: () => {
-                               const fileInput = document.getElementById('formato-swal');
-                               if (!fileInput.files[0]) {
-                                 Swal.showValidationMessage('Debe subir el formato firmado para continuar');
-                                 return false;
-                               }
-                               return fileInput.files[0];
-                             }
-                          });
-                          
-                          if (fileFormato) {
-                             const finalPlayer = {
-                               ...currentPlayer,
-                               documents: { ...currentPlayer.documents, formato: fileFormato }
-                             };
-                             setPlayers([...players, finalPlayer]);
-                             setCurrentPlayer({
-                               id: Date.now(),
-                               firstName: '',
-                               lastNamePaterno: '',
-                               lastNameMaterno: '',
-                               curp: '',
-                               birthDate: '',
-                               sexo_id: 1,
-                               insuranceType: '',
-                               esForaneo: false,
-                               nacionalidadJugador: 'MEXICANA',
-                               paisResidencia: 'MÉXICO',
-                               haVividoExtranjero: false,
-                               dondeVividoExtranjero: '',
-                               nacionalidadPadre: '',
-                               nacionalidadMadre: '',
-                               registroAsociacionExtranjera: '',
-                               nacAbueloPaterno: '',
-                               nacAbuelaPaterna: '',
-                               nacAbueloMaterno: '',
-                               nacAbuelaMaterna: '',
-                               juegoClubExtranjero: '',
-                               documents: {}
-                             });
-                             Swal.fire('Éxito', 'Jugador agregado correctamente', 'success');
-                          }
+                          // 2. Guardamos el jugador pendiente y abrimos el modal premium
+                          setPendingPlayer({ ...currentPlayer });
+                          setSignedForm(null);
+                          setShowFinishModal(true);
                         }}
                         style={{ padding: '14px 30px', background: '#0b4ea6', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)', fontSize: '15px' }}
                       >
@@ -1174,6 +1128,122 @@ export default function ConfigurarEquipo() {
           </div>
         </div>
       )}
+
+      {/* MODAL PREMIUM: SUBIR FORMATO FIRMADO */}
+      <Modal
+        estaAbierto={showFinishModal}
+        titulo="Finalizar Inscripción de Jugador"
+        alCerrar={() => setShowFinishModal(false)}
+        tamanio="medio"
+        pie={
+          <>
+            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setShowFinishModal(false)} />
+            <BotonPrimario
+              etiqueta="Finalizar Inscripción"
+              icono={<FaCheckCircle />}
+              alHacerClick={() => {
+                if (!signedForm) {
+                  Swal.fire('Atención', 'Debe subir el formato firmado para continuar.', 'warning');
+                  return;
+                }
+                const finalPlayer = {
+                  ...pendingPlayer,
+                  documents: { ...pendingPlayer.documents, formato: signedForm }
+                };
+                setPlayers(prev => [...prev, finalPlayer]);
+                setCurrentPlayer({
+                  id: Date.now(),
+                  firstName: '',
+                  lastNamePaterno: '',
+                  lastNameMaterno: '',
+                  curp: '',
+                  birthDate: '',
+                  sexo_id: 1,
+                  insuranceType: '',
+                  esForaneo: false,
+                  nacionalidadJugador: 'MEXICANA',
+                  paisResidencia: 'MÉXICO',
+                  haVividoExtranjero: false,
+                  dondeVividoExtranjero: '',
+                  nacionalidadPadre: '',
+                  nacionalidadMadre: '',
+                  registroAsociacionExtranjera: '',
+                  nacAbueloPaterno: '',
+                  nacAbuelaPaterna: '',
+                  nacAbueloMaterno: '',
+                  nacAbuelaMaterna: '',
+                  juegoClubExtranjero: '',
+                  documents: {}
+                });
+                setPendingPlayer(null);
+                setSignedForm(null);
+                setShowFinishModal(false);
+                Swal.fire({ title: '¡Éxito!', text: 'Jugador agregado correctamente.', icon: 'success', timer: 2000, showConfirmButton: false });
+              }}
+              deshabilitado={!signedForm}
+            />
+          </>
+        }
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '25px',
+            color: '#0369a1',
+            fontSize: '14px',
+            lineHeight: '1.6'
+          }}>
+            <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
+              ¡Formato descargado con éxito!
+            </p>
+            <p style={{ margin: 0 }}>
+              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada.
+              <strong> A continuación debe subir el formato ya firmado</strong> para finalizar con la inscripción de este nuevo jugador al equipo.
+            </p>
+          </div>
+
+          <div
+            onClick={() => document.getElementById('presidente-signed-form').click()}
+            style={{
+              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+              borderRadius: '20px',
+              padding: '40px 20px',
+              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+          >
+            {signedForm ? (
+              <div style={{ color: '#10b981' }}>
+                <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+              </div>
+            ) : (
+              <div style={{ color: '#0ea5e9' }}>
+                <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+              </div>
+            )}
+            <input
+              type="file"
+              id="presidente-signed-form"
+              style={{ display: 'none' }}
+              accept=".pdf"
+              onChange={(e) => {
+                if (e.target.files[0]) {
+                  setSignedForm(e.target.files[0]);
+                }
+              }}
+            />
+          </div>
+        </div>
+      </Modal>
+
       </div>
     </>
   );
