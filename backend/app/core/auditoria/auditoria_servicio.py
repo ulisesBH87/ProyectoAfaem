@@ -12,25 +12,47 @@ SYSTEM_USER_ID = 0
 
 #CREACIÓN DE REGISTRO
 def build_audit_entry(
+    db,
     entidad,
     registro_id,
     accion_id,
     valores_antes,
     valores_despues
 ):
-    usuario_id = usuario_actual_id.get() or SYSTEM_USER_ID
+    
+    user_id = usuario_actual_id.get()
+    if not user_id:
+        user_id = SYSTEM_USER_ID
+
+    usuario_nombre = obtener_nombre_usuario(db, user_id)
     ip = ip_actual.get()
 
     return {
         "EntidadAfectada": entidad,
         "RegistroId": str(registro_id),
         "AccionId": accion_id,
-        "UsuarioId": usuario_id,
+        "UsuarioId": user_id,
+        "UsuarioNombre": usuario_nombre,
         "FechaAccion": datetime.utcnow(),
         "ValoresAntes": json.dumps(valores_antes) if valores_antes else None,
         "ValoresDespues": json.dumps(valores_despues) if valores_despues else None,
         "Ip": ip
     }
+
+#Obtener nombre de usuario al momento de realizar la acción
+def obtener_nombre_usuario(db, user_id):
+    if not user_id:
+        return "SYSTEM"
+
+    usuario = db.query(Usuario).get(user_id)
+    if not usuario:
+        return "SYSTEM"
+
+    persona = db.query(Personas).get(usuario.PersonaId)
+    if not persona:
+        return "SYSTEM"
+
+    return f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido}".strip()
 
 #Visualización de registros
 def construir_descripcion(auditoria, usuario_nombre, antes, despues):
@@ -73,6 +95,7 @@ def construir_descripcion(auditoria, usuario_nombre, antes, despues):
 
     return "Acción desconocida"
 
+
 def obtener_auditorias(db: Session):
 
     auditorias = (
@@ -85,31 +108,15 @@ def obtener_auditorias(db: Session):
 
     for a in auditorias:
 
-        usuario = db.query(Usuario).get(a.UsuarioId)
+        nombre_completo = a.UsuarioNombre or "SYSTEM"
 
-        if usuario:
-            persona = db.query(Personas).get(usuario.PersonaId)
-            if persona:
-                usuario_nombre = persona.Nombre
-                usuario_pa = persona.PrimerApellido
-                usuario_ma = persona.SegundoApellido
+        antes = json.loads(a.ValoresAntes) if a.ValoresAntes else {}
+        despues = json.loads(a.ValoresDespues) if a.ValoresDespues else {}
 
-                nombre_completo = usuario_nombre + " " + usuario_pa + " " + usuario_ma
-            else:
-                usuario_nombre = "SYSTEM"
-                nombre_completo = usuario_nombre
-        else:
-            usuario_nombre = "SYSTEM"
-            nombre_completo = usuario_nombre
-
-        antes = json.loads(a.ValoresAntes) if a.ValoresAntes else None
-        despues = json.loads(a.ValoresDespues) if a.ValoresDespues else None
-
-        
         if despues:
             despues.pop("PersonaId", None)
 
-        descripcion = construir_descripcion(a, nombre_completo, antes or {}, despues or {})
+        descripcion = construir_descripcion(a, nombre_completo, antes, despues)
 
         resultado.append({
             "AuditoriaId": a.AuditoriaId,

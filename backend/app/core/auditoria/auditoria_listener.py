@@ -101,6 +101,7 @@ def audit_after_flush(session, flush_context):
         registro_id = obtener_registro_id(obj)
 
         audit_data = build_audit_entry(
+            session,
             entidad=obj.__tablename__,
             registro_id=registro_id,
             accion_id=mapear_accion(item["tipo"]),

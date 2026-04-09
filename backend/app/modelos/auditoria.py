@@ -22,4 +22,6 @@ class Auditoria(Base):
     Ip = Column(String(45))
     ObservacionesAuditoria = Column(String(500))
 
+    UsuarioNombre = Column(String(200))
+
     CatalogoAccion = relationship("CatalogoAccion")
