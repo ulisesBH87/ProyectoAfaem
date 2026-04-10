@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFootballBall, FaTags, FaCalendar } from 'react-icons/fa';
+import { FaFootballBall, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -8,6 +8,7 @@ import { PDFDocument } from 'pdf-lib';
 import Swal from 'sweetalert2';
 import { validarFotografia } from "../../services/foto";
 import teamsService from "../../services/teams";
+import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 
 export default function ConfigurarEquipo() {
   const navigate = useNavigate();
@@ -42,6 +43,20 @@ export default function ConfigurarEquipo() {
     birthDate: '',
     sexo_id: 1, // 1: Masculino, 2: Femenino (según tu catálogo)
     insuranceType: '',
+    // Foráneo
+    esForaneo: false,
+    nacionalidadJugador: 'MEXICANA',
+    paisResidencia: 'MÉXICO',
+    haVividoExtranjero: false,
+    dondeVividoExtranjero: '',
+    nacionalidadPadre: '',
+    nacionalidadMadre: '',
+    registroAsociacionExtranjera: '',
+    nacAbueloPaterno: '',
+    nacAbuelaPaterna: '',
+    nacAbueloMaterno: '',
+    nacAbuelaMaterna: '',
+    juegoClubExtranjero: '',
     documents: {}
   });
 
@@ -54,6 +69,9 @@ export default function ConfigurarEquipo() {
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [signedForm, setSignedForm] = useState(null);
+  const [pendingPlayer, setPendingPlayer] = useState(null);
 
   // Lógica de Borradores
   const saveDraft = () => {
@@ -424,6 +442,24 @@ export default function ConfigurarEquipo() {
       form.getTextField('de')?.setText(mes);
       form.getTextField('del 20')?.setText(anio);
 
+      // Posición y NumCamiseta defaults si no tiene en este momento
+      form.getTextField('Posición')?.setText('JUGADOR');
+      
+      // ANTECEDENTES INTERNACIONALES (FORÁNEO)
+      if (currentPlayer.esForaneo) {
+        form.getTextField('Nacionalidades del jugador')?.setText(currentPlayer.nacionalidadJugador);
+        form.getTextField('País de residencia actual')?.setText(currentPlayer.paisResidencia);
+        form.getTextField('¿El jugador ha vivido en el extranjero? ¿En que país?')?.setText(currentPlayer.haVividoExtranjero ? currentPlayer.dondeVividoExtranjero : 'NO');
+        form.getTextField('Nacionalidades del padre')?.setText(currentPlayer.nacionalidadPadre);
+        form.getTextField('Nacionalidades de la madre')?.setText(currentPlayer.nacionalidadMadre);
+        form.getTextField('Nacionalidades del abuelo paterno')?.setText(currentPlayer.nacAbueloPaterno);
+        form.getTextField('Nacionalidades de la abuela paterna')?.setText(currentPlayer.nacAbuelaPaterna);
+        form.getTextField('Nacionalidades del abuelo materno')?.setText(currentPlayer.nacAbueloMaterno);
+        form.getTextField('Nacionalidades de la abuela materna')?.setText(currentPlayer.nacAbuelaMaterna);
+        
+        form.getTextField('El jugador ha jugado en un Club extranjero...')?.setText(currentPlayer.juegoClubExtranjero);
+      }
+
       // Cargo: JUGADOR
       form.getTextField('Cargo')?.setText('JUGADOR');
 
@@ -767,8 +803,7 @@ export default function ConfigurarEquipo() {
                         {[
                           { key: 'acta', label: 'Acta Nac.', icon: '📜' },
                           { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
-                          { key: 'foto', label: 'Foto', icon: '📸' },
-                          { key: 'formato', label: 'Formato', icon: '📝' }
+                          { key: 'foto', label: 'Foto', icon: '📸' }
                         ].map(doc => {
                           const isFormato = doc.key === 'formato';
                           const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
@@ -823,6 +858,86 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
+                    {/* ANTECEDENTES INTERNACIONALES */}
+                    <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
+                            2. Antecedentes internacionales
+                          </h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                             <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>¿Jugador foráneo?</label>
+                             <input 
+                               type="checkbox" 
+                               checked={currentPlayer.esForaneo}
+                               onChange={(e) => setCurrentPlayer({...currentPlayer, esForaneo: e.target.checked})}
+                               style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                             />
+                          </div>
+                       </div>
+                       
+                       {currentPlayer.esForaneo ? (
+                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad jugador</label>
+                              <input type="text" value={currentPlayer.nacionalidadJugador} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadJugador: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>País de residencia</label>
+                              <input type="text" value={currentPlayer.paisResidencia} onChange={e => setCurrentPlayer({...currentPlayer, paisResidencia: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿Ha vivido extranjero?</label>
+                              <select value={currentPlayer.haVividoExtranjero ? '1' : '0'} onChange={e => setCurrentPlayer({...currentPlayer, haVividoExtranjero: e.target.value === '1'})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}>
+                                 <option value="0">No</option>
+                                 <option value="1">Sí</option>
+                              </select>
+                            </div>
+                            {currentPlayer.haVividoExtranjero && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿Dónde?</label>
+                                <input type="text" value={currentPlayer.dondeVividoExtranjero} onChange={e => setCurrentPlayer({...currentPlayer, dondeVividoExtranjero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad padre</label>
+                              <input type="text" value={currentPlayer.nacionalidadPadre} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadPadre: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad madre</label>
+                              <input type="text" value={currentPlayer.nacionalidadMadre} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadMadre: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', gridColumn: '1 / -1' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Registro Asoc. Extranjera previo a FMF</label>
+                              <textarea value={currentPlayer.registroAsociacionExtranjera} onChange={e => setCurrentPlayer({...currentPlayer, registroAsociacionExtranjera: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} rows={2}></textarea>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad abuelo paterno</label>
+                              <input type="text" value={currentPlayer.nacAbueloPaterno} onChange={e => setCurrentPlayer({...currentPlayer, nacAbueloPaterno: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nac. abuela paterna</label>
+                              <input type="text" value={currentPlayer.nacAbuelaPaterna} onChange={e => setCurrentPlayer({...currentPlayer, nacAbuelaPaterna: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nac. abuelo materno</label>
+                              <input type="text" value={currentPlayer.nacAbueloMaterno} onChange={e => setCurrentPlayer({...currentPlayer, nacAbueloMaterno: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nac. abuela materna</label>
+                              <input type="text" value={currentPlayer.nacAbuelaMaterna} onChange={e => setCurrentPlayer({...currentPlayer, nacAbuelaMaterna: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', gridColumn: '1 / -1' }}>
+                              <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿Club extranjero o Torneos internacionales escolares?</label>
+                              <textarea value={currentPlayer.juegoClubExtranjero} onChange={e => setCurrentPlayer({...currentPlayer, juegoClubExtranjero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} rows={2}></textarea>
+                            </div>
+                         </div>
+                       ) : (
+                         <p style={{ margin: 0, fontSize: '12px', color: '#9a3412', fontStyle: 'italic' }}>
+                            El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos.
+                         </p>
+                       )}
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9' }}>
                       <button 
                         disabled={!currentPlayer.firstName}
@@ -836,25 +951,19 @@ export default function ConfigurarEquipo() {
                         📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato Pre-llenado</span>
                       </button>
                       <button 
-                        onClick={() => {
+                        onClick={async () => {
                           const docs = currentPlayer.documents || {};
-                          const hasMinDocs = docs.ine && docs.foto && docs.formato;
+                          const hasMinDocs = docs.ine && docs.foto;
                           if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs) {
-                            Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona seguro y sube al menos INE, Foto y Formato para continuar (Pruebas).', 'warning');
+                            Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona seguro y sube INE y Foto para continuar.', 'warning');
                             return;
                           }
-                          setPlayers([...players, currentPlayer]);
-                          setCurrentPlayer({
-                            id: Date.now(),
-                            firstName: '',
-                            lastNamePaterno: '',
-                            lastNameMaterno: '',
-                            curp: '',
-                            birthDate: '',
-                            sexo_id: 1,
-                            insuranceType: '',
-                            documents: {}
-                          });
+                          // 1. Descargamos el PDF
+                          await handleDownloadPlayerPDF();
+                          // 2. Guardamos el jugador pendiente y abrimos el modal premium
+                          setPendingPlayer({ ...currentPlayer });
+                          setSignedForm(null);
+                          setShowFinishModal(true);
                         }}
                         style={{ padding: '14px 30px', background: '#0b4ea6', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)', fontSize: '15px' }}
                       >
@@ -1019,6 +1128,122 @@ export default function ConfigurarEquipo() {
           </div>
         </div>
       )}
+
+      {/* MODAL PREMIUM: SUBIR FORMATO FIRMADO */}
+      <Modal
+        estaAbierto={showFinishModal}
+        titulo="Finalizar Inscripción de Jugador"
+        alCerrar={() => setShowFinishModal(false)}
+        tamanio="medio"
+        pie={
+          <>
+            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setShowFinishModal(false)} />
+            <BotonPrimario
+              etiqueta="Finalizar Inscripción"
+              icono={<FaCheckCircle />}
+              alHacerClick={() => {
+                if (!signedForm) {
+                  Swal.fire('Atención', 'Debe subir el formato firmado para continuar.', 'warning');
+                  return;
+                }
+                const finalPlayer = {
+                  ...pendingPlayer,
+                  documents: { ...pendingPlayer.documents, formato: signedForm }
+                };
+                setPlayers(prev => [...prev, finalPlayer]);
+                setCurrentPlayer({
+                  id: Date.now(),
+                  firstName: '',
+                  lastNamePaterno: '',
+                  lastNameMaterno: '',
+                  curp: '',
+                  birthDate: '',
+                  sexo_id: 1,
+                  insuranceType: '',
+                  esForaneo: false,
+                  nacionalidadJugador: 'MEXICANA',
+                  paisResidencia: 'MÉXICO',
+                  haVividoExtranjero: false,
+                  dondeVividoExtranjero: '',
+                  nacionalidadPadre: '',
+                  nacionalidadMadre: '',
+                  registroAsociacionExtranjera: '',
+                  nacAbueloPaterno: '',
+                  nacAbuelaPaterna: '',
+                  nacAbueloMaterno: '',
+                  nacAbuelaMaterna: '',
+                  juegoClubExtranjero: '',
+                  documents: {}
+                });
+                setPendingPlayer(null);
+                setSignedForm(null);
+                setShowFinishModal(false);
+                Swal.fire({ title: '¡Éxito!', text: 'Jugador agregado correctamente.', icon: 'success', timer: 2000, showConfirmButton: false });
+              }}
+              deshabilitado={!signedForm}
+            />
+          </>
+        }
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '25px',
+            color: '#0369a1',
+            fontSize: '14px',
+            lineHeight: '1.6'
+          }}>
+            <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
+              ¡Formato descargado con éxito!
+            </p>
+            <p style={{ margin: 0 }}>
+              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada.
+              <strong> A continuación debe subir el formato ya firmado</strong> para finalizar con la inscripción de este nuevo jugador al equipo.
+            </p>
+          </div>
+
+          <div
+            onClick={() => document.getElementById('presidente-signed-form').click()}
+            style={{
+              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+              borderRadius: '20px',
+              padding: '40px 20px',
+              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+          >
+            {signedForm ? (
+              <div style={{ color: '#10b981' }}>
+                <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+              </div>
+            ) : (
+              <div style={{ color: '#0ea5e9' }}>
+                <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+              </div>
+            )}
+            <input
+              type="file"
+              id="presidente-signed-form"
+              style={{ display: 'none' }}
+              accept=".pdf"
+              onChange={(e) => {
+                if (e.target.files[0]) {
+                  setSignedForm(e.target.files[0]);
+                }
+              }}
+            />
+          </div>
+        </div>
+      </Modal>
+
       </div>
     </>
   );
