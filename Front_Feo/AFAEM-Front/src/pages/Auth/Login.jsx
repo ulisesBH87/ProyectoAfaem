@@ -10,6 +10,7 @@ import FmfLogo from '../../assets/fmf-logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { refreshAccess } = useRBAC();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,7 +51,6 @@ export default function Login() {
       // ESPERAR A RBAC (Backend Strict)
       try {
         console.log('🔄 Sincronizando sesión con backend...');
-        const { refreshAccess } = useRBAC(); // Necesitamos usar el hook
         if (refreshAccess) await refreshAccess();
       } catch (e) {
         console.warn('Error al sincronizar RBAC en Login alternativo:', e);
@@ -74,15 +74,23 @@ export default function Login() {
       }
 
       // Redirigir según el rol
-      const rol = data?.usuario?.rol || data?.rol || null;
-      if (rol === 'ADMIN' || rol === 'ADMINISTRADOR') {
+      const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
+      console.log('ROL USUARIO (Login.jsx):', role);
+
+      if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
         navigate('/admin/dashboard');
-      } else if (rol === 'ENTRENADOR') {
+      } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
-      } else if (rol === 'PRESIDENTE_EQUIPO') {
-        navigate('/pre-registro-presidente');
+      } else if (role.includes('PRESIDENTE') || role === 'INVITADO') {
+        // Redirigir según el estatus (Aprobado >= 4)
+        const estatusId = data?.usuario?.estatusId || data?.estatusId;
+        if (role !== 'INVITADO' && estatusId && parseInt(estatusId) >= 4) {
+          navigate('/presidente-equipo');
+        } else {
+          navigate('/pre-registro-presidente');
+        }
       } else {
-        navigate('/pre-registro-presidente');
+        navigate('/');
       }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);

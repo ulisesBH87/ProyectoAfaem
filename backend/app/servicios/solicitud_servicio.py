@@ -180,7 +180,7 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
                     raise Exception("No se pudo activar el registro de Presidente de Equipo. Verifique que el usuario esté vinculado correctamente.")
             
         db.commit()
-        mensaje = "Solicitud aprobada y presidente activado" if payload.Estatus == 1 else "Solicitud rechazada correctamente"
+        mensaje = "Solicitud aprobada y presidente activado" if payload.Estatus == 2 else "Solicitud rechazada correctamente"
         return {"mensaje": mensaje, "solicitud_id": solicitud_id}
 
     except HTTPException as he:

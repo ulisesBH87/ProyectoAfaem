@@ -99,8 +99,19 @@ const DashboardSidebar = () => {
 
       {/* MENU ITEMS */}
       <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
-        {menus.map((item, idx) => {
-          const isActive = location.pathname === item.Ruta;
+        {menus
+          .filter(item => {
+            // Seguridad: Si es una ruta de admin, solo mostrar si es admin
+            if (item.Ruta && item.Ruta.startsWith('/admin') && !isAdmin) return false;
+            // Si es Catálogos o Directorio de Equipos y no es Admin, ocultar
+            if ((item.Nombre === 'Catálogos' || item.Nombre === 'Equipos') && !isAdmin) {
+               // A menos que sea un "Ver Mi Equipo" específico para presidentes (otra ruta)
+               if (item.Ruta !== '/presidente/equipo') return false;
+            }
+            return true;
+          })
+          .map((item, idx) => {
+            const isActive = location.pathname === item.Ruta;
           const hasChildren = item.SubMenus && item.SubMenus.length > 0;
 
           return (
