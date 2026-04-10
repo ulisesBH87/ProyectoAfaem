@@ -123,52 +123,48 @@ def actualizar_slot_repo(db, slot, persona_id, seguro_id):
 
     return slot
 
-# --- ENDPOINTS DE DIRECTORIO PARA ADMIN ---
-
 def obtener_directorio_equipos_repo(db):
-    from app.modelos.equipo_modelo import Equipos
-    from app.modelos.liga_modelo import LigaModalidadCategoriaRama
+    from app.modelos.equipo_modelo import Equipos, EquiposJugando
     from app.modelos.catalogos_liga_modelo import Ligas, CatalogoCategorias, CatalogoModalidad, CatalogoRamas
     from app.modelos.presidente_equipo_modelo import PresidenteEquipo
-    from app.modelos.persona_modelo import Personas
     from app.modelos.usuario_modelo import Usuario
 
     resultados = db.query(
-        Equipos, Ligas.Nombreliga, CatalogoCategorias.NombreCategoria,
+        EquiposJugando, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoCategorias.NombreCategoria,
         CatalogoModalidad.NombreModalidad, CatalogoRamas.Nombre,
         Personas.Nombre, Personas.PrimerApellido, Usuario.Correo
     ).join(
-        LigaModalidadCategoriaRama, Equipos.LigaModalidadCategoriaRamaId == LigaModalidadCategoriaRama.LigaModalidadCategoriaRamaId
+        Equipos, EquiposJugando.EquipoId == Equipos.EquipoId
     ).join(
-        Ligas, LigaModalidadCategoriaRama.LigaId == Ligas.LigaId
+        Ligas, EquiposJugando.LigaId == Ligas.LigaId
     ).join(
-        CatalogoCategorias, LigaModalidadCategoriaRama.CategoriaId == CatalogoCategorias.CategoriaId
+        CatalogoCategorias, EquiposJugando.CategoriaId == CatalogoCategorias.CategoriaId
     ).join(
-        CatalogoModalidad, LigaModalidadCategoriaRama.ModalidadId == CatalogoModalidad.ModalidadId
+        CatalogoModalidad, EquiposJugando.ModalidadId == CatalogoModalidad.ModalidadId
     ).join(
-        CatalogoRamas, LigaModalidadCategoriaRama.RamaId == CatalogoRamas.RamaId
+        CatalogoRamas, EquiposJugando.RamaId == CatalogoRamas.RamaId
     ).join(
-        PresidenteEquipo, Equipos.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId
+        PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId
     ).join(
         Personas, PresidenteEquipo.PersonaId == Personas.PersonaId
-    ).join(
+    ).outerjoin(
         Usuario, Personas.PersonaId == Usuario.PersonaId
     ).all()
 
     equipos_response = []
-    for (equipo, liga, categoria, modalidad, rama, p_nombre, p_apellido, email) in resultados:
+    for (ej, eq_nombre, liga, categoria, modalidad, rama, p_nombre, p_apellido, email) in resultados:
         equipos_response.append({
-            "EquipoId": equipo.EquipoId,
-            "NombreEquipo": equipo.NombreEquipo,
+            "EquipoId": ej.EquipoId,
+            "NombreEquipo": eq_nombre,
             "Liga": liga,
             "Categoria": categoria,
             "Modalidad": modalidad,
             "Rama": rama,
             "PresidenteNombreCompleto": f"{p_nombre} {p_apellido}",
-            "PresidenteEmail": email,
-            "NumeroJugadoresRegistrados": equipo.NumeroJugadores,
-            "FechaCreacion": equipo.FechaCreacion,
-            "Estatus": equipo.Estatus
+            "PresidenteEmail": email or "Sin correo",
+            "NumeroJugadoresRegistrados": ej.CantidadJugadores,
+            "FechaCreacion": ej.EquipoRelacion.FechaCreacion,
+            "Estatus": ej.EquipoRelacion.Estatus
         })
 
     return equipos_response
@@ -176,8 +172,7 @@ def obtener_directorio_equipos_repo(db):
 def obtener_directorio_jugadores_repo(db):
     from app.modelos.miembro_equipo_modelo import MiembrosEquipo
     from app.modelos.persona_modelo import Personas
-    from app.modelos.equipo_modelo import Equipos
-    from app.modelos.liga_modelo import LigaModalidadCategoriaRama
+    from app.modelos.equipo_modelo import Equipos, EquiposJugando
     from app.modelos.catalogos_liga_modelo import Ligas
     from app.modelos.sexo_c_modelo import CatalogoSexo
 
@@ -187,10 +182,10 @@ def obtener_directorio_jugadores_repo(db):
         Personas, MiembrosEquipo.PersonaId == Personas.PersonaId
     ).join(
         Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId
-    ).join(
-        LigaModalidadCategoriaRama, Equipos.LigaModalidadCategoriaRamaId == LigaModalidadCategoriaRama.LigaModalidadCategoriaRamaId
-    ).join(
-        Ligas, LigaModalidadCategoriaRama.LigaId == Ligas.LigaId
+    ).outerjoin(
+        EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId
+    ).outerjoin(
+        Ligas, EquiposJugando.LigaId == Ligas.LigaId
     ).outerjoin(
         CatalogoSexo, Personas.SexoId == CatalogoSexo.SexoId
     ).filter(

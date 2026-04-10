@@ -94,9 +94,10 @@ function PreRegistroPresidente() {
         // Ya pagó, falta subir los documentos personales (INE, Acta, etc)
         setPasoActual(3);
       } else if (estatusId === 2) {
-        // Pago en revisión
-        setEstadoPago(1); // 1 = En espera en la UI local
-        setPasoActual(2);
+        // Pago APROBADO (Registry stage) pero aún no activado como Presidente ACTIVO (7)
+        // Lo mandamos al paso 3 (Subir Documentos) para que no se quede trabado
+        setEstadoPago(3); // 3 = Aprobado en la UI local
+        setPasoActual(3);
       } else if (estatusId === 1) {
         // Pago pendiente
         setPasoActual(1);

@@ -14,7 +14,11 @@ class MiembrosEquipo(Base):
     EquipoID = Column(Integer, ForeignKey("Equipos.EquipoId"), nullable=False)
     Estatus = Column(Boolean, default=True)
     Eliminado = Column(Boolean, default=False)
+    NumeroCamiseta = Column(Integer, nullable=True)
+    Extranjero = Column(Boolean, default=False)
+    AntecedentesId = Column(Integer, ForeignKey("AntecedentesInternacionales.AntecedentesId"), nullable=True)
 
     PersonaRelacion = relationship("Personas", back_populates="MiembrosRelacion")
     RolRelacion = relationship("RolesDeEquipo", back_populates="MiembrosRelacion")
     EquipoRelacion = relationship("Equipos", back_populates="MiembrosRelacion")
+    AntecedentesRelacion = relationship("AntecedentesInternacionales")

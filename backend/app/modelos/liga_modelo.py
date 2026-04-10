@@ -17,4 +17,4 @@ class LigaModalidadCategoriaRama(Base):
     LigaRelacion = relationship("Ligas", back_populates="LigaModRelacion")
     ModalidadRelacion = relationship("CatalogoModalidad", back_populates="LigaModRelacion")
 
-    EquiposRelacion = relationship("Equipos", back_populates="LigaModRelacion")
+    # EquiposRelacion = relationship("Equipos", back_populates="LigaModRelacion")  # Removido por cambio de esquema

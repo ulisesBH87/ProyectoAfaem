@@ -67,8 +67,21 @@ export default function AdminJugadores() {
     let result = [...jugadores];
     
     if (filtroEstatus !== 'todos') {
-      const isActivo = filtroEstatus === 'activos';
-      result = result.filter(s => !!s.Estatus === isActivo);
+      if (filtroEstatus === 'activos') {
+        result = result.filter(s => !!s.Estatus);
+      } else if (filtroEstatus === 'inactivos') {
+        result = result.filter(s => !s.Estatus);
+      } else if (filtroEstatus === 'hombres') {
+        result = result.filter(s => {
+          const sexo = s.Sexo?.toLowerCase() || '';
+          return sexo.includes('masculino') || sexo.includes('hombre') || sexo === 'h';
+        });
+      } else if (filtroEstatus === 'mujeres') {
+        result = result.filter(s => {
+          const sexo = s.Sexo?.toLowerCase() || '';
+          return sexo.includes('femenino') || sexo.includes('mujer') || sexo === 'm';
+        });
+      }
     }
     
     if (searchTerm.trim()) {
@@ -96,14 +109,22 @@ export default function AdminJugadores() {
   }, [filteredJugadores, currentPage]);
 
   const stats = React.useMemo(() => {
-    const masculinos = jugadores.filter(j => j.Sexo?.toLowerCase().includes('masculino') || j.Sexo?.toLowerCase() === 'h').length;
-    const femeninos = jugadores.filter(j => j.Sexo?.toLowerCase().includes('femenino') || j.Sexo?.toLowerCase() === 'm').length;
+    const masculinos = jugadores.filter(j => {
+      const sexo = j.Sexo?.toLowerCase() || '';
+      return sexo.includes('masculino') || sexo.includes('hombre') || sexo === 'h';
+    }).length;
+    
+    const femeninos = jugadores.filter(j => {
+      const sexo = j.Sexo?.toLowerCase() || '';
+      return sexo.includes('femenino') || sexo.includes('mujer') || sexo === 'm';
+    }).length;
     
     return {
       total: jugadores.length,
       hombres: masculinos,
       mujeres: femeninos,
-      activos: jugadores.filter(j => j.Estatus === true).length
+      activos: jugadores.filter(j => j.Estatus === true).length,
+      inactivos: jugadores.filter(j => j.Estatus === false).length
     };
   }, [jugadores]);
 
@@ -313,24 +334,105 @@ export default function AdminJugadores() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '40px' }}>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Total jugadores</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            {stats.total} <span style={{ fontSize: '14px', fontWeight: '600', color: '#94a3b8' }}>registros</span>
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        {/* TARJETA TOTAL */}
+        <div
+          onClick={() => setFiltroEstatus('todos')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL JUGADORES</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Jugadores activos</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
+
+        {/* TARJETA ACTIVOS */}
+        <div
+          onClick={() => setFiltroEstatus('activos')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'activos' ? '2px solid #10b981' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'activos' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
+            transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES ACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
         </div>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Masculino</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#3b82f6' }}>{stats.hombres}</div>
+
+        {/* TARJETA INACTIVOS */}
+        <div
+          onClick={() => setFiltroEstatus('inactivos')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'inactivos' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'inactivos' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
+            transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🔴</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES INACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
         </div>
-        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>Femenino</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
+
+        {/* TARJETA HOMBRES */}
+        <div
+          onClick={() => setFiltroEstatus('hombres')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'hombres' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'hombres' ? '0 4px 12px rgba(59, 130, 246, 0.15)' : 'none',
+            transform: filtroEstatus === 'hombres' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🧑</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>MASCULINO</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#3b82f6' }}>{stats.hombres}</div>
+        </div>
+
+        {/* TARJETA MUJERES */}
+        <div
+          onClick={() => setFiltroEstatus('mujeres')}
+          style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            border: filtroEstatus === 'mujeres' ? '2px solid #f43f5e' : '1px solid #e2e8f0',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'mujeres' ? '0 4px 12px rgba(244, 63, 94, 0.15)' : 'none',
+            transform: filtroEstatus === 'mujeres' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>👩</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>FEMENINO</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
         </div>
       </div>
 
@@ -354,9 +456,9 @@ export default function AdminJugadores() {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
-              {['todos', 'activos', 'inactivos'].map((val) => (
+              {['todos', 'activos', 'inactivos', 'hombres', 'mujeres'].map((val) => (
                 <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
-                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : 'Inactivos')}
+                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : (val === 'inactivos' ? 'Inactivos' : (val === 'hombres' ? 'Hombres' : 'Mujeres')))}
                 </button>
               ))}
             </div>
@@ -380,12 +482,13 @@ export default function AdminJugadores() {
         estaAbierto={modalEdicion}
         alCerrar={handleCerrarModal}
         titulo="Detalle y edición del jugador"
-        tamanio="pantallaFull"
+        tamanio="grande"
         pie={
           <>
-            <BotonSecundario texto="Cancelar" onClick={handleCerrarModal} />
+            <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
             <BotonPrimario 
-              texto={guardando ? 'Guardando...' : 'Guardar cambios'} 
+              etiqueta={guardando ? 'Guardando...' : 'Guardar cambios'} 
+
               onClick={manejarGuardarJugador} 
               deshabilitado={guardando}
               icono={<FaSave />}
@@ -393,12 +496,12 @@ export default function AdminJugadores() {
           </>
         }
       >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px' }}>
-          <div style={{ gridColumn: 'span 3', background: 'var(--primary-light)', padding: '15px 25px', borderRadius: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-             <div style={{ fontSize: '24px' }}>🛡️</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+          <div style={{ gridColumn: '1 / -1', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '16px 24px', borderRadius: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+             <div style={{ fontSize: '28px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>🛡️</div>
              <div>
-                <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--primary)', fontWeight: '800' }}>Expediente del Jugador</h4>
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>La información modificada actualizará automáticamente el acta digital del afiliado.</p>
+                <h4 style={{ margin: 0, fontSize: '15px', color: '#1e3a8a', fontWeight: '800' }}>Expediente del Jugador</h4>
+                <p style={{ margin: 0, fontSize: '13px', color: '#3b82f6', fontWeight: '500', marginTop: '4px' }}>La información modificada actualizará automáticamente el acta digital del afiliado.</p>
              </div>
           </div>
 
@@ -471,7 +574,7 @@ export default function AdminJugadores() {
             ]}
           />
           
-          <div style={{ gridColumn: 'span 3', marginTop: '10px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+          <div style={{ gridColumn: '1 / -1', marginTop: '10px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
              <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
                 * Los campos marcados con asterisco son esenciales para la validez de los reportes de juego.
              </p>
