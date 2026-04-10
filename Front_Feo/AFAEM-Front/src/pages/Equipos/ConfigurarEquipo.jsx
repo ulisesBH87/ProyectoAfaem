@@ -190,21 +190,7 @@ export default function ConfigurarEquipo() {
       Swal.fire('Atención', 'Por favor completa todos los campos requeridos', 'warning');
       return;
     }
-    
-    // Buscar la combinación válida de LigaModalidadCategoriaRamaId
-    const combinacion = catalogs.combinaciones.find(c => 
-      c.liga_id === formData.season && 
-      c.modalidad_id === formData.modality && 
-      c.categoria_id === formData.category &&
-      c.rama_id === formData.rama
-    );
-
-    if (!combinacion) {
-      Swal.fire('Atención', 'La combinación de Liga, Modalidad, Categoría y Rama seleccionada no está disponible actualmente.', 'info');
-      return;
-    }
-
-    setFormData(prev => ({ ...prev, liga_mod_cat_ram_id: combinacion.id }));
+    // Ya no buscamos combinaciones, usamos los IDs individuales directamente
     setShowModal(true);
   };
 
@@ -1043,7 +1029,10 @@ export default function ConfigurarEquipo() {
 
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
-                            liga_mod_cat_ram_id: formData.liga_mod_cat_ram_id,
+                            liga_id: formData.season,
+                            modalidad_id: formData.modality,
+                            categoria_id: formData.category,
+                            rama_id: formData.rama,
                             players: players
                           });
 

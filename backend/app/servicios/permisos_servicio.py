@@ -25,34 +25,37 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
 
     # 3. Obtener EstatusId
     estatus_id = 0
-    es_presidente = "PRESIDENTE_EQUIPO" in [r.upper() for r in roles_nombres]
+    # HARDENING: Identificar por ID (3) o por nombre
+    es_presidente = 3 in roles_ids or "PRESIDENTE_EQUIPO" in [r.upper() for r in roles_nombres]
     
     # Prioridad 1: Presidente (usar tabla real de estatus)
     if es_presidente and usuario_base and usuario_base.PersonaId:
         from app.modelos.presidente_equipo_modelo import PresidenteEquipo
         presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario_base.PersonaId).first()
         if presidente:
-            estatus_id = presidente.EstatusId
+            # Forzar a int para evitar problemas en el front
+            estatus_id = int(presidente.EstatusId) if presidente.EstatusId is not None else 0
 
-    # Prioridad 2: Fallback (Legacy)
+    # Prioridad 2: Fallback (Legacy / Registro inicial)
     if estatus_id == 0:
         solicitud = db.query(Solicitud).filter(Solicitud.UsuarioId == usuario_id).order_by(Solicitud.SolicitudId.desc()).first()
         
         if solicitud:
-            estatus_id = solicitud.EstatusValidacion
+            estatus_id = int(solicitud.EstatusValidacion) if solicitud.EstatusValidacion is not None else 0
         else:
-            if usuario_base:
+            if usuario_base and usuario_base.PersonaId:
                 docs_count = db.query(DocumentosEntregados).filter(DocumentosEntregados.PersonaId == usuario_base.PersonaId).count()
             else:
                 docs_count = 0
                 
             if docs_count > 0:
-                estatus_id = usuario_base.RolId if (usuario_base and usuario_base.RolId) else 3
+                # Si tiene docs pero no solicitud, inferir por rol base
+                estatus_id = int(usuario_base.RolId) if (usuario_base and usuario_base.RolId) else 0
             else:
                 estatus_id = 0
 
     if not roles_ids:
-        return {"Roles": [], "Permisos": [], "Menus": [], "estatusId": estatus_id}
+        return {"Roles": [], "Permisos": [], "Menus": [], "estatusId": int(estatus_id)}
 
     # 4. Obtener Permisos asociados a esos roles
     permisos_rels = db.query(RelRolPermisos).filter(RelRolPermisos.RolId.in_(roles_ids)).all()
@@ -63,7 +66,7 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
     allowed_menu_ids = list(set([m.MenuId for m in menu_rels]))
     
     if not allowed_menu_ids:
-        return {"Roles": roles_nombres, "Permisos": permisos_slugs, "Menus": [], "EstatusId": estatus_id}
+        return {"Roles": roles_nombres, "Permisos": permisos_slugs, "Menus": [], "estatusId": estatus_id}
 
     # Obtener todos los menús permitidos de la base de datos
     all_allowed_menus = db.query(Menus).filter(Menus.MenuId.in_(allowed_menu_ids), Menus.Estatus == True).all()
@@ -104,5 +107,5 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
         "Roles": roles_nombres,
         "Permisos": permisos_slugs,
         "Menus": resultado_menus,
-        "estatusId": estatus_id
+        "estatusId": int(estatus_id)
     }

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.db.sesion import get_db
@@ -13,9 +14,9 @@ from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_eq
 from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
-    Equipos, MiembrosEquipo, Personas, RolesDeEquipo, LigaModalidadCategoriaRama, 
+    Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
-    EquipoTemporal, Usuario
+    EquipoTemporal, Usuario, AntecedentesInternacionales
 )
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
@@ -42,7 +43,6 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
         modalidades = db.query(CatalogoModalidad).all()
         ramas = db.query(CatalogoRamas).all()
         seguros = db.query(Seguro).all()
-        combinaciones = db.query(LigaModalidadCategoriaRama).all()
 
         return {
             "ligas": [{"id": l.LigaId, "nombre": l.Nombreliga} for l in ligas],
@@ -50,15 +50,7 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
             "modalidades": [{"id": m.ModalidadId, "nombre": m.NombreModalidad} for m in modalidades],
             "ramas": [{"id": r.RamaId, "nombre": r.Nombre} for r in ramas],
             "seguros": [{"id": s.SeguroId, "nombre": s.Nombre, "precio": float(s.Precio)} for s in seguros],
-            "combinaciones": [
-                {
-                    "id": comb.LigaModalidadCategoriaRamaId,
-                    "liga_id": comb.LigaId,
-                    "modalidad_id": comb.ModalidadId,
-                    "categoria_id": comb.CategoriaId,
-                    "rama_id": comb.RamaId
-                } for comb in combinaciones
-            ]
+            "combinaciones": [] # Mantenemos el campo vacío para no romper el frontend por ahora
         }
     except Exception as e:
         print(f"Error en get_catalogos_registro: {str(e)}")
@@ -86,20 +78,36 @@ async def crear_equipo_completo(
         if not presidente:
             raise HTTPException(status_code=403, detail="El usuario no es un presidente de equipo registrado")
 
-        # 2. Crear Registro de Equipo
-        nuevo_equipo = Equipos(
-            NombreEquipo=team_info["nombre_equipo"],
-            LigaModalidadCategoriaRamaId=team_info["liga_mod_cat_ram_id"],
+        # 2. Obtener o Crear Registro de Equipo (Unicidad por nombre insensible a mayúsculas)
+        nombre_equipo = team_info["nombre_equipo"]
+        equipo_existente = db.query(Equipos).filter(func.lower(Equipos.NombreEquipo) == func.lower(nombre_equipo)).first()
+
+        if equipo_existente:
+            nuevo_equipo = equipo_existente
+        else:
+            nuevo_equipo = Equipos(
+                NombreEquipo=nombre_equipo,
+                Estatus=True
+            )
+            db.add(nuevo_equipo)
+            db.flush() # Para obtener el EquipoId
+
+        # 3. Crear Registro en EquiposJugando
+        nueva_competencia = EquiposJugando(
+            EquipoId=nuevo_equipo.EquipoId,
+            RamaId=team_info["rama_id"],
+            CategoriaId=team_info["categoria_id"],
+            LigaId=team_info["liga_id"],
+            ModalidadId=team_info["modalidad_id"],
             PresidenteEquipoId=presidente.PresidenteEquipoId,
-            NumeroJugadores=len(players_info),
-            Estatus=True
+            CantidadJugadores=len(players_info)
         )
-        db.add(nuevo_equipo)
-        db.flush() # Para obtener el EquipoId
+        db.add(nueva_competencia)
+        db.flush()
 
         os.makedirs(DOCS_DIR, exist_ok=True)
 
-        # 3. Procesar Jugadores
+        # 4. Procesar Jugadores
         for index, p_data in enumerate(players_info):
             # a. Crear Persona
             try:
@@ -114,6 +122,7 @@ async def crear_equipo_completo(
                 db.add(nueva_persona)
                 db.flush()
             except IntegrityError as e:
+                db.rollback()
                 if "check_curp_persona_longitud" in str(e):
                     raise HTTPException(
                         status_code=400,
@@ -125,13 +134,28 @@ async def crear_equipo_completo(
                         detail=f"Error al registrar al jugador {p_data['nombre']} {p_data['primer_apellido']}: {str(e)}"
                     )
 
-            # b. Crear MiembroEquipo (Rol Jugador = 3)
+            # b. Crear Antecedentes si es extranjero (opcional por ahora)
+            antecedentes_id = None
+            if p_data.get("extranjero"):
+                nuevos_antecedentes = AntecedentesInternacionales(
+                    Extranjero=True,
+                    Nacionalidades=p_data.get("nacionalidad"),
+                    # Otros campos vendrán vacíos/null por ahora según instrucción
+                )
+                db.add(nuevos_antecedentes)
+                db.flush()
+                antecedentes_id = nuevos_antecedentes.AntecedentesId
+
+            # c. Crear MiembroEquipo (Rol Jugador = 3)
             nuevo_miembro = MiembrosEquipo(
                 PersonaId=nueva_persona.PersonaId,
                 RolEnEquipo=3, # Asumimos 3 para Jugador según imagen
                 EquipoID=nuevo_equipo.EquipoId,
                 Estatus=True,
-                Eliminado=False
+                Eliminado=False,
+                NumeroCamiseta=p_data.get("numero_camiseta"),
+                Extranjero=p_data.get("extranjero", False),
+                AntecedentesId=antecedentes_id
             )
             db.add(nuevo_miembro)
 
@@ -205,15 +229,15 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             Ligas.Nombreliga.label("Liga"),
             CatalogoModalidad.NombreModalidad.label("Modalidad"),
             CatalogoRamas.Nombre.label("Rama"),
-            Equipos.NumeroJugadores,
+            EquiposJugando.CantidadJugadores.label("NumeroJugadores"),
             Equipos.Estatus,
             EquipoTemporal.SolicitudId
-        ).join(LigaModalidadCategoriaRama, Equipos.LigaModalidadCategoriaRamaId == LigaModalidadCategoriaRama.LigaModalidadCategoriaRamaId)\
-         .join(CatalogoCategorias, LigaModalidadCategoriaRama.CategoriaId == CatalogoCategorias.CategoriaId)\
-         .join(Ligas, LigaModalidadCategoriaRama.LigaId == Ligas.LigaId)\
-         .join(CatalogoModalidad, LigaModalidadCategoriaRama.ModalidadId == CatalogoModalidad.ModalidadId)\
-         .join(CatalogoRamas, LigaModalidadCategoriaRama.RamaId == CatalogoRamas.RamaId)\
-         .join(PresidenteEquipo, Equipos.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+        ).join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
+         .join(CatalogoCategorias, EquiposJugando.CategoriaId == CatalogoCategorias.CategoriaId)\
+         .join(Ligas, EquiposJugando.LigaId == Ligas.LigaId)\
+         .join(CatalogoModalidad, EquiposJugando.ModalidadId == CatalogoModalidad.ModalidadId)\
+         .join(CatalogoRamas, EquiposJugando.RamaId == CatalogoRamas.RamaId)\
+         .join(PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
          .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
          .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)
 
@@ -224,7 +248,7 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
             if not presidente:
                 return []
-            query = query.filter(Equipos.PresidenteEquipoId == presidente.PresidenteEquipoId)
+            query = query.filter(EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId)
 
         resultados = query.all()
 
@@ -260,7 +284,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             MiembrosEquipo.Estatus
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
-         .join(Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId)
+         .join(Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId)\
+         .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)
 
         # 2. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
@@ -269,7 +294,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
             if not presidente:
                 return []
-            query = query.filter(Equipos.PresidenteEquipoId == presidente.PresidenteEquipoId)
+            query = query.filter(EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId).distinct()
 
         resultados = query.all()
 

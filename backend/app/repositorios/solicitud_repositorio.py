@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
@@ -10,7 +11,7 @@ from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from fastapi import HTTPException
 from app.modelos import (
     CatalogoDocumentosPersonas, DocumentosEntregados, EquipoTemporal, 
-    OrdenPago, Equipos, PresidenteEquipo
+    OrdenPago, Equipos, PresidenteEquipo, EquiposJugando, RelUsuarioRoles
 )
 
 #REQUISITOS
@@ -134,7 +135,7 @@ def obtener_solicitudes_usuarios_repo(db: Session):
             Personas.Nombre,
             Personas.PrimerApellido,
             Usuario.Correo,
-            Equipos.NombreEquipo.label("Equipo"),
+            func.coalesce(Equipos.NombreEquipo, "Por asignar").label("Equipo"),
             OrdenPago.TotalPagar.label("Monto")
         )
         .join(Usuario, Solicitud.UsuarioId == Usuario.UsuarioId)
@@ -142,7 +143,8 @@ def obtener_solicitudes_usuarios_repo(db: Session):
         .outerjoin(EquipoTemporal, Solicitud.SolicitudId == EquipoTemporal.SolicitudId)
         .outerjoin(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
         .outerjoin(PresidenteEquipo, Personas.PersonaId == PresidenteEquipo.PersonaId)
-        .outerjoin(Equipos, PresidenteEquipo.PresidenteEquipoId == Equipos.PresidenteEquipoId)
+        .outerjoin(EquiposJugando, PresidenteEquipo.PresidenteEquipoId == EquiposJugando.PresidenteEquipoId)
+        .outerjoin(Equipos, EquiposJugando.EquipoId == Equipos.EquipoId)
         .all()
     )
 
@@ -337,27 +339,70 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
     """
     Busca al presidente vinculado a la solicitud y activa su cuenta.
     EstatusId 7 = ACTIVO.
-    Si no existe el registro de PresidenteEquipo, lo crea.
+    También actualiza el Rol del usuario a PRESIDENTE_EQUIPO (Id 3).
     """
+    print(f"--- ACTIVANDO PRESIDENTE PARA SOLICITUD #{solicitud_id} ---")
+    
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     if not solicitud:
+        print(f"❌ Error: No se encontró la solicitud #{solicitud_id}")
         return False
         
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
-    if not usuario or not usuario.PersonaId:
+    if not usuario:
+        print(f"❌ Error: Usuario {solicitud.UsuarioId} no encontrado")
         return False
+
+    # 1. Actualizar Rol Legacy (Usuarios.RolId)
+    # Rol 3 = PRESIDENTE_EQUIPO
+    print(f"⚙️ Actualizando Rol Latino de {usuario.RolId} a 3 para el usuario {usuario.Correo}")
+    usuario.RolId = 3
+
+    # 2. Actualizar/Insertar Rol RBAC (RelUsuarioRoles)
+    rbac_rol = db.query(RelUsuarioRoles).filter(
+        RelUsuarioRoles.UsuarioId == usuario.UsuarioId,
+        RelUsuarioRoles.RolId == 3
+    ).first()
+
+    if rbac_rol:
+        print(f"✅ El usuario ya tenía el rol RBAC 3. Asegurando Estatus=True")
+        rbac_rol.Estatus = True
+    else:
+        print(f"🆕 Creando nueva relación RBAC (Usuario: {usuario.UsuarioId}, Rol: 3)")
+        nuevo_rbac = RelUsuarioRoles(
+            UsuarioId=usuario.UsuarioId,
+            RolId=3,
+            Estatus=True
+        )
+        db.add(nuevo_rbac)
         
-    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+    # 3. Activar en tabla PresidenteEquipo
+    persona_id = usuario.PersonaId
+    if not persona_id:
+        print(f"⚠️ Alerta: El usuario {usuario.UsuarioId} no tiene PersonaId vinculada.")
+        return False
+
+    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona_id).first()
     
     if presidente:
+        print(f"✅ Presidente encontrado (ID: {presidente.PresidenteEquipoId}). Actualizando EstatusId a 7 (ACTIVO)")
         presidente.EstatusId = 7 # ACTIVO
     else:
+        print(f"🆕 No se encontró registro en PresidenteEquipo para Persona {persona_id}. Creando uno nuevo como ACTIVO.")
         # Si no existe, lo creamos directamente como Activo
         nuevo_presidente = PresidenteEquipo(
-            PersonaId=usuario.PersonaId,
+            PersonaId=persona_id,
             EstatusId=7
         )
         db.add(nuevo_presidente)
         
+    print("🚀 Proceso de activación completado exitosamente.")
     return True
 
+def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+    if solicitud:
+        solicitud.EstatusValidacion = 4 # DOCUMENTOS_EN_REVISION
+        db.commit()
+        return solicitud
+    return None

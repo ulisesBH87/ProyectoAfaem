@@ -120,7 +120,7 @@ export const getSolicitudDocumentos = async (solicitudId) => {
  * VALIDA (APRUEBA/RECHAZA) UNA SOLICITUD EN EL BACKEND
  */
 export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones = "") => {
-  // estatus: 1 = Aprobado, 0 = Rechazado
+  // estatus: 2 = Aprobado total, 3 = Rechazado, 4 = Revisado con observaciones
   try {
     const response = await api.post(`/solicitud/${solicitudId}/validar`, {
       Estatus: estatus,
@@ -132,7 +132,7 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ mensaje: "Estatus actualizado correctamente (Simulado)", solicitud_id: solicitudId });
-      }, 8000);
+      }, 1000);
     });
   }
 };

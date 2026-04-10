@@ -89,12 +89,17 @@ export default function Ingresar() {
         navigate('/admin/dashboard');
       } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
-      } else if (currentEstatusId && currentEstatusId >= 4) {
+      } else if (role.includes('PRESIDENTE') || role === 'INVITADO') {
         // Solo entra al dashboard si ya está aprobado/activo o en revisión (Estatus 4, 5, 6 o 7)
-        navigate('/presidente-equipo');
+        // Pero si es INVITADO, siempre va a pre-registro
+        if (role !== 'INVITADO' && currentEstatusId && parseInt(currentEstatusId) >= 4) {
+          navigate('/presidente-equipo');
+        } else {
+          navigate('/pre-registro-presidente');
+        }
       } else {
-        // En cualquier otro caso (Estatus 1, 2, 3, 4 o nuevo), al pre-registro
-        navigate('/pre-registro-presidente');
+        // En cualquier otro caso, al home
+        navigate('/');
       }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);

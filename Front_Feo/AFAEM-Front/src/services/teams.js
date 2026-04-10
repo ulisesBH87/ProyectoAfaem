@@ -302,7 +302,10 @@ export const createTeamCompleto = async (data) => {
     // Separamos metadatos de archivos
     const teamMetadata = {
       nombre_equipo: data.teamName,
-      liga_mod_cat_ram_id: data.liga_mod_cat_ram_id
+      liga_id: data.liga_id,
+      modalidad_id: data.modalidad_id,
+      categoria_id: data.categoria_id,
+      rama_id: data.rama_id
     };
     
     const playersMetadata = data.players.map((p, index) => ({
@@ -312,7 +315,10 @@ export const createTeamCompleto = async (data) => {
       curp: p.curp,
       sexo_id: p.sexo_id,
       fecha_nacimiento: p.birthDate,
-      seguro_tipo_id: p.insuranceType
+      seguro_tipo_id: p.insuranceType,
+      numero_camiseta: p.shirtNumber,
+      extranjero: p.isForeign,
+      nacionalidad: p.nationality
     }));
 
     formData.append('team_data', JSON.stringify(teamMetadata));
