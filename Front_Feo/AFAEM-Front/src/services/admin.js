@@ -181,6 +181,14 @@ export const updateJugador = async (miembroEquipoId, data) => {
   return response.data;
 };
 
+/**
+ * OBTIENE EL LISTADO DE AUDITORIAS (PAGINADO)
+ */
+export const getAuditorias = async (page = 1, size = 10) => {
+  const response = await api.get(`/auditoria?page=${page}&size=${size}`);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -194,5 +202,6 @@ export default {
   getJugadoresDirectorio,
   getJugadorDocumentos,
   updateEquipo,
-  updateJugador
+  updateJugador,
+  getAuditorias
 };
