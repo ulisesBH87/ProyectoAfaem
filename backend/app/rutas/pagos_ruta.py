@@ -15,20 +15,14 @@ router = APIRouter(
 @router.post("/")
 def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get_pagos_servicio), usuario = Depends(obtener_usuario_actual)):
 
-    try:
-        usuario_id = usuario.UsuarioId
-        resultado = service.crear_orden_pago(usuario_id, datos)
-    except pagos_excepciones.OrdenError:
-        raise HTTPException(status_code=400, detail="Error al crear la orden de pago")
-
+    usuario_id = usuario.UsuarioId
+    resultado = service.crear_orden_pago(usuario_id, datos)
+    
     return resultado
 
 @router.post("/{orden_id}/comprobante")
 async def subir_comprobante(orden_id: int, archivo: UploadFile = File(...), service: PagosServicio = Depends(get_pagos_servicio)):
-    try:
-        resultado = await service.subir_comprobante(orden_id=orden_id, archivo=archivo)
-    except pagos_excepciones.ComprobanteError:
-        raise HTTPException(status_code=400, detail="Error al subir el comprobante")
+    resultado = await service.subir_comprobante(orden_id=orden_id, archivo=archivo)
 
     return resultado
 
