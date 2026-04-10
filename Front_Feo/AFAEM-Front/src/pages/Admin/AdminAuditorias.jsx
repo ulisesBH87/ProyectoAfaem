@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import DashboardTable from '../../components/DashboardTable';
 import { getAuditorias } from '../../services/admin';
 import Modal from '../../components/partials/Forms/Modal';
-import { FaHistory, FaEye, FaSyncAlt } from 'react-icons/fa';
+import { FaHistory, FaEye, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaSearch } from 'react-icons/fa';
 import Skeleton from '../../components/Common/Skeleton';
+import SearchBar from '../../components/Common/SearchBar';
 
 const AdminAuditorias = () => {
   const [auditorias, setAuditorias] = useState([]);
@@ -11,21 +12,33 @@ const AdminAuditorias = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
   
+  // Como el backend restringe el límite máximo a 100 por consulta (le=100), usamos 100
+  // para cargar el histórico reciente y permitir que la búsqueda funcione.
+  const API_FETCH_SIZE = 100; 
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [errorMsg, setErrorMsg] = useState(null);
+  
+  // Estados para búsqueda y filtrado
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filtroAccion, setFiltroAccion] = useState('todos');
+  const [sortOrder, setSortOrder] = useState('desc');
+
   // Modal State
   const [modalAbierto, setModalAbierto] = useState(false);
   const [auditoriaSeleccionada, setAuditoriaSeleccionada] = useState(null);
 
   const fetchAuditorias = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
-      const resp = await getAuditorias(currentPage, itemsPerPage);
-      setAuditorias(resp.data || []);
-      setTotalItems(resp.total || 0);
-      setTotalPages(resp.total_pages || 0);
+      const resp = await getAuditorias(1, API_FETCH_SIZE);
+      setAuditorias(resp?.data || []);
+      // Obtenemos el total real en base de datos para mostrar la métrica
+      setTotalItems(resp?.total || 0); 
     } catch (error) {
       console.error('Error fetching auditorias:', error);
+      setErrorMsg(error?.response?.data?.detail || error.message || 'Error de conexión con el servidor.');
     } finally {
       setLoading(false);
     }
@@ -33,7 +46,44 @@ const AdminAuditorias = () => {
 
   useEffect(() => {
     fetchAuditorias();
-  }, [currentPage, itemsPerPage]);
+  }, []);
+
+  // Volver a la página 1 cuando se cambie de filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filtroAccion, sortOrder]);
+
+  const filteredAuditorias = React.useMemo(() => {
+    let result = [...auditorias];
+
+    if (filtroAccion !== 'todos') {
+      result = result.filter(a => a.accion === filtroAccion);
+    }
+
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
+      result = result.filter(a =>
+        (a.usuario_que_realizo_la_accion?.toLowerCase().includes(query)) ||
+        (a.entidad?.toLowerCase().includes(query)) ||
+        (a.resumen?.toLowerCase().includes(query))
+      );
+    }
+
+    result.sort((a, b) => {
+      // Las auditorías traen un AuditoriaId implícito en el orden cronológico o podemos usar fechas
+      const dateA = new Date(a.fecha).getTime();
+      const dateB = new Date(b.fecha).getTime();
+      if (sortOrder === 'asc') return dateA - dateB;
+      return dateB - dateA;
+    });
+
+    return result;
+  }, [auditorias, filtroAccion, searchTerm, sortOrder]);
+
+  const paginatedAuditorias = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredAuditorias.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredAuditorias, currentPage, itemsPerPage]);
 
   const formatDate = (val) => {
     if (!val) return '—';
@@ -157,22 +207,47 @@ const AdminAuditorias = () => {
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Historial de Acciones</h3>
           
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <SearchBar
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar acción, usuario..."
+              width="280px"
+            />
+
+            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'Antiguos Primero' : 'Recientes Primero'}
+            </button>
+
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
+              {['todos', 'CREATE', 'UPDATE', 'DELETE'].map((val) => (
+                <button key={val} onClick={() => setFiltroAccion(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroAccion === val ? 'white' : 'transparent', color: filtroAccion === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroAccion === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
+                  {val === 'todos' ? 'Todas' : (val === 'CREATE' ? 'Creaciones' : (val === 'UPDATE' ? 'Ediciones' : 'Eliminaciones'))}
+                </button>
+              ))}
+            </div>
+
             <button onClick={fetchAuditorias} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
               <FaSyncAlt /> Refrescar
             </button>
           </div>
         </div>
 
+        {errorMsg && (
+          <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#fee2e2', borderRadius: '8px', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontWeight: '800' }}>No se pudieron cargar los registros:</span>
+            <span>{typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : errorMsg}</span>
+          </div>
+        )}
+
         <DashboardTable 
           columns={columns} 
-          data={auditorias} 
+          data={paginatedAuditorias} 
           isLoading={loading} 
-          // Paginación desde backend
-          totalItems={totalItems} 
+          totalItems={filteredAuditorias.length} 
           itemsPerPage={itemsPerPage} 
           currentPage={currentPage} 
           onPageChange={setCurrentPage} 
-          emptyMessage="No hay registros de auditoría." 
+          emptyMessage="No hay registros de auditoría que coincidan con los filtros." 
         />
       </div>
 
