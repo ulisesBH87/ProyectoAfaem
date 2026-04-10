@@ -6,4 +6,4 @@ class EntidadAuditable(Enum):
     EQUIPO = "Equipos"
     MIEMBRO_EQUIPO = "MiembrosEquipo"
     LIGA = "Ligas"
-
+    USUARIOS = "Usuarios"
