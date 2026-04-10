@@ -5,6 +5,7 @@ from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 
 from app.repositorios import autenticacion_repositorio
+from app.repositorios import usuario_repositorio
 
 from app.excepciones import usuario_excepciones
 from sqlalchemy.exc import IntegrityError
@@ -78,7 +79,7 @@ class AutenticacionServicio:
     # == INICIAR SESIÓN ==
     def iniciar_sesion(self, correo: str, contrasena: str):
 
-        usuarioIntentoSesion = autenticacion_repositorio.obtener_por_correo(self.db, correo)
+        usuarioIntentoSesion = usuario_repositorio.obtener_por_correo(self.db, correo)
 
         if not usuarioIntentoSesion:
             raise usuario_excepciones.CredencialesInvalidasError()
