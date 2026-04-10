@@ -11,52 +11,28 @@ from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.esquemas.auth_esquema import TokenResponse
 from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena, RegistroAdmin
 
-from app.servicios.autenticacion_servicio import AutenticacionServicio, CorreoYaRegistradoError
+from app.servicios.autenticacion_servicio import AutenticacionServicio
 from app.excepciones import usuario_excepciones
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
 @router.post("/registro")
 def register(data: RegistroUsuario, service: AutenticacionServicio = Depends(get_autenticacion_servicio)):
-    try:
-        persona, usuario = service.registrar_usuario(data)
+    usuario = service.registrar_usuario(data)
     
-    except CorreoYaRegistradoError:
-        raise HTTPException(
-            status_code=409,
-            detail="Correo ya registrado"
-        )
-
-    except usuario_excepciones.CurpInvalidaError:
-        raise HTTPException(
-            status_code=400,
-            detail="CURP inválida: Debe tener exactamente 18 caracteres"
-        )
-    
-    except usuario_excepciones.ErrorRegistroUsuario:
-        raise HTTPException(
-            status_code=400,
-            detail="Error al registrar el usuario"
-        )
-
     return {
+        "success": True,
         "message": "Usuario registrado correctamente",
         "usuario_id": usuario.UsuarioId
     }
 
 @router.post("/registrar_admin")
 def registrar_administrador(data: RegistroAdmin, service: AutenticacionServicio = Depends(get_autenticacion_servicio)):
-    try:    
-        usuario = service.registrar_admin(data)
-
-    except usuario_excepciones.ErrorRegistroUsuario as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error al registrar el administrador: {str(e)}"
-        )
-        
+    usuario = service.registrar_admin(data)
+    
     return {
-        "message": "Usuario registrado correctamente",
+        "success": True,
+        "message": "Admin registrado correctamente",
         "usuario_id": usuario.UsuarioId
     }
 
@@ -64,12 +40,6 @@ def registrar_administrador(data: RegistroAdmin, service: AutenticacionServicio 
 def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_autenticacion_servicio)) -> TokenResponse:
     
     usuarioIntentoSesion = service.iniciar_sesion(data.Correo, data.Contrasena)
-
-    if not usuarioIntentoSesion:
-        raise HTTPException(
-            status_code = status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales inválidas"
-        )
 
     datos_token = {
         "sub": str(usuarioIntentoSesion.UsuarioId),
@@ -103,20 +73,8 @@ def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_auten
 
 @router.post("/cambiar-contrasena")
 def cambiar_contrasena(data: CambiarContrasena, service: AutenticacionServicio = Depends(get_autenticacion_servicio), usuario = Depends(seguridad.obtener_usuario_actual)):
-    try:
-        cambio = service.cambiar_contrasena(usuario.UsuarioId, data.ContrasenaActual, data.NuevaContrasena)
-
-        if not cambio:
-            raise HTTPException(
-                status_code = status.HTTP_400_BAD_REQUEST,
-                detail="Contraseña actual incorrecta"
-            )
-        
-    except usuario_excepciones.ContraseñaError as e:
-        raise HTTPException(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            detail="Error al cambiar la contraseña"
-        )
+    
+    service.cambiar_contrasena(usuario.UsuarioId, data.ContrasenaActual, data.NuevaContrasena)
     
     return {"message": "Contraseña cambiada correctamente"}
 

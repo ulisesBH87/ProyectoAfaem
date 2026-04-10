@@ -12,8 +12,6 @@ def obtener_mi_acceso(db: Session = Depends(get_db), usuario = Depends(obtener_u
     """
     Retorna los roles, permisos y estructura de menús personalizada para el usuario actual.
     """
-    if not usuario:
-        raise HTTPException(status_code=401, detail="Usuario no autenticado")
     
     acceso = obtener_acceso_usuario_servicio(db, usuario.UsuarioId)
     return acceso

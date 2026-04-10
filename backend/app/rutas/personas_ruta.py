@@ -13,9 +13,6 @@ router = APIRouter(
 def editar_persona(persona_id: int, datos: PersonaEditar, db: Session = Depends(get_db)):
     persona = personas_servicio.editar_persona_servicio(db, persona_id, datos)
 
-    if not persona:
-        raise HTTPException(status_code=404, detail="Persona no encontrada")
-    
     return {
         "mensaje": "Persona actualizada",
         "persona_id": persona.PersonaId
