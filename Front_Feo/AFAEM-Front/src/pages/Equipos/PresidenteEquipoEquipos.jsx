@@ -93,15 +93,24 @@ export default function PresidenteEquipoEquipos() {
     { 
       key: 'NombreEquipo', 
       label: 'Equipo',
-      render: (val) => (
+      render: (val, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ 
             width: '40px', height: '40px', borderRadius: '12px', 
             background: 'var(--primary-light)', color: 'var(--primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '18px', border: '1px solid var(--border-light)'
+            fontSize: '18px', border: '1px solid var(--border-light)',
+            overflow: 'hidden'
           }}>
-            <FaShieldAlt />
+            {row.RutaLogo ? (
+              <img 
+                src={`http://localhost:8000/${row.RutaLogo.replace(/\\/g, '/')}`} 
+                alt={val} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            ) : (
+              <FaShieldAlt />
+            )}
           </div>
           <div>
             <div style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '14px' }}>{val}</div>

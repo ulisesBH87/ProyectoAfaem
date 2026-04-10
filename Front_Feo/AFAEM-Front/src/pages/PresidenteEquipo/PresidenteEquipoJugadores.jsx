@@ -6,6 +6,8 @@ import '../../styles/dashboard.css';
 // Componentes
 import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
 import SearchBar from '../../components/Common/SearchBar';
+import { API_BASE } from '../../config/config';
+
 
 export default function PresidenteEquipoJugadores() {
   const userEmail = localStorage.getItem('email');
@@ -26,40 +28,28 @@ export default function PresidenteEquipoJugadores() {
     const cargarJugadores = async () => {
       try {
         setLoading(true);
-        // Aquí iría la llamada a API para obtener jugadores
-        // Por ahora usamos datos de ejemplo
-        const datosEjemplo = [
-          {
-            id: 1,
-            nombre: 'Juan Pérez',
-            equipo: 'Equipo A',
-            posicion: 'Delantero',
-            edad: 18,
-            estatus: 'aprobado',
-            fechaRegistro: '2026-01-15'
-          },
-          {
-            id: 2,
-            nombre: 'Carlos García',
-            equipo: 'Equipo B',
-            posicion: 'Portero',
-            edad: 20,
-            estatus: 'pendiente',
-            fechaRegistro: '2026-02-20'
-          },
-          {
-            id: 3,
-            nombre: 'Luis Martínez',
-            equipo: 'Equipo A',
-            posicion: 'Defensor',
-            edad: 19,
-            estatus: 'en_proceso',
-            fechaRegistro: '2026-02-10'
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/equipos/mis-jugadores-reales`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        ];
+        });
+
+        if (!response.ok) throw new Error('Error al obtener jugadores');
         
-        setJugadores(datosEjemplo);
-        calcularEstadisticas(datosEjemplo);
+        const data = await response.json();
+        const mappedData = data.map(j => ({
+          id: j.MiembroEquipoId,
+          nombre: j.NombreCompleto,
+          equipo: j.Equipo,
+          posicion: j.Rol,
+          dorsal: j.NumeroCamiseta || '-',
+          estatus: j.Estatus ? 'aprobado' : 'pendiente',
+          fechaRegistro: j.FechaIngreso
+        }));
+
+        setJugadores(mappedData);
+        calcularEstadisticas(mappedData);
         setError(null);
       } catch (err) {
         console.error('Error al cargar jugadores:', err);
@@ -73,6 +63,7 @@ export default function PresidenteEquipoJugadores() {
       cargarJugadores();
     }
   }, [userEmail]);
+
 
   const calcularEstadisticas = (data) => {
     setStats({
@@ -126,9 +117,11 @@ export default function PresidenteEquipoJugadores() {
       renderizar: (valor) => valor
     },
     {
-      clave: 'edad',
-      etiqueta: 'Edad',
-      renderizar: (valor) => `${valor} años`
+      clave: 'dorsal',
+      etiqueta: 'Dorsal',
+      renderizar: (valor) => (
+        <span style={{ fontWeight: '800', color: '#0b4ea6' }}>#{valor}</span>
+      )
     },
     {
       clave: 'estatus',
@@ -141,6 +134,7 @@ export default function PresidenteEquipoJugadores() {
         />
       )
     }
+
   ];
 
   const manejarExportar = () => {
@@ -150,8 +144,9 @@ export default function PresidenteEquipoJugadores() {
         j.nombre,
         j.equipo,
         j.posicion,
-        j.edad,
+        j.dorsal,
         obtenerEtiquetaEstado(j.estatus)
+
       ])
     ].map(row => row.join(',')).join('\n');
 

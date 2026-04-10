@@ -57,6 +57,8 @@ export default function ConfigurarEquipo() {
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
     juegoClubExtranjero: '',
+    shirtNumber: '',
+    positionId: '',
     documents: {}
   });
 
@@ -126,13 +128,13 @@ export default function ConfigurarEquipo() {
       }
     }
   }, []);
-
   const [catalogs, setCatalogs] = useState({
     ligas: [],
     categorias: [],
     modalidades: [],
     ramas: [],
     seguros: [],
+    roles_equipo: [],
     combinaciones: []
   });
 
@@ -145,6 +147,7 @@ export default function ConfigurarEquipo() {
         setLoadingCatalogs(true);
         const data = await teamsService.getCatalogs();
         setCatalogs(data);
+
       } catch (error) {
         console.error("Error al cargar catálogos:", error);
         Swal.fire('Error', 'No se pudieron cargar los catálogos del servidor.', 'error');
@@ -446,8 +449,8 @@ export default function ConfigurarEquipo() {
         form.getTextField('El jugador ha jugado en un Club extranjero...')?.setText(currentPlayer.juegoClubExtranjero);
       }
 
-      // Cargo: JUGADOR
-      form.getTextField('Cargo')?.setText('JUGADOR');
+      // El campo 'Cargo' no existe en el PDF o es redundante con 'Posición'
+
 
       // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
@@ -698,16 +701,42 @@ export default function ConfigurarEquipo() {
                          />
                        </div>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
-                         <input 
-                           type="text" 
-                           value={currentPlayer.lastNameMaterno}
-                           onChange={e => setCurrentPlayer({...currentPlayer, lastNameMaterno: e.target.value})}
-                           placeholder="Ej. Gómez" 
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                         />
-                       </div>
-                    </div>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
+                          <input 
+                            type="text" 
+                            value={currentPlayer.lastNameMaterno}
+                            onChange={e => setCurrentPlayer({...currentPlayer, lastNameMaterno: e.target.value})}
+                            placeholder="Ej. Gómez" 
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                          />
+                        </div>
+                     </div>
+
+                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
+                          <input 
+                            type="number" 
+                            value={currentPlayer.shirtNumber}
+                            onChange={e => setCurrentPlayer({...currentPlayer, shirtNumber: e.target.value})}
+                            placeholder="10" 
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición</label>
+                          <select 
+                            value={currentPlayer.positionId}
+                            onChange={e => setCurrentPlayer({...currentPlayer, positionId: parseInt(e.target.value)})}
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
+                          >
+                            <option value="">Posición...</option>
+                            {catalogs.roles_equipo.map(rol => (
+                              <option key={rol.id} value={rol.id}>{rol.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -940,10 +969,20 @@ export default function ConfigurarEquipo() {
                         onClick={async () => {
                           const docs = currentPlayer.documents || {};
                           const hasMinDocs = docs.ine && docs.foto;
-                          if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs) {
-                            Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona seguro y sube INE y Foto para continuar.', 'warning');
+                          if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs || !currentPlayer.positionId) {
+                            Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona posición, seguro y sube INE y Foto para continuar.', 'warning');
                             return;
                           }
+
+                          // Validar número de camiseta único
+                          if (currentPlayer.shirtNumber) {
+                            const duplicate = players.find(p => p.shirtNumber === currentPlayer.shirtNumber);
+                            if (duplicate) {
+                              Swal.fire('Atención', `El número de camiseta ${currentPlayer.shirtNumber} ya está asignado a ${duplicate.firstName}.`, 'error');
+                              return;
+                            }
+                          }
+
                           // 1. Descargamos el PDF
                           await handleDownloadPlayerPDF();
                           // 2. Guardamos el jugador pendiente y abrimos el modal premium
@@ -1162,6 +1201,8 @@ export default function ConfigurarEquipo() {
                   nacAbueloMaterno: '',
                   nacAbuelaMaterna: '',
                   juegoClubExtranjero: '',
+                  shirtNumber: '',
+                  positionId: '',
                   documents: {}
                 });
                 setPendingPlayer(null);

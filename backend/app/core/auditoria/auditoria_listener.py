@@ -120,7 +120,8 @@ def audit_after_flush(session, flush_context):
 
             session.add(Auditoria(**audit_data))
 
-    except EXCLUIR as e:
+    except Exception as e:
+
         print("ERROR en auditoría: ", e)
     
     finally:
