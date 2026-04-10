@@ -47,6 +47,13 @@ export const RBACProvider = ({ children }) => {
             Ruta: '/admin/presidentes'
           });
         }
+        if (!finalMenus.find(m => m.Nombre === 'Auditorías')) {
+          finalMenus.push({
+            Nombre: 'Auditorías',
+            Icono: 'FaHistory',
+            Ruta: '/admin/auditorias'
+          });
+        }
       }
 
       const newState = {
