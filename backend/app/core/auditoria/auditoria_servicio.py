@@ -7,6 +7,7 @@ from app.modelos.auditoria import Auditoria
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.modelos.catalogo_accion import CatalogoAccion
+from app.excepciones import auditoria_excepciones
 
 SYSTEM_USER_ID = 0
 
@@ -22,6 +23,13 @@ MAPEO_ACCIONES = {
     "UPDATE": "actualizado",
     "DELETE": "eliminado"
 }
+
+# PROTECCIÓN DE JSON
+def safe_json_load(value):
+    try:
+        return json.loads(value) if value else {}
+    except Exception:
+        return {}
 
 #Traducción de acciones
 def construir_cambios(antes, despues):
@@ -88,19 +96,24 @@ def build_audit_entry(
 
 #Obtener nombre de usuario al momento de realizar la acción
 def obtener_nombre_usuario(db, user_id):
-    if not user_id:
+    
+    try:
+        if not user_id:
+            return "SYSTEM"
+
+        usuario = db.query(Usuario).get(user_id)
+        if not usuario:
+            return "SYSTEM"
+
+        persona = db.query(Personas).get(usuario.PersonaId)
+        if not persona:
+            return "SYSTEM"
+
+        return f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido}".strip()
+    
+    except Exception:
         return "SYSTEM"
-
-    usuario = db.query(Usuario).get(user_id)
-    if not usuario:
-        return "SYSTEM"
-
-    persona = db.query(Personas).get(usuario.PersonaId)
-    if not persona:
-        return "SYSTEM"
-
-    return f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido}".strip()
-
+    
 #Visualización de registros
 def construir_descripcion(auditoria, usuario_nombre, antes, despues):
 
@@ -160,59 +173,62 @@ def construir_descripcion(auditoria, usuario_nombre, antes, despues):
 
 
 def obtener_auditorias(db: Session, page: int, size: int):
+    try:
+        offset = (page - 1) * size
+        total = db.query(Auditoria).count()
 
-    offset = (page - 1) * size
-    total = db.query(Auditoria).count()
-
-    auditorias = (
-        db.query(Auditoria)
-        .join(CatalogoAccion)
-        .order_by(Auditoria.FechaAccion.desc())
-        .offset(offset)
-        .limit(size)
-        .all()
-    )
-
-    resultado = []
-
-    for a in auditorias:
-
-        nombre_completo = a.UsuarioNombre or "SYSTEM"
-
-        antes = json.loads(a.ValoresAntes) if a.ValoresAntes else {}
-        despues = json.loads(a.ValoresDespues) if a.ValoresDespues else {}
-
-        if despues:
-            despues.pop("PersonaId", None)
-
-        descripcion = construir_descripcion(a, nombre_completo, antes, despues)
-
-        entidad_legible = MAPEO_ENTIDADES.get(a.EntidadAfectada, a.EntidadAfectada)
-
-        cambios = construir_cambios(antes, despues) if a.CatalogoAccion.Accion == "UPDATE" else []
-
-        resumen = construir_resumen(
-            a.EntidadAfectada,
-            antes,
-            despues,
-            a.CatalogoAccion.Accion
+        auditorias = (
+            db.query(Auditoria)
+            .join(CatalogoAccion)
+            .order_by(Auditoria.FechaAccion.desc())
+            .offset(offset)
+            .limit(size)
+            .all()
         )
 
-        resultado.append({
-            "AuditoriaId": a.AuditoriaId,
-            "titulo": f"{entidad_legible} {MAPEO_ACCIONES.get(a.CatalogoAccion.Accion)}",
-            "usuario_que_realizo_la_accion": nombre_completo,
-            "fecha": a.FechaAccion,
-            "entidad": entidad_legible,
-            "accion": a.CatalogoAccion.Accion,
-            "resumen": resumen,
-            "cambios": cambios
-        })
+        resultado = []
 
-    return {
-        "page": page,
-        "size": size,
-        "total": total,
-        "total_pages": (total + size - 1) // size,
-        "data": resultado
-    }
+        for a in auditorias:
+
+            nombre_completo = a.UsuarioNombre or "SYSTEM"
+
+            antes = json.loads(a.ValoresAntes) if a.ValoresAntes else {}
+            despues = json.loads(a.ValoresDespues) if a.ValoresDespues else {}
+
+            if despues:
+                despues.pop("PersonaId", None)
+
+            descripcion = construir_descripcion(a, nombre_completo, antes, despues)
+
+            entidad_legible = MAPEO_ENTIDADES.get(a.EntidadAfectada, a.EntidadAfectada)
+
+            cambios = construir_cambios(antes, despues) if a.CatalogoAccion.Accion == "UPDATE" else []
+
+            resumen = construir_resumen(
+                a.EntidadAfectada,
+                antes,
+                despues,
+                a.CatalogoAccion.Accion
+            )
+
+            resultado.append({
+                "AuditoriaId": a.AuditoriaId,
+                "titulo": f"{entidad_legible} {MAPEO_ACCIONES.get(a.CatalogoAccion.Accion)}",
+                "usuario_que_realizo_la_accion": nombre_completo,
+                "fecha": a.FechaAccion,
+                "entidad": entidad_legible,
+                "accion": a.CatalogoAccion.Accion,
+                "resumen": resumen,
+                "cambios": cambios
+            })
+
+        return {
+            "page": page,
+            "size": size,
+            "total": total,
+            "total_pages": (total + size - 1) // size,
+            "data": resultado
+        }
+    
+    except Exception:
+        raise auditoria_excepciones.ErrorObtenerAuditoria()
