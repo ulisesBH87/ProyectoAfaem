@@ -4,10 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles # Importación necesaria
 from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta, auditoria_ruta
 from app.utilidades.context import usuario_actual_id, ip_actual
-import traceback
 from app.db.sesion import SessionLocal
 from app.core.seguridad import obtener_usuario_desde_token
 import os
+from app.excepciones.base import AppError
 
 app = FastAPI(
     title = "BackendAFAEM",
@@ -36,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#middleware para auditoría
 @app.middleware("http")
 async def auditoria_contexto_middleware(request: Request, call_next):
 
@@ -67,6 +68,7 @@ async def auditoria_contexto_middleware(request: Request, call_next):
     response = await call_next(request)
     return response
 
+#importación de rutas
 app.include_router(auth_ruta.router)
 app.include_router(solicitud_ruta.router)
 app.include_router(documentos_ruta.router)
@@ -79,21 +81,28 @@ app.include_router(personas_ruta.router)
 app.include_router(auditoria_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    # Si es una excepción HTTP intencional (401, 403, 404, etc.), dejar que FastAPI la maneje
-    if isinstance(exc, HTTPException):
-        raise exc
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError):
     
-    error_detail = traceback.format_exc()
-    print(f"--- ERROR GLOBAL CAPTURADO ---\n{error_detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "code": exc.code,
+            "message": exc.message
+        }
+    )
+
+#Errores no controlados
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    
     return JSONResponse(
         status_code=500,
         content={
-            "detail": {
-                "message": str(exc),
-                "traceback": error_detail.split("\n")[-6:-1]
-            }
+            "success": False,
+            "code": "INTERNAL_SERVER_ERROR",
+            "message": "Ocurrió un error inesperado. Por favor, inténtalo de nuevo más tarde."
         }
     )
 

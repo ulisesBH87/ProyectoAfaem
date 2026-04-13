@@ -35,59 +35,64 @@ def obtener_registro_id(obj):
 
 @event.listens_for(Session, "before_flush")
 def audit_before_flush(session, flush_context, instances):
-    buffer = session.info.setdefault(BUFFER_AUDITORIA_KEY, [])
-
-    for obj in session.new:
-        if es_registro_auditoria(obj) or not es_auditable(obj):
-            continue
-        
-        buffer.append({
-            "tipo": "CREATE",
-            "obj": obj,
-            "antes": None,
-            "despues": model_to_dict(obj)
-        })
-
-    for obj in session.dirty:
-        if es_registro_auditoria(obj) or not es_auditable(obj):
-            continue
-
-        state = inspect(obj)
-        cambios = {}
-        anteriores = {}
-
-        for attr in state.attrs:
-            hist = attr.history
-            if not hist.has_changes():
-                continue
-
-            if attr.key in EXCLUIR:
-                continue
-
-            anteriores[attr.key] = hist.deleted[0] if hist.deleted else None
-            cambios[attr.key] = hist.added[0] if hist.added else None
-
-        if not cambios:
-            continue
-
-        buffer.append({
-            "tipo": "UPDATE",
-            "obj": obj,
-            "antes": anteriores,
-            "despues": cambios
-        })
-
-    for obj in session.deleted:
     
-        if es_registro_auditoria(obj) or not es_auditable(obj):
-            continue
+    try:
+        buffer = session.info.setdefault(BUFFER_AUDITORIA_KEY, [])
 
-        buffer.append({
-            "tipo": "DELETE",
-            "obj": obj,
-            "antes": model_to_dict(obj),
-            "despues": None
-        })
+        for obj in session.new:
+            if es_registro_auditoria(obj) or not es_auditable(obj):
+                continue
+            
+            buffer.append({
+                "tipo": "CREATE",
+                "obj": obj,
+                "antes": None,
+                "despues": safe_model_to_dict(obj)
+            })
+
+        for obj in session.dirty:
+            if es_registro_auditoria(obj) or not es_auditable(obj):
+                continue
+
+            state = inspect(obj)
+            cambios = {}
+            anteriores = {}
+
+            for attr in state.attrs:
+                hist = attr.history
+                if not hist.has_changes():
+                    continue
+
+                if attr.key in EXCLUIR:
+                    continue
+
+                anteriores[attr.key] = hist.deleted[0] if hist.deleted else None
+                cambios[attr.key] = hist.added[0] if hist.added else None
+
+            if not cambios:
+                continue
+
+            buffer.append({
+                "tipo": "UPDATE",
+                "obj": obj,
+                "antes": anteriores,
+                "despues": cambios
+            })
+
+        for obj in session.deleted:
+        
+            if es_registro_auditoria(obj) or not es_auditable(obj):
+                continue
+
+            buffer.append({
+                "tipo": "DELETE",
+                "obj": obj,
+                "antes": safe_model_to_dict(obj),
+                "despues": None
+            })
+    
+    except Exception as e:
+        print("ERROR en audit_before_flush:", e)
 
 @event.listens_for(Session, "after_flush_postexec")
 def audit_after_flush(session, flush_context):
@@ -97,24 +102,29 @@ def audit_after_flush(session, flush_context):
     if not buffer:
         return
 
-    for item in buffer:
+    try:
+        for item in buffer:
 
-        obj = item["obj"]
+            obj = item["obj"]
 
-        registro_id = obtener_registro_id(obj)
+            registro_id = obtener_registro_id(obj)
 
-        audit_data = build_audit_entry(
-            session,
-            entidad=obj.__tablename__,
-            registro_id=registro_id,
-            accion_id=mapear_accion(item["tipo"]),
-            valores_antes=item["antes"],
-            valores_despues=item["despues"]
-        )
+            audit_data = build_audit_entry(
+                session,
+                entidad=obj.__tablename__,
+                registro_id=registro_id,
+                accion_id=mapear_accion(item["tipo"]),
+                valores_antes=item["antes"],
+                valores_despues=item["despues"]
+            )
 
-        session.add(Auditoria(**audit_data))
+            session.add(Auditoria(**audit_data))
 
-    session.info[BUFFER_AUDITORIA_KEY] = []
+    except EXCLUIR as e:
+        print("ERROR en auditoría: ", e)
+    
+    finally:
+        session.info[BUFFER_AUDITORIA_KEY] = []
 
 
 def obtener_pk(obj):
@@ -128,3 +138,9 @@ def mapear_accion(tipo):
         return 2
     elif tipo == "DELETE":
         return 3
+
+def safe_model_to_dict(obj):
+    try:
+        return model_to_dict(obj)
+    except Exception:
+        return {}
