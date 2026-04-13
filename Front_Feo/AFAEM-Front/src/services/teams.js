@@ -317,12 +317,27 @@ export const createTeamCompleto = async (data) => {
       fecha_nacimiento: p.birthDate,
       seguro_tipo_id: p.insuranceType,
       numero_camiseta: p.shirtNumber,
-      extranjero: p.isForeign,
-      nacionalidad: p.nationality
+      extranjero: p.esForaneo,
+      nacionalidad: p.nacionalidadJugador,
+      pais_residencia: p.paisResidenciaActual,
+      nacionalidad_padre: p.nacionalidadPadre,
+      nacionalidad_madre: p.nacionalidadMadre,
+      nac_abuelo_paterno: p.nacionalidadAbueloP,
+      nac_abuela_paterna: p.nacionalidadAbuelaP,
+      nac_abuelo_materno: p.nacionalidadAbueloM,
+      nac_abuela_materna: p.nacionalidadAbuelaM,
+      registro_asociacion_extranjera: p.registroAsociacionExtranjera,
+      juego_club_extranjero: p.participacionExtranjera,
+      rol_en_equipo: p.positionId
     }));
 
     formData.append('team_data', JSON.stringify(teamMetadata));
     formData.append('players_data', JSON.stringify(playersMetadata));
+    
+    // Adjuntar archivo de logo del equipo si existe
+    if (data.teamLogo) {
+      formData.append('team_logo', data.teamLogo);
+    }
 
     // Adjuntar archivos de cada jugador
     data.players.forEach((p, index) => {
@@ -339,6 +354,7 @@ export const createTeamCompleto = async (data) => {
       }
     });
     return response.data;
+
   } catch (error) {
     console.error('Error creando equipo completo:', error);
     throw error;

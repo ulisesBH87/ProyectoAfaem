@@ -22,6 +22,7 @@ class EquipoResponse(BaseModel):
     Rama: str
     NumeroJugadores: int
     Estatus: bool
+    RutaLogo: Optional[str] = None
     SolicitudId: Optional[int] = None
 
     class Config:
@@ -50,6 +51,7 @@ class CatalogosRegistroResponse(BaseModel):
     modalidades: List[CatalogoItem]
     ramas: List[CatalogoItem]
     seguros: List[dict]
+    roles_equipo: List[CatalogoItem]
     combinaciones: List[dict] # To hold valid [LigaId, ModalidadId, CategoriaId, RamaId]
 
 class JugadorCreate(BaseModel):

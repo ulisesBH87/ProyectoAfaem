@@ -10,6 +10,8 @@ class Equipos(Base):
     NombreEquipo = Column(String(150), nullable=False, unique=True)
     FechaCreacion = Column(DateTime, server_default=func.now())
     Estatus = Column(Boolean, default=True)
+    RutaLogo = Column(String(500), nullable=True)
+
     
     EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="EquipoRelacion")
     MiembrosRelacion = relationship("MiembrosEquipo", back_populates="EquipoRelacion")

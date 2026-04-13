@@ -57,6 +57,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/auditoria': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
       // Proxy para la raíz '/' solo para peticiones JSON (evita el 404 del pingBackend)
       '^/$': {
         target: 'http://127.0.0.1:8000',
