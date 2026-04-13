@@ -4,15 +4,17 @@ from app.core import seguridad
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 
+from app.repositorios import autenticacion_repositorio
 from app.repositorios import usuario_repositorio
-class CorreoYaRegistradoError(Exception):
-    pass
 
+from app.excepciones import usuario_excepciones
+from sqlalchemy.exc import IntegrityError
 class AutenticacionServicio:
 
     def __init__(self, db:Session):
         self.db = db
 
+    # == REGISTRO ==
     def registrar_admin(self, data):
         salt = seguridad.generar_salt()
         hashed_password = seguridad.generar_hash(salt, data.Contrasena)
@@ -29,14 +31,23 @@ class AutenticacionServicio:
             Salt=salt,
             RolId = data.RolId
         )
-
-        return usuario_repositorio.registrar_admin_repo(self.db, datos_persona, datos_usuario)
+        try:
+            persona, usuario = autenticacion_repositorio.registrar_admin_repo(self.db, datos_persona, datos_usuario)
+            self.db.commit()
+            return persona, usuario
+        
+        except IntegrityError:
+            self.db.rollback()
+            raise usuario_excepciones.CorreoYaRegistradoError()
+        except Exception:
+            self.db.rollback()
+            raise usuario_excepciones.ErrorRegistroUsuario()
 
     def registrar_usuario(self, data):
 
-        correo_existente = usuario_repositorio.obtener_por_correo(self.db, data.Correo)
+        correo_existente = autenticacion_repositorio.obtener_por_correo(self.db, data.Correo)
         if correo_existente:
-            raise CorreoYaRegistradoError()
+            raise usuario_excepciones.CorreoYaRegistradoError()
         
         salt = seguridad.generar_salt()
         hashed_password = seguridad.generar_hash(salt, data.Contrasena)
@@ -53,34 +64,52 @@ class AutenticacionServicio:
             Salt=salt
         )
 
-        return usuario_repositorio.registrar_usuario_repo(self.db, datos_persona, datos_usuario)
+        try:
+            persona, usuario = autenticacion_repositorio.registrar_usuario_repo(self.db, datos_persona, datos_usuario)
+            self.db.commit()
+            return persona, usuario
+        
+        except IntegrityError:
+            self.db.rollback()
+            raise usuario_excepciones.CorreoYaRegistradoError()
+        except Exception:
+            self.db.rollback()
+            raise usuario_excepciones.ErrorRegistroUsuario()
 
-
+    # == INICIAR SESIÓN ==
     def iniciar_sesion(self, correo: str, contrasena: str):
 
         usuarioIntentoSesion = usuario_repositorio.obtener_por_correo(self.db, correo)
 
         if not usuarioIntentoSesion:
-            return None
+            raise usuario_excepciones.CredencialesInvalidasError()
 
         if not seguridad.verificar_contrasena(contrasena, usuarioIntentoSesion.Contrasena, usuarioIntentoSesion.Salt):
-            return None
+            raise usuario_excepciones.CredencialesInvalidasError()
 
         return usuarioIntentoSesion
 
 
+    # == CAMBIAR CONTRASEÑA ==
     def cambiar_contrasena(self, usuario_id, contrasena_actual, nueva_contrasena):
 
-        usuario = usuario_repositorio.obtener_usuario_por_id(self.db, usuario_id)
+        usuario = autenticacion_repositorio.obtener_usuario_por_id(self.db, usuario_id)
         if not usuario:
-            return False
+            raise usuario_excepciones.UsuarioNoEncontradoError()
 
         if not seguridad.verificar_contrasena(contrasena_actual, usuario.Contrasena, usuario.Salt):
-            return False
+            raise usuario_excepciones.CredencialesInvalidasError()
 
-        nuevo_salt = seguridad.generar_salt()
-        nuevo_hash = seguridad.generar_hash(nuevo_salt, nueva_contrasena)
+        try:
 
-        usuario_repositorio.cambiar_contrasena_repo(self.db, usuario_id, nuevo_hash, nuevo_salt)
+            nuevo_salt = seguridad.generar_salt()
+            nuevo_hash = seguridad.generar_hash(nuevo_salt, nueva_contrasena)
 
+            autenticacion_repositorio.cambiar_contrasena_repo(self.db, usuario_id, nuevo_hash, nuevo_salt)
+            self.db.commit()
+
+        except Exception:
+            self.db.rollback()
+            raise usuario_excepciones.ErrorCambioContrasena()
+        
         return True
