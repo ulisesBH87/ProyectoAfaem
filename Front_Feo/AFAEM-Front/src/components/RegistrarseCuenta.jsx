@@ -103,7 +103,7 @@ function RegistrarseCuenta() {
 				setTimeout(() => navigate('/ingresar'), 2500);
 			} else {
 				// MANEJAR ERROR DE CORREO DUPLICADO
-				const detail = res.json?.detail || 'Error en el registro.';
+				const detail = res.json?.detail || 'Error en el registro, inténtalo de nuevo más tarde.';
 				const detailStr = typeof detail === 'string' ? detail : JSON.stringify(detail);
 				if (detailStr.toLowerCase().includes('correo')) {
 					setErr('El correo electrónico ya está en uso');

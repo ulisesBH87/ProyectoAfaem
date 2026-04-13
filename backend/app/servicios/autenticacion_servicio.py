@@ -45,7 +45,7 @@ class AutenticacionServicio:
 
     def registrar_usuario(self, data):
 
-        correo_existente = autenticacion_repositorio.obtener_por_correo(self.db, data.Correo)
+        correo_existente = usuario_repositorio.obtener_por_correo(self.db, data.Correo)
         if correo_existente:
             raise usuario_excepciones.CorreoYaRegistradoError()
         
