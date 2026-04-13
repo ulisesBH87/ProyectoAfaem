@@ -1,3 +1,5 @@
+import { getErrorMessage } from './utils/errorHandler';
+
 // VALIDACIONES REUTILIZABLES PARA FORMULARIOS
 
 export function computePasswordRequirements(pw) {
@@ -134,7 +136,14 @@ export async function uploadFile(API_BASE, file) {
 	const fd = new FormData();
 	fd.append('file', file);
 	const res = await fetch(`${API_BASE}/upload/`, { method: 'POST', body: fd });
-	if (!res.ok) throw new Error('ERROR AL SUBIR EL ARCHIVO AL BACKEND');
+	if (!res.ok) {
+		let json = {};
+		try { json = await res.json(); } catch(e) {}
+		// Creamos un mock de error para getErrorMessage
+		const mockError = new Error();
+		mockError.response = { data: json, status: res.status };
+		throw new Error(getErrorMessage(mockError, 'ERROR AL SUBIR EL ARCHIVO AL BACKEND'));
+	}
 	const data = await res.json();
 	return data;
 }
