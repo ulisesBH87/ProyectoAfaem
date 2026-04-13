@@ -95,7 +95,7 @@ def crear_presidente_equipo_repo(db, usuario_id):
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
 
     if not usuario:
-        raise Exception("Usuario no encontrado")
+        return None
 
     persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
 
@@ -154,8 +154,6 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     
     if presidente:
         presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
-
-    db.commit()
 
     return orden
 
