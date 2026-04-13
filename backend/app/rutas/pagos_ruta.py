@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from app.db.sesion import get_db
+from app.db.sesion import get_pagos_servicio
 
 from app.esquemas.pago_esquema import CrearOrdenPago, SeguroBase, AfiliacionesBase, ListaPagos, OrdenPagoIndividual
-from app.servicios.pagos_servicio import crear_orden_pago_servicio
 from app.core.seguridad import obtener_usuario_actual
-from app.servicios import pagos_servicio
+from app.servicios.pagos_servicio import PagosServicio
+from app.excepciones import pagos_excepciones
 
 router = APIRouter(
     prefix="/ordenes-pago",
@@ -13,64 +13,53 @@ router = APIRouter(
 )
 
 @router.post("/")
-def crear_orden_pago(datos: CrearOrdenPago, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get_pagos_servicio), usuario = Depends(obtener_usuario_actual)):
 
     usuario_id = usuario.UsuarioId
-    resultado = crear_orden_pago_servicio(db, usuario_id, datos)
-
+    resultado = service.crear_orden_pago(usuario_id, datos)
+    
     return resultado
 
 @router.post("/{orden_id}/comprobante")
-async def subir_comprobante(orden_id: int, archivo: UploadFile = File(...), db: Session = Depends(get_db)):
-    resultado = await pagos_servicio.subir_comprobante_servicio(db=db, orden_id=orden_id, archivo=archivo)
+async def subir_comprobante(orden_id: int, archivo: UploadFile = File(...), service: PagosServicio = Depends(get_pagos_servicio)):
+    resultado = await service.subir_comprobante(orden_id=orden_id, archivo=archivo)
 
     return resultado
 
 @router.get("/seguros", response_model=list[SeguroBase])
-def obtener_seguros(db:Session=Depends(get_db)):
-    seguros = pagos_servicio.obtener_seguros_servicio(db)
+def obtener_seguros(service: PagosServicio = Depends(get_pagos_servicio)):
+    seguros = service.obtener_seguros()
 
     return seguros
 
 @router.get("/afiliaciones", response_model=list[AfiliacionesBase])
-def obtener_afiliaciones(db:Session=Depends(get_db)):
-    afiliaciones = pagos_servicio.obtener_afiliaciones_servicio
+def obtener_afiliaciones(service: PagosServicio =Depends(get_pagos_servicio)):
+    afiliaciones = service.obtener_afiliaciones()
 
     return afiliaciones
 
 
 @router.get("/generales", response_model=list[ListaPagos])
-def obtener_pagos(db:Session=Depends(get_db)):
-    pagos = pagos_servicio.obtener_pagos_servicio(db)
+def obtener_pagos(service: PagosServicio = Depends(get_pagos_servicio)):
+    pagos = service.obtener_pagos_servicio()
 
     return pagos
 
 #Cambiar el estatus de pago
 @router.post("/estatus-pago")
-def estatus_pago(orden_pago_id: int, estatus: int, db:Session=Depends(get_db)):
-    response = pagos_servicio.estatus_pago_servicio(db, orden_pago_id, estatus)
+def estatus_pago(orden_pago_id: int, estatus: int, service: PagosServicio = Depends(get_pagos_servicio)):
+    response = service.estatus_pago(orden_pago_id, estatus)
 
     return response
 
 @router.get("/mi-estado")
-def mi_estado_pago(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+def mi_estado_pago(service: PagosServicio = Depends(get_pagos_servicio), usuario = Depends(obtener_usuario_actual)):
     """Devuelve el estatus de pago más reciente del usuario autenticado."""
-    from app.modelos.ordenes_pago_modelo import OrdenPago
-    orden = db.query(OrdenPago).filter(
-        OrdenPago.UsuarioId == usuario.UsuarioId
-    ).order_by(OrdenPago.OrdenPagoId.desc()).first()
-    if not orden:
-        return {"tiene_orden": False, "estatus": None}
-    
-    return {
-        "tiene_orden": True,
-        "orden_pago_id": orden.OrdenPagoId,
-        "estatus": orden.EstatusPagoId,
-        "tiene_comprobante": bool(orden.RutaVoucher),
-        "total": float(orden.TotalPagar) if orden.TotalPagar else 0
-    }
+    orden = service.mi_estado_pago(usuario.UsuarioId)
+
+    return orden
 
 @router.get("/{orden_pago_id}", response_model=OrdenPagoIndividual)
-def orden_pago_individual(orden_pago_id: int, db:Session=Depends(get_db)):
+def orden_pago_individual(orden_pago_id: int, service: PagosServicio=Depends(get_pagos_servicio)):
 
-    return pagos_servicio.orden_pago_individual_servicio(db, orden_pago_id)
+    return service.orden_pago_individual(orden_pago_id)

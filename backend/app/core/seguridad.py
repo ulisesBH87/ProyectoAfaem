@@ -1,14 +1,14 @@
-import hashlib
 import hmac
+import hashlib
 import secrets
 
-from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from app.db.sesion import get_db
-from app.modelos.usuario_modelo import Usuario
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from app.modelos.usuario_modelo import Usuario
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status
+from datetime import datetime, timedelta, timezone
 from app.repositorios.usuario_repositorio import obtener_usuario_por_id
 
 from app.core.config import obtener_configuracion
@@ -17,6 +17,8 @@ config = obtener_configuracion()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/iniciar-sesion")
 
+
+#Contraseñas
 def generar_salt():
     return secrets.token_hex(16)
 
@@ -42,11 +44,10 @@ def crear_token(data: dict) -> str:
         minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
-    #fecha de expiración agregada al payload del token
     datos.update(
         {
             "sub": str(data["sub"]),
-            "exp": expire,
+            "exp": expire,      #fecha de expiración agregada al payload del token
             "type": "access"
         }
     )
@@ -56,6 +57,7 @@ def crear_token(data: dict) -> str:
         config.SECRET_KEY,
         algorithm=config.ALGORITHM
     )
+
     return token
 
 def verificar_token(token: str):
@@ -74,6 +76,10 @@ def verificar_token(token: str):
             detail="Token inválido o expirado"
         )
 
+
+#Usuarios
+
+#Obtener desde token
 def obtener_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     payload = verificar_token(token)
     if payload is None:
@@ -126,3 +132,32 @@ def requerir_roles(*roles_permitidos):
         return usuario
 
     return verificador
+
+def obtener_usuario_desde_token(token: str, db: Session):
+    payload = verificar_token(token)
+
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tipo de token inválido"
+        )
+
+    usuario_id = payload.get("sub")
+
+    if usuario_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido"
+        )
+
+    usuario_id = int(usuario_id)
+
+    usuario = obtener_usuario_por_id(db, usuario_id)
+
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado"
+        )
+
+    return usuario

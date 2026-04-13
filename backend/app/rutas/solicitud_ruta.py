@@ -4,9 +4,16 @@ from sqlalchemy.orm import Session
 from app.core.seguridad import crear_token, verificar_token, obtener_usuario_actual
 from app.db.sesion import get_db
 
-from app.esquemas.solicitud_esquema import SolicitudesTodas, SolicitudCrear, SolicitudIndividualRespuesta, RequisitosParaAfiliacion, CrearSolicitud, PDFData
+from app.esquemas.solicitud_esquema import (
+    SolicitudesTodas, SolicitudCrear, SolicitudIndividualRespuesta, 
+    RequisitosParaAfiliacion, CrearSolicitud, PDFData,
+    ValidarSolicitudPayload, SolicitudDocumentosResponse
+)
 
-from app.servicios.solicitud_servicio import crear_solicitud, obtener_solicitudes_servicio, obtener_solicitud_individual_servicio, agregar_requisitos_servicio
+from app.servicios.solicitud_servicio import (
+    crear_solicitud, obtener_solicitudes_servicio, obtener_solicitud_individual_servicio, 
+    agregar_requisitos_servicio, obtener_documentos_para_revision_servicio, validar_solicitud_servicio
+)
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.solicitud_modelo import Solicitud
 from app.servicios import solicitud_servicio
@@ -23,6 +30,22 @@ router = APIRouter(
     tags=["Solicitudes"]
 )
 
+# ... (omitting previous middle code for brevity in replace, but I will include the new endpoints at the end context)
+
+@router.get("/{solicitud_id}/documentos", response_model=SolicitudDocumentosResponse)
+def obtener_documentos_revision(solicitud_id: int, db: Session = Depends(get_db)):
+    """
+    Obtiene los documentos de una solicitud específica para que el administrador los revise.
+    """
+    return obtener_documentos_para_revision_servicio(db, solicitud_id)
+
+@router.post("/{solicitud_id}/validar")
+def validar_solicitud(solicitud_id: int, payload: ValidarSolicitudPayload, db: Session = Depends(get_db)):
+    """
+    Aprueba o rechaza una solicitud y activa la cuenta del presidente si es necesario.
+    """
+    return validar_solicitud_servicio(db, solicitud_id, payload)
+
 """
 @router.post("/enviar-solicitud")
 def enviar_solicitud_presidente(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuario = Depends(obtener_usuario_actual)):
@@ -37,7 +60,8 @@ def enviar_solicitud_presidente(data: SolicitudCrear, db:Session = Depends(get_d
 
 @router.get("/solicitudes-usuarios", response_model=List[SolicitudesTodas])
 def obtener_solicitudes(db:Session = Depends(get_db)):
-    return obtener_solicitudes_servicio(db)
+    return solicitud_servicio.obtener_solicitudes_usuarios_servicio(db)
+
 
 
 @router.get("/solicitud-usuario/{solicitud_id}", response_model=SolicitudIndividualRespuesta)
@@ -112,3 +136,18 @@ async def descargar_formato(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {str(e)}")
+#Hacer el envío de la solicitud al administrador
+@router.post("/solicitud-completa")
+def enviar_solicitud_completa(solicitud_id: int, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
+    resultado = solicitud_servicio.enviar_solicitud_completa_servicio(db, solicitud_id, usuario.UsuarioId)
+    return resultado
+
+#Administrador
+#Ver todas las solicitudes
+@router.get("/")
+def ver_solicitudes(db:Session=Depends(get_db)):
+    return solicitud_servicio.obtener_solicitudes_servicio(db)
+
+@router.get("/detalles/{solicitud_id}")
+def obtener_solicitud_detalle(solicitud_id: int,db: Session = Depends(get_db)):
+    return solicitud_servicio.obtener_solicitud_detalle_servicio(db, solicitud_id)

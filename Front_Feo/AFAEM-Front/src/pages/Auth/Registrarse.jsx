@@ -140,6 +140,17 @@ function Registrarse() {
 			if (!String(value || '').trim()) return 'La fecha de nacimiento es obligatoria';
 			return '';
 		}
+		if (name === 'Contrasena') {
+			const pw = value || '';
+			if (!pw) return 'La contraseña es obligatoria';
+			if (pw.length < 6) return 'Debe tener mínimo 6 caracteres';
+			return '';
+		}
+		if (name === 'ConfirmarContrasena') {
+			if (!value) return 'Confirma tu contraseña';
+			if (value !== formData.Contrasena) return 'Las contraseñas no coinciden';
+			return '';
+		}
 		return '';
 	};
 
@@ -434,304 +445,13 @@ function Registrarse() {
 	}, [resendCooldown]);
 
 	return (
-		<div className="register">
-			<style>{`
-				html, body, #root { 
-					margin: 0; 
-					min-height: 100vh; 
-					background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-					font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-				}
-				
-				.register { 
-					display: flex; 
-					justify-content: center; 
-					align-items: flex-start;
-					padding: 32px 16px; 
-					box-sizing: border-box; 
-					min-height: 100vh;
-				}
-				
-				.form-container {
-					width: 100%;
-					max-width: 960px;
-				}
-				
-				.card { 
-					position: relative; 
-					overflow: visible; 
-					width: 100%; 
-					background: white; 
-					border-radius: 14px; 
-					padding: 48px 32px;
-					box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-					border: none;
-				}
-				
-				/* LOGOS: ENCABEZADO */
-				.card-logos {
-					text-align: center;
-					margin-bottom: 32px;
-					display: flex;
-					justify-content: center;
-					align-items: center;
-					gap: 24px;
-					flex-wrap: wrap;
-				}
-				
-				.left-logo {
-					height: 60px;
-					max-width: 160px;
-					object-fit: contain;
-				}
-				
-				.right-logos {
-					display: flex;
-					gap: 20px;
-					align-items: center;
-				}
-				
-				.right-logos img {
-					height: 50px;
-					max-width: 120px;
-					object-fit: contain;
-				}
-				
-				.card h2 {
-					text-align: center;
-					font-size: 28px;
-					font-weight: 700;
-					color: #0b4ea6;
-					margin-bottom: 32px;
-					letter-spacing: 0.5px;
-				}
-				
-				.form-grid {
-					display: grid;
-					grid-template-columns: repeat(12, 1fr);
-					gap: 16px;
-				}
-				
-				.form-field.col-span-4 {
-					grid-column: span 12;
-				}
-				
-				.form-field.col-span-3 {
-					grid-column: span 9;
-				}
-				
-				.form-field.col-span-2 {
-					grid-column: span 6;
-				}
-				
-				.form-field.col-span-1 {
-					grid-column: span 3;
-				}
-				
-				.form-label {
-					font-size: 13px;
-					font-weight: 700;
-					color: #2c3e50;
-					margin-bottom: 8px;
-					display: block;
-					text-transform: uppercase;
-					letter-spacing: 0.5px;
-				}
-				
-				.form-input {
-					width: 100%;
-					padding: 12px 14px;
-					border-radius: 8px;
-					height: 42px;
-					border: 2px solid #e0e6ed;
-					box-sizing: border-box;
-					font-size: 14px;
-					background: #f8fafb;
-					transition: all 0.3s ease;
-					font-family: inherit;
-				}
-				
-				.form-input:focus {
-					outline: none;
-					border-color: #0b4ea6;
-					background-color: #ffffff;
-					box-shadow: 0 0 0 4px rgba(11, 78, 166, 0.12);
-				}
-				
-				.form-input::placeholder {
-					color: #cbd5e0;
-				}
-				
-				.form-input:disabled {
-					background-color: #f0f2f5;
-					color: #aaa;
-					cursor: not-allowed;
-				}
-				
-				.btn-primary {
-					display: inline-block;
-					width: 100%;
-					max-width: 100%;
-					padding: 12px 24px;
-					font-weight: 700;
-					background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-					color: white;
-					border-radius: 8px;
-					border: none;
-					cursor: pointer;
-					font-size: 15px;
-					transition: all 0.3s ease;
-					box-shadow: 0 4px 15px rgba(11, 78, 166, 0.25);
-					text-transform: uppercase;
-					letter-spacing: 0.5px;
-				}
-				
-				.btn-primary:hover:not(:disabled) {
-					transform: translateY(-2px);
-					box-shadow: 0 8px 25px rgba(11, 78, 166, 0.35);
-				}
-				
-				.btn-primary:active:not(:disabled) {
-					transform: translateY(0);
-				}
-				
-				.btn-primary:disabled {
-					opacity: 0.65;
-					cursor: not-allowed;
-				}
-				
-				.form-error {
-					color: #d32f2f;
-					font-size: 12px;
-					margin-top: 6px;
-					display: block;
-					font-weight: 500;
-				}
-				
-				.pw-bar {
-					height: 6px;
-					background: #e0e6ed;
-					border-radius: 6px;
-					overflow: hidden;
-					margin-top: 8px;
-				}
-				
-				.pw-bar-inner {
-					height: 100%;
-					transition: width 0.25s ease;
-					background: linear-gradient(90deg, #d32f2f, #ffc107, #28a745);
-				}
-				
-				.validation-list {
-					display: flex;
-					gap: 12px;
-					margin-top: 10px;
-					flex-wrap: wrap;
-				}
-				
-				.validation-item {
-					font-size: 12px;
-					color: #666;
-					display: flex;
-					align-items: center;
-					gap: 4px;
-				}
-				
-				.verification-section {
-					margin-top: 24px;
-					padding: 24px;
-					background: #f8fafb;
-					border-radius: 12px;
-					border: 2px solid #e0e6ed;
-				}
-				
-				.json-result {
-					margin-top: 32px;
-					padding: 24px;
-					background: linear-gradient(135deg, #f0f4f8 0%, #fafbfc 100%);
-					border: 2px solid #e0e6ed;
-					border-radius: 12px;
-					color: #2c3e50;
-				}
-				
-				.json-result h3 {
-					margin-top: 0;
-					color: #0b4ea6;
-					font-size: 16px;
-					margin-bottom: 16px;
-				}
-				
-				.json-result pre {
-					white-space: pre-wrap;
-					word-wrap: break-word;
-					background: white;
-					padding: 16px;
-					border-radius: 8px;
-					border: 1px solid #e0e6ed;
-					overflow-x: auto;
-					font-size: 12px;
-					color: #2c3e50;
-					margin: 0;
-				}
-				
-				@media (max-width: 1024px) {
-					.form-field.col-span-3 {
-						grid-column: span 12;
-					}
-					
-					.form-field.col-span-2 {
-						grid-column: span 12;
-					}
-					
-					.form-field.col-span-1 {
-						grid-column: span 6;
-					}
-				}
-				
-				@media (max-width: 768px) {
-					.card {
-						padding: 32px 20px;
-					}
-					
-					.card-logos {
-						gap: 16px;
-						margin-bottom: 24px;
-					}
-					
-					.left-logo {
-						height: 50px;
-					}
-					
-					.right-logos img {
-						height: 40px;
-					}
-					
-					.card h2 {
-						font-size: 22px;
-						margin-bottom: 24px;
-					}
-					
-					.form-field.col-span-1 {
-						grid-column: span 12;
-					}
-					
-					.form-grid {
-						gap: 12px;
-					}
-				}
-			`}</style>
-
-			<div className="form-container">
-				<div ref={cardRef} className="card">
-					<div className="card-logos" aria-hidden="true">
-						<img src={AfaemLogo} alt="AFAEM" className="left-logo" />
-						<div className="right-logos" aria-hidden="true">
-							<img src={FmfLogo} alt="FMF" />
-							<img src={AmateurLogo} alt="Sector Amateur" />
-						</div>
-					</div>
-
-					<h2>Registrarse — Presidente de Equipo</h2>
+		<div className="register-container fade-in">
+			<div className="register-card card glass">
+				<div className="register-header">
+					<img src={AfaemLogo} alt="AFAEM" className="logo-main" />
+					<h1 className="register-title">Únete a AFAEM</h1>
+					<p className="register-subtitle">Registro de Presidente de Equipo</p>
+				</div>
 
 					<form onSubmit={handleSubmit}>
 						<div className="form-grid">
@@ -1149,16 +869,16 @@ function Registrarse() {
 							)}
 						</div>
 					</form>
+					
+					{jsonResult && (
+						<div className="json-result fade-in" style={{ marginTop: '30px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '25px', borderRadius: '12px' }}>
+							<h3 style={{ color: '#10b981', margin: '0 0 10px' }}>✓ ¡Registro Generado!</h3>
+							<p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>Tu solicitud ha sido procesada. Puedes proceder a iniciar sesión.</p>
+							<button className="btn-premium" style={{ marginTop: '15px', background: 'var(--secondary)' }} onClick={() => _navigate('/ingresar')}>Ir al Login</button>
+						</div>
+					)}
 				</div>
-
-				{jsonResult && (
-					<div className="json-result">
-						<h3>✅ JSON GENERADO CORRECTAMENTE</h3>
-						<pre>{JSON.stringify(jsonResult, null, 2)}</pre>
-					</div>
-				)}
 			</div>
-		</div>
 	);
 }
 

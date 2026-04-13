@@ -1,0 +1,1137 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import { 
+  FaArrowLeft, 
+  FaSave, 
+  FaUpload, 
+  FaFilePdf, 
+  FaSyncAlt,
+  FaCheckCircle,
+  FaSearchPlus
+} from 'react-icons/fa';
+import { PDFDocument } from 'pdf-lib';
+import { getSolicitudes } from '../../services/solicitud';
+import { validarFotografia } from '../../services/foto';
+import { registrarJugadorTemporal } from '../../services/teams';
+import { 
+  BotonPrimario, 
+  BotonSecundario, 
+  Tarjeta, 
+  EntradaFormulario, 
+  EntradaSeleccion, 
+  AreaTexto,
+  Cargador,
+  Modal
+} from '../../components/partials';
+
+// Badge Estilizado para los pasos
+const StepBadge = ({ number, isActive, isDone }) => (
+  <div style={{ 
+    width: '32px', 
+    height: '32px', 
+    borderRadius: '50%', 
+    backgroundColor: isDone ? '#10b981' : (isActive ? '#0b4ea6' : '#e2e8f0'),
+    color: (isActive || isDone) ? 'white' : '#64748b',
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    fontSize: '14px', 
+    fontWeight: '800',
+    flexShrink: 0,
+    transition: 'all 0.3s'
+  }}>
+    {isDone ? <FaCheckCircle /> : number}
+  </div>
+);
+
+export default function AdminCrearJugador() {
+  const navigate = useNavigate();
+
+  // ESTILO DINÁMICO PARA HOVER
+  const hoverStyles = `
+    .document-card:hover .overlay-actions {
+      opacity: 1 !important;
+    }
+    .document-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+  `;
+  
+  // ESTADOS
+  const [equiposDb, setEquiposDb] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [fillManually, setFillManually] = useState(false);
+  
+  const [documents, setDocuments] = useState({
+    actaNacimiento: null,
+    identificacion: null,
+    fotografia: null,
+    formatoAfiliacion: null
+  });
+
+  // Previsualizaciones (URLs locales)
+  const [previews, setPreviews] = useState({
+    actaNacimiento: null,
+    identificacion: null,
+    fotografia: null,
+    formatoAfiliacion: null
+  });
+
+  const [extractedData, setExtractedData] = useState({
+    equipoSeleccionado: '',
+    nombreJugador: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
+    curp: '',
+    genero: '1', 
+    fechaNacimiento: '',
+    lugarNacimiento: '',
+    direccion: '',
+    
+    // DATOS DE AFILIADO (NUEVOS)
+    correo: '',
+    telefono: '',
+    tipoAfiliacion: 'JUGADOR',
+    posicion: '',
+    numCamiseta: '',
+    asociacion: 'AFAEM',
+    liga: '',
+    equipo: '',
+    categoria: '',
+
+    // ANTECEDENTES INTERNACIONALES (FORÁNEO)
+    esForaneo: false,
+    nacionalidadJugador: 'MEXICANA',
+    paisResidencia: 'MÉXICO',
+    HaVividoExtranjero: false,
+    dondeVividoExtranjero: '',
+    nacionalidadPadre: '',
+    nacionalidadMadre: '',
+    registroAsociacionExtranjera: '',
+    nacAbueloPaterno: '',
+    nacAbuelaPaterna: '',
+    nacAbueloMaterno: '',
+    nacAbuelaMaterna: '',
+    juegoClubExtranjero: ''
+  });
+
+  // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
+  const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
+
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [signedForm, setSignedForm] = useState(null);
+  const [signedFormPreview, setSignedFormPreview] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+
+  // DETERMINACIÓN DE PASOS
+  const isStep1Done = !!extractedData.equipoSeleccionado;
+  const isStep2Done = Object.values(documents).some(d => d !== null);
+  const showStep2 = isStep1Done;
+  const showStep3 = isStep2Done || fillManually;
+
+  // EFECTO PARA AUTO-LLENAR LIGA Y EQUIPO AL CAMBIAR EQUIPO SELECCIONADO
+  useEffect(() => {
+    if (extractedData.equipoSeleccionado && equiposDb.length > 0) {
+      const selected = equiposDb.find(e => String(e.SolicitudId) === String(extractedData.equipoSeleccionado));
+      if (selected) {
+        setExtractedData(prev => ({
+          ...prev,
+          equipo: selected.Equipo || selected.NombreEquipo || '',
+          liga: selected.Liga || '',
+          categoria: selected.Categoria || 'LIBRE'
+        }));
+      }
+    }
+  }, [extractedData.equipoSeleccionado, equiposDb]);
+
+  // CARGAR CATÁLOGO DE SOLICITUDES ACTIVAS PARA REGISTRO
+  useEffect(() => {
+    const fetchTeamCatalog = async () => {
+      try {
+        setLoadingTeams(true);
+        const data = await getSolicitudes();
+        // Filtramos solo las solicitudes aprobadas o en revisión que tengan equipo
+        const listaEquipos = (Array.isArray(data) ? data : (data.solicitudes || [])).filter(s => s.Equipo);
+        setEquiposDb(listaEquipos);
+      } catch (e) {
+        console.error("No se pudieron cargar los equipos:", e);
+        Swal.fire('Error', 'No se pudo cargar el catálogo de trámites activos.', 'error');
+      } finally {
+        setLoadingTeams(false);
+      }
+    };
+    fetchTeamCatalog();
+  }, []);
+
+  // PROCESAR OCR
+  const handleFileUpload = async (documentKey, file) => {
+    if (!file) return;
+
+    setDocuments(prev => ({ ...prev, [documentKey]: file }));
+
+    // Generar Previsualización
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => ({ ...prev, [documentKey]: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      const url = URL.createObjectURL(file);
+      setPreviews(prev => ({ ...prev, [documentKey]: url }));
+    }
+
+    // VALIDACIÓN DE FOTOGRAFÍA
+    if (documentKey === 'fotografia') {
+      Swal.fire({
+        title: 'Validando Fotografía...',
+        html: 'Verificando formato y calidad.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+      try {
+        const data = await validarFotografia(file);
+        if (data.valido) {
+          Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
+        } else {
+          Swal.fire('Error en la fotografía', data.mensaje, 'error');
+          setDocuments(prev => ({ ...prev, [documentKey]: null }));
+        }
+      } catch (err) {
+        Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+      }
+    }
+
+    // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
+    if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
+      Swal.fire({
+        title: 'Analizando Documento...',
+        html: 'Extrayendo información vía OCR. Por favor espere.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      try {
+        const formDataOcr = new FormData();
+        formDataOcr.append('file_id', file);
+
+        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
+        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+
+        const htmlText = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, "text/html");
+        
+        let nombreEncontrado = '';
+        let curpEncontrada = '';
+        let fechaNacEncontrada = '';
+        let lugarNacEncontrado = '';
+        
+        const rows = doc.querySelectorAll('.dato-fila');
+        rows.forEach(row => {
+          const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
+          const value = row.querySelector('.valor')?.textContent?.trim() || '';
+          
+          if (label.includes('nombre')) nombreEncontrado = value;
+          if (label.includes('curp')) curpEncontrada = value;
+          if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
+          if (label.includes('nacimiento') || label.includes('fecha nac')) {
+            let finalDate = value;
+            if (value.includes('/')) {
+              const p = value.split('/');
+              if (p.length === 3) {
+                if (p[2].length === 4) finalDate = `${p[2]}-${p[1]}-${p[0]}`;
+                else if (p[0].length === 4) finalDate = `${p[0]}-${p[1]}-${p[2]}`;
+              }
+            }
+            fechaNacEncontrada = finalDate;
+          }
+        });
+
+        if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
+          const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+          let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+          
+          if (parts.length >= 3) {
+            lastNamePaterno = parts[0];
+            lastNameMaterno = parts[1];
+            firstName = parts.slice(2).join(' ');
+          } else if (parts.length === 2) {
+            lastNamePaterno = parts[0];
+            firstName = parts[1];
+          } else {
+            firstName = nombreEncontrado;
+          }
+
+          const ocrResult = {
+            nombreJugador: firstName || '',
+            apellidoPaterno: lastNamePaterno || '',
+            apellidoMaterno: lastNameMaterno || '',
+            curp: curpEncontrada || '',
+            fechaNacimiento: fechaNacEncontrada || '',
+            lugarNacimiento: lugarNacEncontrado || ''
+          };
+
+          setOcrDataOriginal(ocrResult);
+
+          setExtractedData(prev => ({
+            ...prev,
+            ...ocrResult
+          }));
+
+          Swal.fire({
+            title: '¡Lectura Exitosa!',
+            text: `Se detectó a: ${nombreEncontrado || 'el documento'}`,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else {
+          throw new Error('No se detectaron datos legibles en este documento.');
+        }
+      } catch (err) {
+        console.error("Error OCR:", err);
+        Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
+      }
+    }
+  };
+
+  // FUNCIÓN AUXILIAR PARA ESCRITURA SEGURA EN PDF
+  const safeSetField = (form, fieldName, value) => {
+    if (!value) return;
+    try {
+      const field = form.getTextField(fieldName);
+      if (field) field.setText(value.toString().toUpperCase());
+    } catch (e) {
+      console.warn(`Campo PDF no encontrado: ${fieldName}`);
+    }
+  };
+
+  // GENERAR PDF PRE-LLENADO
+  const handleDownloadFormato = async () => {
+    try {
+      Swal.fire({
+        title: 'Generando PDF...',
+        text: 'Preparando el formato de afiliación pre-llenado.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const templateUrl = '/formato_afiliacion_jugador.pdf';
+      const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      const form = pdfDoc.getForm();
+      const firstPage = pdfDoc.getPages()[0];
+
+      // INCRUSTAR FOTOGRAFÍA SI EXISTE
+      if (documents.fotografia) {
+        try {
+          const photoBytes = await documents.fotografia.arrayBuffer();
+          let photoImage;
+          const nameLower = documents.fotografia.name.toLowerCase();
+          if (nameLower.endsWith('.png')) photoImage = await pdfDoc.embedPng(photoBytes);
+          else photoImage = await pdfDoc.embedJpg(photoBytes);
+
+          firstPage.drawImage(photoImage, {
+            x: 479, y: 676, width: 76, height: 90,
+          });
+        } catch (photoErr) { console.warn("Error al incrustar foto:", photoErr); }
+      }
+
+      // RELLENAR CAMPOS BÁSICOS
+      safeSetField(form, 'Nombres', extractedData.nombreJugador);
+      safeSetField(form, 'Apellido Paterno', extractedData.apellidoPaterno);
+      safeSetField(form, 'Apellido Materno', extractedData.apellidoMaterno);
+      safeSetField(form, 'CURP o Clave Única de Registro de Población', extractedData.curp);
+      safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
+      safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
+      safeSetField(form, 'Lugar de Nacimiento', extractedData.lugarNacimiento);
+      
+      // DATOS DE AFILIADO
+      safeSetField(form, 'Correo electrónico', extractedData.correo);
+      safeSetField(form, 'Teléfono', extractedData.telefono);
+      safeSetField(form, 'Asociación', extractedData.asociacion);
+      safeSetField(form, 'Liga', extractedData.liga);
+      safeSetField(form, 'Equipo', extractedData.equipo);
+      safeSetField(form, 'Categoría', extractedData.categoria);
+      safeSetField(form, 'Posición', extractedData.posicion);
+      safeSetField(form, 'Camiseta', extractedData.numCamiseta);
+
+      // ANTECEDENTES INTERNACIONALES (SI ES FORÁNEO)
+      if (extractedData.esForaneo) {
+        safeSetField(form, 'Nacionalidades del jugador', extractedData.nacionalidadJugador);
+        safeSetField(form, 'País de residencia actual', extractedData.paisResidencia);
+        safeSetField(form, '¿El jugador ha vivido en el extranjero? ¿En que país?', extractedData.haVividoExtranjero ? extractedData.dondeVividoExtranjero : 'NO');
+        safeSetField(form, 'Nacionalidades del padre', extractedData.nacionalidadPadre);
+        safeSetField(form, 'Nacionalidades de la madre', extractedData.nacionalidadMadre);
+        safeSetField(form, 'Nacionalidades del abuelo paterno', extractedData.nacAbueloPaterno);
+        safeSetField(form, 'Nacionalidades de la abuela paterna', extractedData.nacAbuelaPaterna);
+        safeSetField(form, 'Nacionalidades del abuelo materno', extractedData.nacAbueloMaterno);
+        safeSetField(form, 'Nacionalidades de la abuela materna', extractedData.nacAbuelaMaterna);
+        
+        safeSetField(form, 'El jugador ha jugado en un Club extranjero...', extractedData.juegoClubExtranjero);
+      }
+
+      // 3. FECHA DE DESCARGA AUTOMÁTICA (Desglosada)
+      const now = new Date();
+      const dia = now.getDate().toString().padStart(2, '0');
+      const mes = now.toLocaleDateString('es-MX', { month: 'long' }).toUpperCase();
+      const anio = now.getFullYear().toString().slice(-2); // Solo los últimos 2 dígitos (24, 25, 26, etc.)
+
+      // Intentar varios nombres comunes para los campos de fecha
+      const diaFields = ['Dia', 'Día', 'dia', 'day', 'Fecha Dia'];
+      const mesFields = ['Mes', 'mes', 'month', 'Fecha Mes'];
+      const anioFields = ['Anio', 'Año', 'anio', 'año', 'year', 'Anio_2', 'Año_2', 'Fecha Anio'];
+
+      diaFields.forEach(f => safeSetField(form, f, dia));
+      mesFields.forEach(f => safeSetField(form, f, mes));
+      anioFields.forEach(f => safeSetField(form, f, anio));
+
+      // Mantener el campo completo por si acaso
+      const fechaCompleta = `${dia} DE ${mes} DE 20${anio}`;
+      safeSetField(form, 'Fecha de descarga', fechaCompleta);
+      safeSetField(form, 'Fecha descarga', fechaCompleta);
+      safeSetField(form, 'Fecha', fechaCompleta);
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Formato_Afiliacion_${extractedData.nombreJugador || 'Jugador'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      Swal.close(); 
+      return true; // Indicar éxito
+    } catch (err) {
+      console.error("Error PDF:", err);
+      Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
+      return false;
+    }
+  };
+
+  // GUARDAR JUGADOR (Ahora abre el modal final)
+  const handleGuardar = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!extractedData.nombreJugador || !extractedData.curp) {
+      Swal.fire('Atención', 'Los campos Nombre y CURP son obligatorios.', 'warning');
+      return;
+    }
+
+    // 1. Descargar el formato automáticamente
+    const success = await handleDownloadFormato();
+    
+    if (success) {
+      // 2. Abrir el modal de finalización
+      setShowFinishModal(true);
+    }
+  };
+
+  // ENVÍO FINAL A BACKEND
+  const handleFinalizarInscripcion = async () => {
+    if (!signedForm) {
+      Swal.fire('Archivo requerido', 'Por favor, suba el formato de afiliación firmado para finalizar.', 'warning');
+      return;
+    }
+
+    setUploading(true);
+    Swal.fire({
+      title: 'Finalizando Inscripción',
+      text: 'Enviando información y documentos...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const formData = new FormData();
+      formData.append('equipo_temporal_id', parseInt(extractedData.equipoSeleccionado, 10));
+      formData.append('nombre', (extractedData.nombreJugador || '').toString().trim());
+      formData.append('primer_apellido', (extractedData.apellidoPaterno || '').toString().trim());
+      formData.append('segundo_apellido', (extractedData.apellidoMaterno || '').toString().trim());
+      formData.append('curp', (extractedData.curp || '').toString().toUpperCase());
+      formData.append('sexo_id', parseInt(extractedData.genero, 10));
+      formData.append('fecha_nacimiento', extractedData.fechaNacimiento);
+      formData.append('lugar_nacimiento', extractedData.lugarNacimiento || 'MÉXICO');
+      formData.append('correo', extractedData.correo || '');
+      formData.append('telefono', extractedData.telefono || '');
+      formData.append('posicion', extractedData.posicion || 'JUGADOR');
+      formData.append('num_camiseta', extractedData.numCamiseta || '0');
+      formData.append('seguro_id', 1);
+
+      if (extractedData.esForaneo) {
+        formData.append('es_foraneo', '1');
+        formData.append('nacionalidad_jugador', extractedData.nacionalidadJugador);
+        formData.append('pais_resid_actual', extractedData.paisResidencia);
+        formData.append('ha_vivido_extranjero', extractedData.haVividoExtranjero ? '1' : '0');
+        formData.append('donde_vivido', extractedData.dondeVividoExtranjero);
+      }
+
+      // Otros documentos
+      ['actaNacimiento', 'identificacion', 'fotografia'].forEach(key => {
+        if (documents[key]) {
+          formData.append('documento_afiliacion_ids', 3);
+          formData.append('archivos', documents[key]);
+        }
+      });
+
+      // El formato firmado desde el modal
+      formData.append('documento_afiliacion_ids', 3);
+      formData.append('archivos', signedForm);
+
+      await registrarJugadorTemporal(formData);
+
+      setShowFinishModal(false);
+      Swal.fire({
+        icon: 'success',
+        title: 'Jugador Inscrito Correctamente',
+        text: 'El expediente se ha completado con el formato firmado.'
+      }).then(() => {
+        navigate('/admin/jugadores');
+      });
+    } catch (err) {
+      console.error("Error:", err);
+      Swal.fire('Error', err.message || 'Error del servidor', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="dashboard-content">
+      <style>{hoverStyles}</style>
+      {/* HEADER */}
+      <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button 
+            onClick={() => {
+              const tieneDatos = Object.values(documents).some(d => d !== null) || extractedData.nombreJugador;
+              if (tieneDatos) {
+                Swal.fire({
+                  title: '¿Abandonar registro?',
+                  text: "Se perderán los documentos subidos y el progreso actual.",
+                  icon: 'warning',
+                  showCancelButton: true,
+                  confirmButtonColor: '#ef4444',
+                  cancelButtonColor: '#64748b',
+                  confirmButtonText: 'Sí, salir',
+                  cancelButtonText: 'Continuar registro'
+                }).then((result) => {
+                  if (result.isConfirmed) navigate('/admin/jugadores');
+                });
+              } else {
+                navigate('/admin/jugadores');
+              }
+            }}
+            className="btn btn-outline-secondary"
+            style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center' }}
+          >
+            <FaArrowLeft />
+          </button>
+          <div>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Alta rápida de jugador</h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Inscripción administrativa directa en equipos de liga.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="premium-card fade-in" style={{ maxWidth: '1000px', margin: '0 auto', background: 'white', borderRadius: '24px', padding: '40px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
+        <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px' }}>
+          <p className="required-legend" style={{ margin: 0 }}>
+            <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial en la liga.
+          </p>
+        </div>
+        
+        {/* PASO 1: SELECCION DE EQUIPO */}
+        <section style={{ marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+            <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Elección de equipo destino</h3>
+          </div>
+          
+          <div style={{ 
+            padding: '25px',
+            borderRadius: '16px',
+            border: isStep1Done ? '2px solid #10b981' : '2px solid #e2e8f0',
+            backgroundColor: isStep1Done ? '#f0fdf4' : '#f8fafc',
+            transition: 'all 0.3s'
+          }}>
+            <div className="form-group">
+              <label style={{ fontWeight: '700', fontSize: '14px', color: '#334155', marginBottom: '12px', display: 'block' }}>
+                Busca y elige el equipo donde se inscribirá el jugador <span className="required-star">*</span>
+              </label>
+              
+              <div style={{ position: 'relative' }}>
+                <select 
+                  className="form-select form-input-lg" 
+                  value={extractedData.equipoSeleccionado} 
+                  onChange={(e) => setExtractedData({...extractedData, equipoSeleccionado: e.target.value})}
+                  style={{ 
+                    border: 'none',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                    paddingRight: '40px'
+                  }}
+                  disabled={loadingTeams}
+                >
+                  <option value="">-- Escribe para buscar equipo --</option>
+                  {equiposDb.map(eq => (
+                    <option key={eq.SolicitudId} value={eq.SolicitudId}>
+                      {eq.Equipo} (Solicitud #{eq.SolicitudId}) - {eq.Correo}
+                    </option>
+                  ))}
+                </select>
+                {loadingTeams && (
+                  <div style={{ position: 'absolute', right: '15px', top: '15px' }}>
+                    <div className="spinner-border spinner-border-sm text-primary"></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* PASO 2: CARGA DE DOCUMENTOS */}
+        {showStep2 && (
+          <section className="fade-in" style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+              <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
+            </div>
+
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+              gap: '20px' 
+            }}>
+              {[
+                { key: 'actaNacimiento', title: 'Acta de Nacimiento' },
+                { key: 'identificacion', title: 'Identificación (INE/Pasaporte)' },
+                { key: 'fotografia', title: 'Fotografía Infantil' }
+              ].map(doc => (
+                <div 
+                  key={doc.key}
+                  className="document-card"
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '20px',
+                    border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                    padding: '15px',
+                    textAlign: 'center',
+                    transition: 'all 0.3s',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{
+                    height: '140px',
+                    width: '100%',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '12px',
+                    marginBottom: '10px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #f1f5f9'
+                  }}>
+                    {previews[doc.key] ? (
+                      <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                        {/* MINIATURA */}
+                        {(previews[doc.key].startsWith('blob:') && documents[doc.key]?.type === 'application/pdf') || previews[doc.key] === 'pdf_icon' ? (
+                          <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                            <FaFilePdf />
+                            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                          </div>
+                        ) : (
+                          <img 
+                            src={previews[doc.key]} 
+                            alt="Preview" 
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                          />
+                        )}
+
+                        {/* OVERLAY (Se controla via CSS en index.css o inline hover si fuera necesario) */}
+                        <div className="overlay-actions" style={{
+                          position: 'absolute',
+                          top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '12px',
+                          opacity: 0,
+                          transition: 'opacity 0.2s ease',
+                          backdropFilter: 'blur(2px)'
+                        }}>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isPdf = documents[doc.key]?.type === 'application/pdf';
+                              setPreviewDoc({
+                                open: true,
+                                url: previews[doc.key],
+                                type: isPdf ? 'pdf' : 'image',
+                                title: doc.title
+                              });
+                            }}
+                            className="btn-zoom"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '50%',
+                              backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                            }}
+                          >
+                            <FaSearchPlus />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              document.getElementById(`file-${doc.key}`).click();
+                            }}
+                            className="btn-change"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '50%',
+                              backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                            }}
+                          >
+                            <FaSyncAlt />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ESTADO VACÍO */
+                      <div 
+                        onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                        style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                      >
+                        <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '6px',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9',
+                    color: documents[doc.key] ? '#166534' : '#64748b',
+                    fontSize: '10px',
+                    fontWeight: '800'
+                  }}>
+                    {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                  </div>
+                  <input 
+                    type="file" 
+                    id={`file-${doc.key}`} 
+                    style={{ display: 'none' }} 
+                    accept="image/*,.pdf"
+                    onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {!isStep2Done && (
+              <div style={{ textAlign: 'center', marginTop: '25px' }}>
+                <button 
+                  onClick={() => setFillManually(true)}
+                  style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline' }}
+                >
+                  Omitir carga y llenar datos manualmente
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* PASO 3: INFORMACIÓN DEL JUGADOR */}
+        {showStep3 && (
+          <section className="fade-in" style={{ marginBottom: '40px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <StepBadge number="3" isActive={true} isDone={false} />
+                <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
+              </div>
+            </div>
+
+            {/* AVISO DE DISCREPANCIA OCR */}
+            {ocrDataOriginal && (
+              <div className="fade-in" style={{ 
+                marginBottom: '20px', 
+                padding: '16px', 
+                borderRadius: '12px', 
+                background: (
+                  extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                  extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+                ) ? '#fff7ed' : '#f0fdf4',
+                border: (
+                  extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                  extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+                ) ? '1px solid #ffedd5' : '1px solid #dcfce7',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{ fontSize: '20px' }}>
+                  {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
+                    {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? 
+                      'Discrepancia detectada' : 'Datos validados con OCR'}
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
+                    {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? 
+                      'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' : 
+                      'La información coincide correctamente con la extracción inteligente de tus documentos.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* SECCIÓN 1: DATOS DEL AFILIADO */}
+            {/* ... (Tarjeta content remains same, I'm just fixing the structure here) ... */}
+            <Tarjeta titulo="1. Datos del afiliado" estilo={{ marginBottom: '20px' }}>
+               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                <EntradaFormulario
+                  etiqueta={<>Nombre(s) <span className="required-star">*</span></>}
+                  valor={extractedData.nombreJugador}
+                  alCambiar={(e) => setExtractedData({...extractedData, nombreJugador: e.target.value})}
+                />
+                <EntradaFormulario
+                  etiqueta={<>Apellido paterno <span className="required-star">*</span></>}
+                  valor={extractedData.apellidoPaterno}
+                  alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
+                />
+                <EntradaFormulario
+                  etiqueta={<>Apellido materno <span className="required-star">*</span></>}
+                  valor={extractedData.apellidoMaterno}
+                  alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
+                />
+                <EntradaFormulario
+                  etiqueta={<>CURP <span className="required-star">*</span></>}
+                  valor={extractedData.curp}
+                  alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})}
+                  maxLength={18}
+                />
+                <EntradaFormulario
+                  etiqueta={<>Lugar de nacimiento <span className="required-star">*</span></>}
+                  valor={extractedData.lugarNacimiento}
+                  alCambiar={(e) => setExtractedData({...extractedData, lugarNacimiento: e.target.value})}
+                />
+                <EntradaFormulario
+                  etiqueta={<>Fecha de nacimiento <span className="required-star">*</span></>}
+                  tipo="date"
+                  valor={extractedData.fechaNacimiento}
+                  alCambiar={(e) => setExtractedData({...extractedData, fechaNacimiento: e.target.value})}
+                />
+                <EntradaSeleccion
+                  etiqueta={<>Sexo <span className="required-star">*</span></>}
+                  valor={extractedData.genero}
+                  alCambiar={(e) => setExtractedData({...extractedData, genero: e.target.value})}
+                  opciones={[{ valor: '1', etiqueta: 'Masculino' }, { valor: '2', etiqueta: 'Femenino' }]}
+                />
+                <EntradaFormulario
+                  etiqueta={<>Correo electrónico <span className="required-star">*</span></>}
+                  tipo="email"
+                  valor={extractedData.correo}
+                  alCambiar={(e) => setExtractedData({...extractedData, correo: e.target.value})}
+                />
+                <EntradaSeleccion
+                  etiqueta="Tipo de afiliación"
+                  valor={extractedData.tipoAfiliacion}
+                  alCambiar={(e) => setExtractedData({...extractedData, tipoAfiliacion: e.target.value})}
+                  opciones={[{ valor: 'JUGADOR', etiqueta: 'Jugador' }, { valor: 'CUERPO_TECNICO', etiqueta: 'Cuerpo Técnico' }]}
+                />
+                <EntradaFormulario
+                  etiqueta="Teléfono"
+                  valor={extractedData.telefono}
+                  alCambiar={(e) => setExtractedData({...extractedData, telefono: e.target.value})}
+                />
+                <EntradaFormulario etiqueta="Asociación" valor={extractedData.asociacion} deshabilitado />
+                <EntradaFormulario etiqueta="Liga" valor={extractedData.liga} deshabilitado />
+                <EntradaFormulario etiqueta="Equipo" valor={extractedData.equipo} deshabilitado />
+                <EntradaFormulario etiqueta="Categoría" valor={extractedData.categoria} deshabilitado />
+                <EntradaSeleccion
+                  etiqueta="Posición"
+                  valor={extractedData.posicion}
+                  alCambiar={(e) => setExtractedData({...extractedData, posicion: e.target.value})}
+                  opciones={[
+                    { valor: '', etiqueta: 'Seleccione...' },
+                    { valor: 'PORTERO', etiqueta: 'Portero' },
+                    { valor: 'DEFENSA', etiqueta: 'Defensa' },
+                    { valor: 'MEDIO', etiqueta: 'Medio' },
+                    { valor: 'DELANTERO', etiqueta: 'Delantero' }
+                  ]}
+                />
+                <EntradaFormulario
+                  etiqueta="Camiseta"
+                  tipo="number"
+                  valor={extractedData.numCamiseta}
+                  alCambiar={(e) => setExtractedData({...extractedData, numCamiseta: e.target.value})}
+                />
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <AreaTexto
+                    etiqueta="Dirección completa"
+                    valor={extractedData.direccion}
+                    alCambiar={(e) => setExtractedData({...extractedData, direccion: e.target.value})}
+                    filas={2}
+                  />
+                </div>
+              </div>
+            </Tarjeta>
+
+            {/* SECCIÓN 2: ANTECEDENTES INTERNACIONALES */}
+            <Tarjeta estilo={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', marginBottom: '30px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#9a3412' }}>
+                  2. Antecedentes internacionales
+                </h4>
+                <div className="form-check form-switch">
+                  <input 
+                    className="form-check-input" 
+                    type="checkbox" 
+                    id="switchForaneo" 
+                    checked={extractedData.esForaneo}
+                    onChange={(e) => setExtractedData({...extractedData, esForaneo: e.target.checked})}
+                  />
+                  <label className="form-check-label" htmlFor="switchForaneo" style={{ fontSize: '13px', fontWeight: '700' }}>
+                    ¿Jugador foráneo?
+                  </label>
+                </div>
+              </div>
+
+              {extractedData.esForaneo ? (
+                <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  <EntradaFormulario
+                    etiqueta="Nacionalidad del jugador"
+                    valor={extractedData.nacionalidadJugador}
+                    alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})}
+                  />
+                  <EntradaFormulario
+                    etiqueta="País de residencia actual"
+                    valor={extractedData.paisResidencia}
+                    alCambiar={(e) => setExtractedData({...extractedData, paisResidencia: e.target.value})}
+                  />
+                  <EntradaSeleccion
+                    etiqueta="¿El jugador ha vivido en el extranjero?"
+                    valor={extractedData.haVividoExtranjero ? '1' : '0'}
+                    alCambiar={(e) => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})}
+                    opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
+                  />
+                  {extractedData.haVividoExtranjero && (
+                    <EntradaFormulario
+                      etiqueta="¿En qué país?"
+                      valor={extractedData.dondeVividoExtranjero}
+                      alCambiar={(e) => setExtractedData({...extractedData, dondeVividoExtranjero: e.target.value})}
+                    />
+                  )}
+                  <EntradaFormulario
+                    etiqueta="Nacionalidades del padre"
+                    valor={extractedData.nacionalidadPadre}
+                    alCambiar={(e) => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})}
+                  />
+                  <EntradaFormulario
+                    etiqueta="Nacionalidades de la madre"
+                    valor={extractedData.nacionalidadMadre}
+                    alCambiar={(e) => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})}
+                  />
+                  
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <AreaTexto
+                      etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF."
+                      valor={extractedData.registroAsociacionExtranjera}
+                      alCambiar={(e) => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})}
+                      filas={2}
+                    />
+                  </div>
+
+                  <EntradaFormulario
+                    etiqueta="Nacionalidades del abuelo paterno"
+                    valor={extractedData.nacAbueloPaterno}
+                    alCambiar={(e) => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})}
+                  />
+                  <EntradaFormulario
+                    etiqueta="Nacionalidades de la abuela paterna"
+                    valor={extractedData.nacAbuelaPaterna}
+                    alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})}
+                  />
+                  <EntradaFormulario
+                    etiqueta="Nacionalidades del abuelo materno"
+                    valor={extractedData.nacAbueloMaterno}
+                    alCambiar={(e) => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})}
+                  />
+                  <EntradaFormulario
+                    etiqueta="Nacionalidades de la abuela materna"
+                    valor={extractedData.nacAbuelaMaterna}
+                    alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})}
+                  />
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <AreaTexto
+                      etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?"
+                      valor={extractedData.juegoClubExtranjero}
+                      alCambiar={(e) => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})}
+                      filas={3}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                   El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos de antecedentes internacionales.
+                </p>
+              )}
+            </Tarjeta>
+
+            {/* ACCIONES FINALES */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+              <BotonSecundario 
+                etiqueta="Cancelar y volver" 
+                alHacerClick={() => navigate('/admin/jugadores')} 
+                estilo={{ minWidth: '200px' }}
+              />
+              <BotonPrimario 
+                etiqueta={uploading ? "Procesando..." : "Autorizar e Inscribir Jugador"} 
+                icono={<FaSave />} 
+                alHacerClick={handleGuardar} 
+                deshabilitado={uploading}
+                estilo={{ minWidth: '300px' }}
+              />
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
+      <Modal
+        estaAbierto={previewDoc.open}
+        titulo={previewDoc.title}
+        alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+        tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+        pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+      >
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '300px',
+          backgroundColor: '#f1f5f9',
+          borderRadius: '12px',
+          overflow: 'hidden'
+        }}>
+          {previewDoc.type === 'pdf' ? (
+            <iframe 
+              src={previewDoc.url} 
+              style={{ width: '100%', height: '70vh', border: 'none' }} 
+              title="Visor de PDF"
+            />
+          ) : (
+            <img 
+              src={previewDoc.url} 
+              alt="Preview Grande" 
+              style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }} 
+            />
+          )}
+        </div>
+      </Modal>
+
+      {/* MODAL DE FINALIZACIÓN Y CARGA DE FORMATO */}
+      <Modal
+        estaAbierto={showFinishModal}
+        titulo="Finalizar Inscripción de Jugador"
+        alCerrar={() => setShowFinishModal(false)}
+        tamanio="medio"
+        pie={
+          <>
+            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setShowFinishModal(false)} />
+            <BotonPrimario 
+              etiqueta={uploading ? "Enviando..." : "Finalizar Inscripción"} 
+              icono={<FaCheckCircle />} 
+              alHacerClick={handleFinalizarInscripcion}
+              deshabilitado={uploading || !signedForm}
+            />
+          </>
+        }
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            backgroundColor: '#f0f9ff', 
+            border: '1px solid #bae6fd', 
+            borderRadius: '16px', 
+            padding: '20px', 
+            marginBottom: '25px',
+            color: '#0369a1',
+            fontSize: '14px',
+            lineHeight: '1.6'
+          }}>
+            <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
+               ¡Formato descargado con éxito!
+            </p>
+            <p style={{ margin: 0 }}>
+              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada. 
+              <strong> A continuación debe subir el formato ya firmado</strong> para finalizar con la inscripción de este nuevo jugador al equipo.
+            </p>
+          </div>
+
+          <div 
+            onClick={() => document.getElementById('final-signed-form').click()}
+            style={{ 
+              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+              borderRadius: '20px',
+              padding: '40px 20px',
+              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+          >
+            {signedForm ? (
+              <div style={{ color: '#10b981' }}>
+                <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+              </div>
+            ) : (
+              <div style={{ color: '#0ea5e9' }}>
+                <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
+                <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+              </div>
+            )}
+            <input 
+              type="file" 
+              id="final-signed-form" 
+              style={{ display: 'none' }} 
+              accept=".pdf"
+              onChange={(e) => {
+                if (e.target.files[0]) {
+                  setSignedForm(e.target.files[0]);
+                }
+              }} 
+            />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}

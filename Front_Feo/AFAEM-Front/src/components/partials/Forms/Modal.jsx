@@ -12,6 +12,7 @@ export default function Modal({
   estaAbierto = false,
   titulo = '',
   hijos,
+  children,
   alCerrar,
   pie,
   tamanio = 'medio',
@@ -20,10 +21,13 @@ export default function Modal({
 }) {
   if (!estaAbierto) return null;
 
+  const content = children || hijos;
+
   const estilosPorTamanio = {
     pequeno: { maxWidth: '400px' },
     medio: { maxWidth: '600px' },
     grande: { maxWidth: '800px' },
+    pantallaFull: { maxWidth: '1400px', width: '95vw' },
   };
 
   return (
@@ -101,7 +105,7 @@ export default function Modal({
           </div>
 
           {/* CUERPO */}
-          <div style={{ padding: '24px' }}>{hijos}</div>
+          <div style={{ padding: '24px' }}>{content}</div>
 
           {/* PIE */}
           {pie && (

@@ -206,11 +206,189 @@ export const registrarJugadorTemporal = async (data) => {
   }
 };
 
+/**
+ * OBTIENE LOS SLOTS DISPONIBLES PARA UN EQUIPO TEMPORAL
+ */
+export const getAvailableSlots = async (equipoTemporalId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/slots`, {
+      params: { equipo_temporal_id: equipoTemporalId },
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo slots:', error);
+    throw error;
+  }
+};
+
+/**
+ * OBTIENE LA INFORMACIÓN DEL EQUIPO TEMPORAL DEL USUARIO
+ */
+export const getEquipoTemporalInfo = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/equipos-temporales/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo equipo temporal info:', error);
+    throw error;
+  }
+};
+
+/**
+ * OBTIENE LOS EQUIPOS REALES DEL USUARIO (DESDE LA BD)
+ */
+export const getUserTeamsReal = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/user-real-teams`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo equipos reales:', error);
+    throw error;
+  }
+};
+
+/**
+ * OBTIENE TODOS LOS JUGADORES DE LOS EQUIPOS DEL USUARIO (DESDE LA BD)
+ */
+export const getUserPlayersReal = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/mis-jugadores-reales`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo jugadores reales:', error);
+    throw error;
+  }
+};
+
+/**
+ * OBTIENE LOS CATÁLOGOS REALES DE LA BD PARA EL REGISTRO
+ */
+export const getCatalogs = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/catalogos-registro`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo catálogos:', error);
+    throw error;
+  }
+};
+
+/**
+ * CREA UN EQUIPO COMPLETO CON JUGADORES Y DOCUMENTOS (EN LA BD REAL)
+ */
+export const createTeamCompleto = async (data) => {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    
+    // Separamos metadatos de archivos
+    const teamMetadata = {
+      nombre_equipo: data.teamName,
+      liga_id: data.liga_id,
+      modalidad_id: data.modalidad_id,
+      categoria_id: data.categoria_id,
+      rama_id: data.rama_id
+    };
+    
+    const playersMetadata = data.players.map((p, index) => ({
+      nombre: p.firstName,
+      primer_apellido: p.lastNamePaterno,
+      segundo_apellido: p.lastNameMaterno,
+      curp: p.curp,
+      sexo_id: p.sexo_id,
+      fecha_nacimiento: p.birthDate,
+      seguro_tipo_id: p.insuranceType,
+      numero_camiseta: p.shirtNumber,
+      extranjero: p.esForaneo,
+      nacionalidad: p.nacionalidadJugador,
+      pais_residencia: p.paisResidenciaActual,
+      nacionalidad_padre: p.nacionalidadPadre,
+      nacionalidad_madre: p.nacionalidadMadre,
+      nac_abuelo_paterno: p.nacionalidadAbueloP,
+      nac_abuela_paterna: p.nacionalidadAbuelaP,
+      nac_abuelo_materno: p.nacionalidadAbueloM,
+      nac_abuela_materna: p.nacionalidadAbuelaM,
+      registro_asociacion_extranjera: p.registroAsociacionExtranjera,
+      juego_club_extranjero: p.participacionExtranjera,
+      rol_en_equipo: p.positionId
+    }));
+
+    formData.append('team_data', JSON.stringify(teamMetadata));
+    formData.append('players_data', JSON.stringify(playersMetadata));
+    
+    // Adjuntar archivo de logo del equipo si existe
+    if (data.teamLogo) {
+      formData.append('team_logo', data.teamLogo);
+    }
+
+    // Adjuntar archivos de cada jugador
+    data.players.forEach((p, index) => {
+      if (p.documents.acta) formData.append(`player_${index}_acta`, p.documents.acta);
+      if (p.documents.ine) formData.append(`player_${index}_ine`, p.documents.ine);
+      if (p.documents.foto) formData.append(`player_${index}_foto`, p.documents.foto);
+      if (p.documents.formato) formData.append(`player_${index}_formato`, p.documents.formato);
+    });
+
+    const response = await api.post('/equipo-temporal/crear-equipo-completo', formData, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+
+  } catch (error) {
+    console.error('Error creando equipo completo:', error);
+    throw error;
+  }
+};
+
+/**
+ * FINALIZA LA SOLICITUD COMPLETA (ENVÍA AL ADMIN)
+ */
+export const finalizarSolicitudCompleta = async (solicitudId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.post(`/solicitud/solicitud-completa?solicitud_id=${solicitudId}`, null, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error finalizando solicitud:', error);
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   getUserTeams,
+  getUserTeamsReal,
+  getUserPlayersReal,
   getTeamDetail,
   createTeam,
+  createTeamCompleto,
+  getCatalogs,
   certifyUser,
-  registrarJugadorTemporal
+  registrarJugadorTemporal,
+  getAvailableSlots,
+  getEquipoTemporalInfo,
+  finalizarSolicitudCompleta
 };

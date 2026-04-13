@@ -3,26 +3,70 @@ from app.modelos.menus_modelo import Menus
 from app.modelos.rel_usuario_roles_modelo import RelUsuarioRoles
 from app.modelos.rel_menu_roles_modelo import RelMenuRoles
 from app.modelos.rel_rol_permisos_modelo import RelRolPermisos
+from app.modelos.usuario_modelo import Usuario
+from app.modelos.roles_modelo import Roles
+from app.modelos.solicitud_modelo import Solicitud
+from app.modelos.documentos_entregados_modelo import DocumentosEntregados
 
 def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
-    # 1. Obtener Roles asignados
+    # 1. Obtener Roles asignados (Relación RBAC)
     roles_rels = db.query(RelUsuarioRoles).filter(RelUsuarioRoles.UsuarioId == usuario_id, RelUsuarioRoles.Estatus == True).all()
-    if not roles_rels:
-        return {"Roles": [], "Permisos": [], "Menus": []}
+    
+    # 2. También obtener el RolId primario del usuario (Legacy support / Basic role)
+    usuario_base = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
     
     roles_ids = [r.RolId for r in roles_rels]
     roles_nombres = [r.RolRelacion.Nombre for r in roles_rels]
+    
+    if usuario_base and usuario_base.RolId not in roles_ids:
+        roles_ids.append(usuario_base.RolId)
+        if usuario_base.RolRelacion:
+            roles_nombres.append(usuario_base.RolRelacion.Nombre)
 
-    # 2. Obtener Permisos asociados a esos roles
+    # 3. Obtener EstatusId
+    estatus_id = 0
+    # HARDENING: Identificar por ID (3) o por nombre
+    es_presidente = 3 in roles_ids or "PRESIDENTE_EQUIPO" in [r.upper() for r in roles_nombres]
+    
+    # Prioridad 1: Presidente (usar tabla real de estatus)
+    if es_presidente and usuario_base and usuario_base.PersonaId:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario_base.PersonaId).first()
+        if presidente:
+            # Forzar a int para evitar problemas en el front
+            estatus_id = int(presidente.EstatusId) if presidente.EstatusId is not None else 0
+
+    # Prioridad 2: Fallback (Legacy / Registro inicial)
+    if estatus_id == 0:
+        solicitud = db.query(Solicitud).filter(Solicitud.UsuarioId == usuario_id).order_by(Solicitud.SolicitudId.desc()).first()
+        
+        if solicitud:
+            estatus_id = int(solicitud.EstatusValidacion) if solicitud.EstatusValidacion is not None else 0
+        else:
+            if usuario_base and usuario_base.PersonaId:
+                docs_count = db.query(DocumentosEntregados).filter(DocumentosEntregados.PersonaId == usuario_base.PersonaId).count()
+            else:
+                docs_count = 0
+                
+            if docs_count > 0:
+                # Si tiene docs pero no solicitud, inferir por rol base
+                estatus_id = int(usuario_base.RolId) if (usuario_base and usuario_base.RolId) else 0
+            else:
+                estatus_id = 0
+
+    if not roles_ids:
+        return {"Roles": [], "Permisos": [], "Menus": [], "estatusId": int(estatus_id)}
+
+    # 4. Obtener Permisos asociados a esos roles
     permisos_rels = db.query(RelRolPermisos).filter(RelRolPermisos.RolId.in_(roles_ids)).all()
     permisos_slugs = list(set([p.PermisoRelacion.Slug for p in permisos_rels]))
 
-    # 3. Obtener Menús asociados a esos roles
+    # 5. Obtener Menús asociados a esos roles
     menu_rels = db.query(RelMenuRoles).filter(RelMenuRoles.RolId.in_(roles_ids), RelMenuRoles.Estatus == True).all()
     allowed_menu_ids = list(set([m.MenuId for m in menu_rels]))
     
     if not allowed_menu_ids:
-        return {"Roles": roles_nombres, "Permisos": permisos_slugs, "Menus": []}
+        return {"Roles": roles_nombres, "Permisos": permisos_slugs, "Menus": [], "estatusId": estatus_id}
 
     # Obtener todos los menús permitidos de la base de datos
     all_allowed_menus = db.query(Menus).filter(Menus.MenuId.in_(allowed_menu_ids), Menus.Estatus == True).all()
@@ -62,5 +106,6 @@ def obtener_acceso_usuario_servicio(db: Session, usuario_id: int):
     return {
         "Roles": roles_nombres,
         "Permisos": permisos_slugs,
-        "Menus": resultado_menus
+        "Menus": resultado_menus,
+        "estatusId": int(estatus_id)
     }

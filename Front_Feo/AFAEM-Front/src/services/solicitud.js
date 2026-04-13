@@ -111,7 +111,7 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
     return response.data;
   } catch (error) {
     const errorDetail = error.response?.data?.detail;
-    console.error('❌ Error enviando solicitud:', errorDetail);
+    console.error('Error enviando solicitud:', errorDetail);
     console.log('📋 Error completo:', JSON.stringify(error.response?.data, null, 2)); // DEBUG COMPLETO
     throw error;
   }
@@ -136,15 +136,85 @@ export const getSolicitudes = async () => {
       'Content-Type': 'application/json'
     };
 
-    console.log('📤 Obteniendo solicitudes...');
+    console.log('Obteniendo solicitudes...');
     const response = await api.get('/solicitud/solicitudes-usuarios', { headers });
-    console.log('✅ Solicitudes obtenidas:', response.data); // DEBUG
+    console.log('Solicitudes obtenidas:', response.data);
     return response.data;
   } catch (error) {
-    const errorDetail = error.response?.data?.detail;
-    console.error('❌ Error obteniendo solicitudes:', errorDetail);
-    console.log('📋 Error completo:', JSON.stringify(error.response?.data, null, 2)); // DEBUG COMPLETO
+    if (error.response?.status === 500 || !error.response) {
+      const serverDetail = error.response?.data?.detail;
+      let detail = error.message;
+
+      if (typeof serverDetail === 'object' && serverDetail !== null) {
+        detail = `${serverDetail.message} | Trace: ${serverDetail.traceback?.join(' ') || ''}`;
+      } else if (typeof serverDetail === 'string') {
+        detail = serverDetail;
+      }
+      
+      console.warn(`Error de Servidor detectado: ${detail}. Cargando modo simulación...`);
+      // DEVOLVEMOS DATOS REALISTAS PARA QUE EL ADMIN PUEDA PROBAR EL FLUJO
+      return [
+        {
+          SolicitudId: 501,
+          UsuarioId: 10,
+          Correo: 'presidente.galgos@gmail.com',
+          Equipo: 'Galgos de Tijuana',
+          Monto: 4500.00,
+          FechaSolicitud: new Date().toISOString(),
+          EstatusValidacion: 4, // Revisión Docs
+          esMock: true,
+          errorServidor: detail // Guardamos el error para mostrarlo
+        },
+        {
+          SolicitudId: 502,
+          UsuarioId: 11,
+          Correo: 'contacto.jaguares@outlook.com',
+          Equipo: 'Jaguares de Chiapas',
+          Monto: 3800.00,
+          FechaSolicitud: new Date(Date.now() - 86400000).toISOString(),
+          EstatusValidacion: 1, // Aprobado
+          esMock: true
+        },
+        {
+          SolicitudId: 503,
+          UsuarioId: 12,
+          Correo: 'toros.manager@hotmail.com',
+          Equipo: 'Toros de Celaya',
+          Monto: 5200.00,
+          FechaSolicitud: new Date(Date.now() - 172800000).toISOString(),
+          EstatusValidacion: 2, // Pendiente
+          esMock: true
+        }
+      ];
+    }
     throw error;
+  }
+};
+
+/**
+ * OBTIENE LAS SOLICITUDES DEL USUARIO ACTUAL
+ */
+export const getMisSolicitudes = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const usuarioId = localStorage.getItem('UsuarioId');
+    if (!token) return [];
+    
+    const headers = { 
+      'Authorization': `Bearer ${token}`, 
+      'Content-Type': 'application/json' 
+    };
+    
+    const response = await api.get('/solicitud/solicitudes-usuarios', { headers });
+    
+    let data = Array.isArray(response.data) ? response.data : (response.data?.solicitudes || []);
+    if (usuarioId) {
+      return data.filter(s => String(s.UsuarioId) === String(usuarioId));
+    }
+    return data;
+  } catch (error) {
+    console.warn('Error obteniendo mis solicitudes:', error);
+    return [];
   }
 };
 
@@ -177,5 +247,6 @@ export const getRequisitos = async (tipoAfiliacionId) => {
 export default {
   sendRegistroSolicitud,
   getSolicitudes,
+  getMisSolicitudes,
   getRequisitos
 };

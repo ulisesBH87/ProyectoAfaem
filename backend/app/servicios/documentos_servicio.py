@@ -1,11 +1,12 @@
 import os
 from datetime import datetime
 
-from fastapi import HTTPException
 from app.modelos.persona_modelo import Personas
 from app.repositorios import documentos_repositorio, personas_repositorio
 from app.core.seguridad import obtener_usuario_actual
 from app.repositorios.documentos_repositorio import obtener_solicitud_borrador
+
+from app.excepciones import documentos_excepciones
 
 UPLOAD_DIR = "uploads/documentos"
 
@@ -36,7 +37,7 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
     # Obtener CURP de la persona
     persona = db.query(Personas).filter(Personas.PersonaId == persona_id).first()
     if not persona:
-        raise HTTPException(404, "Persona no encontrada")
+        raise documentos_excepciones.PersonaNoEncontradaError()
     
     curp = persona.CURP
     año = datetime.now().year
@@ -61,7 +62,21 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         )
 
         documentos_creados.append(doc)
+    
+    db.commit()
 
+    # Actualizar Estatus Presidente a DOCUMENTOS_EN_REVISION
+    try:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
+        
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona_id).first()
+        if presidente:
+            presidente.EstatusId = PresidenteEquipoEstatus.PRE_APROBADO
+    except Exception as e:
+        pass # Si falla actualización del estatus, que no rompa la subida.
+
+    db.commit()
 
     return {
         "mensaje": "Documentos subidos",

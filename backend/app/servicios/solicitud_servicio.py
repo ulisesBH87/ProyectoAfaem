@@ -4,7 +4,11 @@ from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.repositorios import solicitud_repositorio
 from app.core.seguridad import obtener_usuario_actual
+from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
+from fastapi import HTTPException
+from app.modelos.equipo_temporal_modelo import EquipoTemporal
 
+#Se crea la solicitud parcialmente, aún no se envía a administrador
 def crear_solicitud(db: Session, data, usuario):
     # 1. Obtener la persona vinculada al usuario
     persona = usuario.PersonaRelacion
@@ -33,8 +37,46 @@ def crear_solicitud(db: Session, data, usuario):
     
     return solicitud
 
+#Todas las solicitudes
+def obtener_solicitudes_usuarios_servicio(db: Session):
+    return solicitud_repositorio.obtener_solicitudes_usuarios_repo(db)
+
 def obtener_solicitudes_servicio(db: Session):
-    return solicitud_repositorio.obtener_solicitudes_repo(db)
+
+    solicitudes = solicitud_repositorio.obtener_solicitudes_repo(db)
+
+    resultado = []
+
+    for s in solicitudes:
+
+        equipo = db.query(EquipoTemporal).filter(
+            EquipoTemporal.SolicitudId == s.SolicitudId
+        ).first()
+
+        jugadores = 0
+        if equipo:
+            jugadores = equipo.CantidadJugadoresPagados
+
+        resultado.append({
+            "solicitud_id": s.SolicitudId,
+            "usuario": s.UsuarioRelacion.Correo,
+            "tipo_afiliacion": s.TipoAfiliacionRelacion.NombreAfiliacion,
+            "estatus": s.EstatusValidacionId,
+            "fecha": s.FechaSolicitud,
+            "jugadores": jugadores
+        })
+
+    return resultado
+
+#Solicitud individual
+def obtener_solicitud_detalle_servicio(db, solicitud_id):
+
+    data = solicitud_repositorio.obtener_solicitud_detalle_repo(db, solicitud_id)
+
+    if not data:
+        raise HTTPException(404, "Solicitud no encontrada")
+
+    return data
 
 def obtener_solicitud_individual_servicio(db: Session, solicitud_id: int):
     return solicitud_repositorio.obtener_solicitud_individual_repo(db, solicitud_id)
@@ -82,3 +124,69 @@ def crear_solicitud_servicio(db, solicitud, usuarioid):
     db.commit()
 
     return {"solicitud_id": nueva_solicitud.SolicitudId, "mensaje": "Solicitud enviada correctamente"}
+
+def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
+
+    solicitud = solicitud_repositorio.obtener_solicitud_por_id(db, solicitud_id)
+
+    if not solicitud:
+        raise HTTPException(404, "No se encontró la solicitud")
+
+    if solicitud.UsuarioId != usuario_id:
+        raise HTTPException(403, "No tienes permiso para enviar esta solicitud")
+
+    if solicitud.EstatusValidacion == EstatusValidacionSolicitud.ESPERA:
+        raise HTTPException(400, "La solicitud ya ha sido enviada")
+
+    #enviio
+    solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)
+    if not solicitud_completa:
+        raise HTTPException(400, "Error al enviar la solicitud")
+    
+    return {"mensaje": "Solicitud enviada correctamente"}
+
+# --- SECCIÓN ADMINISTRADORA: VALIDACIÓN DE SOLICITUDES ---
+
+def obtener_documentos_para_revision_servicio(db: Session, solicitud_id: int):
+    resultado = solicitud_repositorio.obtener_personas_con_documentos_repo(db, solicitud_id)
+    if not resultado:
+         raise HTTPException(status_code=404, detail="No se encontró la solicitud o no tiene documentos asociados")
+    return resultado
+
+def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
+    """
+    Lógica para aprobar o rechazar una solicitud.
+    """
+    try:
+        # Iniciamos transaccion explícita
+        with db.begin_nested(): # Usamos nested para asegurar que si falla algo, todo regrese
+            
+            # Mapeo de Estatus desde el Payload (Sincronizado: 2: Aprobado, 3: Rechazado)
+            estatus_db = payload.Estatus
+            
+            # 1. Actualizar estatus de la solicitud
+            solicitud = solicitud_repositorio.actualizar_validacion_solicitud_repo(
+                db, solicitud_id, estatus_db, payload.Observaciones
+            )
+            
+            if not solicitud:
+                raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+            
+            # 2. Si es aprobado (ID 2), activar al presidente
+            if payload.Estatus == 2:
+                activado = solicitud_repositorio.activar_presidente_solicitud_repo(db, solicitud_id)
+                if not activado:
+                    # Si no pudimos activar al presidente, lanzamos error para hacer rollback
+                    raise Exception("No se pudo activar el registro de Presidente de Equipo. Verifique que el usuario esté vinculado correctamente.")
+            
+        db.commit()
+        mensaje = "Solicitud aprobada y presidente activado" if payload.Estatus == 2 else "Solicitud rechazada correctamente"
+        return {"mensaje": mensaje, "solicitud_id": solicitud_id}
+
+    except HTTPException as he:
+        db.rollback()
+        raise he
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en la validación: {str(e)}")
+

@@ -4,9 +4,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 
 // Componentes
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
+import SearchBar from '../../components/Common/SearchBar';
+import { getMisSolicitudes } from '../../services/solicitud';
 
 export default function PresidenteEquipoSolicitudes() {
   const userEmail = localStorage.getItem('email');
@@ -28,47 +28,22 @@ export default function PresidenteEquipoSolicitudes() {
     const cargarSolicitudes = async () => {
       try {
         setLoading(true);
-        // Aquí iría la llamada a API para obtener solicitudes
-        const datosEjemplo = [
-          {
-            id: 1,
-            tipo: 'Afiliación de jugador',
-            jugador: 'Juan Pérez',
-            equipo: 'Equipo A',
-            fechaSolicitud: '2026-02-25',
-            estado: 'pendiente',
-            prioridad: 'alta'
-          },
-          {
-            id: 2,
-            tipo: 'Cambio de entrenador',
-            equipo: 'Equipo B',
-            entrenador: 'Carlos López',
-            fechaSolicitud: '2026-02-24',
-            estado: 'en_revision',
-            prioridad: 'media'
-          },
-          {
-            id: 3,
-            tipo: 'Afiliación de equipo',
-            equipo: 'Equipo C',
-            fechaSolicitud: '2026-02-20',
-            estado: 'completada',
-            prioridad: 'baja'
-          },
-          {
-            id: 4,
-            tipo: 'Cambio de datos',
-            jugador: 'Luis Martínez',
-            equipo: 'Equipo A',
-            fechaSolicitud: '2026-02-23',
-            estado: 'pendiente',
-            prioridad: 'media'
-          }
-        ];
+        const datos = await getMisSolicitudes();
         
-        setSolicitudes(datosEjemplo);
-        calcularEstadisticas(datosEjemplo);
+        // Mapear datos del backend al formato de la tabla
+        const solicitudesMapeadas = (Array.isArray(datos) ? datos : []).map(s => ({
+          id: s.SolicitudId,
+          tipo: s.TipoSolicitud || 'Registro de Presidente',
+          equipo: s.Equipo || 'N/A',
+          fechaSolicitud: s.FechaSolicitud,
+          estado: s.EstatusValidacion === 1 ? 'completada' : 
+                  s.EstatusValidacion === 0 ? 'rechazada' : 
+                  s.EstatusValidacion === 4 ? 'en_revision' : 'pendiente',
+          prioridad: 'media'
+        }));
+
+        setSolicitudes(solicitudesMapeadas);
+        calcularEstadisticas(solicitudesMapeadas);
         setError(null);
       } catch (err) {
         console.error('Error al cargar solicitudes:', err);
@@ -195,39 +170,26 @@ export default function PresidenteEquipoSolicitudes() {
 
   if (loading) {
     return (
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail={userEmail} />
-        <div className="dashboard-container">
-          <DashboardHeader userEmail={userEmail} pageTitle="Cargando..." />
-          <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div>Cargando solicitudes...</div>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ color: 'var(--text-muted)' }}>Cargando solicitudes...</div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Gestión de Solicitudes" />
-        
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            {error && (
-              <div style={{
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                color: '#991b1b',
-                padding: '12px 16px',
-                borderRadius: '6px',
-                marginBottom: '20px'
-              }}>
-                {error}
-              </div>
-            )}
+    <div className="dashboard-content">
+      {error && (
+        <div style={{
+          backgroundColor: '#fee2e2',
+          border: '1px solid #fecaca',
+          color: '#991b1b',
+          padding: '12px 16px',
+          borderRadius: '6px',
+          marginBottom: '20px'
+        }}>
+          {error}
+        </div>
+      )}
 
             {/* TARJETAS DE ESTADÍSTICAS */}
             <div style={{
@@ -291,13 +253,17 @@ export default function PresidenteEquipoSolicitudes() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '16px'
               }}>
-                <EntradaFormulario
-                  etiqueta="Buscar solicitud"
-                  tipo="text"
-                  valor={filtroBusqueda}
-                  alCambiar={(e) => setFiltroBusqueda(e.target.value)}
-                  marcador="Busca por tipo, jugador o equipo..."
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#25303b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Buscar solicitud
+                  </label>
+                  <SearchBar
+                    value={filtroBusqueda}
+                    onChange={(e) => setFiltroBusqueda(e.target.value)}
+                    placeholder="Busca por tipo, jugador o equipo..."
+                    width="280px"
+                  />
+                </div>
                 
                 <EntradaSeleccion
                   etiqueta="Filtrar por tipo"
@@ -352,9 +318,6 @@ export default function PresidenteEquipoSolicitudes() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -10,15 +10,17 @@ export const RBACProvider = ({ children }) => {
     isLoading: true
   });
 
-  const fetchAccess = useCallback(async () => {
+  const fetchAccess = useCallback(async (isSilent = false) => {
     const token = localStorage.getItem('token');
     if (!token || token === 'undefined' || token === 'null') {
       setAccess({ roles: [], permissions: [], menus: [], isLoading: false });
       return;
     }
 
-    // Aseguramos que isLoading sea true mientras pedimos nuevos datos (evita race conditions)
-    setAccess(prev => ({ ...prev, isLoading: true }));
+    // Solo activamos isLoading si NO es una actualización silenciosa en segundo plano
+    if (!isSilent) {
+      setAccess(prev => ({ ...prev, isLoading: true }));
+    }
 
     try {
       const response = await api.get('/permisos/mi-acceso', {
@@ -26,22 +28,49 @@ export const RBACProvider = ({ children }) => {
       });
       const data = response.data || {};
       const finalRoles = data.Roles || [];
+      const finalMenus = data.Menus ? [...data.Menus] : [];
       
+      const isAdmin = finalRoles.map(r => r.toUpperCase()).includes('ADMINISTRADOR') || finalRoles.map(r => r.toUpperCase()).includes('ADMIN');
+      
+      if (isAdmin) {
+        if (!finalMenus.find(m => m.Nombre === 'Catálogos')) {
+          finalMenus.push({
+            Nombre: 'Catálogos',
+            Icono: 'FaListAlt',
+            Ruta: '/admin/catalogos'
+          });
+        }
+        if (!finalMenus.find(m => m.Nombre === 'Presidentes')) {
+          finalMenus.push({
+            Nombre: 'Presidentes',
+            Icono: 'FaUserTie',
+            Ruta: '/admin/presidentes'
+          });
+        }
+        if (!finalMenus.find(m => m.Nombre === 'Auditorías')) {
+          finalMenus.push({
+            Nombre: 'Auditorías',
+            Icono: 'FaHistory',
+            Ruta: '/admin/auditorias'
+          });
+        }
+      }
+
       const newState = {
         roles: finalRoles,
         permissions: data.Permisos || [],
-        menus: data.Menus || [],
+        menus: finalMenus,
+        estatusId: (data.estatusId !== undefined && data.estatusId !== null) ? parseInt(data.estatusId) : 0,
         isLoading: false
       };
       
       setAccess(newState);
-      return newState; // Devolvemos el nuevo estado para poder esperarlo en el login
+      return newState;
     } catch (error) {
       console.error('Error fetching RBAC access:', error);
       
       let errorState = { roles: [], permissions: [], menus: [], isLoading: false };
       
-      // Si el token es inválido o expira
       if (error.response && error.response.status === 401) {
           setAccess(errorState);
       } else {
@@ -53,14 +82,13 @@ export const RBACProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const id = setTimeout(fetchAccess, 0);
+    const id = setTimeout(() => fetchAccess(false), 0);
     
-    // Escuchar eventos de login para actualizar inmediatamente
-    const handleLogin = () => fetchAccess();
+    const handleLogin = () => fetchAccess(false);
     window.addEventListener('user-logged-in', handleLogin);
     
-    // Polling opcional para cambios de permisos en tiempo real (cada 2 minutos)
-    const interval = setInterval(fetchAccess, 2 * 60 * 1000);
+    // Polling silencioso cada 2 minutos para no interrumpir al usuario
+    const interval = setInterval(() => fetchAccess(true), 2 * 60 * 1000);
     
     return () => {
         clearTimeout(id);

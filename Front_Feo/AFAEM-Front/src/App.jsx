@@ -1,6 +1,8 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import MainLayout from './layouts/MainLayout';
+import Loader from './components/Loader';
 
 const Ingresar = lazy(() => import('./pages/Auth/Ingresar'));
 const Registrarse = lazy(() =>  import('./pages/Auth/Registrarse'));
@@ -17,8 +19,16 @@ const InscribirEquipoALiga = lazy(() => import('./pages/Equipos/InscribirEquipoA
 const AdminSolicitudes = lazy(() => import('./pages/Admin/AdminSolicitudes'));
 const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 const AdminPagos = lazy(() => import('./pages/Admin/AdminPagos'));
+const AdminEquipos = lazy(() => import('./pages/Admin/AdminEquipos'));
+const AdminCrearEquipo = lazy(() => import('./pages/Admin/AdminCrearEquipo'));
+const AdminJugadores = lazy(() => import('./pages/Admin/AdminJugadores'));
+const AdminCrearJugador = lazy(() => import('./pages/Admin/AdminCrearJugador'));
+const AdminCatalogos = lazy(() => import('./pages/Admin/AdminCatalogos'));
+const AdminPresidentes = lazy(() => import('./pages/Admin/AdminPresidentes'));
+const AdminAuditorias = lazy(() => import('./pages/Admin/AdminAuditorias'));
 const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
 const AdminGuard = lazy(() => import('./routes/AdminGuard'));
+const PresidenteGuard = lazy(() => import('./routes/PresidenteGuard'));
 const RegistroJugadores = lazy(() => import('./pages/Jugadores/RegistroJugadores'));
 const ProximoPresidente = lazy(() => import('./pages/Auth/ProximoPresidente'));
 const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPresidente'));
@@ -27,59 +37,86 @@ const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContras
 const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
+import SplashScreen from './components/Common/SplashScreen';
 
 function App() {
+  const [cargandoApp, setCargandoApp] = useState(true);
+  const [estaSaliendo, setEstaSaliendo] = useState(false);
+  const userEmail = localStorage.getItem('email') || 'usuario@afaem.com';
+
+  // CONTROL DE SESIÓN (5 HORAS)
+  useEffect(() => {
+    const verificarSesion = () => {
+      const token = localStorage.getItem('token');
+      const timestamp = localStorage.getItem('token_timestamp');
+      
+      if (token && timestamp) {
+        const cincoHoras = 5 * 60 * 60 * 1000;
+        const ahora = Date.now();
+        
+        if (ahora - parseInt(timestamp) > cincoHoras) {
+          console.warn('⚠️ Sesión expirada después de 5 horas.');
+          localStorage.clear();
+          window.location.href = '/ingresar';
+        }
+      }
+    };
+
+    verificarSesion();
+    
+    // Simular carga de la aplicación (Splash Screen)
+    const timerCarga = setTimeout(() => {
+      setEstaSaliendo(true);
+      setTimeout(() => setCargandoApp(false), 600); // Dar tiempo al fade-out de 0.6s
+    }, 2000);
+
+    return () => clearTimeout(timerCarga);
+  }, []);
+
   return (
     <Router>
-      <Suspense fallback={<div style={{textAlign:'center',marginTop:'40px'}}><span className="spinner" />Cargando...</div>}>
+      {cargandoApp && <SplashScreen isExiting={estaSaliendo} />}
+      <Suspense fallback={<Loader text="AFAEM DIGITAL" />}>
         <Routes>
           <Route path="/" element={<Ingresar />} />
           <Route path="/ingresar" element={<Ingresar />} />
           <Route path="/registrarse-cuenta" element={<RegistrarseCuenta />} />
           <Route path="/proximo-presidente" element={<ProximoPresidente />} />
           <Route path="/pre-registro-presidente" element={<PreRegistroPresidente />} />
-          <Route path="/presidente-equipo" element={<PresidenteEquipo />} />
-          <Route path="/presidente-equipo/jugadores" element={<PresidenteEquipoJugadores />} />
-          <Route path="/presidente-equipo/solicitudes" element={<PresidenteEquipoSolicitudes />} />
-          <Route path="/presidente-equipo/reportes" element={<PresidenteEquipoReportes />} />
-          <Route path="/presidente-equipo/configuracion" element={<PresidenteEquipoConfiguracion />} />
-          <Route path="/presidente-equipo/equipos" element={<PresidenteEquipoEquipos />} />
-          <Route path="/presidente-equipo/mis-jugadores" element={<PresidenteEquipoMisJugadores />} />
-          <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<AdminEquipo />} />
-          <Route path="/presidente-equipo/registro-jugadores" element={<RegistroJugadores />} />
-          <Route path="/inscribir-equipo-liga/:equipoId" element={<InscribirEquipoALiga />} />
-          
-          {/* RUTAS DE ADMINISTRADOR */}
-          <Route path="/registrar-admin" element={<RegistrarAdmin />} />
-          <Route path="/admin/dashboard" element={
-            <AdminGuard>
-              <AdminDashboard />
-            </AdminGuard>
-          } />
-          <Route path="/admin/solicitudes" element={
-            <AdminGuard>
-              <AdminSolicitudes />
-            </AdminGuard>
-          } />
-          <Route path="/admin/pagos" element={
-            <AdminGuard>
-              <AdminPagos />
-            </AdminGuard>
-          } />
-          <Route path="/admin/usuarios-roles" element={
-            <AdminGuard>
-              <UsuariosRolesAdmin />
-            </AdminGuard>
-          } />
-          <Route path="/admin/configuracion" element={
-            <AdminGuard>
-              <ConfiguracionAdmin />
-            </AdminGuard>
-          } />
-          <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteEquipoSolicitudes />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
-          <Route path="/presidente-equipo/configurar-equipo" element={<ConfigurarEquipo />} />
+
+          {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT */}
+          <Route element={<MainLayout userEmail={userEmail} />}>
+            <Route path="/presidente-equipo" element={<PresidenteGuard><PresidenteEquipo /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/jugadores" element={<PresidenteGuard><PresidenteEquipoJugadores /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/reportes" element={<PresidenteGuard><PresidenteEquipoReportes /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/configuracion" element={<PresidenteGuard><PresidenteEquipoConfiguracion /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/registro-jugadores" element={<PresidenteGuard><RegistroJugadores /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/equipos" element={<PresidenteGuard><PresidenteEquipoEquipos /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/mis-jugadores" element={<PresidenteGuard><PresidenteEquipoMisJugadores /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<PresidenteGuard><AdminEquipo /></PresidenteGuard>} />
+            <Route path="/inscribir-equipo-liga/:equipoId" element={<PresidenteGuard><InscribirEquipoALiga /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/configurar-equipo" element={<PresidenteGuard><ConfigurarEquipo /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
+
+            {/* ADMIN DASHBOARD ROUTES */}
+            <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+            <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
+            <Route path="/admin/pagos" element={<AdminGuard><AdminPagos /></AdminGuard>} />
+            <Route path="/admin/equipos" element={<AdminGuard><AdminEquipos /></AdminGuard>} />
+            <Route path="/admin/equipos/crear" element={<AdminGuard><AdminCrearEquipo /></AdminGuard>} />
+            <Route path="/admin/jugadores" element={<AdminGuard><AdminJugadores /></AdminGuard>} />
+            <Route path="/admin/jugadores/crear" element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
+            <Route path="/admin/catalogos" element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
+            <Route path="/admin/presidentes" element={<AdminGuard><AdminPresidentes /></AdminGuard>} />
+            <Route path="/admin/auditorias" element={<AdminGuard><AdminAuditorias /></AdminGuard>} />
+            <Route path="/admin/usuarios-roles" element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
+            <Route path="/admin/configuracion" element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
+          </Route>
+
+          <Route path="/registrar-admin" element={<RegistrarAdmin />} />
         </Routes>
       </Suspense>
     </Router>

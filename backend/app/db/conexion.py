@@ -1,6 +1,7 @@
-from sqlalchemy import create_engine
 import pyodbc
+from sqlalchemy import create_engine
 from app.core.config import obtener_configuracion
+import app.core.auditoria.auditoria_listener
 
 config = obtener_configuracion()
 
@@ -10,6 +11,3 @@ engine = create_engine(
     future=True,
     pool_pre_ping=True
 )
-
-
-

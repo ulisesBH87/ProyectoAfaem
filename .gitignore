@@ -22,7 +22,7 @@ backend/uploads/
 # 🔹 Backend - OCR
 # =========================
 OCR/afaem-487315-9fef755ac1dc.json
-
+OCR/__pycache__
 # =========================
 # 🔹 Python
 # =========================
@@ -64,3 +64,10 @@ Front_Feo/afaem-front/node_modules
 .vscode/
 .idea/
 .vs/
+
+# =========================
+# 🔹 Antigravity / Agentes AI
+# =========================
+.agent/
+.gemini/
+antigravity-skill-creator.md

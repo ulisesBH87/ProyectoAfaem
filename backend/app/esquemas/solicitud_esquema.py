@@ -1,11 +1,11 @@
 from pydantic import BaseModel, EmailStr, field_validator, model_validator, Field
 from datetime import datetime, date
 import re
-from typing import List
+from typing import List, Optional
 
 class SolicitudCrear(BaseModel):
     UsuarioId: int
-    FechaSolicitud: datetime
+    FechaSolicitud: Optional[datetime] = None
     TipoAfiliacion: int
 
     CURP: str
@@ -67,9 +67,13 @@ class SolicitudCrear(BaseModel):
 
 class SolicitudesTodas(BaseModel):
     SolicitudId: int
-    UsuarioId: int
-    FechaSolicitud: datetime
+    FechaSolicitud: Optional[datetime] = None
     EstatusValidacion: int
+    Nombre: str
+    PrimerApellido: str
+    Correo: EmailStr
+    Equipo: Optional[str] = None
+    Monto: Optional[float] = None
 
     model_config = {
         "from_attributes": True
@@ -79,19 +83,23 @@ class SolicitudIndividualRespuesta(BaseModel):
     #Datos del usuario
     Nombre: str
     PrimerApellido: str
-    SegundoApellido: str | None
-    CURP: str
-    Sexo: str
-    FechaNacimiento: date
+    SegundoApellido: Optional[str] = None
+    CURP: Optional[str] = None
+    RFC: Optional[str] = None
+    Sexo: Optional[str] = None
+    FechaNacimiento: Optional[date] = None
 
     #Datos de la solicitud
-    TipoSolicitud: str
-    FechaSolicitud: datetime
-    EstatusSolicitud: str
+    TipoSolicitud: Optional[str] = None
+    FechaSolicitud: Optional[datetime] = None
+    EstatusSolicitud: Optional[str] = None
+    Email: str
+    SolicitudId: int
 
     model_config = {
         "from_attributes": True
     }
+
 
 class RequisitosParaAfiliacion(BaseModel):
     DocumentosPersonaIds: List[int]
@@ -120,3 +128,25 @@ class PDFData(BaseModel):
     edad: str
     nacionalidad: str = "MEXICANA"
     equipo: str = ""
+
+# --- NUEVOS ESQUEMAS PARA VALIDACIÓN (ADMIN) ---
+
+class ValidarSolicitudPayload(BaseModel):
+    Estatus: int  # 1: Aprobado, 0: Rechazado
+    Observaciones: Optional[str] = None
+
+class DocumentoInfo(BaseModel):
+    Tipo: str
+    Url: str
+    Estado: str = "entregado"
+
+class JugadorConDocumentos(BaseModel):
+    Id: int
+    Nombre: str
+    CURP: Optional[str] = None
+    Documentos: List[DocumentoInfo]
+
+class SolicitudDocumentosResponse(BaseModel):
+    Equipo: str
+    SolicitudId: int
+    Jugadores: List[JugadorConDocumentos]

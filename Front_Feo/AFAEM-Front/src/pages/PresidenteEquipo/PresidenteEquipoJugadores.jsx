@@ -4,9 +4,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 
 // Componentes
-import DashboardSidebar from '../../components/DashboardSidebar';
-import DashboardHeader from '../../components/DashboardHeader';
 import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
+import SearchBar from '../../components/Common/SearchBar';
+import { API_BASE } from '../../config/config';
+
 
 export default function PresidenteEquipoJugadores() {
   const userEmail = localStorage.getItem('email');
@@ -27,40 +28,28 @@ export default function PresidenteEquipoJugadores() {
     const cargarJugadores = async () => {
       try {
         setLoading(true);
-        // Aquí iría la llamada a API para obtener jugadores
-        // Por ahora usamos datos de ejemplo
-        const datosEjemplo = [
-          {
-            id: 1,
-            nombre: 'Juan Pérez',
-            equipo: 'Equipo A',
-            posicion: 'Delantero',
-            edad: 18,
-            estatus: 'aprobado',
-            fechaRegistro: '2026-01-15'
-          },
-          {
-            id: 2,
-            nombre: 'Carlos García',
-            equipo: 'Equipo B',
-            posicion: 'Portero',
-            edad: 20,
-            estatus: 'pendiente',
-            fechaRegistro: '2026-02-20'
-          },
-          {
-            id: 3,
-            nombre: 'Luis Martínez',
-            equipo: 'Equipo A',
-            posicion: 'Defensor',
-            edad: 19,
-            estatus: 'en_proceso',
-            fechaRegistro: '2026-02-10'
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/equipos/mis-jugadores-reales`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        ];
+        });
+
+        if (!response.ok) throw new Error('Error al obtener jugadores');
         
-        setJugadores(datosEjemplo);
-        calcularEstadisticas(datosEjemplo);
+        const data = await response.json();
+        const mappedData = data.map(j => ({
+          id: j.MiembroEquipoId,
+          nombre: j.NombreCompleto,
+          equipo: j.Equipo,
+          posicion: j.Rol,
+          dorsal: j.NumeroCamiseta || '-',
+          estatus: j.Estatus ? 'aprobado' : 'pendiente',
+          fechaRegistro: j.FechaIngreso
+        }));
+
+        setJugadores(mappedData);
+        calcularEstadisticas(mappedData);
         setError(null);
       } catch (err) {
         console.error('Error al cargar jugadores:', err);
@@ -74,6 +63,7 @@ export default function PresidenteEquipoJugadores() {
       cargarJugadores();
     }
   }, [userEmail]);
+
 
   const calcularEstadisticas = (data) => {
     setStats({
@@ -127,9 +117,11 @@ export default function PresidenteEquipoJugadores() {
       renderizar: (valor) => valor
     },
     {
-      clave: 'edad',
-      etiqueta: 'Edad',
-      renderizar: (valor) => `${valor} años`
+      clave: 'dorsal',
+      etiqueta: 'Dorsal',
+      renderizar: (valor) => (
+        <span style={{ fontWeight: '800', color: '#0b4ea6' }}>#{valor}</span>
+      )
     },
     {
       clave: 'estatus',
@@ -142,6 +134,7 @@ export default function PresidenteEquipoJugadores() {
         />
       )
     }
+
   ];
 
   const manejarExportar = () => {
@@ -151,8 +144,9 @@ export default function PresidenteEquipoJugadores() {
         j.nombre,
         j.equipo,
         j.posicion,
-        j.edad,
+        j.dorsal,
         obtenerEtiquetaEstado(j.estatus)
+
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -161,52 +155,36 @@ export default function PresidenteEquipoJugadores() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'jugadores.csv';
-    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }, 100);
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   if (loading) {
     return (
-      <div className="dashboard-wrapper">
-        <DashboardSidebar userEmail={userEmail} />
-        <div className="dashboard-container">
-          <DashboardHeader userEmail={userEmail} pageTitle="Cargando..." />
-          <div className="dashboard-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div>Cargando jugadores...</div>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ color: 'var(--text-muted)' }}>Cargando jugadores...</div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-wrapper">
-      <DashboardSidebar userEmail={userEmail} />
-      
-      <div className="dashboard-container">
-        <DashboardHeader userEmail={userEmail} pageTitle="Gestión de Jugadores" />
-        
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            {error && (
-              <div style={{
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                color: '#991b1b',
-                padding: '12px 16px',
-                borderRadius: '6px',
-                marginBottom: '20px'
-              }}>
-                {error}
-              </div>
-            )}
+    <div className="dashboard-content">
+      {error && (
+        <div style={{
+          backgroundColor: '#fee2e2',
+          border: '1px solid #fecaca',
+          color: '#991b1b',
+          padding: '12px 16px',
+          borderRadius: '6px',
+          marginBottom: '20px'
+        }}>
+          {error}
+        </div>
+      )}
 
-            {/* TARJETAS DE ESTADÍSTICAS */}
+      {/* TARJETAS DE ESTADÍSTICAS */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -268,13 +246,17 @@ export default function PresidenteEquipoJugadores() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '16px'
               }}>
-                <EntradaFormulario
-                  etiqueta="Buscar por nombre"
-                  tipo="text"
-                  valor={filtroBusqueda}
-                  alCambiar={(e) => setFiltroBusqueda(e.target.value)}
-                  marcador="Escribe el nombre del jugador..."
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#25303b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Buscar por nombre
+                  </label>
+                  <SearchBar
+                    value={filtroBusqueda}
+                    onChange={(e) => setFiltroBusqueda(e.target.value)}
+                    placeholder="Escribe el nombre del jugador..."
+                    width="280px"
+                  />
+                </div>
                 
                 <EntradaSeleccion
                   etiqueta="Filtrar por estado"
@@ -324,9 +306,6 @@ export default function PresidenteEquipoJugadores() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default function Ingresar() {
   const [err, setErr] = useState(null);
   const [backendOk, setBackendOk] = useState(true);
   const [backendDiag, setBackendDiag] = useState('');
-  
+
   React.useEffect(() => {
     (async () => {
       try {
@@ -39,27 +39,33 @@ export default function Ingresar() {
     if (!email || !password) { setErr('Ingresa correo y contraseña'); return; }
     setLoading(true);
     try {
-      const data = await login(email, password);
+      const data = await login(email.toLowerCase(), password);
       const token = data?.token || data?.access || data?.access_token || null;
       console.log('TOKEN RECIBIDO:', token);
+      let currentEstatusId = null;
       if (token) {
         setAuthToken(token);
         localStorage.setItem('token', token);
         console.log('🔄 Sincronizando permisos con el backend...');
-        await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
+        const accessData = await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
+        // Fallback: Prioridad a la respuesta del login, luego al servicio de permisos
+        currentEstatusId = data?.usuario?.estatusId || accessData?.estatusId;
         window.dispatchEvent(new Event('user-logged-in'));
       }
+
       const userData = {
         email: email,
         correo: email,
         ...data
       };
       localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('email', email); // GUARDAR EMAIL DIRECTAMENTE
-      
+      localStorage.setItem('email', email); 
+      localStorage.setItem('token_timestamp', Date.now().toString()); // CONTROL DE 5 HORAS
+
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
       console.log('ROL USUARIO (desde respuesta login):', role);
-      
+      console.log('ESTATUS ID detectado:', currentEstatusId);
+
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
         localStorage.setItem('UsuarioId', data.UsuarioId);
@@ -75,17 +81,25 @@ export default function Ingresar() {
           console.log('🆔 ID extraído del Token:', decoded.sub);
         }
       }
-      
+
       console.log('ROL USUARIO:', role);
 
+      // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---
       if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
         navigate('/admin/dashboard');
       } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
-      } else if (role === 'PRESIDENTE_EQUIPO') {
-        navigate('/pre-registro-presidente');
+      } else if (role.includes('PRESIDENTE') || role === 'INVITADO') {
+        // Solo entra al dashboard si ya está aprobado/activo o en revisión (Estatus 4, 5, 6 o 7)
+        // Pero si es INVITADO, siempre va a pre-registro
+        if (role !== 'INVITADO' && currentEstatusId && parseInt(currentEstatusId) >= 4) {
+          navigate('/presidente-equipo');
+        } else {
+          navigate('/pre-registro-presidente');
+        }
       } else {
-        navigate('/pre-registro-presidente');
+        // En cualquier otro caso, al home
+        navigate('/');
       }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);
@@ -96,369 +110,81 @@ export default function Ingresar() {
   };
 
   return (
-    <div className="login-container">
-      <style>{`
-        .login-container {
-          min-height: 100vh;
-          background-image: url('${StadiumBg}');
-          background-position: center;
-          background-size: cover;
-          background-attachment: fixed;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          position: relative;
-          overflow: hidden;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-        }
-        
-        .login-container::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.35);
-          pointer-events: none;
-          z-index: 5;
-        }
-        
-        .login-wrapper {
-          position: relative;
-          z-index: 10;
-          width: 100%;
-          max-width: 450px;
-        }
-        
-        .login-card {
-          background: white;
-          border-radius: 14px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-          overflow: hidden;
-        }
-        
-        .login-header {
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-          padding: 24px 32px 16px;
-          text-align: center;
-          position: relative;
-        }
-        
-        .logo-group {
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-          margin-bottom: 12px;
-          align-items: center;
-          flex-wrap: wrap;
-        }
-        
-        .logo-item {
-          width: 45px;
-          height: 45px;
-          background: rgba(255, 255, 255, 0.12);
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4px;
-          backdrop-filter: blur(10px);
-        }
-        
-        .logo-item img {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
-          filter: brightness(1.1);
-        }
-        
-        .login-title {
-          color: white;
-          font-size: 22px;
-          font-weight: 700;
-          margin: 0;
-          letter-spacing: 0.6px;
-        }
-        
-        .login-body {
-          padding: 24px 32px;
-        }
-        
-        .form-group {
-          margin-bottom: 14px;
-        }
-        
-        .form-label {
-          display: block;
-          font-weight: 600;
-          color: #2c3e50;
-          margin-bottom: 6px;
-          font-size: 13px;
-          letter-spacing: 0.5px;
-          text-transform: capitalize;
-        }
-        
-        .form-input {
-          width: 100%;
-          padding: 10px 14px;
-          border: 2px solid #e0e6ed;
-          border-radius: 9px;
-          font-size: 14px;
-          transition: all 0.3s ease;
-          font-family: inherit;
-          background: #f8fafb;
-          box-sizing: border-box;
-        }
-        
-        .form-input:focus {
-          outline: none;
-          border-color: #0b4ea6;
-          box-shadow: 0 0 0 4px rgba(11, 78, 166, 0.12);
-          background-color: #ffffff;
-        }
-        
-        .form-input::placeholder {
-          color: #cbd5e0;
-        }
-        
-        .password-group {
-          position: relative;
-        }
-        
-        .toggle-password {
-          position: absolute;
-          right: 14px;
-          top: 32px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #718096;
-          font-size: 18px;
-          padding: 8px;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .toggle-password:hover {
-          color: #0b4ea6;
-          transform: scale(1.1);
-        }
-        
-        .error-message {
-          background: linear-gradient(135deg, #fee 0%, #fdd 100%);
-          color: #d32f2f;
-          padding: 10px 14px;
-          border-radius: 9px;
-          margin-bottom: 14px;
-          font-size: 13px;
-          border-left: 4px solid #d32f2f;
-          animation: slideIn 0.3s ease;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-        }
-        
-        .backend-warning {
-          background: linear-gradient(135deg, #fff3cd 0%, #ffe8a6 100%);
-          color: #856404;
-          padding: 10px 14px;
-          border-radius: 9px;
-          margin-bottom: 14px;
-          font-size: 13px;
-          border-left: 4px solid #ffc107;
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-        }
-        
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .submit-btn {
-          width: 100%;
-          padding: 11px;
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
-          color: white;
-          border: none;
-          border-radius: 9px;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          letter-spacing: 0.5px;
-          margin-top: 8px;
-          box-shadow: 0 4px 15px rgba(11, 78, 166, 0.25);
-        }
-        
-        .submit-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(11, 78, 166, 0.35);
-        }
-        
-        .submit-btn:active:not(:disabled) {
-          transform: translateY(0);
-        }
-        
-        .submit-btn:disabled {
-          opacity: 0.65;
-          cursor: not-allowed;
-        }
-        
-        .signup-link {
-          text-align: center;
-          margin-top: 16px;
-          padding-top: 12px;
-          border-top: 1px solid #e0e6ed;
-          font-size: 13px;
-          color: #718096;
-        }
-        
-        .signup-link a {
-          color: #0b4ea6;
-          text-decoration: none;
-          font-weight: 700;
-          transition: all 0.3s ease;
-        }
-        
-        .signup-link a:hover {
-          color: #063f82;
-        }
-        
-        .forgot-password-link {
-          font-size: 12px;
-          color: #0b4ea6;
-          text-decoration: none;
-          font-weight: 500;
-          transition: all 0.3s ease;
-          display: inline-block;
-          margin-top: 4px;
-        }
-        
-        .forgot-password-link:hover {
-          color: #063f82;
-        }
-        
-        .backend-diag {
-          font-size: 12px;
-          color: #666;
-          margin-top: 6px;
-          word-break: break-word;
-        }
-        
-        @media (max-width: 768px) {
-          .login-header {
-            padding: 20px 24px 12px;
-          }
-          
-          .login-body {
-            padding: 20px 24px;
-          }
-          
-          .login-title {
-            font-size: 20px;
-          }
-          
-          .logo-group {
-            gap: 10px;
-          }
-          
-          .logo-item {
-            width: 40px;
-            height: 40px;
-          }
-        }
-      `}</style>
+    <div className="auth-page fade-in-up">
+      <div className="auth-overlay"></div>
       
-      <div className="login-wrapper">
-        <div className="login-card">
-          <div className="login-header">
-            <div className="logo-group">
-              <div className="logo-item">
-                <img src={AfaemLogo} alt="AFAEM" title="AFAEM" />
-              </div>
-              <div className="logo-item">
-                <img src={FmfLogo} alt="FMF" title="Federación Mexicana de Fútbol" />
-              </div>
-              <div className="logo-item">
-                <img src={AmateurLogo} alt="Sector Amateur" title="Sector Amateur" />
-              </div>
-            </div>
-            <h1 className="login-title">Inicia Sesión</h1>
+      <div className="auth-content">
+        <div className="glass-dark auth-card-refined" style={{ maxWidth: '440px', margin: '0 auto', padding: '48px 40px', borderRadius: '24px', position: 'relative' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <img src={AfaemLogo} alt="AFAEM" style={{ height: '84px', marginBottom: '24px', filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.3))' }} />
+            <h1 className="heading-outfit" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px', color: 'white' }}>Inicia Sesión</h1>
+            <p className="glass-subtitle" style={{ fontWeight: '500', color: 'rgba(255,255,255,0.7)' }}>Bienvenido a la plataforma AFAEM</p>
           </div>
           
-          <form className="login-body" onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             {!backendOk && (
-              <div className="backend-warning">
-                <span>⚠️</span>
-                <div>
-                  <strong>Conexión con servidor no disponible</strong>
-                  <div className="backend-diag">Verifica URL / que el servidor esté activo: {backendDiag}</div>
-                </div>
+              <div style={{ background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fef3c7', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', textAlign: 'center' }}>
+                <strong>Servidor no disponible</strong>
+                <div style={{ opacity: 0.8, marginTop: '4px' }}>{backendDiag}</div>
               </div>
             )}
             
             {err && (
-              <div className="error-message">
-                <span>❌</span>
-                <span>{err}</span>
+              <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fecaca', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', textAlign: 'center', fontWeight: '600' }}>
+                {err}
               </div>
             )}
             
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                Correo electrónico
-              </label>
+            <div style={{ marginBottom: '24px' }}>
+              <label className="auth-label">Correo electrónico</label>
               <input
-                id="email"
                 type="email"
-                className="form-input"
+                className="auth-input"
                 placeholder="ejemplo@correo.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value.toLowerCase())}
                 disabled={loading}
                 required
-                aria-label="Correo electrónico"
               />
             </div>
             
-            <div className="form-group password-group">
-              <label htmlFor="password" className="form-label">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                className="form-input"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                required
-                aria-label="Contraseña"
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-                title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-              >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
-              <div style={{ textAlign: 'right', marginTop: '6px' }}>
-                <Link to="/olvide-contrasena" className="forgot-password-link">
+            <div style={{ marginBottom: '20px' }}>
+              <label className="auth-label">Contraseña</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="auth-input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ 
+                    position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', 
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '6px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10
+                  }}
+                >
+                  {showPassword ? (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  ) : (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <div style={{ textAlign: 'right', marginTop: '12px' }}>
+                <Link to="/olvide-contrasena" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '12px', fontWeight: '600' }}>
                   ¿Olvidó su contraseña?
                 </Link>
               </div>
@@ -466,16 +192,21 @@ export default function Ingresar() {
             
             <button
               type="submit"
-              className="submit-btn"
+              className="btn-premium"
               disabled={loading}
-              aria-busy={loading}
+              style={{ width: '100%', marginTop: '20px', padding: '16px' }}
             >
-              {loading ? '⏳ Ingresando...' : 'Ingresar'}
+              {loading ? 'Validando acceso...' : 'Ingresar al sistema'}
             </button>
           </form>
           
-          <div className="signup-link">
-            ¿No tienes cuenta? <Link to="/registrarse-cuenta">Regístrate</Link>
+          <div style={{ marginTop: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
+            ¿No tienes cuenta? <Link to="/registrarse-cuenta" style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Regístrate ahora</Link>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '32px', opacity: 0.6 }}>
+            <img src={FmfLogo} alt="FMF" style={{ height: '24px', objectFit: 'contain' }} />
+            <img src={AmateurLogo} alt="Sector Amateur" style={{ height: '24px', objectFit: 'contain' }} />
           </div>
         </div>
       </div>

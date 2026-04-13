@@ -15,6 +15,8 @@ from app.modelos.solicitud_modelo import Solicitud
 from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
+from app.modelos.equipo_temporal_modelo import EquipoTemporal
+from app.enums.estatus_pago_enum  import EstatusValidacionPago
 
 #Tipos de afiliación
 def obtener_afiliaciones_repo(db):
@@ -51,7 +53,7 @@ def crear_orden_pago_repo(db, usuario_id, total):
     orden = OrdenPago(
         UsuarioId=usuario_id,
         TotalPagar=total,
-        EstatusPagoId=1  # PENDIENTE
+        EstatusPagoId=EstatusValidacionPago.NOENVIADO
     )
 
     db.add(orden)
@@ -77,19 +79,23 @@ def crear_detalle_pago_repo(db, orden_pago_id, detalle):
 
 #PAGOS
 def obtener_pagos_repo(db):
-    return db.query(OrdenPago).all()
+    return db.query(OrdenPago).filter(OrdenPago.EstatusPagoId != EstatusValidacionPago.NOENVIADO).all()
 
 def orden_pago_individual_repo(db, orden_pago_id):
     orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
     return orden
+"""
+def cantidad_seguros_repo(db, orden_pago_id):
+    orden = (db.query(EquipoTemporal.CantidadJugadoresPagados).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
 
-
+    return orden
+"""
 def crear_presidente_equipo_repo(db, usuario_id):
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
 
     if not usuario:
-        raise Exception("Usuario no encontrado")
+        return None
 
     persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
 
@@ -117,7 +123,7 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
     
     orden.RutaVoucher = ruta
     orden.FechaEnvio = datetime.now()
-    orden.EstatusPagoId = 1 #comprobante subido
+    orden.EstatusPagoId = EstatusValidacionPago.ESPERA #ENVIADO (ESPERA)
 
     return orden
 
@@ -126,11 +132,14 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
 def estatus_pago_repo(db, orden_pago_id, estatus):
 
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
+    if not orden:
+        return None
 
     orden.EstatusPagoId = estatus
     
     if estatus != 3: #si el pago no es aceptado
-        return 0 
+        db.commit()
+        return orden 
     
     solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
 
@@ -142,13 +151,13 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
 
     #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+    
+    if presidente:
+        presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
 
-    presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
+    return orden
 
-    # Si se aprueba el pago, crear el equipo temporal y los slots de jugadores
-    if estatus == 3:
-        crear_equipo_temporal_repo(db, orden, solicitud.SolicitudId)
-
-    db.commit()
+def mi_estado_pago_repo(db, usuario_id):
+    orden = db.query(OrdenPago).filter(OrdenPago.UsuarioId == usuario_id).order_by(OrdenPago.OrdenPagoId.desc()).first()
 
     return orden
