@@ -185,7 +185,7 @@ def formato_color(imagen_bgr):
     """
 
 # ===========================
-# --- POSICION DEL ROSTRO ---
+# --- POSICION DE LA FOTO ---
 # ===========================
 
 # FUNCION PARA DETECTAR ORIENTACION DE LA FOTO
@@ -223,12 +223,121 @@ def rotar(imagen, pose_landmarks):
     return imagen
 
 # FUNCION PARA LA POSE DE LA PERSONA (PENDIENTE)
-def postura(pose_landmarks):
+def postura(imagen_bgr, pose_landmarks):
+    
+    tol_horizontal=0.05
+
+    h, w = imagen_bgr.shape[:2]
+
+    hombro_izq = pose_landmarks[11]
+    hombro_der = pose_landmarks[12]
+    nariz = pose_landmarks[0]
+    ojo_izq = pose_landmarks[2]
+    ojo_der = pose_landmarks[5]
+
+    puntos_clave = {
+        11: (0,0,255),    # hombro izquierdo
+        12: (255,0,0),   # hombro derecho
+        0: (0,255,255), # nariz
+        2: (255,0,255),  # ojo izquierdo
+        5: (0,255,0)    # ojo derecho
+    }
+
+    for i, color in puntos_clave.items():
+        x = int(pose_landmarks[i].x * w)
+        y = int(pose_landmarks[i].y * h)
+        cv2.circle(imagen_bgr, (x, y), 5, color, -1)
+
+    # Validar visibilidad de puntos clave
+    
+    if (hombro_izq.visibility < 0.5 or 
+        hombro_der.visibility < 0.5):
+        return False, "Los hombros no son visibles correctamente"
+    
+    if (nariz.visibility < 0.5 or 
+        ojo_izq.visibility < 0.5 or 
+        ojo_der.visibility < 0.5):
+        return False, "No se detecta bien el rostro"
+
+    # Detectar dentro del encuadre 
+    
+    puntos = [hombro_izq, hombro_der, nariz, ojo_izq, ojo_der]
+
+    for p in puntos:
+        if p.x < 0 or p.x > 1 or p.y < 0 or p.y > 1:
+            return False, "La persona está fuera del encuadre"
+        
+    # Nariz centrada entre hombros
+    centro_hombros_x = (hombro_izq.x + hombro_der.x) / 2
+    desviacion_centro = abs(nariz.x - centro_hombros_x)
+
+    if desviacion_centro > 0.1:
+        return False, f"La cabeza no esta alineada con los hombros{desviacion_centro}"
+    
+    # Hombros rectos
+    diff_hombros = abs(hombro_izq.y - hombro_der.y)
+
+    if diff_hombros > 0.04:
+        return False, f"No se detecta una postura recta{diff_hombros}"
+    
+    """
+    
+    # Cabeza hacia arriba/abajo
+    ojos_y = (ojo_izq.y + ojo_der.y) / 2
+    hombros_y = (hombro_izq.y + hombro_der.y) / 2
+
+    # Proporción rostro vs cuerpo
+    cara = abs(nariz.y - ojos_y)
+    cuerpo = abs(hombros_y - nariz.y)
+     
+    ratio = cara / cuerpo
+    
+    if ratio > 0.3:
+        return False, f"La foto está tomada desde arriba {ratio}"
+    
+    if ratio < 0.2:
+        return False, f"La foto está tomada desde abajo {ratio}"
+    
+    # Inclonacion lateral de la cabeza
+    
+    diff_lateral = abs(ojo_izq.y - ojo_der.y)
+
+    if diff_lateral > tol_lateral:
+        return False, "La cabeza está inclinada"
+    """
+    
+    # Giro de la cabeza izquierda/derecha
+    
+    centro_hombros = (hombro_izq.x + hombro_der.x) / 2
+    diff_horizontal = nariz.x - centro_hombros
+
+    if diff_horizontal > tol_horizontal:
+        return False, "La cabeza está girada a la derecha"
+    
+    if diff_horizontal < -tol_horizontal:
+        return False, "La cabeza está girada a la izquierda"
+
+    return True, ""
+
+def postura_g(pose_landmarks):
 
     hombro_izq = pose_landmarks[11]
     hombro_der = pose_landmarks[12]
     nariz = pose_landmarks[0]
 
+    # Validar visibilidad
+    if hombro_izq.visibility < 0.5 or hombro_der.visibility < 0.5:
+        return False, "Los hombros no son visibles correctamente"
+
+    # Hombros al mismo nivel (horizontal)
+    diferencia_altura = abs(hombro_izq.y - hombro_der.y)
+
+    tolerancia_hombros=0.04
+
+    if diferencia_altura > tolerancia_hombros:
+        return False, "No se detecto una postura recta"
+    
+    
     return True, ""
 
 # FUNCION PARA DETECTAR SI EL ROSTRO ESTA EN LA FOTO
@@ -289,10 +398,104 @@ def rostro_completo(imagen_bgr, face_landmarks,):
 # --- RECORTE DE FOTO ---
 # =======================
 
-# FUNCION PARA RECORTAR LA FOTO AL ROSTRO
+# FUNCION PARA RECORTAR LA FOTO A LA ALTURA DE PELO Y HOMBROS (CAMBIAR METODO)
+def recortar(imagen_bgr, pose_landmarks,confidence_mask, target_size = (400, 500)):
+
+    #Dimensiones de lo alto y lo ancho de la imagen
+    h, w = imagen_bgr.shape[:2]
+
+    # --- Superior (Cabello) ---
+
+    # Calcular la categoria del cabello
+    confidence_mask = np.squeeze(confidence_mask)
+    
+    # fondo con suficiente confianza
+    persona = confidence_mask > 0.7
+
+    # Coordenadas del cabello 
+    ys_persona, xs_persona = np.where(persona)
+
+    if len(ys_persona) == 0:
+        return 0, "No se detecta la persona en la imagen"
+    
+    y_top = int(np.percentile(ys_persona, 1))
+    
+    # --- Inferior (Hombros) ---
+
+    if pose_landmarks[11].visibility < 0.5 or pose_landmarks[12].visibility < 0.5:
+        return 0, "No se detectan bien los hombros"
+    
+    #Coordenadas de los hombros
+    y_hombro_izq = int(pose_landmarks[11].y * h)
+    y_hombro_der = int(pose_landmarks[12].y * h)
+
+    y_hombros = max(y_hombro_izq, y_hombro_der)
+
+    # --- Altura final ---
+
+    altura_persona = y_hombros - y_top
+
+    # Queremos que la cabeza ocupe ~65% de la imagen
+    altura_final = int(altura_persona / 0.65)
+
+    # Posicionar cabeza con margen superior (~15%)
+    margen_superior = int(altura_final * 0.15)
+
+    y_min = max(y_top - margen_superior, 0)
+    y_max = min(y_min + altura_final, h)
+
+    # Ajuste si se pasa
+    if y_max - y_min < altura_final:
+        y_min = max(y_max - altura_final, 0)
+
+    # --- Centrar horizontalmente ---
+
+    x_centro = int(pose_landmarks[0].x * w)  # Nariz como referencia central 
+
+    ancho_hombros = abs(
+        int(pose_landmarks[12].x * w) - int(pose_landmarks[11].x * w)
+        )
+    
+    ancho_final = int(ancho_hombros * (4 / 5))  # Queremos un poco más de margen lateral    
+
+    mitad = ancho_final // 2
+
+    x_min = max(x_centro - mitad, 0)
+    x_max = min(x_centro + mitad, w)   
+
+    #Ajuste si se pasa
+    if x_max - x_min < ancho_final:
+        x_min = max(x_max - ancho_final, 0)
+
+    # Recortar la imagen
+    foto = imagen_bgr[y_min:y_max, x_min:x_max]
+
+    if foto.size == 0:
+        return 0, "Error al recortar la imagen, el rostro no está completamente visible"
+    
+    # --- Ajustar a 4:5 ---
+
+    h_crop, w_crop = foto.shape[:2]
+    target_ratio = 4 / 5
+
+    if (w_crop / h_crop) > target_ratio:
+        new_w = int(h_crop * target_ratio)
+        x1 = (w_crop - new_w) // 2
+        foto = foto[:, x1:x1 + new_w]
+    else:
+        new_h = int(w_crop / target_ratio)
+        y1 = (h_crop - new_h) // 2
+        foto = foto[y1:y1 + new_h, :]
+
+    # Redimensionar final
+    foto = cv2.resize(foto, target_size)
+    
+    return foto
+
+# FUNCION PARA RECORTAR LA FOTO AL ROSTRO (DUDA)
 def recortar_foto(imagen_bgr, face_landmarks, target_size = (400, 500)):
 
-    #Dimensiones demlo alto y lo ancho de la imagen
+    #Dimensiones de lo alto y lo ancho de la imagen
     h, w = imagen_bgr.shape[:2]
 
     # Convetirlo a pixeles
@@ -345,12 +548,12 @@ def recortar_foto(imagen_bgr, face_landmarks, target_size = (400, 500)):
 # --- CRITERIOS POST-RECORTE ---
 # ==============================
 
-# FUNCION PARA LA ILUMINACION DE LA FOTO (PENDIENTE)
-def iluminacion_foto(imagen_recortada):
-    
-    h, w, _ = imagen_recortada.shape
+# FUNCION PARA LA ILUMINACION DE LA FOTO (CAMBIAR METODO)
+def iluminacion(imagen_recortada, confidence_mask):
 
-    # ----------- ILUMINACIÓN GENERAL DE LA FOTO -----------
+    # --- Iluminacion general ---
+
+    # Iluminacion general de la foto
     gray = cv2.cvtColor(imagen_recortada, cv2.COLOR_BGR2GRAY)
 
     brillo_img = np.mean(gray)
@@ -361,51 +564,44 @@ def iluminacion_foto(imagen_recortada):
     if brillo_img > 210:
         return False, "La foto está muy brillante" #sobreexpuesta
     
-    """
-    # ----------- ILUMINACIÓN DEL ROSTRO -----------
+    # --- Iluminacion del rostro --- 
+    confidence_mask = np.squeeze(confidence_mask)
 
-    # Obtener bounding box del rostro usando landmarks
-    xs = [int(p.x * w) for p in landmarks]
-    ys = [int(p.y * h) for p in landmarks]
-
-    x_min, x_max = max(min(xs),0), min(max(xs),w)
-    y_min, y_max = max(min(ys),0), min(max(ys),h)
-
-    rostro = imagen_recortada[y_min:y_max, x_min:x_max]
-
-     # Convertir a escala de grises
-    gris_rostro = cv2.cvtColor(rostro, cv2.COLOR_BGR2GRAY)
-
-    brillo_rostro = np.mean(gris_rostro)
-    contraste = np.std(gris_rostro)
-
-    # Porcentaje de píxeles extremos
-    pixeles_oscuros = np.sum(gris_rostro < 15) / gris_rostro.size
-    pixeles_claros = np.sum(gris_rostro > 225) / gris_rostro.size
+    persona = confidence_mask > 0.6
     
-     # Muy oscura
-    if brillo_rostro <  40 or pixeles_oscuros > 0.65:
-        return False, "El rostro tiene poca iluminación" #subexpuesta
+    #Extraer solo píxeles de la persona
+    persona = imagen_recortada[persona]
 
-    # Muy brillante
-    if brillo_rostro > 210 or pixeles_claros > 0.65:
-        return False, "El rostro tiene demasiada iluminación" #sobreexpuesta
+    #b, g, r = cv2.split(persona)
 
-    # Poco contraste
-    if contraste < 10:
-        return False, "La foto tiene bajo contraste"
+    # Separar canales (OJO: aquí ya es imagen real)
+    b = persona[:, 0]
+    g = persona[:, 1]
+    r = persona[:, 2]
 
-    # ----------- LUZ DESIGUAL EN EL ROSTRO -----------
-    mitad_izq = gris_rostro[:, :gris_rostro.shape[1]//2]
-    mitad_der = gris_rostro[:, gris_rostro.shape[1]//2:]
 
-    if abs(np.mean(mitad_izq) - np.mean(mitad_der)) > 35:
-        return False, "La iluminación del rostro es desigual"
-        """
+    #Promedio del color
+    prom_b = np.mean(b) #Azul
+    prom_g = np.mean(g) #Vende
+    prom_r = np.mean(r) #Rojo
+
+    # Si un canal domina demasiado → color raro
+    #if prom_r > prom_b * 1.5:
+    #    return False, f"Iluminación incorrecta {prom_r}"
+    
+    # Detectar dominancia de cualquier canal 
+    if (prom_r > prom_g * 1.4 and prom_r > prom_b * 1.4): 
+        return False, "Imagen muy rojiza/amarilla" 
+    
+    if (prom_b > prom_r * 1.4 and prom_b > prom_g * 1.4): 
+        return False, "Imagen muy azulada" 
+    
+    if (prom_g > prom_r * 1.4 and prom_g > prom_b * 1.4): 
+        return False, "Imagen muy verdosa"
     
     return True, ""
 
-# FUNCION PARA DETECTAR IMAGEN BORROSA
+# FUNCION PARA DETECTAR IMAGEN BORROSA (CAMBIAR METODO)
 def nitidez(imagen_recortada):
 
     # Convertir a escala de grises
@@ -418,8 +614,8 @@ def nitidez(imagen_recortada):
     varianza = laplacian.var()
 
     # Umbrales recomendados
-    if varianza > 10:
-        return False, f"El rostro es borroso al momento del recortem{varianza}"
+    if varianza < 80:
+        return False, f"La imagen esta borrosa {varianza}"
     
     return True, ""
 
@@ -492,15 +688,16 @@ def cabello(category_mask, limite = 0.20):
     total_pixeles = category_mask.size
 
     # Pixeles que pertenecen a la categoria cabello
-    pixeles_persona = np.sum(category_mask == 1)
+    pixeles_cabello = np.sum(category_mask == 1)
 
-    porcentaje = pixeles_persona / total_pixeles
+    porcentaje = pixeles_cabello / total_pixeles
 
     if porcentaje > limite:
-        return False, "El cabello debe ir amarrado y atras del rostro"
+        return False, f"El cabello debe ir amarrado y atras del rostro{porcentaje}"
 
     return True, ""
 
+    
 # FUNCION PARA LA SEGMENTACION DEL FONDO BLANCO
 def fondo_blanco(imagen_recortada, category_mask, confidence_mask, conf = 0.6):
 
@@ -511,7 +708,6 @@ def fondo_blanco(imagen_recortada, category_mask, confidence_mask, conf = 0.6):
     
     # fondo con suficiente confianza
     fondo_mask = (category_mask == 0) & (confidence_mask > conf)
-
     imagen[fondo_mask] = [255,255,255]
     
     #fondo_pixeles = imagen[fondo_mask]
@@ -549,7 +745,7 @@ def accesorios(imagen_segmentada):
         confianza = obj[4]
 
         if confianza > 0.5 and nombre in OBJETOS_PROHIBIDOS:
-            return False, f"No se permite el uso de cubrebocas, lentes, sombreros y gorras en la foto"
+            return False, f"No se permite el uso de {nombre} en la foto"
 
     return True, ""
 
@@ -574,7 +770,7 @@ def ojos_abiertos(image_shape, face_landmarks):
     diferencia = abs(ear_izq - ear_der)
     
     EAR_MIN = 0.15          # Solo si está prácticamente cerrado
-    EAR_MAX = 0.45          # Evita ojos exageradamente abiertos
+    EAR_MAX = 0.60          # Evita ojos exageradamente abiertos
     DIF_MAX = 0.15         # Permite asimetría natural
 
 
@@ -641,7 +837,7 @@ def mirada_frontal(face_landmarks):
 
     return False, "La mirada no esta al frente"
 
-# FUNCION PARA LA EXPRESION DEL ROSTRO
+# FUNCION PARA LA EXPRESION DEL ROSTRO (DUDA EN METODO)
 def expresion_neutral(image_shape, face_landmarks):
 
     mar = MAR(image_shape, face_landmarks)
@@ -652,34 +848,39 @@ def expresion_neutral(image_shape, face_landmarks):
         return False, "La boca debe estar cerrada"
     
     # --- PUNTOS CLAVE ---
-    labio_sup = face_landmarks[13]
-    labio_inf = face_landmarks[14]
+    boca_izq = face_landmarks[61] # P1
+    boca_der = face_landmarks[291] # P4
 
-    boca_izq = face_landmarks[61]
-    boca_der = face_landmarks[291]
+    labio_sup = face_landmarks[13] # P3
+    labio_inf = face_landmarks[14] # P5
 
     # Para normalizar
-    ojo_izq = face_landmarks[33]
-    ojo_der = face_landmarks[263]
+    ojo_izq = face_landmarks[33] # P2
+    ojo_der = face_landmarks[263] # P8
 
     ancho_cara = abs(ojo_der.x - ojo_izq.x)
 
-    # Estiramiento 
+    # Estiramiento
     boca_ancho = abs(boca_der.x - boca_izq.x) / ancho_cara
+    boca_ancho = round(boca_ancho, 2)
 
+    """
      # Comisuras
     altura_prom_labios = (labio_sup.y + labio_inf.y) / 2
+    
     comisuras_altas = (
         boca_izq.y < altura_prom_labios and
         boca_der.y < altura_prom_labios
     )
+    """
 
      # Detectar sonrisa (aunque esté cerrada)
-    if boca_ancho > 0.6 or comisuras_altas:
-        return False, f"Evita sonreír, mantén expresión seria"
+    if not (0.5 <= boca_ancho <= 0.6):
+        return False, "Evita sonreír, mantén expresión seria y neutral"
 
-    
+
     return True, ""
+
 
 
 

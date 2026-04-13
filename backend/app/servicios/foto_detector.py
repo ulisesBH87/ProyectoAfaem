@@ -119,7 +119,7 @@ def pose_landmarks_detector():
     options = PoseLandmarkerOptions(
         base_options = BaseOptions(model_asset_path=pose_landmarks_model_path),
         running_mode = VisionRunningMode.IMAGE,
-        num_poses = 10,                           # Cantidad de poses maximos para evaluar
+        num_poses = 1,                           # Cantidad de poses maximos para evaluar
         min_pose_detection_confidence = 0.5,    # Mayor confianza para la deteccion de poses sea exitosa
         min_pose_presence_confidence = 0.5      # Controla detecciones superpuestas
     )

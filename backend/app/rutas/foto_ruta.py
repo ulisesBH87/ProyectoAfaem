@@ -25,27 +25,25 @@ async def validar_archivo(file: UploadFile = File(...)): #|definir una función 
         }
 
     #Detección de archivo
-    rostros_detectados, resultado = validacion_fotografia(contenido) #Llamar a la función de detección de rostros y almacenar el resultado en una variable 
+    #Llamar a la función de detección de rostros y almacenar el resultado en una variable 
+    valido, resultados = validacion_fotografia(contenido)
     #imagen_base64 = base64.b64encode(contenido).decode('utf-8') #Codificar la imagen a base64 para enviarla al frontend
-    tipo_imagen = file.content_type #Definir el tipo de imagen para archivos que no son PDF
+    
+    if valido == 1:
 
-    if rostros_detectados == 1:
-        imagen_base64 = base64.b64encode(resultado).decode('utf-8')
+        imagen_base64 = base64.b64encode(resultados).decode('utf-8')
         razon = None
-    else:
-        imagen_base64 = None
-        razon = resultado
-
-    # ===== REGLA DE VALIDACIÓN =====
-    if rostros_detectados == 1:
         return {
             "valido": True,
             "imagen": imagen_base64,
-            "tipo_imagen": tipo_imagen,
-            "mensaje": "Fotografìa aprobada"
-        }
+            "tipo_imagen": "image/jpg",
+            "mensaje": f"Fotografía aprobada"
+            }
+    
+    else:
+        imagen_base64 = None
+        razon = resultados
 
-    elif rostros_detectados == 0:
         return {
             "valido": False,
             "mensaje": f"Fotografía no aprobada: {razon}"
