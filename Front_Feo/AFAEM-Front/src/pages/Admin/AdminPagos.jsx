@@ -10,7 +10,7 @@ import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWall
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [filtroEstatus, setFiltroEstatus] = useState('2'); // Pendientes por defecto
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
@@ -243,16 +243,18 @@ const AdminPagos = () => {
             <>
               <button 
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 3, 'Aprobar')}
-                className="btn-premium"
-                style={{ padding: '6px 14px', fontSize: '11px' }}
+                style={{ 
+                  padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
+                  background: '#10b981', color: 'white', border: 'none', borderRadius: '8px'
+                }}
               >
                 Aprobar
               </button>
               <button 
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 4, 'Rechazar')}
                 style={{ 
-                  background: 'white', color: 'var(--danger)', border: '1.5px solid var(--danger)33',
-                  padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700'
+                  padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
+                  background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px'
                 }}
               >
                 Rechazar
@@ -269,18 +271,19 @@ const AdminPagos = () => {
   return (
     <div className="fade-in">
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Validación de pagos</h1>
-        <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Gestiona y verifica los comprobantes de pago recibidos.</p>
+        <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px', margin: 0 }}>Validación de Pagos</h2>
+        <p style={{ color: 'var(--text-muted)', fontWeight: '500', marginTop: '6px' }}>Gestiona y verifica los comprobantes de pago recibidos.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
         {[
-          { label: 'Total Órdenes', value: totalPagos, filter: 'todos', color: 'var(--primary)', icon: <FaWallet /> },
           { label: 'Pendientes', value: pendientes, filter: '2', color: 'var(--warning)', icon: <FaClock /> },
+          { label: 'Total Órdenes', value: totalPagos, filter: 'todos', color: 'var(--primary)', icon: <FaWallet /> },
           { label: 'Aprobados', value: aprobados, filter: '3', color: 'var(--secondary)', icon: <FaCheckCircle /> },
           { label: 'Rechazados', value: rechazados, filter: '4', color: 'var(--danger)', icon: <FaTimesCircle /> },
           { label: 'Monto Total', value: `$${montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, color: 'var(--primary)', icon: <FaWallet />, isMetricOnly: true }
-        ].map((stat, i) => (
+        ]
+        .map((stat, i) => (
           <div 
             key={i} 
             onClick={() => stat.filter && setFiltroEstatus(stat.filter)}

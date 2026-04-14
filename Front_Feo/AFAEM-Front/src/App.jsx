@@ -26,6 +26,7 @@ const AdminCrearJugador = lazy(() => import('./pages/Admin/AdminCrearJugador'));
 const AdminCatalogos = lazy(() => import('./pages/Admin/AdminCatalogos'));
 const AdminPresidentes = lazy(() => import('./pages/Admin/AdminPresidentes'));
 const AdminAuditorias = lazy(() => import('./pages/Admin/AdminAuditorias'));
+const AdminLayoutJugadores = lazy(() => import('./pages/Admin/AdminLayoutJugadores'));
 const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
 const AdminGuard = lazy(() => import('./routes/AdminGuard'));
 const PresidenteGuard = lazy(() => import('./routes/PresidenteGuard'));
@@ -120,6 +121,7 @@ function App() {
             <Route path="/admin/catalogos" element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
             <Route path="/admin/presidentes" element={<AdminGuard><AdminPresidentes /></AdminGuard>} />
             <Route path="/admin/auditorias" element={<AdminGuard><AdminAuditorias /></AdminGuard>} />
+            <Route path="/admin/layout-jugadores" element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path="/admin/usuarios-roles" element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path="/admin/configuracion" element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
           </Route>

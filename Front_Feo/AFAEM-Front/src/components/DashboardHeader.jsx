@@ -3,7 +3,7 @@ import HeaderSearch from './Dashboard/HeaderSearch';
 import NotificationBell from './Dashboard/NotificationBell';
 import UserMenu from './Dashboard/UserMenu';
 
-const DashboardHeader = ({ userEmail, pageTitle = 'Dashboard' }) => {
+const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM' }) => {
   return (
     <header 
       className="main-header-fixed"

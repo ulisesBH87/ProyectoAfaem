@@ -4,7 +4,7 @@ import { getEquiposDirectorio, updateEquipo } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 
 export default function AdminEquipos() {
@@ -276,6 +276,12 @@ export default function AdminEquipos() {
             <FaSyncAlt />
           </button>
           <button 
+            onClick={() => navigate('/admin/layout-jugadores')}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FaTable /> Layout Jugadores
+          </button>
+          <button 
             className="btn btn-premium"
             onClick={() => navigate('/admin/equipos/crear')}
             style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
@@ -489,6 +495,32 @@ export default function AdminEquipos() {
               </div>
             </div>
           )}
+
+          {/* SECCIÓN: AGREGAR PARTICIPANTE/ROL (PLACEHOLDER VISUAL) */}
+          <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaUserPlus style={{ color: '#8b5cf6' }} /> Cuerpo Técnico / Participantes
+              </h4>
+              <span style={{ fontSize: '11px', background: '#fef3c7', color: '#92400e', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
+                🛠️ Funcionalidad en desarrollo
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
+              {['Entrenador principal', 'Entrenador asistente', 'Delegado', 'Médico', 'Directivo'].map(rol => (
+                <div key={rol} style={{
+                  padding: '12px 16px', borderRadius: '10px', border: '1.5px dashed #e2e8f0',
+                  background: '#fafafa', color: '#94a3b8', fontSize: '12px', fontWeight: '600',
+                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'not-allowed'
+                }}>
+                  <FaUserPlus style={{ opacity: 0.4 }} />{rol}
+                </div>
+              ))}
+            </div>
+            <p style={{ margin: '12px 0 0', fontSize: '11px', color: '#94a3b8' }}>
+              El registro de cuerpo técnico estará disponible cuando el endpoint de backend esté listo.
+            </p>
+          </div>
         </div>
       </Modal>
     </div>
