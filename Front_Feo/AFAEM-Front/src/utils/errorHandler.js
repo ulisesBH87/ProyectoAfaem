@@ -14,6 +14,7 @@ export const ERROR_DICTIONARY = {
   "ERROR_REGISTRO_USUARIO": "Ocurrió un error al intentar registrar al usuario. Inténtalo de nuevo.",
   "CORREO_YA_REGISTRADO": "Este correo electrónico ya se encuentra registrado. Usa otro o inicia sesión.",
   "ERROR_CAMBIO_CONTRASENA": "No se pudo realizar el cambio de contraseña. Por favor, inténtalo de nuevo.",
+  "REG_INVALID_DATA": "Los datos enviados son inválidos. Revisa el formulario.",
 
   // === ERRORES DE AUDITORÍA Y PERSONAS ===
   "ERROR_OBTENER_AUDITORIA": "No se pudieron obtener los registros de auditoría. Intenta de nuevo más tarde.",
