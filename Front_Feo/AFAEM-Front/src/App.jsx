@@ -44,7 +44,7 @@ function App() {
   const [estaSaliendo, setEstaSaliendo] = useState(false);
   const userEmail = localStorage.getItem('email') || 'usuario@afaem.com';
 
-  // CONTROL DE SESIÓN (5 HORAS)
+  // CONTROL DE SESIÓN (5 HORAS CONTINUO)
   useEffect(() => {
     const verificarSesion = () => {
       const token = localStorage.getItem('token');
@@ -53,24 +53,32 @@ function App() {
       if (token && timestamp) {
         const cincoHoras = 5 * 60 * 60 * 1000;
         const ahora = Date.now();
+        const tiempoTranscurrido = ahora - parseInt(timestamp);
         
-        if (ahora - parseInt(timestamp) > cincoHoras) {
+        if (tiempoTranscurrido > cincoHoras) {
           console.warn('⚠️ Sesión expirada después de 5 horas.');
           localStorage.clear();
-          window.location.href = '/ingresar';
+          window.location.href = '/ingresar?motivo=sesion_expirada';
         }
       }
     };
 
+    // Ejecutar inmediatamente al cargar
     verificarSesion();
+    
+    // Y verificar cada minuto para que funcione sin necesidad de recargar la página
+    const intervalSesion = setInterval(verificarSesion, 60000); 
     
     // Simular carga de la aplicación (Splash Screen)
     const timerCarga = setTimeout(() => {
       setEstaSaliendo(true);
-      setTimeout(() => setCargandoApp(false), 600); // Dar tiempo al fade-out de 0.6s
+      setTimeout(() => setCargandoApp(false), 600);
     }, 2000);
 
-    return () => clearTimeout(timerCarga);
+    return () => {
+      clearInterval(intervalSesion);
+      clearTimeout(timerCarga);
+    };
   }, []);
 
   return (
