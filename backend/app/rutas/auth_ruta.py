@@ -18,7 +18,7 @@ router = APIRouter(prefix="/auth",tags=["Auth"])
 
 @router.post("/registro")
 def register(data: RegistroUsuario, service: AutenticacionServicio = Depends(get_autenticacion_servicio)):
-    persona, usuario = service.registrar_usuario(data)
+    usuario = service.registrar_usuario(data)
     
     return {
         "success": True,
