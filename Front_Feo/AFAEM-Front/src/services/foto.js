@@ -1,5 +1,7 @@
-export const validarFotografia = async (archivo) => {
+import { API_BASE } from '../config/config';
+import { getErrorMessage } from '../utils/errorHandler';
 
+export const validarFotografia = async (archivo) => {
   const tiposPermitidos = [
     "image/jpg",
     "image/jpeg",
@@ -13,16 +15,30 @@ export const validarFotografia = async (archivo) => {
   const formData = new FormData();
   formData.append("file", archivo);
 
-  const response = await fetch("http://127.0.0.1:8000/fotografia", {
-    method: "POST",
-    body: formData
-  });
+  try {
+    const response = await fetch(`${API_BASE}/validar/fotografia`, {
+      method: "POST",
+      body: formData
+    });
 
-  const data = await response.json();
+    const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.mensaje || "Error al validar la fotografía");
+    if (!response.ok) {
+      // Creamos un objeto de error compatible con getErrorMessage
+      const mockError = new Error();
+      mockError.response = { data, status: response.status };
+      throw new Error(getErrorMessage(mockError));
+    }
+
+    return data;
+  } catch (err) {
+    // Si ya es un error con mensaje amigable (ej. de getErrorMessage) lo relanzamos
+    // verificando que no sea un error técnico de parseo JSON o similar
+    if (err.message && !err.message.includes("Unexpected token") && !err.message.includes("json")) {
+        throw err;
+    }
+    
+    // Si es un error de red o fetch falló (cors, dns, etc)
+    throw new Error("No se pudo conectar con el servidor de validación.");
   }
-
-  return data;
 };

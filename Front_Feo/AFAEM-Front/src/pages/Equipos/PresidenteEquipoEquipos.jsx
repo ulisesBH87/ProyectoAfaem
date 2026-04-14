@@ -104,7 +104,7 @@ export default function PresidenteEquipoEquipos() {
           }}>
             {row.RutaLogo ? (
               <img 
-                src={`http://localhost:8000/${row.RutaLogo.replace(/\\/g, '/')}`} 
+                src={`/${row.RutaLogo.replace(/\\/g, '/')}`} 
                 alt={val} 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
               />

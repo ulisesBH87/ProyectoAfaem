@@ -22,6 +22,8 @@ export default function EntradaFormulario({
   icono = '',
   deshabilitado = false,
   clasesPersonalizadas = '',
+  nombre,
+  onChange,
   ...accesorios
 }) {
   const [estaEnfocado, setEstaEnfocado] = useState(false);
@@ -60,9 +62,10 @@ export default function EntradaFormulario({
         
         <input
           type={tipo}
-          value={valor}
-          onChange={alCambiar}
-          placeholder={marcador}
+          name={nombre}
+           value={valor}
+           onChange={onChange || alCambiar}
+           placeholder={marcador}
           disabled={deshabilitado}
           className={clasesPersonalizadas}
           style={{

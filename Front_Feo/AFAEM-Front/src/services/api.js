@@ -1,5 +1,6 @@
 // SE REALIZA LA LÓGICA PREVIDA DE DEFAULT_API_BASE POR LA CONFIGURACIÓN CENTRALIZADA
-import { API_BASE, API_CANDIDATES } from './config/config';
+import { API_BASE, API_CANDIDATES } from '../config/config';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -37,6 +38,19 @@ export async function postJSON(path, payload = {}, opts = {}) {
 	const res = await fetchWithTimeout(url, { method: 'POST', headers, body: JSON.stringify(payload) }, opts.timeout || 7000, opts.retries || 1);
 	let json = null;
 	try { json = await res.json(); } catch { /* NO JSON */ }
+
+	// Estandarizar errores si no fue exitoso
+	if (!res.ok) {
+		const mockError = new Error();
+		mockError.response = { data: json, status: res.status };
+		const customMessage = getErrorMessage(mockError);
+		if (json) {
+			json.detail = customMessage;
+		} else {
+			json = { detail: customMessage };
+		}
+	}
+
 	return { ok: res.ok, status: res.status, json, res };
 }
 

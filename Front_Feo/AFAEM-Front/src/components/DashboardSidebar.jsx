@@ -108,6 +108,9 @@ const DashboardSidebar = () => {
                // A menos que sea un "Ver Mi Equipo" específico para presidentes (otra ruta)
                if (item.Ruta !== '/presidente/equipo') return false;
             }
+            // Si es 'Mi Equipo' y es Admin, ocultar (porque pertenece a la vista de presidente)
+            if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
+
             return true;
           })
           .map((item, idx) => {
