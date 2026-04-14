@@ -17,125 +17,143 @@ class PagosServicio:
 
     def crear_orden_pago(self, usuario_id, orden):
         if orden.CantidadJugadores < 1:
-            raise pagos_excepciones.PagoInvalidoError("Debe haber al menos un jugador en la orden de pago")
+            raise pagos_excepciones.CantidadJugadoresError()
         
         total_personas = orden.CantidadJugadores + 1
-        
         total_seguros = sum(s.Cantidad for s in orden.Seguros)
         
         if total_seguros != total_personas:
-            raise pagos_excepciones.PagoInvalidoError("La cantidad de seguros debe coincidir con jugadores + presidente")
-        detalles = []
-        total = 0
+            raise pagos_excepciones.CantidadSegurosPersonasError()
         
-        #PRESIDENTE
-        
-        afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_PRESIDENTE)
-        
-        subtotal = afiliacion_presidente.CostoActual * 1
-        
-        detalles.append({
-            "tipo_concepto": 1,
-            "tipo_afiliacion_id": self.TIPO_AFILIACION_PRESIDENTE,
-            "seguro_id": None,
-            "cantidad": 1,
-            "precio": afiliacion_presidente.CostoActual,
-            "subtotal": subtotal
-        })
-        
-        total += subtotal
-        
-        #JUGADORES
-        afiliacion_jugador = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_JUGADOR)
-        
-        subtotal = afiliacion_jugador.CostoActual * orden.CantidadJugadores
-        
-        detalles.append({
-            "tipo_concepto": 1,
-            "tipo_afiliacion_id": self.TIPO_AFILIACION_JUGADOR,
-            "seguro_id": None,
-            "cantidad": orden.CantidadJugadores,
-            "precio": afiliacion_jugador.CostoActual,
-            "subtotal": subtotal
-        })
+        try:
+            detalles = []
+            total = 0
+            
+            #PRESIDENTE
+            
+            afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_PRESIDENTE)
 
-        total += subtotal
+            if not afiliacion_presidente:
+                raise pagos_excepciones.PagoInvalidoError()
         
-        #seguros
-        
-        for s in orden.Seguros:
-            seguro = pagos_repositorio.obtener_seguro_repo(self.db, s.SeguroId)
-            
-            if not seguro:
-                raise pagos_excepciones.SeguroNoExiste(f"Seguro {s.SeguroId} no existe")
-            
-            subtotal = seguro.Precio * s.Cantidad
+            subtotal = afiliacion_presidente.CostoActual * 1
             
             detalles.append({
-                "tipo_concepto": 2,
-                "tipo_afiliacion_id": None,
-                "seguro_id": seguro.SeguroId,
-                "cantidad": s.Cantidad,
-                "precio": seguro.Precio,
+                "tipo_concepto": 1,
+                "tipo_afiliacion_id": self.TIPO_AFILIACION_PRESIDENTE,
+                "seguro_id": None,
+                "cantidad": 1,
+                "precio": afiliacion_presidente.CostoActual,
                 "subtotal": subtotal
             })
             
             total += subtotal
             
-        orden_pago = pagos_repositorio.crear_orden_pago_repo(self.db, usuario_id, total)
-            
-        for d in detalles:
-            pagos_repositorio.crear_detalle_pago_repo(db=self.db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
-                
-        pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
-        self.db.commit()
+            #JUGADORES
+            afiliacion_jugador = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_JUGADOR)
+            if not afiliacion_jugador:
+                raise pagos_excepciones.PagoInvalidoError()
 
+            subtotal = afiliacion_jugador.CostoActual * orden.CantidadJugadores
             
-        return {
-            "orden_pago_id": orden_pago.OrdenPagoId,
-            "total": total
-        }
+            detalles.append({
+                "tipo_concepto": 1,
+                "tipo_afiliacion_id": self.TIPO_AFILIACION_JUGADOR,
+                "seguro_id": None,
+                "cantidad": orden.CantidadJugadores,
+                "precio": afiliacion_jugador.CostoActual,
+                "subtotal": subtotal
+            })
+
+            total += subtotal
             
+            #seguros
+            
+            for s in orden.Seguros:
+                seguro = pagos_repositorio.obtener_seguro_repo(self.db, s.SeguroId)
+                
+                if not seguro:
+                    raise pagos_excepciones.SeguroNoExiste(f"Seguro {s.SeguroId} no existe")
+                
+                subtotal = seguro.Precio * s.Cantidad
+                
+                detalles.append({
+                    "tipo_concepto": 2,
+                    "tipo_afiliacion_id": None,
+                    "seguro_id": seguro.SeguroId,
+                    "cantidad": s.Cantidad,
+                    "precio": seguro.Precio,
+                    "subtotal": subtotal
+                })
+                
+                total += subtotal
+                
+            orden_pago = pagos_repositorio.crear_orden_pago_repo(self.db, usuario_id, total)
+                
+            for d in detalles:
+                pagos_repositorio.crear_detalle_pago_repo(db=self.db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
+
+
+            try:        
+                pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
+                self.db.commit()
+            except Exception:
+                self.db.rollback()
+                raise pagos_excepciones.UsuarioNoEncontradoError()
+
+                
+            return {
+                "orden_pago_id": orden_pago.OrdenPagoId,
+                "total": total
+            }
+    
+        except Exception:
+            self.db.rollback()
+            raise pagos_excepciones.PagoInvalidoError()
+        
         
     async def subir_comprobante(self, orden_id, archivo):
         orden = pagos_repositorio.obtener_orden_repo(self.db, orden_id)
         
         if not orden:
-            raise pagos_excepciones.OrdenNoEncontradaError(f"Orden de pago {orden_id} no encontrada")
+            raise pagos_excepciones.OrdenNoEncontradaError()
         
-        os.makedirs(self.UPLOAD_DIR, exist_ok=True)
-        
-        extension = archivo.filename.split(".")[-1]
-        
-        nombre_archivo = f"orden_{orden_id}.{extension}"
+        try:
+            os.makedirs(self.UPLOAD_DIR, exist_ok=True)
+            
+            extension = archivo.filename.split(".")[-1]
+            
+            nombre_archivo = f"orden_{orden_id}.{extension}"
 
-        ruta = os.path.join(self.UPLOAD_DIR, nombre_archivo)
+            ruta = os.path.join(self.UPLOAD_DIR, nombre_archivo)
 
-        with open(ruta, "wb") as buffer:
-            buffer.write(await archivo.read())
-            pagos_repositorio.actualizar_comprobante_repo(self.db, orden_id, ruta)
+            with open(ruta, "wb") as buffer:
+                buffer.write(await archivo.read())
+                pagos_repositorio.actualizar_comprobante_repo(self.db, orden_id, ruta)
 
-            # Actualizar Estatus Presidente a PAGO_EN_REVISION
-            try:
-                from app.modelos.usuario_modelo import Usuario
-                from app.modelos.presidente_equipo_modelo import PresidenteEquipo
-                from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
-                
-                usuario = self.db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
-                if usuario:
-                    presidente = self.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
-                    if presidente:
-                        presidente.EstatusId = PresidenteEquipoEstatus.PAGO_EN_REVISION
-            except Exception as e:
-                pass # Si falla actualización del estatus, que no rompa la subida.
+                # Actualizar Estatus Presidente a PAGO_EN_REVISION
+                try:
+                    from app.modelos.usuario_modelo import Usuario
+                    from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+                    from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
+                    
+                    usuario = self.db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
+                    if usuario:
+                        presidente = self.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+                        if presidente:
+                            presidente.EstatusId = PresidenteEquipoEstatus.PAGO_EN_REVISION
+                except Exception as e:
+                    pass # Si falla actualización del estatus, que no rompa la subida.
 
-            self.db.commit()
+                self.db.commit()
 
-            return {
-                "mensaje": "Comprobante subido correctamente",
-                "orden_pago_id": orden_id
-            }
-
+                return {
+                    "mensaje": "Comprobante subido correctamente",
+                    "orden_pago_id": orden_id
+                }
+        except Exception:
+            self.db.rollback()
+            raise pagos_excepciones.ComprobanteError()
 
     def obtener_seguros(self):
         seguros = pagos_repositorio.obtener_seguros_repo(self.db)
@@ -171,13 +189,16 @@ class PagosServicio:
 
         orden = pagos_repositorio.orden_pago_individual_repo(self.db, orden_pago_id)
 
+        if not orden:
+            raise pagos_excepciones.OrdenNoEncontradaError()
+        
         return orden
     
     def mi_estado_pago(self, usuario_id):
         orden = pagos_repositorio.mi_estado_pago_repo(self.db, usuario_id)
 
         if not orden:
-            return {"tiene_orden": False,"estatus": None}
+            return None
 
         return {
             "tiene_orden": True,
