@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_BASE } from '../config/config';
+import { applyErrorInterceptor } from '../utils/errorHandler';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -10,11 +11,13 @@ const api = axios.create({
   },
 });
 
-// INTERCEPTOR PARA MANEJAR 401 Unauthorized
+// APLICAR INTERCEPTOR CENTRALIZADO DE ERRORES
+applyErrorInterceptor(api);
+
+// INTERCEPTOR PARA MANEJAR 401 Unauthorized (Log adicional)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // SOLO REDIRIGIR A LOGIN SI ES UN 401 Y NO ESTAMOS EN UNA PÁGINA QUE LO MANEJA
     if (error.response && error.response.status === 401) {
       console.warn('⚠️ Acceso denegado (401). Error presentado al usuario.');
     }
