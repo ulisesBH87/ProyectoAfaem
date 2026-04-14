@@ -23,7 +23,8 @@ export default function EntradaSeleccion({
   requerido = false,
   marcador = 'Selecciona una opción',
   deshabilitado = false,
-  estilo = {}
+  estilo = {},
+  onChange
 }) {
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -41,10 +42,10 @@ export default function EntradaSeleccion({
       )}
       <select
         id={nombre}
-        name={nombre}
-        value={valor}
-        onChange={alCambiar}
-        disabled={deshabilitado}
+         name={nombre}
+         value={valor}
+         onChange={onChange || alCambiar}
+         disabled={deshabilitado}
         required={requerido}
         style={{
           width: '100%',
