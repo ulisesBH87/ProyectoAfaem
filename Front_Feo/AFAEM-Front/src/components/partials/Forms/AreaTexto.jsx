@@ -25,7 +25,8 @@ export default function AreaTexto({
   marcador = 'Escribe aquí...',
   requerido = false,
   deshabilitado = false,
-  estilo = {}
+  estilo = {},
+  onChange
 }) {
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -51,11 +52,11 @@ export default function AreaTexto({
         </label>
       )}
       <textarea
-        id={nombre}
-        name={nombre}
-        value={valor}
-        onChange={alCambiar}
-        rows={filas}
+         id={nombre}
+         name={nombre}
+         value={valor}
+         onChange={onChange || alCambiar}
+         rows={filas}
         maxLength={longitudMaxima}
         placeholder={marcador}
         required={requerido}
