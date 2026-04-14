@@ -110,6 +110,8 @@ const DashboardSidebar = () => {
             }
             // Si es 'Mi Equipo' y es Admin, ocultar (porque pertenece a la vista de presidente)
             if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
+            // Ocultar Auditorías temporalmente del sidebar (sin borrar)
+            if (item.Nombre === 'Auditorías') return false;
 
             return true;
           })
