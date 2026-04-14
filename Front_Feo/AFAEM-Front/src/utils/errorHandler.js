@@ -6,12 +6,34 @@ export const ERROR_DICTIONARY = {
   "AUTH_TOKEN_INVALID": "La sesión es inválida. Inicia sesión nuevamente.",
   "AUTH_PERMISSION_DENIED": "No tienes permiso para realizar esta acción.",
   
-  // === ERRORES DE REGISTRO E INFORMACIÓN ===
-  "REG_DUPLICATE_EMAIL": "Este correo ya está registrado. Usa otro o inicia sesión.",
-  "REG_DUPLICATE_CURP": "La CURP proporcionada ya está registrada en el sistema.",
+  // === ERRORES DE REGISTRO E INFORMACIÓN (BACKEND) ===
+  "USUARIO_NO_ENCONTRADO": "El usuario no existe. Revisa tus datos o regístrate.",
+  "CREDENCIALES_INVALIDAS": "El correo o la contraseña son incorrectos. Por favor, inténtalo de nuevo.",
+  "CURP_INVALIDA": "La CURP proporcionada no es válida o tiene un formato incorrecto.",
+  "USUARIO_YA_EXISTE": "Ya existe un usuario registrado con estos datos.",
+  "ERROR_REGISTRO_USUARIO": "Ocurrió un error al intentar registrar al usuario. Inténtalo de nuevo.",
+  "CORREO_YA_REGISTRADO": "Este correo electrónico ya se encuentra registrado. Usa otro o inicia sesión.",
+  "ERROR_CAMBIO_CONTRASENA": "No se pudo realizar el cambio de contraseña. Por favor, inténtalo de nuevo.",
   "REG_INVALID_DATA": "Los datos enviados son inválidos. Revisa el formulario.",
-  
-  // === ERRORES DE EQUIPOS Y JUGADORES ===
+
+  // === ERRORES DE AUDITORÍA Y PERSONAS ===
+  "ERROR_OBTENER_AUDITORIA": "No se pudieron obtener los registros de auditoría. Intenta de nuevo más tarde.",
+  "PERSONA_NO_ENCONTRADA": "No se encontró a la persona solicitada en el sistema.",
+
+  // === ERRORES DE DOCUMENTOS ===
+  "ARCHIVOS_INVALIDOS": "Los archivos seleccionados no tienen un formato válido o están dañados.",
+  "ERROR_SUBIDA_DOCUMENTO": "Hubo un problema al subir el documento. Por favor, inténtalo de nuevo.",
+
+  // === ERRORES DE PAGOS Y SEGUROS ===
+  "PAGO_INVALIDO": "La información del pago no es válida o está incompleta.",
+  "CANTIDAD_JUGADORES_INVALIDA": "La cantidad de jugadores no es válida para esta operación.",
+  "SEGURO_NO_EXISTE": "El seguro seleccionado no existe o no está disponible.",
+  "ORDEN_NO_ENCONTRADA": "No se encontró la orden de pago especificada.",
+  "ORDEN_ERROR": "Ocurrió un error al procesar la orden de pago.",
+  "COMPROBANTE_ERROR": "Hubo un error al validar el comprobante de pago.",
+  "CANTIDAD_SEGUROS_PERSONAS_INVALIDA": "La cantidad de seguros no coincide con el número de personas registradas.",
+
+  // === ERRORES DE EQUIPOS Y JUGADORES (LEGACY/UI) ===
   "TEAM_NOT_FOUND": "El equipo especificado no existe o no se encontró.",
   "TEAM_LIMIT_REACHED": "Has alcanzado el límite de jugadores para este equipo.",
   "PLAYER_NOT_FOUND": "El jugador especificado no existe o no se encontró.",
