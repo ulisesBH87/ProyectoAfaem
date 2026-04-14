@@ -1,4 +1,4 @@
-import { getErrorMessage } from './utils/errorHandler';
+import { getErrorMessage } from './errorHandler';
 
 // VALIDACIONES REUTILIZABLES PARA FORMULARIOS
 

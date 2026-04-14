@@ -1,6 +1,6 @@
 // SE REALIZA LA LÓGICA PREVIDA DE DEFAULT_API_BASE POR LA CONFIGURACIÓN CENTRALIZADA
-import { API_BASE, API_CANDIDATES } from './config/config';
-import { getErrorMessage } from './utils/errorHandler';
+import { API_BASE, API_CANDIDATES } from '../config/config';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

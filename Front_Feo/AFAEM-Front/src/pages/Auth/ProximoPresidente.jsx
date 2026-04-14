@@ -3,7 +3,7 @@ import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { postJSON } from '../../api';
+import { postJSON } from '../../services/api';
 
 export default function ProximoPresidente() {
   const navigate = useNavigate();
