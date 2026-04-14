@@ -23,10 +23,18 @@ class Personas(Base):
     SexoRelacion = relationship("CatalogoSexo", back_populates="PersonaRelacion")
 
     FechaNacimiento = Column(Date, nullable=True)
+    
+    LugarNacimiento = Column(String(100), nullable=True)
+
+    CorreoElectronico = Column(String(100), nullable=True, unique=True)
+
+    NumeroTelefono = Column(String(20), nullable=True)
+
+    Direccion = Column(String(200), nullable=True)
 
     PresidenteEquipoRelacion = relationship("PresidenteEquipo", back_populates="PersonaRelacion")
 
     UsuarioRelacion = relationship("Usuario", back_populates="PersonaRelacion")
     
     EquipoTemporalJugadorRelacion = relationship("EquipoTemporalJugador", back_populates="PersonaRelacion")
-    MiembrosRelacion = relationship("MiembrosEquipo", back_populates="PersonaRelacion")
+    MiembrosRelacion = relationship("MiembrosEquipo", back_populates="PersonaRelacion")

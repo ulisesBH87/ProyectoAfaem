@@ -45,7 +45,8 @@ class AutenticacionServicio:
 
     def registrar_usuario(self, data):
 
-        if usuario_repositorio.obtener_por_correo(self.db, data.Correo):
+        usuario_existe = usuario_repositorio.obtener_por_correo(self.db, data.Correo)
+        if usuario_existe:
             raise usuario_excepciones.CorreoYaRegistradoError()
         
         salt = seguridad.generar_salt()
@@ -64,9 +65,9 @@ class AutenticacionServicio:
         )
 
         try:
-            persona, usuario = autenticacion_repositorio.registrar_usuario_repo(self.db, datos_persona, datos_usuario)
+            usuario = autenticacion_repositorio.registrar_usuario_repo(self.db, datos_persona, datos_usuario)
             self.db.commit()
-            return persona, usuario
+            return usuario
         
         except IntegrityError:
             self.db.rollback()
