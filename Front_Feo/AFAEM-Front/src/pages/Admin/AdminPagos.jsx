@@ -345,7 +345,6 @@ const AdminPagos = () => {
         <DashboardTable columns={columns} data={paginatedPagos} isLoading={loading} totalItems={filteredPagos.length} itemsPerPage={itemsPerPage} currentPage={currentPage} onPageChange={setCurrentPage} emptyMessage="No hay órdenes de pago registradas." />
       </div>
     </div>
-    </div>
   );
 };
 
