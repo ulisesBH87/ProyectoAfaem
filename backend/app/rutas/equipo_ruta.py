@@ -215,7 +215,7 @@ async def crear_equipo_completo(
         db.rollback()
         print(f"Error en crear_equipo_completo: {str(e)}")
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error al procesar el registro: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al procesar el registro")
 
 @router.post("/registrar-jugador")
 async def registrar_jugador(
