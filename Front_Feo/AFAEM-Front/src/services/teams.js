@@ -1,9 +1,12 @@
 import { API_BASE } from '../config/config';
 import axios from 'axios';
+import { applyErrorInterceptor } from '../utils/errorHandler';
 
 const api = axios.create({
   baseURL: API_BASE,
 });
+
+applyErrorInterceptor(api);
 
 /**
  * OBTIENE EL PERFIL DEL USUARIO
