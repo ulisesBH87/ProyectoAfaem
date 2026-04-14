@@ -43,6 +43,7 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
         modalidades = db.query(CatalogoModalidad).all()
         ramas = db.query(CatalogoRamas).all()
         seguros = db.query(Seguro).all()
+        roles_equipo = db.query(RolesDeEquipo).filter(RolesDeEquipo.Eliminado == False).all()
 
         return {
             "ligas": [{"id": l.LigaId, "nombre": l.Nombreliga} for l in ligas],
@@ -50,8 +51,10 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
             "modalidades": [{"id": m.ModalidadId, "nombre": m.NombreModalidad} for m in modalidades],
             "ramas": [{"id": r.RamaId, "nombre": r.Nombre} for r in ramas],
             "seguros": [{"id": s.SeguroId, "nombre": s.Nombre, "precio": float(s.Precio)} for s in seguros],
+            "roles_equipo": [{"id": r.RolId, "nombre": r.NombreRol} for r in roles_equipo],
             "combinaciones": [] # Mantenemos el campo vacío para no romper el frontend por ahora
         }
+
     except Exception as e:
         print(f"Error en get_catalogos_registro: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -106,6 +109,21 @@ async def crear_equipo_completo(
         db.flush()
 
         os.makedirs(DOCS_DIR, exist_ok=True)
+        LOGOS_DIR = os.path.join(UPLOAD_DIR, "logos")
+        os.makedirs(LOGOS_DIR, exist_ok=True)
+
+        # 3.5 Procesar Logo del Equipo
+        team_logo = form_data.get("team_logo")
+        if team_logo and isinstance(team_logo, UploadFile):
+            logo_ext = team_logo.filename.split(".")[-1]
+            logo_name = f"Logo_{nuevo_equipo.EquipoId}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{logo_ext}"
+            logo_path = os.path.join(LOGOS_DIR, logo_name)
+            
+            with open(logo_path, "wb") as buffer:
+                buffer.write(await team_logo.read())
+            
+            nuevo_equipo.RutaLogo = os.path.join("uploads", "logos", logo_name).replace("\\", "/")
+            db.flush()
 
         # 4. Procesar Jugadores
         for index, p_data in enumerate(players_info):
@@ -134,22 +152,30 @@ async def crear_equipo_completo(
                         detail=f"Error al registrar al jugador {p_data['nombre']} {p_data['primer_apellido']}: {str(e)}"
                     )
 
-            # b. Crear Antecedentes si es extranjero (opcional por ahora)
+            # b. Crear Antecedentes si es extranjero
             antecedentes_id = None
             if p_data.get("extranjero"):
                 nuevos_antecedentes = AntecedentesInternacionales(
                     Extranjero=True,
                     Nacionalidades=p_data.get("nacionalidad"),
-                    # Otros campos vendrán vacíos/null por ahora según instrucción
+                    PaisResidenciaActual=p_data.get("pais_residencia"),
+                    NacionalidadPadre=p_data.get("nacionalidad_padre"),
+                    NacionalidadMadre=p_data.get("nacionalidad_madre"),
+                    NacionalidadAbueloP=p_data.get("nac_abuelo_paterno"),
+                    NacionalidadAbuelaP=p_data.get("nac_abuela_paterna"),
+                    NacionalidadAbueloM=p_data.get("nac_abuelo_materno"),
+                    NacionalidadAbuelaM=p_data.get("nac_abuela_materna"),
+                    RegistroAsociacionExtranjera=p_data.get("registro_asociacion_extranjera"),
+                    ParticipacionExtranjera=p_data.get("juego_club_extranjero")
                 )
                 db.add(nuevos_antecedentes)
                 db.flush()
                 antecedentes_id = nuevos_antecedentes.AntecedentesId
 
-            # c. Crear MiembroEquipo (Rol Jugador = 3)
+            # c. Crear MiembroEquipo (Usar rol proporcionado por el front)
             nuevo_miembro = MiembrosEquipo(
                 PersonaId=nueva_persona.PersonaId,
-                RolEnEquipo=3, # Asumimos 3 para Jugador según imagen
+                RolEnEquipo=p_data.get("rol_en_equipo", 3), # Default 3 (Jugador)
                 EquipoID=nuevo_equipo.EquipoId,
                 Estatus=True,
                 Eliminado=False,
@@ -189,7 +215,7 @@ async def crear_equipo_completo(
         db.rollback()
         print(f"Error en crear_equipo_completo: {str(e)}")
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error al procesar el registro: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al procesar el registro")
 
 @router.post("/registrar-jugador")
 async def registrar_jugador(
@@ -225,6 +251,7 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             Equipos.EquipoId,
             Equipos.NombreEquipo,
             Equipos.FechaCreacion,
+            Equipos.RutaLogo,
             CatalogoCategorias.NombreCategoria.label("Categoria"),
             Ligas.Nombreliga.label("Liga"),
             CatalogoModalidad.NombreModalidad.label("Modalidad"),
@@ -263,6 +290,7 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
                "Rama": r.Rama,
                "NumeroJugadores": r.NumeroJugadores,
                "Estatus": bool(r.Estatus),
+               "RutaLogo": r.RutaLogo,
                "SolicitudId": r.SolicitudId
            } for r in resultados
         ]

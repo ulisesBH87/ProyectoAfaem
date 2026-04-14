@@ -21,12 +21,10 @@ def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
 
     db.add(usuario)
 
-    db.commit()
-
     db.refresh(persona)
     db.refresh(usuario)
 
-    return persona, usuario
+    return usuario
 
 # Registro
 def registrar_admin_repo(db: Session, persona: Personas, usuario: Usuario):
