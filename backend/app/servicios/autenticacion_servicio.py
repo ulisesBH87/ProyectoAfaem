@@ -45,8 +45,7 @@ class AutenticacionServicio:
 
     def registrar_usuario(self, data):
 
-        correo_existente = autenticacion_repositorio.obtener_por_correo(self.db, data.Correo)
-        if correo_existente:
+        if usuario_repositorio.obtener_por_correo(self.db, data.Correo):
             raise usuario_excepciones.CorreoYaRegistradoError()
         
         salt = seguridad.generar_salt()
