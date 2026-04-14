@@ -32,7 +32,7 @@ def detector_face(imagen):
      
     return imagen_result
 
-# DETECTOR DE LANDMARKS DE ROSTRO ---
+# DETECTOR DE LANDMARKS DE ROSTRO
 def detector_face_landmarks(imagen):
 
     face_landmarks = get_face_landmarks_detector()
@@ -52,7 +52,7 @@ def detector_face_landmarks(imagen):
 
     return imagen_result
 
-# DETECTOR DE LANDMARKS DE POSES ---
+# DETECTOR DE LANDMARKS DE POSES
 def detector_pose_landmarks(imagen):
     
     pose = get_pose_landmarks_detector()
@@ -72,7 +72,7 @@ def detector_pose_landmarks(imagen):
 
     return imagen_result
 
-# --- DETECTOR DE SEGMENTACION ---
+# DETECTOR DE SEGMENTACION
 def detector_segmentacion(imagen):
 
     segmentacion = get_segmentacion_detector()
@@ -110,27 +110,17 @@ def validacion_fotografia(imagen_bytes):
     if imagen_bgr is None:
         return 0, "No se pudo cargar la imagen"
 
-    # =====================
-    # CRITERIOS PRE-RECORTE 
-    # =====================
-
-    # RESOLUCION, DIMENSIONES, COLOR
-    for funcion in [resolucion, dimensiones, formato_color]:
-        valido, mensaje = funcion(imagen_bgr if funcion != resolucion else imagen_bytes)
-        if not valido:
-            return 0, mensaje
-  
     # =============================
     # DETECTAR ANTES DE LA ROTACION 
     # =============================
 
-    # --- DETECTOR DE ROSTRO ---
+    # DETECTOR DE ROSTRO
     imagen_result = detector_face(imagen_bgr)
     
     if isinstance(imagen_result, tuple):
         return imagen_result
     
-    # --- DETECTOR DE POSICION DE FOTO ---
+    # DETECTOR DE POSICION DE FOTO
     imagen_result = detector_pose_landmarks(imagen_bgr)
 
     if isinstance(imagen_result, tuple):
@@ -145,7 +135,7 @@ def validacion_fotografia(imagen_bytes):
     # DETECTAR ANTES DEL RECORTE 
     # ==========================
     
-    # --- DETECTOR DE ROSTRO ---
+    # DETECTOR DE ROSTRO
     imagen_result = detector_face_landmarks(imagen_bgr)
 
     if isinstance(imagen_result, tuple):
@@ -153,7 +143,7 @@ def validacion_fotografia(imagen_bytes):
 
     face_landmarks = imagen_result.face_landmarks[0]
 
-    # --- DETECTOR DE POSE ---
+    # DETECTOR DE POSE
     imagen_result = detector_pose_landmarks(imagen_bgr)
 
     if isinstance(imagen_result, tuple):
@@ -161,18 +151,28 @@ def validacion_fotografia(imagen_bytes):
 
     pose_landmarks = imagen_result.pose_landmarks[0]
 
-    # --- DETECTOR DE SEGMENTACION ---
+    # DETECTOR DE SEGMENTACION
     category_mask, confidence_mask = detector_segmentacion(imagen_bgr)
 
+     # =====================
+    # CRITERIOS PRE-RECORTE 
+    # =====================
+
+    # RESOLUCION, DIMENSIONES, COLOR
+    for funcion in [resolucion, dimensiones, formato_color, iluminacion_foto]:
+        valido, mensaje = funcion(imagen_bgr if funcion != resolucion else imagen_bytes)
+        if not valido:
+            return 0, mensaje
+    
     # ROSTRO COPLETO
     valido, mensaje = rostro_completo(imagen_bgr, face_landmarks)
     if not valido:
         return 0, mensaje
     
-    # POSTURA (CAMBIAR METODO)
-    #valido, mensaje = postura(imagen_bgr, pose_landmarks)
-    #if not valido:
-    #    return 0, mensaje
+    # POSTURA
+    valido, mensaje = postura(imagen_bgr, pose_landmarks)
+    if not valido:
+        return 0, mensaje
     
     # CABELLO
     valido, mensaje = cabello(category_mask)
@@ -182,11 +182,12 @@ def validacion_fotografia(imagen_bytes):
     # RECORTAR FOTO
     imagen_recortada= recortar_foto(imagen_bgr, face_landmarks)
     
+    
     # ============================
     # DETECTAR DESPUES DEL RECORTE 
     # ============================
 
-    # --- DETECTOR DE ROSTRO ---
+    # DETECTOR DE ROSTRO
 
     imagen_result = detector_pose_landmarks(imagen_recortada)
 
@@ -195,45 +196,40 @@ def validacion_fotografia(imagen_bytes):
 
     posicion = imagen_result.pose_landmarks[0]
 
-    # --- DETECTOR DE SEGMENTACION ---
+    # DETECTOR DE SEGMENTACION
     category_mask, confidence_mask = detector_segmentacion(imagen_recortada)
     
     # =======================
     # CRITERIOS PORST-RECORTE 
     # =======================
+    
+    # FONDO BLANCO
+    imagen_validada = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
 
-    # NITIDEZ (CAMBIAR METODO)
-    #valido, mensaje = nitidez(imagen_recortada)
-    #if not valido:
-    #    return 0, mensaje
- 
-    # ILUMINACION (CAMBIAR METODO)
-    #valido, mensaje = iluminacion_imagen(imagen_recortada)
-    #if not valido:
-    #    return 0, mensaje
+    #ILUMINACION DEL ROSTRO
+    valido, mensaje = iluminacion_rostro(imagen_validada, face_landmarks)
+    if not valido:
+        return 0, mensaje
+    
+    # NITIDEZ
+    valido, mensaje = nitidez(imagen_validada)
+    if not valido:
+        return 0, mensaje
     
      #TAMAÑO DEL ROSTRO
-    valido, mensaje = tam_rostro(imagen_recortada.shape, face_landmarks)
+    valido, mensaje = tam_rostro(imagen_validada.shape, face_landmarks)
     if not valido:
         return 0, mensaje 
     
-    # CRENTRADO DEL ROSTRO (DUDA DE SI SE OCUPA)
+    # CRENTRADO DEL ROSTRO
     #valido, mensaje = rostro_centrado(imagen_recortada.shape, face_landmarks)
     #if not valido:
     #    return 0, mensaje 
         
-    # ILUMINACION (CAMBIAR METODO)
-    #valido, mensaje = iluminacion_persona(imagen_recortada, confidence_mask)
-    #if not valido:
-    #    return 0, mensaje
-
     #CRITERIOS DE ACCESORIOS
-    valido, mensaje = accesorios(imagen_recortada)
+    valido, mensaje = accesorios(imagen_validada)
     if not valido:
         return 0, mensaje 
-    
-    # FONDO BLANCO
-    imagen_validada = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
     
     # --- CRITERIOS PARA LA FOTO ---
     
@@ -252,7 +248,10 @@ def validacion_fotografia(imagen_bytes):
     if not valido:
         return 0, mensaje 
     
-    # CABEZA (EN PROCESO)
+    # CABEZA INCLINADA
+    valido, mensaje = inclinacion_vertical(face_landmarks)
+    if not valido:
+        return 0, mensaje
 
     # --- RESULTADO FINAL ---
     
