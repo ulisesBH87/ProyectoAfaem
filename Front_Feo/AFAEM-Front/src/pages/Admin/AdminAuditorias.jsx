@@ -108,7 +108,7 @@ const AdminAuditorias = () => {
     },
     { 
       key: 'usuario_que_realizo_la_accion', 
-      label: 'Usuario',
+      label: 'Usuario que realizó la acción',
       render: (val) => (
         <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>{val || '—'}</span>
       )
