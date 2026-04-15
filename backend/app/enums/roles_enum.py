@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import IntEnum
 
 #ROLES
-class Rol(str, Enum):
+class Rol(IntEnum):
     ADMINISTRADOR = 1
     PRESIDENTE_LIGA = 2
     PRESIDENTE_EQUIPO = 3

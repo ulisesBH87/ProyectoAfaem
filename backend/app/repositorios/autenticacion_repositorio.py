@@ -22,8 +22,7 @@ def registrar_usuario_repo(db: Session, persona: Personas, usuario: Usuario):
 
     db.add(usuario)
 
-    db.refresh(persona)
-    db.refresh(usuario)
+    db.flush()
 
     return usuario
 
