@@ -87,9 +87,11 @@ const AdminAuditorias = () => {
 
   const formatDate = (val) => {
     if (!val) return '—';
-    return new Date(val).toLocaleDateString('es-MX', { 
-      day: '2-digit', month: 'short', year: 'numeric', 
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    return new Date(val).toLocaleDateString('es-MX', 
+      { 
+        timeZone: 'America/Mexico_City',
+        day: '2-digit', month: 'short', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
   };
 
@@ -108,7 +110,7 @@ const AdminAuditorias = () => {
     },
     { 
       key: 'usuario_que_realizo_la_accion', 
-      label: 'Usuario',
+      label: 'Usuario que realizó la acción',
       render: (val) => (
         <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>{val || '—'}</span>
       )
@@ -272,8 +274,8 @@ const AdminAuditorias = () => {
             <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
               <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Información General</h4>
               <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Acción:</strong> {auditoriaSeleccionada.accion}</p>
-              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Sujeto:</strong> {auditoriaSeleccionada.resumen}</p>
-              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Usuario:</strong> {auditoriaSeleccionada.usuario_que_realizo_la_accion}</p>
+              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Sujeto modificado:</strong> {auditoriaSeleccionada.resumen}</p>
+              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Usuario que hizo la acción:</strong> {auditoriaSeleccionada.usuario_que_realizo_la_accion}</p>
               <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Fecha:</strong> {formatDate(auditoriaSeleccionada.fecha)}</p>
             </div>
 

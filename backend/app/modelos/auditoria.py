@@ -14,7 +14,7 @@ class Auditoria(Base):
     AccionId = Column(Integer, ForeignKey("CatalogoAccion.AccionId"), nullable=False)
     UsuarioId = Column(Integer, nullable=False)
 
-    FechaAccion = Column(DateTime, nullable=False, server_default=func.now())
+    FechaAccion = Column(DateTime(timezone=True), nullable=False)
 
     ValoresAntes = Column(String)
     ValoresDespues = Column(String)

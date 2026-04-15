@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
+from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 
 from app.excepciones import usuario_excepciones
 from app.enums.roles_enum import Rol
@@ -57,3 +58,8 @@ def cambiar_contrasena_repo(db: Session, usuario_id: int, hash: str, salt: str):
     db.flush()
 
     return usuario
+
+def obtener_estatus_presidente(db, persona_id):
+    return db.query(PresidenteEquipo).filter(
+        PresidenteEquipo.PersonaId == persona_id
+    ).first()
