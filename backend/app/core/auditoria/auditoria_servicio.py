@@ -1,5 +1,6 @@
 import json
-from datetime import datetime
+from datetime import timezone, datetime
+from zoneinfo import ZoneInfo
 from app.utilidades.context import usuario_actual_id, ip_actual
 
 from sqlalchemy.orm import Session
@@ -88,7 +89,7 @@ def build_audit_entry(
         "AccionId": accion_id,
         "UsuarioId": user_id,
         "UsuarioNombre": usuario_nombre,
-        "FechaAccion": datetime.utcnow(),
+        "FechaAccion": datetime.now(timezone.utc),
         "ValoresAntes": json.dumps(valores_antes) if valores_antes else None,
         "ValoresDespues": json.dumps(valores_despues) if valores_despues else None,
         "Ip": ip
@@ -188,8 +189,14 @@ def obtener_auditorias(db: Session, page: int, size: int):
 
         resultado = []
 
+
         for a in auditorias:
 
+            fecha = a.FechaAccion
+
+            if fecha.tzinfo is None:
+                fecha = fecha.replace(tzinfo=timezone.utc)
+            
             nombre_completo = a.UsuarioNombre or "SYSTEM"
 
             antes = json.loads(a.ValoresAntes) if a.ValoresAntes else {}
@@ -215,7 +222,7 @@ def obtener_auditorias(db: Session, page: int, size: int):
                 "AuditoriaId": a.AuditoriaId,
                 "titulo": f"{entidad_legible} {MAPEO_ACCIONES.get(a.CatalogoAccion.Accion)}",
                 "usuario_que_realizo_la_accion": nombre_completo,
-                "fecha": a.FechaAccion,
+                "fecha": fecha.isoformat(),
                 "entidad": entidad_legible,
                 "accion": a.CatalogoAccion.Accion,
                 "resumen": resumen,
