@@ -10,7 +10,7 @@ import { API_BASE } from '../../config/config';
 import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo } from '../../services/admin';
 
 /* ─── Catálogos ─── */
-const CATALOGO_SEGUROS = [
+const CATALOGO_SEGUROS_INICIAL = [
   { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege ante accidentes deportivos.',   precio: 150 },
   { id: '2', nombre: 'Seguro de vida',           descripcion: 'Cobertura en caso de fallecimiento.',   precio: 200 },
   { id: '3', nombre: 'Seguro médico',            descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 },
@@ -83,6 +83,10 @@ export default function AdminPresidentes() {
   const [cargando,     setCargando]     = useState(true);
   const [searchTerm,   setSearchTerm]   = useState('');
 
+  /* ── Seguros ── */
+  const [seguros, setSeguros] = useState(CATALOGO_SEGUROS_INICIAL);
+  const [cargandoSeguros, setCargandoSeguros] = useState(false);
+
   /* ── Modal ── */
   const [modalAbierto, setModalAbierto] = useState(false);
   const [paso,         setPaso]         = useState(1); // 1 = Cuotas, 2 = Datos + Documentos
@@ -117,7 +121,7 @@ export default function AdminPresidentes() {
 
   /* Cálculos */
   const totalAsignados    = Object.values(asignacionSeguros).reduce((a, v) => a + Number(v || 0), 0);
-  const totalPagar        = CATALOGO_SEGUROS.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
+  const totalPagar        = seguros.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
   const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas) + 1 : 0;
 
   /* ─── Carga inicial ─── */
@@ -141,25 +145,72 @@ export default function AdminPresidentes() {
 
   useEffect(() => {
     cargarPresidentes();
+    cargarSeguros();
   }, []);
+
+  /* ─── Cargar Seguros del Endpoint ─── */
+  const cargarSeguros = async () => {
+    setCargandoSeguros(true);
+    try {
+      const res = await fetch(`${API_BASE}/ordenes-pago/seguros`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('Error al cargar seguros');
+      const data = await res.json();
+      
+      // Extraer el array de seguros (puede estar en diferentes ubicaciones según la API)
+      let arrSeguros = Array.isArray(data) ? data : 
+                       Array.isArray(data.data) ? data.data :
+                       Array.isArray(data.seguros) ? data.seguros :
+                       Array.isArray(data.results) ? data.results : [];
+      
+      if (arrSeguros.length === 0) {
+        setSeguros(CATALOGO_SEGUROS_INICIAL);
+        return;
+      }
+
+      // Mapear los datos del endpoint al formato esperado
+      const segurosMapeados = arrSeguros.map((seg, idx) => ({
+        id: String(seg.id || seg.SeguroId || idx + 1),
+        nombre: seg.nombre || seg.Nombre || seg.name || seg.nombre_seguro || 'Seguro sin nombre',
+        descripcion: seg.descripcion || seg.Descripcion || seg.description || '',
+        precio: Number(seg.costo || seg.Costo || seg.precio || seg.Precio || seg.price || 0),
+      }));
+      
+      setSeguros(segurosMapeados);
+    } catch (err) {
+      console.error("Error al cargar seguros:", err);
+      // Fallback a los seguros iniciales en caso de error
+      setSeguros(CATALOGO_SEGUROS_INICIAL);
+    } finally {
+      setCargandoSeguros(false);
+    }
+  };
 
   /* ─── Efecto de Auto-cálculo ─── */
   useEffect(() => {
     if (numPersonas !== '' && paso === 1) {
       const totalNecesario = Number(numPersonas) + 1;
-      setAsignacionSeguros({
-        '1': totalNecesario, // Por defecto asignar todo al seguro de accidentes
-        '2': 0,
-        '3': 0
+      // Inicializar con el primer seguro disponible
+      const newAsignacion = {};
+      seguros.forEach((seg, idx) => {
+        newAsignacion[seg.id] = idx === 0 ? totalNecesario : 0;
       });
+      setAsignacionSeguros(newAsignacion);
     }
-  }, [numPersonas]);
+  }, [numPersonas, seguros]);
 
   /* ─── Reset / cerrar ─── */
   const resetModal = () => {
     setPaso(1);
     setNumPersonas('');
-    setAsignacionSeguros({ '1': '', '2': '', '3': '' });
+    // Crear un objeto de asignación vacío para todos los seguros
+    const emptyAsignacion = {};
+    seguros.forEach(seg => {
+      emptyAsignacion[seg.id] = '';
+    });
+    setAsignacionSeguros(emptyAsignacion);
     setInfoPersonal({ correo: '', telefono: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '' });
     setDocuments({});
     setOcrResults({});
@@ -680,13 +731,13 @@ export default function AdminPresidentes() {
                         className="premium-input-admin" style={{ width: 120, fontSize: '18px', textAlign: 'center' }}
                       />
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
-                        Matrícula sugerida + 1 Presidente = <strong style={{ color: '#5d87e5' }}>{segurosRequeridos} seguros</strong>
+                        # Jugadores + 1 Presidente = <strong style={{ color: '#5d87e5' }}>{segurosRequeridos} seguros</strong>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {CATALOGO_SEGUROS.map(seg => (
+                {seguros.map(seg => (
                   <div key={seg.id} className="insurance-card-admin">
                     <div>
                       <h4 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-main)', margin: '0 0 3px' }}>
