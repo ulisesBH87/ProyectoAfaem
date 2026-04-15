@@ -568,16 +568,23 @@ export default function AdminPresidentes() {
         }
       `}</style>
 
-      {/* ─── Header ─── */}
       <div style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Directorio de Presidentes</h2>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
         </div>
-        <button onClick={() => { resetModal(); setModalAbierto(true); }}
-          style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-          <FaPlus /> Registrar Presidente
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            onClick={() => cargarPresidentes(true)} 
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FaSyncAlt />
+          </button>
+          <button onClick={() => { resetModal(); setModalAbierto(true); }}
+            style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <FaPlus /> Registrar Presidente
+          </button>
+        </div>
       </div>
 
       {/* ─── Stats ─── */}
