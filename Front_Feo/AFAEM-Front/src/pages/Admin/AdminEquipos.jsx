@@ -521,6 +521,34 @@ export default function AdminEquipos() {
               El registro de cuerpo técnico estará disponible cuando el endpoint de backend esté listo.
             </p>
           </div>
+
+          {/* SECCIÓN: NÓMINA DE JUGADORES (ACCESO RÁPIDO) */}
+          <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ 
+              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '18px',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ 
+                  width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(11,78,166,0.1)', 
+                  color: '#0b4ea6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' 
+                }}>
+                  <FaTable />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Nómina de Jugadores</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Consulta y copia los datos masivos de todos los miembros inscritos.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate(`/admin/layout-jugadores?equipo=${equipoEdicion.EquipoId}`)}
+                className="btn-premium" 
+                style={{ padding: '10px 18px', fontSize: '12px', background: 'white', color: '#0b4ea6', border: '1.5px solid #0b4ea6', boxShadow: 'none' }}
+              >
+                Ver Nómina Completa →
+              </button>
+            </div>
+          </div>
         </div>
       </Modal>
     </div>
