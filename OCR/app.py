@@ -64,9 +64,30 @@ def limpiar_nombre_basura(texto):
         
     res = texto.upper()
     res = res.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
-    res = re.sub(r'[^A-ZÑ\s]', ' ', res)
-    res = re.sub(r'\s+', ' ', res).strip()
     
+    # --- MEJORA CRÍTICA: Eliminar palabras que contengan NÚMEROS ---
+    # Esto borra CURPs, CRIPs o fechas que el OCR haya mezclado en medio del nombre
+    # antes de que le quitemos los números y queden "restos" de letras.
+    palabras_preliminares = res.split()
+    palabras_sin_numeros = [p for p in palabras_preliminares if not any(c.isdigit() for c in p)]
+    res = " ".join(palabras_sin_numeros)
+    
+    # Basura legal específica de actas de nacimiento
+    basura_legal = [
+        "CIVIL CERTIFICO Y HAGO CONSTAR QUE EN LOS ARCHIVOS QUE OBRAN EN",
+        "ESTA OFICIALIA DEL REGISTRO CIVIL SE ENCUENTRA ASENTADA UN ACTA DE",
+        "NACIMIENTO EN LA CUAL SE CONTIENEN ENTRE OTROS LOS SIGUIENTES DATOS",
+        "EN NOMBRE DEL ESTADO LIBRE Y SOBERANO DE SINALOA Y COMO OFICIAL DEL",
+        "REGISTRO CIVIL SE EXPIDE LA PRESENTE CERTIFICACION",
+        "EL C OFICIAL DEL REGISTRO CIVIL", "DOY FE"
+    ]
+    
+    for b in basura_legal:
+        res = res.replace(b, " ")
+
+    res = re.sub(r'[^A-ZÑ\s]', ' ', res)
+    
+    # Tokens sueltos de basura y errores comunes del OCR
     basura = [
         "ESTADOS UNIDOS MEXICANOS", "ESTADOS", "UNIDOS", "MEXICANOS",
         "MEXICA VICANOS", "MEXICAVICANOS", "GOBIERNO DE MEXICO", "GOBIERNO", "REPUBLICA",
@@ -79,7 +100,8 @@ def limpiar_nombre_basura(texto):
         "DE NACIMIENTO", "OF BIRTH", "SUMAME", "ELECCIONES", "FEDERALES", "LOCALES", 
         "INSTITUTO", "NACIONAL", "ELECTORAL", "INE", "CREDENCIAL", "PARA", "VOTAR", 
         "EMISION", "VIGENCIA", "REGISTRO", "KEKERADRRHAGIAS", "OS UNIDOS", "SOY MEXICO",
-        "MEXICO", "CONSTANCIA", "ENTIDAD", "DOMICILIO", "INF"
+        "MEXICO", "CONSTANCIA", "ENTIDAD", "DOMICILIO", "INF", "SINALOA", "ESTADO",
+        "NOMORES", "NOMORE", "NOBRES"  # <-- Añadidos errores tipográficos del OCR para 'NOMBRES'
     ]
     
     for b in basura:
@@ -109,13 +131,26 @@ def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
     datos = {"nombre": "No detectado"}
     texto_lineal = texto_up.replace("\n", " ")
     
+    # 1. ACTAS DE NACIMIENTO (Lógica de bloque)
+    if tipo_doc == "ACTA DE NACIMIENTO":
+        match_bloque = re.search(r'NOMBRE\s*:(.*?)FECHA\s*DE\s*NACIMIENTO', texto_up, re.DOTALL)
+        if match_bloque:
+            contenido_nombre = match_bloque.group(1).strip()
+            nombre_sucio = contenido_nombre.replace("\n", " ")
+            datos["nombre"] = limpiar_nombre_basura(nombre_sucio)
+            if datos["nombre"] != "No detectado":
+                return datos
+
+    # 2. PASAPORTES
     mrz_pasaporte = re.search(r'P<MEX([A-ZÑ<]+)<<([A-ZÑ<]+)', texto_lineal.replace(" ", ""))
     if mrz_pasaporte:
         ap = mrz_pasaporte.group(1).replace("<", " ").strip()
         nom = mrz_pasaporte.group(2).replace("<", " ").strip()
         datos["nombre"] = limpiar_nombre_basura(f"{ap} {nom}")
-        if datos["nombre"] != "No detectado": return datos
+        if datos["nombre"] != "No detectado": 
+            return datos
 
+    # 3. INE (Por MRZ inferior)
     matches_ine = re.findall(r'\b([A-ZÑ]{2,})[< ]+([A-ZÑ]{2,})<<([A-ZÑ<]{2,})', texto_lineal)
     for p, m, n in matches_ine:
         if "MEX" not in p and "ID" not in p:
@@ -125,6 +160,7 @@ def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
                 datos["nombre"] = nomb_limpio
                 return datos
 
+    # 4. INE (Por líneas frontales)
     if tipo_doc == "INE":
         nombres_lineas = []
         capturando = False
@@ -136,22 +172,25 @@ def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
                 continue
             
             if capturando:
-                # FRENO DE EMERGENCIA: Si dice SEXO, el nombre se acabó.
-                if "SEXO" in l_up:
-                    parte_nombre = l_up.split("SEXO")[0].strip()
-                    if parte_nombre:
-                        nombres_lineas.append(parte_nombre)
-                    break # Detiene la búsqueda de nombres inmediatamente
-                    
-                # Frenos de seguridad por si no lee "SEXO"
                 if any(stop in l_up for stop in ["DOMICILIO", "CLAVE", "EDAD", "FECHA", "CURP", "VIGENCIA"]):
                     break
+                
+                if "SEXO" in l_up:
+                    parte_nombre = l_up.split("SEXO")[0].strip()
+                    if parte_nombre and not any(c.islower() for c in linea[:len(parte_nombre)]):
+                        nombres_lineas.append(parte_nombre)
+                    continue
+                
+                if any(c.islower() for c in linea):
+                    continue
                 
                 nombres_lineas.append(linea)
                 
         if nombres_lineas:
             datos["nombre"] = limpiar_nombre_basura(" ".join(nombres_lineas))
+            return datos
             
+    # 5. PASAPORTE (Por líneas si falla MRZ)
     elif tipo_doc == "PASAPORTE":
         apellidos = ""
         nombres = ""
@@ -163,32 +202,31 @@ def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
                 nombres = lineas[i+1]
         if apellidos or nombres:
             datos["nombre"] = f"{apellidos} {nombres}".strip()
+            return datos
             
-    elif tipo_doc == "CURP" or tipo_doc == "ACTA DE NACIMIENTO":
+    # 6. GENÉRICO O CURP
+    for i, linea in enumerate(lineas):
+        if "NOMBRE" in linea.upper():
+            for j in range(1, 6):
+                if i + j < len(lineas):
+                    candidato = limpiar_nombre_basura(lineas[i+j])
+                    if candidato != "No detectado" and len(candidato.split()) >= 2:
+                        datos["nombre"] = candidato
+                        return datos
+                        
+    if datos["nombre"] == "No detectado":
         for i, linea in enumerate(lineas):
-            if "NOMBRE" in linea.upper():
-                for j in range(1, 6):
-                    if i + j < len(lineas):
-                        candidato = limpiar_nombre_basura(lineas[i+j])
-                        if candidato != "No detectado" and len(candidato.split()) >= 2:
-                            datos["nombre"] = candidato
-                            break
-                if datos["nombre"] != "No detectado":
-                    break
-                    
-        if datos["nombre"] == "No detectado":
-            for i, linea in enumerate(lineas):
-                if re.search(r'[A-Z]{4}[0-9O]{6}[HMI][A-Z]{5}[A-Z0-9][0-9O]', linea.upper().replace(" ", "")):
-                    if i > 0:
-                        cand_arriba = limpiar_nombre_basura(lineas[i-1])
-                        if cand_arriba != "No detectado" and len(cand_arriba.split()) >= 2:
-                            datos["nombre"] = cand_arriba
-                            break
-                    if i + 2 < len(lineas):
-                        cand_abajo = limpiar_nombre_basura(lineas[i+2])
-                        if cand_abajo != "No detectado" and len(cand_abajo.split()) >= 2:
-                            datos["nombre"] = cand_abajo
-                            break
+            if re.search(r'[A-Z]{4}[0-9O]{6}[HMI][A-Z]{5}[A-Z0-9][0-9O]', linea.upper().replace(" ", "")):
+                if i > 0:
+                    cand_arriba = limpiar_nombre_basura(lineas[i-1])
+                    if cand_arriba != "No detectado" and len(cand_arriba.split()) >= 2:
+                        datos["nombre"] = cand_arriba
+                        break
+                if i + 2 < len(lineas):
+                    cand_abajo = limpiar_nombre_basura(lineas[i+2])
+                    if cand_abajo != "No detectado" and len(cand_abajo.split()) >= 2:
+                        datos["nombre"] = cand_abajo
+                        break
 
     if datos["nombre"] == "No detectado" or datos["nombre"] == "":
         datos["nombre"] = limpiar_nombre_basura(datos["nombre"])

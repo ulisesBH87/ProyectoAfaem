@@ -45,17 +45,10 @@ def registrar_admin_repo(db: Session, persona: Personas, usuario: Usuario):
     return persona, usuario
 
 # Contraseña
-def cambiar_contrasena_repo(db: Session, usuario_id: int, hash: str, salt: str):
-
-    usuario = obtener_usuario_por_id(db, usuario_id)
-
-    if not usuario:
-        return None
+def cambiar_contrasena_repo(db: Session, usuario, hash: str, salt: str):
 
     usuario.Contrasena = hash
     usuario.Salt = salt
-
-    db.flush()
 
     return usuario
 

@@ -114,10 +114,9 @@ class AutenticacionServicio:
             nuevo_salt = seguridad.generar_salt()
             nuevo_hash = seguridad.generar_hash(nuevo_salt, nueva_contrasena)
 
-            autenticacion_repositorio.cambiar_contrasena_repo(self.db, usuario_id, nuevo_hash, nuevo_salt)
+            autenticacion_repositorio.cambiar_contrasena_repo(self.db, usuario, nuevo_hash, nuevo_salt)
 
         except Exception:
-            self.db.rollback()
             raise usuario_excepciones.ErrorCambioContrasena()
         
         return True
