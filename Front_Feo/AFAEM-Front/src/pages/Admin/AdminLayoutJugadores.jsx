@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getJugadoresDirectorio, getEquiposDirectorio } from '../../services/admin';
 import { FaSyncAlt, FaCopy, FaCheck, FaFilter } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
 import SearchBar from '../../components/Common/SearchBar';
 
 export default function AdminLayoutJugadores() {
@@ -8,7 +9,8 @@ export default function AdminLayoutJugadores() {
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filtroEquipo, setFiltroEquipo] = useState('todos');
+  const [searchParams] = useSearchParams();
+  const [filtroEquipo, setFiltroEquipo] = useState(searchParams.get('equipo') || 'todos');
   const [copiedCell, setCopiedCell] = useState(null);
 
   useEffect(() => {

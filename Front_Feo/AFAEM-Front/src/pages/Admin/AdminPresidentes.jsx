@@ -23,6 +23,30 @@ const REQUISITOS = [
   { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado',  icon: '📝', hasDownload: true },
 ];
 
+/* ─── Catálogos para Selectores ─── */
+const CATALOGO_LIGAS = [
+  { valor: 'LIGA AFAEM NORTE', etiqueta: 'Ligue AFAEM Norte' },
+  { valor: 'LIGA AFAEM SUR',   etiqueta: 'Ligue AFAEM Sur' },
+  { valor: 'VARONIL PRIMERA',  etiqueta: 'Varonil Primera Plus' },
+  { valor: 'FEMENIL ELITE',    etiqueta: 'Femenil Elite' },
+  { valor: 'OTRA',             etiqueta: 'Otra Liga (Especificar)' },
+];
+
+const CATALOGO_ASOCIACIONES = [
+  { valor: 'MORELOS',      etiqueta: 'Morelos (AFEMOR)' },
+  { valor: 'ESTADO DE MEX', etiqueta: 'Estado de México' },
+  { valor: 'CDMX',         etiqueta: 'Ciudad de México' },
+  { valor: 'PUEBLA',       etiqueta: 'Puebla' },
+  { valor: 'QUERETARO',    etiqueta: 'Querétaro' },
+];
+
+const CATALOGO_ROLES = [
+  { valor: 'PRESIDENTE',   etiqueta: 'Presidente de Equipo' },
+  { valor: 'DIRECTIVO',    etiqueta: 'Directivo de Club' },
+  { valor: 'DELEGADO',     etiqueta: 'Delegado Deportivo' },
+  { valor: 'REPRESENTANTE', etiqueta: 'Representante Legal' },
+];
+
 /* ─── Step pill ─── */
 const StepCircle = ({ num, label, active, done }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -118,6 +142,18 @@ export default function AdminPresidentes() {
   useEffect(() => {
     cargarPresidentes();
   }, []);
+
+  /* ─── Efecto de Auto-cálculo ─── */
+  useEffect(() => {
+    if (numPersonas !== '' && paso === 1) {
+      const totalNecesario = Number(numPersonas) + 1;
+      setAsignacionSeguros({
+        '1': totalNecesario, // Por defecto asignar todo al seguro de accidentes
+        '2': 0,
+        '3': 0
+      });
+    }
+  }, [numPersonas]);
 
   /* ─── Reset / cerrar ─── */
   const resetModal = () => {
@@ -633,17 +669,21 @@ export default function AdminPresidentes() {
                   <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,0.88)' }}>Plantilla Inicial y Distribución de Seguros</h4>
                 </div>
 
-                <div style={{ marginBottom: 18 }}>
-                  <label className="premium-label-admin">¿Cuántos jugadores tendrá el equipo inicialmente?</label>
-                  <input
-                    type="number" placeholder="0" min="0"
-                    value={numPersonas}
-                    onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setNumPersonas(v); }}
-                    className="premium-input-admin" style={{ width: 200, marginTop: 8 }}
-                  />
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginLeft: 12 }}>
-                    (Jugadores + 1 Presidente = {segurosRequeridos} seguros requeridos)
-                  </span>
+                <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px', background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ flex: 1 }}>
+                    <label className="premium-label-admin">¿Cuántos jugadores tendrá el equipo inicialmente?</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '8px' }}>
+                      <input
+                        type="number" placeholder="0" min="0"
+                        value={numPersonas}
+                        onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setNumPersonas(v); }}
+                        className="premium-input-admin" style={{ width: 120, fontSize: '18px', textAlign: 'center' }}
+                      />
+                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
+                        Matrícula sugerida + 1 Presidente = <strong style={{ color: '#5d87e5' }}>{segurosRequeridos} seguros</strong>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {CATALOGO_SEGUROS.map(seg => (
@@ -703,27 +743,47 @@ export default function AdminPresidentes() {
                     <input type="tel" placeholder="55 1234 5678" value={infoPersonal.telefono} onChange={e => setInfoPersonal(p => ({ ...p, telefono: e.target.value }))} className="premium-input-admin" />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                   <div>
-                    <label className="premium-label-admin">Tipo Afiliación</label>
-                    <select value={infoPersonal.tipoAfiliacion} onChange={e => setInfoPersonal(p => ({ ...p, tipoAfiliacion: e.target.value }))} className="premium-input-admin">
+                    <label className="premium-label-admin">Rol / Cargo</label>
+                    <select 
+                      value={infoPersonal.tipoAfiliacion} 
+                      onChange={e => setInfoPersonal(p => ({ ...p, tipoAfiliacion: e.target.value }))} 
+                      className="premium-input-admin"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <option value="">Selecciona...</option>
-                      <option value="DIRECTIVO">Directivo</option>
-                      <option value="PRESIDENTE">Presidente</option>
-                      <option value="DELEGADO">Delegado</option>
-                      <option value="REPRESENTANTE">Representante</option>
+                      {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
                     </select>
                   </div>
-                  {[
-                    { key: 'asociacion', label: 'Asociación', ph: 'MORELOS' },
-                    { key: 'liga',       label: 'Liga',       ph: 'LIGA ESTATAL' },
-                    { key: 'equipo',     label: 'Equipo',     ph: 'ACADEMIA FC' },
-                  ].map(({ key, label, ph }) => (
-                    <div key={key}>
-                      <label className="premium-label-admin">{label}</label>
-                      <input type="text" placeholder={ph} value={infoPersonal[key]} onChange={e => setInfoPersonal(p => ({ ...p, [key]: e.target.value }))} className="premium-input-admin" />
-                    </div>
-                  ))}
+                  <div>
+                    <label className="premium-label-admin">Asociación</label>
+                    <select 
+                      value={infoPersonal.asociacion} 
+                      onChange={e => setInfoPersonal(p => ({ ...p, asociacion: e.target.value }))} 
+                      className="premium-input-admin"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <option value="">Selecciona...</option>
+                      {CATALOGO_ASOCIACIONES.map(a => <option key={a.valor} value={a.valor}>{a.etiqueta}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="premium-label-admin">Liga Destino</label>
+                    <select 
+                      value={infoPersonal.liga} 
+                      onChange={e => setInfoPersonal(p => ({ ...p, liga: e.target.value }))} 
+                      className="premium-input-admin"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <option value="">Selecciona...</option>
+                      {CATALOGO_LIGAS.map(l => <option key={l.valor} value={l.valor}>{l.etiqueta}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="premium-label-admin">Nombre del Equipo</label>
+                    <input type="text" placeholder="Ej: Rayados FC" value={infoPersonal.equipo} onChange={e => setInfoPersonal(p => ({ ...p, equipo: e.target.value }))} className="premium-input-admin" />
+                  </div>
                 </div>
               </div>
 
