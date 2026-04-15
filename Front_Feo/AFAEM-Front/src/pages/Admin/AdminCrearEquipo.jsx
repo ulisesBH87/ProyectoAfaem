@@ -62,10 +62,13 @@ export default function AdminCrearEquipo() {
               navigate('/admin/equipos');
             }
           }}
-          className="btn btn-outline-secondary"
-          style={{ padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            padding: '10px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center',
+            gap: '8px', background: '#f1f5f9', color: '#334155', border: '1.5px solid #e2e8f0',
+            fontWeight: '700', fontSize: '14px', cursor: 'pointer'
+          }}
         >
-          <FaArrowLeft />
+          <FaArrowLeft /> Regresar a Equipos
         </button>
         <div>
           <h2 className="section-title" style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Creación directa de equipo</h2>
