@@ -34,7 +34,7 @@ export default function AdminSolicitudes() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const loadSolicitudes = async () => {
+  const loadSolicitudes = async (forceRefresh = false) => {
     try {
       const email = localStorage.getItem('email');
       const token = localStorage.getItem('token');
@@ -50,8 +50,8 @@ export default function AdminSolicitudes() {
 
       setLoading(true);
 
-      // Obtener solicitudes del servidor
-      const response = await getSolicitudes();
+      // Obtener solicitudes del servidor con opción de forzar refresco
+      const response = await getSolicitudes(forceRefresh);
       console.log('Respuesta de solicitudes:', response);
 
       // Manejar diferentes estructuras de respuesta
@@ -502,7 +502,7 @@ export default function AdminSolicitudes() {
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro entrantes.</p>
         </div>
         <button
-          onClick={loadSolicitudes}
+          onClick={() => loadSolicitudes(true)}
           title="Actualizar"
           style={{
             padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px',
@@ -605,7 +605,7 @@ export default function AdminSolicitudes() {
               ))}
             </div>
 
-            <button onClick={() => window.location.reload()} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
+            <button onClick={() => loadSolicitudes(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
               <FaSyncAlt />
             </button>
           </div>

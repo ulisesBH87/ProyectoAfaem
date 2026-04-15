@@ -8,6 +8,28 @@ const api = axios.create({
 
 applyErrorInterceptor(api);
 
+/* ─── SISTEMA DE CACHÉ EN MEMORIA ─── */
+const serviceCache = {
+  data: {},
+  get(key) {
+    const entry = this.data[key];
+    if (!entry) return null;
+    const isExpired = (Date.now() - entry.timestamp) > (5 * 60 * 1000); // 5 minutos
+    if (isExpired) {
+      delete this.data[key];
+      return null;
+    }
+    return entry.value;
+  },
+  set(key, value) {
+    this.data[key] = { value, timestamp: Date.now() };
+  },
+  clear(key) {
+    if (key) delete this.data[key];
+    else this.data = {};
+  }
+};
+
 /**
  * DECODIFICA UN JWT SIN VALIDACIÓN (SOLO PARA LEER EL PAYLOAD)
  * @param {string} token - TOKEN JWT
@@ -124,7 +146,7 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
  * OBTIENE TODAS LAS SOLICITUDES DE USUARIOS (PARA ADMINISTRADOR)
  * @returns {Promise} RESPUESTA CON LAS SOLICITUDES
  */
-export const getSolicitudes = async () => {
+export const getSolicitudes = async (forceRefresh = false) => {
   try {
     // OBTENER EL TOKEN DEL LOCALSTORAGE
     const token = localStorage.getItem('token');
@@ -139,8 +161,16 @@ export const getSolicitudes = async () => {
       'Content-Type': 'application/json'
     };
 
+    const cacheKey = '/solicitud/solicitudes-usuarios';
+    const cachedData = serviceCache.get(cacheKey);
+    if (cachedData && !forceRefresh) {
+      console.log(`[Cache Hit] ${cacheKey}`);
+      return cachedData;
+    }
+
     console.log('Obteniendo solicitudes...');
     const response = await api.get('/solicitud/solicitudes-usuarios', { headers });
+    serviceCache.set(cacheKey, response.data);
     console.log('Solicitudes obtenidas:', response.data);
     return response.data;
   } catch (error) {
