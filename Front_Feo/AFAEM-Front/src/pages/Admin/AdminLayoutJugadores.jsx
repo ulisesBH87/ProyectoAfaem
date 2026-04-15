@@ -178,10 +178,8 @@ export default function AdminLayoutJugadores() {
                     <CeldaCopia value={j.EquipoNombre} id={`equipo-${idx}`} />
                     <CeldaCopia value={j.Liga} id={`liga-${idx}`} />
                     <CeldaCopia value={j.Email} id={`email-${idx}`} />
-                    <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX') : null} id={`fnac-${idx}`} />
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '12px', color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
-                    </td>
+                    <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX', {timeZone:'UTC'}) : null} id={`fnac-${idx}`} />
+                    <CeldaCopia value={j.NUI} id={`nui-${idx}`} />
                   </tr>
                 ))
               )}
