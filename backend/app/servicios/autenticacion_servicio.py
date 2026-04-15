@@ -61,7 +61,9 @@ class AutenticacionServicio:
         datos_usuario = Usuario(
             Correo=data.Correo,
             Contrasena=hashed_password,
-            Salt=salt
+            Salt=salt,
+            Estatus=1,
+            Eliminado=0
         )
 
         try:
