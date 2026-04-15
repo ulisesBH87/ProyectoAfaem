@@ -183,11 +183,13 @@ export default function Ingresar() {
                   )}
                 </button>
               </div>
+              {/* Restaurar cuando esté listo el servicio de recuperación de contraseña 
               <div style={{ textAlign: 'right', marginTop: '12px' }}>
                 <Link to="/olvide-contrasena" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '12px', fontWeight: '600' }}>
                   ¿Olvidó su contraseña?
                 </Link>
               </div>
+              */}
             </div>
             
             <button
