@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import {
-  FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash,
-  FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft
-} from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
+import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
+import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo } from '../../services/admin';
 
 /* ─── Catálogos ─── */
 const CATALOGO_SEGUROS = [
@@ -78,21 +76,47 @@ export default function AdminPresidentes() {
   const [detailsOpen, setDetailsOpen] = useState({});
   const [loading,     setLoading]     = useState(false);
 
+  /* ── Edición ── */
+  const [modalEdicion, setModalEdicion] = useState(false);
+  const [presidenteEnEdicion, setPresidenteEnEdicion] = useState(null);
+  const [datosEditables, setDatosEditables] = useState({
+    nombre: '', email: '', telefono: '', curp: '', estatus: '1'
+  });
+
+  /* ── Reasignación ── */
+  const [modalReasignacion, setModalReasignacion] = useState(false);
+  const [equipoIDHuerfano, setEquipoIDHuerfano] = useState(null);
+  const [equipoNombreHuerfano, setEquipoNombreHuerfano] = useState('');
+  const [disponibles, setDisponibles] = useState([]);
+  const [searchDisponibles, setSearchDisponibles] = useState('');
+  const [loadingReasignacion, setLoadingReasignacion] = useState(false);
+
   /* Cálculos */
   const totalAsignados    = Object.values(asignacionSeguros).reduce((a, v) => a + Number(v || 0), 0);
   const totalPagar        = CATALOGO_SEGUROS.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
   const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas) + 1 : 0;
 
   /* ─── Carga inicial ─── */
-  useEffect(() => {
-    setTimeout(() => {
+  const cargarPresidentes = async () => {
+    setCargando(true);
+    try {
+      const data = await getPresidentesDirectorio();
+      setPresidentes(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error al cargar presidentes:", err);
+      // Fallback para desarrollo si el back falla
       setPresidentes([
-        { id: 1, nombre: 'Carlos Ruiz',  correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true  },
-        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com',         telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true  },
-        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com',     telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false },
+        { id: 1, nombre: 'Carlos Ruiz',  correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true, equipo: 'Rayados', equipoId: 101 },
+        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com',         telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true, equipo: 'Tigres', equipoId: 102 },
+        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com',     telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null },
       ]);
+    } finally {
       setCargando(false);
-    }, 900);
+    }
+  };
+
+  useEffect(() => {
+    cargarPresidentes();
   }, []);
 
   /* ─── Reset / cerrar ─── */
@@ -306,17 +330,129 @@ export default function AdminPresidentes() {
   };
 
   /* ═══ Tabla ═══ */
-  const stats = { total: presidentes.length, activos: presidentes.filter(p => p.estatus).length, inactivos: presidentes.filter(p => !p.estatus).length };
-
-  const handleEliminar = (id) => {
-    Swal.fire({ title: '¿Suspender Presidente?', text: 'El presidente perderá acceso a su panel.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, suspender' })
-      .then(res => { if (res.isConfirmed) setPresidentes(prev => prev.map(p => p.id === id ? { ...p, estatus: false } : p)); });
+  const stats = { 
+    total: (presidentes || []).length, 
+    activos: (presidentes || []).filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1").length, 
+    inactivos: (presidentes || []).filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")).length 
   };
 
-  const filtrados = presidentes.filter(p =>
-    p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.correo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  /* ═══ Edición ═══ */
+  const handleEditarPresidente = (pres) => {
+    setPresidenteEnEdicion(pres);
+    setDatosEditables({
+      nombre: pres.nombre || pres.Nombre || '',
+      email: pres.correo || pres.Email || '',
+      telefono: pres.telefono || pres.Telefono || '',
+      curp: pres.curp || pres.CURP || '',
+      estatus: pres.estatus ? '1' : '0'
+    });
+    setModalEdicion(true);
+  };
+
+  const manejarCambioInput = (e) => {
+    const { name, value } = e.target;
+    setDatosEditables(prev => ({ ...prev, [name]: value }));
+  };
+
+  const guardarEdicion = async () => {
+    setLoading(true);
+    try {
+      await updatePresidente(presidenteEnEdicion.id || presidenteEnEdicion.UsuarioId, datosEditables);
+      await cargarPresidentes();
+      setModalEdicion(false);
+      Swal.fire('¡Éxito!', 'Los datos del presidente han sido actualizados.', 'success');
+    } catch (err) {
+      Swal.fire('Error', 'No se pudieron guardar los cambios.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ═══ Eliminación y Reasignación ═══ */
+  const handleEliminar = (pres) => {
+    const id = pres.id || pres.UsuarioId;
+    const nombre = pres.nombre || pres.Nombre;
+    const equipoId = pres.equipoId || pres.EquipoId;
+    const equipoNombre = pres.equipo || pres.NombreEquipo || 'su equipo';
+
+    Swal.fire({
+      title: '¿Eliminar Presidente?',
+      text: `¿Estás seguro que quieres eliminar a ${nombre} de forma permanente? Ya no podrá tener acceso al sistema.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar permanentemente',
+      cancelButtonText: 'Cancelar'
+    }).then(async (res) => {
+      if (res.isConfirmed) {
+        try {
+          Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          await deletePresidente(id);
+          await cargarPresidentes();
+          
+          if (equipoId) {
+            Swal.fire({
+              title: 'Presidente Eliminado',
+              html: `El equipo <strong>${equipoNombre}</strong> ha quedado sin presidente.<br>¿Deseas asignar uno nuevo ahora?`,
+              icon: 'info',
+              showCancelButton: true,
+              confirmButtonText: 'Sí, asignar nuevo presidente',
+              cancelButtonText: 'Después',
+              confirmButtonColor: '#0b4ea6'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                abrirReasignacion(equipoId, equipoNombre);
+              }
+            });
+          } else {
+            Swal.fire('Eliminado', 'El presidente ha sido removido exitosamente.', 'success');
+          }
+        } catch (err) {
+          Swal.fire('Error', 'No se pudo eliminar al presidente.', 'error');
+        }
+      }
+    });
+  };
+
+  const abrirReasignacion = async (eqId, eqNombre) => {
+    setEquipoIDHuerfano(eqId);
+    setEquipoNombreHuerfano(eqNombre);
+    setLoadingReasignacion(true);
+    setModalReasignacion(true);
+    try {
+      const data = await getPresidentesDisponibles();
+      setDisponibles(Array.isArray(data) ? data : []);
+    } catch (err) {
+      // Mock para reasignación
+      setDisponibles([
+        { id: 4, nombre: 'Javier Mendez', correo: 'j.mendez@test.com' },
+        { id: 5, nombre: 'Lucia Ferreyra', correo: 'l.ferreyra@test.com' },
+        { id: 6, nombre: 'Roberto Gomez', correo: 'r.gomez@test.com' },
+      ]);
+    } finally {
+      setLoadingReasignacion(false);
+    }
+  };
+
+  const ejecutarReasignacion = async (nuevoPresId, nuevoNombre) => {
+    try {
+      Swal.fire({ title: 'Vinculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      await vincularPresidenteEquipo(nuevoPresId, equipoIDHuerfano);
+      await cargarPresidentes();
+      setModalReasignacion(false);
+      Swal.fire('¡Asignado!', `El equipo ${equipoNombreHuerfano} ahora está bajo el mando de ${nuevoNombre}.`, 'success');
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo vincular al nuevo presidente.', 'error');
+    }
+  };
+
+  const filtrados = (presidentes || []).filter(p => {
+    const nom = (p.nombre || p.Nombre || "").toLowerCase();
+    const mail = (p.correo || p.Email || "").toLowerCase();
+    const query = (searchTerm || "").toLowerCase();
+    return nom.includes(query) || mail.includes(query);
+  });
 
   const columns = [
     { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Presidente' },
@@ -325,17 +461,29 @@ export default function AdminPresidentes() {
   ];
 
   const dataTransformada = filtrados.map(p => ({
-    id:         <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id}</span>,
-    presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre}</div>,
-    contacto:   <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono}</div></div>,
-    curp:       <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp}</span>,
-    estatus:    p.estatus
+    id:         <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
+    presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
+    contacto:   <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo || p.Email || 'Sin correo'}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div></div>,
+    curp:       <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
+    estatus:    (p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")
       ? <span style={{ background: '#dcfce7', color: '#166534', padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>ACTIVO</span>
       : <span style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>SUSPENDIDO</span>,
     acciones: (
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-        <button style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '6px 10px', borderRadius: 6 }}><FaEdit /></button>
-        {p.estatus && <button onClick={() => handleEliminar(p.id)} style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '6px 10px', borderRadius: 6 }}><FaTrash /></button>}
+        <button 
+          onClick={() => handleEditarPresidente(p)}
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          title="Ver / Editar"
+        >
+          <FaEdit />
+        </button>
+        <button 
+          onClick={() => handleEliminar(p)} 
+          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          title="Eliminar Permanente"
+        >
+          <FaTrash />
+        </button>
       </div>
     ),
   }));
@@ -672,6 +820,201 @@ export default function AdminPresidentes() {
 
         </div>
       </Modal>
+      
+      {/* ══ MODAL DE EDICIÓN ══ */}
+      <Modal
+        estaAbierto={modalEdicion}
+        alCerrar={() => setModalEdicion(false)}
+        titulo="Detalle del Presidente"
+        tamanio="medio"
+        pie={
+          <>
+            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setModalEdicion(false)} />
+            <BotonPrimario 
+              etiqueta={loading ? 'Guardando...' : 'Guardar Cambios'} 
+              alHacerClick={guardarEdicion} 
+              deshabilitado={loading}
+              icono={<FaSave />}
+            />
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ gridColumn: 'span 2' }}>
+            <EntradaFormulario 
+              etiqueta="Nombre Completo" 
+              nombre="nombre" 
+              valor={datosEditables.nombre} 
+              onChange={manejarCambioInput}
+              placeholder="Ej: Juan Pérez"
+            />
+          </div>
+          <EntradaFormulario 
+            etiqueta="Correo Electrónico" 
+            nombre="email" 
+            valor={datosEditables.email} 
+            onChange={manejarCambioInput}
+            placeholder="ejemplo@correo.com"
+          />
+          <EntradaFormulario 
+            etiqueta="Teléfono" 
+            nombre="telefono" 
+            valor={datosEditables.telefono} 
+            onChange={manejarCambioInput}
+            placeholder="55 0000 0000"
+          />
+          <EntradaFormulario 
+            etiqueta="CURP" 
+            nombre="curp" 
+            valor={datosEditables.curp} 
+            onChange={manejarCambioInput}
+            placeholder="CURP de 18 caracteres"
+          />
+          <EntradaSeleccion 
+            etiqueta="Estatus del Usuario" 
+            nombre="estatus" 
+            valor={datosEditables.estatus} 
+            onChange={manejarCambioInput}
+            opciones={[
+              { valor: '1', etiqueta: 'Activo (Acceso Total)' },
+              { valor: '0', etiqueta: 'Suspendido (Sin Acceso)' }
+            ]}
+          />
+        </div>
+      </Modal>
+
+      {/* ══ MODAL DE REASIGNACIÓN ══ */}
+      <Modal
+        estaAbierto={modalReasignacion}
+        alCerrar={() => setModalReasignacion(false)}
+        titulo="Asignar Nuevo Presidente"
+        tamanio="medio"
+      >
+        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+          <div style={{ 
+            fontSize: '32px', 
+            background: 'rgba(59, 130, 246, 0.1)', 
+            color: '#3b82f6', 
+            width: '70px', 
+            height: '70px', 
+            borderRadius: '20px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            margin: '0 auto 15px',
+            boxShadow: '0 8px 16px rgba(59, 130, 246, 0.15)'
+          }}>
+            <FaUserPlus />
+          </div>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>Equiparando a {equipoNombreHuerfano}</h3>
+          <p style={{ margin: '5px 0 0', fontSize: '14px', color: '#64748b' }}>Selecciona un presidente disponible para tomar el mando.</p>
+        </div>
+
+        <div style={{ position: 'relative', marginBottom: '20px' }}>
+          <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+            <FaSearch />
+          </div>
+          <input 
+            type="text" 
+            placeholder="Buscar presidente por nombre..." 
+            value={searchDisponibles}
+            onChange={(e) => setSearchDisponibles(e.target.value)}
+            style={{ 
+              width: '100%', 
+              padding: '14px 14px 14px 45px', 
+              borderRadius: '16px', 
+              border: '2px solid #f1f5f9', 
+              background: '#f8fafc',
+              fontSize: '15px',
+              outline: 'none',
+              transition: 'all 0.3s'
+            }}
+          />
+        </div>
+
+        <div style={{ maxHeight: '350px', overflowY: 'auto', padding: '5px' }}>
+          {loadingReasignacion ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div className="spinner-border text-primary" style={{ width: '2rem', height: '2rem' }}></div>
+              <p style={{ marginTop: '10px', color: '#64748b', fontSize: '14px' }}>Buscando candidatos...</p>
+            </div>
+          ) : disponibles.filter(d => d.nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()) || d.Nombre?.toLowerCase().includes(searchDisponibles.toLowerCase())).length > 0 ? (
+            disponibles
+              .filter(d => d.nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()) || d.Nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()))
+              .map(pres => (
+              <div 
+                key={pres.id || pres.UsuarioId} 
+                className="pres-item-hover"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  padding: '15px',
+                  borderRadius: '16px',
+                  marginBottom: '10px',
+                  border: '1px solid #f1f5f9',
+                  transition: 'all 0.2s',
+                  background: 'white'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <div style={{ 
+                    width: '44px', 
+                    height: '44px', 
+                    borderRadius: '12px', 
+                    background: 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '800',
+                    fontSize: '16px'
+                  }}>
+                    {(pres.nombre || pres.Nombre || '?').charAt(0)}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{pres.nombre || pres.Nombre}</div>
+                    <div style={{ color: '#64748b', fontSize: '12px' }}>{pres.correo || pres.Email}</div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => ejecutarReasignacion(pres.id || pres.UsuarioId, pres.nombre || pres.Nombre)}
+                  style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '10px', 
+                    background: '#eff6ff', 
+                    color: '#2563eb', 
+                    border: 'none', 
+                    fontWeight: '700', 
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Asignar
+                </button>
+              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              <FaUserTie style={{ fontSize: '40px', opacity: 0.3, marginBottom: '10px' }} />
+              <p>No hay presidentes disponibles que coincidan.</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <style>{`
+        .pres-item-hover:hover {
+          background: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          transform: translateX(5px);
+        }
+        .pres-item-hover button:hover {
+          background: #2563eb !important;
+          color: white !important;
+        }
+      `}</style>
 
     </div>
   );

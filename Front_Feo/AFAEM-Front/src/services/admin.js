@@ -166,6 +166,55 @@ export const updateJugador = async (miembroEquipoId, data) => {
 };
 
 /**
+ * OBTIENE EL DIRECTORIO DE PRESIDENTES
+ */
+export const getPresidentesDirectorio = async () => {
+  const response = await api.get('/equipo-temporal/directorio-presidentes');
+  return response.data;
+};
+
+/**
+ * ACTUALIZA LOS DATOS DE UN PRESIDENTE
+ */
+export const updatePresidente = async (presidenteId, data) => {
+  const response = await api.patch(`/equipo-temporal/update-presidente/${presidenteId}`, {
+    Nombre: data.nombre,
+    Email: data.email,
+    Telefono: data.telefono,
+    CURP: data.curp,
+    Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true
+  });
+  return response.data;
+};
+
+/**
+ * ELIMINA PERMANENTEMENTE A UN PRESIDENTE
+ */
+export const deletePresidente = async (presidenteId) => {
+  const response = await api.delete(`/equipo-temporal/delete-presidente/${presidenteId}`);
+  return response.data;
+};
+
+/**
+ * OBTIENE PRESIDENTES DISPONIBLES (SIN EQUIPO) PARA REASIGNACIÓN
+ */
+export const getPresidentesDisponibles = async () => {
+  const response = await api.get('/equipo-temporal/presidentes-disponibles');
+  return response.data;
+};
+
+/**
+ * VINCULA UN PRESIDENTE A UN EQUIPO ESPECÍFICO
+ */
+export const vincularPresidenteEquipo = async (presidenteId, equipoId) => {
+  const response = await api.post(`/equipo-temporal/vincular-presidente-equipo`, {
+    PresidenteId: presidenteId,
+    EquipoId: equipoId
+  });
+  return response.data;
+};
+
+/**
  * OBTIENE EL LISTADO DE AUDITORIAS (PAGINADO)
  */
 export const getAuditorias = async (page = 1, size = 10) => {
@@ -187,5 +236,10 @@ export default {
   getJugadorDocumentos,
   updateEquipo,
   updateJugador,
+  getPresidentesDirectorio,
+  updatePresidente,
+  deletePresidente,
+  getPresidentesDisponibles,
+  vincularPresidenteEquipo,
   getAuditorias
 };

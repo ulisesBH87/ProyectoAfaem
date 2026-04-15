@@ -28,7 +28,7 @@ export default function AdminSolicitudes() {
   const [cargandoRevision, setCargandoRevision] = useState(false);
 
   // Estados para filtros, búsqueda y paginación
-  const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [filtroEstatus, setFiltroEstatus] = useState('1'); // Pendientes por defecto
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -385,14 +385,9 @@ export default function AdminSolicitudes() {
           <button
             onClick={() => handleVerDetalles(row.SolicitudId)}
             style={{
-              padding: '6px 12px',
-              backgroundColor: '#0b4ea6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
+              padding: '7px 14px', background: '#3b82f6', color: 'white',
+              border: 'none', borderRadius: '8px', cursor: 'pointer',
+              fontSize: '12px', fontWeight: '700'
             }}
           >
             Ver
@@ -401,14 +396,9 @@ export default function AdminSolicitudes() {
             <button
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
-                padding: '6px 12px',
-                backgroundColor: '#6366f1',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '600'
+                padding: '7px 14px', background: '#6366f1', color: 'white',
+                border: 'none', borderRadius: '8px', cursor: 'pointer',
+                fontSize: '12px', fontWeight: '700'
               }}
             >
               Docs
@@ -417,14 +407,9 @@ export default function AdminSolicitudes() {
           <button
             onClick={() => handleAprobarSolicitud(row.SolicitudId)}
             style={{
-              padding: '6px 12px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
+              padding: '7px 14px', background: '#10b981', color: 'white',
+              border: 'none', borderRadius: '8px', cursor: 'pointer',
+              fontSize: '12px', fontWeight: '700'
             }}
           >
             Aprobar
@@ -432,14 +417,9 @@ export default function AdminSolicitudes() {
           <button
             onClick={() => handleRechazarSolicitud(row.SolicitudId)}
             style={{
-              padding: '6px 12px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600'
+              padding: '7px 14px', background: '#ef4444', color: 'white',
+              border: 'none', borderRadius: '8px', cursor: 'pointer',
+              fontSize: '12px', fontWeight: '700'
             }}
           >
             Rechazar
@@ -517,59 +497,32 @@ export default function AdminSolicitudes() {
       )}
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Solicitudes de registro</h2>
-        <div className="section-actions">
-          <button
-            className="btn btn-primary"
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#0b4ea6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '14px'
-            }}
-          >
-            🔄 Actualizar
-          </button>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Validación de Solicitudes</h2>
+          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro entrantes.</p>
         </div>
+        <button
+          onClick={loadSolicitudes}
+          title="Actualizar"
+          style={{
+            padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px',
+            background: 'white', color: '#334155',
+            border: '1.5px solid #e2e8f0', borderRadius: '12px',
+            cursor: 'pointer', fontWeight: '700', fontSize: '14px'
+          }}
+        >
+          <FaSyncAlt />
+        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        {/* TARJETA TOTAL */}
-        <div
-          onClick={() => setFiltroEstatus('todos')}
-          style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
-            transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
-          }}
-        >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
-        </div>
-
-        {/* TARJETA PENDIENTES */}
+        {/* TARJETA PENDIENTES — Primero */}
         <div
           onClick={() => setFiltroEstatus('1')}
           style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '12px',
+            background: 'white', padding: '20px', borderRadius: '12px',
             border: filtroEstatus === '1' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
             boxShadow: filtroEstatus === '1' ? '0 4px 12px rgba(245, 158, 11, 0.15)' : 'none',
             transform: filtroEstatus === '1' ? 'translateY(-2px)' : 'none'
           }}
@@ -579,17 +532,29 @@ export default function AdminSolicitudes() {
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
         </div>
 
+        {/* TARJETA TOTAL */}
+        <div
+          onClick={() => setFiltroEstatus('todos')}
+          style={{
+            background: 'white', padding: '20px', borderRadius: '12px',
+            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+        </div>
+
         {/* TARJETA APROBADAS */}
         <div
           onClick={() => setFiltroEstatus('2')}
           style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '12px',
+            background: 'white', padding: '20px', borderRadius: '12px',
             border: filtroEstatus === '2' ? '2px solid #10b981' : '1px solid #e2e8f0',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
             boxShadow: filtroEstatus === '2' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
             transform: filtroEstatus === '2' ? 'translateY(-2px)' : 'none'
           }}
@@ -603,13 +568,9 @@ export default function AdminSolicitudes() {
         <div
           onClick={() => setFiltroEstatus('3')}
           style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '12px',
+            background: 'white', padding: '20px', borderRadius: '12px',
             border: filtroEstatus === '3' ? '2px solid #ef4444' : '1px solid #e2e8f0',
-            textAlign: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
             boxShadow: filtroEstatus === '3' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
             transform: filtroEstatus === '3' ? 'translateY(-2px)' : 'none'
           }}

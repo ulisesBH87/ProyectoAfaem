@@ -6,6 +6,7 @@ class Configuracion(BaseSettings):
     ALGORITHM: str
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    DEBUG: bool = False
     model_config = SettingsConfigDict(
         env_file=".env"
     )
