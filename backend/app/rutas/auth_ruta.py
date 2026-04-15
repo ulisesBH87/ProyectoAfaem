@@ -12,10 +12,10 @@ from app.esquemas.auth_esquema import TokenResponse
 from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena, RegistroAdmin
 
 from app.servicios.autenticacion_servicio import AutenticacionServicio
-from app.excepciones import usuario_excepciones
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
+# == REGISTRO ==
 @router.post("/registro")
 def register(data: RegistroUsuario, service: AutenticacionServicio = Depends(get_autenticacion_servicio)):
     usuario = service.registrar_usuario(data)
@@ -36,10 +36,12 @@ def registrar_administrador(data: RegistroAdmin, service: AutenticacionServicio 
         "usuario_id": usuario.UsuarioId
     }
 
+
+# == INICIAR SESIÓN ==
 @router.post("/iniciar-sesion", response_model=TokenResponse)
 def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_autenticacion_servicio)) -> TokenResponse:
     
-    usuarioIntentoSesion = service.iniciar_sesion(data.Correo, data.Contrasena)
+    usuarioIntentoSesion, estatus_id = service.iniciar_sesion(data.Correo, data.Contrasena)
 
     datos_token = {
         "sub": str(usuarioIntentoSesion.UsuarioId),
@@ -50,13 +52,6 @@ def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_auten
     token_generado = seguridad.crear_token(datos_token)
 
     persona = usuarioIntentoSesion.PersonaRelacion
-
-    # Obtener EstatusId (solo para Presidentes de Equipo)
-    estatus_id = None
-    if persona:
-        presidente = service.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
-        if presidente:
-            estatus_id = presidente.EstatusId
 
     return {
         "access_token": token_generado,
@@ -71,6 +66,7 @@ def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_auten
         }
     }
 
+# == CAMBIAR CONTRASEÑA ==
 @router.post("/cambiar-contrasena")
 def cambiar_contrasena(data: CambiarContrasena, service: AutenticacionServicio = Depends(get_autenticacion_servicio), usuario = Depends(seguridad.obtener_usuario_actual)):
     
@@ -79,10 +75,10 @@ def cambiar_contrasena(data: CambiarContrasena, service: AutenticacionServicio =
     return {"message": "Contraseña cambiada correctamente"}
 
 
-#oauth2
+#oauth2. para fastapi
 @router.post("/iniciar-sesion-oauth", response_model=TokenResponse)
 def login_oauth(form_data: OAuth2PasswordRequestForm = Depends(), service: AutenticacionServicio = Depends(get_autenticacion_servicio)) -> TokenResponse:
-    usuarioIntentoSesion = service.iniciar_sesion(form_data.username, form_data.password)
+    usuarioIntentoSesion, estatus_id = service.iniciar_sesion(form_data.username, form_data.password)
 
     if not usuarioIntentoSesion:
         raise HTTPException(
@@ -99,12 +95,6 @@ def login_oauth(form_data: OAuth2PasswordRequestForm = Depends(), service: Auten
     token_generado = seguridad.crear_token(datos_token)
 
     persona = usuarioIntentoSesion.PersonaRelacion
-    # Obtener EstatusId (solo para Presidentes de Equipo)
-    estatus_id = None
-    if persona:
-        presidente = service.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
-        if presidente:
-            estatus_id = presidente.EstatusId
 
     return {
         "access_token": token_generado,
