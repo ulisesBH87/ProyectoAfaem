@@ -115,7 +115,7 @@ function App() {
             <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
             <Route path="/admin/pagos" element={<AdminGuard><AdminPagos /></AdminGuard>} />
             <Route path="/admin/equipos" element={<AdminGuard><AdminEquipos /></AdminGuard>} />
-            <Route path="/admin/equipos/crear" element={<AdminGuard><AdminCrearEquipo /></AdminGuard>} />
+            <Route path="/admin/equipos/crear" element={<AdminGuard><ConfigurarEquipo /></AdminGuard>} />
             <Route path="/admin/jugadores" element={<AdminGuard><AdminJugadores /></AdminGuard>} />
             <Route path="/admin/jugadores/crear" element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
             <Route path="/admin/catalogos" element={<AdminGuard><AdminCatalogos /></AdminGuard>} />

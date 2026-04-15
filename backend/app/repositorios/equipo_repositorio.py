@@ -206,7 +206,10 @@ def obtener_directorio_jugadores_repo(db):
             "EquipoNombre": equipo_nombre,
             "Liga": liga,
             "FechaIngreso": miembro.FechaIngreso,
-            "Estatus": miembro.Estatus
+            "Estatus": miembro.Estatus,
+            "Email": persona.CorreoElectronico or "N/A",
+            "FechaNacimiento": persona.FechaNacimiento,
+            "NUI": persona.NUI or "N/A"
         })
 
     return jugadores_response

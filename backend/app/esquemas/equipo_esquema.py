@@ -98,6 +98,9 @@ class DirectorioJugadorResponse(BaseModel):
     Liga: str
     FechaIngreso: datetime
     Estatus: bool
+    Email: Optional[str] = None
+    FechaNacimiento: Optional[date] = None
+    NUI: Optional[str] = None
 
     class Config:
         from_attributes = True

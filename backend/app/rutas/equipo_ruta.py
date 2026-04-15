@@ -77,9 +77,17 @@ async def crear_equipo_completo(
         players_info = json.loads(players_data_str)
 
         # 1. Obtener PresidenteEquipoId
-        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
-        if not presidente:
-            raise HTTPException(status_code=403, detail="El usuario no es un presidente de equipo registrado")
+        rol_id = getattr(usuario, 'RolId', None)
+        presidente_id = None
+
+        if rol_id == 1:  # ADMINISTRADOR
+            presidente_id = team_info.get("presidente_id")
+            # Si no se envía presidente_id, permitimos que sea None (el modelo lo soporta)
+        else:
+            presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+            if not presidente:
+                raise HTTPException(status_code=403, detail="El usuario no es un presidente de equipo registrado")
+            presidente_id = presidente.PresidenteEquipoId
 
         # 2. Obtener o Crear Registro de Equipo (Unicidad por nombre insensible a mayúsculas)
         nombre_equipo = team_info["nombre_equipo"]
@@ -102,7 +110,7 @@ async def crear_equipo_completo(
             CategoriaId=team_info["categoria_id"],
             LigaId=team_info["liga_id"],
             ModalidadId=team_info["modalidad_id"],
-            PresidenteEquipoId=presidente.PresidenteEquipoId,
+            PresidenteEquipoId=presidente_id,
             CantidadJugadores=len(players_info)
         )
         db.add(nueva_competencia)
@@ -134,8 +142,12 @@ async def crear_equipo_completo(
                     PrimerApellido=p_data["primer_apellido"],
                     SegundoApellido=p_data.get("segundo_apellido"),
                     CURP=p_data["curp"],
+                    NUI=p_data.get("nui"),
                     SexoId=p_data["sexo_id"],
-                    FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None
+                    FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None,
+                    LugarNacimiento=p_data.get("lugar_nacimiento"),
+                    CorreoElectronico=p_data.get("correo"),
+                    NumeroTelefono=p_data.get("telefono")
                 )
                 db.add(nueva_persona)
                 db.flush()
@@ -202,20 +214,26 @@ async def crear_equipo_completo(
                     # Aquí podrías registrar la ruta en la tabla de documentos si fuera necesario parse.
                     # Por ahora el usuario sólo solicitó guardarlos físicamente.
 
-        # 4. Actualizar Estatus del Presidente y Rol del Usuario (Automatización Final)
-        presidente.EstatusId = 4  # En Revisión
-        usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario.UsuarioId).first()
-        if usuario_db:
-            usuario_db.RolId = 3  # Presidente de Equipo
+        # 4. Actualizar Estatus del Presidente y Rol del Usuario (Solo si es el propio presidente)
+        if rol_id != 1:
+            if presidente:
+                presidente.EstatusId = 4  # En Revisión
+            
+            usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario.UsuarioId).first()
+            if usuario_db:
+                usuario_db.RolId = 3  # Presidente de Equipo
 
         db.commit()
         return {"mensaje": "Equipo y jugadores creados exitosamente", "equipo_id": nuevo_equipo.EquipoId}
 
     except Exception as e:
         db.rollback()
-        print(f"Error en crear_equipo_completo: {str(e)}")
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error al procesar el registro")
+        error_msg = f"Error en crear_equipo_completo: {str(e)}"
+        print(error_msg)
+        tb = traceback.format_exc()
+        print(tb)
+        # Retornamos el error real temporalmente para depuración
+        raise HTTPException(status_code=500, detail=f"{error_msg} | Traceback: {tb}")
 
 @router.post("/registrar-jugador")
 async def registrar_jugador(
@@ -340,6 +358,33 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
         print(f"Error en get_mis_jugadores_reales: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
+
+@router.get("/directorio-presidentes-activos")
+def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        # Buscamos presidentes que tengan una persona asociada
+        query = db.query(
+            PresidenteEquipo.PresidenteEquipoId,
+            Personas.Nombre,
+            Personas.PrimerApellido,
+            Personas.SegundoApellido
+        ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)
+        
+        resultados = query.all()
+        
+        return [
+            {
+                "id": r.PresidenteEquipoId,
+                "nombre": f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip()
+            } for r in resultados
+        ]
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al obtener directorio de presidentes: {str(e)}")
 
 # --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
 
