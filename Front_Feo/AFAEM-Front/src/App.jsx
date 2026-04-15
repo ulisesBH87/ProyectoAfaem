@@ -70,11 +70,11 @@ function App() {
     // Y verificar cada minuto para que funcione sin necesidad de recargar la página
     const intervalSesion = setInterval(verificarSesion, 60000); 
     
-    // Simular carga de la aplicación (Splash Screen)
+    // Simular carga de la aplicación (Splash Screen) - Reducido para mayor velocidad
     const timerCarga = setTimeout(() => {
       setEstaSaliendo(true);
-      setTimeout(() => setCargandoApp(false), 600);
-    }, 2000);
+      setTimeout(() => setCargandoApp(false), 400); // Salida más rápida
+    }, 400); // 400ms en lugar de 2000ms
 
     return () => {
       clearInterval(intervalSesion);
