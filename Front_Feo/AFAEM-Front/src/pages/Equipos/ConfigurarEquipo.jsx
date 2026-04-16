@@ -937,6 +937,112 @@ export default function ConfigurarEquipo() {
                         </div>
                      </div>
 
+                     {/* SELECTOR DE NACIONALIDAD E INTERNACIONALES */}
+                     <div style={{ marginBottom: '30px' }}>
+                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Nacionalidad del Jugador</label>
+                       <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', width: 'fit-content', marginBottom: currentPlayer.esForaneo ? '20px' : '0' }}>
+                         <button
+                           type="button"
+                           onClick={() => setCurrentPlayer({...currentPlayer, esForaneo: false})}
+                           style={{
+                             padding: '8px 20px', borderRadius: '10px', border: 'none',
+                             background: !currentPlayer.esForaneo ? 'white' : 'transparent',
+                             color: !currentPlayer.esForaneo ? '#0b4ea6' : '#64748b',
+                             fontWeight: '800', fontSize: '13px',
+                             boxShadow: !currentPlayer.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                             transition: 'all 0.2s', cursor: 'pointer'
+                           }}
+                         >🇲🇽 Mexicano</button>
+                         <button
+                           type="button"
+                           onClick={() => setCurrentPlayer({...currentPlayer, esForaneo: true})}
+                           style={{
+                             padding: '8px 20px', borderRadius: '10px', border: 'none',
+                             background: currentPlayer.esForaneo ? 'white' : 'transparent',
+                             color: currentPlayer.esForaneo ? '#0b4ea6' : '#64748b',
+                             fontWeight: '800', fontSize: '13px',
+                             boxShadow: currentPlayer.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                             transition: 'all 0.2s', cursor: 'pointer'
+                           }}
+                         >🌎 Extranjero</button>
+                       </div>
+
+                       {currentPlayer.esForaneo && (
+                         <div className="fade-in" style={{ padding: '24px', background: '#f0f9ff', borderRadius: '16px', border: '1px solid #bae6fd', marginTop: '15px' }}>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                             <div style={{ color: '#0369a1' }}>📋</div>
+                             <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0369a1' }}>Antecedentes Internacionales Obligatorios</h4>
+                           </div>
+
+                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '15px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Nacionalidad (País de Origen) *</label>
+                               <input type="text" value={currentPlayer.nacionalidadJugador} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadJugador: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} placeholder="Ej. Argentina" />
+                             </div>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>País de residencia actual *</label>
+                               <input type="text" value={currentPlayer.paisResidencia} onChange={e => setCurrentPlayer({...currentPlayer, paisResidencia: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} placeholder="Ej. México" />
+                             </div>
+                           </div>
+
+                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '15px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>¿Ha vivido en el extranjero?</label>
+                               <select value={currentPlayer.haVividoExtranjero ? '1' : '0'} onChange={e => setCurrentPlayer({...currentPlayer, haVividoExtranjero: e.target.value === '1'})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px', backgroundColor: 'white' }}>
+                                 <option value="0">No</option>
+                                 <option value="1">Sí</option>
+                               </select>
+                             </div>
+                             {currentPlayer.haVividoExtranjero && (
+                               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                 <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>¿En qué país? *</label>
+                                 <input type="text" value={currentPlayer.dondeVividoExtranjero || ''} onChange={e => setCurrentPlayer({...currentPlayer, dondeVividoExtranjero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} />
+                               </div>
+                             )}
+                           </div>
+
+                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '15px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Nacionalidad del Padre *</label>
+                               <input type="text" value={currentPlayer.nacionalidadPadre} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadPadre: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} />
+                             </div>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Nacionalidad de la Madre *</label>
+                               <input type="text" value={currentPlayer.nacionalidadMadre} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadMadre: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} />
+                             </div>
+                           </div>
+
+                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '15px' }}>
+                             <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Registrado previo en Asociación Nacional (Extranjero) *</label>
+                             <textarea value={currentPlayer.registroAsociacionExtranjera} onChange={e => setCurrentPlayer({...currentPlayer, registroAsociacionExtranjera: e.target.value})} rows={2} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px', resize: 'none' }} placeholder="Describa el registro previo..." />
+                           </div>
+
+                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '15px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Nac. Abuelo Paterno *</label>
+                               <input type="text" value={currentPlayer.nacAbueloPaterno} onChange={e => setCurrentPlayer({...currentPlayer, nacAbueloPaterno: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} />
+                             </div>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Nac. Abuela Paterna *</label>
+                               <input type="text" value={currentPlayer.nacAbuelaPaterna} onChange={e => setCurrentPlayer({...currentPlayer, nacAbuelaPaterna: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} />
+                             </div>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Nac. Abuelo Materno *</label>
+                               <input type="text" value={currentPlayer.nacAbueloMaterno} onChange={e => setCurrentPlayer({...currentPlayer, nacAbueloMaterno: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} />
+                             </div>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                               <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Nac. Abuela Materna *</label>
+                               <input type="text" value={currentPlayer.nacAbuelaMaterna} onChange={e => setCurrentPlayer({...currentPlayer, nacAbuelaMaterna: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px' }} />
+                             </div>
+                           </div>
+
+                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                             <label style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1' }}>Participaciones competenciales en el extranjero *</label>
+                             <textarea value={currentPlayer.juegoClubExtranjero} onChange={e => setCurrentPlayer({...currentPlayer, juegoClubExtranjero: e.target.value})} rows={2} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '13px', resize: 'none' }} placeholder="Clubes, torneos escolares, etc..." />
+                           </div>
+                         </div>
+                       )}
+                     </div>
                     <div style={{ marginBottom: '25px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Asignar Seguro</label>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
@@ -1110,7 +1216,7 @@ export default function ConfigurarEquipo() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9' }}>
-                      <button 
+                       <button 
                         disabled={!currentPlayer.firstName}
                         style={{ 
                           background: 'none', border: 'none', color: !currentPlayer.firstName ? '#94a3b8' : '#0b4ea6', 
@@ -1119,15 +1225,34 @@ export default function ConfigurarEquipo() {
                         }}
                         onClick={handleDownloadPlayerPDF}
                       >
-                        📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato Pre-llenado</span>
+                         📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato Pre-llenado</span>
                       </button>
+
                       <button 
                         onClick={async () => {
                           const docs = currentPlayer.documents || {};
                           const hasMinDocs = docs.ine && docs.foto;
+                          
+                          // Validación básica
                           if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs || !currentPlayer.positionId) {
                             Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona posición, seguro y sube INE y Foto para continuar.', 'warning');
                             return;
+                          }
+
+                          // Validación estricta para Extranjeros
+                          if (currentPlayer.esForaneo) {
+                            const fields = [
+                              'nacionalidadJugador', 'paisResidencia', 'nacionalidadPadre', 'nacionalidadMadre',
+                              'registroAsociacionExtranjera', 'nacAbueloPaterno', 'nacAbuelaPaterna',
+                              'nacAbueloMaterno', 'nacAbuelaMaterna', 'juegoClubExtranjero'
+                            ];
+                            const incomplete = fields.some(f => !String(currentPlayer[f] || '').trim());
+                            const liveValid = !currentPlayer.haVividoExtranjero || (currentPlayer.haVividoExtranjero && String(currentPlayer.dondeVividoExtranjero || '').trim());
+                            
+                            if (incomplete || !liveValid) {
+                              Swal.fire('Atención', 'Al ser extranjero, TODOS los campos de antecedentes internacionales son obligatorios.', 'warning');
+                              return;
+                            }
                           }
 
                           // Validar número de camiseta único
@@ -1146,9 +1271,9 @@ export default function ConfigurarEquipo() {
                           setSignedForm(null);
                           setShowFinishModal(true);
                         }}
-                        style={{ padding: '14px 30px', background: '#0b4ea6', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)', fontSize: '15px' }}
+                        style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(11, 78, 166, 0.3)', fontSize: '15px' }}
                       >
-                        + Guardar Jugador
+                        + Registrar Jugador
                       </button>
                     </div>
                   </div>

@@ -35,7 +35,6 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM' }) =>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         <HeaderSearch />
-        <NotificationBell />
         <UserMenu userEmail={userEmail} />
       </div>
     </header>
