@@ -678,14 +678,15 @@ export default function AdminCrearJugador() {
           </div>
         </section>
 
-        {/* PREVISUALIZACIÓN DE DATOS PARA EXTRANJEROS */}
+        {/* PREVISUALIZACIÓN DE DATOS Y ANTECEDENTES PARA EXTRANJEROS */}
         {extractedData.esForaneo && !showStep3 && (
           <section className="fade-in" style={{ marginBottom: '40px', padding: '24px', background: '#f0f9ff', borderRadius: '16px', border: '1px solid #bae6fd' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
               <FaMapMarkerAlt style={{ color: '#0369a1' }} />
-              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>Pre-llenado de Identidad para Extranjero</h4>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>Pre-llenado de Identidad y Antecedentes Internacionales</h4>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
               <EntradaFormulario
                 etiqueta="Nombre(s)"
                 valor={extractedData.nombreJugador}
@@ -697,13 +698,93 @@ export default function AdminCrearJugador() {
                 alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
               />
               <EntradaFormulario
-                etiqueta="País de Origen"
+                etiqueta="Nacionalidad del jugador (País de Origen)"
                 valor={extractedData.nacionalidadJugador}
-                alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
+                obligatorio={true}
               />
+              <EntradaFormulario
+                etiqueta="País de residencia actual"
+                valor={extractedData.paisResidencia}
+                alCambiar={(e) => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaSeleccion
+                etiqueta="¿El jugador ha vivido en el extranjero?"
+                valor={extractedData.haVividoExtranjero ? '1' : '0'}
+                alCambiar={(e) => setExtractedData({ ...extractedData, haVividoExtranjero: e.target.value === '1' })}
+                opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
+                obligatorio={true}
+              />
+              {extractedData.haVividoExtranjero && (
+                <EntradaFormulario
+                  etiqueta="¿En qué país?"
+                  valor={extractedData.dondeVividoExtranjero}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
+                  obligatorio={true}
+                />
+              )}
+              <EntradaFormulario
+                etiqueta="Nacionalidades del padre"
+                valor={extractedData.nacionalidadPadre}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades de la madre"
+                valor={extractedData.nacionalidadMadre}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
+                obligatorio={true}
+              />
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <AreaTexto
+                  etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF."
+                  valor={extractedData.registroAsociacionExtranjera}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
+                  filas={2}
+                  obligatorio={true}
+                />
+              </div>
+
+              <EntradaFormulario
+                etiqueta="Nacionalidades del abuelo paterno"
+                valor={extractedData.nacAbueloPaterno}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades de la abuela paterna"
+                valor={extractedData.nacAbuelaPaterna}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades del abuelo materno"
+                valor={extractedData.nacAbueloMaterno}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades de la abuela materna"
+                valor={extractedData.nacAbuelaMaterna}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })}
+                obligatorio={true}
+              />
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <AreaTexto
+                  etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?"
+                  valor={extractedData.juegoClubExtranjero}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
+                  filas={3}
+                  obligatorio={true}
+                />
+              </div>
             </div>
+            
             <p style={{ margin: '15px 0 0', fontSize: '12px', color: '#0c4a6e', fontStyle: 'italic' }}>
-              💡 Al ser extranjero, puedes adelantar estos datos. Se validarán automáticamente al subir los documentos abajo.
+              💡 Al ser extranjero, debes completar todos estos antecedentes internacionales. Se validarán automáticamente al subir los documentos.
             </p>
           </section>
         )}
@@ -1030,119 +1111,6 @@ export default function AdminCrearJugador() {
               </div>
             </Tarjeta>
 
-            {/* SECCIÓN 2: ANTECEDENTES INTERNACIONALES */}
-            <Tarjeta estilo={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', marginBottom: '30px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#9a3412' }}>
-                  2. Antecedentes internacionales
-                </h4>
-                <div className="form-check form-switch">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="switchForaneo"
-                    checked={extractedData.esForaneo}
-                    onChange={(e) => setExtractedData({ ...extractedData, esForaneo: e.target.checked })}
-                  />
-                  <label className="form-check-label" htmlFor="switchForaneo" style={{ fontSize: '13px', fontWeight: '700' }}>
-                    ¿Jugador foráneo?
-                  </label>
-                </div>
-              </div>
-
-              {extractedData.esForaneo ? (
-                <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                  <EntradaFormulario
-                    etiqueta="Nacionalidad del jugador"
-                    valor={extractedData.nacionalidadJugador}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
-                    obligatorio={true}
-                  />
-                  <EntradaFormulario
-                    etiqueta="País de residencia actual"
-                    valor={extractedData.paisResidencia}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
-                    obligatorio={true}
-                  />
-                  <EntradaSeleccion
-                    etiqueta="¿El jugador ha vivido en el extranjero?"
-                    valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, haVividoExtranjero: e.target.value === '1' })}
-                    opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
-                    obligatorio={true}
-                  />
-                  {extractedData.haVividoExtranjero && (
-                    <EntradaFormulario
-                      etiqueta="¿En qué país?"
-                      valor={extractedData.dondeVividoExtranjero}
-                      alCambiar={(e) => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
-                      obligatorio={true}
-                    />
-                  )}
-                  <EntradaFormulario
-                    etiqueta="Nacionalidades del padre"
-                    valor={extractedData.nacionalidadPadre}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
-                    obligatorio={true}
-                  />
-                  <EntradaFormulario
-                    etiqueta="Nacionalidades de la madre"
-                    valor={extractedData.nacionalidadMadre}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
-                    obligatorio={true}
-                  />
-
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <AreaTexto
-                      etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF."
-                      valor={extractedData.registroAsociacionExtranjera}
-                      alCambiar={(e) => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
-                      filas={2}
-                      obligatorio={true}
-                    />
-                  </div>
-
-                  <EntradaFormulario
-                    etiqueta="Nacionalidades del abuelo paterno"
-                    valor={extractedData.nacAbueloPaterno}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })}
-                    obligatorio={true}
-                  />
-                  <EntradaFormulario
-                    etiqueta="Nacionalidades de la abuela paterna"
-                    valor={extractedData.nacAbuelaPaterna}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })}
-                    obligatorio={true}
-                  />
-                  <EntradaFormulario
-                    etiqueta="Nacionalidades del abuelo materno"
-                    valor={extractedData.nacAbueloMaterno}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })}
-                    obligatorio={true}
-                  />
-                  <EntradaFormulario
-                    etiqueta="Nacionalidades de la abuela materna"
-                    valor={extractedData.nacAbuelaMaterna}
-                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })}
-                    obligatorio={true}
-                  />
-
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <AreaTexto
-                      etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?"
-                      valor={extractedData.juegoClubExtranjero}
-                      alCambiar={(e) => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
-                      filas={3}
-                      obligatorio={true}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                  El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos de antecedentes internacionales.
-                </p>
-              )}
-            </Tarjeta>
 
             {/* ACCIONES FINALES */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
