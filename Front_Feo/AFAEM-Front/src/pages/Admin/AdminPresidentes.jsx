@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave } from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
@@ -121,10 +121,10 @@ export default function AdminPresidentes() {
   const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas) + 1 : 0;
 
   /* ─── Carga inicial ─── */
-  const cargarPresidentes = async () => {
+  const cargarPresidentes = async (forceRefresh = false) => {
     setCargando(true);
     try {
-      const data = await getPresidentesDirectorio();
+      const data = await getPresidentesDirectorio(forceRefresh);
       setPresidentes(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error al cargar presidentes:", err);
