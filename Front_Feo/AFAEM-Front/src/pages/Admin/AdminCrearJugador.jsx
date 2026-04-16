@@ -429,6 +429,29 @@ export default function AdminCrearJugador() {
       return;
     }
 
+    if (extractedData.esForaneo) {
+      const {
+        nacionalidadJugador, paisResidencia, dondeVividoExtranjero, haVividoExtranjero,
+        nacionalidadPadre, nacionalidadMadre, registroAsociacionExtranjera,
+        nacAbueloPaterno, nacAbuelaPaterna, nacAbueloMaterno, nacAbuelaMaterna,
+        juegoClubExtranjero
+      } = extractedData;
+      
+      const basicosForaneo = [
+        nacionalidadJugador, paisResidencia, nacionalidadPadre, nacionalidadMadre,
+        registroAsociacionExtranjera, nacAbueloPaterno, nacAbuelaPaterna, 
+        nacAbueloMaterno, nacAbuelaMaterna, juegoClubExtranjero
+      ];
+      
+      const completado = basicosForaneo.every(campo => String(campo || '').trim() !== '');
+      const vivoValid = !haVividoExtranjero || (haVividoExtranjero && String(dondeVividoExtranjero || '').trim() !== '');
+      
+      if (!completado || !vivoValid) {
+        Swal.fire('Atención', 'Al seleccionar que el jugador es extranjero, TODOS los campos de antecedentes internacionales deben ser llenados.', 'warning');
+        return;
+      }
+    }
+
     // 1. Descargar el formato automáticamente
     const success = await handleDownloadFormato();
 
@@ -1033,34 +1056,40 @@ export default function AdminCrearJugador() {
                     etiqueta="Nacionalidad del jugador"
                     valor={extractedData.nacionalidadJugador}
                     alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
+                    obligatorio={true}
                   />
                   <EntradaFormulario
                     etiqueta="País de residencia actual"
                     valor={extractedData.paisResidencia}
                     alCambiar={(e) => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
+                    obligatorio={true}
                   />
                   <EntradaSeleccion
                     etiqueta="¿El jugador ha vivido en el extranjero?"
                     valor={extractedData.haVividoExtranjero ? '1' : '0'}
                     alCambiar={(e) => setExtractedData({ ...extractedData, haVividoExtranjero: e.target.value === '1' })}
                     opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
+                    obligatorio={true}
                   />
                   {extractedData.haVividoExtranjero && (
                     <EntradaFormulario
                       etiqueta="¿En qué país?"
                       valor={extractedData.dondeVividoExtranjero}
                       alCambiar={(e) => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
+                      obligatorio={true}
                     />
                   )}
                   <EntradaFormulario
                     etiqueta="Nacionalidades del padre"
                     valor={extractedData.nacionalidadPadre}
                     alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
+                    obligatorio={true}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades de la madre"
                     valor={extractedData.nacionalidadMadre}
                     alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
+                    obligatorio={true}
                   />
 
                   <div style={{ gridColumn: '1 / -1' }}>
@@ -1069,6 +1098,7 @@ export default function AdminCrearJugador() {
                       valor={extractedData.registroAsociacionExtranjera}
                       alCambiar={(e) => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
                       filas={2}
+                      obligatorio={true}
                     />
                   </div>
 
@@ -1076,21 +1106,25 @@ export default function AdminCrearJugador() {
                     etiqueta="Nacionalidades del abuelo paterno"
                     valor={extractedData.nacAbueloPaterno}
                     alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })}
+                    obligatorio={true}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades de la abuela paterna"
                     valor={extractedData.nacAbuelaPaterna}
                     alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })}
+                    obligatorio={true}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades del abuelo materno"
                     valor={extractedData.nacAbueloMaterno}
                     alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })}
+                    obligatorio={true}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades de la abuela materna"
                     valor={extractedData.nacAbuelaMaterna}
                     alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })}
+                    obligatorio={true}
                   />
 
                   <div style={{ gridColumn: '1 / -1' }}>
@@ -1099,6 +1133,7 @@ export default function AdminCrearJugador() {
                       valor={extractedData.juegoClubExtranjero}
                       alCambiar={(e) => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
                       filas={3}
+                      obligatorio={true}
                     />
                   </div>
                 </div>

@@ -34,11 +34,10 @@ function PreRegistroPresidente() {
   const [ocrResults, setOcrResults] = useState({});
   const [, setFotoPreview] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState({});
-  const [telefono, setTelefono] = useState('');
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
-  const [asociacion, setAsociacion] = useState('');
+  const [asociacion, setAsociacion] = useState('AFAEM');
   const [liga, setLiga] = useState('');
-  const [equipo, setEquipo] = useState('');
+  const [ligasCatalogo, setLigasCatalogo] = useState([]);
 
 
   // Verificar estado de pago al cargar
@@ -93,6 +92,21 @@ function PreRegistroPresidente() {
       }
     };
     verificarEstadoPago();
+
+    const fetchLigas = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/equipo-temporal/catalogos-registro`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ligas) {
+            setLigasCatalogo(data.ligas);
+          }
+        }
+      } catch (err) {
+        console.warn('No se pudo cargar catálogos:', err);
+      }
+    };
+    fetchLigas();
   }, []);
 
   // SINCRONIZAR PASO ACTUAL CON EL ESTATUS REAL DEL BACKEND
@@ -141,27 +155,9 @@ function PreRegistroPresidente() {
   ];
 
   /* ─── Catálogos para Selectores ─── */
-  const CATALOGO_LIGAS = [
-    { valor: 'LIGA AFAEM NORTE', etiqueta: 'Ligue AFAEM Norte' },
-    { valor: 'LIGA AFAEM SUR',   etiqueta: 'Ligue AFAEM Sur' },
-    { valor: 'VARONIL PRIMERA',  etiqueta: 'Varonil Primera Plus' },
-    { valor: 'FEMENIL ELITE',    etiqueta: 'Femenil Elite' },
-    { valor: 'OTRA',             etiqueta: 'Otra Liga (Especificar)' },
-  ];
-
-  const CATALOGO_ASOCIACIONES = [
-    { valor: 'MORELOS',      etiqueta: 'Morelos (AFEMOR)' },
-    { valor: 'ESTADO DE MEX', etiqueta: 'Estado de México' },
-    { valor: 'CDMX',         etiqueta: 'Ciudad de México' },
-    { valor: 'PUEBLA',       etiqueta: 'Puebla' },
-    { valor: 'QUERETARO',    etiqueta: 'Querétaro' },
-  ];
-
   const CATALOGO_ROLES = [
-    { valor: 'PRESIDENTE',   etiqueta: 'Presidente de Equipo' },
-    { valor: 'DIRECTIVO',    etiqueta: 'Directivo de Club' },
-    { valor: 'DELEGADO',     etiqueta: 'Delegado Deportivo' },
-    { valor: 'REPRESENTANTE', etiqueta: 'Representante Legal' },
+    { valor: 'PRESIDENTE DE EQUIPO',   etiqueta: 'Presidente de Equipo' },
+    { valor: 'ENTRENADOR',             etiqueta: 'Entrenador' },
   ];
 
   const bankInfo = {
@@ -634,9 +630,8 @@ function PreRegistroPresidente() {
       }
 
       // Teléfono
-      if (telefono) {
-        form.getTextField('Teléfono')?.setText(telefono);
-      }
+      // Teléfono es llenado por defecto o removido
+      form.getTextField('fill_24')?.setText('');
 
       // Tipo de afiliación
       if (tipoAfiliacion) {
@@ -646,7 +641,7 @@ function PreRegistroPresidente() {
       // Asociación, Liga, Equipo
       if (asociacion) form.getTextField('Asociación')?.setText(asociacion.toUpperCase());
       if (liga) form.getTextField('Liga')?.setText(liga.toUpperCase());
-      if (equipo) form.getTextField('Equipo')?.setText(equipo.toUpperCase());
+      form.getTextField('Equipo')?.setText('');
 
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
@@ -1642,10 +1637,22 @@ function PreRegistroPresidente() {
                 <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Datos de Registro</h4>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
                 <div className="premium-input-group">
-                  <label className="premium-label">Teléfono *</label>
-                  <input type="tel" placeholder="Ej: 7771234567" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="premium-input" />
+                  <label className="premium-label">Asociación</label>
+                  <input type="text" value={asociacion} disabled className="premium-input" style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed' }} />
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Liga Destino</label>
+                  <select 
+                    value={liga} 
+                    onChange={(e) => setLiga(e.target.value)} 
+                    className="premium-input"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="">Selecciona...</option>
+                    {ligasCatalogo.map(l => <option key={l.id} value={l.nombre}>{l.nombre}</option>)}
+                  </select>
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Tipo de afiliación *</label>
@@ -1658,38 +1665,6 @@ function PreRegistroPresidente() {
                     <option value="">Selecciona...</option>
                     {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
                   </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-                <div className="premium-input-group">
-                  <label className="premium-label">Asociación</label>
-                  <select 
-                    value={asociacion} 
-                    onChange={(e) => setAsociacion(e.target.value)} 
-                    className="premium-input"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <option value="">Selecciona...</option>
-                    {CATALOGO_ASOCIACIONES.map(a => <option key={a.valor} value={a.valor}>{a.etiqueta}</option>)}
-                    <option value="OTRA">Otra Asociación...</option>
-                  </select>
-                </div>
-                <div className="premium-input-group">
-                  <label className="premium-label">Liga Destino</label>
-                  <select 
-                    value={liga} 
-                    onChange={(e) => setLiga(e.target.value)} 
-                    className="premium-input"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <option value="">Selecciona...</option>
-                    {CATALOGO_LIGAS.map(l => <option key={l.valor} value={l.valor}>{l.etiqueta}</option>)}
-                  </select>
-                </div>
-                <div className="premium-input-group" style={{ gridColumn: 'span 2' }}>
-                  <label className="premium-label">Nombre del Equipo</label>
-                  <input type="text" placeholder="Ej: ACADEMIA FC" value={equipo} onChange={(e) => setEquipo(e.target.value)} className="premium-input" />
                 </div>
               </div>
             </div>
@@ -1808,16 +1783,7 @@ function PreRegistroPresidente() {
                 ← Anterior
               </button>
 
-              {/* Pill progress indicator */}
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                {requisitos.map((doc, i) => (
-                  <div key={i} className="progress-pill" style={{
-                    width: documents[doc.documento] ? '22px' : '8px',
-                    background: documents[doc.documento] ? '#10b981' : 'rgba(255,255,255,0.12)',
-                    boxShadow: documents[doc.documento] ? '0 0 6px rgba(16,185,129,0.5)' : 'none',
-                  }} />
-                ))}
-              </div>
+              {/* Pill progress indicator Removed */}
 
               <button
                 className="btn-premium"
