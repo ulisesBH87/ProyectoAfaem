@@ -458,8 +458,8 @@ export default function AdminEquipos() {
             onChange={manejarCambioInput}
             nombre="estatus"
             opciones={[
-              { valor: '1', etiqueta: 'Activo (Habilitado para Torneos)' },
-              { valor: '0', etiqueta: 'Inactivo (Baja Temporal)' }
+              { valor: '1', etiqueta: 'Activo' },
+              { valor: '0', etiqueta: 'Inactivo' }
             ]}
           />
 
@@ -486,41 +486,17 @@ export default function AdminEquipos() {
               </div>
               
               <div style={{ display: 'flex', gap: '14px' }}>
-                <div style={{ color: '#059669', fontSize: '18px', marginTop: '4px' }}><FaCalendarDay /></div>
+                <div style={{ color: '#059669', fontSize: '18px', marginTop: '4px' }}>🏆</div>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vigencia Matricula</label>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginTop: '2px' }}>Temporada 2024 - 2025</div>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Ligas: {equipoEdicion.Liga}</div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Liga del Equipo</label>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginTop: '2px' }}>{equipoEdicion.Liga}</div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Categoría: {equipoEdicion.Categoria}</div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* SECCIÓN: AGREGAR PARTICIPANTE/ROL (PLACEHOLDER VISUAL) */}
-          <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed #e2e8f0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FaUserPlus style={{ color: '#8b5cf6' }} /> Cuerpo Técnico / Participantes
-              </h4>
-              <span style={{ fontSize: '11px', background: '#fef3c7', color: '#92400e', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
-                🛠️ Funcionalidad en desarrollo
-              </span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
-              {['Entrenador principal', 'Entrenador asistente', 'Delegado', 'Médico', 'Directivo'].map(rol => (
-                <div key={rol} style={{
-                  padding: '12px 16px', borderRadius: '10px', border: '1.5px dashed #e2e8f0',
-                  background: '#fafafa', color: '#94a3b8', fontSize: '12px', fontWeight: '600',
-                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'not-allowed'
-                }}>
-                  <FaUserPlus style={{ opacity: 0.4 }} />{rol}
-                </div>
-              ))}
-            </div>
-            <p style={{ margin: '12px 0 0', fontSize: '11px', color: '#94a3b8' }}>
-              El registro de cuerpo técnico estará disponible cuando el endpoint de backend esté listo.
-            </p>
-          </div>
+           {/* SECCIÓN: CUERPO TÉCNICO REMOVIDA A PETICIÓN */}
 
           {/* SECCIÓN: NÓMINA DE JUGADORES (ACCESO RÁPIDO) */}
           <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>

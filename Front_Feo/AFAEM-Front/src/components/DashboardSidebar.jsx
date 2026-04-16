@@ -106,18 +106,30 @@ const DashboardSidebar = () => {
             // Si es Catálogos o Directorio de Equipos y no es Admin, ocultar
             if ((item.Nombre === 'Catálogos' || item.Nombre === 'Equipos') && !isAdmin) {
                // A menos que sea un "Ver Mi Equipo" específico para presidentes (otra ruta)
-               if (item.Ruta !== '/presidente/equipo') return false;
+               if (item.Ruta !== '/presidente-equipo/equipos') return false;
             }
             // Si es 'Mi Equipo' y es Admin, ocultar (porque pertenece a la vista de presidente)
             if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
             // Ocultar Auditorías temporalmente del sidebar (sin borrar)
             if (item.Nombre === 'Auditorías') return false;
+            
+            // Ocultar Inicio y Solicitudes para Presidente de Equipo (Solo dejar Equipos y Jugadores) en el nivel superior
+            if (!isAdmin && (item.Nombre === 'Inicio' || item.Nombre === 'Solicitudes' || item.Nombre === 'Dashboard' || item.Nombre === 'Reportes')) return false;
 
             return true;
           })
           .map((item, idx) => {
             const isActive = location.pathname === item.Ruta;
-          const hasChildren = item.SubMenus && item.SubMenus.length > 0;
+            
+            // FILTRAR SUBMENÚS PARA PRESIDENTES
+            let filteredSubMenus = item.SubMenus || [];
+            if (!isAdmin) {
+              filteredSubMenus = filteredSubMenus.filter(sub => 
+                !['inicio', 'solicitudes', 'reportes', 'dashboard'].includes(sub.Nombre.toLowerCase())
+              );
+            }
+            
+            const hasChildren = filteredSubMenus.length > 0;
 
           return (
             <React.Fragment key={idx}>
@@ -160,7 +172,7 @@ const DashboardSidebar = () => {
               </div>
 
               {/* Submenus if present */}
-              {hasChildren && !isCollapsed && item.SubMenus.map((child, cIdx) => {
+              {hasChildren && !isCollapsed && filteredSubMenus.map((child, cIdx) => {
                 const isChildActive = location.pathname === child.Ruta;
                 return (
                   <div

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaSignOutAlt } from 'react-icons/fa';
+import { FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
+import { useRBAC } from '../../hooks/useRBAC';
 
 const UserMenu = ({ userEmail }) => {
   const navigate = useNavigate();
@@ -13,9 +14,9 @@ const UserMenu = ({ userEmail }) => {
     return () => window.removeEventListener('click', closeMenu);
   }, []);
 
-  const getInitials = (email) => {
-    return email ? email.split('@')[0].substring(0, 2).toUpperCase() : 'US';
-  };
+  const { hasRole } = useRBAC();
+  const isAdmin = hasRole('Admin') || hasRole('Administrador');
+  const roleName = isAdmin ? 'Administrador' : 'Presidente';
 
   const handleLogout = () => {
     Swal.fire({
@@ -47,17 +48,18 @@ const UserMenu = ({ userEmail }) => {
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
     >
       <div style={{ textAlign: 'right', flexShrink: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {userEmail ? userEmail.split('@')[0] : 'User'}
+        <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {roleName}
         </div>
-        <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>Administrator</div>
       </div>
       <div style={{
-        width: '44px', height: '44px', borderRadius: '12px',
-        background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%)',
+        width: '40px', height: '40px', borderRadius: '10px',
+        background: isAdmin ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)',
         color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        fontWeight: 'bold', boxShadow: '0 4px 10px rgba(37, 99, 235, 0.2)'
-      }}>{getInitials(userEmail)}</div>
+        fontSize: '24px', boxShadow: isAdmin ? '0 4px 12px rgba(15, 23, 42, 0.2)' : '0 4px 12px rgba(11, 78, 166, 0.2)'
+      }}>
+        <FaUserCircle />
+      </div>
 
       {showUserMenu && (
         <div className="fade-in glass" style={{

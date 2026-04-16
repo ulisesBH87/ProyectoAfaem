@@ -48,11 +48,7 @@ const AdminDashboard = () => {
 
   const chartData = chartDataCompleto[mesFiltro] || chartDataCompleto['Abr'];
 
-  const statusData = [
-    { name: 'Aprobados', value: statsData.equipos, color: '#10b981' },
-    { name: 'Pendientes', value: statsData.pagosPendientes, color: '#f59e0b' },
-    { name: 'Solicitudes', value: statsData.solicitudesPendientes, color: 'var(--primary)' },
-  ];
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -232,36 +228,7 @@ const AdminDashboard = () => {
           ruta="/admin/jugadores"
         />
 
-        {/* DISTRIBUCIÓN DE ESTATUS (2x1) */}
-        <div className="card glass" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column' }}>
-          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Distribución de Estatus</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {statusData.map(item => (
-              <div key={item.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
-                    {item.name}
-                  </span>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: item.color }}>
-                    {item.value} <small style={{ color: 'var(--text-muted)', fontWeight: '400' }}>({item.value > 0 && statsData.totalSolicitudes > 0 ? Math.round((item.value / statsData.totalSolicitudes) * 100) : 0}%)</small>
-                  </span>
-                </div>
-                <div style={{ flex: 1, background: 'rgba(0,0,0,0.03)', borderRadius: '8px', height: '12px', overflow: 'hidden', position: 'relative' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${item.value > 0 ? Math.max((item.value / Math.max(...statusData.map(d => d.value), 1)) * 100, 2) : 0}%`,
-                      background: item.color,
-                      borderRadius: '8px',
-                      transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: `0 0 10px ${item.color}44`
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+
 
       </div>
     </div>
