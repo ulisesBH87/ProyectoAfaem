@@ -263,20 +263,6 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* ESTADO DEL SISTEMA (2x1) */}
-        <div className="card glass" style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h4 className="heading-outfit" style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Estado del sistema</h4>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaCheckCircle /> OPERATIVO
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <p className="data-fira" style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Latencia: 42ms</p>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '4px 0 0' }}>Última sincronización: Hace 1 min</p>
-          </div>
-        </div>
-
       </div>
     </div>
   );
