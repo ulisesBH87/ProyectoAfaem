@@ -5,6 +5,7 @@ from app.repositorios import personas_repositorio
 from app.repositorios import documentos_repositorio
 from app.servicios import documentos_servicio
 from app.modelos.catalogo_seguros import Seguro
+from app.utilidades.file_handler import guardar_logo, parse_form_data
 
 def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
     return equipo_repositorio.obtener_equipos_temporales_por_usuario_repo(db, usuario_id)
@@ -77,3 +78,40 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
             for s in slots
         ]
     }
+
+
+async def crear_equipo_completo_servicio(form_data, db, usuario):
+    try:
+        team_info, players_info = parse_form_data(form_data)
+
+        presidente_id, presidente, rol_id = equipo_repositorio.obtener_presidente(
+            db, usuario, team_info
+        )
+
+        equipo = equipo_repositorio.obtener_o_crear_equipo(
+            db, team_info["nombre_equipo"]
+        )
+
+        equipo_repositorio.crear_equipo_jugando(
+            db, equipo, team_info, presidente_id, len(players_info)
+        )
+
+        await guardar_logo(form_data, equipo, db)
+
+        for index, player in enumerate(players_info):
+            await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index)
+
+        equipo_repositorio.actualizar_usuario_y_presidente(
+            db, usuario, presidente, rol_id
+        )
+
+        db.commit()
+
+        return {
+            "mensaje": "Equipo y jugadores creados exitosamente",
+            "equipo_id": equipo.EquipoId
+        }
+
+    except:
+        db.rollback()
+        raise

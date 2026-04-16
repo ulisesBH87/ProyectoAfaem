@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { 
-  FaArrowLeft, 
-  FaSave, 
-  FaUpload, 
-  FaFilePdf, 
+import {
+  FaArrowLeft,
+  FaSave,
+  FaUpload,
+  FaFilePdf,
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus
@@ -14,12 +14,12 @@ import { PDFDocument } from 'pdf-lib';
 import { getSolicitudes } from '../../services/solicitud';
 import { validarFotografia } from '../../services/foto';
 import { registrarJugadorTemporal } from '../../services/teams';
-import { 
-  BotonPrimario, 
-  BotonSecundario, 
-  Tarjeta, 
-  EntradaFormulario, 
-  EntradaSeleccion, 
+import {
+  BotonPrimario,
+  BotonSecundario,
+  Tarjeta,
+  EntradaFormulario,
+  EntradaSeleccion,
   AreaTexto,
   Cargador,
   Modal
@@ -27,16 +27,16 @@ import {
 
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
-  <div style={{ 
-    width: '32px', 
-    height: '32px', 
-    borderRadius: '50%', 
+  <div style={{
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
     backgroundColor: isDone ? '#10b981' : (isActive ? '#0b4ea6' : '#e2e8f0'),
     color: (isActive || isDone) ? 'white' : '#64748b',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    fontSize: '14px', 
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '14px',
     fontWeight: '800',
     flexShrink: 0,
     transition: 'all 0.3s'
@@ -58,13 +58,13 @@ export default function AdminCrearJugador() {
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
   `;
-  
+
   // ESTADOS
   const [equiposDb, setEquiposDb] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [fillManually, setFillManually] = useState(false);
-  
+
   const [documents, setDocuments] = useState({
     actaNacimiento: null,
     identificacion: null,
@@ -86,11 +86,11 @@ export default function AdminCrearJugador() {
     apellidoPaterno: '',
     apellidoMaterno: '',
     curp: '',
-    genero: '1', 
+    genero: '1',
     fechaNacimiento: '',
     lugarNacimiento: '',
     direccion: '',
-    
+
     // DATOS DE AFILIADO (NUEVOS)
     correo: '',
     telefono: '',
@@ -225,17 +225,17 @@ export default function AdminCrearJugador() {
         const htmlText = await response.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, "text/html");
-        
+
         let nombreEncontrado = '';
         let curpEncontrada = '';
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
-        
+
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
           const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
           const value = row.querySelector('.valor')?.textContent?.trim() || '';
-          
+
           if (label.includes('nombre')) nombreEncontrado = value;
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
@@ -255,7 +255,7 @@ export default function AdminCrearJugador() {
         if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
-          
+
           if (parts.length >= 3) {
             lastNamePaterno = parts[0];
             lastNameMaterno = parts[1];
@@ -350,7 +350,7 @@ export default function AdminCrearJugador() {
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
       safeSetField(form, 'Lugar de Nacimiento', extractedData.lugarNacimiento);
-      
+
       // DATOS DE AFILIADO
       safeSetField(form, 'Correo electrónico', extractedData.correo);
       safeSetField(form, 'Teléfono', extractedData.telefono);
@@ -372,7 +372,7 @@ export default function AdminCrearJugador() {
         safeSetField(form, 'Nacionalidades de la abuela paterna', extractedData.nacAbuelaPaterna);
         safeSetField(form, 'Nacionalidades del abuelo materno', extractedData.nacAbueloMaterno);
         safeSetField(form, 'Nacionalidades de la abuela materna', extractedData.nacAbuelaMaterna);
-        
+
         safeSetField(form, 'El jugador ha jugado en un Club extranjero...', extractedData.juegoClubExtranjero);
       }
 
@@ -400,7 +400,7 @@ export default function AdminCrearJugador() {
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `Formato_Afiliacion_${extractedData.nombreJugador || 'Jugador'}.pdf`;
@@ -409,7 +409,7 @@ export default function AdminCrearJugador() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      Swal.close(); 
+      Swal.close();
       return true; // Indicar éxito
     } catch (err) {
       console.error("Error PDF:", err);
@@ -429,7 +429,7 @@ export default function AdminCrearJugador() {
 
     // 1. Descargar el formato automáticamente
     const success = await handleDownloadFormato();
-    
+
     if (success) {
       // 2. Abrir el modal de finalización
       setShowFinishModal(true);
@@ -511,7 +511,7 @@ export default function AdminCrearJugador() {
       {/* HEADER */}
       <div style={{ marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button 
+          <button
             onClick={() => {
               const tieneDatos = Object.values(documents).some(d => d !== null) || extractedData.nombreJugador;
               if (tieneDatos) {
@@ -549,15 +549,15 @@ export default function AdminCrearJugador() {
             <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial en la liga.
           </p>
         </div>
-        
+
         {/* PASO 1: SELECCION DE EQUIPO */}
         <section style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
             <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Elección de equipo destino</h3>
           </div>
-          
-          <div style={{ 
+
+          <div style={{
             padding: '25px',
             borderRadius: '16px',
             border: isStep1Done ? '2px solid #10b981' : '2px solid #e2e8f0',
@@ -568,13 +568,13 @@ export default function AdminCrearJugador() {
               <label style={{ fontWeight: '700', fontSize: '14px', color: '#334155', marginBottom: '12px', display: 'block' }}>
                 Busca y elige el equipo donde se inscribirá el jugador <span className="required-star">*</span>
               </label>
-              
+
               <div style={{ position: 'relative' }}>
-                <select 
-                  className="form-select form-input-lg" 
-                  value={extractedData.equipoSeleccionado} 
-                  onChange={(e) => setExtractedData({...extractedData, equipoSeleccionado: e.target.value})}
-                  style={{ 
+                <select
+                  className="form-select form-input-lg"
+                  value={extractedData.equipoSeleccionado}
+                  onChange={(e) => setExtractedData({ ...extractedData, equipoSeleccionado: e.target.value })}
+                  style={{
                     border: 'none',
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
                     paddingRight: '40px'
@@ -606,17 +606,17 @@ export default function AdminCrearJugador() {
               <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
             </div>
 
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
-              gap: '20px' 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '20px'
             }}>
               {[
                 { key: 'actaNacimiento', title: 'Acta de Nacimiento' },
                 { key: 'identificacion', title: 'Identificación (INE/Pasaporte)' },
                 { key: 'fotografia', title: 'Fotografía Infantil' }
               ].map(doc => (
-                <div 
+                <div
                   key={doc.key}
                   className="document-card"
                   style={{
@@ -652,10 +652,10 @@ export default function AdminCrearJugador() {
                             <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
                           </div>
                         ) : (
-                          <img 
-                            src={previews[doc.key]} 
-                            alt="Preview" 
-                            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                          <img
+                            src={previews[doc.key]}
+                            alt="Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                           />
                         )}
 
@@ -672,7 +672,7 @@ export default function AdminCrearJugador() {
                           transition: 'opacity 0.2s ease',
                           backdropFilter: 'blur(2px)'
                         }}>
-                          <button 
+                          <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -694,7 +694,7 @@ export default function AdminCrearJugador() {
                           >
                             <FaSearchPlus />
                           </button>
-                          <button 
+                          <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -714,7 +714,7 @@ export default function AdminCrearJugador() {
                       </div>
                     ) : (
                       /* ESTADO VACÍO */
-                      <div 
+                      <div
                         onClick={() => document.getElementById(`file-${doc.key}`).click()}
                         style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
                       >
@@ -723,11 +723,11 @@ export default function AdminCrearJugador() {
                       </div>
                     )}
                   </div>
-                  
+
                   <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                  <div style={{ 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
                     gap: '6px',
                     padding: '4px 12px',
                     borderRadius: '20px',
@@ -738,10 +738,10 @@ export default function AdminCrearJugador() {
                   }}>
                     {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                   </div>
-                  <input 
-                    type="file" 
-                    id={`file-${doc.key}`} 
-                    style={{ display: 'none' }} 
+                  <input
+                    type="file"
+                    id={`file-${doc.key}`}
+                    style={{ display: 'none' }}
                     accept="image/*,.pdf"
                     onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                   />
@@ -751,7 +751,7 @@ export default function AdminCrearJugador() {
 
             {!isStep2Done && (
               <div style={{ textAlign: 'center', marginTop: '25px' }}>
-                <button 
+                <button
                   onClick={() => setFillManually(true)}
                   style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline' }}
                 >
@@ -774,10 +774,10 @@ export default function AdminCrearJugador() {
 
             {/* AVISO DE DISCREPANCIA OCR */}
             {ocrDataOriginal && (
-              <div className="fade-in" style={{ 
-                marginBottom: '20px', 
-                padding: '16px', 
-                borderRadius: '12px', 
+              <div className="fade-in" style={{
+                marginBottom: '20px',
+                padding: '16px',
+                borderRadius: '12px',
                 background: (
                   extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                   extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
@@ -797,13 +797,13 @@ export default function AdminCrearJugador() {
                 <div>
                   <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
                     {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? 
+                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
                       'Discrepancia detectada' : 'Datos validados con OCR'}
                   </h4>
                   <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
                     {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? 
-                      'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' : 
+                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
+                      'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
                       'La información coincide correctamente con la extracción inteligente de tus documentos.'}
                   </p>
                 </div>
@@ -813,61 +813,61 @@ export default function AdminCrearJugador() {
             {/* SECCIÓN 1: DATOS DEL AFILIADO */}
             {/* ... (Tarjeta content remains same, I'm just fixing the structure here) ... */}
             <Tarjeta titulo="1. Datos del afiliado" estilo={{ marginBottom: '20px' }}>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                 <EntradaFormulario
                   etiqueta={<>Nombre(s) <span className="required-star">*</span></>}
                   valor={extractedData.nombreJugador}
-                  alCambiar={(e) => setExtractedData({...extractedData, nombreJugador: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, nombreJugador: e.target.value })}
                 />
                 <EntradaFormulario
                   etiqueta={<>Apellido paterno <span className="required-star">*</span></>}
                   valor={extractedData.apellidoPaterno}
-                  alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })}
                 />
                 <EntradaFormulario
                   etiqueta={<>Apellido materno <span className="required-star">*</span></>}
                   valor={extractedData.apellidoMaterno}
-                  alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })}
                 />
                 <EntradaFormulario
                   etiqueta={<>CURP <span className="required-star">*</span></>}
                   valor={extractedData.curp}
-                  alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, curp: e.target.value.toUpperCase() })}
                   maxLength={18}
                 />
                 <EntradaFormulario
                   etiqueta={<>Lugar de nacimiento <span className="required-star">*</span></>}
                   valor={extractedData.lugarNacimiento}
-                  alCambiar={(e) => setExtractedData({...extractedData, lugarNacimiento: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })}
                 />
                 <EntradaFormulario
                   etiqueta={<>Fecha de nacimiento <span className="required-star">*</span></>}
                   tipo="date"
                   valor={extractedData.fechaNacimiento}
-                  alCambiar={(e) => setExtractedData({...extractedData, fechaNacimiento: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, fechaNacimiento: e.target.value })}
                 />
                 <EntradaSeleccion
                   etiqueta={<>Sexo <span className="required-star">*</span></>}
                   valor={extractedData.genero}
-                  alCambiar={(e) => setExtractedData({...extractedData, genero: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, genero: e.target.value })}
                   opciones={[{ valor: '1', etiqueta: 'Masculino' }, { valor: '2', etiqueta: 'Femenino' }]}
                 />
                 <EntradaFormulario
                   etiqueta={<>Correo electrónico <span className="required-star">*</span></>}
                   tipo="email"
                   valor={extractedData.correo}
-                  alCambiar={(e) => setExtractedData({...extractedData, correo: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, correo: e.target.value })}
                 />
                 <EntradaSeleccion
                   etiqueta="Tipo de afiliación"
                   valor={extractedData.tipoAfiliacion}
-                  alCambiar={(e) => setExtractedData({...extractedData, tipoAfiliacion: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, tipoAfiliacion: e.target.value })}
                   opciones={[{ valor: 'JUGADOR', etiqueta: 'Jugador' }, { valor: 'CUERPO_TECNICO', etiqueta: 'Cuerpo Técnico' }]}
                 />
                 <EntradaFormulario
                   etiqueta="Teléfono"
                   valor={extractedData.telefono}
-                  alCambiar={(e) => setExtractedData({...extractedData, telefono: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, telefono: e.target.value })}
                 />
                 <EntradaFormulario etiqueta="Asociación" valor={extractedData.asociacion} deshabilitado />
                 <EntradaFormulario etiqueta="Liga" valor={extractedData.liga} deshabilitado />
@@ -876,7 +876,7 @@ export default function AdminCrearJugador() {
                 <EntradaSeleccion
                   etiqueta="Posición"
                   valor={extractedData.posicion}
-                  alCambiar={(e) => setExtractedData({...extractedData, posicion: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, posicion: e.target.value })}
                   opciones={[
                     { valor: '', etiqueta: 'Seleccione...' },
                     { valor: 'PORTERO', etiqueta: 'Portero' },
@@ -889,13 +889,13 @@ export default function AdminCrearJugador() {
                   etiqueta="Camiseta"
                   tipo="number"
                   valor={extractedData.numCamiseta}
-                  alCambiar={(e) => setExtractedData({...extractedData, numCamiseta: e.target.value})}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, numCamiseta: e.target.value })}
                 />
                 <div style={{ gridColumn: '1 / -1' }}>
                   <AreaTexto
                     etiqueta="Dirección completa"
                     valor={extractedData.direccion}
-                    alCambiar={(e) => setExtractedData({...extractedData, direccion: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, direccion: e.target.value })}
                     filas={2}
                   />
                 </div>
@@ -909,12 +909,12 @@ export default function AdminCrearJugador() {
                   2. Antecedentes internacionales
                 </h4>
                 <div className="form-check form-switch">
-                  <input 
-                    className="form-check-input" 
-                    type="checkbox" 
-                    id="switchForaneo" 
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="switchForaneo"
                     checked={extractedData.esForaneo}
-                    onChange={(e) => setExtractedData({...extractedData, esForaneo: e.target.checked})}
+                    onChange={(e) => setExtractedData({ ...extractedData, esForaneo: e.target.checked })}
                   />
                   <label className="form-check-label" htmlFor="switchForaneo" style={{ fontSize: '13px', fontWeight: '700' }}>
                     ¿Jugador foráneo?
@@ -927,42 +927,42 @@ export default function AdminCrearJugador() {
                   <EntradaFormulario
                     etiqueta="Nacionalidad del jugador"
                     valor={extractedData.nacionalidadJugador}
-                    alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
                   />
                   <EntradaFormulario
                     etiqueta="País de residencia actual"
                     valor={extractedData.paisResidencia}
-                    alCambiar={(e) => setExtractedData({...extractedData, paisResidencia: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
                   />
                   <EntradaSeleccion
                     etiqueta="¿El jugador ha vivido en el extranjero?"
                     valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                    alCambiar={(e) => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, haVividoExtranjero: e.target.value === '1' })}
                     opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
                   />
                   {extractedData.haVividoExtranjero && (
                     <EntradaFormulario
                       etiqueta="¿En qué país?"
                       valor={extractedData.dondeVividoExtranjero}
-                      alCambiar={(e) => setExtractedData({...extractedData, dondeVividoExtranjero: e.target.value})}
+                      alCambiar={(e) => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
                     />
                   )}
                   <EntradaFormulario
                     etiqueta="Nacionalidades del padre"
                     valor={extractedData.nacionalidadPadre}
-                    alCambiar={(e) => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades de la madre"
                     valor={extractedData.nacionalidadMadre}
-                    alCambiar={(e) => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
                   />
-                  
+
                   <div style={{ gridColumn: '1 / -1' }}>
                     <AreaTexto
                       etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF."
                       valor={extractedData.registroAsociacionExtranjera}
-                      alCambiar={(e) => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})}
+                      alCambiar={(e) => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
                       filas={2}
                     />
                   </div>
@@ -970,51 +970,51 @@ export default function AdminCrearJugador() {
                   <EntradaFormulario
                     etiqueta="Nacionalidades del abuelo paterno"
                     valor={extractedData.nacAbueloPaterno}
-                    alCambiar={(e) => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades de la abuela paterna"
                     valor={extractedData.nacAbuelaPaterna}
-                    alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades del abuelo materno"
                     valor={extractedData.nacAbueloMaterno}
-                    alCambiar={(e) => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })}
                   />
                   <EntradaFormulario
                     etiqueta="Nacionalidades de la abuela materna"
                     valor={extractedData.nacAbuelaMaterna}
-                    alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})}
+                    alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })}
                   />
 
                   <div style={{ gridColumn: '1 / -1' }}>
                     <AreaTexto
                       etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?"
                       valor={extractedData.juegoClubExtranjero}
-                      alCambiar={(e) => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})}
+                      alCambiar={(e) => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
                       filas={3}
                     />
                   </div>
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                   El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos de antecedentes internacionales.
+                  El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos de antecedentes internacionales.
                 </p>
               )}
             </Tarjeta>
 
             {/* ACCIONES FINALES */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
-              <BotonSecundario 
-                etiqueta="Cancelar y volver" 
-                alHacerClick={() => navigate('/admin/jugadores')} 
+              <BotonSecundario
+                etiqueta="Cancelar y volver"
+                alHacerClick={() => navigate('/admin/jugadores')}
                 estilo={{ minWidth: '200px' }}
               />
-              <BotonPrimario 
-                etiqueta={uploading ? "Procesando..." : "Autorizar e Inscribir Jugador"} 
-                icono={<FaSave />} 
-                alHacerClick={handleGuardar} 
+              <BotonPrimario
+                etiqueta={uploading ? "Procesando..." : "Autorizar e Inscribir Jugador"}
+                icono={<FaSave />}
+                alHacerClick={handleGuardar}
                 deshabilitado={uploading}
                 estilo={{ minWidth: '300px' }}
               />
@@ -1031,26 +1031,26 @@ export default function AdminCrearJugador() {
         tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
         pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
       >
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           minHeight: '300px',
           backgroundColor: '#f1f5f9',
           borderRadius: '12px',
           overflow: 'hidden'
         }}>
           {previewDoc.type === 'pdf' ? (
-            <iframe 
-              src={previewDoc.url} 
-              style={{ width: '100%', height: '70vh', border: 'none' }} 
+            <iframe
+              src={previewDoc.url}
+              style={{ width: '100%', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />
           ) : (
-            <img 
-              src={previewDoc.url} 
-              alt="Preview Grande" 
-              style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }} 
+            <img
+              src={previewDoc.url}
+              alt="Preview Grande"
+              style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
             />
           )}
         </div>
@@ -1065,9 +1065,9 @@ export default function AdminCrearJugador() {
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setShowFinishModal(false)} />
-            <BotonPrimario 
-              etiqueta={uploading ? "Enviando..." : "Finalizar Inscripción"} 
-              icono={<FaCheckCircle />} 
+            <BotonPrimario
+              etiqueta={uploading ? "Enviando..." : "Finalizar Inscripción"}
+              icono={<FaCheckCircle />}
               alHacerClick={handleFinalizarInscripcion}
               deshabilitado={uploading || !signedForm}
             />
@@ -1075,28 +1075,28 @@ export default function AdminCrearJugador() {
         }
       >
         <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            backgroundColor: '#f0f9ff', 
-            border: '1px solid #bae6fd', 
-            borderRadius: '16px', 
-            padding: '20px', 
+          <div style={{
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '16px',
+            padding: '20px',
             marginBottom: '25px',
             color: '#0369a1',
             fontSize: '14px',
             lineHeight: '1.6'
           }}>
             <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
-               ¡Formato descargado con éxito!
+              ¡Formato descargado con éxito!
             </p>
             <p style={{ margin: 0 }}>
-              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada. 
+              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada.
               <strong> A continuación debe subir el formato ya firmado</strong> para finalizar con la inscripción de este nuevo jugador al equipo.
             </p>
           </div>
 
-          <div 
+          <div
             onClick={() => document.getElementById('final-signed-form').click()}
-            style={{ 
+            style={{
               border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
               borderRadius: '20px',
               padding: '40px 20px',
@@ -1118,16 +1118,16 @@ export default function AdminCrearJugador() {
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
               </div>
             )}
-            <input 
-              type="file" 
-              id="final-signed-form" 
-              style={{ display: 'none' }} 
+            <input
+              type="file"
+              id="final-signed-form"
+              style={{ display: 'none' }}
               accept=".pdf"
               onChange={(e) => {
                 if (e.target.files[0]) {
                   setSignedForm(e.target.files[0]);
                 }
-              }} 
+              }}
             />
           </div>
         </div>

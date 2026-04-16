@@ -32,10 +32,10 @@ export default function AdminEquipos() {
     loadEquipos();
   }, [navigate]);
 
-  const loadEquipos = async () => {
+  const loadEquipos = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const data = await getEquiposDirectorio();
+      const data = await getEquiposDirectorio(forceRefresh);
       setEquipos(data);
       setError(null);
     } catch (err) {
@@ -270,7 +270,7 @@ export default function AdminEquipos() {
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button 
             className="btn btn-primary"
-            onClick={() => window.location.reload()}
+            onClick={() => loadEquipos(true)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />

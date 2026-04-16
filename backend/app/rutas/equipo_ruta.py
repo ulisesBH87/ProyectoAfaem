@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 from app.core.seguridad import obtener_usuario_actual
 
-from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio
+from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
 from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
@@ -60,162 +60,18 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/crear-equipo-completo")
-async def crear_equipo_completo(
-    request: Request,
-    db: Session = Depends(get_db),
-    usuario = Depends(obtener_usuario_actual)
-):
+async def crear_equipo_completo(request: Request, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
         form_data = await request.form()
-        team_data_str = form_data.get("team_data")
-        players_data_str = form_data.get("players_data")
 
-        if not team_data_str or not players_data_str:
-            raise HTTPException(status_code=400, detail="Faltan datos de equipo o jugadores")
+        result = await crear_equipo_completo_servicio(form_data=form_data, db=db, usuario=usuario)
 
-        team_info = json.loads(team_data_str)
-        players_info = json.loads(players_data_str)
+        return result
 
-        # 1. Obtener PresidenteEquipoId
-        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
-        if not presidente:
-            raise HTTPException(status_code=403, detail="El usuario no es un presidente de equipo registrado")
-
-        # 2. Obtener o Crear Registro de Equipo (Unicidad por nombre insensible a mayúsculas)
-        nombre_equipo = team_info["nombre_equipo"]
-        equipo_existente = db.query(Equipos).filter(func.lower(Equipos.NombreEquipo) == func.lower(nombre_equipo)).first()
-
-        if equipo_existente:
-            nuevo_equipo = equipo_existente
-        else:
-            nuevo_equipo = Equipos(
-                NombreEquipo=nombre_equipo,
-                Estatus=True
-            )
-            db.add(nuevo_equipo)
-            db.flush() # Para obtener el EquipoId
-
-        # 3. Crear Registro en EquiposJugando
-        nueva_competencia = EquiposJugando(
-            EquipoId=nuevo_equipo.EquipoId,
-            RamaId=team_info["rama_id"],
-            CategoriaId=team_info["categoria_id"],
-            LigaId=team_info["liga_id"],
-            ModalidadId=team_info["modalidad_id"],
-            PresidenteEquipoId=presidente.PresidenteEquipoId,
-            CantidadJugadores=len(players_info)
-        )
-        db.add(nueva_competencia)
-        db.flush()
-
-        os.makedirs(DOCS_DIR, exist_ok=True)
-        LOGOS_DIR = os.path.join(UPLOAD_DIR, "logos")
-        os.makedirs(LOGOS_DIR, exist_ok=True)
-
-        # 3.5 Procesar Logo del Equipo
-        team_logo = form_data.get("team_logo")
-        if team_logo and isinstance(team_logo, UploadFile):
-            logo_ext = team_logo.filename.split(".")[-1]
-            logo_name = f"Logo_{nuevo_equipo.EquipoId}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{logo_ext}"
-            logo_path = os.path.join(LOGOS_DIR, logo_name)
-            
-            with open(logo_path, "wb") as buffer:
-                buffer.write(await team_logo.read())
-            
-            nuevo_equipo.RutaLogo = os.path.join("uploads", "logos", logo_name).replace("\\", "/")
-            db.flush()
-
-        # 4. Procesar Jugadores
-        for index, p_data in enumerate(players_info):
-            # a. Crear Persona
-            try:
-                nueva_persona = Personas(
-                    Nombre=p_data["nombre"],
-                    PrimerApellido=p_data["primer_apellido"],
-                    SegundoApellido=p_data.get("segundo_apellido"),
-                    CURP=p_data["curp"],
-                    SexoId=p_data["sexo_id"],
-                    FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None
-                )
-                db.add(nueva_persona)
-                db.flush()
-            except IntegrityError as e:
-                db.rollback()
-                if "check_curp_persona_longitud" in str(e):
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"La CURP '{p_data['curp']}' del jugador {p_data['nombre']} {p_data['primer_apellido']} debe tener exactamente 18 caracteres."
-                    )
-                else:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Error al registrar al jugador {p_data['nombre']} {p_data['primer_apellido']}: {str(e)}"
-                    )
-
-            # b. Crear Antecedentes si es extranjero
-            antecedentes_id = None
-            if p_data.get("extranjero"):
-                nuevos_antecedentes = AntecedentesInternacionales(
-                    Extranjero=True,
-                    Nacionalidades=p_data.get("nacionalidad"),
-                    PaisResidenciaActual=p_data.get("pais_residencia"),
-                    NacionalidadPadre=p_data.get("nacionalidad_padre"),
-                    NacionalidadMadre=p_data.get("nacionalidad_madre"),
-                    NacionalidadAbueloP=p_data.get("nac_abuelo_paterno"),
-                    NacionalidadAbuelaP=p_data.get("nac_abuela_paterna"),
-                    NacionalidadAbueloM=p_data.get("nac_abuelo_materno"),
-                    NacionalidadAbuelaM=p_data.get("nac_abuela_materna"),
-                    RegistroAsociacionExtranjera=p_data.get("registro_asociacion_extranjera"),
-                    ParticipacionExtranjera=p_data.get("juego_club_extranjero")
-                )
-                db.add(nuevos_antecedentes)
-                db.flush()
-                antecedentes_id = nuevos_antecedentes.AntecedentesId
-
-            # c. Crear MiembroEquipo (Usar rol proporcionado por el front)
-            nuevo_miembro = MiembrosEquipo(
-                PersonaId=nueva_persona.PersonaId,
-                RolEnEquipo=p_data.get("rol_en_equipo", 3), # Default 3 (Jugador)
-                EquipoID=nuevo_equipo.EquipoId,
-                Estatus=True,
-                Eliminado=False,
-                NumeroCamiseta=p_data.get("numero_camiseta"),
-                Extranjero=p_data.get("extranjero", False),
-                AntecedentesId=antecedentes_id
-            )
-            db.add(nuevo_miembro)
-
-            # c. Guardar Archivos del Jugador
-            doc_types = ["acta", "ine", "foto", "formato"]
-            for doc_type in doc_types:
-                file_key = f"player_{index}_{doc_type}"
-                archivo = form_data.get(file_key)
-                if archivo and isinstance(archivo, UploadFile):
-                    ext = archivo.filename.split(".")[-1]
-                    # Formato solicitado: Equipo_CURP_Tipo.ext (Agrego tipo para no sobreescribir)
-                    nombre_archivo = f"{nuevo_equipo.NombreEquipo}_{nueva_persona.CURP}_{doc_type}.{ext}".replace(" ", "_")
-                    ruta_archivo = os.path.join(DOCS_DIR, nombre_archivo)
-                    
-                    with open(ruta_archivo, "wb") as buffer:
-                        buffer.write(await archivo.read())
-                    
-                    # Aquí podrías registrar la ruta en la tabla de documentos si fuera necesario parse.
-                    # Por ahora el usuario sólo solicitó guardarlos físicamente.
-
-        # 4. Actualizar Estatus del Presidente y Rol del Usuario (Automatización Final)
-        presidente.EstatusId = 4  # En Revisión
-        usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario.UsuarioId).first()
-        if usuario_db:
-            usuario_db.RolId = 3  # Presidente de Equipo
-
-        db.commit()
-        return {"mensaje": "Equipo y jugadores creados exitosamente", "equipo_id": nuevo_equipo.EquipoId}
-
+    except HTTPException:
+        raise
     except Exception as e:
-        db.rollback()
-        print(f"Error en crear_equipo_completo: {str(e)}")
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error al procesar el registro")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/registrar-jugador")
 async def registrar_jugador(
@@ -340,6 +196,33 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
         print(f"Error en get_mis_jugadores_reales: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
+
+@router.get("/directorio-presidentes-activos")
+def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        # Buscamos presidentes que tengan una persona asociada
+        query = db.query(
+            PresidenteEquipo.PresidenteEquipoId,
+            Personas.Nombre,
+            Personas.PrimerApellido,
+            Personas.SegundoApellido
+        ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)
+        
+        resultados = query.all()
+        
+        return [
+            {
+                "id": r.PresidenteEquipoId,
+                "nombre": f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip()
+            } for r in resultados
+        ]
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al obtener directorio de presidentes: {str(e)}")
 
 # --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
 

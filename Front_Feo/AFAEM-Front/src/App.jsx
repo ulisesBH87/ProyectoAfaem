@@ -70,11 +70,11 @@ function App() {
     // Y verificar cada minuto para que funcione sin necesidad de recargar la página
     const intervalSesion = setInterval(verificarSesion, 60000); 
     
-    // Simular carga de la aplicación (Splash Screen)
+    // Simular carga de la aplicación (Splash Screen) - Reducido para mayor velocidad
     const timerCarga = setTimeout(() => {
       setEstaSaliendo(true);
-      setTimeout(() => setCargandoApp(false), 600);
-    }, 2000);
+      setTimeout(() => setCargandoApp(false), 400); // Salida más rápida
+    }, 400); // 400ms en lugar de 2000ms
 
     return () => {
       clearInterval(intervalSesion);
@@ -115,7 +115,7 @@ function App() {
             <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
             <Route path="/admin/pagos" element={<AdminGuard><AdminPagos /></AdminGuard>} />
             <Route path="/admin/equipos" element={<AdminGuard><AdminEquipos /></AdminGuard>} />
-            <Route path="/admin/equipos/crear" element={<AdminGuard><AdminCrearEquipo /></AdminGuard>} />
+            <Route path="/admin/equipos/crear" element={<AdminGuard><ConfigurarEquipo /></AdminGuard>} />
             <Route path="/admin/jugadores" element={<AdminGuard><AdminJugadores /></AdminGuard>} />
             <Route path="/admin/jugadores/crear" element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
             <Route path="/admin/catalogos" element={<AdminGuard><AdminCatalogos /></AdminGuard>} />

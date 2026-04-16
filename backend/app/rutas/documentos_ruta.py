@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from app.db.sesion import get_db
-from app.servicios.documentos_servicio import subir_documento_servicio, subir_documento_servicio2, proceso_presidente, presidente_solicitud
+from app.servicios.documentos_servicio import subir_documento_servicio2, proceso_presidente, presidente_solicitud
 from app.core.seguridad import obtener_usuario_actual
 
 router = APIRouter(prefix="/documentos", tags=["Documentos"])

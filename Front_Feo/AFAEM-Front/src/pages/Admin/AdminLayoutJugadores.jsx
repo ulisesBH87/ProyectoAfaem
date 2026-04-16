@@ -13,19 +13,23 @@ export default function AdminLayoutJugadores() {
   const [filtroEquipo, setFiltroEquipo] = useState(searchParams.get('equipo') || 'todos');
   const [copiedCell, setCopiedCell] = useState(null);
 
+  const fetchData = async (forceRefresh = false) => {
+    setLoading(true);
+    try {
+      const [j, e] = await Promise.all([
+        getJugadoresDirectorio(forceRefresh),
+        getEquiposDirectorio(forceRefresh)
+      ]);
+      setJugadores(j || []);
+      setEquipos(e || []);
+    } catch (err) {
+      console.error('Error cargando datos:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [j, e] = await Promise.all([getJugadoresDirectorio(), getEquiposDirectorio()]);
-        setJugadores(j || []);
-        setEquipos(e || []);
-      } catch (err) {
-        console.error('Error cargando datos:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
@@ -97,7 +101,7 @@ export default function AdminLayoutJugadores() {
           </p>
         </div>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => fetchData()} // Recarga asíncrona en lugar de reload()
           style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: '#334155' }}
         >
           <FaSyncAlt />
@@ -178,10 +182,8 @@ export default function AdminLayoutJugadores() {
                     <CeldaCopia value={j.EquipoNombre} id={`equipo-${idx}`} />
                     <CeldaCopia value={j.Liga} id={`liga-${idx}`} />
                     <CeldaCopia value={j.Email} id={`email-${idx}`} />
-                    <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX') : null} id={`fnac-${idx}`} />
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '12px', color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
-                    </td>
+                    <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX', {timeZone:'UTC'}) : null} id={`fnac-${idx}`} />
+                    <CeldaCopia value={j.NUI} id={`nui-${idx}`} />
                   </tr>
                 ))
               )}

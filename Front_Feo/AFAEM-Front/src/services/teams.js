@@ -46,9 +46,9 @@ const getTeamsLocally = (email) => {
   try {
     const allTeams = JSON.parse(localStorage.getItem('teams') || '[]');
     const userTeams = allTeams.filter(team => team.owner_email.toLowerCase() === email.toLowerCase());
-    
+
     console.log('📋 Equipos obtenidos desde localStorage:', userTeams);
-    
+
     return {
       teams: userTeams,
       total: userTeams.length,
@@ -111,7 +111,7 @@ export const createTeam = async (teamData) => {
     return response.data;
   } catch (error) {
     console.warn('⚠️ Backend no disponible, guardando equipo en localStorage...', error.message);
-    
+
     // FALLBACK: GUARDAR EN LOCALSTORAGE SI EL BACKEND NO ESTÁ DISPONIBLE
     return saveTeamLocally(teamData);
   }
@@ -124,10 +124,10 @@ const saveTeamLocally = (teamData) => {
   try {
     // OBTENER EQUIPOS EXISTENTES
     const existingTeams = JSON.parse(localStorage.getItem('teams') || '[]');
-    
+
     // GENERAR ID
-    const newId = existingTeams.length > 0 
-      ? Math.max(...existingTeams.map(t => t.id)) + 1 
+    const newId = existingTeams.length > 0
+      ? Math.max(...existingTeams.map(t => t.id)) + 1
       : 1;
 
     // CREAR EQUIPO (SIN ARCHIVOS, SOLO REFERENCIAS)
@@ -295,48 +295,69 @@ export const getCatalogs = async () => {
 };
 
 /**
+ * OBTIENE EL DIRECTORIO DE PRESIDENTES ACTIVOS (PARA ADMIN)
+ */
+export const getPresidentesActivos = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/equipo-temporal/directorio-presidentes-activos`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo directorio de presidentes:', error);
+    throw error;
+  }
+};
+
+/**
  * CREA UN EQUIPO COMPLETO CON JUGADORES Y DOCUMENTOS (EN LA BD REAL)
  */
 export const createTeamCompleto = async (data) => {
   try {
     const token = localStorage.getItem('token');
     const formData = new FormData();
-    
+
     // Separamos metadatos de archivos
     const teamMetadata = {
       nombre_equipo: data.teamName,
       liga_id: data.liga_id,
       modalidad_id: data.modalidad_id,
       categoria_id: data.categoria_id,
-      rama_id: data.rama_id
+      rama_id: data.rama_id,
+      presidente_id: data.presidente_id
     };
-    
+
     const playersMetadata = data.players.map((p, index) => ({
       nombre: p.firstName,
       primer_apellido: p.lastNamePaterno,
       segundo_apellido: p.lastNameMaterno,
       curp: p.curp,
+      nui: p.nui,
+      lugar_nacimiento: p.lugarNacimiento,
+      correo: p.email,
+      telefono: p.telefono,
       sexo_id: p.sexo_id,
       fecha_nacimiento: p.birthDate,
       seguro_tipo_id: p.insuranceType,
       numero_camiseta: p.shirtNumber,
       extranjero: p.esForaneo,
       nacionalidad: p.nacionalidadJugador,
-      pais_residencia: p.paisResidenciaActual,
+      pais_residencia: p.paisResidencia,
       nacionalidad_padre: p.nacionalidadPadre,
       nacionalidad_madre: p.nacionalidadMadre,
-      nac_abuelo_paterno: p.nacionalidadAbueloP,
-      nac_abuela_paterna: p.nacionalidadAbuelaP,
-      nac_abuelo_materno: p.nacionalidadAbueloM,
-      nac_abuela_materna: p.nacionalidadAbuelaM,
+      nac_abuelo_paterno: p.nacAbueloPaterno,
+      nac_abuela_paterna: p.nacAbuelaPaterna,
+      nac_abuelo_materno: p.nacAbueloMaterno,
+      nac_abuela_materna: p.nacAbuelaMaterna,
       registro_asociacion_extranjera: p.registroAsociacionExtranjera,
-      juego_club_extranjero: p.participacionExtranjera,
+      juego_club_extranjero: p.juegoClubExtranjero,
       rol_en_equipo: p.positionId
     }));
 
     formData.append('team_data', JSON.stringify(teamMetadata));
     formData.append('players_data', JSON.stringify(playersMetadata));
-    
+
     // Adjuntar archivo de logo del equipo si existe
     if (data.teamLogo) {
       formData.append('team_logo', data.teamLogo);
@@ -351,7 +372,7 @@ export const createTeamCompleto = async (data) => {
     });
 
     const response = await api.post('/equipo-temporal/crear-equipo-completo', formData, {
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'multipart/form-data'
       }
@@ -393,5 +414,6 @@ export default {
   registrarJugadorTemporal,
   getAvailableSlots,
   getEquipoTemporalInfo,
+  getPresidentesActivos,
   finalizarSolicitudCompleta
 };

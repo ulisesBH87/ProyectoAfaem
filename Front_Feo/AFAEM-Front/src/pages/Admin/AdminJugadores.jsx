@@ -29,10 +29,10 @@ export default function AdminJugadores() {
   const [haCambiado, setHaCambiado] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  const loadJugadores = async () => {
+  const loadJugadores = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const data = await getJugadoresDirectorio();
+      const data = await getJugadoresDirectorio(forceRefresh);
       setJugadores(data);
       setError(null);
     } catch (err) {
@@ -327,7 +327,7 @@ export default function AdminJugadores() {
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button 
             className="btn btn-primary"
-            onClick={() => window.location.reload()}
+            onClick={() => loadJugadores(true)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
