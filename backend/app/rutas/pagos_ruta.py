@@ -49,10 +49,12 @@ def obtener_pagos(service: PagosServicio = Depends(get_pagos_servicio)):
 
     return pagos
 
-@router.get("/{orden_pago_id}", response_model=OrdenPagoIndividual)
-def orden_pago_individual(orden_pago_id: int, service: PagosServicio=Depends(get_pagos_servicio)):
+@router.get("/mi-estado")
+def mi_estado_pago(service: PagosServicio = Depends(get_pagos_servicio), usuario = Depends(obtener_usuario_actual)):
+    """Devuelve el estatus de pago más reciente del usuario autenticado."""
+    orden = service.mi_estado_pago(usuario.UsuarioId)
 
-    return service.orden_pago_individual(orden_pago_id)
+    return orden
 
 #Cambiar el estatus de pago
 @router.post("/estatus-pago")
@@ -61,9 +63,7 @@ def estatus_pago(orden_pago_id: int, estatus: int, service: PagosServicio = Depe
 
     return response
 
-@router.get("/mi-estado")
-def mi_estado_pago(service: PagosServicio = Depends(get_pagos_servicio), usuario = Depends(obtener_usuario_actual)):
-    """Devuelve el estatus de pago más reciente del usuario autenticado."""
-    orden = service.mi_estado_pago(usuario.UsuarioId)
+@router.get("/{orden_pago_id}", response_model=OrdenPagoIndividual)
+def orden_pago_individual(orden_pago_id: int, service: PagosServicio=Depends(get_pagos_servicio)):
 
-    return orden
+    return service.orden_pago_individual(orden_pago_id)
