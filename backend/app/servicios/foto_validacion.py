@@ -109,6 +109,12 @@ def validacion_fotografia(imagen_bytes):
 
     if imagen_bgr is None:
         return 0, "No se pudo cargar la imagen"
+    
+    # RESOLUCION, DIMENSIONES, COLOR
+    for funcion in [resolucion, dimensiones, formato_color, iluminacion_foto]:
+        valido, mensaje = funcion(imagen_bgr if funcion != resolucion else imagen_bytes)
+        if not valido:
+            return 0, mensaje
 
     # =============================
     # DETECTAR ANTES DE LA ROTACION 
@@ -157,12 +163,6 @@ def validacion_fotografia(imagen_bytes):
      # =====================
     # CRITERIOS PRE-RECORTE 
     # =====================
-
-    # RESOLUCION, DIMENSIONES, COLOR
-    for funcion in [resolucion, dimensiones, formato_color, iluminacion_foto]:
-        valido, mensaje = funcion(imagen_bgr if funcion != resolucion else imagen_bytes)
-        if not valido:
-            return 0, mensaje
     
     # ROSTRO COPLETO
     valido, mensaje = rostro_completo(imagen_bgr, face_landmarks)
@@ -180,7 +180,8 @@ def validacion_fotografia(imagen_bytes):
         return 0, mensaje
 
     # RECORTAR FOTO
-    imagen_recortada= recortar_foto(imagen_bgr, face_landmarks)
+    #imagen_recortada= recortar_foto(imagen_bgr, face_landmarks)
+    imagen_recortada= recortar_foto(imagen_bgr, category_mask, pose_landmarks)
     
     
     # ============================
@@ -205,9 +206,9 @@ def validacion_fotografia(imagen_bytes):
     
     # FONDO BLANCO
     imagen_validada = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
-
+    
     #ILUMINACION DEL ROSTRO
-    valido, mensaje = iluminacion_rostro(imagen_validada, face_landmarks)
+    valido, mensaje = iluminacion_persona(imagen_validada, face_landmarks)
     if not valido:
         return 0, mensaje
     
@@ -231,8 +232,6 @@ def validacion_fotografia(imagen_bytes):
     if not valido:
         return 0, mensaje 
     
-    # --- CRITERIOS PARA LA FOTO ---
-    
     # OJOS ABIERTOS
     valido, mensaje = ojos_abiertos(imagen_validada.shape, face_landmarks)
     if not valido:
@@ -249,10 +248,10 @@ def validacion_fotografia(imagen_bytes):
         return 0, mensaje 
     
     # CABEZA INCLINADA
-    valido, mensaje = inclinacion_vertical(face_landmarks)
+    valido, mensaje = orientacion(face_landmarks)
     if not valido:
         return 0, mensaje
-
+    
     # --- RESULTADO FINAL ---
     
     _, buffer = cv2.imencode(".jpg", imagen_validada)

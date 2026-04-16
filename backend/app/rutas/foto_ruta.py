@@ -29,7 +29,7 @@ async def validar_archivo(file: UploadFile = File(...)): #|definir una función 
     valido, resultados = validacion_fotografia(contenido)
     #imagen_base64 = base64.b64encode(contenido).decode('utf-8') #Codificar la imagen a base64 para enviarla al frontend
     
-    if valido == 1:
+    if valido:
 
         imagen_base64 = base64.b64encode(resultados).decode('utf-8')
         razon = None
@@ -37,7 +37,7 @@ async def validar_archivo(file: UploadFile = File(...)): #|definir una función 
             "valido": True,
             "imagen": imagen_base64,
             "tipo_imagen": "image/jpg",
-            "mensaje": f"Fotografía aprobada"
+            "mensaje": "Fotografía aprobada"
             }
     
     else:
@@ -46,5 +46,5 @@ async def validar_archivo(file: UploadFile = File(...)): #|definir una función 
 
         return {
             "valido": False,
-            "mensaje": f"Fotografía no aprobada: {razon}"
+            "mensaje": f"{razon}"
         }
