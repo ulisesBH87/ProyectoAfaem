@@ -460,6 +460,29 @@ export default function AdminCrearJugador() {
       return;
     }
 
+    if (extractedData.esForaneo) {
+      const {
+        nacionalidadJugador, paisResidencia, dondeVividoExtranjero, haVividoExtranjero,
+        nacionalidadPadre, nacionalidadMadre, registroAsociacionExtranjera,
+        nacAbueloPaterno, nacAbuelaPaterna, nacAbueloMaterno, nacAbuelaMaterna,
+        juegoClubExtranjero
+      } = extractedData;
+      
+      const basicosForaneo = [
+        nacionalidadJugador, paisResidencia, nacionalidadPadre, nacionalidadMadre,
+        registroAsociacionExtranjera, nacAbueloPaterno, nacAbuelaPaterna, 
+        nacAbueloMaterno, nacAbuelaMaterna, juegoClubExtranjero
+      ];
+      
+      const completado = basicosForaneo.every(campo => String(campo || '').trim() !== '');
+      const vivoValid = !haVividoExtranjero || (haVividoExtranjero && String(dondeVividoExtranjero || '').trim() !== '');
+      
+      if (!completado || !vivoValid) {
+        Swal.fire('Atención', 'Al seleccionar que el jugador es extranjero, TODOS los campos de antecedentes internacionales deben ser llenados.', 'warning');
+        return;
+      }
+    }
+
     // 1. Descargar el formato automáticamente
     const success = await handleDownloadFormato();
 
@@ -731,14 +754,15 @@ export default function AdminCrearJugador() {
           </div>
         </section>
 
-        {/* PREVISUALIZACIÓN DE DATOS PARA EXTRANJEROS */}
+        {/* PREVISUALIZACIÓN DE DATOS Y ANTECEDENTES PARA EXTRANJEROS */}
         {extractedData.esForaneo && !showStep3 && (
           <section className="fade-in" style={{ marginBottom: '40px', padding: '24px', background: '#f0f9ff', borderRadius: '16px', border: '1px solid #bae6fd' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
               <FaMapMarkerAlt style={{ color: '#0369a1' }} />
-              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>Pre-llenado de Identidad para Extranjero</h4>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>Pre-llenado de Identidad y Antecedentes Internacionales</h4>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
               <EntradaFormulario
                 etiqueta="Nombre(s)"
                 valor={extractedData.nombreJugador}
@@ -750,13 +774,93 @@ export default function AdminCrearJugador() {
                 alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
               />
               <EntradaFormulario
-                etiqueta="País de Origen"
+                etiqueta="Nacionalidad del jugador (País de Origen)"
                 valor={extractedData.nacionalidadJugador}
-                alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
+                obligatorio={true}
               />
+              <EntradaFormulario
+                etiqueta="País de residencia actual"
+                valor={extractedData.paisResidencia}
+                alCambiar={(e) => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaSeleccion
+                etiqueta="¿El jugador ha vivido en el extranjero?"
+                valor={extractedData.haVividoExtranjero ? '1' : '0'}
+                alCambiar={(e) => setExtractedData({ ...extractedData, haVividoExtranjero: e.target.value === '1' })}
+                opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
+                obligatorio={true}
+              />
+              {extractedData.haVividoExtranjero && (
+                <EntradaFormulario
+                  etiqueta="¿En qué país?"
+                  valor={extractedData.dondeVividoExtranjero}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
+                  obligatorio={true}
+                />
+              )}
+              <EntradaFormulario
+                etiqueta="Nacionalidades del padre"
+                valor={extractedData.nacionalidadPadre}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades de la madre"
+                valor={extractedData.nacionalidadMadre}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
+                obligatorio={true}
+              />
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <AreaTexto
+                  etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF."
+                  valor={extractedData.registroAsociacionExtranjera}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
+                  filas={2}
+                  obligatorio={true}
+                />
+              </div>
+
+              <EntradaFormulario
+                etiqueta="Nacionalidades del abuelo paterno"
+                valor={extractedData.nacAbueloPaterno}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades de la abuela paterna"
+                valor={extractedData.nacAbuelaPaterna}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades del abuelo materno"
+                valor={extractedData.nacAbueloMaterno}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })}
+                obligatorio={true}
+              />
+              <EntradaFormulario
+                etiqueta="Nacionalidades de la abuela materna"
+                valor={extractedData.nacAbuelaMaterna}
+                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })}
+                obligatorio={true}
+              />
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <AreaTexto
+                  etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?"
+                  valor={extractedData.juegoClubExtranjero}
+                  alCambiar={(e) => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
+                  filas={3}
+                  obligatorio={true}
+                />
+              </div>
             </div>
+            
             <p style={{ margin: '15px 0 0', fontSize: '12px', color: '#0c4a6e', fontStyle: 'italic' }}>
-              💡 Al ser extranjero, puedes adelantar estos datos. Se validarán automáticamente al subir los documentos abajo.
+              💡 Al ser extranjero, debes completar todos estos antecedentes internacionales. Se validarán automáticamente al subir los documentos.
             </p>
           </section>
         )}
@@ -1009,170 +1113,6 @@ export default function AdminCrearJugador() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
-                  <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({...extractedData, numCamiseta: e.target.value})} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo</label>
-                  <select value={extractedData.posicion} onChange={e => setExtractedData({...extractedData, posicion: parseInt(e.target.value) || ''})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
-                    <option value="">Posición...</option>
-                    {(catalogs?.roles_equipo || []).map(r => (
-                      <option key={r.id} value={r.id}>{r.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP o Identificador <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.curp || ''} onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    let sId = extractedData.genero;
-                    if (val.length >= 11) {
-                      const char = val.charAt(10);
-                      if (char === 'M') sId = 2; // Femenino
-                      else if (char === 'H') sId = 1; // Masculino
-                    }
-                    setExtractedData({...extractedData, curp: val, genero: sId});
-                  }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI</label>
-                  <input type="text" value={extractedData.nui || ''} onChange={e => setExtractedData({...extractedData, nui: e.target.value})} placeholder="NUI o Id FMF..." style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
-                  <input type="date" value={extractedData.fechaNacimiento || ''} onChange={e => setExtractedData({...extractedData, fechaNacimiento: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({...extractedData, lugarNacimiento: e.target.value})} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                  <select value={extractedData.genero || ""} onChange={e => setExtractedData({...extractedData, genero: parseInt(e.target.value) || ''})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
-                    <option value="">Seleccione...</option>
-                    <option value={1}>MASCULINO</option>
-                    <option value={2}>FEMENINO</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                  <input type="email" value={extractedData.correo} onChange={e => setExtractedData({...extractedData, correo: e.target.value})} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Número de Teléfono</label>
-                  <input type="tel" value={extractedData.telefono} onChange={e => setExtractedData({...extractedData, telefono: e.target.value})} placeholder="10 dígitos numericos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-              </div>
-
-            </div>
-
-            {/* SECCIÓN 2: ANTECEDENTES INTERNACIONALES */}
-            <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
-                  2. Antecedentes internacionales
-                </h4>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>¿Jugador foráneo?</label>
-                  <div className="form-check form-switch" style={{ margin: 0, padding: 0, minHeight: 'auto' }}>
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      checked={extractedData.esForaneo}
-                      onChange={e => setExtractedData({...extractedData, esForaneo: e.target.checked})}
-                      style={{ cursor: 'pointer', margin: 0, width: '36px', height: '20px' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {extractedData.esForaneo ? (
-                <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginTop: '20px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad del jugador</label>
-                      <input type="text" value={extractedData.nacionalidadJugador} onChange={e => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>País de residencia actual</label>
-                      <input type="text" value={extractedData.paisResidencia} onChange={e => setExtractedData({...extractedData, paisResidencia: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', alignItems: 'end' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿El jugador ha vivido en el extranjero?</label>
-                      <select value={extractedData.haVividoExtranjero ? '1' : '0'} onChange={e => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: 'white' }}>
-                        <option value="0">No</option>
-                        <option value="1">Sí</option>
-                      </select>
-                    </div>
-                    {extractedData.haVividoExtranjero && (
-                      <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿En qué país?</label>
-                        <input type="text" value={extractedData.dondeVividoExtranjero} onChange={e => setExtractedData({...extractedData, dondeVividoExtranjero: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad del padre</label>
-                      <input type="text" value={extractedData.nacionalidadPadre} onChange={e => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad de la madre</label>
-                      <input type="text" value={extractedData.nacionalidadMadre} onChange={e => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>El jugador ha sido registrado por la Asoc. Nac. (Extranjero) previo a solicitud en FMF</label>
-                    <textarea rows="2" value={extractedData.registroAsociacionExtranjera} onChange={e => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}></textarea>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad(es) Abuelo Paterno</label>
-                      <input type="text" value={extractedData.nacAbueloPaterno} onChange={e => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad(es) Abuela Paterna</label>
-                      <input type="text" value={extractedData.nacAbuelaPaterna} onChange={e => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad(es) Abuelo Materno</label>
-                      <input type="text" value={extractedData.nacAbueloMaterno} onChange={e => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad(es) Abuela Materna</label>
-                      <input type="text" value={extractedData.nacAbuelaMaterna} onChange={e => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿El jugador ha jugado en un Club extranjero o participado en torneos internacionales escolares (campeonatos, cursos)?</label>
-                    <textarea rows="3" value={extractedData.juegoClubExtranjero} onChange={e => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}></textarea>
-                  </div>
-                </div>
-              ) : (
-                <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic', padding: '10px 0' }}>
-                  El jugador se considera nacional por defecto. Activa el interruptor para habilitar los campos.
-                </p>
-              )}
-            </div>
 
             {/* ACCIONES FINALES */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>

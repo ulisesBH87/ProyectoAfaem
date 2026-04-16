@@ -35,7 +35,7 @@ const DashboardTable = ({
           <thead>
             <tr>
               {columns.map((col, idx) => (
-                <th key={idx}>{col.label}</th>
+                <th key={idx} style={col.width ? { width: col.width } : {}}>{col.label}</th>
               ))}
             </tr>
           </thead>
@@ -48,7 +48,7 @@ const DashboardTable = ({
                   style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                 >
                   {columns.map((col, colIdx) => (
-                    <td key={colIdx}>
+                    <td key={colIdx} style={col.width ? { width: col.width } : {}}>
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>
                   ))}

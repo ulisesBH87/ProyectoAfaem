@@ -112,6 +112,8 @@ const DashboardSidebar = () => {
             if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
             // Ocultar Auditorías temporalmente del sidebar (sin borrar)
             if (item.Nombre === 'Auditorías') return false;
+            // Ocultar Inicio y Solicitudes para Presidente de Equipo
+            if (!isAdmin && (item.Nombre === 'Inicio' || item.Nombre === 'Solicitudes' || item.Nombre === 'Dashboard')) return false;
 
             return true;
           })

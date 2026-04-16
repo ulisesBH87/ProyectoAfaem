@@ -289,6 +289,7 @@ export default function AdminSolicitudes() {
     {
       key: 'SolicitudId',
       label: 'ID Solicitud',
+      width: '10%',
       render: (value, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>#{value || '-'}</span>
@@ -299,6 +300,7 @@ export default function AdminSolicitudes() {
     {
       key: 'Equipo',
       label: 'Equipo / Usuario',
+      width: '25%',
       render: (value, row) => (
         <div>
           <div style={{ fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -324,6 +326,7 @@ export default function AdminSolicitudes() {
     {
       key: 'FechaSolicitud',
       label: 'Fecha de Solicitud',
+      width: '15%',
       render: (fecha) => {
         if (!fecha) return '-';
         try {
@@ -343,6 +346,7 @@ export default function AdminSolicitudes() {
     {
       key: 'Monto',
       label: 'Monto',
+      width: '10%',
       render: (value) => value ? (
         <span style={{ fontWeight: '700', color: 'var(--primary)' }}>
           ${parseFloat(value).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
@@ -352,6 +356,7 @@ export default function AdminSolicitudes() {
     {
       key: 'EstatusValidacion',
       label: 'Estado',
+      width: '15%',
       render: (estatus) => {
         let badgeClass = 'badge-warning';
         let label = 'Pendiente';
@@ -366,7 +371,7 @@ export default function AdminSolicitudes() {
           badgeClass = 'badge-warning';
           label = 'Pendiente';
         } else if (estatus === 4) {
-          badgeClass = 'badge-primary'; // Usamos badge-primary que sí existe en dashboard.css
+          badgeClass = 'badge-primary';
           label = 'Revisión Docs';
         }
 
@@ -380,6 +385,7 @@ export default function AdminSolicitudes() {
     {
       key: 'acciones',
       label: 'Acciones',
+      width: '25%',
       render: (_, row) => (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <button
