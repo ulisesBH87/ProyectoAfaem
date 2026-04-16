@@ -455,6 +455,17 @@ def crear_solicitud_administrativa(db, usuario_id):
     db.flush()
     return solicitud.SolicitudId
 
+def crear_solicitud_presidente(db, usuario_id):
+    solicitud = Solicitud(
+        UsuarioId=usuario_id,
+        FechaSolicitud=datetime.now(),
+        EstatusValidacion=int(EstatusValidacionSolicitud.ACEPTADO),
+        ObservacionesSolicitud="Solicitud de registro de equipo por presidente"
+    )
+    db.add(solicitud)
+    db.flush()
+    return solicitud.SolicitudId
+
 
 def obtener_presidente(db, usuario, team_info):
     rol_id = getattr(usuario, 'RolId', None)
