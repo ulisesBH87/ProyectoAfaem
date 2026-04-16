@@ -181,11 +181,20 @@ function RegistrarseCuenta() {
 
 									<div style={{ gridColumn: 'span 2' }}>
 										<div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-											{Object.entries(pwInfo.rules).map(([key, met]) => (
-												<span key={key} style={{ fontSize: '10px', color: met ? 'var(--secondary)' : 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-													{met ? '✅' : '⬜'} {key === 'minLen' ? '6+ car.' : key.replace('has', '').toLowerCase()}
-												</span>
-											))}
+											{Object.entries(pwInfo.rules).map(([key, met]) => {
+												const labels = {
+													minLen: '8+ car.',
+													hasLower: 'minús.',
+													hasUpper: 'mayús.',
+													hasDigit: 'número',
+													hasSpecial: 'especial'
+												};
+												return (
+													<span key={key} style={{ fontSize: '10px', color: met ? 'var(--secondary)' : 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+														{met ? '✅' : '⬜'} {labels[key]}
+													</span>
+												);
+											})}
 										</div>
 									</div>
 

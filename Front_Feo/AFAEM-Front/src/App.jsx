@@ -26,6 +26,7 @@ const AdminCrearJugador = lazy(() => import('./pages/Admin/AdminCrearJugador'));
 const AdminCatalogos = lazy(() => import('./pages/Admin/AdminCatalogos'));
 const AdminPresidentes = lazy(() => import('./pages/Admin/AdminPresidentes'));
 const AdminAuditorias = lazy(() => import('./pages/Admin/AdminAuditorias'));
+const AdminLayoutJugadores = lazy(() => import('./pages/Admin/AdminLayoutJugadores'));
 const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
 const AdminGuard = lazy(() => import('./routes/AdminGuard'));
 const PresidenteGuard = lazy(() => import('./routes/PresidenteGuard'));
@@ -44,7 +45,7 @@ function App() {
   const [estaSaliendo, setEstaSaliendo] = useState(false);
   const userEmail = localStorage.getItem('email') || 'usuario@afaem.com';
 
-  // CONTROL DE SESIÓN (5 HORAS)
+  // CONTROL DE SESIÓN (5 HORAS CONTINUO)
   useEffect(() => {
     const verificarSesion = () => {
       const token = localStorage.getItem('token');
@@ -53,24 +54,32 @@ function App() {
       if (token && timestamp) {
         const cincoHoras = 5 * 60 * 60 * 1000;
         const ahora = Date.now();
+        const tiempoTranscurrido = ahora - parseInt(timestamp);
         
-        if (ahora - parseInt(timestamp) > cincoHoras) {
+        if (tiempoTranscurrido > cincoHoras) {
           console.warn('⚠️ Sesión expirada después de 5 horas.');
           localStorage.clear();
-          window.location.href = '/ingresar';
+          window.location.href = '/ingresar?motivo=sesion_expirada';
         }
       }
     };
 
+    // Ejecutar inmediatamente al cargar
     verificarSesion();
     
-    // Simular carga de la aplicación (Splash Screen)
+    // Y verificar cada minuto para que funcione sin necesidad de recargar la página
+    const intervalSesion = setInterval(verificarSesion, 60000); 
+    
+    // Simular carga de la aplicación (Splash Screen) - Reducido para mayor velocidad
     const timerCarga = setTimeout(() => {
       setEstaSaliendo(true);
-      setTimeout(() => setCargandoApp(false), 600); // Dar tiempo al fade-out de 0.6s
-    }, 2000);
+      setTimeout(() => setCargandoApp(false), 400); // Salida más rápida
+    }, 400); // 400ms en lugar de 2000ms
 
-    return () => clearTimeout(timerCarga);
+    return () => {
+      clearInterval(intervalSesion);
+      clearTimeout(timerCarga);
+    };
   }, []);
 
   return (
@@ -106,12 +115,13 @@ function App() {
             <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
             <Route path="/admin/pagos" element={<AdminGuard><AdminPagos /></AdminGuard>} />
             <Route path="/admin/equipos" element={<AdminGuard><AdminEquipos /></AdminGuard>} />
-            <Route path="/admin/equipos/crear" element={<AdminGuard><AdminCrearEquipo /></AdminGuard>} />
+            <Route path="/admin/equipos/crear" element={<AdminGuard><ConfigurarEquipo /></AdminGuard>} />
             <Route path="/admin/jugadores" element={<AdminGuard><AdminJugadores /></AdminGuard>} />
             <Route path="/admin/jugadores/crear" element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
             <Route path="/admin/catalogos" element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
             <Route path="/admin/presidentes" element={<AdminGuard><AdminPresidentes /></AdminGuard>} />
             <Route path="/admin/auditorias" element={<AdminGuard><AdminAuditorias /></AdminGuard>} />
+            <Route path="/admin/layout-jugadores" element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path="/admin/usuarios-roles" element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path="/admin/configuracion" element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
           </Route>

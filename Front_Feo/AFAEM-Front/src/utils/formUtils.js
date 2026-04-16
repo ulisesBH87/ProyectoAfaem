@@ -5,7 +5,7 @@ import { getErrorMessage } from './errorHandler';
 export function computePasswordRequirements(pw) {
 	const value = pw || '';
 	const rules = {
-		minLen: value.length >= 6,
+		minLen: value.length >= 8,
 		hasLower: /[a-z]/.test(value),
 		hasUpper: /[A-Z]/.test(value),
 		hasDigit: /\d/.test(value),
@@ -19,7 +19,7 @@ export function validateField(name, value, formData = {}) {
 	if (name === 'Contrasena') {
 		const pw = value || '';
 		if (!pw) return 'La contraseña es obligatoria';
-		if (pw.length < 6) return 'Debe tener mínimo 6 caracteres';
+		if (pw.length < 8) return 'Debe tener mínimo 8 caracteres';
 		if (!/[a-z]/.test(pw)) return 'Debe tener al menos una minúscula';
 		if (!/[A-Z]/.test(pw)) return 'Debe tener al menos una mayúscula';
 		if (!/\d/.test(pw)) return 'Debe tener al menos un número';

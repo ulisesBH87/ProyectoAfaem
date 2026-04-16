@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import {
-  FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash,
-  FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft
-} from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
+import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
+import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo } from '../../services/admin';
 
 /* ─── Catálogos ─── */
-const CATALOGO_SEGUROS = [
+const CATALOGO_SEGUROS_INICIAL = [
   { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege ante accidentes deportivos.',   precio: 150 },
   { id: '2', nombre: 'Seguro de vida',           descripcion: 'Cobertura en caso de fallecimiento.',   precio: 200 },
   { id: '3', nombre: 'Seguro médico',            descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 },
@@ -23,6 +21,30 @@ const REQUISITOS = [
   { documento: 'identificacion',    nombre: 'Identificación oficial',         icon: '🪪' },
   { documento: 'fotografia',        nombre: 'Fotografía (Imagen)',            icon: '📸' },
   { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado',  icon: '📝', hasDownload: true },
+];
+
+/* ─── Catálogos para Selectores ─── */
+const CATALOGO_LIGAS = [
+  { valor: 'LIGA AFAEM NORTE', etiqueta: 'Ligue AFAEM Norte' },
+  { valor: 'LIGA AFAEM SUR',   etiqueta: 'Ligue AFAEM Sur' },
+  { valor: 'VARONIL PRIMERA',  etiqueta: 'Varonil Primera Plus' },
+  { valor: 'FEMENIL ELITE',    etiqueta: 'Femenil Elite' },
+  { valor: 'OTRA',             etiqueta: 'Otra Liga (Especificar)' },
+];
+
+const CATALOGO_ASOCIACIONES = [
+  { valor: 'MORELOS',      etiqueta: 'Morelos (AFEMOR)' },
+  { valor: 'ESTADO DE MEX', etiqueta: 'Estado de México' },
+  { valor: 'CDMX',         etiqueta: 'Ciudad de México' },
+  { valor: 'PUEBLA',       etiqueta: 'Puebla' },
+  { valor: 'QUERETARO',    etiqueta: 'Querétaro' },
+];
+
+const CATALOGO_ROLES = [
+  { valor: 'PRESIDENTE',   etiqueta: 'Presidente de Equipo' },
+  { valor: 'DIRECTIVO',    etiqueta: 'Directivo de Club' },
+  { valor: 'DELEGADO',     etiqueta: 'Delegado Deportivo' },
+  { valor: 'REPRESENTANTE', etiqueta: 'Representante Legal' },
 ];
 
 /* ─── Step pill ─── */
@@ -61,6 +83,10 @@ export default function AdminPresidentes() {
   const [cargando,     setCargando]     = useState(true);
   const [searchTerm,   setSearchTerm]   = useState('');
 
+  /* ── Seguros ── */
+  const [seguros, setSeguros] = useState(CATALOGO_SEGUROS_INICIAL);
+  const [cargandoSeguros, setCargandoSeguros] = useState(false);
+
   /* ── Modal ── */
   const [modalAbierto, setModalAbierto] = useState(false);
   const [paso,         setPaso]         = useState(1); // 1 = Cuotas, 2 = Datos + Documentos
@@ -78,28 +104,113 @@ export default function AdminPresidentes() {
   const [detailsOpen, setDetailsOpen] = useState({});
   const [loading,     setLoading]     = useState(false);
 
+  /* ── Edición ── */
+  const [modalEdicion, setModalEdicion] = useState(false);
+  const [presidenteEnEdicion, setPresidenteEnEdicion] = useState(null);
+  const [datosEditables, setDatosEditables] = useState({
+    nombre: '', email: '', telefono: '', curp: '', estatus: '1'
+  });
+
+  /* ── Reasignación ── */
+  const [modalReasignacion, setModalReasignacion] = useState(false);
+  const [equipoIDHuerfano, setEquipoIDHuerfano] = useState(null);
+  const [equipoNombreHuerfano, setEquipoNombreHuerfano] = useState('');
+  const [disponibles, setDisponibles] = useState([]);
+  const [searchDisponibles, setSearchDisponibles] = useState('');
+  const [loadingReasignacion, setLoadingReasignacion] = useState(false);
+
   /* Cálculos */
   const totalAsignados    = Object.values(asignacionSeguros).reduce((a, v) => a + Number(v || 0), 0);
-  const totalPagar        = CATALOGO_SEGUROS.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
+  const totalPagar        = seguros.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
   const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas) + 1 : 0;
 
   /* ─── Carga inicial ─── */
-  useEffect(() => {
-    setTimeout(() => {
+  const cargarPresidentes = async (forceRefresh = false) => {
+    setCargando(true);
+    try {
+      const data = await getPresidentesDirectorio(forceRefresh);
+      setPresidentes(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error al cargar presidentes:", err);
+      // Fallback para desarrollo si el back falla
       setPresidentes([
-        { id: 1, nombre: 'Carlos Ruiz',  correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true  },
-        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com',         telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true  },
-        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com',     telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false },
+        { id: 1, nombre: 'Carlos Ruiz',  correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true, equipo: 'Rayados', equipoId: 101 },
+        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com',         telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true, equipo: 'Tigres', equipoId: 102 },
+        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com',     telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null },
       ]);
+    } finally {
       setCargando(false);
-    }, 900);
+    }
+  };
+
+  useEffect(() => {
+    cargarPresidentes();
+    cargarSeguros();
   }, []);
+
+  /* ─── Cargar Seguros del Endpoint ─── */
+  const cargarSeguros = async () => {
+    setCargandoSeguros(true);
+    try {
+      const res = await fetch(`${API_BASE}/ordenes-pago/seguros`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('Error al cargar seguros');
+      const data = await res.json();
+      
+      // Extraer el array de seguros (puede estar en diferentes ubicaciones según la API)
+      let arrSeguros = Array.isArray(data) ? data : 
+                       Array.isArray(data.data) ? data.data :
+                       Array.isArray(data.seguros) ? data.seguros :
+                       Array.isArray(data.results) ? data.results : [];
+      
+      if (arrSeguros.length === 0) {
+        setSeguros(CATALOGO_SEGUROS_INICIAL);
+        return;
+      }
+
+      // Mapear los datos del endpoint al formato esperado
+      const segurosMapeados = arrSeguros.map((seg, idx) => ({
+        id: String(seg.id || seg.SeguroId || idx + 1),
+        nombre: seg.nombre || seg.Nombre || seg.name || seg.nombre_seguro || 'Seguro sin nombre',
+        descripcion: seg.descripcion || seg.Descripcion || seg.description || '',
+        precio: Number(seg.costo || seg.Costo || seg.precio || seg.Precio || seg.price || 0),
+      }));
+      
+      setSeguros(segurosMapeados);
+    } catch (err) {
+      console.error("Error al cargar seguros:", err);
+      // Fallback a los seguros iniciales en caso de error
+      setSeguros(CATALOGO_SEGUROS_INICIAL);
+    } finally {
+      setCargandoSeguros(false);
+    }
+  };
+
+  /* ─── Efecto de Auto-cálculo ─── */
+  useEffect(() => {
+    if (numPersonas !== '' && paso === 1) {
+      const totalNecesario = Number(numPersonas) + 1;
+      // Inicializar con el primer seguro disponible
+      const newAsignacion = {};
+      seguros.forEach((seg, idx) => {
+        newAsignacion[seg.id] = idx === 0 ? totalNecesario : 0;
+      });
+      setAsignacionSeguros(newAsignacion);
+    }
+  }, [numPersonas, seguros]);
 
   /* ─── Reset / cerrar ─── */
   const resetModal = () => {
     setPaso(1);
     setNumPersonas('');
-    setAsignacionSeguros({ '1': '', '2': '', '3': '' });
+    // Crear un objeto de asignación vacío para todos los seguros
+    const emptyAsignacion = {};
+    seguros.forEach(seg => {
+      emptyAsignacion[seg.id] = '';
+    });
+    setAsignacionSeguros(emptyAsignacion);
     setInfoPersonal({ correo: '', telefono: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '' });
     setDocuments({});
     setOcrResults({});
@@ -306,17 +417,129 @@ export default function AdminPresidentes() {
   };
 
   /* ═══ Tabla ═══ */
-  const stats = { total: presidentes.length, activos: presidentes.filter(p => p.estatus).length, inactivos: presidentes.filter(p => !p.estatus).length };
-
-  const handleEliminar = (id) => {
-    Swal.fire({ title: '¿Suspender Presidente?', text: 'El presidente perderá acceso a su panel.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, suspender' })
-      .then(res => { if (res.isConfirmed) setPresidentes(prev => prev.map(p => p.id === id ? { ...p, estatus: false } : p)); });
+  const stats = { 
+    total: (presidentes || []).length, 
+    activos: (presidentes || []).filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1").length, 
+    inactivos: (presidentes || []).filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")).length 
   };
 
-  const filtrados = presidentes.filter(p =>
-    p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.correo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  /* ═══ Edición ═══ */
+  const handleEditarPresidente = (pres) => {
+    setPresidenteEnEdicion(pres);
+    setDatosEditables({
+      nombre: pres.nombre || pres.Nombre || '',
+      email: pres.correo || pres.Email || '',
+      telefono: pres.telefono || pres.Telefono || '',
+      curp: pres.curp || pres.CURP || '',
+      estatus: pres.estatus ? '1' : '0'
+    });
+    setModalEdicion(true);
+  };
+
+  const manejarCambioInput = (e) => {
+    const { name, value } = e.target;
+    setDatosEditables(prev => ({ ...prev, [name]: value }));
+  };
+
+  const guardarEdicion = async () => {
+    setLoading(true);
+    try {
+      await updatePresidente(presidenteEnEdicion.id || presidenteEnEdicion.UsuarioId, datosEditables);
+      await cargarPresidentes();
+      setModalEdicion(false);
+      Swal.fire('¡Éxito!', 'Los datos del presidente han sido actualizados.', 'success');
+    } catch (err) {
+      Swal.fire('Error', 'No se pudieron guardar los cambios.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ═══ Eliminación y Reasignación ═══ */
+  const handleEliminar = (pres) => {
+    const id = pres.id || pres.UsuarioId;
+    const nombre = pres.nombre || pres.Nombre;
+    const equipoId = pres.equipoId || pres.EquipoId;
+    const equipoNombre = pres.equipo || pres.NombreEquipo || 'su equipo';
+
+    Swal.fire({
+      title: '¿Eliminar Presidente?',
+      text: `¿Estás seguro que quieres eliminar a ${nombre} de forma permanente? Ya no podrá tener acceso al sistema.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar permanentemente',
+      cancelButtonText: 'Cancelar'
+    }).then(async (res) => {
+      if (res.isConfirmed) {
+        try {
+          Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          await deletePresidente(id);
+          await cargarPresidentes();
+          
+          if (equipoId) {
+            Swal.fire({
+              title: 'Presidente Eliminado',
+              html: `El equipo <strong>${equipoNombre}</strong> ha quedado sin presidente.<br>¿Deseas asignar uno nuevo ahora?`,
+              icon: 'info',
+              showCancelButton: true,
+              confirmButtonText: 'Sí, asignar nuevo presidente',
+              cancelButtonText: 'Después',
+              confirmButtonColor: '#0b4ea6'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                abrirReasignacion(equipoId, equipoNombre);
+              }
+            });
+          } else {
+            Swal.fire('Eliminado', 'El presidente ha sido removido exitosamente.', 'success');
+          }
+        } catch (err) {
+          Swal.fire('Error', 'No se pudo eliminar al presidente.', 'error');
+        }
+      }
+    });
+  };
+
+  const abrirReasignacion = async (eqId, eqNombre) => {
+    setEquipoIDHuerfano(eqId);
+    setEquipoNombreHuerfano(eqNombre);
+    setLoadingReasignacion(true);
+    setModalReasignacion(true);
+    try {
+      const data = await getPresidentesDisponibles();
+      setDisponibles(Array.isArray(data) ? data : []);
+    } catch (err) {
+      // Mock para reasignación
+      setDisponibles([
+        { id: 4, nombre: 'Javier Mendez', correo: 'j.mendez@test.com' },
+        { id: 5, nombre: 'Lucia Ferreyra', correo: 'l.ferreyra@test.com' },
+        { id: 6, nombre: 'Roberto Gomez', correo: 'r.gomez@test.com' },
+      ]);
+    } finally {
+      setLoadingReasignacion(false);
+    }
+  };
+
+  const ejecutarReasignacion = async (nuevoPresId, nuevoNombre) => {
+    try {
+      Swal.fire({ title: 'Vinculando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      await vincularPresidenteEquipo(nuevoPresId, equipoIDHuerfano);
+      await cargarPresidentes();
+      setModalReasignacion(false);
+      Swal.fire('¡Asignado!', `El equipo ${equipoNombreHuerfano} ahora está bajo el mando de ${nuevoNombre}.`, 'success');
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo vincular al nuevo presidente.', 'error');
+    }
+  };
+
+  const filtrados = (presidentes || []).filter(p => {
+    const nom = (p.nombre || p.Nombre || "").toLowerCase();
+    const mail = (p.correo || p.Email || "").toLowerCase();
+    const query = (searchTerm || "").toLowerCase();
+    return nom.includes(query) || mail.includes(query);
+  });
 
   const columns = [
     { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Presidente' },
@@ -325,17 +548,29 @@ export default function AdminPresidentes() {
   ];
 
   const dataTransformada = filtrados.map(p => ({
-    id:         <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id}</span>,
-    presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre}</div>,
-    contacto:   <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono}</div></div>,
-    curp:       <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp}</span>,
-    estatus:    p.estatus
+    id:         <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
+    presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
+    contacto:   <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo || p.Email || 'Sin correo'}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div></div>,
+    curp:       <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
+    estatus:    (p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")
       ? <span style={{ background: '#dcfce7', color: '#166534', padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>ACTIVO</span>
       : <span style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>SUSPENDIDO</span>,
     acciones: (
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-        <button style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '6px 10px', borderRadius: 6 }}><FaEdit /></button>
-        {p.estatus && <button onClick={() => handleEliminar(p.id)} style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '6px 10px', borderRadius: 6 }}><FaTrash /></button>}
+        <button 
+          onClick={() => handleEditarPresidente(p)}
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          title="Ver / Editar"
+        >
+          <FaEdit />
+        </button>
+        <button 
+          onClick={() => handleEliminar(p)} 
+          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          title="Eliminar Permanente"
+        >
+          <FaTrash />
+        </button>
       </div>
     ),
   }));
@@ -384,16 +619,23 @@ export default function AdminPresidentes() {
         }
       `}</style>
 
-      {/* ─── Header ─── */}
       <div style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Directorio de Presidentes</h2>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
         </div>
-        <button onClick={() => { resetModal(); setModalAbierto(true); }}
-          style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-          <FaPlus /> Registrar Presidente
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            onClick={() => cargarPresidentes(true)} 
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FaSyncAlt />
+          </button>
+          <button onClick={() => { resetModal(); setModalAbierto(true); }}
+            style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <FaPlus /> Registrar Presidente
+          </button>
+        </div>
       </div>
 
       {/* ─── Stats ─── */}
@@ -485,20 +727,24 @@ export default function AdminPresidentes() {
                   <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,0.88)' }}>Plantilla Inicial y Distribución de Seguros</h4>
                 </div>
 
-                <div style={{ marginBottom: 18 }}>
-                  <label className="premium-label-admin">¿Cuántos jugadores tendrá el equipo inicialmente?</label>
-                  <input
-                    type="number" placeholder="0" min="0"
-                    value={numPersonas}
-                    onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setNumPersonas(v); }}
-                    className="premium-input-admin" style={{ width: 200, marginTop: 8 }}
-                  />
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginLeft: 12 }}>
-                    (Jugadores + 1 Presidente = {segurosRequeridos} seguros requeridos)
-                  </span>
+                <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px', background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ flex: 1 }}>
+                    <label className="premium-label-admin">¿Cuántos jugadores tendrá el equipo inicialmente?</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '8px' }}>
+                      <input
+                        type="number" placeholder="0" min="0"
+                        value={numPersonas}
+                        onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setNumPersonas(v); }}
+                        className="premium-input-admin" style={{ width: 120, fontSize: '18px', textAlign: 'center' }}
+                      />
+                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
+                        # Jugadores + 1 Presidente = <strong style={{ color: '#5d87e5' }}>{segurosRequeridos} seguros</strong>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {CATALOGO_SEGUROS.map(seg => (
+                {seguros.map(seg => (
                   <div key={seg.id} className="insurance-card-admin">
                     <div>
                       <h4 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-main)', margin: '0 0 3px' }}>
@@ -555,27 +801,47 @@ export default function AdminPresidentes() {
                     <input type="tel" placeholder="55 1234 5678" value={infoPersonal.telefono} onChange={e => setInfoPersonal(p => ({ ...p, telefono: e.target.value }))} className="premium-input-admin" />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                   <div>
-                    <label className="premium-label-admin">Tipo Afiliación</label>
-                    <select value={infoPersonal.tipoAfiliacion} onChange={e => setInfoPersonal(p => ({ ...p, tipoAfiliacion: e.target.value }))} className="premium-input-admin">
+                    <label className="premium-label-admin">Rol / Cargo</label>
+                    <select 
+                      value={infoPersonal.tipoAfiliacion} 
+                      onChange={e => setInfoPersonal(p => ({ ...p, tipoAfiliacion: e.target.value }))} 
+                      className="premium-input-admin"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <option value="">Selecciona...</option>
-                      <option value="DIRECTIVO">Directivo</option>
-                      <option value="PRESIDENTE">Presidente</option>
-                      <option value="DELEGADO">Delegado</option>
-                      <option value="REPRESENTANTE">Representante</option>
+                      {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
                     </select>
                   </div>
-                  {[
-                    { key: 'asociacion', label: 'Asociación', ph: 'MORELOS' },
-                    { key: 'liga',       label: 'Liga',       ph: 'LIGA ESTATAL' },
-                    { key: 'equipo',     label: 'Equipo',     ph: 'ACADEMIA FC' },
-                  ].map(({ key, label, ph }) => (
-                    <div key={key}>
-                      <label className="premium-label-admin">{label}</label>
-                      <input type="text" placeholder={ph} value={infoPersonal[key]} onChange={e => setInfoPersonal(p => ({ ...p, [key]: e.target.value }))} className="premium-input-admin" />
-                    </div>
-                  ))}
+                  <div>
+                    <label className="premium-label-admin">Asociación</label>
+                    <select 
+                      value={infoPersonal.asociacion} 
+                      onChange={e => setInfoPersonal(p => ({ ...p, asociacion: e.target.value }))} 
+                      className="premium-input-admin"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <option value="">Selecciona...</option>
+                      {CATALOGO_ASOCIACIONES.map(a => <option key={a.valor} value={a.valor}>{a.etiqueta}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="premium-label-admin">Liga Destino</label>
+                    <select 
+                      value={infoPersonal.liga} 
+                      onChange={e => setInfoPersonal(p => ({ ...p, liga: e.target.value }))} 
+                      className="premium-input-admin"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <option value="">Selecciona...</option>
+                      {CATALOGO_LIGAS.map(l => <option key={l.valor} value={l.valor}>{l.etiqueta}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="premium-label-admin">Nombre del Equipo</label>
+                    <input type="text" placeholder="Ej: Rayados FC" value={infoPersonal.equipo} onChange={e => setInfoPersonal(p => ({ ...p, equipo: e.target.value }))} className="premium-input-admin" />
+                  </div>
                 </div>
               </div>
 
@@ -672,6 +938,201 @@ export default function AdminPresidentes() {
 
         </div>
       </Modal>
+      
+      {/* ══ MODAL DE EDICIÓN ══ */}
+      <Modal
+        estaAbierto={modalEdicion}
+        alCerrar={() => setModalEdicion(false)}
+        titulo="Detalle del Presidente"
+        tamanio="medio"
+        pie={
+          <>
+            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setModalEdicion(false)} />
+            <BotonPrimario 
+              etiqueta={loading ? 'Guardando...' : 'Guardar Cambios'} 
+              alHacerClick={guardarEdicion} 
+              deshabilitado={loading}
+              icono={<FaSave />}
+            />
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ gridColumn: 'span 2' }}>
+            <EntradaFormulario 
+              etiqueta="Nombre Completo" 
+              nombre="nombre" 
+              valor={datosEditables.nombre} 
+              onChange={manejarCambioInput}
+              placeholder="Ej: Juan Pérez"
+            />
+          </div>
+          <EntradaFormulario 
+            etiqueta="Correo Electrónico" 
+            nombre="email" 
+            valor={datosEditables.email} 
+            onChange={manejarCambioInput}
+            placeholder="ejemplo@correo.com"
+          />
+          <EntradaFormulario 
+            etiqueta="Teléfono" 
+            nombre="telefono" 
+            valor={datosEditables.telefono} 
+            onChange={manejarCambioInput}
+            placeholder="55 0000 0000"
+          />
+          <EntradaFormulario 
+            etiqueta="CURP" 
+            nombre="curp" 
+            valor={datosEditables.curp} 
+            onChange={manejarCambioInput}
+            placeholder="CURP de 18 caracteres"
+          />
+          <EntradaSeleccion 
+            etiqueta="Estatus del Usuario" 
+            nombre="estatus" 
+            valor={datosEditables.estatus} 
+            onChange={manejarCambioInput}
+            opciones={[
+              { valor: '1', etiqueta: 'Activo (Acceso Total)' },
+              { valor: '0', etiqueta: 'Suspendido (Sin Acceso)' }
+            ]}
+          />
+        </div>
+      </Modal>
+
+      {/* ══ MODAL DE REASIGNACIÓN ══ */}
+      <Modal
+        estaAbierto={modalReasignacion}
+        alCerrar={() => setModalReasignacion(false)}
+        titulo="Asignar Nuevo Presidente"
+        tamanio="medio"
+      >
+        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+          <div style={{ 
+            fontSize: '32px', 
+            background: 'rgba(59, 130, 246, 0.1)', 
+            color: '#3b82f6', 
+            width: '70px', 
+            height: '70px', 
+            borderRadius: '20px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            margin: '0 auto 15px',
+            boxShadow: '0 8px 16px rgba(59, 130, 246, 0.15)'
+          }}>
+            <FaUserPlus />
+          </div>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>Equiparando a {equipoNombreHuerfano}</h3>
+          <p style={{ margin: '5px 0 0', fontSize: '14px', color: '#64748b' }}>Selecciona un presidente disponible para tomar el mando.</p>
+        </div>
+
+        <div style={{ position: 'relative', marginBottom: '20px' }}>
+          <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+            <FaSearch />
+          </div>
+          <input 
+            type="text" 
+            placeholder="Buscar presidente por nombre..." 
+            value={searchDisponibles}
+            onChange={(e) => setSearchDisponibles(e.target.value)}
+            style={{ 
+              width: '100%', 
+              padding: '14px 14px 14px 45px', 
+              borderRadius: '16px', 
+              border: '2px solid #f1f5f9', 
+              background: '#f8fafc',
+              fontSize: '15px',
+              outline: 'none',
+              transition: 'all 0.3s'
+            }}
+          />
+        </div>
+
+        <div style={{ maxHeight: '350px', overflowY: 'auto', padding: '5px' }}>
+          {loadingReasignacion ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <div className="spinner-border text-primary" style={{ width: '2rem', height: '2rem' }}></div>
+              <p style={{ marginTop: '10px', color: '#64748b', fontSize: '14px' }}>Buscando candidatos...</p>
+            </div>
+          ) : disponibles.filter(d => d.nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()) || d.Nombre?.toLowerCase().includes(searchDisponibles.toLowerCase())).length > 0 ? (
+            disponibles
+              .filter(d => d.nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()) || d.Nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()))
+              .map(pres => (
+              <div 
+                key={pres.id || pres.UsuarioId} 
+                className="pres-item-hover"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  padding: '15px',
+                  borderRadius: '16px',
+                  marginBottom: '10px',
+                  border: '1px solid #f1f5f9',
+                  transition: 'all 0.2s',
+                  background: 'white'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <div style={{ 
+                    width: '44px', 
+                    height: '44px', 
+                    borderRadius: '12px', 
+                    background: 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '800',
+                    fontSize: '16px'
+                  }}>
+                    {(pres.nombre || pres.Nombre || '?').charAt(0)}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{pres.nombre || pres.Nombre}</div>
+                    <div style={{ color: '#64748b', fontSize: '12px' }}>{pres.correo || pres.Email}</div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => ejecutarReasignacion(pres.id || pres.UsuarioId, pres.nombre || pres.Nombre)}
+                  style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '10px', 
+                    background: '#eff6ff', 
+                    color: '#2563eb', 
+                    border: 'none', 
+                    fontWeight: '700', 
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Asignar
+                </button>
+              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              <FaUserTie style={{ fontSize: '40px', opacity: 0.3, marginBottom: '10px' }} />
+              <p>No hay presidentes disponibles que coincidan.</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <style>{`
+        .pres-item-hover:hover {
+          background: #f8fafc !important;
+          border-color: #cbd5e1 !important;
+          transform: translateX(5px);
+        }
+        .pres-item-hover button:hover {
+          background: #2563eb !important;
+          color: white !important;
+        }
+      `}</style>
 
     </div>
   );

@@ -4,7 +4,7 @@ import { getJugadoresDirectorio, getJugadorDocumentos, updateJugador } from '../
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 
 export default function AdminJugadores() {
@@ -29,10 +29,10 @@ export default function AdminJugadores() {
   const [haCambiado, setHaCambiado] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  const loadJugadores = async () => {
+  const loadJugadores = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const data = await getJugadoresDirectorio();
+      const data = await getJugadoresDirectorio(forceRefresh);
       setJugadores(data);
       setError(null);
     } catch (err) {
@@ -124,7 +124,9 @@ export default function AdminJugadores() {
       hombres: masculinos,
       mujeres: femeninos,
       activos: jugadores.filter(j => j.Estatus === true).length,
-      inactivos: jugadores.filter(j => j.Estatus === false).length
+      inactivos: jugadores.filter(j => j.Estatus === false).length,
+      conNUI: jugadores.filter(j => !!(j.NUI)).length,
+      sinNUI: jugadores.filter(j => !(j.NUI)).length,
     };
   }, [jugadores]);
 
@@ -239,8 +241,9 @@ export default function AdminJugadores() {
   const columns = [
     { key: "MiembroEquipoId", label: "ID" },
     { key: "NombreCompleto", label: "Jugador" },
+    { key: "NUI", label: "NUI" },
     { key: "Sexo", label: "Sexo" },
-    { key: "EquipoLiga", label: "Equipo actual", style: { width: '400px' } }, // Aumentado espacio para equipo
+    { key: "EquipoLiga", label: "Equipo actual", style: { width: '340px' } },
     { key: "FechaIngreso", label: "Fecha ingreso" },
     { key: "Estatus", label: "Estatus" },
     { key: "Acciones", label: "Acciones" }
@@ -253,6 +256,11 @@ export default function AdminJugadores() {
         <div style={{ fontWeight: '800', color: '#1e293b' }}>{j.NombreCompleto}</div>
         <div style={{ fontSize: '11px', color: '#64748b' }}>{j.Email || 'Sin correo registrado'}</div>
       </div>
+    ),
+    NUI: j.NUI ? (
+      <span style={{ fontFamily: 'monospace', fontSize: '12px', background: '#eff6ff', color: '#2563eb', padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>{j.NUI}</span>
+    ) : (
+      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>Sin NUI</span>
     ),
     Sexo: <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>{j.Sexo || 'N/A'}</span>,
     EquipoLiga: (
@@ -267,14 +275,22 @@ export default function AdminJugadores() {
       <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>BAJA</span>,
     Acciones: (
       <div style={{ display: 'flex', gap: '8px' }}>
-        <button 
-          className="btn btn-sm"
-          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: '700' }}
-          onClick={() => handleDescargarDocs(j)}
-          title="Ver documentos"
-        >
-          <FaFileDownload /> Docs
-        </button>
+          <button 
+            className="btn btn-sm"
+            style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: '700' }}
+            onClick={() => handleDescargarDocs(j)}
+            title="Ver documentos"
+          >
+            <FaFileDownload /> Docs
+          </button>
+          <button 
+            className="btn btn-sm"
+            style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#eff6ff', color: '#2563eb', border: 'none', fontWeight: '700' }}
+            onClick={() => Swal.fire('Descarga de Expediente', 'Esta funcionalidad estará disponible próximamente en conjunto con el nuevo endpoint de backend.', 'info')}
+            title="Exportar como ZIP"
+          >
+            <FaFileArchive /> Exportar
+          </button>
         <button 
           className="btn btn-sm btn-primary"
           style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
@@ -319,7 +335,7 @@ export default function AdminJugadores() {
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button 
             className="btn btn-primary"
-            onClick={() => window.location.reload()}
+            onClick={() => loadJugadores(true)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
@@ -434,6 +450,37 @@ export default function AdminJugadores() {
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>FEMENINO</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
         </div>
+        {/* TARJETA CON NUI */}
+        <div
+          onClick={() => setFiltroEstatus('conNUI')}
+          style={{
+            background: 'white', padding: '20px', borderRadius: '12px',
+            border: filtroEstatus === 'conNUI' ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
+            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'conNUI' ? '0 4px 12px rgba(139,92,246,0.15)' : 'none',
+            transform: filtroEstatus === 'conNUI' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🆔</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>CON NUI</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#8b5cf6' }}>{stats.conNUI}</div>
+        </div>
+
+        {/* TARJETA SIN NUI */}
+        <div
+          onClick={() => setFiltroEstatus('sinNUI')}
+          style={{
+            background: 'white', padding: '20px', borderRadius: '12px',
+            border: filtroEstatus === 'sinNUI' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+            boxShadow: filtroEstatus === 'sinNUI' ? '0 4px 12px rgba(245,158,11,0.15)' : 'none',
+            transform: filtroEstatus === 'sinNUI' ? 'translateY(-2px)' : 'none'
+          }}
+        >
+          <div style={{ fontSize: '24px', marginBottom: '5px' }}>⚠️</div>
+          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>SIN NUI</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.sinNUI}</div>
+        </div>
       </div>
 
       <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
@@ -456,9 +503,9 @@ export default function AdminJugadores() {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
-              {['todos', 'activos', 'inactivos', 'hombres', 'mujeres'].map((val) => (
+              {['todos', 'activos', 'inactivos', 'hombres', 'mujeres', 'conNUI', 'sinNUI'].map((val) => (
                 <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
-                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : (val === 'inactivos' ? 'Inactivos' : (val === 'hombres' ? 'Hombres' : 'Mujeres')))}
+                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : (val === 'inactivos' ? 'Inactivos' : (val === 'hombres' ? 'Hombres' : (val === 'mujeres' ? 'Mujeres' : (val === 'conNUI' ? 'Con NUI' : 'Sin NUI')))))}
                 </button>
               ))}
             </div>
@@ -497,45 +544,52 @@ export default function AdminJugadores() {
         }
       >
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-          <div style={{ gridColumn: '1 / -1', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '16px 24px', borderRadius: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-             <div style={{ fontSize: '28px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>🛡️</div>
-             <div>
-                <h4 style={{ margin: 0, fontSize: '15px', color: '#1e3a8a', fontWeight: '800' }}>Expediente del Jugador</h4>
-                <p style={{ margin: 0, fontSize: '13px', color: '#3b82f6', fontWeight: '500', marginTop: '4px' }}>La información modificada actualizará automáticamente el acta digital del afiliado.</p>
-             </div>
+          <div style={{ gridColumn: '1 / -1', background: '#fef2f2', border: '1px solid #fecaca', padding: '12px 20px', borderRadius: '10px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>⚠️</span>
+            <p style={{ margin: 0, fontSize: '13px', color: '#991b1b', fontWeight: '600' }}>
+              Los campos marcados con <strong>*</strong> son datos sensibles. Solo se pueden editar si se sube un nuevo documento y el OCR los detecta automáticamente. Los demás campos (estatus, correo) sí son editables manualmente.
+            </p>
           </div>
 
           <EntradaFormulario
-            etiqueta="Nombre(s)"
+            etiqueta="Nombre(s) *"
             valor={datosEditables.nombre}
             onChange={manejarCambioInput}
             nombre="nombre"
             obligatorio
             placeholder="Ej: Juan Antonio"
+            disabled
+            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f8fafc' }}
           />
           <EntradaFormulario
-            etiqueta="Primer apellido"
+            etiqueta="Primer apellido *"
             valor={datosEditables.primerApellido}
             onChange={manejarCambioInput}
             nombre="primerApellido"
             obligatorio
             placeholder="Apellido paterno"
+            disabled
+            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f8fafc' }}
           />
           <EntradaFormulario
-            etiqueta="Segundo apellido"
+            etiqueta="Segundo apellido *"
             valor={datosEditables.segundoApellido}
             onChange={manejarCambioInput}
             nombre="segundoApellido"
             placeholder="Apellido materno"
+            disabled
+            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f8fafc' }}
           />
           
           <EntradaFormulario
-            etiqueta="CURP"
+            etiqueta="CURP *"
             valor={datosEditables.curp}
             onChange={manejarCambioInput}
             nombre="curp"
             obligatorio
             placeholder="Clave única de registro"
+            disabled
+            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f8fafc' }}
           />
           <EntradaFormulario
             etiqueta="Correo electrónico"
@@ -575,8 +629,8 @@ export default function AdminJugadores() {
           />
           
           <div style={{ gridColumn: '1 / -1', marginTop: '10px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
-             <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
-                * Los campos marcados con asterisco son esenciales para la validez de los reportes de juego.
+             <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', margin: 0 }}>
+               Los campos marcados con <strong>*</strong> solo se actualizan mediante carga de nuevo documento + OCR.
              </p>
           </div>
         </div>

@@ -12,6 +12,8 @@ router = APIRouter(
     tags=["Ordenes de pago"]
 )
 
+
+# == CREACIÓN DE ORDEN DE PAGO ==
 @router.post("/")
 def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get_pagos_servicio), usuario = Depends(obtener_usuario_actual)):
 
@@ -26,6 +28,8 @@ async def subir_comprobante(orden_id: int, archivo: UploadFile = File(...), serv
 
     return resultado
 
+
+# == CONSULTAS DE SEGUROS Y AFILIACIONES ==
 @router.get("/seguros", response_model=list[SeguroBase])
 def obtener_seguros(service: PagosServicio = Depends(get_pagos_servicio)):
     seguros = service.obtener_seguros()
@@ -38,12 +42,17 @@ def obtener_afiliaciones(service: PagosServicio =Depends(get_pagos_servicio)):
 
     return afiliaciones
 
-
+# == OBTENER LAS ORDENES DE PAGO. TODAS E INDIVIDUALES ==
 @router.get("/generales", response_model=list[ListaPagos])
 def obtener_pagos(service: PagosServicio = Depends(get_pagos_servicio)):
     pagos = service.obtener_pagos_servicio()
 
     return pagos
+
+@router.get("/{orden_pago_id}", response_model=OrdenPagoIndividual)
+def orden_pago_individual(orden_pago_id: int, service: PagosServicio=Depends(get_pagos_servicio)):
+
+    return service.orden_pago_individual(orden_pago_id)
 
 #Cambiar el estatus de pago
 @router.post("/estatus-pago")
@@ -58,8 +67,3 @@ def mi_estado_pago(service: PagosServicio = Depends(get_pagos_servicio), usuario
     orden = service.mi_estado_pago(usuario.UsuarioId)
 
     return orden
-
-@router.get("/{orden_pago_id}", response_model=OrdenPagoIndividual)
-def orden_pago_individual(orden_pago_id: int, service: PagosServicio=Depends(get_pagos_servicio)):
-
-    return service.orden_pago_individual(orden_pago_id)

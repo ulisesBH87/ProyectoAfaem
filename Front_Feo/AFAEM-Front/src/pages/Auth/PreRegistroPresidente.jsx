@@ -24,6 +24,22 @@ function PreRegistroPresidente() {
   const [estadoPago, setEstadoPago] = useState(null); // null, 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
   const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
 
+  // PASO 1: Pago y Seguros
+  const [numPersonas, setNumPersonas] = useState('');
+  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
+  const [comprobantePago, setComprobantePago] = useState(null);
+
+  // PASO 2: Documentos
+  const [documents, setDocuments] = useState({});
+  const [ocrResults, setOcrResults] = useState({});
+  const [, setFotoPreview] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState({});
+  const [telefono, setTelefono] = useState('');
+  const [tipoAfiliacion, setTipoAfiliacion] = useState('');
+  const [asociacion, setAsociacion] = useState('');
+  const [liga, setLiga] = useState('');
+  const [equipo, setEquipo] = useState('');
+
 
   // Verificar estado de pago al cargar
   useEffect(() => {
@@ -105,14 +121,47 @@ function PreRegistroPresidente() {
     }
   }, [estatusId, navigate]);
 
+  /* ─── Efecto de Auto-cálculo ─── */
+  useEffect(() => {
+    if (numPersonas !== '' && pasoActual === 1) {
+      const totalNecesario = Number(numPersonas) + 1;
+      setAsignacionSeguros({
+        '1': totalNecesario, // Por defecto asignar todo al seguro de accidentes
+        '2': 0,
+        '3': 0
+      });
+    }
+  }, [numPersonas, pasoActual]);
+
   // PASO 1: Pago y Seguros
-  const [numPersonas, setNumPersonas] = useState('');
-  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
-  const [comprobantePago, setComprobantePago] = useState(null);
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
     { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
     { id: '3', nombre: 'Seguro médico', descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 }
+  ];
+
+  /* ─── Catálogos para Selectores ─── */
+  const CATALOGO_LIGAS = [
+    { valor: 'LIGA AFAEM NORTE', etiqueta: 'Ligue AFAEM Norte' },
+    { valor: 'LIGA AFAEM SUR',   etiqueta: 'Ligue AFAEM Sur' },
+    { valor: 'VARONIL PRIMERA',  etiqueta: 'Varonil Primera Plus' },
+    { valor: 'FEMENIL ELITE',    etiqueta: 'Femenil Elite' },
+    { valor: 'OTRA',             etiqueta: 'Otra Liga (Especificar)' },
+  ];
+
+  const CATALOGO_ASOCIACIONES = [
+    { valor: 'MORELOS',      etiqueta: 'Morelos (AFEMOR)' },
+    { valor: 'ESTADO DE MEX', etiqueta: 'Estado de México' },
+    { valor: 'CDMX',         etiqueta: 'Ciudad de México' },
+    { valor: 'PUEBLA',       etiqueta: 'Puebla' },
+    { valor: 'QUERETARO',    etiqueta: 'Querétaro' },
+  ];
+
+  const CATALOGO_ROLES = [
+    { valor: 'PRESIDENTE',   etiqueta: 'Presidente de Equipo' },
+    { valor: 'DIRECTIVO',    etiqueta: 'Directivo de Club' },
+    { valor: 'DELEGADO',     etiqueta: 'Delegado Deportivo' },
+    { valor: 'REPRESENTANTE', etiqueta: 'Representante Legal' },
   ];
 
   const bankInfo = {
@@ -129,15 +178,6 @@ function PreRegistroPresidente() {
   const jugadoresRestantes = segurosRequeridos - totalAsignados;
 
   // PASO 2: Documentos
-  const [documents, setDocuments] = useState({});
-  const [ocrResults, setOcrResults] = useState({});
-  const [fotoPreview, setFotoPreview] = useState(null);
-  const [detailsOpen, setDetailsOpen] = useState({});
-  const [telefono, setTelefono] = useState('');
-  const [tipoAfiliacion, setTipoAfiliacion] = useState('');
-  const [asociacion, setAsociacion] = useState('');
-  const [liga, setLiga] = useState('');
-  const [equipo, setEquipo] = useState('');
 
   const requisitos = [
     { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
@@ -1474,7 +1514,7 @@ function PreRegistroPresidente() {
                   <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
                     <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: 'var(--danger)' }}>Administrador: haz sido rechazado por este motivo:</h4>
                     <p style={{ fontSize: '14px', color: 'var(--text-main)', fontStyle: 'italic', margin: 0 }}>
-                      "{localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
+                      "{ (ordenPendienteId && localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`)) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
                     </p>
                   </div>
 
@@ -1609,27 +1649,46 @@ function PreRegistroPresidente() {
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Tipo de afiliación *</label>
-                  <select value={tipoAfiliacion} onChange={(e) => setTipoAfiliacion(e.target.value)} className="premium-input">
+                  <select 
+                    value={tipoAfiliacion} 
+                    onChange={(e) => setTipoAfiliacion(e.target.value)} 
+                    className="premium-input"
+                    style={{ cursor: 'pointer' }}
+                  >
                     <option value="">Selecciona...</option>
-                    <option value="DIRECTIVO">Directivo</option>
-                    <option value="PRESIDENTE">Presidente</option>
-                    <option value="DELEGADO">Delegado</option>
-                    <option value="REPRESENTANTE">Representante</option>
+                    {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
                 <div className="premium-input-group">
                   <label className="premium-label">Asociación</label>
-                  <input type="text" placeholder="Ej: MORELOS" value={asociacion} onChange={(e) => setAsociacion(e.target.value)} className="premium-input" />
+                  <select 
+                    value={asociacion} 
+                    onChange={(e) => setAsociacion(e.target.value)} 
+                    className="premium-input"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="">Selecciona...</option>
+                    {CATALOGO_ASOCIACIONES.map(a => <option key={a.valor} value={a.valor}>{a.etiqueta}</option>)}
+                    <option value="OTRA">Otra Asociación...</option>
+                  </select>
                 </div>
                 <div className="premium-input-group">
-                  <label className="premium-label">Liga</label>
-                  <input type="text" placeholder="Ej: LIGA ESTATAL" value={liga} onChange={(e) => setLiga(e.target.value)} className="premium-input" />
+                  <label className="premium-label">Liga Destino</label>
+                  <select 
+                    value={liga} 
+                    onChange={(e) => setLiga(e.target.value)} 
+                    className="premium-input"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="">Selecciona...</option>
+                    {CATALOGO_LIGAS.map(l => <option key={l.valor} value={l.valor}>{l.etiqueta}</option>)}
+                  </select>
                 </div>
-                <div className="premium-input-group">
-                  <label className="premium-label">Equipo</label>
+                <div className="premium-input-group" style={{ gridColumn: 'span 2' }}>
+                  <label className="premium-label">Nombre del Equipo</label>
                   <input type="text" placeholder="Ej: ACADEMIA FC" value={equipo} onChange={(e) => setEquipo(e.target.value)} className="premium-input" />
                 </div>
               </div>

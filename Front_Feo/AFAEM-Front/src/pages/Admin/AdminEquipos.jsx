@@ -4,7 +4,7 @@ import { getEquiposDirectorio, updateEquipo } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 
 export default function AdminEquipos() {
@@ -32,10 +32,10 @@ export default function AdminEquipos() {
     loadEquipos();
   }, [navigate]);
 
-  const loadEquipos = async () => {
+  const loadEquipos = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      const data = await getEquiposDirectorio();
+      const data = await getEquiposDirectorio(forceRefresh);
       setEquipos(data);
       setError(null);
     } catch (err) {
@@ -199,10 +199,25 @@ export default function AdminEquipos() {
         <div style={{ fontSize: '11px', color: '#64748b' }}>{eq.Categoria} - {eq.Rama}</div>
       </div>
     ),
-    Presidente: (
+    Presidente: eq.PresidenteNombreCompleto ? (
       <div>
         <div style={{ fontWeight: '600', fontSize: '13px' }}>{eq.PresidenteNombreCompleto}</div>
         <div style={{ fontSize: '11px', color: '#64748b' }}>{eq.PresidenteEmail}</div>
+      </div>
+    ) : (
+      <div style={{ 
+        background: '#fee2e2', 
+        color: '#991b1b', 
+        padding: '6px 14px', 
+        borderRadius: '12px', 
+        fontSize: '11px', 
+        fontWeight: '800',
+        border: '1px solid #fecaca',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px'
+      }}>
+        ⚠️ SIN PRESIDENTE
       </div>
     ),
     NumeroJugadoresRegistrados: <span style={{ fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '4px 10px', borderRadius: '20px' }}>{eq.NumeroJugadoresRegistrados}</span>,
@@ -255,10 +270,16 @@ export default function AdminEquipos() {
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button 
             className="btn btn-primary"
-            onClick={() => window.location.reload()}
+            onClick={() => loadEquipos(true)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
+          </button>
+          <button 
+            onClick={() => navigate('/admin/layout-jugadores')}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FaTable /> Layout Jugadores
           </button>
           <button 
             className="btn btn-premium"
@@ -389,9 +410,37 @@ export default function AdminEquipos() {
         }
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
-          <div style={{ gridColumn: 'span 2', background: 'var(--primary-light)', padding: '15px 20px', borderRadius: '12px', marginBottom: '10px', border: '1px solid var(--border-light)' }}>
-             <p style={{ margin: 0, fontSize: '14px', color: 'var(--primary)', fontWeight: '700' }}>⚠️ Estás editando la ficha oficial del equipo.</p>
-             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>Cualquier cambio afectará la visibilidad en torneos y cédulas oficiales.</p>
+          <div style={{ 
+            gridColumn: 'span 2', 
+            background: 'rgba(245, 158, 11, 0.08)', 
+            border: '1px solid rgba(245, 158, 11, 0.2)', 
+            padding: '16px 20px', 
+            borderRadius: '16px', 
+            marginBottom: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.05)'
+          }}>
+             <div style={{ 
+               fontSize: '22px', 
+               background: '#f59e0b', 
+               color: 'white',
+               width: '42px', 
+               height: '42px', 
+               borderRadius: '12px', 
+               display: 'flex', 
+               alignItems: 'center', 
+               justifyContent: 'center',
+               boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+               flexShrink: 0
+             }}>
+               <FaShieldAlt />
+             </div>
+             <div>
+                <h4 style={{ margin: 0, fontSize: '15px', color: '#92400e', fontWeight: '800' }}>Edición de Ficha Oficial</h4>
+                <p style={{ margin: 0, fontSize: '13px', color: '#b45309', fontWeight: '500', marginTop: '2px' }}>Cualquier cambio afectará la visibilidad en torneos y cédulas oficiales.</p>
+             </div>
           </div>
 
           <EntradaFormulario
@@ -415,19 +464,91 @@ export default function AdminEquipos() {
           />
 
           {equipoEdicion && (
-            <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '10px', padding: '15px', background: '#f8fafc', borderRadius: '10px' }}>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Presidente responsable</label>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>{equipoEdicion.PresidenteNombreCompleto}</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>{equipoEdicion.PresidenteEmail}</div>
+            <div style={{ 
+              gridColumn: 'span 2', 
+              marginTop: '15px', 
+              padding: '24px', 
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', 
+              borderRadius: '20px',
+              border: '1px solid #e2e8f0',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr)',
+              gap: '24px',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+            }}>
+              <div style={{ display: 'flex', gap: '14px' }}>
+                <div style={{ color: '#0b4ea6', fontSize: '18px', marginTop: '4px' }}><FaUser /></div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Presidente responsable</label>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginTop: '2px' }}>{equipoEdicion.PresidenteNombreCompleto}</div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>{equipoEdicion.PresidenteEmail}</div>
+                </div>
               </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Vigencia Matricula</label>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b' }}>Temporada 2024 - 2025</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>{equipoEdicion.Liga}</div>
+              
+              <div style={{ display: 'flex', gap: '14px' }}>
+                <div style={{ color: '#059669', fontSize: '18px', marginTop: '4px' }}><FaCalendarDay /></div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Vigencia Matricula</label>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginTop: '2px' }}>Temporada 2024 - 2025</div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Ligas: {equipoEdicion.Liga}</div>
+                </div>
               </div>
             </div>
           )}
+
+          {/* SECCIÓN: AGREGAR PARTICIPANTE/ROL (PLACEHOLDER VISUAL) */}
+          <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaUserPlus style={{ color: '#8b5cf6' }} /> Cuerpo Técnico / Participantes
+              </h4>
+              <span style={{ fontSize: '11px', background: '#fef3c7', color: '#92400e', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
+                🛠️ Funcionalidad en desarrollo
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
+              {['Entrenador principal', 'Entrenador asistente', 'Delegado', 'Médico', 'Directivo'].map(rol => (
+                <div key={rol} style={{
+                  padding: '12px 16px', borderRadius: '10px', border: '1.5px dashed #e2e8f0',
+                  background: '#fafafa', color: '#94a3b8', fontSize: '12px', fontWeight: '600',
+                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'not-allowed'
+                }}>
+                  <FaUserPlus style={{ opacity: 0.4 }} />{rol}
+                </div>
+              ))}
+            </div>
+            <p style={{ margin: '12px 0 0', fontSize: '11px', color: '#94a3b8' }}>
+              El registro de cuerpo técnico estará disponible cuando el endpoint de backend esté listo.
+            </p>
+          </div>
+
+          {/* SECCIÓN: NÓMINA DE JUGADORES (ACCESO RÁPIDO) */}
+          <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ 
+              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '18px',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ 
+                  width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(11,78,166,0.1)', 
+                  color: '#0b4ea6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' 
+                }}>
+                  <FaTable />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Nómina de Jugadores</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Consulta y copia los datos masivos de todos los miembros inscritos.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate(`/admin/layout-jugadores?equipo=${equipoEdicion.EquipoId}`)}
+                className="btn-premium" 
+                style={{ padding: '10px 18px', fontSize: '12px', background: 'white', color: '#0b4ea6', border: '1.5px solid #0b4ea6', boxShadow: 'none' }}
+              >
+                Ver Nómina Completa →
+              </button>
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

@@ -1,42 +1,57 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  FaRegFileAlt, 
-  FaShieldAlt, 
-  FaHistory,
-  FaChartLine,
-  FaTrophy,
-  FaBolt,
-  FaCheckCircle
+  FaRegFileAlt, FaShieldAlt, FaHistory, FaChartLine,
+  FaTrophy, FaBolt, FaCheckCircle, FaUsers, FaSyncAlt,
+  FaClipboardList, FaMoneyBillWave
 } from 'react-icons/fa';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell
+  BarChart, Bar, Cell, LabelList
 } from 'recharts';
 import { getSolicitudes } from '../../services/solicitud';
 import { getPagosGenerales } from '../../services/admin';
 import Skeleton from '../../components/Common/Skeleton';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [mesFiltro, setMesFiltro] = useState('Abr');
   const [statsData, setStatsData] = useState({
-    solicitudes: 0,
+    solicitudesPendientes: 0,
     pagosPendientes: 0,
     totalIngreso: 0,
-    equipos: 0
+    equipos: 0,
+    jugadoresActivos: 0
   });
 
-  // Datos simulados para gráficas basados en la tendencia real
-  const chartData = [
-    { name: 'Ene', ingresos: 4000, solicitudes: 24 },
-    { name: 'Feb', ingresos: 3000, solicitudes: 13 },
-    { name: 'Mar', ingresos: 2000, solicitudes: 98 },
-    { name: 'Abr', ingresos: statsData.totalIngreso || 2780, solicitudes: statsData.solicitudes || 39 },
-  ];
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+
+  // Datos simulados para gráficas hasta que backend tenga endpoint
+  const chartDataCompleto = {
+    'Ene': [{ name: 'Ene', ingresos: 4200 }],
+    'Feb': [{ name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 }],
+    'Mar': [{ name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 }, { name: 'Mar', ingresos: 5100 }],
+    'Abr': [
+      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
+      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: statsData.totalIngreso || 6400 }
+    ],
+    'May': [
+      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
+      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: 6400 }, { name: 'May', ingresos: 0 }
+    ],
+    'Jun': [
+      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
+      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: 6400 }, { name: 'May', ingresos: 0 }, { name: 'Jun', ingresos: 0 }
+    ],
+  };
+
+  const chartData = chartDataCompleto[mesFiltro] || chartDataCompleto['Abr'];
 
   const statusData = [
-    { name: 'Aprobados', value: statsData.equipos, color: 'var(--secondary)' },
-    { name: 'Pendientes', value: statsData.pagosPendientes, color: 'var(--warning)' },
-    { name: 'Totales', value: statsData.solicitudes, color: 'var(--primary)' },
+    { name: 'Aprobados', value: statsData.equipos, color: '#10b981' },
+    { name: 'Pendientes', value: statsData.pagosPendientes, color: '#f59e0b' },
+    { name: 'Solicitudes', value: statsData.solicitudesPendientes, color: 'var(--primary)' },
   ];
 
   useEffect(() => {
@@ -56,74 +71,119 @@ const AdminDashboard = () => {
           .reduce((acc, curr) => acc + parseFloat(curr.MontoTotal || curr.TotalPagar || 0), 0);
 
         setStatsData({
-          solicitudes: solicitudesList.length,
+          solicitudesPendientes: solicitudesList.filter(s => s.EstatusValidacion === 1).length,
           pagosPendientes: pagosList.filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 2).length,
           totalIngreso: totalIngreso,
-          equipos: solicitudesList.filter(s => s.EstatusValidacion === 1).length
+          equipos: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
+          jugadoresActivos: 0 // Mock hasta endpoint de backend
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setTimeout(() => setLoading(false), 800); // Pequeño delay para apreciar la animación
+        setLoading(false); // Retraso artificial de 800ms eliminado
       }
     };
     fetchData();
   }, []);
+
+  const StatCard = ({ icon, bg, color, label, val, ruta, badge }) => (
+    <div
+      onClick={() => ruta && navigate(ruta)}
+      className="card card-hover glass"
+      style={{
+        gridColumn: 'span 1',
+        cursor: ruta ? 'pointer' : 'default',
+        transition: 'transform 0.2s, box-shadow 0.2s'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ width: '48px', height: '48px', background: bg, color, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+          {icon}
+        </div>
+        {badge && <span className="data-fira" style={{ fontSize: '12px', fontWeight: '700', color: badge.color, background: badge.bg, padding: '4px 10px', borderRadius: '20px' }}>{badge.text}</span>}
+      </div>
+      <h3 className="heading-outfit" style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>
+        {label}
+      </h3>
+      {loading
+        ? <Skeleton width="80px" height="32px" />
+        : <h2 className="data-fira" style={{ fontSize: '32px', fontWeight: '800', margin: 0 }}>{val}</h2>
+      }
+      {ruta && <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>Clic para ver →</p>}
+    </div>
+  );
 
   return (
     <div className="fade-in-up" style={{ padding: '20px 0' }}>
       {/* HEADER SECTION */}
       <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h1 className="heading-outfit" style={{ fontSize: '36px', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-1px' }}>
-            Panel de control
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '16px' }}>
+          <h2 className="heading-outfit" style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-1px', margin: 0 }}>
+            Panel de Control AFAEM
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '15px', margin: '6px 0 0' }}>
             Bienvenido, Administrador. Visualiza el pulso de la liga en tiempo real.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="glass" style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '600', color: 'var(--primary)' }}>
-            <FaHistory style={{ marginRight: '8px' }} /> Historial
-          </button>
-          <button className="btn-premium">
-            <FaBolt style={{ marginRight: '8px' }} /> Acción rápida
-          </button>
-        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="glass"
+          style={{ padding: '10px 20px', backgroundColor: 'white', color: 'var(--text-main)', border: '1.5px solid var(--border-light)', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+        >
+          <FaSyncAlt /> Actualizar
+        </button>
       </header>
 
-      {/* BENTO GRID MAIN */}
+      {/* BENTO GRID */}
       <div className="bento-grid">
-        
-        {/* STAT 1: SOLICITUDES (1x1) */}
-        <div className="card card-hover glass" style={{ gridColumn: 'span 1' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ width: '48px', height: '48px', background: 'rgba(37, 99, 235, 0.1)', color: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-              <FaRegFileAlt />
-            </div>
-            <span className="data-fira" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary)' }}>+12%</span>
-          </div>
-          <h3 className="heading-outfit" style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Solicitudes</h3>
-          {loading ? <Skeleton width="80px" height="32px" /> : <h2 className="data-fira" style={{ fontSize: '32px', fontWeight: '800' }}>{statsData.solicitudes}</h2>}
-        </div>
 
-        {/* STAT 2: EQUIPOS (1x1) */}
-        <div className="card card-hover glass" style={{ gridColumn: 'span 1' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ width: '48px', height: '48px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--secondary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-              <FaShieldAlt />
-            </div>
-            <span className="data-fira" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--secondary)' }}>ACTIVO</span>
-          </div>
-          <h3 className="heading-outfit" style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Equipos aprobados</h3>
-          {loading ? <Skeleton width="80px" height="32px" /> : <h2 className="data-fira" style={{ fontSize: '32px', fontWeight: '800' }}>{statsData.equipos}</h2>}
-        </div>
+        {/* STAT 1: SOLICITUDES PENDIENTES */}
+        <StatCard
+          icon={<FaRegFileAlt />}
+          bg="rgba(37, 99, 235, 0.1)"
+          color="var(--primary)"
+          label="Solicitudes Pendientes"
+          val={statsData.solicitudesPendientes}
+          ruta="/admin/solicitudes"
+          badge={{ text: '⚡ Revisar', color: 'var(--primary)', bg: 'rgba(37,99,235,0.08)' }}
+        />
 
-        {/* CHART 1: RECAUDACIÓN (2x2) */}
+        {/* STAT 2: PAGOS PENDIENTES */}
+        <StatCard
+          icon={<FaMoneyBillWave />}
+          bg="rgba(245, 158, 11, 0.1)"
+          color="var(--warning)"
+          label="Pagos Pendientes"
+          val={statsData.pagosPendientes}
+          ruta="/admin/pagos"
+          badge={{ text: '⏳ Validar', color: 'var(--warning)', bg: 'rgba(245,158,11,0.08)' }}
+        />
+
+        {/* CHART: RECAUDACIÓN (2x2) */}
         <div className="card glass" style={{ gridColumn: 'span 2', gridRow: 'span 2', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ marginBottom: '24px' }}>
-            <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700' }}>Tendencia de ingresos</h3>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Histórico de los últimos 4 meses ($ MXN)</p>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Tendencia de ingresos</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>Histórico mensual ($ MXN)</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {meses.map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMesFiltro(m)}
+                  style={{
+                    padding: '6px 14px', borderRadius: '10px', variant: 'none', border: 'none', fontSize: '11px', fontWeight: '800', cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    background: mesFiltro === m ? 'var(--primary)' : 'rgba(0,0,0,0.03)',
+                    color: mesFiltro === m ? 'white' : 'var(--text-muted)',
+                    boxShadow: mesFiltro === m ? '0 4px 12px rgba(11, 78, 166, 0.25)' : 'none',
+                    transform: mesFiltro === m ? 'scale(1.05)' : 'scale(1)'
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
           </div>
           <div style={{ flex: 1, minHeight: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -137,9 +197,10 @@ const AdminDashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)', fontSize: 12}} />
                 <YAxis hide />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '12px' }}
                   itemStyle={{ fontWeight: 700, color: 'var(--primary)' }}
+                  formatter={(val) => [`$${val.toLocaleString('es-MX')}`, 'Ingresos']}
                 />
                 <Area type="monotone" dataKey="ingresos" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorIngresos)" />
               </AreaChart>
@@ -150,60 +211,55 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* STAT 3: PAGOS PENDIENTES (1x1) */}
-        <div className="card card-hover glass" style={{ gridColumn: 'span 1' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ width: '48px', height: '48px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-              <FaHistory />
-            </div>
-          </div>
-          <h3 className="heading-outfit" style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Pendientes</h3>
-          {loading ? <Skeleton width="80px" height="32px" /> : <h2 className="data-fira" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--warning)' }}>{statsData.pagosPendientes}</h2>}
-        </div>
+        {/* STAT 3: EQUIPOS APROBADOS */}
+        <StatCard
+          icon={<FaShieldAlt />}
+          bg="rgba(16, 185, 129, 0.1)"
+          color="var(--secondary)"
+          label="Equipos Aprobados"
+          val={statsData.equipos}
+          ruta="/admin/equipos"
+          badge={{ text: 'ACTIVO', color: 'var(--secondary)', bg: 'rgba(16,185,129,0.08)' }}
+        />
 
-        {/* QUICK ACTIONS (1x1) */}
-        <div className="glass-dark" style={{ gridColumn: 'span 1', borderRadius: 'var(--radius-lg)', padding: '24px', display: 'flex', flexDirection: 'column' }}>
-          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Acciones rápidas</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <button className="btn-premium" style={{ width: '100%', padding: '12px', fontSize: '13px' }}>
-              <FaTrophy style={{ marginRight: '8px' }} /> Nuevo torneo
-            </button>
-            <button className="btn-ghost" style={{ width: '100%', padding: '12px' }}>
-              Anuncio Global
-            </button>
-          </div>
-        </div>
+        {/* STAT 4: JUGADORES ACTIVOS */}
+        <StatCard
+          icon={<FaUsers />}
+          bg="rgba(139, 92, 246, 0.1)"
+          color="#8b5cf6"
+          label="Jugadores Activos"
+          val={loading ? '—' : (statsData.jugadoresActivos || 'N/D')}
+          ruta="/admin/jugadores"
+        />
 
-        {/* CHART 2: STATUS DISTRIBUTION (2x1) */}
+        {/* DISTRIBUCIÓN DE ESTATUS (2x1) */}
         <div className="card glass" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column' }}>
-          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>Distribución de estatus</h3>
-          <div style={{ flex: 1 }}>
-            <ResponsiveContainer width="100%" height={100}>
-              <BarChart data={statusData} layout="vertical">
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" hide />
-                <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* SYSTEM STATUS (2x1) */}
-        <div className="card glass" style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h4 className="heading-outfit" style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Estado del sistema</h4>
-            <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaCheckCircle /> OPERATIVO
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <p className="data-fira" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Latencia: 42ms</p>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Última sincronización: Hace 1 min</p>
+          <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Distribución de Estatus</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {statusData.map(item => (
+              <div key={item.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
+                    {item.name}
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: item.color }}>
+                    {item.value} <small style={{ color: 'var(--text-muted)', fontWeight: '400' }}>({item.value > 0 && statsData.totalSolicitudes > 0 ? Math.round((item.value / statsData.totalSolicitudes) * 100) : 0}%)</small>
+                  </span>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(0,0,0,0.03)', borderRadius: '8px', height: '12px', overflow: 'hidden', position: 'relative' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${item.value > 0 ? Math.max((item.value / Math.max(...statusData.map(d => d.value), 1)) * 100, 2) : 0}%`,
+                      background: item.color,
+                      borderRadius: '8px',
+                      transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: `0 0 10px ${item.color}44`
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -33,7 +33,6 @@ class AutenticacionServicio:
         )
         try:
             persona, usuario = autenticacion_repositorio.registrar_admin_repo(self.db, datos_persona, datos_usuario)
-            self.db.commit()
             return persona, usuario
         
         except IntegrityError:
@@ -55,18 +54,20 @@ class AutenticacionServicio:
         datos_persona = Personas(
             Nombre=data.Nombre,
             PrimerApellido=data.PrimerApellido,
-            SegundoApellido=data.SegundoApellido
+            SegundoApellido=data.SegundoApellido,
+            NumeroTelefono=data.NumeroTelefono
         )
 
         datos_usuario = Usuario(
             Correo=data.Correo,
             Contrasena=hashed_password,
-            Salt=salt
+            Salt=salt,
+            Estatus=1,
+            Eliminado=0
         )
 
         try:
             usuario = autenticacion_repositorio.registrar_usuario_repo(self.db, datos_persona, datos_usuario)
-            self.db.commit()
             return usuario
         
         except IntegrityError:
@@ -75,6 +76,7 @@ class AutenticacionServicio:
         except Exception:
             self.db.rollback()
             raise usuario_excepciones.ErrorRegistroUsuario()
+
 
     # == INICIAR SESIÓN ==
     def iniciar_sesion(self, correo: str, contrasena: str):
@@ -87,7 +89,16 @@ class AutenticacionServicio:
         if not seguridad.verificar_contrasena(contrasena, usuarioIntentoSesion.Contrasena, usuarioIntentoSesion.Salt):
             raise usuario_excepciones.CredencialesInvalidasError()
 
-        return usuarioIntentoSesion
+        # Obtener EstatusId (solo para Presidentes de Equipo)
+        estatus_id = None
+
+        if usuarioIntentoSesion.PersonaRelacion:
+            presidente = autenticacion_repositorio.obtener_estatus_presidente(self.db, usuarioIntentoSesion.PersonaRelacion.PersonaId)
+            
+            if presidente:
+                estatus_id = presidente.EstatusId
+
+        return usuarioIntentoSesion, estatus_id
 
 
     # == CAMBIAR CONTRASEÑA ==
@@ -105,11 +116,9 @@ class AutenticacionServicio:
             nuevo_salt = seguridad.generar_salt()
             nuevo_hash = seguridad.generar_hash(nuevo_salt, nueva_contrasena)
 
-            autenticacion_repositorio.cambiar_contrasena_repo(self.db, usuario_id, nuevo_hash, nuevo_salt)
-            self.db.commit()
+            autenticacion_repositorio.cambiar_contrasena_repo(self.db, usuario, nuevo_hash, nuevo_salt)
 
         except Exception:
-            self.db.rollback()
             raise usuario_excepciones.ErrorCambioContrasena()
         
         return True

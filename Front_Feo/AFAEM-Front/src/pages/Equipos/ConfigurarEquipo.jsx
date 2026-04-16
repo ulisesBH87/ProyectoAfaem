@@ -9,14 +9,20 @@ import Swal from 'sweetalert2';
 import { validarFotografia } from "../../services/foto";
 import teamsService from "../../services/teams";
 import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
+import { useRBAC } from '../../hooks/useRBAC';
 
 export default function ConfigurarEquipo() {
   const navigate = useNavigate();
+  const { hasRole } = useRBAC();
+  const isAdmin = hasRole && (hasRole('ADMINISTRADOR') || hasRole('ADMIN'));
+
   const preRegistro = JSON.parse(localStorage.getItem('afaem_pre_registro') || '{}');
-  const numPersonasPagadas = preRegistro.numPersonas || 25; // Default 25 for testing
-  const asignacionSeguros = (preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0) 
-    ? preRegistro.asignacionSeguros 
-    : { '1': 15, '2': 15, '3': 15 }; // Default quotas for testing
+  const numPersonasPagadas = isAdmin ? 999 : (preRegistro.numPersonas || 25); 
+  const asignacionSeguros = isAdmin 
+    ? { '1': 999, '2': 999, '3': 999 }
+    : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0) 
+        ? preRegistro.asignacionSeguros 
+        : { '1': 15, '2': 15, '3': 15 });
 
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro Básico (Futbol 7/9/Sala)', precio: 350 },
@@ -32,7 +38,10 @@ export default function ConfigurarEquipo() {
     agreedToTerms: false
   });
 
-  const [activeStep, setActiveStep] = useState(1); // 1: Config, 2: Players
+  const [activeStep, setActiveStep] = useState(isAdmin ? 0 : 1); // 0: Select President (Admin), 1: Config, 2: Players
+  const [activePresidents, setActivePresidents] = useState([]);
+  const [selectedPresidentId, setSelectedPresidentId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [players, setPlayers] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState({
     id: Date.now(),
@@ -40,7 +49,11 @@ export default function ConfigurarEquipo() {
     lastNamePaterno: '',
     lastNameMaterno: '',
     curp: '',
+    nui: '',
     birthDate: '',
+    lugarNacimiento: '',
+    email: '',
+    telefono: '',
     sexo_id: 1, // 1: Masculino, 2: Femenino (según tu catálogo)
     insuranceType: '',
     // Foráneo
@@ -148,6 +161,11 @@ export default function ConfigurarEquipo() {
         const data = await teamsService.getCatalogs();
         setCatalogs(data);
 
+        if (isAdmin) {
+          const presidents = await teamsService.getPresidentesActivos();
+          setActivePresidents(presidents);
+        }
+
       } catch (error) {
         console.error("Error al cargar catálogos:", error);
         Swal.fire('Error', 'No se pudieron cargar los catálogos del servidor.', 'error');
@@ -218,7 +236,7 @@ export default function ConfigurarEquipo() {
   const handleSuccessModalContinue = () => {
     clearDraft();
     setShowSuccessModal(false);
-    navigate('/presidente-equipo');
+    navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo');
   };
 
   const handleTeamNameChange = (e) => {
@@ -390,35 +408,42 @@ export default function ConfigurarEquipo() {
         }
       }
 
-      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate } = currentPlayer;
+      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, lugarNacimiento, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
 
-      // Nombre y Apellidos en sus campos exactos
+      // Nombre y Apellidos
       form.getTextField('Nombres')?.setText(firstName || '');
       form.getTextField('Apellido Paterno')?.setText(lastNamePaterno || '');
       form.getTextField('Apellido Materno')?.setText(lastNameMaterno || '');
 
-      // CURP
-      if (curp) {
-        form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
-      }
+      // Identificadores y Nacimiento
+      if (curp) form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
+      if (birthDate) form.getTextField('Fecha de Nacimiento')?.setText(birthDate);
+      if (lugarNacimiento) form.getTextField('Lugar de Nacimiento')?.setText(lugarNacimiento);
+      
+      // Tipo de Afiliación (Mapeado empíricamente a fill_24) y Asociación
+      // El campo 'Tipo' corresponde a 'Tipo de Sangre', no lo llenaremos con AFAEM.
+      form.getTextField('Asociación')?.setText('AFAEM');
+      form.getTextField('fill_24')?.setText('AFAEM');
 
-      // Fecha de Nacimiento
-      if (birthDate) {
-        form.getTextField('Fecha de Nacimiento')?.setText(birthDate);
-      }
+      // Contacto
+      const formEmail = email || localStorage.getItem('email') || '';
+      if (formEmail) form.getTextField('Correo electrónico')?.setText(formEmail);
+      if (telefono) form.getTextField('Teléfono')?.setText(telefono);
 
-      // Correo electrónico
-      const email = localStorage.getItem('email') || '';
-      if (email) {
-        form.getTextField('Correo electrónico')?.setText(email);
-      }
+      // Sexo
+      const sexoTexto = sexo_id === 1 ? 'MASCULINO' : sexo_id === 2 ? 'FEMENINO' : curp && curp.length >= 11 ? (curp.charAt(10).toUpperCase() === 'H' ? 'MASCULINO' : 'FEMENINO') : '';
+      if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
 
-      // Sexo (extraer de CURP)
-      if (curp && curp.length >= 11) {
-        const sexoChar = curp.charAt(10).toUpperCase();
-        const sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
-        if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
-      }
+      // Equipo y Torneo (tomamos del estado actual del formulario, con fallback a localStorage)
+      form.getTextField('Equipo')?.setText(modalData.teamName || preRegistro.teamName || '');
+      
+      const currentLigaId = formData.season || preRegistro.liga_id || '';
+      const ligaObj = catalogs.ligas?.find(l => l.id.toString() === currentLigaId.toString());
+      if (ligaObj) form.getTextField('Liga')?.setText(ligaObj.nombre);
+      
+      const currentCatId = formData.category || preRegistro.categoria_id || '';
+      const catObj = catalogs.categorias?.find(c => c.id.toString() === currentCatId.toString());
+      if (catObj) form.getTextField('Categoría')?.setText(catObj.nombre);
 
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
@@ -431,22 +456,25 @@ export default function ConfigurarEquipo() {
       form.getTextField('de')?.setText(mes);
       form.getTextField('del 20')?.setText(anio);
 
-      // Posición y NumCamiseta defaults si no tiene en este momento
-      form.getTextField('Posición')?.setText('JUGADOR');
+      // Posición y Camiseta
+      const rolObj = catalogs.roles_equipo.find(r => r.id.toString() === (positionId || '').toString());
+      form.getTextField('Posición')?.setText(rolObj ? rolObj.nombre : 'JUGADOR');
+      if (shirtNumber) form.getTextField('Camiseta')?.setText(shirtNumber.toString());
       
       // ANTECEDENTES INTERNACIONALES (FORÁNEO)
       if (currentPlayer.esForaneo) {
-        form.getTextField('Nacionalidades del jugador')?.setText(currentPlayer.nacionalidadJugador);
-        form.getTextField('País de residencia actual')?.setText(currentPlayer.paisResidencia);
-        form.getTextField('¿El jugador ha vivido en el extranjero? ¿En que país?')?.setText(currentPlayer.haVividoExtranjero ? currentPlayer.dondeVividoExtranjero : 'NO');
-        form.getTextField('Nacionalidades del padre')?.setText(currentPlayer.nacionalidadPadre);
-        form.getTextField('Nacionalidades de la madre')?.setText(currentPlayer.nacionalidadMadre);
-        form.getTextField('Nacionalidades del abuelo paterno')?.setText(currentPlayer.nacAbueloPaterno);
-        form.getTextField('Nacionalidades de la abuela paterna')?.setText(currentPlayer.nacAbuelaPaterna);
-        form.getTextField('Nacionalidades del abuelo materno')?.setText(currentPlayer.nacAbueloMaterno);
-        form.getTextField('Nacionalidades de la abuela materna')?.setText(currentPlayer.nacAbuelaMaterna);
+        form.getTextField('Nacionalidades del jugador')?.setText(currentPlayer.nacionalidadJugador || '');
+        form.getTextField('País de residencia actual')?.setText(currentPlayer.paisResidencia || '');
+        form.getTextField('El jugador ha vivido en el extranjero En que país')?.setText(currentPlayer.haVividoExtranjero ? (currentPlayer.dondeVividoExtranjero || 'SÍ') : 'NO');
+        form.getTextField('Nacionalidades del padre')?.setText(currentPlayer.nacionalidadPadre || '');
+        form.getTextField('Nacionalidades de la madre')?.setText(currentPlayer.nacionalidadMadre || '');
+        form.getTextField('Nacionalidades del abuelo paterno')?.setText(currentPlayer.nacAbueloPaterno || '');
+        form.getTextField('Nacionalidades de la abuela paterna')?.setText(currentPlayer.nacAbuelaPaterna || '');
+        form.getTextField('Nacionalidades del abuelo materno')?.setText(currentPlayer.nacAbueloMaterno || '');
+        form.getTextField('Nacionalidades de la abuela materna')?.setText(currentPlayer.nacAbuelaMaterna || '');
         
-        form.getTextField('El jugador ha jugado en un Club extranjero...')?.setText(currentPlayer.juegoClubExtranjero);
+        form.getTextField('El jugador ha jugado en un Club extranjero y participado en')?.setText(currentPlayer.juegoClubExtranjero || '');
+        form.getTextField('El jugador ha sido registrado por la Asociación Nacional de Fútbol')?.setText(currentPlayer.registroAsociacionExtranjera || '');
       }
 
       // El campo 'Cargo' no existe en el PDF o es redundante con 'Posición'
@@ -502,12 +530,90 @@ export default function ConfigurarEquipo() {
       <div className="dashboard-content">
         {/* STEP INDICATOR */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '25px', padding: '10px' }}>
+              {isAdmin && <div className={`step-pill ${activeStep === 0 ? 'active' : ''}`}>0. Presidente</div>}
+              {isAdmin && <div style={{ color: '#cbd5e1', alignSelf: 'center' }}>→</div>}
               <div className={`step-pill ${activeStep === 1 ? 'active' : ''}`}>1. Configuración</div>
               <div style={{ color: '#cbd5e1', alignSelf: 'center' }}>→</div>
               <div className={`step-pill ${activeStep === 2 ? 'active' : ''}`}>2. Jugadores</div>
             </div>
 
             <div>
+              {isAdmin && activeStep === 0 && (
+                <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '600px', margin: '0 auto' }}>
+                  <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '10px' }}>👤</div>
+                    <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b' }}>Seleccionar Presidente</h2>
+                    <p style={{ color: '#64748b' }}>Busca y selecciona al presidente responsable de este equipo.</p>
+                  </div>
+
+                  <div className="card" style={{ padding: '30px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                    <div className="mb-4">
+                      <label className="form-label" style={{ fontWeight: '700', fontSize: '14px' }}>Buscar Presidente</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="Escribe nombre o apellido..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{ borderRadius: '10px', padding: '12px' }}
+                      />
+                    </div>
+
+                    <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '20px' }}>
+                      {activePresidents
+                        .filter(p => !searchTerm || p.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map(p => (
+                          <div 
+                            key={p.id} 
+                            onClick={() => setSelectedPresidentId(p.id)}
+                            style={{ 
+                              padding: '12px 20px', 
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #f1f5f9',
+                              backgroundColor: selectedPresidentId === p.id ? '#eff6ff' : 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{ 
+                              width: '32px', height: '32px', borderRadius: '50%', 
+                              background: selectedPresidentId === p.id ? '#0b4ea6' : '#f1f5f9',
+                              color: selectedPresidentId === p.id ? 'white' : '#64748b',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '12px', fontWeight: '800'
+                            }}>
+                              {p.nombre.charAt(0)}
+                            </div>
+                            <span style={{ fontWeight: selectedPresidentId === p.id ? '700' : '500', color: '#1e293b' }}>{p.nombre}</span>
+                            {selectedPresidentId === p.id && <span style={{ marginLeft: 'auto', color: '#0b4ea6' }}>✓</span>}
+                          </div>
+                        ))}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                      <button 
+                        onClick={() => navigate('/admin/equipos')}
+                        style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '600' }}
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        disabled={!selectedPresidentId}
+                        onClick={() => setActiveStep(1)}
+                        style={{ 
+                          padding: '10px 30px', borderRadius: '8px', border: 'none', 
+                          background: !selectedPresidentId ? '#cbd5e1' : '#0b4ea6', 
+                          color: 'white', fontWeight: '700', cursor: !selectedPresidentId ? 'not-allowed' : 'pointer' 
+                        }}
+                      >
+                        Siguiente →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {activeStep === 1 && (
                 <div style={{ animation: 'slideUp 0.4s ease' }}>
                   {/* HEADER DEL FORMULARIO */}
@@ -525,8 +631,12 @@ export default function ConfigurarEquipo() {
                     <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', gap: '12px' }}>
                        <div style={{ fontSize: '24px' }}>ℹ️</div>
                        <div>
-                         <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e3a8a' }}>Seguros pre-pagados: {numPersonasPagadas}</div>
-                         <div style={{ fontSize: '12px', color: '#60a5fa' }}>Las opciones se habilitan según tu pago previo.</div>
+                         <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e3a8a' }}>
+                           {isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}
+                         </div>
+                         <div style={{ fontSize: '12px', color: '#60a5fa' }}>
+                           {isAdmin ? 'Crea equipos y registra jugadores directamente en la base de datos.' : 'Las opciones se habilitan según tu pago previo.'}
+                         </div>
                        </div>
                     </div>
                   </div>
@@ -646,8 +756,8 @@ export default function ConfigurarEquipo() {
 
                   {/* BOTONES STEP 1 */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
-                    <button type="button" onClick={saveDraft} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid #0b4ea6', background: '#eff6ff', color: '#0b4ea6', fontWeight: '700', cursor: 'pointer' }}>💾 Guardar Borrador</button>
-                    <button type="button" onClick={() => navigate('/presidente-equipo')} style={{ padding: '12px 30px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}>Cancelar</button>
+                    {!isAdmin && <button type="button" onClick={saveDraft} style={{ padding: '12px 20px', borderRadius: '10px', border: '1px solid #0b4ea6', background: '#eff6ff', color: '#0b4ea6', fontWeight: '700', cursor: 'pointer' }}>💾 Guardar Borrador</button>}
+                    <button type="button" onClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo')} style={{ padding: '12px 30px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}>Cancelar</button>
                     <button type="button" onClick={handleSubmit} style={{ padding: '12px 40px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)' }}>Continuar a Jugadores →</button>
                   </div>
                 </div>
@@ -657,8 +767,8 @@ export default function ConfigurarEquipo() {
             {activeStep === 2 && (
               <div style={{ animation: 'slideUp 0.4s ease' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                   <button onClick={() => setActiveStep(1)} style={{ background: 'none', border: 'none', color: '#0b4ea6', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                     ← Volver a Configuración
+                   <button onClick={() => setActiveStep(isAdmin ? 0 : 1)} style={{ background: 'none', border: 'none', color: '#0b4ea6', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                     ← Volver {isAdmin ? 'a Selección de Presidente' : 'a Configuración'}
                    </button>
                    <div style={{ background: '#dcfce7', color: '#166534', padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                      Equipo: {modalData.teamName || 'Sin nombre'}
@@ -759,12 +869,35 @@ export default function ConfigurarEquipo() {
                          />
                        </div>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI</label>
+                         <input 
+                           type="text" 
+                           value={currentPlayer.nui}
+                           onChange={e => setCurrentPlayer({...currentPlayer, nui: e.target.value})}
+                           placeholder="NUI o Id FMF..." 
+                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                         />
+                       </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac.</label>
                          <input 
                            type="text" 
                            value={currentPlayer.birthDate}
                            onChange={e => setCurrentPlayer({...currentPlayer, birthDate: e.target.value})}
                            placeholder="DD/MM/AAAA" 
+                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                         />
+                       </div>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento</label>
+                         <input 
+                           type="text" 
+                           value={currentPlayer.lugarNacimiento}
+                           onChange={e => setCurrentPlayer({...currentPlayer, lugarNacimiento: e.target.value})}
+                           placeholder="Ej. Monterrey, NL" 
                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
                          />
                        </div>
@@ -780,6 +913,29 @@ export default function ConfigurarEquipo() {
                          </select>
                        </div>
                     </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico</label>
+                          <input 
+                            type="email" 
+                            value={currentPlayer.email}
+                            onChange={e => setCurrentPlayer({...currentPlayer, email: e.target.value})}
+                            placeholder="correo@ejemplo.com" 
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Número de Teléfono</label>
+                          <input 
+                            type="tel" 
+                            value={currentPlayer.telefono}
+                            onChange={e => setCurrentPlayer({...currentPlayer, telefono: e.target.value})}
+                            placeholder="10 dígitos numericos" 
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                          />
+                        </div>
+                     </div>
 
                     <div style={{ marginBottom: '25px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Asignar Seguro</label>
@@ -1050,12 +1206,12 @@ export default function ConfigurarEquipo() {
                 </div>
                 
                 <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
-                  <button 
+                   {!isAdmin && <button 
                     onClick={saveDraft}
                     style={{ padding: '14px 30px', background: '#f8fafc', color: '#0b4ea6', border: '1.5px solid #0b4ea6', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}
                   >
                     💾 Guardar Borrador
-                  </button>
+                  </button>}
                   <button 
                     onClick={async () => {
                         try {
@@ -1068,11 +1224,13 @@ export default function ConfigurarEquipo() {
 
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
+                            presidente_id: isAdmin ? (selectedPresidentId || null) : null,
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
                             rama_id: formData.rama,
-                            players: players
+                            players: players,
+                            teamLogo: modalData.teamLogo
                           });
 
                           setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente en la base de datos.`);
@@ -1185,7 +1343,11 @@ export default function ConfigurarEquipo() {
                   lastNamePaterno: '',
                   lastNameMaterno: '',
                   curp: '',
+                  nui: '',
                   birthDate: '',
+                  lugarNacimiento: '',
+                  email: '',
+                  telefono: '',
                   sexo_id: 1,
                   insuranceType: '',
                   esForaneo: false,

@@ -1,8 +1,24 @@
+from sqlite3 import IntegrityError
+
+from fastapi import HTTPException
+from sqlalchemy import func
+
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
 from app.modelos.persona_modelo import Personas
 from sqlalchemy.orm import joinedload
+
+from app.modelos.equipo_modelo import EquiposJugando, Equipos
+from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+from app.modelos.usuario_modelo import Usuario
+from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
+from datetime import datetime
+from app.servicios.documentos_servicio import subir_documento_servicio2
+from app.modelos.solicitud_modelo import Solicitud
+from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
+
 
 def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
     return db.query(EquipoTemporal).filter(
@@ -81,7 +97,6 @@ def contar_seguros_usados(slots):
     return usados
 
 
-
 #Registro de jugadores
 def obtener_solicitud_id(db, equipo_temporal_id):
     equipo = db.query(EquipoTemporal).filter(
@@ -89,7 +104,6 @@ def obtener_solicitud_id(db, equipo_temporal_id):
     ).first()
 
     return equipo.SolicitudId
-
 
 #total de slots
 def obtener_cantidad_slots(db, equipo_temporal_id):
@@ -105,14 +119,12 @@ def obtener_slots_con_persona(db, equipo_temporal_id):
 
     return slots
 
-
 def existe_persona_repo(db, curp):
     persona = db.query(Personas).filter(Personas.CURP == curp).first()
     if persona:
         return True
     
     return False
-
 
 #Agregar jugador a un slot
 def actualizar_slot_repo(db, slot, persona_id, seguro_id):
@@ -206,7 +218,10 @@ def obtener_directorio_jugadores_repo(db):
             "EquipoNombre": equipo_nombre,
             "Liga": liga,
             "FechaIngreso": miembro.FechaIngreso,
-            "Estatus": miembro.Estatus
+            "Estatus": miembro.Estatus,
+            "Email": persona.CorreoElectronico or "N/A",
+            "FechaNacimiento": persona.FechaNacimiento,
+            "NUI": persona.NUI or "N/A"
         })
 
     return jugadores_response
@@ -269,3 +284,196 @@ def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apel
     db.refresh(persona)
     db.refresh(miembro)
     return miembro
+
+
+def obtener_o_crear_equipo(db, nombre_equipo):
+    equipo = db.query(Equipos).filter(
+        func.lower(Equipos.NombreEquipo) == func.lower(nombre_equipo)
+    ).first()
+
+    if equipo:
+        return equipo
+
+    nuevo = Equipos(NombreEquipo=nombre_equipo, Estatus=True)
+    db.add(nuevo)
+    db.flush()
+    return nuevo
+
+
+def crear_equipo_jugando(db, equipo, team_info, presidente_id, cantidad):
+    nuevo = EquiposJugando(
+        EquipoId=equipo.EquipoId,
+        RamaId=team_info["rama_id"],
+        CategoriaId=team_info["categoria_id"],
+        LigaId=team_info["liga_id"],
+        ModalidadId=team_info["modalidad_id"],
+        PresidenteEquipoId=presidente_id,
+        CantidadJugadores=cantidad
+    )
+    db.add(nuevo)
+    db.flush()
+    return nuevo
+
+def crear_equipo_jugando(db, equipo, team_info, presidente_id, cantidad):
+    nuevo = EquiposJugando(
+        EquipoId=equipo.EquipoId,
+        RamaId=team_info["rama_id"],
+        CategoriaId=team_info["categoria_id"],
+        LigaId=team_info["liga_id"],
+        ModalidadId=team_info["modalidad_id"],
+        PresidenteEquipoId=presidente_id,
+        CantidadJugadores=cantidad
+    )
+    db.add(nuevo)
+    db.flush()
+    return nuevo
+
+
+def actualizar_usuario_y_presidente(db, usuario, presidente, rol_id):
+    if rol_id != 1:
+        if presidente:
+            presidente.EstatusId = 4
+
+        usuario_db = db.query(Usuario).filter(
+            Usuario.UsuarioId == usuario.UsuarioId
+        ).first()
+
+        if usuario_db:
+            usuario_db.RolId = 3
+
+
+async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
+    try:
+        nueva_persona = Personas(
+            Nombre=p_data["nombre"],
+            PrimerApellido=p_data["primer_apellido"],
+            SegundoApellido=p_data.get("segundo_apellido"),
+            CURP=p_data["curp"],
+            NUI=p_data.get("nui"),
+            SexoId=p_data["sexo_id"],
+            FechaNacimiento=datetime.strptime(
+                p_data["fecha_nacimiento"], "%d/%m/%Y"
+            ).date() if p_data.get("fecha_nacimiento") else None,
+            LugarNacimiento=p_data.get("lugar_nacimiento"),
+            CorreoElectronico=p_data.get("correo"),
+            NumeroTelefono=p_data.get("telefono")
+        )
+
+        db.add(nueva_persona)
+        db.flush()
+
+    except IntegrityError as e:
+        db.rollback()
+
+        if "check_curp_persona_longitud" in str(e):
+            raise HTTPException(
+                400,
+                f"La CURP '{p_data['curp']}' debe tener 18 caracteres"
+            )
+        else:
+            raise HTTPException(
+                400,
+                f"Error al registrar jugador: {str(e)}"
+            )
+
+    antecedentes_id = None
+
+    if p_data.get("extranjero"):
+        antecedentes = AntecedentesInternacionales(
+            Extranjero=True,
+            Nacionalidades=p_data.get("nacionalidad"),
+            PaisResidenciaActual=p_data.get("pais_residencia"),
+            NacionalidadPadre=p_data.get("nacionalidad_padre"),
+            NacionalidadMadre=p_data.get("nacionalidad_madre"),
+            NacionalidadAbueloP=p_data.get("nac_abuelo_paterno"),
+            NacionalidadAbuelaP=p_data.get("nac_abuela_paterna"),
+            NacionalidadAbueloM=p_data.get("nac_abuelo_materno"),
+            NacionalidadAbuelaM=p_data.get("nac_abuela_materna"),
+            RegistroAsociacionExtranjera=p_data.get("registro_asociacion_extranjera"),
+            ParticipacionExtranjera=p_data.get("juego_club_extranjero")
+        )
+
+        db.add(antecedentes)
+        db.flush()
+        antecedentes_id = antecedentes.AntecedentesId
+
+    miembro = MiembrosEquipo(
+        PersonaId=nueva_persona.PersonaId,
+        RolEnEquipo=p_data.get("rol_en_equipo", 3),
+        EquipoID=equipo.EquipoId,
+        Estatus=True,
+        Eliminado=False,
+        NumeroCamiseta=p_data.get("numero_camiseta"),
+        Extranjero=p_data.get("extranjero", False),
+        AntecedentesId=antecedentes_id
+    )
+
+    db.add(miembro)
+
+    archivos = []
+    documento_ids = []
+
+    DOC_TYPE_TO_ID = {
+        "acta": 3,
+        "ine": 3,
+        "foto": 3,
+        "formato": 3
+    }
+
+    for doc_type, doc_id in DOC_TYPE_TO_ID.items():
+        file_key = f"player_{index}_{doc_type}"
+        archivo = form_data.get(file_key)
+
+        if archivo:
+            archivos.append(archivo)
+            documento_ids.append(doc_id)
+
+    if archivos:
+        if not solicitud_id:
+            raise HTTPException(400, "No hay solicitud_id para guardar documentos")
+
+        await subir_documento_servicio2(
+            db=db,
+            persona_id=nueva_persona.PersonaId,
+            documento_afiliacion_ids=documento_ids,
+            archivos=archivos,
+            solicitud_id=solicitud_id
+        )
+
+def crear_solicitud_administrativa(db, usuario_id):
+    """
+    Crea una solicitud administrativa cuando un admin registra un equipo.
+    Usado para auditar y registrar documentos de jugadores en BD.
+    """
+    solicitud = Solicitud(
+        UsuarioId=usuario_id,
+        FechaSolicitud=datetime.now(),
+        EstatusValidacion=int(EstatusValidacionSolicitud.ACEPTADO),
+        ObservacionesSolicitud="Registro administrativo de equipo y jugadores"
+    )
+    db.add(solicitud)
+    db.flush()
+    return solicitud.SolicitudId
+
+
+def obtener_presidente(db, usuario, team_info):
+    rol_id = getattr(usuario, 'RolId', None)
+    presidente_id = None
+    presidente = None
+
+    if rol_id == 1:
+        presidente_id = team_info.get("presidente_id")
+    else:
+        presidente = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PersonaId == usuario.PersonaId
+        ).first()
+
+        if not presidente:
+            raise HTTPException(
+                status_code=403,
+                detail="El usuario no es un presidente de equipo registrado"
+            )
+
+        presidente_id = presidente.PresidenteEquipoId
+
+    return presidente_id, presidente, rol_id
