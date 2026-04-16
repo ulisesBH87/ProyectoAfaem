@@ -179,6 +179,12 @@ h1, h2, h3, h4 {
 }
 .data-fira { font-family: 'Fira Sans', monospace; }
 .fade-in { animation: fadeInSlide 0.5s var(--ease-out-expo) forwards; }
+.slide-up { animation: slideUp 0.4s ease forwards; }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* Badge */
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
