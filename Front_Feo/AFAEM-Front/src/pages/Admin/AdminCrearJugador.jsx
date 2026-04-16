@@ -66,6 +66,7 @@ export default function AdminCrearJugador() {
   const [equiposDb, setEquiposDb] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [loadingTeams, setLoadingTeams] = useState(true);
+  const [teamSearchTerm, setTeamSearchTerm] = useState('');
   const [fillManually, setFillManually] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -620,18 +621,65 @@ export default function AdminCrearJugador() {
               <p style={{ color: '#64748b' }}>Busca y elige el equipo donde se inscribirá el jugador.</p>
             </div>
 
-            <div className="card" style={{ padding: '30px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', position: 'relative' }}>
-              <div className="mb-4">
-                <label className="form-label" style={{ fontWeight: '700', fontSize: '14px' }}>Buscar Equipo <span className="required-star">*</span></label>
+              <div style={{ position: 'relative' }}>
                 <input 
                   type="text" 
                   className="form-control" 
-                  placeholder="Escribe nombre de equipo, liga o categoría..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ borderRadius: '10px', padding: '12px' }}
+                  placeholder="Escribe el nombre o correo del equipo..." 
+                  value={teamSearchTerm}
+                  onChange={(e) => setTeamSearchTerm(e.target.value)}
+                  style={{ borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0', width: '100%', marginBottom: '10px' }}
                   disabled={loadingTeams}
                 />
+                {loadingTeams && (
+                  <div style={{ position: 'absolute', right: '15px', top: '15px' }}>
+                    <div className="spinner-border spinner-border-sm text-primary"></div>
+                  </div>
+                )}
+                {!loadingTeams && (
+                  <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: 'white' }}>
+                    {equiposDb
+                      .filter(eq => !teamSearchTerm || eq.Equipo.toLowerCase().includes(teamSearchTerm.toLowerCase()) || eq.Correo.toLowerCase().includes(teamSearchTerm.toLowerCase()))
+                      .map(eq => (
+                        <div 
+                          key={eq.SolicitudId} 
+                          onClick={() => setExtractedData({ ...extractedData, equipoSeleccionado: eq.SolicitudId })}
+                          style={{ 
+                            padding: '12px 20px', 
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #f1f5f9',
+                            backgroundColor: extractedData.equipoSeleccionado === eq.SolicitudId ? '#eff6ff' : 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <div style={{ 
+                            width: '32px', height: '32px', borderRadius: '50%', 
+                            background: extractedData.equipoSeleccionado === eq.SolicitudId ? '#0b4ea6' : '#f1f5f9',
+                            color: extractedData.equipoSeleccionado === eq.SolicitudId ? 'white' : '#64748b',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '12px', fontWeight: '800'
+                          }}>
+                            {(eq.Equipo || 'E').charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: extractedData.equipoSeleccionado === eq.SolicitudId ? '700' : '600', color: '#1e293b' }}>
+                              {eq.Equipo}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>
+                              Solicitud #{eq.SolicitudId} • {eq.Correo}
+                            </span>
+                          </div>
+                          {extractedData.equipoSeleccionado === eq.SolicitudId && <span style={{ marginLeft: 'auto', color: '#0b4ea6', fontWeight: '800' }}>✓</span>}
+                        </div>
+                      ))}
+                    {equiposDb.filter(eq => !teamSearchTerm || eq.Equipo.toLowerCase().includes(teamSearchTerm.toLowerCase()) || eq.Correo.toLowerCase().includes(teamSearchTerm.toLowerCase())).length === 0 && (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>No se encontraron equipos que coincidan con la búsqueda.</div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {loadingTeams ? (
@@ -772,6 +820,11 @@ export default function AdminCrearJugador() {
                 etiqueta="Apellido Paterno"
                 valor={extractedData.apellidoPaterno}
                 alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
+              />
+              <EntradaFormulario
+                etiqueta="Apellido Materno"
+                valor={extractedData.apellidoMaterno}
+                alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
               />
               <EntradaFormulario
                 etiqueta="Nacionalidad del jugador (País de Origen)"

@@ -458,8 +458,8 @@ export default function AdminEquipos() {
             onChange={manejarCambioInput}
             nombre="estatus"
             opciones={[
-              { valor: '1', etiqueta: 'Activo (Habilitado para Torneos)' },
-              { valor: '0', etiqueta: 'Inactivo (Baja Temporal)' }
+              { valor: '1', etiqueta: 'Activo' },
+              { valor: '0', etiqueta: 'Inactivo' }
             ]}
           />
 
