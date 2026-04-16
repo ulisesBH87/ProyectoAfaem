@@ -58,6 +58,14 @@ def calcular_datos_curp(curp):
     except:
         return "No calculada", "No detectada"
 
+def inicial_curp(texto):
+    partes = texto.split()
+    ignoradas = ["DE", "LA", "LAS", "LOS", "MAC", "VON", "VAN", "Y", "DEL"]
+    for p in partes:
+        if p not in ignoradas:
+            return p[0]
+    return texto[0] if texto else ""
+
 def limpiar_nombre_basura(texto):
     if not texto or texto == "No detectado":
         return "No detectado"
@@ -65,21 +73,18 @@ def limpiar_nombre_basura(texto):
     res = texto.upper()
     res = res.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
     
-    # --- MEJORA CRÍTICA: Eliminar palabras que contengan NÚMEROS ---
-    # Esto borra CURPs, CRIPs o fechas que el OCR haya mezclado en medio del nombre
-    # antes de que le quitemos los números y queden "restos" de letras.
     palabras_preliminares = res.split()
     palabras_sin_numeros = [p for p in palabras_preliminares if not any(c.isdigit() for c in p)]
     res = " ".join(palabras_sin_numeros)
     
-    # Basura legal específica de actas de nacimiento
     basura_legal = [
         "CIVIL CERTIFICO Y HAGO CONSTAR QUE EN LOS ARCHIVOS QUE OBRAN EN",
         "ESTA OFICIALIA DEL REGISTRO CIVIL SE ENCUENTRA ASENTADA UN ACTA DE",
         "NACIMIENTO EN LA CUAL SE CONTIENEN ENTRE OTROS LOS SIGUIENTES DATOS",
         "EN NOMBRE DEL ESTADO LIBRE Y SOBERANO DE SINALOA Y COMO OFICIAL DEL",
         "REGISTRO CIVIL SE EXPIDE LA PRESENTE CERTIFICACION",
-        "EL C OFICIAL DEL REGISTRO CIVIL", "DOY FE"
+        "EL C OFICIAL DEL REGISTRO CIVIL", "DOY FE",
+        "DATOS DE LA PERSONA REGISTRADA", "DATOS DE FILIACION", "COPIA CERTIFICADA"
     ]
     
     for b in basura_legal:
@@ -87,7 +92,6 @@ def limpiar_nombre_basura(texto):
 
     res = re.sub(r'[^A-ZÑ\s]', ' ', res)
     
-    # Tokens sueltos de basura y errores comunes del OCR
     basura = [
         "ESTADOS UNIDOS MEXICANOS", "ESTADOS", "UNIDOS", "MEXICANOS",
         "MEXICA VICANOS", "MEXICAVICANOS", "GOBIERNO DE MEXICO", "GOBIERNO", "REPUBLICA",
@@ -101,7 +105,14 @@ def limpiar_nombre_basura(texto):
         "INSTITUTO", "NACIONAL", "ELECTORAL", "INE", "CREDENCIAL", "PARA", "VOTAR", 
         "EMISION", "VIGENCIA", "REGISTRO", "KEKERADRRHAGIAS", "OS UNIDOS", "SOY MEXICO",
         "MEXICO", "CONSTANCIA", "ENTIDAD", "DOMICILIO", "INF", "SINALOA", "ESTADO",
-        "NOMORES", "NOMORE", "NOBRES"  # <-- Añadidos errores tipográficos del OCR para 'NOMBRES'
+        "NOMORES", "NOMORE", "NOBRES", "PERSONA REGISTRADA", 
+        "FILIACION", "OFICIALIA", "LIBRO", "ACTA", "NUMERO DE ACTA", 
+        "FECHA DE REGISTRO", "CERTIFICADO DE NACIMIENTO", "IDENTIFICADOR ELECTRONICO", 
+        "HOMBRE", "MUJER", "MASCULINO", "FEMENINO", "MUNICIPIO", "ENTIDAD", "CODIGO QR",
+        "CODIGO DE VERIFICACION", "FIRMA ELECTRONICA", "AVANZADA", "DIRECTORA GENERAL",
+        "SECRETARIA DE GOBIERNO", "FUNDAMENTO", "ARTICULOS", 
+        "FRACCIONES", "REGLAMENTO", "CIVIL", "MORELOS", "CUAUTLA", "POBLACION", 
+        "IDENTIFICADOR", "ELECTRONICO"
     ]
     
     for b in basura:
@@ -116,23 +127,89 @@ def limpiar_nombre_basura(texto):
     return res if len(res) > 3 else "No detectado"
 
 def determinar_tipo_documento(texto_up):
-    if "INSTITUTO NACIONAL ELECTORAL" in texto_up or "CREDENCIAL PARA VOTAR" in texto_up or "ELECCIONES FEDERALES" in texto_up:
+    if "ACTA DE NACIMIENTO" in texto_up or "ESTADO LIBRE Y SOBERANO" in texto_up:
+        return "ACTA DE NACIMIENTO"
+    elif "INSTITUTO NACIONAL ELECTORAL" in texto_up or "CREDENCIAL PARA VOTAR" in texto_up or "ELECCIONES FEDERALES" in texto_up:
         return "INE"
     elif "PASAPORTE" in texto_up or "PASSPORT" in texto_up or "SURNAMES" in texto_up:
         return "PASAPORTE"
-    elif "CLAVE UNICA DE REGISTRO DE POBLACION" in texto_up.replace("Ú", "U").replace("Ó", "O") or "REGISTRO NACIONAL" in texto_up:
+    elif "CLAVE UNICA DE REGISTRO DE POBLACION" in texto_up.replace("Ú", "U").replace("Ó", "O") or "REGISTRO NACIONAL" in texto_up or "CURP" in texto_up:
         return "CURP"
-    elif "ACTA DE NACIMIENTO" in texto_up:
-        return "ACTA DE NACIMIENTO"
     else:
         return "DOCUMENTO NO RECONOCIDO"
+
+def extraccion_misma_linea_o_arriba(lineas, i, etiquetas):
+    l_up = lineas[i].upper().strip()
+    parte = l_up
+    for et in etiquetas:
+        parte = parte.replace(et, "")
+    cand = limpiar_nombre_basura(parte)
+    if cand != "No detectado":
+        return cand
+        
+    for j in range(1, 3):
+        if i - j >= 0:
+            cand = limpiar_nombre_basura(lineas[i-j])
+            if cand != "No detectado":
+                return cand
+    return ""
 
 def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
     datos = {"nombre": "No detectado"}
     texto_lineal = texto_up.replace("\n", " ")
+    texto_limpio_curp = texto_up.replace(" ", "").replace("\n", "").upper()
     
-    # 1. ACTAS DE NACIMIENTO (Lógica de bloque)
     if tipo_doc == "ACTA DE NACIMIENTO":
+        nombres_encontrados = []
+        primeros_apellidos = []
+        segundos_apellidos = []
+        
+        for i, linea in enumerate(lineas):
+            l_up = linea.upper().strip()
+            
+            if any(x in l_up for x in ["NOMBRE(S)", "NOMBRE S", "NOMBRES"]):
+                cand = extraccion_misma_linea_o_arriba(lineas, i, ["NOMBRE(S)", "NOMBRE S", "NOMBRES"])
+                if cand: nombres_encontrados.append(cand)
+                
+            elif "PRIMER APELLIDO" in l_up:
+                cand = extraccion_misma_linea_o_arriba(lineas, i, ["PRIMER APELLIDO"])
+                if cand: primeros_apellidos.append(cand)
+                
+            elif "SEGUNDO APELLIDO" in l_up:
+                cand = extraccion_misma_linea_o_arriba(lineas, i, ["SEGUNDO APELLIDO"])
+                if cand: segundos_apellidos.append(cand)
+
+        nombres = nombres_encontrados[0] if nombres_encontrados else ""
+        ap1 = ""
+        ap2 = ""
+        
+        if curp_original != "No detectado" and len(curp_original) >= 4:
+            letra_ap1 = curp_original[0]
+            letra_ap2 = curp_original[2]
+            
+            for cand in primeros_apellidos:
+                if inicial_curp(cand) == letra_ap1:
+                    ap1 = cand
+                    break
+            
+            todos_aps = primeros_apellidos + segundos_apellidos
+            for cand in todos_aps:
+                if inicial_curp(cand) == letra_ap2 and cand != ap1:
+                    ap2 = cand
+                    break
+                    
+        if not ap1 and primeros_apellidos:
+            ap1 = primeros_apellidos[0]
+        if not ap2 and segundos_apellidos:
+            ap2 = segundos_apellidos[0]
+            
+        candidato_federal = f"{nombres} {ap1} {ap2}".strip()
+        candidato_limpio = limpiar_nombre_basura(candidato_federal)
+        
+        if len(candidato_limpio.split()) >= 2 and candidato_limpio != "No detectado":
+            datos["nombre"] = candidato_limpio
+            return datos
+
         match_bloque = re.search(r'NOMBRE\s*:(.*?)FECHA\s*DE\s*NACIMIENTO', texto_up, re.DOTALL)
         if match_bloque:
             contenido_nombre = match_bloque.group(1).strip()
@@ -140,60 +217,32 @@ def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
             datos["nombre"] = limpiar_nombre_basura(nombre_sucio)
             if datos["nombre"] != "No detectado":
                 return datos
+                
+        curp_match = re.search(r'[A-Z]{4}[0-9O]{6}[HMI][A-Z]{5}[A-Z0-9][0-9O]', texto_limpio_curp)
+        if curp_match:
+            curp_str = curp_match.group(0)
+            for i, linea in enumerate(lineas):
+                if curp_str in linea.replace(" ", ""):
+                    candidatos = []
+                    for j in range(-3, 4):
+                        if 0 <= i + j < len(lineas) and j != 0:
+                            cand = limpiar_nombre_basura(lineas[i+j])
+                            if cand != "No detectado" and len(cand.split()) >= 2:
+                                candidatos.append(cand)
+                    if candidatos:
+                        datos["nombre"] = max(candidatos, key=len)
+                        return datos
 
-    # 2. PASAPORTES
-    mrz_pasaporte = re.search(r'P<MEX([A-ZÑ<]+)<<([A-ZÑ<]+)', texto_lineal.replace(" ", ""))
-    if mrz_pasaporte:
-        ap = mrz_pasaporte.group(1).replace("<", " ").strip()
-        nom = mrz_pasaporte.group(2).replace("<", " ").strip()
-        datos["nombre"] = limpiar_nombre_basura(f"{ap} {nom}")
-        if datos["nombre"] != "No detectado": 
-            return datos
-
-    # 3. INE (Por MRZ inferior)
-    matches_ine = re.findall(r'\b([A-ZÑ]{2,})[< ]+([A-ZÑ]{2,})<<([A-ZÑ<]{2,})', texto_lineal)
-    for p, m, n in matches_ine:
-        if "MEX" not in p and "ID" not in p:
-            n_clean = n.replace("<", " ").strip()
-            nomb_limpio = limpiar_nombre_basura(f"{p} {m} {n_clean}")
-            if nomb_limpio != "No detectado":
-                datos["nombre"] = nomb_limpio
+    if tipo_doc == "PASAPORTE":
+        mrz_pasaporte = re.search(r'P<MEX([A-ZÑ<]+)<<([A-ZÑ<]+)', texto_lineal.replace(" ", ""))
+        if mrz_pasaporte:
+            ap = mrz_pasaporte.group(1).replace("<", " ").strip()
+            nom = mrz_pasaporte.group(2).replace("<", " ").strip()
+            datos["nombre"] = limpiar_nombre_basura(f"{ap} {nom}")
+            if datos["nombre"] != "No detectado": 
                 return datos
-
-    # 4. INE (Por líneas frontales)
-    if tipo_doc == "INE":
-        nombres_lineas = []
-        capturando = False
-        for linea in lineas:
-            l_up = linea.upper().replace("É", "E").replace("Í", "I").strip()
-            
-            if l_up in ["NOMBRE", "NOMBRE(S)", "NOMBRES"]:
-                capturando = True
-                continue
-            
-            if capturando:
-                if any(stop in l_up for stop in ["DOMICILIO", "CLAVE", "EDAD", "FECHA", "CURP", "VIGENCIA"]):
-                    break
-                
-                if "SEXO" in l_up:
-                    parte_nombre = l_up.split("SEXO")[0].strip()
-                    if parte_nombre and not any(c.islower() for c in linea[:len(parte_nombre)]):
-                        nombres_lineas.append(parte_nombre)
-                    continue
-                
-                if any(c.islower() for c in linea):
-                    continue
-                
-                nombres_lineas.append(linea)
-                
-        if nombres_lineas:
-            datos["nombre"] = limpiar_nombre_basura(" ".join(nombres_lineas))
-            return datos
-            
-    # 5. PASAPORTE (Por líneas si falla MRZ)
-    elif tipo_doc == "PASAPORTE":
-        apellidos = ""
-        nombres = ""
+        
+        apellidos, nombres = "", ""
         for i, linea in enumerate(lineas):
             l_up = linea.upper()
             if ("APELLIDO" in l_up or "SURNAME" in l_up or "SUMAME" in l_up) and i + 1 < len(lineas):
@@ -201,10 +250,42 @@ def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
             if ("NOMBRE" in l_up or "GIVEN" in l_up) and i + 1 < len(lineas):
                 nombres = lineas[i+1]
         if apellidos or nombres:
-            datos["nombre"] = f"{apellidos} {nombres}".strip()
+            datos["nombre"] = limpiar_nombre_basura(f"{apellidos} {nombres}".strip())
+            return datos
+
+    if tipo_doc == "INE":
+        matches_ine = re.findall(r'\b([A-ZÑ]{2,})[< ]+([A-ZÑ]{2,})<<([A-ZÑ<]{2,})', texto_lineal)
+        for p, m, n in matches_ine:
+            if "MEX" not in p and "ID" not in p:
+                n_clean = n.replace("<", " ").strip()
+                nomb_limpio = limpiar_nombre_basura(f"{p} {m} {n_clean}")
+                if nomb_limpio != "No detectado":
+                    datos["nombre"] = nomb_limpio
+                    return datos
+
+        nombres_lineas = []
+        capturando = False
+        for linea in lineas:
+            l_up = linea.upper().replace("É", "E").replace("Í", "I").strip()
+            if l_up in ["NOMBRE", "NOMBRE(S)", "NOMBRES"]:
+                capturando = True
+                continue
+            if capturando:
+                if any(stop in l_up for stop in ["DOMICILIO", "CLAVE", "EDAD", "FECHA", "CURP", "VIGENCIA"]):
+                    break
+                if "SEXO" in l_up:
+                    parte_nombre = l_up.split("SEXO")[0].strip()
+                    if parte_nombre and not any(c.islower() for c in linea[:len(parte_nombre)]):
+                        nombres_lineas.append(parte_nombre)
+                    continue
+                if any(c.islower() for c in linea):
+                    continue
+                nombres_lineas.append(linea)
+                
+        if nombres_lineas:
+            datos["nombre"] = limpiar_nombre_basura(" ".join(nombres_lineas))
             return datos
             
-    # 6. GENÉRICO O CURP
     for i, linea in enumerate(lineas):
         if "NOMBRE" in linea.upper():
             for j in range(1, 6):
