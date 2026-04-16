@@ -24,6 +24,22 @@ function PreRegistroPresidente() {
   const [estadoPago, setEstadoPago] = useState(null); // null, 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
   const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
 
+  // PASO 1: Pago y Seguros
+  const [numPersonas, setNumPersonas] = useState('');
+  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
+  const [comprobantePago, setComprobantePago] = useState(null);
+
+  // PASO 2: Documentos
+  const [documents, setDocuments] = useState({});
+  const [ocrResults, setOcrResults] = useState({});
+  const [, setFotoPreview] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState({});
+  const [telefono, setTelefono] = useState('');
+  const [tipoAfiliacion, setTipoAfiliacion] = useState('');
+  const [asociacion, setAsociacion] = useState('');
+  const [liga, setLiga] = useState('');
+  const [equipo, setEquipo] = useState('');
+
 
   // Verificar estado de pago al cargar
   useEffect(() => {
@@ -118,9 +134,6 @@ function PreRegistroPresidente() {
   }, [numPersonas, pasoActual]);
 
   // PASO 1: Pago y Seguros
-  const [numPersonas, setNumPersonas] = useState('');
-  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
-  const [comprobantePago, setComprobantePago] = useState(null);
   const catalogoSeguros = [
     { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
     { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
@@ -165,15 +178,6 @@ function PreRegistroPresidente() {
   const jugadoresRestantes = segurosRequeridos - totalAsignados;
 
   // PASO 2: Documentos
-  const [documents, setDocuments] = useState({});
-  const [ocrResults, setOcrResults] = useState({});
-  const [, setFotoPreview] = useState(null);
-  const [detailsOpen, setDetailsOpen] = useState({});
-  const [telefono, setTelefono] = useState('');
-  const [tipoAfiliacion, setTipoAfiliacion] = useState('');
-  const [asociacion, setAsociacion] = useState('');
-  const [liga, setLiga] = useState('');
-  const [equipo, setEquipo] = useState('');
 
   const requisitos = [
     { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
@@ -1510,7 +1514,7 @@ function PreRegistroPresidente() {
                   <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
                     <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: 'var(--danger)' }}>Administrador: haz sido rechazado por este motivo:</h4>
                     <p style={{ fontSize: '14px', color: 'var(--text-main)', fontStyle: 'italic', margin: 0 }}>
-                      "{localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
+                      "{ (ordenPendienteId && localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`)) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
                     </p>
                   </div>
 
