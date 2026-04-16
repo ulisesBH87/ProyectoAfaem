@@ -164,16 +164,31 @@ export default function AdminCrearJugador() {
   const showStep2 = isStep1Done;
   const showStep3 = isStep2Done || fillManually;
 
-  // ELIMINADO: Redundante con la lógica del onClick en el buscador de equipos
-  // const selected = equiposDb.find(e => String(e.SolicitudId) === String(extractedData.equipoSeleccionado));
+  // EFECTO PARA AUTO-LLENAR LIGA Y EQUIPO AL CAMBIAR EQUIPO SELECCIONADO
+  useEffect(() => {
+    if (extractedData.equipoSeleccionado && equiposDb.length > 0) {
+      const selected = equiposDb.find(e => String(e.SolicitudId) === String(extractedData.equipoSeleccionado));
+      if (selected) {
+        setExtractedData(prev => ({
+          ...prev,
+          equipo: selected.Equipo || selected.NombreEquipo || '',
+          liga: selected.Liga || '',
+          categoria: selected.Categoria || 'LIBRE'
+        }));
+      }
+    }
+  }, [extractedData.equipoSeleccionado, equiposDb]);
 
   // CARGAR CATÁLOGO DE EQUIPOS ACTIVOS PARA REGISTRO
   useEffect(() => {
     const fetchTeamCatalog = async () => {
       try {
         setLoadingTeams(true);
-        const data = await adminService.getEquiposDirectorio();
-        setEquiposDb(data || []);
+        const data = await getSolicitudes();
+        // Filtramos solo las solicitudes que tengan equipo o nombre de equipo
+        const rawList = Array.isArray(data) ? data : (data.solicitudes || []);
+        const listaEquipos = rawList.filter(s => s && (s.Equipo || s.NombreEquipo));
+        setEquiposDb(listaEquipos);
       } catch (e) {
         console.error("No se pudieron cargar los equipos:", e);
         Swal.fire('Error', 'No se pudo cargar el directorio de equipos.', 'error');
@@ -632,23 +647,25 @@ export default function AdminCrearJugador() {
                 <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '20px' }}>
                   {equiposDb
                     .filter(eq => {
-                      const term = (teamSearchTerm || '').toLowerCase();
-                      const nombre = (eq.NombreEquipo || eq.Equipo || '').toLowerCase();
+                      const term = (teamSearchTerm || '').toLowerCase().trim();
+                      if (!term) return true;
+                      
+                      const name = (eq.Equipo || eq.NombreEquipo || '').toLowerCase();
+                      const email = (eq.Correo || '').toLowerCase();
                       const liga = (eq.Liga || '').toLowerCase();
                       const cat = (eq.Categoria || '').toLowerCase();
-                      const correo = (eq.Correo || '').toLowerCase();
-                      return !term || nombre.includes(term) || liga.includes(term) || cat.includes(term) || correo.includes(term);
+                      const id = String(eq.SolicitudId || '').toLowerCase();
+                      
+                      return name.includes(term) || 
+                             email.includes(term) || 
+                             liga.includes(term) ||
+                             cat.includes(term) ||
+                             id.includes(term);
                     })
                     .map((eq, index) => (
                       <div 
-                        key={`team-${eq.SolicitudId || index}`} 
-                        onClick={() => setExtractedData({ 
-                          ...extractedData, 
-                          equipoSeleccionado: String(eq.SolicitudId),
-                          equipo: eq.NombreEquipo || eq.Equipo || '',
-                          liga: eq.Liga || '',
-                          categoria: eq.Categoria || 'LIBRE'
-                        })}
+                        key={`equipo-${eq.SolicitudId || 'null'}-${index}`} 
+                        onClick={() => setExtractedData(prev => ({ ...prev, equipoSeleccionado: String(eq.SolicitudId) }))}
                         style={{ 
                           padding: '12px 20px', 
                           cursor: 'pointer',
@@ -667,11 +684,11 @@ export default function AdminCrearJugador() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '14px', fontWeight: '800', flexShrink: 0
                         }}>
-                          {(eq.NombreEquipo || eq.Equipo || 'E').charAt(0).toUpperCase()}
+                          {(eq.Equipo || eq.NombreEquipo || 'E').charAt(0).toUpperCase()}
                         </div>
                         <div style={{ flex: 1 }}>
                           <span style={{ fontWeight: String(extractedData.equipoSeleccionado) === String(eq.SolicitudId) ? '700' : '500', color: '#1e293b', display: 'block' }}>
-                            {eq.NombreEquipo || eq.Equipo}
+                            {eq.Equipo || eq.NombreEquipo}
                           </span>
                           <span style={{ fontSize: '12px', color: '#64748b' }}>
                             {eq.Liga || 'Sin Liga'} - {eq.Categoria || 'LIBRE'}
@@ -681,11 +698,12 @@ export default function AdminCrearJugador() {
                       </div>
                     ))}
                   {equiposDb.filter(eq => {
-                      const term = (teamSearchTerm || '').toLowerCase();
-                      const nombre = (eq.NombreEquipo || eq.Equipo || '').toLowerCase();
+                      const term = (teamSearchTerm || '').toLowerCase().trim();
+                      if (!term) return true;
+                      const name = (eq.Equipo || eq.NombreEquipo || '').toLowerCase();
+                      const email = (eq.Correo || '').toLowerCase();
                       const liga = (eq.Liga || '').toLowerCase();
-                      const cat = (eq.Categoria || '').toLowerCase();
-                      return !term || nombre.includes(term) || liga.includes(term) || cat.includes(term);
+                      return name.includes(term) || email.includes(term) || liga.includes(term);
                     }).length === 0 && (
                       <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
                          No se encontraron equipos que coincidan con la búsqueda.
