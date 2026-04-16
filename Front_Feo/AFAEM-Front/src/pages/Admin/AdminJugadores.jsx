@@ -4,7 +4,7 @@ import { getJugadoresDirectorio, getJugadorDocumentos, updateJugador } from '../
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 
 export default function AdminJugadores() {
@@ -275,14 +275,22 @@ export default function AdminJugadores() {
       <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>BAJA</span>,
     Acciones: (
       <div style={{ display: 'flex', gap: '8px' }}>
-        <button 
-          className="btn btn-sm"
-          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: '700' }}
-          onClick={() => handleDescargarDocs(j)}
-          title="Ver documentos"
-        >
-          <FaFileDownload /> Docs
-        </button>
+          <button 
+            className="btn btn-sm"
+            style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: '700' }}
+            onClick={() => handleDescargarDocs(j)}
+            title="Ver documentos"
+          >
+            <FaFileDownload /> Docs
+          </button>
+          <button 
+            className="btn btn-sm"
+            style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#eff6ff', color: '#2563eb', border: 'none', fontWeight: '700' }}
+            onClick={() => Swal.fire('Descarga de Expediente', 'Esta funcionalidad estará disponible próximamente en conjunto con el nuevo endpoint de backend.', 'info')}
+            title="Exportar como ZIP"
+          >
+            <FaFileArchive /> Exportar
+          </button>
         <button 
           className="btn btn-sm btn-primary"
           style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}

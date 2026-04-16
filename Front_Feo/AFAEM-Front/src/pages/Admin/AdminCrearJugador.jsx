@@ -8,7 +8,9 @@ import {
   FaFilePdf,
   FaSyncAlt,
   FaCheckCircle,
-  FaSearchPlus
+  FaSearchPlus,
+  FaGlobeAmericas,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { getSolicitudes } from '../../services/solicitud';
@@ -598,12 +600,115 @@ export default function AdminCrearJugador() {
           </div>
         </section>
 
+        {/* SELECTOR DE NACIONALIDAD */}
+        <section className="fade-in" style={{ marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+            <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            background: '#f1f5f9', 
+            padding: '4px', 
+            borderRadius: '12px', 
+            width: 'fit-content' 
+          }}>
+            <button
+              onClick={() => setExtractedData({...extractedData, esForaneo: false})}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '10px',
+                border: 'none',
+                background: !extractedData.esForaneo ? 'white' : 'transparent',
+                color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                fontWeight: '800',
+                fontSize: '13px',
+                boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              🇲🇽 Mexicano
+            </button>
+            <button
+              onClick={() => setExtractedData({...extractedData, esForaneo: true})}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '10px',
+                border: 'none',
+                background: extractedData.esForaneo ? 'white' : 'transparent',
+                color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                fontWeight: '800',
+                fontSize: '13px',
+                boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              🌎 Extranjero
+            </button>
+          </div>
+        </section>
+
+        {/* PREVISUALIZACIÓN DE DATOS PARA EXTRANJEROS */}
+        {extractedData.esForaneo && !showStep3 && (
+          <section className="fade-in" style={{ marginBottom: '40px', padding: '24px', background: '#f0f9ff', borderRadius: '16px', border: '1px solid #bae6fd' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+              <FaMapMarkerAlt style={{ color: '#0369a1' }} />
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>Pre-llenado de Identidad para Extranjero</h4>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+              <EntradaFormulario
+                etiqueta="Nombre(s)"
+                valor={extractedData.nombreJugador}
+                alCambiar={(e) => setExtractedData({...extractedData, nombreJugador: e.target.value})}
+              />
+              <EntradaFormulario
+                etiqueta="Apellido Paterno"
+                valor={extractedData.apellidoPaterno}
+                alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
+              />
+              <EntradaFormulario
+                etiqueta="País de Origen"
+                valor={extractedData.nacionalidadJugador}
+                alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})}
+              />
+            </div>
+            <p style={{ margin: '15px 0 0', fontSize: '12px', color: '#0c4a6e', fontStyle: 'italic' }}>
+              💡 Al ser extranjero, puedes adelantar estos datos. Se validarán automáticamente al subir los documentos abajo.
+            </p>
+          </section>
+        )}
+
         {/* PASO 2: CARGA DE DOCUMENTOS */}
         {showStep2 && (
           <section className="fade-in" style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
               <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
               <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
+            </div>
+            
+            <div style={{ marginBottom: '24px', paddingLeft: '47px' }}>
+              <div style={{ 
+                background: '#f8fafc', 
+                border: '1px solid #e2e8f0', 
+                padding: '10px 16px', 
+                borderRadius: '10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: '#475569',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
+                <span style={{ fontSize: '18px' }}>✨</span>
+                Sube tus documentos y tus datos se rellenarán automáticamente
+              </div>
             </div>
 
             <div style={{
