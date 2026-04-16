@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 from app.core.seguridad import obtener_usuario_actual
 
-from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio
+from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
 from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
@@ -71,21 +71,13 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/crear-equipo-completo")
-async def crear_equipo_completo(
-    request: Request,
-    db: Session = Depends(get_db),
-    usuario = Depends(obtener_usuario_actual)
-):
+async def crear_equipo_completo(request: Request, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
         form_data = await request.form()
-        team_data_str = form_data.get("team_data")
-        players_data_str = form_data.get("players_data")
 
-        if not team_data_str or not players_data_str:
-            raise HTTPException(status_code=400, detail="Faltan datos de equipo o jugadores")
+        result = await crear_equipo_completo_servicio(form_data=form_data, db=db, usuario=usuario)
 
-        team_info = json.loads(team_data_str)
-        players_info = json.loads(players_data_str)
+        return result
 
         # 1. Obtener PresidenteEquipoId
         rol_id = getattr(usuario, 'RolId', None)
@@ -241,14 +233,10 @@ async def crear_equipo_completo(
         db.commit()
         return {"mensaje": "Equipo y jugadores creados exitosamente", "equipo_id": nuevo_equipo.EquipoId}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        db.rollback()
-        error_msg = f"Error en crear_equipo_completo: {str(e)}"
-        print(error_msg)
-        tb = traceback.format_exc()
-        print(tb)
-        # Retornamos el error real temporalmente para depuración
-        raise HTTPException(status_code=500, detail=f"{error_msg} | Traceback: {tb}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/agregar-jugador-equipo-existente")
 async def agregar_jugador_equipo_existente(

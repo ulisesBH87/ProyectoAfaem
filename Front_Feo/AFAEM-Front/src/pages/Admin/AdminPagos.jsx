@@ -16,10 +16,10 @@ const AdminPagos = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const fetchPagos = async () => {
+  const fetchPagos = async (forceRefresh = false) => {
     setLoading(true);
     try {
-      const data = await getPagosGenerales();
+      const data = await getPagosGenerales(forceRefresh);
       setPagos(data);
     } catch (error) {
       console.error('Error fetching pagos:', error);
@@ -336,7 +336,7 @@ const AdminPagos = () => {
               ))}
             </div>
 
-            <button onClick={fetchPagos} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
+            <button onClick={() => fetchPagos(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
               <FaSyncAlt />
             </button>
           </div>

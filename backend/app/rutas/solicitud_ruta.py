@@ -46,22 +46,10 @@ def validar_solicitud(solicitud_id: int, payload: ValidarSolicitudPayload, db: S
     """
     return validar_solicitud_servicio(db, solicitud_id, payload)
 
-"""
-@router.post("/enviar-solicitud")
-def enviar_solicitud_presidente(data: SolicitudCrear, db:Session = Depends(get_db),usuario: Usuario = Depends(obtener_usuario_actual)):
-
-    crear_solicitud(db, data, usuario)
-
-    if not data:
-        raise HTTPException(status_code=400, detail="Datos de solicitud inválidos")
-
-    return {"message": "Solicitud enviada correctamente"}
-"""
 
 @router.get("/solicitudes-usuarios", response_model=List[SolicitudesTodas])
 def obtener_solicitudes(db:Session = Depends(get_db)):
     return solicitud_servicio.obtener_solicitudes_usuarios_servicio(db)
-
 
 
 @router.get("/solicitud-usuario/{solicitud_id}", response_model=SolicitudIndividualRespuesta)
@@ -136,6 +124,7 @@ async def descargar_formato(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {str(e)}")
+
 #Hacer el envío de la solicitud al administrador
 @router.post("/solicitud-completa")
 def enviar_solicitud_completa(solicitud_id: int, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):

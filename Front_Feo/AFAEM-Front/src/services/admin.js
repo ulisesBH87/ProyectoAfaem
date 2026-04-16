@@ -21,6 +21,41 @@ api.interceptors.request.use((config) => {
 // Aplicar interceptor centralizado para manejo de errores (códigos del servidor)
 applyErrorInterceptor(api);
 
+/* ─── SISTEMA DE CACHÉ EN MEMORIA ─── */
+const serviceCache = {
+  data: {},
+  get(key) {
+    const entry = this.data[key];
+    if (!entry) return null;
+    const isExpired = (Date.now() - entry.timestamp) > (5 * 60 * 1000); // 5 minutos
+    if (isExpired) {
+      delete this.data[key];
+      return null;
+    }
+    return entry.value;
+  },
+  set(key, value) {
+    this.data[key] = { value, timestamp: Date.now() };
+  },
+  clear(key) {
+    if (key) delete this.data[key];
+    else this.data = {};
+  }
+};
+
+const fetchWithCache = async (url, options = {}) => {
+  const cacheKey = typeof url === 'string' ? url : url.url;
+  const cachedData = serviceCache.get(cacheKey);
+  if (cachedData && !options.forceRefresh) {
+    console.log(`[Cache Hit] ${cacheKey}`);
+    return cachedData;
+  }
+  
+  const response = await api.get(url, options);
+  serviceCache.set(cacheKey, response.data);
+  return response.data;
+};
+
 /**
  * OBTIENE EL DETALLE INDIVIDUAL DE UNA SOLICITUD
  */
@@ -32,9 +67,8 @@ export const getSolicitudDetalle = async (solicitudId) => {
 /**
  * OBTIENE TODAS LAS ÓRDENES DE PAGO (GENERALES)
  */
-export const getPagosGenerales = async () => {
-  const response = await api.get('/ordenes-pago/generales');
-  return response.data;
+export const getPagosGenerales = async (forceRefresh = false) => {
+  return fetchWithCache('/ordenes-pago/generales', { forceRefresh });
 };
 
 /**
@@ -45,6 +79,7 @@ export const updateEstatusPago = async (ordenPagoId, estatus) => {
   const response = await api.post('/ordenes-pago/estatus-pago', null, {
     params: { orden_pago_id: ordenPagoId, estatus: estatus }
   });
+  serviceCache.clear('/ordenes-pago/generales'); // Invalida caché de pagos
   return response.data;
 };
 
@@ -125,14 +160,12 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
 //           DIRECTORIO GLOBAL (NUEVO REQUERIMIENTO)
 // ==============================================================
 
-export const getEquiposDirectorio = async () => {
-  const response = await api.get('/equipo-temporal/directorio-equipos');
-  return response.data;
+export const getEquiposDirectorio = async (forceRefresh = false) => {
+  return fetchWithCache('/equipo-temporal/directorio-equipos', { forceRefresh });
 };
 
-export const getJugadoresDirectorio = async () => {
-  const response = await api.get('/equipo-temporal/directorio-jugadores');
-  return response.data;
+export const getJugadoresDirectorio = async (forceRefresh = false) => {
+  return fetchWithCache('/equipo-temporal/directorio-jugadores', { forceRefresh });
 };
 
 export const getJugadorDocumentos = async (personaId) => {
@@ -148,6 +181,9 @@ export const updateEquipo = async (equipoId, nombre, estatus) => {
     NombreEquipo: nombre,
     Estatus: estatus === "1" || estatus === 1 || estatus === true
   });
+  // Invalida catálogos relacionados
+  serviceCache.clear('/equipo-temporal/directorio-equipos');
+  serviceCache.clear('/equipo-temporal/directorio-jugadores'); // Jugadores pueden tener el nombre del equipo
   return response.data;
 };
 
@@ -162,15 +198,15 @@ export const updateJugador = async (miembroEquipoId, data) => {
     CURP: data.curp,
     Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true
   });
+  serviceCache.clear('/equipo-temporal/directorio-jugadores');
   return response.data;
 };
 
 /**
  * OBTIENE EL DIRECTORIO DE PRESIDENTES
  */
-export const getPresidentesDirectorio = async () => {
-  const response = await api.get('/equipo-temporal/directorio-presidentes');
-  return response.data;
+export const getPresidentesDirectorio = async (forceRefresh = false) => {
+  return fetchWithCache('/equipo-temporal/directorio-presidentes', { forceRefresh });
 };
 
 /**
@@ -184,6 +220,7 @@ export const updatePresidente = async (presidenteId, data) => {
     CURP: data.curp,
     Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true
   });
+  serviceCache.clear('/equipo-temporal/directorio-presidentes');
   return response.data;
 };
 
@@ -192,6 +229,7 @@ export const updatePresidente = async (presidenteId, data) => {
  */
 export const deletePresidente = async (presidenteId) => {
   const response = await api.delete(`/equipo-temporal/delete-presidente/${presidenteId}`);
+  serviceCache.clear('/equipo-temporal/directorio-presidentes');
   return response.data;
 };
 
@@ -211,6 +249,8 @@ export const vincularPresidenteEquipo = async (presidenteId, equipoId) => {
     PresidenteId: presidenteId,
     EquipoId: equipoId
   });
+  serviceCache.clear('/equipo-temporal/directorio-presidentes');
+  serviceCache.clear('/equipo-temporal/directorio-equipos');
   return response.data;
 };
 

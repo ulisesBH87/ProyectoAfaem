@@ -80,7 +80,7 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setTimeout(() => setLoading(false), 800);
+        setLoading(false); // Retraso artificial de 800ms eliminado
       }
     };
     fetchData();
@@ -128,7 +128,7 @@ const AdminDashboard = () => {
         <button
           onClick={() => window.location.reload()}
           className="glass"
-          style={{ padding: '10px 16px', borderRadius: '12px', fontWeight: '600', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}
+          style={{ padding: '10px 20px', backgroundColor: 'white', color: 'var(--text-main)', border: '1.5px solid var(--border-light)', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
         >
           <FaSyncAlt /> Actualizar
         </button>
@@ -166,15 +166,18 @@ const AdminDashboard = () => {
               <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Tendencia de ingresos</h3>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>Histórico mensual ($ MXN)</p>
             </div>
-            <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
               {meses.map(m => (
                 <button
                   key={m}
                   onClick={() => setMesFiltro(m)}
                   style={{
-                    padding: '5px 12px', borderRadius: '8px', border: 'none', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-                    background: mesFiltro === m ? 'var(--primary)' : 'transparent',
-                    color: mesFiltro === m ? 'white' : 'var(--text-muted)'
+                    padding: '6px 14px', borderRadius: '10px', variant: 'none', border: 'none', fontSize: '11px', fontWeight: '800', cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    background: mesFiltro === m ? 'var(--primary)' : 'rgba(0,0,0,0.03)',
+                    color: mesFiltro === m ? 'white' : 'var(--text-muted)',
+                    boxShadow: mesFiltro === m ? '0 4px 12px rgba(11, 78, 166, 0.25)' : 'none',
+                    transform: mesFiltro === m ? 'scale(1.05)' : 'scale(1)'
                   }}
                 >
                   {m}
@@ -234,24 +237,27 @@ const AdminDashboard = () => {
           <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Distribución de Estatus</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {statusData.map(item => (
-              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ width: '100px', fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', flexShrink: 0 }}>
-                  {item.name}
-                </span>
-                <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', height: '20px', overflow: 'hidden' }}>
+              <div key={item.name} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
+                    {item.name}
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: item.color }}>
+                    {item.value} <small style={{ color: 'var(--text-muted)', fontWeight: '400' }}>({item.value > 0 && statsData.totalSolicitudes > 0 ? Math.round((item.value / statsData.totalSolicitudes) * 100) : 0}%)</small>
+                  </span>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(0,0,0,0.03)', borderRadius: '8px', height: '12px', overflow: 'hidden', position: 'relative' }}>
                   <div
                     style={{
                       height: '100%',
-                      width: `${item.value > 0 ? Math.max((item.value / Math.max(...statusData.map(d => d.value), 1)) * 100, 5) : 0}%`,
+                      width: `${item.value > 0 ? Math.max((item.value / Math.max(...statusData.map(d => d.value), 1)) * 100, 2) : 0}%`,
                       background: item.color,
-                      borderRadius: '6px',
-                      transition: 'width 0.6s ease'
+                      borderRadius: '8px',
+                      transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: `0 0 10px ${item.color}44`
                     }}
                   />
                 </div>
-                <span style={{ width: '30px', textAlign: 'right', fontSize: '14px', fontWeight: '800', color: item.color, flexShrink: 0 }}>
-                  {item.value}
-                </span>
               </div>
             ))}
           </div>
