@@ -101,7 +101,7 @@ export default function AdminLayoutJugadores() {
           </p>
         </div>
         <button
-          onClick={() => fetchData()} // Recarga asíncrona en lugar de reload()
+          onClick={() => fetchData(true)} // Recarga asíncrona en lugar de reload()
           style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: '#334155' }}
         >
           <FaSyncAlt />
