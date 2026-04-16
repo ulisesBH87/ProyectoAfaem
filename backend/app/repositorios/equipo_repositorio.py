@@ -15,7 +15,9 @@ from app.modelos.usuario_modelo import Usuario
 from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
 from datetime import datetime
-from app.utilidades.file_handler import guardar_documentos_jugador
+from app.servicios.documentos_servicio import subir_documento_servicio2
+from app.modelos.solicitud_modelo import Solicitud
+from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 
 
 def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
@@ -340,7 +342,7 @@ def actualizar_usuario_y_presidente(db, usuario, presidente, rol_id):
             usuario_db.RolId = 3
 
 
-async def procesar_jugador(db, equipo, p_data, form_data, index):
+async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     try:
         nueva_persona = Personas(
             Nombre=p_data["nombre"],
@@ -408,10 +410,50 @@ async def procesar_jugador(db, equipo, p_data, form_data, index):
 
     db.add(miembro)
 
-    await guardar_documentos_jugador(
-        form_data, equipo, nueva_persona, index
-    )
+    archivos = []
+    documento_ids = []
 
+    DOC_TYPE_TO_ID = {
+        "acta": 3,
+        "ine": 3,
+        "foto": 3,
+        "formato": 3
+    }
+
+    for doc_type, doc_id in DOC_TYPE_TO_ID.items():
+        file_key = f"player_{index}_{doc_type}"
+        archivo = form_data.get(file_key)
+
+        if archivo:
+            archivos.append(archivo)
+            documento_ids.append(doc_id)
+
+    if archivos:
+        if not solicitud_id:
+            raise HTTPException(400, "No hay solicitud_id para guardar documentos")
+
+        await subir_documento_servicio2(
+            db=db,
+            persona_id=nueva_persona.PersonaId,
+            documento_afiliacion_ids=documento_ids,
+            archivos=archivos,
+            solicitud_id=solicitud_id
+        )
+
+def crear_solicitud_administrativa(db, usuario_id):
+    """
+    Crea una solicitud administrativa cuando un admin registra un equipo.
+    Usado para auditar y registrar documentos de jugadores en BD.
+    """
+    solicitud = Solicitud(
+        UsuarioId=usuario_id,
+        FechaSolicitud=datetime.now(),
+        EstatusValidacion=int(EstatusValidacionSolicitud.ACEPTADO),
+        ObservacionesSolicitud="Registro administrativo de equipo y jugadores"
+    )
+    db.add(solicitud)
+    db.flush()
+    return solicitud.SolicitudId
 
 
 def obtener_presidente(db, usuario, team_info):

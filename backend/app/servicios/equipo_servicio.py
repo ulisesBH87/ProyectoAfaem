@@ -98,8 +98,13 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
 
         await guardar_logo(form_data, equipo, db)
 
+        # Crear solicitud administrativa si el usuario es admin (rol_id == 1)
+        solicitud_id = None
+        if rol_id == 1:  # ADMINISTRADOR
+            solicitud_id = equipo_repositorio.crear_solicitud_administrativa(db, usuario.UsuarioId)
+
         for index, player in enumerate(players_info):
-            await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index)
+            await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
 
         equipo_repositorio.actualizar_usuario_y_presidente(
             db, usuario, presidente, rol_id
