@@ -613,10 +613,15 @@ export default function AdminCrearJugador() {
                 {!loadingTeams && (
                   <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', backgroundColor: 'white' }}>
                     {equiposDb
-                      .filter(eq => !teamSearchTerm || eq.Equipo.toLowerCase().includes(teamSearchTerm.toLowerCase()) || eq.Correo.toLowerCase().includes(teamSearchTerm.toLowerCase()))
-                      .map(eq => (
+                      .filter(eq => {
+                        const term = (teamSearchTerm || '').toLowerCase();
+                        const nombreEquipo = (eq.Equipo || eq.NombreEquipo || '').toLowerCase();
+                        const correo = (eq.Correo || '').toLowerCase();
+                        return !term || nombreEquipo.includes(term) || correo.includes(term);
+                      })
+                      .map((eq, index) => (
                         <div 
-                          key={eq.SolicitudId} 
+                          key={`team-${eq.SolicitudId}-${index}`} 
                           onClick={() => setExtractedData({ ...extractedData, equipoSeleccionado: eq.SolicitudId })}
                           style={{ 
                             padding: '12px 20px', 
@@ -649,7 +654,12 @@ export default function AdminCrearJugador() {
                           {extractedData.equipoSeleccionado === eq.SolicitudId && <span style={{ marginLeft: 'auto', color: '#0b4ea6', fontWeight: '800' }}>✓</span>}
                         </div>
                       ))}
-                    {equiposDb.filter(eq => !teamSearchTerm || eq.Equipo.toLowerCase().includes(teamSearchTerm.toLowerCase()) || eq.Correo.toLowerCase().includes(teamSearchTerm.toLowerCase())).length === 0 && (
+                    {equiposDb.filter(eq => {
+                      const term = (teamSearchTerm || '').toLowerCase();
+                      const nombreEquipo = (eq.Equipo || eq.NombreEquipo || '').toLowerCase();
+                      const correo = (eq.Correo || '').toLowerCase();
+                      return !term || nombreEquipo.includes(term) || correo.includes(term);
+                    }).length === 0 && (
                       <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>No se encontraron equipos que coincidan con la búsqueda.</div>
                     )}
                   </div>
