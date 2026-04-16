@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.db.sesion import get_db
 from typing import List, Optional
 import traceback
+import sys
 import json
 import os
 from datetime import datetime
@@ -375,7 +376,7 @@ async def agregar_jugador_equipo_existente(
         # 4. Crear Antecedentes si es extranjero
         antecedentes_id = None
         if p_data.get("extranjero"):
-            from app.modelos.extranjero_modelo import AntecedentesInternacionales
+            from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
             nuevos_antecedentes = AntecedentesInternacionales(
                 Extranjero=True,
                 Nacionalidades=p_data.get("nacionalidad"),
