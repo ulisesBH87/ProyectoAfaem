@@ -262,6 +262,19 @@ export const getAuditorias = async (page = 1, size = 10) => {
   return response.data;
 };
 
+/**
+ * REGISTRA UN JUGADOR DIRECTAMENTE EN UN EQUIPO EXISTENTE (USO DEL ADMIN)
+ * POST /equipo-temporal/agregar-jugador-equipo-existente
+ */
+export const agregarJugadorEquipoExistente = async (formData) => {
+  const response = await api.post('/equipo-temporal/agregar-jugador-equipo-existente', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -281,5 +294,6 @@ export default {
   deletePresidente,
   getPresidentesDisponibles,
   vincularPresidenteEquipo,
-  getAuditorias
+  getAuditorias,
+  agregarJugadorEquipoExistente
 };

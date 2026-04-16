@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.db.sesion import get_db
 from typing import List, Optional
 import traceback
+import sys
 import json
 import os
 from datetime import datetime
@@ -20,6 +21,17 @@ from app.modelos import (
 )
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
+
+def safe_int(val, default=None):
+    if val is None: return default
+    try:
+        # Manejar casos donde el valor es un float string como "10.0" o "NaN"
+        s_val = str(val).strip().lower()
+        if s_val in ["", "null", "undefined", "nan"]:
+            return default
+        return int(float(s_val))
+    except (ValueError, TypeError):
+        return default
 
 @router.get("/equipos-temporales")
 def obtener_equipos_temporales_por_usuario(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -68,10 +80,385 @@ async def crear_equipo_completo(request: Request, db: Session = Depends(get_db),
 
         return result
 
+        # 1. Obtener PresidenteEquipoId
+        rol_id = getattr(usuario, 'RolId', None)
+        presidente_id = None
+
+        if rol_id in [1, 3, 4, '1', '3', '4']:  # ADMINISTRADOR
+            # Validamos todos los rols administrativos
+            presidente_id_raw = team_info.get("presidente_id")
+            if presidente_id_raw is not None:
+                try: presidente_id = int(presidente_id_raw)
+                except ValueError: presidente_id = None
+            # Si no se envía presidente_id, permitimos que sea None (el modelo lo soporta pero el admin lo requiere)
+        else:
+            presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+            if not presidente:
+                raise HTTPException(status_code=403, detail="El usuario no es un presidente de equipo registrado")
+            presidente_id = presidente.PresidenteEquipoId
+
+        # 2. Obtener o Crear Registro de Equipo (Unicidad por nombre insensible a mayúsculas)
+        nombre_equipo = team_info["nombre_equipo"]
+        equipo_existente = db.query(Equipos).filter(func.lower(Equipos.NombreEquipo) == func.lower(nombre_equipo)).first()
+
+        if equipo_existente:
+            nuevo_equipo = equipo_existente
+        else:
+            nuevo_equipo = Equipos(
+                NombreEquipo=nombre_equipo,
+                Estatus=True
+            )
+            db.add(nuevo_equipo)
+            db.flush() # Para obtener el EquipoId
+
+        # 3. Crear Registro en EquiposJugando
+        nueva_competencia = EquiposJugando(
+            EquipoId=nuevo_equipo.EquipoId,
+            RamaId=team_info["rama_id"],
+            CategoriaId=team_info["categoria_id"],
+            LigaId=team_info["liga_id"],
+            ModalidadId=team_info["modalidad_id"],
+            PresidenteEquipoId=presidente_id,
+            CantidadJugadores=len(players_info)
+        )
+        db.add(nueva_competencia)
+        db.flush()
+
+        os.makedirs(DOCS_DIR, exist_ok=True)
+        LOGOS_DIR = os.path.join(UPLOAD_DIR, "logos")
+        os.makedirs(LOGOS_DIR, exist_ok=True)
+
+        # 3.5 Procesar Logo del Equipo
+        team_logo = form_data.get("team_logo")
+        if team_logo and isinstance(team_logo, UploadFile):
+            logo_ext = team_logo.filename.split(".")[-1]
+            logo_name = f"Logo_{nuevo_equipo.EquipoId}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{logo_ext}"
+            logo_path = os.path.join(LOGOS_DIR, logo_name)
+            
+            with open(logo_path, "wb") as buffer:
+                buffer.write(await team_logo.read())
+            
+            nuevo_equipo.RutaLogo = os.path.join("uploads", "logos", logo_name).replace("\\", "/")
+            db.flush()
+
+        # 4. Procesar Jugadores
+        for index, p_data in enumerate(players_info):
+            # a. Crear Persona
+            try:
+                nueva_persona = Personas(
+                    Nombre=p_data["nombre"],
+                    PrimerApellido=p_data["primer_apellido"],
+                    SegundoApellido=p_data.get("segundo_apellido"),
+                    CURP=p_data["curp"],
+                    NUI=p_data.get("nui"),
+                    SexoId=p_data["sexo_id"],
+                    FechaNacimiento=datetime.strptime(p_data["fecha_nacimiento"], "%d/%m/%Y").date() if p_data.get("fecha_nacimiento") else None,
+                    LugarNacimiento=p_data.get("lugar_nacimiento"),
+                    CorreoElectronico=p_data.get("correo"),
+                    NumeroTelefono=p_data.get("telefono")
+                )
+                db.add(nueva_persona)
+                db.flush()
+            except IntegrityError as e:
+                db.rollback()
+                if "check_curp_persona_longitud" in str(e):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"La CURP '{p_data['curp']}' del jugador {p_data['nombre']} {p_data['primer_apellido']} debe tener exactamente 18 caracteres."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Error al registrar al jugador {p_data['nombre']} {p_data['primer_apellido']}: {str(e)}"
+                    )
+
+            # b. Crear Antecedentes si es extranjero
+            antecedentes_id = None
+            if p_data.get("extranjero"):
+                nuevos_antecedentes = AntecedentesInternacionales(
+                    Extranjero=True,
+                    Nacionalidades=p_data.get("nacionalidad"),
+                    PaisResidenciaActual=p_data.get("pais_residencia"),
+                    NacionalidadPadre=p_data.get("nacionalidad_padre"),
+                    NacionalidadMadre=p_data.get("nacionalidad_madre"),
+                    NacionalidadAbueloP=p_data.get("nac_abuelo_paterno"),
+                    NacionalidadAbuelaP=p_data.get("nac_abuela_paterna"),
+                    NacionalidadAbueloM=p_data.get("nac_abuelo_materno"),
+                    NacionalidadAbuelaM=p_data.get("nac_abuela_materna"),
+                    RegistroAsociacionExtranjera=p_data.get("registro_asociacion_extranjera"),
+                    ParticipacionExtranjera=p_data.get("juego_club_extranjero")
+                )
+                db.add(nuevos_antecedentes)
+                db.flush()
+                antecedentes_id = nuevos_antecedentes.AntecedentesId
+
+            # c. Crear MiembroEquipo (Usar rol proporcionado por el front)
+            nuevo_miembro = MiembrosEquipo(
+                PersonaId=nueva_persona.PersonaId,
+                RolEnEquipo=p_data.get("rol_en_equipo", 3), # Default 3 (Jugador)
+                EquipoID=nuevo_equipo.EquipoId,
+                Estatus=True,
+                Eliminado=False,
+                NumeroCamiseta=p_data.get("numero_camiseta"),
+                Extranjero=p_data.get("extranjero", False),
+                AntecedentesId=antecedentes_id
+            )
+            db.add(nuevo_miembro)
+
+            # c. Guardar Archivos del Jugador
+            doc_types = ["acta", "ine", "foto", "formato"]
+            for doc_type in doc_types:
+                file_key = f"player_{index}_{doc_type}"
+                archivo = form_data.get(file_key)
+                if archivo and isinstance(archivo, UploadFile):
+                    ext = archivo.filename.split(".")[-1]
+                    # Formato solicitado: Equipo_CURP_Tipo.ext (Agrego tipo para no sobreescribir)
+                    nombre_archivo = f"{nuevo_equipo.NombreEquipo}_{nueva_persona.CURP}_{doc_type}.{ext}".replace(" ", "_")
+                    ruta_archivo = os.path.join(DOCS_DIR, nombre_archivo)
+                    
+                    with open(ruta_archivo, "wb") as buffer:
+                        buffer.write(await archivo.read())
+                    
+                    # Aquí podrías registrar la ruta en la tabla de documentos si fuera necesario parse.
+                    # Por ahora el usuario sólo solicitó guardarlos físicamente.
+
+        # 4. Actualizar Estatus del Presidente y Rol del Usuario (Solo si es el propio presidente)
+        if rol_id != 1:
+            if presidente:
+                presidente.EstatusId = 4  # En Revisión
+            
+            usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario.UsuarioId).first()
+            if usuario_db:
+                usuario_db.RolId = 3  # Presidente de Equipo
+
+        db.commit()
+        return {"mensaje": "Equipo y jugadores creados exitosamente", "equipo_id": nuevo_equipo.EquipoId}
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/agregar-jugador-equipo-existente")
+async def agregar_jugador_equipo_existente(
+    request: Request,
+    equipo_id: int = Form(...),
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    """
+    Agrega un jugador a un equipo ya existente en la base de datos real.
+    Solo para uso de Administradores.
+    """
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id not in [1, 3, 4, '1', '3', '4']:
+        raise HTTPException(status_code=403, detail="Acceso denegado. Solo administradores pueden agregar jugadores a equipos existentes directamente.")
+
+    try:
+        form_data = await request.form()
+        equipo_id = form_data.get("equipo_id")
+        if not equipo_id:
+            raise HTTPException(status_code=400, detail="El ID del equipo es obligatorio")
+        
+        try:
+            equipo_id = int(equipo_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"ID de equipo inválido: {equipo_id}")
+
+        # 1. Validar que el equipo exista
+        from app.modelos.equipo_modelo import Equipos, EquiposJugando
+        
+        equipo_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
+        if not equipo_jugando:
+            raise HTTPException(status_code=404, detail="El equipo no está registrado en la temporada actual (No se encontró en EquiposJugando)")
+
+        equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo_id).first()
+        if not equipo:
+            raise HTTPException(status_code=404, detail="El equipo especificado no existe en la tabla Equipos")
+
+        # 2. Parsear los datos del único jugador
+        p_data = {}
+        for key, value in form_data.items():
+            # Soporta tanto formato indexado 'players[0][key]' como campos directos 'key'
+            clean_key = key
+            if key.startswith("players[0]["):
+                clean_key = key.replace("players[0][", "").replace("]", "")
+            
+            # Convertir "" o "null" o "undefined" a None para consistencia
+            val = value
+            if isinstance(val, str):
+                val_stripped = val.strip()
+                if val_stripped == "" or val_stripped.lower() in ["null", "undefined", "nan"]:
+                    val = None
+                else:
+                    # Si es un booleano en string
+                    if val_stripped.lower() == "true": val = True
+                    elif val_stripped.lower() == "false": val = False
+                    elif val_stripped == "1" and clean_key in ["extranjero", "es_foraneo", "ha_vivido_extranjero"]: val = True
+                    elif val_stripped == "0" and clean_key in ["extranjero", "es_foraneo", "ha_vivido_extranjero"]: val = False
+                    else: val = val_stripped
+            elif val is None:
+                val = None
+            
+            p_data[clean_key] = val
+
+        # Mapeos de compatibilidad si vienen con nombres distintos
+        if "es_foraneo" in p_data and "extranjero" not in p_data: p_data["extranjero"] = p_data["es_foraneo"]
+        if "rol_en_equipo" not in p_data and "posicion" in p_data: p_data["rol_en_equipo"] = p_data["posicion"]
+        if "numero_camiseta" not in p_data and "num_camiseta" in p_data: p_data["numero_camiseta"] = p_data["num_camiseta"]
+        if "nacionalidad_jugador" in p_data: p_data["nacionalidad"] = p_data["nacionalidad_jugador"]
+        if "pais_resid_actual" in p_data: p_data["pais_residencia"] = p_data["pais_resid_actual"]
+        if "donde_vivido" in p_data: p_data["donde_vivido_extranjero"] = p_data["donde_vivido"]
+
+        if not p_data or "curp" not in p_data:
+             raise HTTPException(status_code=400, detail="No se recibieron datos del jugador válidos.")
+        # Comprobar si ya existe la CURP o el Email
+        from app.modelos.persona_modelo import Personas
+        
+        curp_val = str(p_data.get("curp", "")).strip().upper()
+        # El usuario solicita remover la validación de CURP duplicada para fines de pruebas
+        
+        email_val = p_data.get("correo")
+        if email_val:
+            existe_email = db.query(Personas).filter(Personas.CorreoElectronico == email_val).first()
+            if existe_email:
+                raise HTTPException(status_code=400, detail=f"El correo electrónico '{email_val}' ya está registrado por otro jugador.")
+
+        # 3. Crear Persona
+        try:
+            fn = None
+            if p_data.get("fecha_nacimiento"):
+                fecha_str = str(p_data["fecha_nacimiento"])
+                try:
+                    if "-" in fecha_str:
+                        fn = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                    else:
+                        fn = datetime.strptime(fecha_str, "%d/%m/%Y").date()
+                except (ValueError, TypeError):
+                    pass # Dejar como None si el formato es inválido
+
+            # Validar campos obligatorios antes de insertar
+            for field in ["nombre", "primer_apellido", "curp"]:
+                if not p_data.get(field):
+                    raise HTTPException(status_code=400, detail=f"El campo '{field}' es obligatorio.")
+
+            s_id = safe_int(p_data.get("sexo_id"), 1)
+
+            nueva_persona = Personas(
+                Nombre=str(p_data.get("nombre", "")).strip().upper() if p_data.get("nombre") else None,
+                PrimerApellido=str(p_data.get("primer_apellido", "")).strip().upper() if p_data.get("primer_apellido") else None,
+                SegundoApellido=str(p_data.get("segundo_apellido", "")).strip().upper() if p_data.get("segundo_apellido") else None,
+                CURP=str(p_data.get("curp", "")).strip().upper() if p_data.get("curp") else None,
+                NUI=p_data.get("nui"),
+                SexoId=s_id,
+                FechaNacimiento=fn,
+                LugarNacimiento=p_data.get("lugar_nacimiento"),
+                CorreoElectronico=p_data.get("correo"),
+                NumeroTelefono=p_data.get("telefono")
+            )
+            db.add(nueva_persona)
+            db.flush()
+        except HTTPException:
+            raise
+        except Exception as e:
+            db.rollback()
+            if "check_curp_persona_longitud" in str(e):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"La CURP '{p_data['curp']}' debe tener exactamente 18 caracteres."
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Error al registrar persona: {str(e)}"
+                )
+
+        # 4. Crear Antecedentes si es extranjero
+        antecedentes_id = None
+        if p_data.get("extranjero"):
+            from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
+            nuevos_antecedentes = AntecedentesInternacionales(
+                Extranjero=True,
+                Nacionalidades=p_data.get("nacionalidad"),
+                PaisResidenciaActual=p_data.get("pais_residencia"),
+                NacionalidadPadre=p_data.get("nacionalidad_padre"),
+                NacionalidadMadre=p_data.get("nacionalidad_madre"),
+                NacionalidadAbueloP=p_data.get("nac_abuelo_paterno"),
+                NacionalidadAbuelaP=p_data.get("nac_abuela_paterna"),
+                NacionalidadAbueloM=p_data.get("nac_abuelo_materno"),
+                NacionalidadAbuelaM=p_data.get("nac_abuela_materna"),
+                RegistroAsociacionExtranjera=p_data.get("registro_asociacion_extranjera"),
+                ParticipacionExtranjera=p_data.get("juego_club_extranjero")
+            )
+            db.add(nuevos_antecedentes)
+            db.flush()
+            antecedentes_id = nuevos_antecedentes.AntecedentesId
+
+        from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+        
+        rol_id = safe_int(p_data.get("rol_en_equipo"), 3)
+        camista_num = safe_int(p_data.get("numero_camiseta"))
+
+        nuevo_miembro = MiembrosEquipo(
+            PersonaId=nueva_persona.PersonaId,
+            RolEnEquipo=rol_id,
+            EquipoID=equipo.EquipoId,
+            Estatus=True,
+            Eliminado=False,
+            NumeroCamiseta=camista_num,
+            Extranjero=bool(p_data.get("extranjero", False)),
+            AntecedentesId=antecedentes_id
+        )
+        db.add(nuevo_miembro)
+        
+        # 6. Sumar +1 a la CantidadJugadores
+        equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + 1
+
+        # 7. Guardar Archivos del Jugador
+        DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "documentos_entregados")
+        os.makedirs(DOCS_DIR, exist_ok=True)
+        doc_types = ["acta", "ine", "foto", "formato"]
+        for doc_type in doc_types:
+            # Soportar tanto el formato indexado (antiguo) como el directo (nuevo panel admin)
+            file_key = f"player_0_{doc_type}"
+            direct_key = "formato_firmado" if doc_type == "formato" else doc_type
+            
+            archivo = form_data.get(file_key) or form_data.get(direct_key)
+            
+            if archivo and isinstance(archivo, UploadFile):
+                ext = "jpg"
+                if "." in archivo.filename:
+                    ext = archivo.filename.split(".")[-1]
+                
+                # Sanitizar nombre de archivo
+                curp_safe = str(nueva_persona.CURP).replace(" ", "")
+                nombre_equipo_safe = str(equipo.NombreEquipo).replace(" ", "_").replace("/", "_")
+                nombre_archivo = f"{nombre_equipo_safe}_{curp_safe}_{doc_type}.{ext}"
+                ruta_archivo = os.path.join(DOCS_DIR, nombre_archivo)
+                
+                try:
+                    await archivo.seek(0)
+                    contenido = await archivo.read()
+                    if contenido:
+                        with open(ruta_archivo, "wb") as buffer:
+                            buffer.write(contenido)
+                except Exception as file_err:
+                    print(f"Error guardando archivo {doc_type}: {file_err}")
+                    # No frenamos todo el proceso si falla un guardado de archivo no crítico
+
+        db.commit()
+        return {"mensaje": "Jugador agregado exitosamente al equipo", "persona_id": nueva_persona.PersonaId}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        tb = traceback.format_exc()
+        error_msg = str(e)
+        print("ERROR EN AGREGAR JUGADOR:", tb)
+        raise HTTPException(status_code=500, detail=f"Error interno: {error_msg} | Traceback: {tb}")
 
 @router.post("/registrar-jugador")
 async def registrar_jugador(
