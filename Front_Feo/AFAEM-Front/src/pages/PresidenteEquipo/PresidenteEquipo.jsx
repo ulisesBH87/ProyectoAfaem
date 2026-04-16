@@ -56,6 +56,7 @@ export default function PresidenteEquipo() {
         }
 
         let availableSlots = null;
+        let segurosData = [];
         try {
           // 1. Obtener ID de equipo temporal
           const tempTeamInfo = await teamsService.getEquipoTemporalInfo();
@@ -64,8 +65,9 @@ export default function PresidenteEquipo() {
             
             // 2. Obtener slots con ese ID
             const slotsData = await teamsService.getAvailableSlots(teamId);
-            availableSlots = slotsData.slots_disponibles;
-            console.log('✅ Slots disponibles:', availableSlots);
+            availableSlots = slotsData.jugadores_restantes;
+            segurosData = slotsData.seguros || [];
+            console.log('✅ Slots disponibles:', availableSlots, 'Seguros:', segurosData);
           }
         } catch (err) {
           console.warn('No se pudo obtener información de slots temporales:', err);
@@ -87,7 +89,8 @@ export default function PresidenteEquipo() {
             totalPlayers: totalPlayers,
             pendingRequests: 0,
             certifications: 1,
-            slotsDisponibles: availableSlots // Agregado a stats
+            slotsDisponibles: availableSlots,
+            segurosInfo: segurosData
           });
         } catch (err) {
           console.warn('No se pudo obtener equipos:', err);
@@ -282,6 +285,35 @@ export default function PresidenteEquipo() {
           iconType="success" 
         />
       </div>
+
+      {/* SECCIÓN SEGUROS MÉDICOS Y SLOTS */}
+      {stats.segurosInfo && stats.segurosInfo.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <h3 style={{ margin: '0 0 20px 0', color: 'var(--text-main)', fontSize: '16px', fontWeight: '600' }}>
+            Estado de Seguros Médicos (Jugadores Pagados)
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            {stats.segurosInfo.map(seguro => (
+              <Tarjeta key={seguro.seguro_id} titulo={seguro.nombre}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Membresías Pagadas:</span>
+                  <span style={{ fontWeight: '700' }}>{seguro.pagados}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Slots Usados:</span>
+                  <span style={{ fontWeight: '700', color: 'var(--primary)' }}>{seguro.usados}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-light)', paddingTop: '12px', marginTop: '4px', fontSize: '15px' }}>
+                  <span style={{ fontWeight: '600' }}>Slots Disponibles:</span>
+                  <span style={{ fontWeight: '800', color: seguro.disponibles > 0 ? '#10b981' : '#ef4444' }}>
+                    {seguro.disponibles}
+                  </span>
+                </div>
+              </Tarjeta>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* SECCIÓN "¿QUÉ QUIERES HACER HOY?" + SOLICITUDES PENDIENTES */}
       <div style={{ marginBottom: '40px' }}>
