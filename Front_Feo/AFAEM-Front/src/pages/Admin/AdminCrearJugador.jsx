@@ -734,6 +734,11 @@ export default function AdminCrearJugador() {
                 alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
               />
               <EntradaFormulario
+                etiqueta="Apellido Materno"
+                valor={extractedData.apellidoMaterno}
+                alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
+              />
+              <EntradaFormulario
                 etiqueta="Nacionalidad del jugador (País de Origen)"
                 valor={extractedData.nacionalidadJugador}
                 alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
