@@ -290,7 +290,10 @@ export default function PresidenteEquipoEquipos() {
           currentPage={currentPage} 
           onPageChange={setCurrentPage} 
           emptyMessage="No se encontraron equipos en la búsqueda." 
-          onRowClick={(team) => navigate(`/presidente-equipo/admin-equipo/${team.EquipoId}`)}
+          onRowClick={(team) => {
+            const id = team.EquipoId || team.id;
+            if (id) navigate(`/presidente-equipo/admin-equipo/${id}`);
+          }}
         />
       </div>
     </div>

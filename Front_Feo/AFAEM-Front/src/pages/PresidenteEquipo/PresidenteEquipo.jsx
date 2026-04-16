@@ -20,6 +20,13 @@ import teamsService from '../../services/teams';
 
 export default function PresidenteEquipo() {
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    navigate('/presidente-equipo/equipos');
+  }, [navigate]);
+
+  return null;
+  /* El código anterior queda comentado o eliminado para evitar carga innecesaria
   const [userInfo, setUserInfo] = useState(null);
   const [teams, setTeams] = useState([]);
   const [usingLocalFallback, setUsingLocalFallback] = useState(false);
