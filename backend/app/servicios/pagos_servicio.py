@@ -198,7 +198,7 @@ class PagosServicio:
         orden = pagos_repositorio.mi_estado_pago_repo(self.db, usuario_id)
 
         if not orden:
-            return None
+            return {"tiene_orden": false}
 
         return {
             "tiene_orden": True,

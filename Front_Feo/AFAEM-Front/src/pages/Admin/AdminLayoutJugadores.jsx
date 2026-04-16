@@ -44,7 +44,7 @@ export default function AdminLayoutJugadores() {
   const filteredJugadores = React.useMemo(() => {
     let result = [...jugadores];
     if (filtroEquipo !== 'todos') {
-      result = result.filter(j => String(j.EquipoId) === filtroEquipo);
+      result = result.filter(j => j.EquipoNombre === filtroEquipo);
     }
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -130,7 +130,7 @@ export default function AdminLayoutJugadores() {
           >
             <option value="todos">Todos los equipos</option>
             {equipos.map(eq => (
-              <option key={eq.EquipoId} value={String(eq.EquipoId)}>
+              <option key={eq.EquipoId} value={eq.NombreEquipo}>
                 {eq.NombreEquipo}
               </option>
             ))}
