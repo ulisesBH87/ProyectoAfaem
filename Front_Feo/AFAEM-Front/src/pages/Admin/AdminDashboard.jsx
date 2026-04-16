@@ -126,7 +126,7 @@ const AdminDashboard = () => {
           </p>
         </div>
         <button
-          onClick={() => window.location.reload()} // Nota: El dashboard central sí requiere reload para refrescar múltiples contextos (auth, stats, etc) de forma segura por ahora, pero lo hacemos con estilo
+          onClick={() => window.location.reload()}
           className="glass"
           style={{ padding: '10px 20px', backgroundColor: 'white', color: 'var(--text-main)', border: '1.5px solid var(--border-light)', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
         >
