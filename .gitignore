@@ -16,7 +16,7 @@ backend/*.env
 # =========================
 # 🔹 Backend - Archivos
 # =========================
-backend/uploads/
+#backend/uploads/
 
 # =========================
 # 🔹 Backend - OCR
