@@ -26,7 +26,12 @@ function PreRegistroPresidente() {
 
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState('');
-  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
+  const [catalogoSeguros, setCatalogoSeguros] = useState([]);
+  const [catalogoAfiliaciones, setCatalogoAfiliaciones] = useState([]);
+  const [cargandoSeguros, setCargandoSeguros] = useState(false);
+  const [asignacionSeguros, setAsignacionSeguros] = useState({});
+  const [detalleInscripciones, setDetalleInscripciones] = useState([]);
+  const [totalOrdenPendiente, setTotalOrdenPendiente] = useState(0);
   const [comprobantePago, setComprobantePago] = useState(null);
 
   // PASO 2: Documentos
@@ -42,6 +47,34 @@ function PreRegistroPresidente() {
 
   // Verificar estado de pago al cargar
   useEffect(() => {
+    const cargarDetalleOrden = async (ordenId, token) => {
+      try {
+        const res = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Error al cargar detalle de orden');
+        const data = await res.json();
+
+        setTotalOrdenPendiente(Number(data.TotalPagar || data.total || 0));
+
+        const detalles = data.OrdenPagoDetalleRelacion || data.detalles || [];
+        const segurosOrden = {};
+        const inscripcionesOrden = [];
+        detalles.forEach(detalle => {
+          const seguroId = detalle.SeguroId || detalle.seguro_id;
+          if (seguroId) {
+            segurosOrden[String(seguroId)] = detalle.Cantidad || detalle.cantidad || 0;
+          } else {
+            inscripcionesOrden.push(detalle);
+          }
+        });
+        setAsignacionSeguros(segurosOrden);
+        setDetalleInscripciones(inscripcionesOrden);
+      } catch (err) {
+        console.warn('No se pudo cargar detalle de la orden:', err);
+      }
+    };
+
     const verificarEstadoPago = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -65,7 +98,10 @@ function PreRegistroPresidente() {
         if (res.ok) {
           const data = await res.json();
           if (data.tiene_orden) {
+            const ordenId = data.orden_pago_id || data.OrdenPagoId;
             setEstadoPago(data.estatus);
+            setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
+            if (ordenId) cargarDetalleOrden(ordenId, token);
             // Si ya tiene orden, ir a la pantalla correcta
             if (data.estatus === 3) {
               // Pago aprobado → mostrar pantalla de validado
@@ -73,16 +109,16 @@ function PreRegistroPresidente() {
             } else if (data.estatus === 1 || data.estatus === 2) {
               if (data.tiene_comprobante) {
                 // Pago pendiente revisión
-                setOrdenPendienteId(data.orden_pago_id);
+                setOrdenPendienteId(ordenId);
                 setPasoActual(2);
               } else {
                 // Generó orden pero no subió comprobante (Guardar y salir)
-                setOrdenPendienteId(data.orden_pago_id);
+                setOrdenPendienteId(ordenId);
                 setPasoActual(1);
               }
             } else if (data.estatus === 4) {
               // Rechazado
-              setOrdenPendienteId(data.orden_pago_id);
+              setOrdenPendienteId(ordenId);
               setPasoActual(2);
             }
           }
@@ -106,7 +142,55 @@ function PreRegistroPresidente() {
         console.warn('No se pudo cargar catálogos:', err);
       }
     };
+
+    const fetchSeguros = async () => {
+      setCargandoSeguros(true);
+      try {
+        const res = await fetch(`${API_BASE}/ordenes-pago/seguros`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) throw new Error('Error al cargar seguros');
+        const data = await res.json();
+        const arrSeguros = Array.isArray(data) ? data :
+                           Array.isArray(data.data) ? data.data :
+                           Array.isArray(data.seguros) ? data.seguros :
+                           Array.isArray(data.results) ? data.results : [];
+
+        const segurosMapeados = arrSeguros.map((seg, idx) => ({
+          id: String(seg.id || seg.SeguroId || idx + 1),
+          nombre: seg.nombre || seg.Nombre || seg.name || seg.nombre_seguro || 'Seguro sin nombre',
+          descripcion: seg.descripcion || seg.Descripcion || seg.description || '',
+          precio: Number(seg.costo || seg.Costo || seg.precio || seg.Precio || seg.price || 0),
+        }));
+
+        setCatalogoSeguros(segurosMapeados);
+      } catch (err) {
+        console.warn('No se pudo cargar seguros:', err);
+        setCatalogoSeguros([]);
+      } finally {
+        setCargandoSeguros(false);
+      }
+    };
+
+    const fetchAfiliaciones = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) throw new Error('Error al cargar afiliaciones');
+        const data = await res.json();
+        setCatalogoAfiliaciones(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.warn('No se pudo cargar afiliaciones:', err);
+        setCatalogoAfiliaciones([]);
+      }
+    };
+
     fetchLigas();
+    fetchSeguros();
+    fetchAfiliaciones();
   }, []);
 
   // SINCRONIZAR PASO ACTUAL CON EL ESTATUS REAL DEL BACKEND
@@ -137,22 +221,15 @@ function PreRegistroPresidente() {
 
   /* ─── Efecto de Auto-cálculo ─── */
   useEffect(() => {
-    if (numPersonas !== '' && pasoActual === 1) {
+    if (numPersonas !== '' && pasoActual === 1 && catalogoSeguros.length > 0) {
       const totalNecesario = Number(numPersonas) + 1;
-      setAsignacionSeguros({
-        '1': totalNecesario, // Por defecto asignar todo al seguro de accidentes
-        '2': 0,
-        '3': 0
+      const nuevaAsignacion = {};
+      catalogoSeguros.forEach((seg, idx) => {
+        nuevaAsignacion[seg.id] = idx === 0 ? totalNecesario : 0;
       });
+      setAsignacionSeguros(nuevaAsignacion);
     }
-  }, [numPersonas, pasoActual]);
-
-  // PASO 1: Pago y Seguros
-  const catalogoSeguros = [
-    { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
-    { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
-    { id: '3', nombre: 'Seguro médico', descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 }
-  ];
+  }, [numPersonas, pasoActual, catalogoSeguros]);
 
   /* ─── Catálogos para Selectores ─── */
   const CATALOGO_ROLES = [
@@ -170,6 +247,11 @@ function PreRegistroPresidente() {
 
   const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + Number(val || 0), 0);
   const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const totalMostrado = ordenPendienteId ? totalOrdenPendiente : totalPagar;
+  const nombreAfiliacion = (tipoAfiliacionId) => {
+    const afiliacion = catalogoAfiliaciones.find(a => String(a.TipoAfiliacionId) === String(tipoAfiliacionId));
+    return afiliacion?.NombreAfiliacion || 'Inscripción';
+  };
   const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas || 0) + 1 : 0; // Jugadores + Presidente
   const jugadoresRestantes = segurosRequeridos - totalAsignados;
 
@@ -1231,23 +1313,32 @@ function PreRegistroPresidente() {
                   <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
                 </div>
 
-                {catalogoSeguros.map(seg => (
-                  <div key={seg.id} className="insurance-card">
+                {cargandoSeguros ? (
+                  <div className="insurance-card">
                     <div className="insurance-info">
-                      <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
-                      <p>{seg.descripcion}</p>
+                      <h4>Cargando seguros...</h4>
+                      <p>Obteniendo costos actualizados.</p>
                     </div>
-                    <input
-                      type="number"
-                      className="insurance-input"
-                    value={asignacionSeguros[seg.id]}
-                    onChange={(e) => {
-                      const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                      setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                    }}
-                    />
                   </div>
-                ))}
+                ) : (
+                  catalogoSeguros.map(seg => (
+                    <div key={seg.id} className="insurance-card">
+                      <div className="insurance-info">
+                        <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
+                        <p>{seg.descripcion}</p>
+                      </div>
+                      <input
+                        type="number"
+                        className="insurance-input"
+                      value={asignacionSeguros[seg.id] ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                        setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                      }}
+                      />
+                    </div>
+                  ))
+                )}
 
                 <div className="assigned-bar">
                   <span>Seguros asignados (Jugadores + Presid.): {totalAsignados}/{segurosRequeridos}</span>
@@ -1273,6 +1364,12 @@ function PreRegistroPresidente() {
                     {ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}
                   </h5>
                 </div>
+                {ordenPendienteId && detalleInscripciones.map(detalle => (
+                  <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.55)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
+                    <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
+                  </div>
+                ))}
                 {catalogoSeguros.map(seg =>
                   asignacionSeguros[seg.id] > 0 && (
                     <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
@@ -1283,7 +1380,7 @@ function PreRegistroPresidente() {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
-                  <span style={{ color: '#5d87e5' }}>${totalPagar}</span>
+                  <span style={{ color: '#5d87e5' }}>${totalMostrado}</span>
                 </div>
               </div>
 
