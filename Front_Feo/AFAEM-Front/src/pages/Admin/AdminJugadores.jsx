@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getJugadoresDirectorio, getJugadorDocumentos, updateJugador } from '../../services/admin';
+import { getJugadoresDirectorio, getJugadorDocumentos, exportarJugadorDocumentos, updateJugador } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -142,7 +142,7 @@ export default function AdminJugadores() {
       const docs = await getJugadorDocumentos(jugador.MiembroEquipoId);
       
       if (!docs || docs.length === 0) {
-        Swal.fire('Sin documentos', 'Este jugador no tiene documentos PDF subidos en el sistema o están dañados.', 'warning');
+        Swal.fire('Sin documentos', 'Ocurrió un error al cargar los datos del jugador.', 'warning');
         return;
       }
 
@@ -162,6 +162,46 @@ export default function AdminJugadores() {
     } catch (err) {
       console.error(err);
       Swal.fire('Error', 'No se pudieron obtener los documentos del jugador.', 'error');
+    }
+  };
+
+  const handleExportar = async (jugador) => {
+    try {
+      Swal.fire({
+        title: 'Generando expediente...',
+        text: 'Preparando archivos del jugador',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const response = await exportarJugadorDocumentos(jugador.MiembroEquipoId);
+
+      const blob = new Blob([response.data], { type: 'application/zip' });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+
+      // Nombre del archivo
+      const nombreJugador = (jugador.NombreCompleto || 'jugador')
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '')
+        .replace(/\s+/g, '_');
+      const nombre = `expediente_${nombreJugador}.zip`;
+      a.download = nombre;
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+
+      Swal.close();
+
+    } catch (error) {
+      console.error("Error exportando:", error);
+      Swal.fire('Error', 'No se pudo generar el expediente', 'error');
     }
   };
 
@@ -286,7 +326,7 @@ export default function AdminJugadores() {
           <button 
             className="btn btn-sm"
             style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#eff6ff', color: '#2563eb', border: 'none', fontWeight: '700' }}
-            onClick={() => Swal.fire('Descarga de Expediente', 'Esta funcionalidad estará disponible próximamente en conjunto con el nuevo endpoint de backend.', 'info')}
+            onClick={() => handleExportar(j)}
             title="Exportar como ZIP"
           >
             <FaFileArchive /> Exportar
