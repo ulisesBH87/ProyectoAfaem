@@ -20,6 +20,13 @@ from app.modelos.solicitud_modelo import Solicitud
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 
 
+from app.modelos.documentos_entregados_modelo import DocumentosEntregados
+from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+from app.modelos.catalogo_documento import CatalogoDocumentos
+from app.modelos.catalogo_rol_personas import CatalogoRolesPersonas
+
+
+
 def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
     return db.query(EquipoTemporal).filter(
         EquipoTemporal.UsuarioId == usuario_id
@@ -225,7 +232,7 @@ def obtener_directorio_jugadores_repo(db):
         })
 
     return jugadores_response
-
+"""
 def obtener_documentos_jugador_repo(db, persona_id: int):
     from app.modelos.documentos_entregados_modelo import DocumentosEntregados
     docs = db.query(DocumentosEntregados).filter(
@@ -239,6 +246,42 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
             "FechaEntrega": d.FechaEntrega,
             "EstadoValidacionId": d.EstadoValidacionId
         } for d in docs
+    ]
+"""
+def obtener_documentos_jugador_repo(db, persona_id: int):
+
+    docs = db.query(
+        DocumentosEntregados.DocumentosSolicitudId,
+        DocumentosEntregados.RutaArchivo,
+        DocumentosEntregados.FechaEntrega,
+        DocumentosEntregados.EstadoValidacionId,
+        CatalogoDocumentos.NombreDocumento,
+        CatalogoRolesPersonas.Nombre.label("RolNombre"),
+        DocumentoAfiliacion.Obligatorio
+    ).join(
+        DocumentoAfiliacion,
+        DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId
+    ).join(
+        CatalogoDocumentos,
+        DocumentoAfiliacion.DocumentoId == CatalogoDocumentos.DocumentoId
+    ).outerjoin(
+        CatalogoRolesPersonas,
+        DocumentoAfiliacion.RolPersonaId == CatalogoRolesPersonas.RolPersonaId
+    ).filter(
+        DocumentosEntregados.PersonaId == persona_id
+    ).all()
+    print("DOCS RAW:", docs)
+    return [
+        {
+            "DocumentosSolicitudId": d.DocumentosSolicitudId,
+            "nombre": d.NombreDocumento,
+            "rol": d.RolNombre,
+            "obligatorio": d.Obligatorio,
+            "RutaArchivo": d.RutaArchivo,
+            "FechaEntrega": d.FechaEntrega,
+            "EstadoValidacionId": d.EstadoValidacionId
+        }
+        for d in docs
     ]
 
 def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool):
@@ -358,7 +401,7 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
             CorreoElectronico=p_data.get("correo"),
             NumeroTelefono=p_data.get("telefono")
         )
-
+        print("PERSONA CREADA:", nueva_persona.PersonaId)
         db.add(nueva_persona)
         db.flush()
 

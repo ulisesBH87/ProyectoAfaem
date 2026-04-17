@@ -642,11 +642,20 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
-@router.get("/jugador/{persona_id}/documentos")
-def get_documentos_jugador(persona_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+@router.get("/jugador/{miembro_id}/documentos")
+def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado")
+    
+    miembro = db.query(MiembrosEquipo).filter(
+        MiembrosEquipo.MiembroEquipoId == miembro_id
+    ).first()
+
+    if not miembro:
+        raise HTTPException(404, "Jugador no encontrado")
+    
+    persona_id = miembro.PersonaId
     
     try:
         from app.repositorios.equipo_repositorio import obtener_documentos_jugador_repo
