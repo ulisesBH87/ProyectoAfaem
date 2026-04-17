@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFootballBall, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
+import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -645,7 +645,7 @@ export default function ConfigurarEquipo() {
                     {/* MODALIDAD */}
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                       <h5 style={{ marginBottom: '20px', color: '#0b4ea6', fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FaFootballBall /> Modalidad
+                        <FaFutbol /> Modalidad
                       </h5>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {catalogs.modalidades.map((mod) => (
