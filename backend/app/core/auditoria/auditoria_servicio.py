@@ -14,9 +14,9 @@ SYSTEM_USER_ID = 0
 
 #Traducciones para frontend
 MAPEO_ENTIDADES = {
-    "Personas": "Persona",
-    "Usuarios": "Usuario",
-    "Equipos": "Equipo"
+    #"Personas": "Persona",
+    #"Usuarios": "Usuario"
+    #"Equipos": "Equipo"
 }
 
 MAPEO_ACCIONES = {
@@ -90,8 +90,8 @@ def build_audit_entry(
         "UsuarioId": user_id,
         "UsuarioNombre": usuario_nombre,
         "FechaAccion": datetime.now(timezone.utc),
-        "ValoresAntes": json.dumps(valores_antes) if valores_antes else None,
-        "ValoresDespues": json.dumps(valores_despues) if valores_despues else None,
+        "ValoresAntes": json.dumps(valores_antes, default=str) if valores_antes else None,
+        "ValoresDespues": json.dumps(valores_despues, default=str) if valores_despues else None,
         "Ip": ip
     }
 
