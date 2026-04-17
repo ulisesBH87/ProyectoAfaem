@@ -413,11 +413,12 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     archivos = []
     documento_ids = []
 
+    #ID HARDCODEADOS POR AHORA. MEJORAR EN EL FUTURO. BORRAR LÍNEA CUANDO SE HAGA LA MEJORA
     DOC_TYPE_TO_ID = {
-        "acta": 3,
-        "ine": 3,
-        "foto": 3,
-        "formato": 3
+        "acta": 22,     # jugador mayor
+        "ine": 26,
+        "foto": 25,
+        "formato": 28
     }
 
     for doc_type, doc_id in DOC_TYPE_TO_ID.items():

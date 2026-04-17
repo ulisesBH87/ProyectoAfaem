@@ -6,5 +6,12 @@ class DocumentoAfiliacion(Base):
     __tablename__ = "DocumentoAfiliacion"
 
     DocumentoAfiliacionId = Column(Integer, primary_key=True)
+
+    DocumentoId = Column(Integer, ForeignKey("CatalogoDocumentos.DocumentoId"), nullable=False) #id del documento en el catálogo
+    RolPersonaId = Column(Integer, ForeignKey("CatalogoRolesPersonas.RolPersonaId"), nullable=False)
     TipoAfiliacionId = Column(Integer, ForeignKey("CatalogoTiposAfiliacion.TipoAfiliacionId"), nullable=False)
-    DocumentoPersonaId = Column(Integer, ForeignKey("CatalogoDocumentosPersonas.DocumentosPersonasId"), nullable=False)
+    Obligatorio = Column(Boolean, nullable=False, default=True)
+
+    Documento = relationship("CatalogoDocumentos")
+    Rol = relationship("CatalogoRolesPersonas")
+    TipoAfiliacion = relationship("CatalogoTiposAfiliacion")
