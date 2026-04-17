@@ -31,7 +31,7 @@ export default function ConfiguracionAdmin() {
           { id: 1, nombre: 'Dashboard Principal', ruta: '/admin/dashboard', icono: 'FaChartLine', roles: ['Administrador', 'Super Admin'] },
           { id: 2, nombre: 'Solicitudes', ruta: '/admin/solicitudes', icono: 'FaClipboardList', roles: ['Administrador', 'Presidente Liga'] },
           { id: 3, nombre: 'Control de Pagos', ruta: '/admin/pagos', icono: 'FaShieldAlt', roles: ['Administrador'] },
-          { id: 4, nombre: 'Mi Equipo', ruta: '/presidente-equipo', icono: 'FaFootballBall', roles: ['Presidente de Equipo'] }
+          { id: 4, nombre: 'Mi Equipo', ruta: '/presidente-equipo', icono: 'FaFutbol', roles: ['Presidente de Equipo'] }
         ]);
         setLoading(false);
       }, 700);

@@ -163,7 +163,7 @@ export default function PresidenteEquipoEquipos() {
       <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Mis equipos registrados</h1>
-          <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Gestión descentralizada de tus clubes afiliados en la liga afaem.</p>
+          <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Panel centralizado para la supervisión y gestión administrativa de tus clubes afiliados.</p>
         </div>
         <button 
           className="btn-premium" 
@@ -179,7 +179,6 @@ export default function PresidenteEquipoEquipos() {
         {[
           { label: 'Equipos Registrados', value: totalEquipos, filter: 'todos', color: 'var(--primary)', icon: <FaShieldAlt /> },
           { label: 'Jugadores Totales', value: jugadoresTotales, color: 'var(--secondary)', icon: <FaUsers />, isMetricOnly: true },
-          { label: 'Ligas Participantes', value: ligasActivas, color: '#f59e0b', icon: <FaTrophy />, isMetricOnly: true },
           { label: 'Equipos Activos', value: teams.filter(t => t.Estatus).length, filter: 'activos', color: '#10b981', icon: <FaCheckCircle /> }
         ].map((stat, i) => (
           <div 
@@ -224,7 +223,7 @@ export default function PresidenteEquipoEquipos() {
             <SearchBar 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre o liga..."
+              placeholder="Buscar por nombre o categoría..."
               width="300px"
             />
 
