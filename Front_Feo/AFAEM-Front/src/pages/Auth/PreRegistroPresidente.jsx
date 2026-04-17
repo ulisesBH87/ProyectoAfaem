@@ -347,6 +347,7 @@ function PreRegistroPresidente() {
     if (pasoActual === 0) {
       setPasoActual(1);
     } else if (pasoActual === 1) {
+      // 1. Validar que los seguros estén bien asignados antes de nada
       if (!ordenPendienteId) {
         if (numPersonas <= 0) {
           setError('Debes ingresar el número de jugadores.');
@@ -358,26 +359,61 @@ function PreRegistroPresidente() {
         }
       }
 
-      if (!comprobantePago) {
-        setError('Debes subir el comprobante de pago para continuar.');
-        return;
-      }
+      // SI YA TENEMOS ORDEN, necesitamos el comprobante para avanzar a validación
+      if (ordenPendienteId) {
+        if (!comprobantePago) {
+          setError('Debes subir el comprobante de pago para continuar.');
+          return;
+        }
 
-      try {
-        Swal.fire({
-          title: ordenPendienteId ? 'Subiendo comprobante...' : 'Creando Orden...',
-          html: ordenPendienteId ? 'Subiendo tu comprobante de pago. <b>Por favor espere.</b>' : 'Generando tu orden de pago y subiendo el comprobante. <b>Por favor espere.</b>',
-          allowOutsideClick: false,
-          didOpen: () => { Swal.showLoading(); }
-        });
+        try {
+          Swal.fire({
+            title: 'Subiendo comprobante...',
+            html: 'Subiendo tu comprobante de pago. <b>Por favor espere.</b>',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+          });
 
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No se encontró autenticación. Por favor inicia sesión.');
+          const token = localStorage.getItem('token');
+          const formData = new FormData();
+          formData.append('archivo', comprobantePago);
 
-        let idParaComprobante = ordenPendienteId;
+          const resComprobante = await fetch(`${API_BASE}/ordenes-pago/${ordenPendienteId}/comprobante`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+          });
 
-        // 1. Si no existe la orden, hay que crearla
-        if (!idParaComprobante) {
+          if (!resComprobante.ok) {
+            const errData = await resComprobante.json().catch(() => ({}));
+            throw new Error('Falló al subir el comprobante: ' + (errData.detail || ''));
+          }
+
+          Swal.fire({
+            title: '¡Evidencia Recibida!',
+            text: 'Tu comprobante de pago ha sido enviado a revisión.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
+
+          setEstadoPago(1); // Pendiente
+          setPasoActual(2);
+        } catch (err) {
+          Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
+        }
+      } 
+      // SI NO TENEMOS ORDEN, la creamos y nos quedamos aquí para que suba el comprobante
+      else {
+        try {
+          Swal.fire({
+            title: 'Generando Orden...',
+            text: 'Estamos creando tu ficha de pago con la referencia necesaria.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+          });
+
+          const token = localStorage.getItem('token');
           const segurosPayload = [];
           for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
             if (cant > 0) {
@@ -388,18 +424,16 @@ function PreRegistroPresidente() {
             }
           }
 
-          const ordenPayload = {
-            CantidadJugadores: numPersonas,
-            Seguros: segurosPayload
-          };
-
           const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(ordenPayload)
+            body: JSON.stringify({
+              CantidadJugadores: numPersonas,
+              Seguros: segurosPayload
+            })
           });
 
           if (!resOrden.ok) {
@@ -408,50 +442,18 @@ function PreRegistroPresidente() {
           }
 
           const ordenData = await resOrden.json();
-          // Extraemos el ID
-          const ordenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
-          idParaComprobante = ordenId || ordenData;
+          const newOrdenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
+          setOrdenPendienteId(newOrdenId);
+          
+          Swal.fire({
+            title: '¡Orden Generada!',
+            text: 'Ahora utiliza los datos bancarios para realizar tu pago y sube el comprobante aquí mismo.',
+            icon: 'success',
+            confirmButtonColor: '#0b4ea6'
+          });
+        } catch (err) {
+          Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
         }
-
-        // 2. Subir Comprobante
-        const formData = new FormData();
-        formData.append('archivo', comprobantePago);
-
-        const resComprobante = await fetch(`${API_BASE}/ordenes-pago/${idParaComprobante}/comprobante`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        if (!resComprobante.ok) {
-          const errData = await resComprobante.json().catch(() => ({}));
-          throw new Error('La orden se creó pero falló al subir el comprobante: ' + (errData.detail || ''));
-        }
-
-        Swal.fire({
-          title: '¡Evidencia Recibida!',
-          text: 'Se ha creado la orden de pago y enviado tu comprobante a revisión.',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
-
-        // Actualizar el rol del usuario en la sesión local
-        // para que la interfaz sepa que ya es Presidente (o está en proceso).
-        localStorage.setItem('rol', 'PRESIDENTE_EQUIPO');
-        
-        // Ir a pantalla de espera
-        setEstadoPago(1); // Pendiente
-        setPasoActual(2);
-      } catch (err) {
-        console.error('Error al procesar el pago:', err);
-        Swal.fire({
-          title: 'Error',
-          text: err.message,
-          icon: 'error'
-        });
       }
     }
   };
@@ -1452,41 +1454,15 @@ function PreRegistroPresidente() {
               </div>
             )}
 
-            {!ordenPendienteId ? (
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px', marginBottom: '10px' }}>
-                <button
-                  onClick={handleGuardarYSalir}
-                  style={{
-                    background: 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
-                    color: 'white', border: 'none',
-                    padding: '16px 40px', borderRadius: '14px',
-                    fontWeight: '800', fontSize: '15px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    boxShadow: '0 6px 20px rgba(11,78,166,0.35)',
-                    transition: 'transform 0.2s, box-shadow 0.2s'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.02)';
-                    e.currentTarget.style.boxShadow = '0 10px 28px rgba(11,78,166,0.5)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(11,78,166,0.35)';
-                  }}
-                >
-                  {comprobantePago ? '✅ Enviar para Validación' : '💾 Guardar para después'}
-                </button>
-              </div>
-            ) : null}
 
             <div className="footer-nav">
               <button className="btn-nav-gray" onClick={irPasoAnterior}>Anterior</button>
               <button
                 className="btn-nav-blue"
                 onClick={irSiguientePaso}
-                disabled={!comprobantePago}
+                disabled={ordenPendienteId && !comprobantePago}
               >
-                {ordenPendienteId ? 'Subir Comprobante' : 'Siguiente'}
+                {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
               </button>
             </div>
           </div>
