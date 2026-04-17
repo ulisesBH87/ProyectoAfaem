@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaUserCog, FaLock, FaBell, FaSave, FaFootballBall, FaTags, FaCalendar, FaPlus, FaUsers, FaShieldAlt } from 'react-icons/fa';
+import { FaUserCog, FaLock, FaBell, FaSave, FaFutbol, FaTags, FaCalendar, FaPlus, FaUsers, FaShieldAlt } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
@@ -201,7 +201,7 @@ export default function PresidenteEquipoConfiguracion() {
             {!hasTeam && (
               <div className="config-card">
                 <div className="config-header">
-                  <div style={{ padding: '10px', background: '#e0e7ff', borderRadius: '8px', color: '#4f46e5' }}><FaFootballBall size={20} /></div>
+                  <div style={{ padding: '10px', background: '#e0e7ff', borderRadius: '8px', color: '#4f46e5' }}><FaFutbol size={20} /></div>
                   <div>
                     <h2 className="config-title">1. Datos Iniciales del Equipo</h2>
                     <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>Define los detalles de tu plantilla y realiza el pago de inscripción.</p>
