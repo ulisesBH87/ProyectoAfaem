@@ -173,6 +173,12 @@ export const getJugadorDocumentos = async (personaId) => {
   return response.data;
 };
 
+export const exportarJugadorDocumentos = async (miembroEquipoId) => {
+  return api.get(`/equipo-temporal/jugador/${miembroEquipoId}/exportar`, {
+    responseType: 'blob',
+  });
+};
+
 /**
  * ACTUALIZA UN EQUIPO (NOMBRE Y ESTATUS)
  */
@@ -262,6 +268,19 @@ export const getAuditorias = async (page = 1, size = 10) => {
   return response.data;
 };
 
+/**
+ * REGISTRA UN JUGADOR DIRECTAMENTE EN UN EQUIPO EXISTENTE (USO DEL ADMIN)
+ * POST /equipo-temporal/agregar-jugador-equipo-existente
+ */
+export const agregarJugadorEquipoExistente = async (formData) => {
+  const response = await api.post('/equipo-temporal/agregar-jugador-equipo-existente', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -274,6 +293,7 @@ export default {
   getEquiposDirectorio,
   getJugadoresDirectorio,
   getJugadorDocumentos,
+  exportarJugadorDocumentos,
   updateEquipo,
   updateJugador,
   getPresidentesDirectorio,
@@ -281,5 +301,6 @@ export default {
   deletePresidente,
   getPresidentesDisponibles,
   vincularPresidenteEquipo,
-  getAuditorias
+  getAuditorias,
+  agregarJugadorEquipoExistente
 };
