@@ -142,7 +142,7 @@ export default function AdminJugadores() {
       const docs = await getJugadorDocumentos(jugador.MiembroEquipoId);
       
       if (!docs || docs.length === 0) {
-        Swal.fire('Sin documentos', 'Este jugador no tiene documentos PDF subidos en el sistema o están dañados.', 'warning');
+        Swal.fire('Sin documentos', 'Ocurrió un error al cargar los datos del jugador.', 'warning');
         return;
       }
 
