@@ -8,6 +8,10 @@ from app.repositorios.documentos_repositorio import obtener_solicitud_borrador
 
 from app.excepciones import documentos_excepciones
 from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+import zipfile
+from io import BytesIO
+from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+from app.repositorios import equipo_repositorio
 
 UPLOAD_DIR = "uploads/documentos"
 
@@ -109,3 +113,38 @@ def presidente_solicitud(db, usuario):
     usuario_id = usuario.UsuarioId
     solicitud_id = obtener_solicitud_borrador(db, usuario_id)
     return solicitud_id
+
+#DESCARGAR DOCUMENTOS COMPRIMIDOS
+def generar_zip_documentos(db, miembro_id):
+    miembro = db.query(MiembrosEquipo).filter(
+        MiembrosEquipo.MiembroEquipoId == miembro_id
+    ).first()
+
+    if not miembro:
+        raise Exception("Jugador no encontrado")
+
+    persona_id = miembro.PersonaId
+
+    documentos = equipo_repositorio.obtener_documentos_jugador_repo(db, persona_id)
+
+    if not documentos:
+        raise Exception("No hay documentos para este jugador")
+
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for doc in documentos:
+            ruta = doc["RutaArchivo"]
+
+            if not os.path.exists(ruta):
+                continue
+
+            nombre_archivo = os.path.basename(ruta)
+
+            zipf.write(ruta, arcname=nombre_archivo)
+
+    zip_buffer.seek(0)
+
+    nombre_zip = f"documentos_jugador_{persona_id}.zip"
+
+    return zip_buffer.read(), nombre_zip
