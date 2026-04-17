@@ -7,6 +7,7 @@ from app.core.seguridad import obtener_usuario_actual
 from app.repositorios.documentos_repositorio import obtener_solicitud_borrador
 
 from app.excepciones import documentos_excepciones
+from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
 
 UPLOAD_DIR = "uploads/documentos"
 
@@ -34,20 +35,35 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
 
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    # Obtener CURP de la persona
+    # Obtener persona
     persona = db.query(Personas).filter(Personas.PersonaId == persona_id).first()
     if not persona:
         raise documentos_excepciones.PersonaNoEncontradaError()
     
+    #Obtener CURP y año para nombrar archivos
     curp = persona.CURP
     año = datetime.now().year
+
+    #Obtener los documentos
+    doc_afiliaciones = db.query(DocumentoAfiliacion).filter(
+        DocumentoAfiliacion.DocumentoAfiliacionId.in_(documento_afiliacion_ids)
+    ).all()
+
+    doc_map = {d.DocumentoAfiliacionId: d for d in doc_afiliaciones}
 
     documentos_creados = []
 
     for archivo, doc_id in zip(archivos, documento_afiliacion_ids):
 
+        d = doc_map.get(doc_id)
+
+        if not d:
+            raise Exception(f"No se encontró DocumentoAfiliacionId {doc_id}")
+    
+        nombre_doc = d.Documento.NombreDocumento.upper()
+        
         extension = archivo.filename.split(".")[-1]
-        nombre = f"{curp}_{doc_id}_{año}.{extension}"
+        nombre = f"{nombre_doc}_{curp}_{año}.{extension}"
         ruta = os.path.join(UPLOAD_DIR, nombre)
 
         with open(ruta, "wb") as buffer:
