@@ -624,6 +624,19 @@ function PreRegistroPresidente() {
     }
   };
 
+  // ── HELPER: Escritura segura en campos del PDF ──────────────────────
+  // pdf-lib lanza una excepción si el campo no existe (no retorna null),
+  // por lo que el operador ?. solo es ineficiente. Este helper lo captura.
+  const safeSetField = (form, fieldName, value) => {
+    if (value === null || value === undefined || value === '') return;
+    try {
+      const field = form.getTextField(fieldName);
+      if (field) field.setText(String(value));
+    } catch (e) {
+      console.warn(`[PDF] Campo no encontrado: "${fieldName}" → omitido.`);
+    }
+  };
+
   const handleDownloadFormato = async () => {
     try {
       Swal.fire({
@@ -653,16 +666,14 @@ function PreRegistroPresidente() {
             photoImage = await pdfDoc.embedJpg(photoBytes);
           }
 
-          // Coordenadas calculadas para el recuadro superior derecho
           firstPage.drawImage(photoImage, {
             x: 479,
             y: 676,
             width: 76,
             height: 90,
           });
-          console.log("✅ Fotografía incrustada en el PDF");
         } catch (photoErr) {
-          console.warn("⚠️ Error al incrustar foto:", photoErr);
+          console.warn("Error al incrustar foto:", photoErr);
         }
       }
 
@@ -672,58 +683,52 @@ function PreRegistroPresidente() {
       if (nombre && nombre !== "No detectado") {
         const parts = nombre.split(' ');
         if (parts.length >= 3) {
-          form.getTextField('Apellido Paterno')?.setText(parts[0]);
-          form.getTextField('Apellido Materno')?.setText(parts[1]);
-          form.getTextField('Nombres')?.setText(parts.slice(2).join(' '));
+          safeSetField(form, 'Apellido Paterno', parts[0]);
+          safeSetField(form, 'Apellido Materno', parts[1]);
+          safeSetField(form, 'Nombres', parts.slice(2).join(' '));
         } else if (parts.length === 2) {
-          form.getTextField('Apellido Paterno')?.setText(parts[0]);
-          form.getTextField('Nombres')?.setText(parts[1]);
+          safeSetField(form, 'Apellido Paterno', parts[0]);
+          safeSetField(form, 'Nombres', parts[1]);
         } else {
-          form.getTextField('Nombres')?.setText(nombre);
+          safeSetField(form, 'Nombres', nombre);
         }
       }
 
       // CURP
       if (curp && curp !== "No detectado") {
-        form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
+        safeSetField(form, 'CURP o Clave Única de Registro de Población', curp);
       }
 
       // Fecha de Nacimiento
       if (fecha_nac && fecha_nac !== "No detectada") {
-        form.getTextField('Fecha de Nacimiento')?.setText(fecha_nac);
+        safeSetField(form, 'Fecha de Nacimiento', fecha_nac);
       }
 
       // Correo electrónico
       const email = user.Correo || user.correo || user.email || localStorage.getItem('email') || '';
-      if (email) {
-        form.getTextField('Correo electrónico')?.setText(email);
-      }
+      safeSetField(form, 'Correo electrónico', email);
 
       // Sexo (extraer de CURP: posición 10, H=Hombre, M=Mujer)
       if (curp && curp.length >= 11) {
         const sexoChar = curp.charAt(10).toUpperCase();
         const sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
-        if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
+        safeSetField(form, 'Sexo', sexoTexto);
       }
 
-      // Nacionalidad
-      if (nacionalidad) {
-        form.getTextField('Lugar de Nacimiento')?.setText(nacionalidad);
-      }
+      // Nacionalidad / Lugar de Nacimiento
+      safeSetField(form, 'Lugar de Nacimiento', nacionalidad);
 
-      // Teléfono
-      // Teléfono es llenado por defecto o removido
-      form.getTextField('fill_24')?.setText('');
+      // Teléfono (fill_24 en la plantilla directivo — puede no existir)
+      safeSetField(form, 'fill_24', '');
+      safeSetField(form, 'Teléfono', '');
 
       // Tipo de afiliación
-      if (tipoAfiliacion) {
-        form.getTextField('fill_20')?.setText(tipoAfiliacion);
-      }
+      safeSetField(form, 'fill_20', tipoAfiliacion);
 
       // Asociación, Liga, Equipo
-      if (asociacion) form.getTextField('Asociación')?.setText(asociacion.toUpperCase());
-      if (liga) form.getTextField('Liga')?.setText(liga.toUpperCase());
-      form.getTextField('Equipo')?.setText('');
+      if (asociacion) safeSetField(form, 'Asociación', asociacion.toUpperCase());
+      if (liga) safeSetField(form, 'Liga', liga.toUpperCase());
+      safeSetField(form, 'Equipo', '');
 
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
@@ -732,12 +737,12 @@ function PreRegistroPresidente() {
       const mes = meses[hoy.getMonth()];
       const anio = String(hoy.getFullYear()).slice(-2);
 
-      form.getTextField('A')?.setText(dia);
-      form.getTextField('de')?.setText(mes);
-      form.getTextField('del 20')?.setText(anio);
+      safeSetField(form, 'A', dia);
+      safeSetField(form, 'de', mes);
+      safeSetField(form, 'del 20', anio);
 
       // Cargo: Presidente
-      form.getTextField('Cargo')?.setText('PRESIDENTE');
+      safeSetField(form, 'Cargo', 'PRESIDENTE');
 
       // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
@@ -759,6 +764,7 @@ function PreRegistroPresidente() {
       Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
     }
   };
+
 
   const procesarFotografia = async (archivo) => {
     Swal.fire({
