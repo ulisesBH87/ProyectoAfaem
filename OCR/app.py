@@ -4,7 +4,7 @@ import base64
 import requests
 import difflib
 from concurrent.futures import ThreadPoolExecutor
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 from google.cloud import vision
 from datetime import datetime
 import fitz
