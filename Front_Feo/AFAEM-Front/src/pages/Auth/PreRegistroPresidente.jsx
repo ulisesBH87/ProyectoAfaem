@@ -153,9 +153,9 @@ function PreRegistroPresidente() {
         if (!res.ok) throw new Error('Error al cargar seguros');
         const data = await res.json();
         const arrSeguros = Array.isArray(data) ? data :
-                           Array.isArray(data.data) ? data.data :
-                           Array.isArray(data.seguros) ? data.seguros :
-                           Array.isArray(data.results) ? data.results : [];
+          Array.isArray(data.data) ? data.data :
+            Array.isArray(data.seguros) ? data.seguros :
+              Array.isArray(data.results) ? data.results : [];
 
         const segurosMapeados = arrSeguros.map((seg, idx) => ({
           id: String(seg.id || seg.SeguroId || idx + 1),
@@ -233,8 +233,8 @@ function PreRegistroPresidente() {
 
   /* ─── Catálogos para Selectores ─── */
   const CATALOGO_ROLES = [
-    { valor: 'PRESIDENTE DE EQUIPO',   etiqueta: 'Presidente de Equipo' },
-    { valor: 'ENTRENADOR',             etiqueta: 'Entrenador' },
+    { valor: 'PRESIDENTE DE EQUIPO', etiqueta: 'Presidente de Equipo' },
+    { valor: 'ENTRENADOR', etiqueta: 'Entrenador' },
   ];
 
   const bankInfo = {
@@ -441,7 +441,7 @@ function PreRegistroPresidente() {
         // Actualizar el rol del usuario en la sesión local
         // para que la interfaz sepa que ya es Presidente (o está en proceso).
         localStorage.setItem('rol', 'PRESIDENTE_EQUIPO');
-        
+
         // Ir a pantalla de espera
         setEstadoPago(1); // Pendiente
         setPasoActual(2);
@@ -488,21 +488,21 @@ function PreRegistroPresidente() {
   const mejorarExtraccionActa = (rawText, currentData) => {
     if (!rawText) return currentData;
     const data = { ...currentData };
-    
+
     // 1. RESCATE DE NOMBRE (Especialmente para actas digitales mexicanas)
     // Buscamos patrones de etiquetas seguidas de valores en líneas subsecuentes
     if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2) {
       // Intento 1: Formato "Nombre(s) \n VALOR \n Primer Apellido \n VALOR ..."
       const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
-      
-      for(let i=0; i<lines.length; i++) {
+
+      for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i+1 < lines.length) nombres = lines[i+1];
-        if (l.includes('PRIMER APELLIDO') && i+1 < lines.length) ap1 = lines[i+1];
-        if (l.includes('SEGUNDO APELLIDO') && i+1 < lines.length) ap2 = lines[i+1];
+        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) nombres = lines[i + 1];
+        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1 = lines[i + 1];
+        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2 = lines[i + 1];
       }
-      
+
       if (nombres && ap1) {
         data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
       }
@@ -514,18 +514,18 @@ function PreRegistroPresidente() {
         'ENERO': '01', 'FEBRERO': '02', 'MARZO': '03', 'ABRIL': '04', 'MAYO': '05', 'JUNIO': '06',
         'JULIO': '07', 'AGOSTO': '08', 'SEPTIEMBRE': '09', 'OCTUBRE': '10', 'NOVIEMBRE': '11', 'DICIEMBRE': '12'
       };
-      
+
       const regexFechaTexto = /(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i;
       const matchFecha = rawText.match(regexFechaTexto);
-      
+
       if (matchFecha) {
         const dia = matchFecha[1].padStart(2, '0');
         const mesNombre = matchFecha[2].toUpperCase();
         const anio = matchFecha[3];
-        
+
         if (meses[mesNombre]) {
           data.fecha_nac = `${dia}/${meses[mesNombre]}/${anio}`;
-          
+
           // Intentar recalcular edad
           try {
             const hoy = new Date();
@@ -533,7 +533,7 @@ function PreRegistroPresidente() {
             let edad = hoy.getFullYear() - a;
             if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
             data.edad = `${edad} años`;
-          } catch(e) {}
+          } catch (e) { }
         }
       }
     }
@@ -855,48 +855,51 @@ function PreRegistroPresidente() {
 
       const token = localStorage.getItem('token');
 
-      // Upload each document
-      /* 
-      // TODO: Rehabilitar este bloque cuando se cuente con un servidor de almacenamiento de archivos.
-      for (const docKey of requiredDocs) {
-        const file = documents[docKey];
-        const formData = new FormData();
-        formData.append('documento_afiliacion_ids', 3); 
-        formData.append('archivo', file);
+      // ── SUBIDA REAL DE LOS 4 DOCUMENTOS DEL PRESIDENTE ──────────────
+      // IDs de DocumentoAfiliacion confirmados en base de datos:
+      //   actaNacimiento   → 8  (ACTA_NACIMIENTO, Presidente de Equipo)
+      //   identificacion   → 38 (INE, Presidente de Equipo)
+      //   fotografia       → 37 (FOTOGRAFIA, Presidente de Equipo)
+      //   formatoAfiliacion→ 10 (FORMATO_DIRECTIVO, Presidente de Equipo)
+      const docMapping = [
+        { key: 'actaNacimiento',    docAfiliacionId: 8  },
+        { key: 'identificacion',    docAfiliacionId: 38 },
+        { key: 'fotografia',        docAfiliacionId: 37 },
+        { key: 'formatoAfiliacion', docAfiliacionId: 10 },
+      ];
 
-        const response = await fetch(`${API_BASE}/documentos/`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(`Error subiendo ${docKey}: ${errData.detail || response.statusText}`);
-        }
+      console.log('📤 Subiendo documentos del presidente al servidor...');
+      const formDataDocs = new FormData();
+      for (const { key, docAfiliacionId } of docMapping) {
+        formDataDocs.append('documento_afiliacion_ids', docAfiliacionId);
+        formDataDocs.append('archivo', documents[key]);
       }
-      */
 
-      // --- BYPASS DE DOCUMENTOS ---
-      // Obtenemos la solicitud actual del usuario para marcarla como completa
-      console.log('🔄 Marcando solicitud como completa (Bypass de archivos)...');
-      
+      const resUpload = await fetch(`${API_BASE}/documentos/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formDataDocs
+      });
+
+      if (!resUpload.ok) {
+        const errData = await resUpload.json().catch(() => ({}));
+        throw new Error(`Error al subir documentos: ${errData.detail || resUpload.statusText}`);
+      }
+      console.log('✅ Documentos subidos correctamente.');
+
+      // ── MARCAR SOLICITUD COMO COMPLETA (Status 4 – Revisión) ─────────
       const resMisSolicitudes = await fetch(`${API_BASE}/solicitud/solicitudes-usuarios`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!resMisSolicitudes.ok) throw new Error('No se pudo verificar el estado de la solicitud.');
       const solicitudesData = await resMisSolicitudes.json();
-      
-      // Buscamos la solicitud del usuario (usualmente es la más reciente o la única pendiente)
-      const miSolicitud = Array.isArray(solicitudesData) 
-        ? solicitudesData.find(s => String(s.UsuarioId) === String(personaId)) 
+
+      const miSolicitud = Array.isArray(solicitudesData)
+        ? solicitudesData.find(s => String(s.UsuarioId) === String(personaId))
         : null;
 
       if (miSolicitud && miSolicitud.SolicitudId) {
-        // Marcamos la solicitud como completa (Status 4 - Revisión)
         const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?solicitud_id=${miSolicitud.SolicitudId}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
@@ -918,7 +921,7 @@ function PreRegistroPresidente() {
 
       // Refresh RBAC permissions before navigating
       if (refreshAccess) await refreshAccess();
-      
+
       Swal.fire({
         title: '¡Registro Exitoso!',
         text: 'Tus documentos han sido subidos correctamente. El administrador procederá a validarlos.',
@@ -1169,10 +1172,10 @@ function PreRegistroPresidente() {
 
       {/* HEADER LOGOS */}
       <div style={{ width: '100%', maxWidth: '1000px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <img 
-          src={AfaemLogo} 
-          alt="AFAEM" 
-          style={{ height: '70px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }} 
+        <img
+          src={AfaemLogo}
+          alt="AFAEM"
+          style={{ height: '70px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }}
         />
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <img src={FmfLogo} alt="FMF" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
@@ -1330,11 +1333,11 @@ function PreRegistroPresidente() {
                       <input
                         type="number"
                         className="insurance-input"
-                      value={asignacionSeguros[seg.id] ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                        setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                      }}
+                        value={asignacionSeguros[seg.id] ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                          setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                        }}
                       />
                     </div>
                   ))
@@ -1497,25 +1500,25 @@ function PreRegistroPresidente() {
           <div className="welcome-content">
             {estadoPago === 3 ? (
               /* PAGO VALIDADO */
-              <div className="fade-in" style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <div className="fade-in" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '40px 20px',
                 textAlign: 'center',
                 minHeight: '400px'
               }}>
-                <div style={{ 
-                  width: '80px', 
-                  height: '80px', 
+                <div style={{
+                  width: '80px',
+                  height: '80px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '32px', 
-                  background: 'rgba(16, 185, 129, 0.1)', 
-                  color: 'var(--secondary)', 
+                  fontSize: '32px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: 'var(--secondary)',
                   marginBottom: '25px',
                   border: '2px solid rgba(16, 185, 129, 0.2)'
                 }}>
@@ -1525,9 +1528,9 @@ function PreRegistroPresidente() {
                 <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
                   ¡Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}!
                 </h1>
-                
+
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ 
+                  <div style={{
                     display: 'inline-block',
                     background: 'rgba(16, 185, 129, 0.1)',
                     color: 'var(--secondary)',
@@ -1547,12 +1550,12 @@ function PreRegistroPresidente() {
                     Continuar con documentos
                   </button>
                   <br />
-                  <button style={{ 
-                    marginTop: '20px', 
-                    background: 'none', 
-                    border: 'none', 
-                    color: 'var(--text-muted)', 
-                    cursor: 'pointer', 
+                  <button style={{
+                    marginTop: '20px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
                     fontSize: '14px',
                     fontWeight: '600'
                   }} onClick={handleLogout}>Cerrar sesión</button>
@@ -1560,25 +1563,25 @@ function PreRegistroPresidente() {
               </div>
             ) : estadoPago === 4 || estadoPago === 2 ? (
               /* PAGO RECHAZADO */
-              <div className="fade-in" style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <div className="fade-in" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '40px 20px',
                 textAlign: 'center',
                 minHeight: '400px'
               }}>
-                <div style={{ 
-                  width: '80px', 
-                  height: '80px', 
+                <div style={{
+                  width: '80px',
+                  height: '80px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '32px', 
-                  background: 'rgba(239, 68, 68, 0.1)', 
-                  color: 'var(--danger)', 
+                  fontSize: '32px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: 'var(--danger)',
                   marginBottom: '25px',
                   border: '2px solid rgba(239, 68, 68, 0.2)'
                 }}>
@@ -1588,9 +1591,9 @@ function PreRegistroPresidente() {
                 <h1 style={{ fontSize: '30px', fontWeight: '800', color: 'var(--danger)', marginBottom: '15px' }}>
                   Un administrador ha revisado el pago y haz sido rechazado
                 </h1>
-                
+
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ 
+                  <div style={{
                     display: 'inline-block',
                     background: 'rgba(239, 68, 68, 0.1)',
                     color: 'var(--danger)',
@@ -1606,23 +1609,23 @@ function PreRegistroPresidente() {
                   <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
                     <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: 'var(--danger)' }}>Administrador: haz sido rechazado por este motivo:</h4>
                     <p style={{ fontSize: '14px', color: 'var(--text-main)', fontStyle: 'italic', margin: 0 }}>
-                      "{ (ordenPendienteId && localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`)) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
+                      "{(ordenPendienteId && localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`)) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
                     </p>
                   </div>
 
                   <button className="btn-premium" style={{ padding: '16px 60px' }} onClick={() => {
-                     setEstadoPago(null);
-                     setPasoActual(1);
+                    setEstadoPago(null);
+                    setPasoActual(1);
                   }}>
                     Subir nuevo comprobante
                   </button>
                   <br />
-                  <button style={{ 
-                    marginTop: '20px', 
-                    background: 'none', 
-                    border: 'none', 
-                    color: 'var(--text-muted)', 
-                    cursor: 'pointer', 
+                  <button style={{
+                    marginTop: '20px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
                     fontSize: '14px',
                     fontWeight: '600'
                   }} onClick={handleLogout}>Cerrar sesión</button>
@@ -1630,25 +1633,25 @@ function PreRegistroPresidente() {
               </div>
             ) : (
               /* ESPERANDO VALIDACIÓN */
-              <div className="fade-in" style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <div className="fade-in" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '40px 20px',
                 textAlign: 'center',
                 minHeight: '400px'
               }}>
-                <div style={{ 
-                  width: '80px', 
-                  height: '80px', 
+                <div style={{
+                  width: '80px',
+                  height: '80px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '32px', 
-                  background: 'rgba(245, 158, 11, 0.1)', 
-                  color: 'var(--warning)', 
+                  fontSize: '32px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  color: 'var(--warning)',
                   marginBottom: '25px',
                   border: '2px solid rgba(245, 158, 11, 0.2)'
                 }}>
@@ -1658,9 +1661,9 @@ function PreRegistroPresidente() {
                 <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
                   Esperando Validación
                 </h1>
-                
+
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ 
+                  <div style={{
                     display: 'inline-block',
                     background: 'rgba(245, 158, 11, 0.1)',
                     color: 'var(--warning)',
@@ -1674,10 +1677,10 @@ function PreRegistroPresidente() {
                     PAGO EN REVISIÓN
                   </div>
                   <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
-                    Hemos recibido tu comprobante de pago. Será validado en un plazo de 24 a 48 horas hábiles. 
+                    Hemos recibido tu comprobante de pago. Será validado en un plazo de 24 a 48 horas hábiles.
                     Una vez validado, podrás continuar con la carga de documentos necesarios para tu afiliación oficial.
                   </p>
-                  
+
                   <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
                     <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>📄 Documentos a preparar:</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -1741,9 +1744,9 @@ function PreRegistroPresidente() {
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Liga Destino</label>
-                  <select 
-                    value={liga} 
-                    onChange={(e) => setLiga(e.target.value)} 
+                  <select
+                    value={liga}
+                    onChange={(e) => setLiga(e.target.value)}
                     className="premium-input"
                     style={{ cursor: 'pointer' }}
                   >
@@ -1753,9 +1756,9 @@ function PreRegistroPresidente() {
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Tipo de afiliación *</label>
-                  <select 
-                    value={tipoAfiliacion} 
-                    onChange={(e) => setTipoAfiliacion(e.target.value)} 
+                  <select
+                    value={tipoAfiliacion}
+                    onChange={(e) => setTipoAfiliacion(e.target.value)}
                     className="premium-input"
                     style={{ cursor: 'pointer' }}
                   >
