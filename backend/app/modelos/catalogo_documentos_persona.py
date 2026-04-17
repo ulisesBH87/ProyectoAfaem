@@ -9,3 +9,5 @@ class CatalogoDocumentosPersonas(Base):
 
     DocumentoId = Column(Integer, ForeignKey("CatalogoDocumentos.DocumentoId"), nullable=False)
     RolPersonaId = Column(Integer, ForeignKey("CatalogoRolesPersonas.RolPersonaId"), nullable=False)
+
+    Documento = relationship("CatalogoDocumentos")

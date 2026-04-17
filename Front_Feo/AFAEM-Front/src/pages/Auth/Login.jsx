@@ -479,9 +479,11 @@ export default function Login() {
             </button>
           </form>
           
+          {/* 
           <div className="signup-link">
             ¿No tienes cuenta? <Link to="/signup">Crea una aquí</Link>
           </div>
+          */}
         </div>
       </div>
     </div>

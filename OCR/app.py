@@ -1,7 +1,6 @@
 import os
 import re
 import base64
-import logging
 import requests
 import difflib
 from concurrent.futures import ThreadPoolExecutor
@@ -9,10 +8,6 @@ from flask import Flask, render_template, request
 from google.cloud import vision
 from datetime import datetime
 import fitz
-
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "afaem-487315-9fef755ac1dc.json"
 
@@ -153,6 +148,59 @@ def extraccion_misma_linea_o_arriba(lineas, i, etiquetas):
             if cand != "No detectado":
                 return cand
     return ""
+
+def extraer_sexo_doc(curp, texto_up):
+    # La extracción más precisa siempre será mediante la CURP (letra 11)
+    if curp and curp != "No detectado" and len(curp) >= 11:
+        letra = curp[10]
+        if letra == 'H': return "MASCULINO"
+        if letra == 'M': return "FEMENINO"
+        if letra == 'X': return "NO BINARIO"
+        
+    # Respaldo con el texto escaneado
+    if "FEMENINO" in texto_up or "MUJER" in texto_up or "SEXO M" in texto_up:
+        return "FEMENINO"
+    if "MASCULINO" in texto_up or "HOMBRE" in texto_up or "SEXO H" in texto_up:
+        return "MASCULINO"
+        
+    return "No detectado"
+
+def extraer_lugar_localidad(lineas, tipo_doc):
+    # 1. Lógica para INE (Sacar el municipio del domicilio)
+    if tipo_doc == "INE":
+        capturando_domicilio = False
+        lineas_domicilio = []
+        for linea in lineas:
+            l_up = linea.upper().strip()
+            if "DOMICILIO" in l_up:
+                capturando_domicilio = True
+                continue
+            if capturando_domicilio:
+                # Si llega a alguna de estas palabras, ya terminó la dirección
+                if any(stop in l_up for stop in ["CLAVE DE ELECTOR", "CURP", "AÑO DE REGISTRO", "ESTADO", "TLR"]):
+                    break
+                lineas_domicilio.append(linea.strip())
+        
+        if lineas_domicilio:
+            # La última línea antes de CLAVE DE ELECTOR es el Municipio y Estado ("CUAUTLA, MOR.")
+            return lineas_domicilio[-1].strip()
+
+    # 2. Lógica para Actas de Nacimiento (Lugar de Nacimiento)
+    for i, linea in enumerate(lineas):
+        l_up = linea.upper().strip()
+        if "LUGAR DE NACIMIENTO" in l_up or "MUNICIPIO DE REGISTRO" in l_up:
+            partes = re.split(r'LUGAR DE NACIMIENTO|MUNICIPIO DE REGISTRO', l_up)
+            if len(partes) > 1:
+                limpio = partes[1].replace(":", "").strip()
+                if len(limpio) > 2 and not any(x in limpio for x in ["FECHA", "CURP", "SEXO", "NOMBRE"]):
+                    return limpio
+            
+            for j in range(1, 3):
+                if i + j < len(lineas):
+                    cand = lineas[i+j].upper().replace(":", "").strip()
+                    if cand and len(cand) > 2 and not any(x in cand for x in ["FECHA", "CURP", "SEXO", "NOMBRE", "ESTADO", "ENTIDAD", "REGISTRADA"]):
+                        return cand
+    return "No detectado"
 
 def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
     datos = {"nombre": "No detectado"}
@@ -361,12 +409,17 @@ def procesar_texto(texto):
     info_doc = extraer_datos_por_tipo(lineas, tipo_doc, curp, texto_up)
     estado = "MENOR DE EDAD" if isinstance(edad, int) and edad < 18 else "ADULTO"
     
+    sexo = extraer_sexo_doc(curp, texto_up)
+    localidad = extraer_lugar_localidad(lineas, tipo_doc)
+    
     validacion_api = validar_verificamex(curp)
     
     return {
         "documento": tipo_doc,
         "nombre": info_doc['nombre'],
         "nacionalidad": nacionalidad,
+        "sexo": sexo,
+        "localidad": localidad,
         "curp": curp,
         "fecha_nac": fecha_nac,
         "edad": f"{edad} años" if isinstance(edad, int) else edad,
@@ -476,7 +529,6 @@ def index():
                 else:
                     datos = {"error": "No se pudo leer ningún texto del documento de Identidad."}
             except Exception as e:
-                logger.error(f"Error en el procesamiento OCR: {e}")
                 datos = {"error": f"Error técnico: {str(e)}"}
                 
     return render_template('index.html', datos=datos)
