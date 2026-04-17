@@ -414,39 +414,43 @@ async def agregar_jugador_equipo_existente(
         # 6. Sumar +1 a la CantidadJugadores
         equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + 1
 
-        # 7. Guardar Archivos del Jugador
-        DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "documentos_entregados")
-        os.makedirs(DOCS_DIR, exist_ok=True)
-        doc_types = ["acta", "ine", "foto", "formato"]
-        for doc_type in doc_types:
-            # Soportar tanto el formato indexado (antiguo) como el directo (nuevo panel admin)
+        DOC_TYPE_TO_ID = {
+            "acta": 22,
+            "ine": 26,
+            "foto": 25,
+            "formato": 28
+        }
+
+        archivos = []
+        documento_ids = []
+
+        for doc_type, doc_id in DOC_TYPE_TO_ID.items():
             file_key = f"player_0_{doc_type}"
             direct_key = "formato_firmado" if doc_type == "formato" else doc_type
             
-            archivo = form_data.get(file_key) or form_data.get(direct_key)
-            
-            if archivo and isinstance(archivo, UploadFile):
-                ext = "jpg"
-                if "." in archivo.filename:
-                    ext = archivo.filename.split(".")[-1]
-                
-                # Sanitizar nombre de archivo
-                curp_safe = str(nueva_persona.CURP).replace(" ", "")
-                nombre_equipo_safe = str(equipo.NombreEquipo).replace(" ", "_").replace("/", "_")
-                nombre_archivo = f"{nombre_equipo_safe}_{curp_safe}_{doc_type}.{ext}"
-                ruta_archivo = os.path.join(DOCS_DIR, nombre_archivo)
-                
-                try:
-                    await archivo.seek(0)
-                    contenido = await archivo.read()
-                    if contenido:
-                        with open(ruta_archivo, "wb") as buffer:
-                            buffer.write(contenido)
-                except Exception as file_err:
-                    print(f"Error guardando archivo {doc_type}: {file_err}")
-                    # No frenamos todo el proceso si falla un guardado de archivo no crítico
+            archivo = (
+                form_data.get(file_key) or
+                form_data.get(direct_key) or
+                form_data.get(doc_type)
+            )
+
+            if archivo and hasattr(archivo, "filename"):
+                archivos.append(archivo)
+                documento_ids.append(doc_id)
+
+        if archivos:
+            from app.servicios.documentos_servicio import subir_documento_servicio2
+
+            await subir_documento_servicio2(
+                db=db,
+                persona_id=nueva_persona.PersonaId,
+                documento_afiliacion_ids=documento_ids,
+                archivos=archivos,
+                solicitud_id=None
+            )
 
         db.commit()
+
         return {"mensaje": "Jugador agregado exitosamente al equipo", "persona_id": nueva_persona.PersonaId}
 
     except HTTPException:

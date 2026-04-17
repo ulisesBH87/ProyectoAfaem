@@ -29,7 +29,7 @@ def subir_documento_repo2(db, persona_id, documento_afiliacion_id, ruta, solicit
     #su solicitud que está en borrador
     if not solicitud_id:
         solicitud = db.query(Solicitud).filter(
-            Solicitud.EstatusValidacionId == EstatusValidacionSolicitud.BORRADOR
+            Solicitud.EstatusValidacion == EstatusValidacionSolicitud.BORRADOR.value
         ).first()
 
         solicitud_id = solicitud.SolicitudId
@@ -45,7 +45,7 @@ def subir_documento_repo2(db, persona_id, documento_afiliacion_id, ruta, solicit
         FechaEntrega=datetime.now(),
         EstadoValidacionId=DocumentoEstatus.PENDIENTE
     )
-    print("PERSONA USADA PARA DOCS:", persona_id)
+    print("🚀🚀🚀🚀VPERSONA USADA PARA DOCS🚀🚀🚀🚀:", persona_id)
     db.add(doc)
     return doc
 
