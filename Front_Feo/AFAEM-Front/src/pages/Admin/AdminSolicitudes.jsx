@@ -398,8 +398,7 @@ export default function AdminSolicitudes() {
           >
             Ver
           </button>
-          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4) && (
-            <button
+          <button
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
                 padding: '7px 14px', background: '#6366f1', color: 'white',
@@ -409,7 +408,6 @@ export default function AdminSolicitudes() {
             >
               Docs
             </button>
-          )}
           <button
             onClick={() => handleAprobarSolicitud(row.SolicitudId)}
             style={{
