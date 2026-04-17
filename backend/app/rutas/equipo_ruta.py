@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -19,6 +19,7 @@ from app.modelos import (
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
     EquipoTemporal, Usuario, AntecedentesInternacionales
 )
+from app.servicios import documentos_servicio
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
 
@@ -713,3 +714,16 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+    
+
+@router.get("/jugador/{miembro_equipo_id}/exportar")
+def exportar_documentos_jugador(miembro_equipo_id: int, db:Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    zip_bytes, nombre_zip = documentos_servicio.generar_zip_documentos(db, miembro_equipo_id)
+
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={nombre_zip}"
+        }
+    )

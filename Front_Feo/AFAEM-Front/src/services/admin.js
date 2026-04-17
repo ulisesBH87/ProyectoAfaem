@@ -173,6 +173,12 @@ export const getJugadorDocumentos = async (personaId) => {
   return response.data;
 };
 
+export const exportarJugadorDocumentos = async (miembroEquipoId) => {
+  return api.get(`/equipo-temporal/jugador/${miembroEquipoId}/exportar`, {
+    responseType: 'blob',
+  });
+};
+
 /**
  * ACTUALIZA UN EQUIPO (NOMBRE Y ESTATUS)
  */
@@ -287,6 +293,7 @@ export default {
   getEquiposDirectorio,
   getJugadoresDirectorio,
   getJugadorDocumentos,
+  exportarJugadorDocumentos,
   updateEquipo,
   updateJugador,
   getPresidentesDirectorio,
