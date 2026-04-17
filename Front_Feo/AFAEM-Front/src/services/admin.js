@@ -50,7 +50,7 @@ const fetchWithCache = async (url, options = {}) => {
     console.log(`[Cache Hit] ${cacheKey}`);
     return cachedData;
   }
-  
+
   const response = await api.get(url, options);
   serviceCache.set(cacheKey, response.data);
   return response.data;
