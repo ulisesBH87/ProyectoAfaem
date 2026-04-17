@@ -149,6 +149,70 @@ def extraccion_misma_linea_o_arriba(lineas, i, etiquetas):
                 return cand
     return ""
 
+def extraer_sexo_doc(curp, texto_up):
+    if curp and curp != "No detectado" and len(curp) >= 11:
+        letra = curp[10]
+        if letra == 'H': return "MASCULINO"
+        if letra == 'M': return "FEMENINO"
+        if letra == 'X': return "NO BINARIO"
+        
+    if "FEMENINO" in texto_up or "MUJER" in texto_up or "SEXO M" in texto_up:
+        return "FEMENINO"
+    if "MASCULINO" in texto_up or "HOMBRE" in texto_up or "SEXO H" in texto_up:
+        return "MASCULINO"
+        
+    return "No detectado"
+
+# --- NUEVA FUNCIÓN SEPARADA ---
+def extraer_ubicaciones(lineas, tipo_doc):
+    lugar_nacimiento = "No aplica"
+    lugar_residencia = "No aplica"
+
+    if tipo_doc == "INE":
+        capturando_domicilio = False
+        lineas_domicilio = []
+        for linea in lineas:
+            l_up = linea.upper().strip()
+            if "DOMICILIO" in l_up:
+                capturando_domicilio = True
+                continue
+            if capturando_domicilio:
+                if any(stop in l_up for stop in ["CLAVE DE ELECTOR", "CURP", "AÑO DE REGISTRO", "ESTADO", "TLR"]):
+                    break
+                lineas_domicilio.append(linea.strip())
+        
+        if lineas_domicilio:
+            lugar_residencia = lineas_domicilio[-1].strip()
+            if not lugar_residencia:
+                lugar_residencia = "No detectado"
+
+    elif tipo_doc == "ACTA DE NACIMIENTO":
+        encontrado = False
+        for i, linea in enumerate(lineas):
+            l_up = linea.upper().strip()
+            if "LUGAR DE NACIMIENTO" in l_up or "MUNICIPIO DE REGISTRO" in l_up:
+                partes = re.split(r'LUGAR DE NACIMIENTO|MUNICIPIO DE REGISTRO', l_up)
+                if len(partes) > 1:
+                    limpio = partes[1].replace(":", "").strip()
+                    if len(limpio) > 2 and not any(x in limpio for x in ["FECHA", "CURP", "SEXO", "NOMBRE"]):
+                        lugar_nacimiento = limpio
+                        encontrado = True
+                        break
+                
+                for j in range(1, 3):
+                    if i + j < len(lineas):
+                        cand = lineas[i+j].upper().replace(":", "").strip()
+                        if cand and len(cand) > 2 and not any(x in cand for x in ["FECHA", "CURP", "SEXO", "NOMBRE", "ESTADO", "ENTIDAD", "REGISTRADA"]):
+                            lugar_nacimiento = cand
+                            encontrado = True
+                            break
+                if encontrado: break
+        if not encontrado:
+            lugar_nacimiento = "No detectado"
+
+    return lugar_nacimiento, lugar_residencia
+# ------------------------------
+
 def extraer_datos_por_tipo(lineas, tipo_doc, curp_original, texto_up):
     datos = {"nombre": "No detectado"}
     texto_lineal = texto_up.replace("\n", " ")
@@ -356,12 +420,20 @@ def procesar_texto(texto):
     info_doc = extraer_datos_por_tipo(lineas, tipo_doc, curp, texto_up)
     estado = "MENOR DE EDAD" if isinstance(edad, int) and edad < 18 else "ADULTO"
     
+    sexo = extraer_sexo_doc(curp, texto_up)
+    
+    # Llamamos a la nueva función
+    lugar_nac, lugar_res = extraer_ubicaciones(lineas, tipo_doc)
+    
     validacion_api = validar_verificamex(curp)
     
     return {
         "documento": tipo_doc,
         "nombre": info_doc['nombre'],
         "nacionalidad": nacionalidad,
+        "sexo": sexo,
+        "lugar_nacimiento": lugar_nac,
+        "lugar_residencia": lugar_res,
         "curp": curp,
         "fecha_nac": fecha_nac,
         "edad": f"{edad} años" if isinstance(edad, int) else edad,
