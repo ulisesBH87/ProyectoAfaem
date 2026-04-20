@@ -48,33 +48,6 @@ function PreRegistroPresidente() {
 
   // Verificar estado de pago al cargar
   useEffect(() => {
-    const cargarDetalleOrden = async (ordenId, token) => {
-      try {
-        const res = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error('Error al cargar detalle de orden');
-        const data = await res.json();
-
-        setTotalOrdenPendiente(Number(data.TotalPagar || data.total || 0));
-
-        const detalles = data.OrdenPagoDetalleRelacion || data.detalles || [];
-        const segurosOrden = {};
-        const inscripcionesOrden = [];
-        detalles.forEach(detalle => {
-          const seguroId = detalle.SeguroId || detalle.seguro_id;
-          if (seguroId) {
-            segurosOrden[String(seguroId)] = detalle.Cantidad || detalle.cantidad || 0;
-          } else {
-            inscripcionesOrden.push(detalle);
-          }
-        });
-        setAsignacionSeguros(segurosOrden);
-        setDetalleInscripciones(inscripcionesOrden);
-      } catch (err) {
-        console.warn('No se pudo cargar detalle de la orden:', err);
-      }
-    };
 
     const verificarEstadoPago = async () => {
       try {
@@ -102,7 +75,7 @@ function PreRegistroPresidente() {
             const ordenId = data.orden_pago_id || data.OrdenPagoId;
             setEstadoPago(data.estatus);
             setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
-            if (ordenId) cargarDetalleOrden(ordenId, token);
+            if (ordenId) cargarDetalleOrdenDirecto(ordenId, token);
             // Si ya tiene orden, ir a la pantalla correcta
             if (data.estatus === 3) {
               // Pago aprobado → mostrar pantalla de validado
@@ -244,6 +217,35 @@ function PreRegistroPresidente() {
     cuenta: '0123456789 01',
     clabe: '012 180 0001234567 89',
     referencia: 'RHX-CL26-001'
+  };
+
+  // ================== FUNCIÓN PARA CARGAR DETALLES DE ORDEN ==================
+  const cargarDetalleOrdenDirecto = async (ordenId, token) => {
+    try {
+      const res = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Error al cargar detalle de orden');
+      const data = await res.json();
+
+      setTotalOrdenPendiente(Number(data.TotalPagar || data.total || 0));
+
+      const detalles = data.OrdenPagoDetalleRelacion || data.detalles || [];
+      const segurosOrden = {};
+      const inscripcionesOrden = [];
+      detalles.forEach(detalle => {
+        const seguroId = detalle.SeguroId || detalle.seguro_id;
+        if (seguroId) {
+          segurosOrden[String(seguroId)] = detalle.Cantidad || detalle.cantidad || 0;
+        } else {
+          inscripcionesOrden.push(detalle);
+        }
+      });
+      setAsignacionSeguros(segurosOrden);
+      setDetalleInscripciones(inscripcionesOrden);
+    } catch (err) {
+      console.warn('No se pudo cargar detalle de la orden:', err);
+    }
   };
 
   const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + Number(val || 0), 0);
@@ -578,6 +580,9 @@ function PreRegistroPresidente() {
           const ordenData = await resOrden.json();
           const newOrdenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
           setOrdenPendienteId(newOrdenId);
+          
+          // Cargar detalles de la orden inmediatamente
+          await cargarDetalleOrdenDirecto(newOrdenId, token);
           
           // Generar PDF de cuota
           setTimeout(() => {
