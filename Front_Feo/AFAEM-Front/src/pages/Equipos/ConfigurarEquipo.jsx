@@ -789,6 +789,67 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
+                    <div style={{ marginBottom: '30px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Documentación Requerida</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                        {[
+                          { key: 'acta', label: 'Acta Nac.', icon: '📜' },
+                          { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
+                          { key: 'foto', label: 'Foto', icon: '📸' }
+                        ].map(doc => {
+                          const isFormato = doc.key === 'formato';
+                          const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
+                          
+                          return (
+                            <div key={doc.key} style={{ 
+                              textAlign: 'center', padding: '20px 10px', border: '1px dashed', borderRadius: '16px',
+                              backgroundColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#f0fdf4' : (isFormato && !canUploadFormato ? '#f1f5f9' : '#f8fafc'),
+                              borderColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#22c55e' : (isFormato && !canUploadFormato ? '#e2e8f0' : '#cbd5e1'),
+                              transition: 'all 0.2s',
+                              opacity: isFormato && !canUploadFormato ? 0.6 : 1
+                            }}>
+                               <div style={{ fontSize: '28px', marginBottom: '8px' }}>{doc.icon}</div>
+                               <div style={{ fontSize: '10px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>{doc.label}</div>
+                               
+                               {(currentPlayer.documents && currentPlayer.documents[doc.key]) ? (
+                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>Cargado ✓</div>
+                               ) : (
+                                 <button 
+                                   disabled={isFormato && !canUploadFormato}
+                                   onClick={() => {
+                                     const input = document.createElement('input');
+                                     input.type = 'file';
+                                     input.onchange = (e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                          if (doc.key === 'foto') {
+                                            procesarFotografiaJugador(file);
+                                          } else if (['acta', 'ine'].includes(doc.key)) {
+                                            procesarOCRReal(doc.key, file);
+                                          } else {
+                                            setCurrentPlayer(prev => ({
+                                              ...prev,
+                                              documents: { ...prev.documents, [doc.key]: file }
+                                            }));
+                                          }
+                                        }
+                                     };
+                                     input.click();
+                                   }}
+                                   style={{ 
+                                     fontSize: '10px', padding: '5px 10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', 
+                                     cursor: (isFormato && !canUploadFormato) ? 'not-allowed' : 'pointer', fontWeight: '800', color: '#0b4ea6' 
+                                   }}
+                                 >
+                                   Subir
+                                 </button>
+                               )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s)</label>
@@ -884,7 +945,7 @@ export default function ConfigurarEquipo() {
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac.</label>
                          <input 
-                           type="text" 
+                           type="date" 
                            value={currentPlayer.birthDate}
                            onChange={e => setCurrentPlayer({...currentPlayer, birthDate: e.target.value})}
                            placeholder="DD/MM/AAAA" 
@@ -1074,66 +1135,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ marginBottom: '30px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Documentación Requerida</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                        {[
-                          { key: 'acta', label: 'Acta Nac.', icon: '📜' },
-                          { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
-                          { key: 'foto', label: 'Foto', icon: '📸' }
-                        ].map(doc => {
-                          const isFormato = doc.key === 'formato';
-                          const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
-                          
-                          return (
-                            <div key={doc.key} style={{ 
-                              textAlign: 'center', padding: '20px 10px', border: '1px dashed', borderRadius: '16px',
-                              backgroundColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#f0fdf4' : (isFormato && !canUploadFormato ? '#f1f5f9' : '#f8fafc'),
-                              borderColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#22c55e' : (isFormato && !canUploadFormato ? '#e2e8f0' : '#cbd5e1'),
-                              transition: 'all 0.2s',
-                              opacity: isFormato && !canUploadFormato ? 0.6 : 1
-                            }}>
-                               <div style={{ fontSize: '28px', marginBottom: '8px' }}>{doc.icon}</div>
-                               <div style={{ fontSize: '10px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>{doc.label}</div>
-                               
-                               {(currentPlayer.documents && currentPlayer.documents[doc.key]) ? (
-                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>Cargado ✓</div>
-                               ) : (
-                                 <button 
-                                   disabled={isFormato && !canUploadFormato}
-                                   onClick={() => {
-                                     const input = document.createElement('input');
-                                     input.type = 'file';
-                                     input.onchange = (e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                          if (doc.key === 'foto') {
-                                            procesarFotografiaJugador(file);
-                                          } else if (['acta', 'ine'].includes(doc.key)) {
-                                            procesarOCRReal(doc.key, file);
-                                          } else {
-                                            setCurrentPlayer(prev => ({
-                                              ...prev,
-                                              documents: { ...prev.documents, [doc.key]: file }
-                                            }));
-                                          }
-                                        }
-                                     };
-                                     input.click();
-                                   }}
-                                   style={{ 
-                                     fontSize: '10px', padding: '5px 10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', 
-                                     cursor: (isFormato && !canUploadFormato) ? 'not-allowed' : 'pointer', fontWeight: '800', color: '#0b4ea6' 
-                                   }}
-                                 >
-                                   Subir
-                                 </button>
-                               )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    
 
                     {/* ANTECEDENTES INTERNACIONALES */}
                     <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
