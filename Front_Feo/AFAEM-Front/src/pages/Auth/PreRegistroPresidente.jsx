@@ -246,7 +246,10 @@ function PreRegistroPresidente() {
   };
 
   const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + Number(val || 0), 0);
-  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const precioPresidente = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0;
+  const precioJugador = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0;
+  const costoAfiliaciones = precioPresidente + (Number(numPersonas || 0) * precioJugador);
+  const totalPagar = costoAfiliaciones + catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
   const totalMostrado = ordenPendienteId ? totalOrdenPendiente : totalPagar;
   const nombreAfiliacion = (tipoAfiliacionId) => {
     const afiliacion = catalogoAfiliaciones.find(a => String(a.TipoAfiliacionId) === String(tipoAfiliacionId));
@@ -487,14 +490,7 @@ function PreRegistroPresidente() {
         // Ir a pantalla de espera
         setEstadoPago(1); // Pendiente
         setPasoActual(2);
-      } catch (err) {
-        console.error('Error al procesar el pago:', err);
-        Swal.fire({
-          title: 'Error',
-          text: err.message,
-          icon: 'error'
-        });
-      }
+      } 
     }
   };
 
@@ -1356,6 +1352,27 @@ function PreRegistroPresidente() {
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>(Recuerda: Deberás asignar un seguro por cada jugador, más un seguro extra para ti como Presidente)</span>
                 </div>
 
+                {numPersonas >= 0 && (
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', marginTop: '20px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <div style={{ width: '3px', height: '14px', background: 'linear-gradient(180deg, #10b981, #059669)', borderRadius: '2px' }} />
+                      <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,0.75)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costos de Afiliación</p>
+                    </div>
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '24px 0 16px' }}>
                   <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
                   <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -1428,6 +1445,22 @@ function PreRegistroPresidente() {
                       <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
                     </div>
                   )
+                )}
+                {!ordenPendienteId && numPersonas > 0 && (
+                  <>
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x1)</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x{numPersonas})</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual * numPersonas}</span>
+                      </div>
+                    ))}
+                  </>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
