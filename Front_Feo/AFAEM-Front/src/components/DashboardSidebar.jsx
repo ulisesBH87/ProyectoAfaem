@@ -220,7 +220,7 @@ const DashboardSidebar = () => {
         >
           <FaSignOutAlt style={{ fontSize: '18px' }} />
           {!isCollapsed && (
-            <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Sign Out</span>
+            <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Cerrar Sesión</span>
           )}
         </div>
 
