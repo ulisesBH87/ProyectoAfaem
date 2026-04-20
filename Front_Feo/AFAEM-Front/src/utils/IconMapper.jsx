@@ -11,3 +11,5 @@ export const getIcon = (iconName) => {
   const IconComponent = FaIcons[mappedIcon];
   return IconComponent ? <IconComponent /> : <FaIcons.FaQuestion />;
 };
+
+// Cambio trivial para actualización de la rama
