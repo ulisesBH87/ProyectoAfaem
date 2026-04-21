@@ -543,6 +543,19 @@ def exportar_documentos_jugador(miembro_equipo_id: int, db:Session = Depends(get
         }
     )
 
+@router.get("/equipo/{equipo_id}/exportar")
+def exportar_documentos_equipo(equipo_id: int, db:Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    """Exporta todos los documentos de todos los jugadores de un equipo en un ZIP"""
+    zip_bytes, nombre_zip = documentos_servicio.generar_zip_documentos_equipo(db, equipo_id)
+
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={nombre_zip}"
+        }
+    )
+
 
 
 # == ACTUALIZACIÓN DE EQUIPO Y JUGADOR == 

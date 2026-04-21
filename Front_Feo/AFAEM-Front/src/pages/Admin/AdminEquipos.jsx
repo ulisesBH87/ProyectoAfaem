@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getEquiposDirectorio, updateEquipo } from '../../services/admin';
+import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable, FaFileArchive } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 
 export default function AdminEquipos() {
@@ -180,6 +180,47 @@ export default function AdminEquipos() {
     }
   };
 
+  const handleExportarEquipo = async (equipo) => {
+    try {
+      Swal.fire({
+        title: 'Generando expediente...',
+        text: 'Preparando archivos del equipo',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const response = await exportarEquipoDocumentos(equipo.EquipoId);
+
+      const blob = new Blob([response.data], { type: 'application/zip' });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+
+      // Nombre del archivo: NombreEquipo_fecha_actual.zip
+      const nombreEquipo = (equipo.NombreEquipo || 'equipo')
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '')
+        .replace(/\s+/g, '_');
+      const hoy = new Date().toISOString().split('T')[0];
+      const nombre = `${nombreEquipo}_${hoy}.zip`;
+      a.download = nombre;
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+
+      Swal.close();
+
+    } catch (error) {
+      console.error("Error exportando:", error);
+      Swal.fire('Error', 'No se pudo generar el expediente del equipo', 'error');
+    }
+  };
+
   const columns = [
     { key: "EquipoId", label: "ID" },
     { key: "NombreEquipo", label: "Equipo" },
@@ -225,13 +266,21 @@ export default function AdminEquipos() {
       <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>🟢 ACTIVO</span> :
       <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>🔴 INACTIVO</span>,
     Acciones: (
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button 
           className="btn btn-sm btn-primary"
           style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
           onClick={() => handleEditarEquipo(eq)}
         >
           <FaEdit /> Detalles y gestión
+        </button>
+        <button 
+          className="btn btn-sm"
+          style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', background: 'white', color: '#059669', border: '1.5px solid #86efac' }}
+          onClick={() => handleExportarEquipo(eq)}
+          title="Descargar documentos de todos los jugadores del equipo"
+        >
+          <FaFileArchive /> Descargar documentos
         </button>
       </div>
     )
