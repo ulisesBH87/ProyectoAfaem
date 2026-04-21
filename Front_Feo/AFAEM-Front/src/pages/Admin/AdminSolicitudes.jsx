@@ -436,7 +436,8 @@ export default function AdminSolicitudes() {
               Docs
             </button>
           )}
-          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 3) ? (
+          
+          {((filtroEstatus === '2' || filtroEstatus === '3') && (row.EstatusValidacion === 2 || row.EstatusValidacion === 3)) ? (
             <button
               onClick={() => handleCambiarEstatusTerminal(row.SolicitudId, row.EstatusValidacion)}
               style={{
