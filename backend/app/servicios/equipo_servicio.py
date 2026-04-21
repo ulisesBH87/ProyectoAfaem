@@ -125,3 +125,41 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
     except:
         db.rollback()
         raise
+"""
+#REGISTRAR A JUGADOR A EQUIPO EXISTENTE
+async def agregar_jugador_equipo_existente(request, db, usuario):
+
+
+    equipo_id = validar_equipo_id(form_data)
+
+    p_data = parsear_jugador(form_data)
+
+    equipo = equipo_repo.obtener_equipo(db, equipo_id)
+    equipo_jugando = equipo_repo.obtener_equipo_jugando(db, equipo_id)
+
+    validar_datos_jugador(p_data)
+
+    validar_email_unico(db, p_data.get("correo"))
+
+    nueva_persona = crear_persona(db, p_data)
+
+    antecedentes_id = crear_antecedentes(db, p_data)
+
+    agregar_miembro_equipo(
+        db,
+        nueva_persona.PersonaId,
+        equipo_id,
+        p_data,
+        antecedentes_id
+    )
+
+    equipo_repositorio.incrementar_jugadores(db, equipo_jugando)
+
+    await procesar_documentos(db, form_data, nueva_persona.PersonaId)
+
+    db.commit()
+
+    return {
+        "mensaje": "Jugador agregado exitosamente",
+        "persona_id": nueva_persona.PersonaId
+    }"""

@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 from app.modelos.persona_modelo import Personas
+from app.modelos.equipo_modelo import Equipos
 from app.repositorios import documentos_repositorio, personas_repositorio
 from app.core.seguridad import obtener_usuario_actual
 from app.repositorios.documentos_repositorio import obtener_solicitud_borrador
@@ -146,5 +147,63 @@ def generar_zip_documentos(db, miembro_id):
     zip_buffer.seek(0)
 
     nombre_zip = f"documentos_jugador_{persona_id}.zip"
+
+    return zip_buffer.read(), nombre_zip
+
+
+def generar_zip_documentos_equipo(db, equipo_id):
+    """
+    Genera un ZIP con los documentos de todos los jugadores del equipo.
+    Cada jugador tendrá su propia carpeta dentro del ZIP.
+    """
+    from datetime import datetime as dt
+    
+    # Obtener el equipo para el nombre
+    equipo = db.query(Equipos).filter(
+        Equipos.EquipoId == equipo_id
+    ).first()
+
+    if not equipo:
+        raise Exception("Equipo no encontrado")
+
+    # Obtener todos los miembros del equipo
+    miembros = equipo_repositorio.obtener_miembros_equipo_por_id_repo(db, equipo_id)
+
+    if not miembros:
+        raise Exception("No hay jugadores en este equipo")
+
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for miembro in miembros:
+            persona_id = miembro["PersonaId"]
+            nombre_carpeta = f"{miembro['NombreCompleto'].replace(' ', '_')}"
+
+            # Obtener documentos del jugador
+            documentos = equipo_repositorio.obtener_documentos_jugador_repo(db, persona_id)
+
+            if not documentos:
+                continue
+
+            # Agregar cada documento a su carpeta
+            for doc in documentos:
+                ruta = doc["RutaArchivo"]
+
+                if not os.path.exists(ruta):
+                    continue
+
+                nombre_archivo = os.path.basename(ruta)
+                
+                # Ruta dentro del ZIP: NombreCarpeta/NombreArchivo
+                arcname = f"{nombre_carpeta}/{nombre_archivo}"
+
+                zipf.write(ruta, arcname=arcname)
+
+    zip_buffer.seek(0)
+
+    # Nombre del archivo con la fecha actual
+    fecha_hoy = dt.now().strftime("%Y-%m-%d")
+    nombre_limpio = equipo.NombreEquipo.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    nombre_zip = f"{nombre_limpio}_{fecha_hoy}.zip"
 
     return zip_buffer.read(), nombre_zip

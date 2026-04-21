@@ -179,6 +179,12 @@ export const exportarJugadorDocumentos = async (miembroEquipoId) => {
   });
 };
 
+export const exportarEquipoDocumentos = async (equipoId) => {
+  return api.get(`/equipo-temporal/equipo/${equipoId}/exportar`, {
+    responseType: 'blob',
+  });
+};
+
 /**
  * ACTUALIZA UN EQUIPO (NOMBRE Y ESTATUS)
  */
