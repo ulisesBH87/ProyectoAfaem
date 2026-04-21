@@ -60,8 +60,21 @@ export default function RegistroJugadores() {
     actaNacimiento: null,
     identificacion: null,
     fotografia: null,
-    formatoAfiliacion: null
+    formatoAfiliacion: null,
+    documentoEstudiante: null
   });
+
+  // ── Detección de minoría de edad ──
+  const esMenorDeEdad = React.useMemo(() => {
+    if (!extractedData.fechaNacimiento) return false;
+    const hoy = new Date();
+    const nac = new Date(extractedData.fechaNacimiento);
+    if (isNaN(nac.getTime())) return false;
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const mDiff = hoy.getMonth() - nac.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad < 18;
+  }, [extractedData.fechaNacimiento]);
 
   const [extractedData, setExtractedData] = useState({
     nombreJugador: '',
@@ -327,6 +340,11 @@ export default function RegistroJugadores() {
         if (documents[key]) { formData.append('documento_afiliacion_ids', 3); formData.append('archivos', documents[key]); }
       });
 
+      // Documento de estudiante (solo si el jugador es menor de edad)
+      if (esMenorDeEdad && documents.documentoEstudiante) {
+        formData.append('documento_estudiante', documents.documentoEstudiante);
+      }
+
       await registrarJugadorTemporal(formData);
       Swal.fire({ title: 'Registro Exitoso!', text: 'El jugador ha sido enviado a revisión por el administrador.', icon: 'success' })
         .then(() => navigate(`/presidente-equipo/admin-equipo/${teamId}`));
@@ -388,14 +406,16 @@ export default function RegistroJugadores() {
               <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Carga de Documentación (OCR)</h3>
             </div>
+            {/* Instrucción de flujo */}
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px 18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0369a1', fontWeight: '600' }}>
+              <span style={{ fontSize: '18px' }}>📋</span>
+              Sube primero el <strong style={{ marginLeft: 4 }}>Acta de Nacimiento</strong>. El sistema detectará automáticamente si el jugador es mayor o menor de edad.
+            </div>
+
+            {/* 1. ACTA (siempre visible) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-              {[
-                { key: 'actaNacimiento', title: 'Acta de Nacimiento' },
-                { key: 'identificacion', title: 'Identificación (INE/Pasaporte)' },
-                { key: 'fotografia', title: 'Fotografía Infantil' },
-                { key: 'formatoAfiliacion', title: 'Formato de Afiliación Firmado' }
-              ].map(doc => (
-                <div 
+              {[{ key: 'actaNacimiento', title: 'Acta de Nacimiento' }].map(doc => (
+                <div
                   key={doc.key}
                   onClick={() => document.getElementById(`file-${doc.key}`).click()}
                   style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s' }}
@@ -409,6 +429,71 @@ export default function RegistroJugadores() {
                 </div>
               ))}
             </div>
+
+            {/* Hint OCR */}
+            {documents.actaNacimiento && !extractedData.fechaNacimiento && (
+              <div className="fade-in" style={{ marginTop: '14px', padding: '12px 16px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                ⏳ Analizando el Acta... Los documentos adicionales aparecerán en breve.
+              </div>
+            )}
+
+            {/* 2a. INE para mayores */}
+            {documents.actaNacimiento && extractedData.fechaNacimiento && !esMenorDeEdad && (
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
+                {[{ key: 'identificacion', title: 'Identificación (INE / Pasaporte)' }].map(doc => (
+                  <div
+                    key={doc.key}
+                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                    style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s' }}
+                  >
+                    <div style={{ fontSize: '30px', marginBottom: '10px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
+                      {documents[doc.key] ? <FaCheckCircle /> : <FaUpload />}
+                    </div>
+                    <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '5px' }}>{doc.title}</h4>
+                    <div style={{ fontSize: '11px', color: documents[doc.key] ? '#166534' : '#64748b' }}>{documents[doc.key] ? 'Listo' : 'Hacer clic para subir'}</div>
+                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 2b. Documento de Estudiante para menores */}
+            {documents.actaNacimiento && extractedData.fechaNacimiento && esMenorDeEdad && (
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
+                <div
+                  onClick={() => document.getElementById('file-documentoEstudiante').click()}
+                  style={{ borderRadius: '12px', border: documents.documentoEstudiante ? '2px solid #10b981' : '2px solid #fbbf24', background: documents.documentoEstudiante ? 'rgba(16,185,129,0.04)' : 'linear-gradient(135deg,#fffbeb,#fef3c7)', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', position: 'relative' }}
+                >
+                  <div style={{ position: 'absolute', top: 8, right: 8, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '10px', padding: '2px 8px', fontSize: '9px', fontWeight: '900', color: 'white' }}>🧒 MENOR</div>
+                  <div style={{ fontSize: '30px', marginBottom: '8px', color: documents.documentoEstudiante ? '#10b981' : '#f59e0b' }}>
+                    {documents.documentoEstudiante ? <FaCheckCircle /> : <FaUpload />}
+                  </div>
+                  <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px', color: '#78350f' }}>Documento de Estudiante</h4>
+                  <div style={{ fontSize: '11px', color: '#92400e' }}>Credencial escolar, certificado o carta de residencia</div>
+                  <input type="file" id="file-documentoEstudiante" style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload('documentoEstudiante', e.target.files[0])} />
+                </div>
+              </div>
+            )}
+
+            {/* 3. FOTOGRAFÍA */}
+            {documents.actaNacimiento && extractedData.fechaNacimiento && (
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
+                {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
+                  <div
+                    key={doc.key}
+                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                    style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s' }}
+                  >
+                    <div style={{ fontSize: '30px', marginBottom: '10px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
+                      {documents[doc.key] ? <FaCheckCircle /> : <FaUpload />}
+                    </div>
+                    <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '5px' }}>{doc.title}</h4>
+                    <div style={{ fontSize: '11px', color: documents[doc.key] ? '#166534' : '#64748b' }}>{documents[doc.key] ? 'Listo' : 'Hacer clic para subir'}</div>
+                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+                  </div>
+                ))}
+              </div>
+            )}
             {!isStep2Done && (
               <div style={{ textAlign: 'center', marginTop: '20px' }}>
                 <button onClick={() => setFillManually(true)} style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '600', background: 'none', border: 'none', textDecoration: 'underline' }}>

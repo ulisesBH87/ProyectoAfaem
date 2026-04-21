@@ -38,6 +38,7 @@ const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContras
 const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
+const Suspended = lazy(() => import('./pages/Auth/Suspended'));
 import SplashScreen from './components/Common/SplashScreen';
 
 function App() {
@@ -94,6 +95,7 @@ function App() {
           <Route path="/pre-registro-presidente" element={<PreRegistroPresidente />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
+          <Route path="/suspendido" element={<Suspended />} />
 
           {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT */}
           <Route element={<MainLayout userEmail={userEmail} />}>
