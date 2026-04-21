@@ -682,7 +682,7 @@ export default function ConfigurarEquipo() {
                            {isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}
                          </div>
                          <div style={{ fontSize: '12px', color: '#60a5fa' }}>
-                           {isAdmin ? 'Crea equipos y registra jugadores directamente en la base de datos.' : 'Las opciones se habilitan según tu pago previo.'}
+                           {isAdmin ? 'Crea equipos y registra jugadores directamente en el sistema.' : 'Las opciones se habilitan según tu pago previo.'}
                          </div>
                        </div>
                     </div>

@@ -439,7 +439,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
 def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
-        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+        raise HTTPException(status_code=403, detail="Acceso denegado: No tienes permisos para acceder a este recurso")
     
     try:
         # Buscamos presidentes que tengan una persona asociada
@@ -448,7 +448,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             Personas.Nombre,
             Personas.PrimerApellido,
             Personas.SegundoApellido,
-            Personas.CURP
+            Personas.CURP,
+            PresidenteEquipo.EstatusId
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)
         
         resultados = query.all()
@@ -456,7 +457,9 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
         return [
             {
                 "id": r.PresidenteEquipoId,
-                "nombre": f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip()
+                "nombre": f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip(),
+                "curp": r.CURP,
+                "estatus": r.EstatusId
             } for r in resultados
         ]
     except Exception as e:
