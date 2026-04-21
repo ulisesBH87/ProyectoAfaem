@@ -87,6 +87,7 @@ export default function ConfigurarEquipo() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [pendingPlayer, setPendingPlayer] = useState(null);
+  const [editingPlayerId, setEditingPlayerId] = useState(null);
 
   // Lógica de Borradores
   const saveDraft = () => {
@@ -503,6 +504,52 @@ export default function ConfigurarEquipo() {
 
   const userEmail = localStorage.getItem('email') || '';
 
+  const resetPlayerForm = () => {
+    setCurrentPlayer({
+      id: Date.now(),
+      firstName: '',
+      lastNamePaterno: '',
+      lastNameMaterno: '',
+      curp: '',
+      nui: '',
+      birthDate: '',
+      lugarNacimiento: '',
+      email: '',
+      telefono: '',
+      sexo_id: 1,
+      insuranceType: '',
+      esForaneo: false,
+      nacionalidadJugador: 'MEXICANA',
+      paisResidencia: 'MÉXICO',
+      haVividoExtranjero: false,
+      dondeVividoExtranjero: '',
+      nacionalidadPadre: '',
+      nacionalidadMadre: '',
+      registroAsociacionExtranjera: '',
+      nacAbueloPaterno: '',
+      nacAbuelaPaterna: '',
+      nacAbueloMaterno: '',
+      nacAbuelaMaterna: '',
+      juegoClubExtranjero: '',
+      shirtNumber: '',
+      positionId: '',
+      documents: {}
+    });
+    setEditingPlayerId(null);
+  };
+
+  const loadPlayerForEditing = (playerId) => {
+    const playerToEdit = players.find(p => p.id === playerId);
+    if (playerToEdit) {
+      setCurrentPlayer({ ...playerToEdit });
+      setEditingPlayerId(playerId);
+      // Scroll al formulario
+      setTimeout(() => {
+        document.querySelector('[data-player-form]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  };
+
   return (
     <>
       <style>
@@ -635,7 +682,7 @@ export default function ConfigurarEquipo() {
                            {isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}
                          </div>
                          <div style={{ fontSize: '12px', color: '#60a5fa' }}>
-                           {isAdmin ? 'Crea equipos y registra jugadores directamente en la base de datos.' : 'Las opciones se habilitan según tu pago previo.'}
+                           {isAdmin ? 'Crea equipos y registra jugadores directamente en el sistema.' : 'Las opciones se habilitan según tu pago previo.'}
                          </div>
                        </div>
                     </div>
@@ -777,15 +824,76 @@ export default function ConfigurarEquipo() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '30px' }}>
                   {/* FORMULARIO DE JUGADOR */}
-                  <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                  <div data-player-form style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: editingPlayerId ? '2px solid #0b4ea6' : '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', transition: 'all 0.3s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
                       <div>
-                        <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registrar Jugador</h3>
-                        <p style={{ fontSize: '13px', color: '#64748b', margin: '5px 0 0 0' }}>Sube los documentos para autocompletar la información.</p>
+                        <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>{editingPlayerId ? '✏️ Editar Jugador' : 'Registrar Jugador'}</h3>
+                        <p style={{ fontSize: '13px', color: '#64748b', margin: '5px 0 0 0' }}>{editingPlayerId ? 'Modifica la información del jugador seleccionado.' : 'Sube los documentos para autocompletar la información.'}</p>
                       </div>
                       <div style={{ background: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', textAlign: 'center' }}>
                         <span style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>Jugadores</span>
                         <span style={{ fontSize: '18px', fontWeight: '800', color: '#0b4ea6' }}>{players.length}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '30px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Documentación Requerida</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                        {[
+                          { key: 'acta', label: 'Acta Nac.', icon: '📜' },
+                          { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
+                          { key: 'foto', label: 'Foto', icon: '📸' }
+                        ].map(doc => {
+                          const isFormato = doc.key === 'formato';
+                          const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
+                          
+                          return (
+                            <div key={doc.key} style={{ 
+                              textAlign: 'center', padding: '20px 10px', border: '1px dashed', borderRadius: '16px',
+                              backgroundColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#f0fdf4' : (isFormato && !canUploadFormato ? '#f1f5f9' : '#f8fafc'),
+                              borderColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#22c55e' : (isFormato && !canUploadFormato ? '#e2e8f0' : '#cbd5e1'),
+                              transition: 'all 0.2s',
+                              opacity: isFormato && !canUploadFormato ? 0.6 : 1
+                            }}>
+                               <div style={{ fontSize: '28px', marginBottom: '8px' }}>{doc.icon}</div>
+                               <div style={{ fontSize: '10px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>{doc.label}</div>
+                               
+                               {(currentPlayer.documents && currentPlayer.documents[doc.key]) ? (
+                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>Cargado ✓</div>
+                               ) : (
+                                 <button 
+                                   disabled={isFormato && !canUploadFormato}
+                                   onClick={() => {
+                                     const input = document.createElement('input');
+                                     input.type = 'file';
+                                     input.onchange = (e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                          if (doc.key === 'foto') {
+                                            procesarFotografiaJugador(file);
+                                          } else if (['acta', 'ine'].includes(doc.key)) {
+                                            procesarOCRReal(doc.key, file);
+                                          } else {
+                                            setCurrentPlayer(prev => ({
+                                              ...prev,
+                                              documents: { ...prev.documents, [doc.key]: file }
+                                            }));
+                                          }
+                                        }
+                                     };
+                                     input.click();
+                                   }}
+                                   style={{ 
+                                     fontSize: '10px', padding: '5px 10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', 
+                                     cursor: (isFormato && !canUploadFormato) ? 'not-allowed' : 'pointer', fontWeight: '800', color: '#0b4ea6' 
+                                   }}
+                                 >
+                                   Subir
+                                 </button>
+                               )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -884,7 +992,7 @@ export default function ConfigurarEquipo() {
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac.</label>
                          <input 
-                           type="text" 
+                           type="date" 
                            value={currentPlayer.birthDate}
                            onChange={e => setCurrentPlayer({...currentPlayer, birthDate: e.target.value})}
                            placeholder="DD/MM/AAAA" 
@@ -1074,66 +1182,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ marginBottom: '30px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Documentación Requerida</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                        {[
-                          { key: 'acta', label: 'Acta Nac.', icon: '📜' },
-                          { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
-                          { key: 'foto', label: 'Foto', icon: '📸' }
-                        ].map(doc => {
-                          const isFormato = doc.key === 'formato';
-                          const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
-                          
-                          return (
-                            <div key={doc.key} style={{ 
-                              textAlign: 'center', padding: '20px 10px', border: '1px dashed', borderRadius: '16px',
-                              backgroundColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#f0fdf4' : (isFormato && !canUploadFormato ? '#f1f5f9' : '#f8fafc'),
-                              borderColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#22c55e' : (isFormato && !canUploadFormato ? '#e2e8f0' : '#cbd5e1'),
-                              transition: 'all 0.2s',
-                              opacity: isFormato && !canUploadFormato ? 0.6 : 1
-                            }}>
-                               <div style={{ fontSize: '28px', marginBottom: '8px' }}>{doc.icon}</div>
-                               <div style={{ fontSize: '10px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>{doc.label}</div>
-                               
-                               {(currentPlayer.documents && currentPlayer.documents[doc.key]) ? (
-                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>Cargado ✓</div>
-                               ) : (
-                                 <button 
-                                   disabled={isFormato && !canUploadFormato}
-                                   onClick={() => {
-                                     const input = document.createElement('input');
-                                     input.type = 'file';
-                                     input.onchange = (e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                          if (doc.key === 'foto') {
-                                            procesarFotografiaJugador(file);
-                                          } else if (['acta', 'ine'].includes(doc.key)) {
-                                            procesarOCRReal(doc.key, file);
-                                          } else {
-                                            setCurrentPlayer(prev => ({
-                                              ...prev,
-                                              documents: { ...prev.documents, [doc.key]: file }
-                                            }));
-                                          }
-                                        }
-                                     };
-                                     input.click();
-                                   }}
-                                   style={{ 
-                                     fontSize: '10px', padding: '5px 10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', 
-                                     cursor: (isFormato && !canUploadFormato) ? 'not-allowed' : 'pointer', fontWeight: '800', color: '#0b4ea6' 
-                                   }}
-                                 >
-                                   Subir
-                                 </button>
-                               )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    
 
                     {/* ANTECEDENTES INTERNACIONALES */}
                     <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
@@ -1215,18 +1264,32 @@ export default function ConfigurarEquipo() {
                        )}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9' }}>
-                       <button 
-                        disabled={!currentPlayer.firstName}
-                        style={{ 
-                          background: 'none', border: 'none', color: !currentPlayer.firstName ? '#94a3b8' : '#0b4ea6', 
-                          fontSize: '14px', fontWeight: '800', cursor: !currentPlayer.firstName ? 'not-allowed' : 'pointer', 
-                          display: 'flex', alignItems: 'center', gap: '8px', opacity: !currentPlayer.firstName ? 0.6 : 1
-                        }}
-                        onClick={handleDownloadPlayerPDF}
-                      >
-                         📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato Pre-llenado</span>
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9', gap: '15px' }}>
+                       <div style={{ display: 'flex', gap: '10px' }}>
+                         <button 
+                          disabled={!currentPlayer.firstName}
+                          style={{ 
+                            background: 'none', border: 'none', color: !currentPlayer.firstName ? '#94a3b8' : '#0b4ea6', 
+                            fontSize: '14px', fontWeight: '800', cursor: !currentPlayer.firstName ? 'not-allowed' : 'pointer', 
+                            display: 'flex', alignItems: 'center', gap: '8px', opacity: !currentPlayer.firstName ? 0.6 : 1
+                          }}
+                          onClick={handleDownloadPlayerPDF}
+                        >
+                           📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato</span>
+                        </button>
+                        {editingPlayerId && (
+                          <button
+                            onClick={resetPlayerForm}
+                            style={{
+                              background: 'none', border: 'none', color: '#64748b',
+                              fontSize: '14px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '8px'
+                            }}
+                          >
+                            ✕ Limpiar
+                          </button>
+                        )}
+                       </div>
 
                       <button 
                         onClick={async () => {
@@ -1257,23 +1320,37 @@ export default function ConfigurarEquipo() {
 
                           // Validar número de camiseta único
                           if (currentPlayer.shirtNumber) {
-                            const duplicate = players.find(p => p.shirtNumber === currentPlayer.shirtNumber);
+                            const duplicate = players.find(p => p.shirtNumber === currentPlayer.shirtNumber && p.id !== editingPlayerId);
                             if (duplicate) {
                               Swal.fire('Atención', `El número de camiseta ${currentPlayer.shirtNumber} ya está asignado a ${duplicate.firstName}.`, 'error');
                               return;
                             }
                           }
 
-                          // 1. Descargamos el PDF
-                          await handleDownloadPlayerPDF();
-                          // 2. Guardamos el jugador pendiente y abrimos el modal premium
-                          setPendingPlayer({ ...currentPlayer });
-                          setSignedForm(null);
-                          setShowFinishModal(true);
+                          if (editingPlayerId) {
+                            // Editar jugador existente
+                            setPlayers(players.map(p => p.id === editingPlayerId ? { ...currentPlayer } : p));
+                            Swal.fire({
+                              title: '¡Actualizado!',
+                              text: `La información de ${currentPlayer.firstName} ha sido actualizada.`,
+                              icon: 'success',
+                              timer: 2000,
+                              showConfirmButton: false
+                            });
+                            resetPlayerForm();
+                          } else {
+                            // Registrar nuevo jugador
+                            // 1. Descargamos el PDF
+                            await handleDownloadPlayerPDF();
+                            // 2. Guardamos el jugador pendiente y abrimos el modal premium
+                            setPendingPlayer({ ...currentPlayer });
+                            setSignedForm(null);
+                            setShowFinishModal(true);
+                          }
                         }}
                         style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(11, 78, 166, 0.3)', fontSize: '15px' }}
                       >
-                        + Registrar Jugador
+                        {editingPlayerId ? '💾 Guardar Cambios' : '+ Registrar Jugador'}
                       </button>
                     </div>
                   </div>
@@ -1313,15 +1390,40 @@ export default function ConfigurarEquipo() {
                           </div>
                         ) : (
                           players.map(p => (
-                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '14px', border: '1px solid #f1f5f9' }}>
-                               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: '#0b4ea6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px' }}>
+                            <div 
+                              key={p.id} 
+                              onClick={() => loadPlayerForEditing(p.id)}
+                              style={{ 
+                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
+                                background: editingPlayerId === p.id ? '#dbeafe' : '#f8fafc', 
+                                borderRadius: '14px', 
+                                border: editingPlayerId === p.id ? '2px solid #0b4ea6' : '1px solid #f1f5f9',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s',
+                                boxShadow: editingPlayerId === p.id ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none'
+                              }}
+                            >
+                               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: editingPlayerId === p.id ? 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px', transition: 'all 0.3s' }}>
                                  {p.firstName?.charAt(0) || 'J'}
                                </div>
                                <div style={{ flex: 1 }}>
-                                 <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{p.firstName} {p.lastNamePaterno}</div>
+                                 <div style={{ fontSize: '13px', fontWeight: editingPlayerId === p.id ? '900' : '800', color: editingPlayerId === p.id ? '#0b4ea6' : '#1e293b', transition: 'all 0.3s' }}>{p.firstName} {p.lastNamePaterno}</div>
                                  <div style={{ fontSize: '11px', color: '#64748b' }}>{catalogs.seguros.find(s => s.id.toString() === p.insuranceType)?.nombre}</div>
                                </div>
-                               <button onClick={() => setPlayers(players.filter(pl => pl.id !== p.id))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                               <button 
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setPlayers(players.filter(pl => pl.id !== p.id));
+                                   if (editingPlayerId === p.id) {
+                                     resetPlayerForm();
+                                   }
+                                 }} 
+                                 style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                                 onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
+                                 onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
+                               >
+                                 ×
+                               </button>
                             </div>
                           ))
                         )}
@@ -1358,7 +1460,7 @@ export default function ConfigurarEquipo() {
                             teamLogo: modalData.teamLogo
                           });
 
-                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente en la base de datos.`);
+                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
                           setShowSuccessModal(true);
                           Swal.close();
                         } catch (err) {
