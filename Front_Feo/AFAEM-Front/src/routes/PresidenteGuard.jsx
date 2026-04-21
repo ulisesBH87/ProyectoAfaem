@@ -30,7 +30,8 @@ const PresidenteGuard = ({ children }) => {
   }
 
   // Verificación de Suspensión (Acordado con Backend estatusId: 0)
-  if (parseInt(estatusId) === 0) {
+  // IMPORTANTE: Solo activa si el backend devuelve EXPLÍCITAMENTE 0, nunca si es null/undefined
+  if (estatusId !== null && estatusId !== undefined && parseInt(estatusId) === 0) {
     return <Navigate to="/suspendido" replace />;
   }
 
