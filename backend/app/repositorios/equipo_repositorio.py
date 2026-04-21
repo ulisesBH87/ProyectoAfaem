@@ -503,6 +503,38 @@ def obtener_directorio_jugadores_repo(db):
 
     return jugadores_response
 
+def obtener_miembros_equipo_por_id_repo(db, equipo_id):
+    """
+    Obtiene todos los miembros (PersonaId) de un equipo específico.
+    Usado para exportar documentos de todos los jugadores del equipo.
+    """
+    from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+    from app.modelos.persona_modelo import Personas
+    
+    resultados = db.query(
+        MiembrosEquipo.MiembroEquipoId,
+        MiembrosEquipo.PersonaId,
+        Personas.Nombre,
+        Personas.PrimerApellido,
+        Personas.SegundoApellido
+    ).join(
+        Personas, MiembrosEquipo.PersonaId == Personas.PersonaId
+    ).filter(
+        MiembrosEquipo.EquipoID == equipo_id,
+        MiembrosEquipo.Eliminado == False
+    ).all()
+
+    miembros = []
+    for miembro in resultados:
+        nombre_completo = f"{miembro.Nombre} {miembro.PrimerApellido} {miembro.SegundoApellido or ''}".strip()
+        miembros.append({
+            "MiembroEquipoId": miembro.MiembroEquipoId,
+            "PersonaId": miembro.PersonaId,
+            "NombreCompleto": nombre_completo
+        })
+    
+    return miembros
+
 def obtener_o_crear_equipo(db, nombre_equipo):
     equipo = db.query(Equipos).filter(
         func.lower(Equipos.NombreEquipo) == func.lower(nombre_equipo)
