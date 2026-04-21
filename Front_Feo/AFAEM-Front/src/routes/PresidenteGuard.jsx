@@ -29,6 +29,11 @@ const PresidenteGuard = ({ children }) => {
     return <Navigate to="/ingresar" state={{ from: location }} replace />;
   }
 
+  // Verificación de Suspensión (Acordado con Backend estatusId: 0)
+  if (parseInt(estatusId) === 0) {
+    return <Navigate to="/suspendido" replace />;
+  }
+
   // Si no estamos cargando, pero no tenemos roles aún, esperar un momento (puede ser un refresh)
   if (!isLoading && roles.length === 0 && token) {
     return (

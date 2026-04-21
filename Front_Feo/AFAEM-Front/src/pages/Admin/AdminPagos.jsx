@@ -99,6 +99,32 @@ const AdminPagos = () => {
     }
   };
 
+  const handleCambiarEstatusTerminal = async (id, estatusActual) => {
+    const esAprobado = estatusActual === 3;
+    const mensaje = esAprobado 
+      ? "¿Estás a punto de rechazar un pago que ya ha sido aprobado, estás seguro?"
+      : "¿Estás a punto de aprobar un pago que ya ha sido rechazado, estás seguro?";
+    
+    const { isConfirmed } = await Swal.fire({
+      title: 'Cambiar Estado de Pago',
+      text: mensaje,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, continuar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: esAprobado ? 'var(--danger)' : '#10b981',
+      cancelButtonColor: 'var(--text-muted)'
+    });
+
+    if (isConfirmed) {
+      if (esAprobado) {
+        handleUpdateEstatus(id, 4, 'Rechazar');
+      } else {
+        handleUpdateEstatus(id, 3, 'Aprobar');
+      }
+    }
+  };
+
   const handleVerVoucher = (rutaVoucher, ordenId) => {
     if (!rutaVoucher) {
       Swal.fire({
@@ -239,7 +265,17 @@ const AdminPagos = () => {
             <FaFileInvoice /> Ver
           </button>
 
-          {row.EstatusPagoId === 2 && (
+          {(row.EstatusPagoId === 3 || row.EstatusPagoId === 4) ? (
+            <button 
+              onClick={() => handleCambiarEstatusTerminal(row.OrdenPagoId, row.EstatusPagoId)}
+              style={{ 
+                padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
+                background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px'
+              }}
+            >
+              Editar
+            </button>
+          ) : (
             <>
               <button 
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 3, 'Aprobar')}
@@ -261,8 +297,6 @@ const AdminPagos = () => {
               </button>
             </>
           )}
-          {row.EstatusPagoId === 3 && <span style={{ fontSize: '12px', color: 'var(--secondary)', fontWeight: '700' }}>Validado ✓</span>}
-          {row.EstatusPagoId === 4 && <span style={{ fontSize: '12px', color: 'var(--danger)', fontWeight: '700' }}>Rechazado</span>}
         </div>
       )
     }
