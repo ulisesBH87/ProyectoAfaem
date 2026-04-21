@@ -13,6 +13,7 @@ from app.modelos.equipo_modelo import EquiposJugando, Equipos
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
 from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
+from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.modelos.catalogo_rol_personas import CatalogoRolesPersonas
 from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
 from app.modelos.documentos_entregados_modelo import DocumentosEntregados
@@ -23,6 +24,7 @@ from sqlalchemy.orm import joinedload
 
 from app.servicios.documentos_servicio import subir_documento_servicio2
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
+from app.enums.estatus_pago_enum import EstatusValidacionPago
 
 
 def crear_equipo_temporal_repo(db, orden, solicitud_id):
@@ -145,6 +147,18 @@ def obtener_presidente(db, usuario, team_info):
         presidente_id = presidente.PresidenteEquipoId
 
     return presidente_id, presidente, rol_id
+
+
+def obtener_equipo_temporal_pagado_activo(db, usuario_id):
+    return (
+        db.query(EquipoTemporal)
+        .join(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
+        .filter(EquipoTemporal.UsuarioId == usuario_id)
+        .filter(EquipoTemporal.Activo == True)
+        .filter(OrdenPago.EstatusPagoId == int(EstatusValidacionPago.ACTIVO.value))
+        .order_by(EquipoTemporal.EquipoTemporalId.desc())
+        .first()
+    )
 
 
 #DOCUMENTOS

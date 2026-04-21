@@ -88,6 +88,24 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             db, usuario, team_info
         )
 
+        pago_equipo = None
+        if rol_id != 1:
+            pago_equipo = equipo_repositorio.obtener_equipo_temporal_pagado_activo(
+                db, usuario.UsuarioId
+            )
+
+            if not pago_equipo:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Debes tener un pago aprobado para configurar un nuevo equipo"
+                )
+
+            if len(players_info) > (pago_equipo.CantidadJugadoresPagados or 0):
+                raise HTTPException(
+                    status_code=400,
+                    detail="El nÃºmero de jugadores excede la cantidad pagada"
+                )
+
         equipo = equipo_repositorio.obtener_o_crear_equipo(
             db, team_info["nombre_equipo"]
         )
@@ -114,6 +132,9 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         equipo_repositorio.actualizar_usuario_y_presidente(
             db, usuario, presidente, rol_id
         )
+
+        if pago_equipo:
+            pago_equipo.Activo = False
 
         db.commit()
 
