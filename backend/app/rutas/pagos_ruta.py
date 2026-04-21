@@ -56,6 +56,12 @@ def mi_estado_pago(service: PagosServicio = Depends(get_pagos_servicio), usuario
 
     return orden
 
+@router.get("/mi-estado-equipo")
+def mi_estado_pago_equipo(service: PagosServicio = Depends(get_pagos_servicio), usuario = Depends(obtener_usuario_actual)):
+    orden = service.mi_estado_pago_equipo(usuario.UsuarioId)
+
+    return orden
+
 #Cambiar el estatus de pago
 @router.post("/estatus-pago")
 def estatus_pago(orden_pago_id: int, estatus: int, service: PagosServicio = Depends(get_pagos_servicio)):

@@ -140,7 +140,7 @@ class PagosServicio:
                     usuario = self.db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
                     if usuario:
                         presidente = self.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
-                        if presidente:
+                        if presidente and str(presidente.EstatusId) != str(PresidenteEquipoEstatus.ACTIVO.value):
                             presidente.EstatusId = PresidenteEquipoEstatus.PAGO_EN_REVISION
                 except Exception as e:
                     pass # Si falla actualización del estatus, que no rompa la subida.
@@ -198,7 +198,7 @@ class PagosServicio:
         orden = pagos_repositorio.mi_estado_pago_repo(self.db, usuario_id)
 
         if not orden:
-            return {"tiene_orden": false}
+            return {"tiene_orden": False}
 
         return {
             "tiene_orden": True,
@@ -206,4 +206,37 @@ class PagosServicio:
             "estatus": orden.EstatusPagoId,
             "tiene_comprobante": bool(orden.RutaVoucher),
             "total": float(orden.TotalPagar) if orden.TotalPagar else 0
+        }
+
+    def mi_estado_pago_equipo(self, usuario_id):
+        orden = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
+
+        if not orden:
+            return {"tiene_orden": False}
+
+        cantidad_jugadores = 0
+        seguros = []
+        for detalle in orden.OrdenPagoDetalleRelacion:
+            if detalle.TipoAfiliacionId == self.TIPO_AFILIACION_JUGADOR:
+                cantidad_jugadores = detalle.Cantidad
+            if detalle.SeguroId:
+                seguros.append({
+                    "SeguroId": detalle.SeguroId,
+                    "Cantidad": detalle.Cantidad
+                })
+
+        disponible_para_equipo = bool(
+            orden.EstatusPagoId == 3
+            and any(equipo.Activo for equipo in orden.EquipoTemporalRelacion)
+        )
+
+        return {
+            "tiene_orden": True,
+            "orden_pago_id": orden.OrdenPagoId,
+            "estatus": orden.EstatusPagoId,
+            "tiene_comprobante": bool(orden.RutaVoucher),
+            "total": float(orden.TotalPagar) if orden.TotalPagar else 0,
+            "cantidad_jugadores": cantidad_jugadores,
+            "seguros": seguros,
+            "disponible_para_equipo": disponible_para_equipo
         }

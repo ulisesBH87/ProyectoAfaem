@@ -13,6 +13,7 @@ from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.modelos.solicitud_modelo import Solicitud
 from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
+from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
@@ -91,6 +92,10 @@ def cantidad_seguros_repo(db, orden_pago_id):
 
     return orden
 """
+def _presidente_esta_activo(presidente):
+    return str(getattr(presidente, "EstatusId", "")) == str(PresidenteEquipoEstatus.ACTIVO.value)
+
+
 def crear_presidente_equipo_repo(db, usuario_id):
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
 
@@ -101,6 +106,16 @@ def crear_presidente_equipo_repo(db, usuario_id):
 
     if not persona:
         raise Exception("Persona no encontrada")
+
+    presidente_existente = db.query(PresidenteEquipo).filter(
+        PresidenteEquipo.PersonaId == persona.PersonaId
+    ).first()
+
+    if presidente_existente:
+        if not _presidente_esta_activo(presidente_existente):
+            presidente_existente.EstatusId = PresidenteEquipoEstatus.PAGO_PENDIENTE
+        usuario.RolId = Rol.PRESIDENTE_EQUIPO.value
+        return presidente_existente
     
     nuevo_presidente = PresidenteEquipo(
         PersonaId = persona.PersonaId,
@@ -152,8 +167,10 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
     
-    if presidente:
+    if presidente and not _presidente_esta_activo(presidente):
         presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
+
+    db.commit()
 
     return orden
 
@@ -161,3 +178,14 @@ def mi_estado_pago_repo(db, usuario_id):
     orden = db.query(OrdenPago).filter(OrdenPago.UsuarioId == usuario_id).order_by(OrdenPago.OrdenPagoId.desc()).first()
 
     return orden
+
+def mi_estado_pago_equipo_repo(db, usuario_id):
+    return (
+        db.query(OrdenPago)
+        .outerjoin(EquipoTemporal, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
+        .options(selectinload(OrdenPago.OrdenPagoDetalleRelacion), selectinload(OrdenPago.EquipoTemporalRelacion))
+        .filter(OrdenPago.UsuarioId == usuario_id)
+        .filter(or_(EquipoTemporal.EquipoTemporalId == None, EquipoTemporal.Activo == True))
+        .order_by(OrdenPago.OrdenPagoId.desc())
+        .first()
+    )
