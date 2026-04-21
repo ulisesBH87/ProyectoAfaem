@@ -20,6 +20,10 @@ from app.modelos import (
     EquipoTemporal, Usuario, AntecedentesInternacionales
 )
 from app.servicios import documentos_servicio
+from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
+
+UPLOAD_DIR = "uploads"
+DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
 
@@ -45,9 +49,9 @@ async def obtener_slots(equipo_temporal_id: int,db: Session = Depends(get_db)):
     slots = obtener_equipo_temporal_servicio(db, equipo_temporal_id)
     return slots
 
-UPLOAD_DIR = "uploads"
-DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
 
+
+# == REGISTROS ==
 @router.get("/catalogos-registro", response_model=CatalogosRegistroResponse)
 def get_catalogos_registro(db: Session = Depends(get_db)):
     try:
@@ -76,7 +80,7 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
 async def crear_equipo_completo(request: Request, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
         form_data = await request.form()
-
+        print(type(form_data.get("team_logo")))
         result = await crear_equipo_completo_servicio(form_data=form_data, db=db, usuario=usuario)
 
         return result
@@ -335,8 +339,9 @@ async def registrar_jugador(
     )
     return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id)
 
-# --- NUEVOS ENDPOINTS PARA TABLAS REALES (PRESIDENTE Y ADMIN) ---
 
+
+# --- NUEVOS ENDPOINTS PARA TABLAS REALES (PRESIDENTE Y ADMIN) ---
 @router.get("/user-real-teams", response_model=List[EquipoResponse])
 def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
@@ -435,6 +440,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
 
+
+# --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
 @router.get("/directorio-presidentes-activos")
 def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
@@ -466,10 +473,6 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error al obtener directorio de presidentes: {str(e)}")
 
-# --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
-
-from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
-
 @router.get("/directorio-equipos", response_model=List[DirectorioEquipoResponse])
 def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     # Protección, idealmente verificar si es admin (RolId == 1)
@@ -497,6 +500,9 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
+
+
+# == DOCUMENTOS DE JUGADOR ==
 @router.get("/jugador/{miembro_id}/documentos")
 def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
@@ -525,6 +531,21 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
+@router.get("/jugador/{miembro_equipo_id}/exportar")
+def exportar_documentos_jugador(miembro_equipo_id: int, db:Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    zip_bytes, nombre_zip = documentos_servicio.generar_zip_documentos(db, miembro_equipo_id)
+
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={nombre_zip}"
+        }
+    )
+
+
+
+# == ACTUALIZACIÓN DE EQUIPO Y JUGADOR == 
 @router.patch("/update-equipo/{equipo_id}")
 def update_equipo(equipo_id: int, equipo_data: EquipoUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
@@ -564,16 +585,3 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
-    
-
-@router.get("/jugador/{miembro_equipo_id}/exportar")
-def exportar_documentos_jugador(miembro_equipo_id: int, db:Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
-    zip_bytes, nombre_zip = documentos_servicio.generar_zip_documentos(db, miembro_equipo_id)
-
-    return Response(
-        content=zip_bytes,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f"attachment; filename={nombre_zip}"
-        }
-    )
