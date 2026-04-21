@@ -212,7 +212,7 @@ export const updateJugador = async (miembroEquipoId, data) => {
  * OBTIENE EL DIRECTORIO DE PRESIDENTES
  */
 export const getPresidentesDirectorio = async (forceRefresh = false) => {
-  return fetchWithCache('/equipo-temporal/directorio-presidentes', { forceRefresh });
+  return fetchWithCache('/equipo-temporal/directorio-presidentes-activos', { forceRefresh });
 };
 
 /**

@@ -447,7 +447,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             PresidenteEquipo.PresidenteEquipoId,
             Personas.Nombre,
             Personas.PrimerApellido,
-            Personas.SegundoApellido
+            Personas.SegundoApellido,
+            Personas.CURP
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)
         
         resultados = query.all()
