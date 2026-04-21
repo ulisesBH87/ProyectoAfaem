@@ -78,8 +78,8 @@ export default function Login() {
       console.log('ROL USUARIO (Login.jsx):', role);
 
       // Verificación de Suspensión (Acordado con Backend estatusId: 0)
-      const estatusId = data?.usuario?.estatusId || data?.estatusId;
-      if (parseInt(estatusId) === 0) {
+      const estatusId = data?.usuario?.estatusId !== undefined ? data?.usuario?.estatusId : data?.estatusId;
+      if (estatusId !== null && estatusId !== undefined && parseInt(estatusId) === 0) {
         navigate('/suspendido');
         return;
       }
