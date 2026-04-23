@@ -92,7 +92,9 @@ class AutenticacionServicio:
         # Obtener EstatusId (solo para Presidentes de Equipo)
         estatus_id = None
 
-        if usuarioIntentoSesion.PersonaRelacion:
+        if usuarioIntentoSesion.Estatus == False:
+            estatus_id = 0
+        elif usuarioIntentoSesion.PersonaRelacion:
             presidente = autenticacion_repositorio.obtener_estatus_presidente(self.db, usuarioIntentoSesion.PersonaRelacion.PersonaId)
             
             if presidente:

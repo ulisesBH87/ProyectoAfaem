@@ -329,6 +329,14 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
 def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus_db: int, observaciones: str = None):
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     if solicitud:
+        # Lógica de suspensión/reactivación basada en el nuevo estatus
+        usuario = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
+        if usuario:
+            if estatus_db == 3: # 3 = Rechazado -> Suspender
+                usuario.Estatus = False
+            elif estatus_db == 2: # 2 = Aprobado -> Reactivar
+                usuario.Estatus = True
+
         solicitud.EstatusValidacion = estatus_db
         if observaciones:
             solicitud.ObservacionesSolicitud = observaciones
