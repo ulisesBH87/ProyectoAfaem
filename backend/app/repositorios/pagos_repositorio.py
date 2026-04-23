@@ -150,25 +150,34 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     if not orden:
         return None
 
+    # Lógica de suspensión/reactivación
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
+    if usuario:
+        if estatus == 4: # 4 = Rechazado -> Suspender
+            usuario.Estatus = False
+        elif estatus == 3: # 3 = Aprobado -> Reactivar
+            usuario.Estatus = True
+
     orden.EstatusPagoId = estatus
     
     if estatus != 3: #si el pago no es aceptado
         db.commit()
         return orden 
     
-    solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
+    # Verificar si ya existe un EquipoTemporal para esta orden para evitar duplicar solicitud y equipo
+    equipo_existente = db.query(EquipoTemporal).filter(EquipoTemporal.OrdenPagoId == orden.OrdenPagoId).first()
+    if not equipo_existente:
+        solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
+        crear_equipo_temporal_repo(db, orden, solicitud.SolicitudId)
 
-    crear_equipo_temporal_repo(db, orden, solicitud.SolicitudId)
-
-
-    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
-    persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
-
-    #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
-    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
-    
-    if presidente and not _presidente_esta_activo(presidente):
-        presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
+    if usuario:
+        persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
+        if persona:
+            #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
+            presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+            
+            if presidente and not _presidente_esta_activo(presidente):
+                presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
 
     db.commit()
 
