@@ -115,3 +115,10 @@ class JugadorUpdate(BaseModel):
     SegundoApellido: Optional[str] = None
     CURP: Optional[str] = None
     Estatus: Optional[bool] = None
+
+class PresidenteAdminCreate(BaseModel):
+    nombre: str
+    correo: str
+    telefono: Optional[str] = None
+    curp: str
+    numPersonas: int

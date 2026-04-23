@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
-import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo } from '../../services/admin';
+import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin } from '../../services/admin';
 
 /* ─── Catálogos ─── */
 const CATALOGO_SEGUROS_INICIAL = [
@@ -384,33 +384,27 @@ export default function AdminPresidentes() {
       setLoading(true);
       Swal.fire({ title: 'Registrando Presidente...', text: 'Procesando registro con aprobación automática.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-      /* TODO: Llamar al endpoint cuando exista
-         const token = localStorage.getItem('token');
-         await fetch(`${API_BASE}/presidentes/registrar`, {
-           method: 'POST',
-           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-           body: JSON.stringify({ nombre: nombreDetectado, curp: curpDetectada, ...infoPersonal, numPersonas, asignacionSeguros, aprobacionAutomatica: true })
-         });
-      */
-      await new Promise(r => setTimeout(r, 1200)); // simulación
-
-      setPresidentes(prev => [...prev, {
-        id: Math.floor(Math.random() * 9000) + 100,
-        nombre:   nombreDetectado,
-        curp:     curpDetectada,
-        correo:   infoPersonal.correo,
+      const payload = {
+        nombre: nombreDetectado,
+        curp: curpDetectada,
+        correo: infoPersonal.correo,
         telefono: infoPersonal.telefono,
-        estatus: true,
-      }]);
+        numPersonas: Number(numPersonas) || 0,
+      };
+      
+      const result = await registrarPresidenteAdmin(payload);
+
+      // Refresh data
+      await cargarPresidentes();
 
       cerrarModal();
       Swal.fire({
         title: '¡Presidente Registrado!',
-        html: `<p style="font-size:14px;color:#475569;">El registro de <strong>${nombreDetectado}</strong> fue completado y aprobado automáticamente ya que fue realizado por un administrador.</p>`,
+        html: `<p style="font-size:14px;color:#475569;">El registro de <strong>${nombreDetectado}</strong> fue completado y aprobado automáticamente. Su contraseña de acceso es <strong>Hola1234?</strong></p>`,
         icon: 'success', confirmButtonColor: '#0b4ea6',
       });
     } catch (err) {
-      Swal.fire('Error', err.message || 'No se pudo completar el registro.', 'error');
+      Swal.fire('Error', err.response?.data?.detail || err.message || 'No se pudo completar el registro.', 'error');
     } finally {
       setLoading(false);
     }
