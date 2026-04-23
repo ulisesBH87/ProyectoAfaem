@@ -9,15 +9,15 @@ import sys
 import json
 import os
 from datetime import datetime
-from app.core.seguridad import obtener_usuario_actual
+from app.core.seguridad import obtener_usuario_actual, generar_salt, generar_hash
 
 from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
-from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate
+from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate, PresidenteAdminCreate
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
-    EquipoTemporal, Usuario, AntecedentesInternacionales
+    EquipoTemporal, Usuario, AntecedentesInternacionales, OrdenPago
 )
 from app.servicios import documentos_servicio
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
@@ -596,5 +596,100 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
             raise HTTPException(status_code=404, detail="Jugador no encontrado")
         return {"mensaje": "Jugador actualizado correctamente", "miembro_equipo_id": miembro.MiembroEquipoId}
     except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.post("/registrar-presidente-admin")
+def registrar_presidente_admin(
+    data: PresidenteAdminCreate,
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        # Check if email exists
+        usuario_existente = db.query(Usuario).filter(Usuario.Correo == data.correo).first()
+        if usuario_existente:
+            raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+        # Descomentar para permitir validar curp y no permitir dos presidentes con la misma curp
+        # persona_existente = db.query(Personas).filter(Personas.CURP == data.curp).first()
+        # if persona_existente:
+        #      raise HTTPException(status_code=400, detail="El CURP ya está registrado.")
+
+        # Create Persona
+        nueva_persona = Personas(
+            Nombre=data.nombre,
+            PrimerApellido="",
+            CURP=data.curp,
+            NumeroTelefono=data.telefono
+        )
+        db.add(nueva_persona)
+        db.flush()
+        
+        # Hash password "Hola1234?"
+        salt = generar_salt()
+        hash_pass = generar_hash(salt, "Hola1234?")
+        
+        # Create Usuario
+        nuevo_usuario = Usuario(
+            PersonaId=nueva_persona.PersonaId,
+            Correo=data.correo,
+            Contrasena=hash_pass,
+            Salt=salt,
+            RolId=3, # Presidente
+            Estatus=True
+        )
+        db.add(nuevo_usuario)
+        db.flush()
+        
+        # Create PresidenteEquipo
+        nuevo_presidente = PresidenteEquipo(
+            PersonaId=nueva_persona.PersonaId,
+            EstatusId=7 # Activo
+        )
+        db.add(nuevo_presidente)
+        db.flush()
+        
+        # Create OrdenPago
+        nueva_orden = OrdenPago(
+            UsuarioId=nuevo_usuario.UsuarioId,
+            EstatusPagoId=3, # Aprobado
+            FechaEnvio=datetime.now(),
+            FechaDePago=datetime.now(),
+            TotalPagar=0 # Opcional: calcular monto
+        )
+        db.add(nueva_orden)
+        db.flush()
+        
+        # Create EquipoTemporal
+        nuevo_equipo_temporal = EquipoTemporal(
+            UsuarioId=nuevo_usuario.UsuarioId,
+            CantidadJugadoresPagados=data.numPersonas,
+            Activo=True,
+            OrdenPagoId=nueva_orden.OrdenPagoId,
+            TipoProcesoId=1 # asumiendo que 1 es el tipo de proceso general
+        )
+        db.add(nuevo_equipo_temporal)
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "mensaje": "Presidente creado correctamente",
+            "presidente": {
+                "nombre": nueva_persona.Nombre,
+                "correo": nuevo_usuario.Correo,
+                "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados
+            }
+        }
+        
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

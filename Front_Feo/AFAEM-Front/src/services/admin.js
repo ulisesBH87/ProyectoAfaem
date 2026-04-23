@@ -287,6 +287,18 @@ export const agregarJugadorEquipoExistente = async (formData) => {
   return response.data;
 };
 
+export const registrarPresidenteAdmin = async (data) => {
+  try {
+    const response = await api.post('/equipo-temporal/registrar-presidente-admin', data);
+    // Invalidar caché del directorio
+    serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
+    return response.data;
+  } catch (error) {
+    console.error('Error registrando presidente (admin):', error);
+    throw error;
+  }
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -308,5 +320,6 @@ export default {
   getPresidentesDisponibles,
   vincularPresidenteEquipo,
   getAuditorias,
-  agregarJugadorEquipoExistente
+  agregarJugadorEquipoExistente,
+  registrarPresidenteAdmin
 };
