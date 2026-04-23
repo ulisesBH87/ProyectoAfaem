@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt } from 'react-icons/fa';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
@@ -78,10 +78,15 @@ const StepCircle = ({ num, label, active, done }) => (
 ══════════════════════════════════════════════════════════════════════ */
 export default function AdminPresidentes() {
 
-  /* ── Tabla ── */
   const [presidentes,  setPresidentes]  = useState([]);
   const [cargando,     setCargando]     = useState(true);
-  const [searchTerm,   setSearchTerm]   = useState('');
+
+  // Estados para filtros, búsqueda y paginación
+  const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   /* ── Seguros ── */
   const [seguros, setSeguros] = useState(CATALOGO_SEGUROS_INICIAL);
@@ -216,6 +221,59 @@ export default function AdminPresidentes() {
     setOcrResults({});
     setDetailsOpen({});
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtroEstatus, searchTerm, sortOrder]);
+
+  const filteredPresidentes = useMemo(() => {
+    let result = [...presidentes];
+    
+    // Filtrado por estatus
+    if (filtroEstatus !== 'todos') {
+      if (filtroEstatus === 'activos') {
+        result = result.filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1");
+      } else if (filtroEstatus === 'inactivos') {
+        result = result.filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1"));
+      }
+    }
+    
+    // Búsqueda por término
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
+      result = result.filter(p => 
+        (p.nombre && p.nombre.toLowerCase().includes(query)) ||
+        (p.Nombre && p.Nombre.toLowerCase().includes(query)) ||
+        (p.correo && p.correo.toLowerCase().includes(query)) ||
+        (p.Email && p.Email.toLowerCase().includes(query)) ||
+        (p.curp && p.curp.toLowerCase().includes(query)) ||
+        (p.CURP && p.CURP.toLowerCase().includes(query))
+      );
+    }
+    
+    // Ordenamiento
+    result.sort((a, b) => {
+      const idA = a.id || a.UsuarioId || 0;
+      const idB = b.id || b.UsuarioId || 0;
+      if (sortOrder === 'asc') return idA - idB;
+      return idB - idA;
+    });
+    
+    return result;
+  }, [presidentes, filtroEstatus, searchTerm, sortOrder]);
+
+  const paginatedPresidentes = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredPresidentes.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredPresidentes, currentPage]);
+
+  const stats = useMemo(() => {
+    return {
+      total: presidentes.length,
+      activos: presidentes.filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1").length,
+      inactivos: presidentes.filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")).length
+    };
+  }, [presidentes]);
   const cerrarModal = () => { setModalAbierto(false); resetModal(); };
 
   /* ═══ OCR ═══ */
@@ -416,12 +474,6 @@ export default function AdminPresidentes() {
     }
   };
 
-  /* ═══ Tabla ═══ */
-  const stats = { 
-    total: (presidentes || []).length, 
-    activos: (presidentes || []).filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1").length, 
-    inactivos: (presidentes || []).filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")).length 
-  };
 
   /* ═══ Edición ═══ */
   const handleEditarPresidente = (pres) => {
@@ -534,12 +586,6 @@ export default function AdminPresidentes() {
     }
   };
 
-  const filtrados = (presidentes || []).filter(p => {
-    const nom = (p.nombre || p.Nombre || "").toLowerCase();
-    const mail = (p.correo || p.Email || "").toLowerCase();
-    const query = (searchTerm || "").toLowerCase();
-    return nom.includes(query) || mail.includes(query);
-  });
 
   const columns = [
     { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Presidente' },
@@ -547,7 +593,7 @@ export default function AdminPresidentes() {
     { key: 'estatus', label: 'Estatus' }, { key: 'acciones', label: 'Acciones', style: { textAlign: 'center' } },
   ];
 
-  const dataTransformada = filtrados.map(p => ({
+  const dataTransformada = paginatedPresidentes.map(p => ({
     id:         <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
     presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
     contacto:   <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo || p.Email || 'Sin correo'}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div></div>,
@@ -641,11 +687,27 @@ export default function AdminPresidentes() {
       {/* ─── Stats ─── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
-          { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total    },
-          { icon: <FaCheck />,   bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS',          val: stats.activos  },
-          { icon: <FaTimes />,   bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS',         val: stats.inactivos },
-        ].map(({ icon, bg, color, label, val }) => (
-          <div key={label} style={{ background: 'white', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 20 }}>
+          { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos'    },
+          { icon: <FaCheck />,   bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS',          val: stats.activos, key: 'activos'  },
+          { icon: <FaTimes />,   bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS',         val: stats.inactivos, key: 'inactivos' },
+        ].map(({ icon, bg, color, label, val, key }) => (
+          <div 
+            key={label} 
+            onClick={() => setFiltroEstatus(key)}
+            style={{ 
+              background: 'white', 
+              padding: 24, 
+              borderRadius: 16, 
+              border: filtroEstatus === key ? `2px solid ${color}` : '1px solid #e2e8f0', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 20,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: filtroEstatus === key ? `0 4px 12px ${color}20` : 'none',
+              transform: filtroEstatus === key ? 'translateY(-2px)' : 'none'
+            }}
+          >
             <div style={{ width: 60, height: 60, borderRadius: 14, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color }}>{icon}</div>
             <div>
               <p style={{ margin: 0, fontSize: 13, color: '#64748b', fontWeight: 700 }}>{label}</p>
@@ -656,11 +718,63 @@ export default function AdminPresidentes() {
       </div>
 
       {/* ─── Tabla ─── */}
-      <div style={{ background: 'white', borderRadius: 16, padding: 25, boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #f1f5f9' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
-          <SearchBar value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar por nombre o correo..." />
+      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
+        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <SearchBar 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Nombre, CURP o correo..."
+              width="280px"
+            />
+
+            <button 
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} 
+              style={{ background: 'white', border: '1.5px solid #e2e8f0', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', cursor: 'pointer' }}
+            >
+              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
+            </button>
+
+            <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '5px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
+              {['todos', 'activos', 'inactivos'].map((val) => (
+                <button 
+                  key={val} 
+                  onClick={() => setFiltroEstatus(val)} 
+                  style={{ 
+                    padding: '8px 16px', 
+                    borderRadius: '10px', 
+                    border: 'none', 
+                    background: filtroEstatus === val ? 'white' : 'transparent', 
+                    color: filtroEstatus === val ? '#0b4ea6' : '#64748b', 
+                    boxShadow: filtroEstatus === val ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', 
+                    fontSize: '11px', 
+                    fontWeight: '800', 
+                    textTransform: 'uppercase',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : 'Inactivos')}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <DashboardTable columns={columns} data={dataTransformada} isLoading={cargando} emptyMessage="No se encontraron presidentes." />
+
+        <DashboardTable 
+          columns={columns} 
+          data={dataTransformada} 
+          isLoading={cargando} 
+          totalItems={filteredPresidentes.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          emptyMessage="No se encontraron presidentes con los criterios de búsqueda." 
+        />
       </div>
 
       {/* ══ MODAL ══ */}
