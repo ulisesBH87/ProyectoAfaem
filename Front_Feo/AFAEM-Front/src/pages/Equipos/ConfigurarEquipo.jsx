@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
+import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -11,24 +11,38 @@ import teamsService from "../../services/teams";
 import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 import { useRBAC } from '../../hooks/useRBAC';
 
+const ESTATUS_PAGO = {
+  NO_ENVIADO: 1,
+  EN_ESPERA: 2,
+  APROBADO: 3,
+  RECHAZADO: 4
+};
+
 export default function ConfigurarEquipo() {
   const navigate = useNavigate();
   const { hasRole } = useRBAC();
   const isAdmin = hasRole && (hasRole('ADMINISTRADOR') || hasRole('ADMIN'));
 
   const preRegistro = JSON.parse(localStorage.getItem('afaem_pre_registro') || '{}');
-  const numPersonasPagadas = isAdmin ? 999 : (preRegistro.numPersonas || 25); 
-  const asignacionSeguros = isAdmin 
+  const [pagoEquipo, setPagoEquipo] = useState({
+    loading: !isAdmin,
+    aprobado: isAdmin,
+    estado: null,
+    ordenId: null,
+    total: 0,
+    cantidadJugadores: 0,
+    tieneComprobante: false
+  });
+  const [numJugadoresPago, setNumJugadoresPago] = useState(preRegistro.numPersonas || '');
+  const [asignacionSeguros, setAsignacionSeguros] = useState(isAdmin
     ? { '1': 999, '2': 999, '3': 999 }
-    : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0) 
-        ? preRegistro.asignacionSeguros 
-        : { '1': 15, '2': 15, '3': 15 });
-
-  const catalogoSeguros = [
-    { id: '1', nombre: 'Seguro Básico (Futbol 7/9/Sala)', precio: 350 },
-    { id: '2', nombre: 'Seguro Profesional (Futbol 11)', precio: 550 },
-    { id: '3', nombre: 'Seguro Premier (Todas las categorías)', precio: 750 }
-  ];
+    : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0)
+        ? preRegistro.asignacionSeguros
+        : {}));
+  const [comprobantePagoEquipo, setComprobantePagoEquipo] = useState(null);
+  const [pagoError, setPagoError] = useState(null);
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [catalogoAfiliacionesPago, setCatalogoAfiliacionesPago] = useState([]);
 
   const [formData, setFormData] = useState({
     modality: '',
@@ -153,6 +167,7 @@ export default function ConfigurarEquipo() {
   });
 
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
+  const numPersonasPagadas = isAdmin ? 999 : Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
 
   // Cargar catálogos al montar
   useEffect(() => {
@@ -161,6 +176,14 @@ export default function ConfigurarEquipo() {
         setLoadingCatalogs(true);
         const data = await teamsService.getCatalogs();
         setCatalogs(data);
+
+        if (!isAdmin) {
+          const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
+          if (resAfiliaciones.ok) {
+            const afiliaciones = await resAfiliaciones.json();
+            setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
+          }
+        }
 
         if (isAdmin) {
           const presidents = await teamsService.getPresidentesActivos();
@@ -176,6 +199,203 @@ export default function ConfigurarEquipo() {
     };
     loadCatalogs();
   }, []);
+
+  useEffect(() => {
+    const cargarEstadoPagoEquipo = async () => {
+      if (isAdmin) return;
+
+      try {
+        setPagoEquipo(prev => ({ ...prev, loading: true }));
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
+
+        const data = await res.json();
+        if (!data.tiene_orden) {
+          setPagoEquipo({
+            loading: false,
+            aprobado: false,
+            estado: null,
+            ordenId: null,
+            total: 0,
+            cantidadJugadores: 0,
+            tieneComprobante: false
+          });
+          return;
+        }
+
+        const seguros = {};
+        (data.seguros || []).forEach(seguro => {
+          const id = String(seguro.SeguroId || seguro.seguro_id);
+          seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
+        });
+
+        if (Object.keys(seguros).length > 0) {
+          setAsignacionSeguros(seguros);
+        }
+
+        if (data.cantidad_jugadores) {
+          setNumJugadoresPago(data.cantidad_jugadores);
+        }
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: Boolean(data.disponible_para_equipo),
+          estado: Number(data.estatus),
+          ordenId: data.orden_pago_id,
+          total: Number(data.total || 0),
+          cantidadJugadores: Number(data.cantidad_jugadores || 0),
+          tieneComprobante: Boolean(data.tiene_comprobante)
+        });
+      } catch (error) {
+        console.error('Error al cargar pago de equipo:', error);
+        setPagoEquipo(prev => ({ ...prev, loading: false }));
+        setPagoError(error.message);
+      }
+    };
+
+    cargarEstadoPagoEquipo();
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin || pagoEquipo.ordenId || !numJugadoresPago || catalogs.seguros.length === 0) return;
+
+    const totalNecesario = Number(numJugadoresPago) + 1;
+    const nuevaAsignacion = {};
+    catalogs.seguros.forEach((seguro, index) => {
+      nuevaAsignacion[String(seguro.id)] = index === 0 ? totalNecesario : 0;
+    });
+    setAsignacionSeguros(nuevaAsignacion);
+  }, [catalogs.seguros, isAdmin, numJugadoresPago, pagoEquipo.ordenId]);
+
+  const segurosRequeridosPago = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) + 1 : 0;
+  const totalAsignadosPago = Object.values(asignacionSeguros).reduce((sum, value) => sum + Number(value || 0), 0);
+  const segurosPendientesPago = segurosRequeridosPago - totalAsignadosPago;
+  const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
+  const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
+  const totalPagoEstimado = (
+    costoAfiliacionPresidente +
+    (costoAfiliacionJugador * Number(numJugadoresPago || 0)) +
+    catalogs.seguros.reduce((sum, seguro) => {
+      const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+      return sum + (Number(seguro.precio || 0) * cantidad);
+    }, 0)
+  );
+  const totalPagoMostrado = pagoEquipo.total || totalPagoEstimado;
+
+  const handleCrearOrdenPagoEquipo = async () => {
+    setPagoError(null);
+
+    if (Number(numJugadoresPago) < 1) {
+      setPagoError('Debes ingresar el numero de jugadores.');
+      return;
+    }
+
+    if (totalAsignadosPago !== segurosRequeridosPago) {
+      setPagoError(`Debes asignar un seguro por jugador y uno para ti. Faltan ${segurosPendientesPago}.`);
+      return;
+    }
+
+    try {
+      setProcesandoPago(true);
+      const token = localStorage.getItem('token');
+      const segurosPayload = Object.entries(asignacionSeguros)
+        .filter(([, cantidad]) => Number(cantidad) > 0)
+        .map(([seguroId, cantidad]) => ({
+          SeguroId: Number(seguroId),
+          Cantidad: Number(cantidad)
+        }));
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          CantidadJugadores: Number(numJugadoresPago),
+          Seguros: segurosPayload
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo crear la orden de pago');
+      }
+
+      const data = await res.json();
+      setPagoEquipo({
+        loading: false,
+        aprobado: false,
+        estado: ESTATUS_PAGO.NO_ENVIADO,
+        ordenId: data.orden_pago_id || data.OrdenPagoId || data.id,
+        total: Number(data.total || totalPagoEstimado || 0),
+        cantidadJugadores: Number(numJugadoresPago),
+        tieneComprobante: false
+      });
+
+      Swal.fire({
+        title: 'Orden generada',
+        text: 'Ahora realiza el pago y sube tu comprobante para revision.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      setPagoError(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
+
+  const handleSubirComprobanteEquipo = async () => {
+    setPagoError(null);
+
+    if (!comprobantePagoEquipo) {
+      setPagoError('Debes subir tu comprobante de pago.');
+      return;
+    }
+
+    try {
+      setProcesandoPago(true);
+      const token = localStorage.getItem('token');
+      const formDataPago = new FormData();
+      formDataPago.append('archivo', comprobantePagoEquipo);
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/${pagoEquipo.ordenId}/comprobante`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataPago
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo subir el comprobante');
+      }
+
+      setPagoEquipo(prev => ({
+        ...prev,
+        estado: ESTATUS_PAGO.EN_ESPERA,
+        tieneComprobante: true
+      }));
+      setComprobantePagoEquipo(null);
+
+      Swal.fire({
+        title: 'Comprobante recibido',
+        text: 'Un administrador debe aprobar el pago antes de configurar el equipo.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      setPagoError(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
 
   const handleOptionChange = (field, value) => {
     setFormData(prev => ({
@@ -550,6 +770,176 @@ export default function ConfigurarEquipo() {
     }
   };
 
+  const renderPagoPrevioEquipo = () => {
+    const ordenCreada = Boolean(pagoEquipo.ordenId);
+    const pagoEnRevision = pagoEquipo.estado === ESTATUS_PAGO.EN_ESPERA && pagoEquipo.tieneComprobante;
+    const pagoRechazado = pagoEquipo.estado === ESTATUS_PAGO.RECHAZADO;
+
+    if (pagoEquipo.loading || loadingCatalogs) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <FaClock style={{ fontSize: '42px', color: '#0b4ea6', marginBottom: '18px' }} />
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Revisando estado de pago</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>Un momento mientras validamos si tienes una orden aprobada disponible.</p>
+        </div>
+      );
+    }
+
+    if (pagoEnRevision) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ width: '82px', height: '82px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: '36px' }}>
+            <FaClock />
+          </div>
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Pago en revision</h2>
+          <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
+            Ya recibimos tu comprobante de la orden #{pagoEquipo.ordenId}. Un administrador debe aprobarlo antes de que puedas configurar este equipo.
+          </p>
+          <button onClick={() => navigate('/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
+            Volver al panel
+          </button>
+        </div>
+      );
+    }
+
+    if (pagoEquipo.estado === ESTATUS_PAGO.APROBADO && pagoEquipo.aprobado) {
+      return null;
+    }
+
+    return (
+      <div style={{ maxWidth: '980px', margin: '0 auto', animation: 'slideUp 0.4s ease' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: '0 12px 24px rgba(11,78,166,0.22)' }}>
+            <FaMoneyBillWave />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>
+            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+          </p>
+        </div>
+
+        {pagoRechazado && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '16px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <FaTimesCircle />
+            <span style={{ fontWeight: '700' }}>El comprobante fue rechazado. Sube un nuevo archivo para enviarlo otra vez a revision.</span>
+          </div>
+        )}
+
+        {pagoError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', fontWeight: '700' }}>
+            {pagoError}
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            {!ordenCreada ? (
+              <>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={numJugadoresPago}
+                  onChange={(e) => setNumJugadoresPago(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '100%', padding: '14px 16px', border: '2px solid #dbeafe', borderRadius: '12px', fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '18px' }}
+                />
+
+                <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {catalogs.seguros.map(seguro => {
+                    const id = String(seguro.id);
+                    return (
+                      <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
+                        <div>
+                          <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                          <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={asignacionSeguros[id] ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                            setAsignacionSeguros(prev => ({ ...prev, [id]: value }));
+                          }}
+                          style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPago === segurosRequeridosPago && segurosRequeridosPago > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPago === segurosRequeridosPago && segurosRequeridosPago > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                  Seguros asignados: {totalAsignadosPago}/{segurosRequeridosPago || 0}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: '#ecfdf5', color: '#047857', fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
+                  <FaCheckCircle /> Orden activa #{pagoEquipo.ordenId}
+                </div>
+                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
+                  Adjunta un PDF o imagen del comprobante. La configuracion se habilitara cuando el administrador apruebe esta orden.
+                </p>
+                <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
+                  <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
+                  <input
+                    id="comprobante-equipo"
+                    type="file"
+                    accept=".pdf,image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setComprobantePagoEquipo(e.target.files?.[0] || null)}
+                  />
+                  <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
+                    {comprobantePagoEquipo ? comprobantePagoEquipo.name : 'No se ha seleccionado archivo'}
+                  </div>
+                  <button onClick={() => document.getElementById('comprobante-equipo').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}>
+                    {comprobantePagoEquipo ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+              <span>Afiliacion presidente</span>
+              <strong style={{ color: '#1e293b' }}>${costoAfiliacionPresidente.toFixed(2)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+              <span>Afiliacion jugadores x{Number(numJugadoresPago || 0)}</span>
+              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresPago || 0)).toFixed(2)}</strong>
+            </div>
+            {catalogs.seguros.map(seguro => {
+              const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+              if (!cantidad) return null;
+              return (
+                <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+                  <span>{seguro.nombre} x{cantidad}</span>
+                  <strong style={{ color: '#1e293b' }}>${(Number(seguro.precio || 0) * cantidad).toFixed(2)}</strong>
+                </div>
+              );
+            })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
+              <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${Number(totalPagoMostrado || 0).toFixed(2)}</span>
+            </div>
+
+            <button
+              disabled={procesandoPago || (!ordenCreada && (Number(numJugadoresPago) < 1 || totalAsignadosPago !== segurosRequeridosPago)) || (ordenCreada && !comprobantePagoEquipo)}
+              onClick={ordenCreada ? handleSubirComprobanteEquipo : handleCrearOrdenPagoEquipo}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPago ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: (!ordenCreada && (Number(numJugadoresPago) < 1 || totalAsignadosPago !== segurosRequeridosPago)) || (ordenCreada && !comprobantePagoEquipo) ? 0.55 : 1 }}
+            >
+              {procesandoPago ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <style>
@@ -575,6 +965,10 @@ export default function ConfigurarEquipo() {
         `}
       </style>
       <div className="dashboard-content">
+        {!isAdmin && !pagoEquipo.aprobado ? (
+          renderPagoPrevioEquipo()
+        ) : (
+          <>
         {/* STEP INDICATOR */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '25px', padding: '10px' }}>
               {isAdmin && <div className={`step-pill ${activeStep === 0 ? 'active' : ''}`}>0. Presidente</div>}
@@ -1481,6 +1875,9 @@ export default function ConfigurarEquipo() {
               </div>
             )}
           </div>
+
+          </>
+        )}
 
       {/* MODAL CONFIGURACIÓN EQUIPO */}
       {showModal && (

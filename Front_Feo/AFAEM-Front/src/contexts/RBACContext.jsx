@@ -60,7 +60,7 @@ export const RBACProvider = ({ children }) => {
         roles: finalRoles,
         permissions: data.Permisos || [],
         menus: finalMenus,
-        estatusId: (data.estatusId !== undefined && data.estatusId !== null) ? parseInt(data.estatusId) : 0,
+        estatusId: (data.estatusId !== undefined && data.estatusId !== null) ? parseInt(data.estatusId) : null,
         isLoading: false
       };
       
