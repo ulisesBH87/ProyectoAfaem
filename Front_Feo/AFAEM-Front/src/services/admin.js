@@ -186,17 +186,33 @@ export const exportarEquipoDocumentos = async (equipoId) => {
 };
 
 /**
- * ACTUALIZA UN EQUIPO (NOMBRE Y ESTATUS)
+ * ACTUALIZA UN EQUIPO (NOMBRE, ESTATUS, PRESIDENTE Y CATEGORÍAS)
  */
-export const updateEquipo = async (equipoId, nombre, estatus) => {
-  const response = await api.patch(`/equipo-temporal/update-equipo/${equipoId}`, {
+export const updateEquipo = async (equipoId, nombre, estatus, extras = {}) => {
+  const payload = {
     NombreEquipo: nombre,
     Estatus: estatus === "1" || estatus === 1 || estatus === true
-  });
+  };
+
+  // Añadir campos opcionales si vienen
+  if (extras.presidenteEquipoId != null) payload.PresidenteEquipoId = extras.presidenteEquipoId;
+  if (extras.ligaId != null) payload.LigaId = extras.ligaId;
+  if (extras.modalidadId != null) payload.ModalidadId = extras.modalidadId;
+  if (extras.categoriaId != null) payload.CategoriaId = extras.categoriaId;
+  if (extras.ramaId != null) payload.RamaId = extras.ramaId;
+
+  const response = await api.patch(`/equipo-temporal/update-equipo/${equipoId}`, payload);
   // Invalida catálogos relacionados
   serviceCache.clear('/equipo-temporal/directorio-equipos');
-  serviceCache.clear('/equipo-temporal/directorio-jugadores'); // Jugadores pueden tener el nombre del equipo
+  serviceCache.clear('/equipo-temporal/directorio-jugadores');
   return response.data;
+};
+
+/**
+ * OBTIENE CATÁLOGOS DE REGISTRO (LIGAS, MODALIDADES, CATEGORÍAS, RAMAS)
+ */
+export const getCatalogosRegistro = async () => {
+  return fetchWithCache('/equipo-temporal/catalogos-registro');
 };
 
 /**
@@ -312,6 +328,7 @@ export default {
   getJugadoresDirectorio,
   getJugadorDocumentos,
   exportarJugadorDocumentos,
+  exportarEquipoDocumentos,
   updateEquipo,
   updateJugador,
   getPresidentesDirectorio,
@@ -321,5 +338,6 @@ export default {
   vincularPresidenteEquipo,
   getAuditorias,
   agregarJugadorEquipoExistente,
-  registrarPresidenteAdmin
+  registrarPresidenteAdmin,
+  getCatalogosRegistro
 };
