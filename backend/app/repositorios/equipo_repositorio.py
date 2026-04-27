@@ -216,7 +216,8 @@ def crear_solicitud_administrativa(db, usuario_id):
         UsuarioId=usuario_id,
         FechaSolicitud=datetime.now(),
         EstatusValidacion=int(EstatusValidacionSolicitud.ACEPTADO),
-        ObservacionesSolicitud="Registro administrativo de equipo y jugadores"
+        ObservacionesSolicitud="Registro administrativo de equipo y jugadores",
+        TipoSolicitudId=2
     )
     db.add(solicitud)
     db.flush()
@@ -227,7 +228,8 @@ def crear_solicitud_presidente(db, usuario_id):
         UsuarioId=usuario_id,
         FechaSolicitud=datetime.now(),
         EstatusValidacion=int(EstatusValidacionSolicitud.ACEPTADO),
-        ObservacionesSolicitud="Solicitud de registro de equipo por presidente"
+        ObservacionesSolicitud="Solicitud de registro de equipo por presidente",
+        TipoSolicitudId=2 #Equipo
     )
     db.add(solicitud)
     db.flush()
