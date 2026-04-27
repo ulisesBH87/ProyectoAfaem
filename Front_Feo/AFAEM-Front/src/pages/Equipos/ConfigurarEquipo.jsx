@@ -1859,6 +1859,8 @@ export default function ConfigurarEquipo() {
                           Swal.close();
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
+                          //Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
+                          // Para debuguear: 
                           Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
                     }}
