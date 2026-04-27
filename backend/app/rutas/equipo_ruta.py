@@ -12,7 +12,7 @@ from datetime import datetime
 from app.core.seguridad import obtener_usuario_actual, generar_salt, generar_hash
 
 from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
-from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate, PresidenteAdminCreate
+from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, EquipoUpdateCompleto, JugadorUpdate, PresidenteAdminCreate
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
@@ -560,17 +560,38 @@ def exportar_documentos_equipo(equipo_id: int, db:Session = Depends(get_db), usu
 
 # == ACTUALIZACIÓN DE EQUIPO Y JUGADOR == 
 @router.patch("/update-equipo/{equipo_id}")
-def update_equipo(equipo_id: int, equipo_data: EquipoUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+def update_equipo(equipo_id: int, equipo_data: EquipoUpdateCompleto, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
-    
+
+    # Validar que el nuevo presidente exista si se proporciona
+    if equipo_data.PresidenteEquipoId is not None:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        presidente = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PresidenteEquipoId == equipo_data.PresidenteEquipoId
+        ).first()
+        if not presidente:
+            raise HTTPException(status_code=404, detail="Presidente no encontrado con el ID proporcionado")
+
     try:
         from app.repositorios.equipo_repositorio import actualizar_equipo_repo
-        equipo = actualizar_equipo_repo(db, equipo_id, equipo_data.NombreEquipo, equipo_data.Estatus)
+        equipo = actualizar_equipo_repo(
+            db,
+            equipo_id,
+            equipo_data.NombreEquipo,
+            equipo_data.Estatus,
+            presidente_equipo_id=equipo_data.PresidenteEquipoId,
+            liga_id=equipo_data.LigaId,
+            modalidad_id=equipo_data.ModalidadId,
+            categoria_id=equipo_data.CategoriaId,
+            rama_id=equipo_data.RamaId
+        )
         if not equipo:
             raise HTTPException(status_code=404, detail="Equipo no encontrado")
         return {"mensaje": "Equipo actualizado correctamente", "equipo_id": equipo.EquipoId}
+    except HTTPException:
+        raise
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
