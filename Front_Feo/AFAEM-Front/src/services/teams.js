@@ -255,7 +255,29 @@ export const getUserTeamsReal = async () => {
     const response = await api.get(`/equipo-temporal/user-real-teams`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    return response.data;
+
+    const raw = response.data;
+    const teams = Array.isArray(raw) ? raw : (raw?.teams || []);
+
+    // Algunos endpoints pueden regresar equipos duplicados (por ejemplo, por joins).
+    // Normalizamos a una lista única por id para evitar filas repetidas en tablas.
+    const seen = new Set();
+    const uniqueTeams = [];
+    for (const team of teams) {
+      const teamId = team?.EquipoId ?? team?.id ?? team?.equipo_id ?? team?.equipoId;
+      const key = teamId != null ? String(teamId) : null;
+
+      if (!key) {
+        uniqueTeams.push(team);
+        continue;
+      }
+
+      if (seen.has(key)) continue;
+      seen.add(key);
+      uniqueTeams.push(team);
+    }
+
+    return uniqueTeams;
   } catch (error) {
     console.error('Error obteniendo equipos reales:', error);
     throw error;
