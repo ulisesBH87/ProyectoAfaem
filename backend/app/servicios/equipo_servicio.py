@@ -88,6 +88,24 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             db, usuario, team_info
         )
 
+        pago_equipo = None
+        if rol_id != 1:
+            pago_equipo = equipo_repositorio.obtener_equipo_temporal_pagado_activo(
+                db, usuario.UsuarioId
+            )
+
+            if not pago_equipo:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Debes tener un pago aprobado para configurar un nuevo equipo"
+                )
+
+            if len(players_info) > (pago_equipo.CantidadJugadoresPagados or 0):
+                raise HTTPException(
+                    status_code=400,
+                    detail="El nÃºmero de jugadores excede la cantidad pagada"
+                )
+
         equipo = equipo_repositorio.obtener_o_crear_equipo(
             db, team_info["nombre_equipo"]
         )
@@ -115,6 +133,9 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             db, usuario, presidente, rol_id
         )
 
+        if pago_equipo:
+            pago_equipo.Activo = False
+
         db.commit()
 
         return {
@@ -125,3 +146,41 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
     except:
         db.rollback()
         raise
+"""
+#REGISTRAR A JUGADOR A EQUIPO EXISTENTE
+async def agregar_jugador_equipo_existente(request, db, usuario):
+
+
+    equipo_id = validar_equipo_id(form_data)
+
+    p_data = parsear_jugador(form_data)
+
+    equipo = equipo_repo.obtener_equipo(db, equipo_id)
+    equipo_jugando = equipo_repo.obtener_equipo_jugando(db, equipo_id)
+
+    validar_datos_jugador(p_data)
+
+    validar_email_unico(db, p_data.get("correo"))
+
+    nueva_persona = crear_persona(db, p_data)
+
+    antecedentes_id = crear_antecedentes(db, p_data)
+
+    agregar_miembro_equipo(
+        db,
+        nueva_persona.PersonaId,
+        equipo_id,
+        p_data,
+        antecedentes_id
+    )
+
+    equipo_repositorio.incrementar_jugadores(db, equipo_jugando)
+
+    await procesar_documentos(db, form_data, nueva_persona.PersonaId)
+
+    db.commit()
+
+    return {
+        "mensaje": "Jugador agregado exitosamente",
+        "persona_id": nueva_persona.PersonaId
+    }"""

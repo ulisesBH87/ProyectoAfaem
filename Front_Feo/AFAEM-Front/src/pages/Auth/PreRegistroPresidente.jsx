@@ -7,6 +7,7 @@ import AmateurLogo from '../../assets/amateur-logo.png';
 import { validarFotografia } from "../../services/foto";
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
+import { jsPDF } from 'jspdf';
 import { API_BASE } from '../../config/config';
 import { parseJwt } from '../../services/auth';
 
@@ -47,33 +48,6 @@ function PreRegistroPresidente() {
 
   // Verificar estado de pago al cargar
   useEffect(() => {
-    const cargarDetalleOrden = async (ordenId, token) => {
-      try {
-        const res = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error('Error al cargar detalle de orden');
-        const data = await res.json();
-
-        setTotalOrdenPendiente(Number(data.TotalPagar || data.total || 0));
-
-        const detalles = data.OrdenPagoDetalleRelacion || data.detalles || [];
-        const segurosOrden = {};
-        const inscripcionesOrden = [];
-        detalles.forEach(detalle => {
-          const seguroId = detalle.SeguroId || detalle.seguro_id;
-          if (seguroId) {
-            segurosOrden[String(seguroId)] = detalle.Cantidad || detalle.cantidad || 0;
-          } else {
-            inscripcionesOrden.push(detalle);
-          }
-        });
-        setAsignacionSeguros(segurosOrden);
-        setDetalleInscripciones(inscripcionesOrden);
-      } catch (err) {
-        console.warn('No se pudo cargar detalle de la orden:', err);
-      }
-    };
 
     const verificarEstadoPago = async () => {
       try {
@@ -101,7 +75,7 @@ function PreRegistroPresidente() {
             const ordenId = data.orden_pago_id || data.OrdenPagoId;
             setEstadoPago(data.estatus);
             setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
-            if (ordenId) cargarDetalleOrden(ordenId, token);
+            if (ordenId) cargarDetalleOrdenDirecto(ordenId, token);
             // Si ya tiene orden, ir a la pantalla correcta
             if (data.estatus === 3) {
               // Pago aprobado → mostrar pantalla de validado
@@ -245,8 +219,40 @@ function PreRegistroPresidente() {
     referencia: 'RHX-CL26-001'
   };
 
+  // ================== FUNCIÓN PARA CARGAR DETALLES DE ORDEN ==================
+  const cargarDetalleOrdenDirecto = async (ordenId, token) => {
+    try {
+      const res = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Error al cargar detalle de orden');
+      const data = await res.json();
+
+      setTotalOrdenPendiente(Number(data.TotalPagar || data.total || 0));
+
+      const detalles = data.OrdenPagoDetalleRelacion || data.detalles || [];
+      const segurosOrden = {};
+      const inscripcionesOrden = [];
+      detalles.forEach(detalle => {
+        const seguroId = detalle.SeguroId || detalle.seguro_id;
+        if (seguroId) {
+          segurosOrden[String(seguroId)] = detalle.Cantidad || detalle.cantidad || 0;
+        } else {
+          inscripcionesOrden.push(detalle);
+        }
+      });
+      setAsignacionSeguros(segurosOrden);
+      setDetalleInscripciones(inscripcionesOrden);
+    } catch (err) {
+      console.warn('No se pudo cargar detalle de la orden:', err);
+    }
+  };
+
   const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + Number(val || 0), 0);
-  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const precioPresidente = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0;
+  const precioJugador = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0;
+  const costoAfiliaciones = precioPresidente + (Number(numPersonas || 0) * precioJugador);
+  const totalPagar = costoAfiliaciones + catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
   const totalMostrado = ordenPendienteId ? totalOrdenPendiente : totalPagar;
   const nombreAfiliacion = (tipoAfiliacionId) => {
     const afiliacion = catalogoAfiliaciones.find(a => String(a.TipoAfiliacionId) === String(tipoAfiliacionId));
@@ -263,6 +269,136 @@ function PreRegistroPresidente() {
     { documento: 'fotografia', nombre: 'Fotografía (Imagen)' },
     { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', hasDownload: true }
   ];
+
+  // ================== FUNCIÓN PARA GENERAR PDF DE CUOTA ==================
+  const generarPDFCuota = (ordenId) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'letter'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 15;
+      const margin = 15;
+      const contentWidth = pageWidth - 2 * margin;
+
+      // Encabezado
+      doc.setFontSize(16);
+      doc.setTextColor(11, 78, 166);
+      doc.text('FICHA DE PAGO - AFAEM', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Número de Orden: ${ordenId}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+      const today = new Date().toLocaleDateString('es-MX');
+      doc.text(`Fecha: ${today}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 12;
+
+      // Datos del Usuario
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.text('DATOS DEL SOLICITANTE', margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Nombre: ${user.Nombre || user.NombreUsuario || 'N/A'}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Correo: ${user.Correo || user.email || 'N/A'}`, margin, yPosition);
+      yPosition += 10;
+
+      // Datos Bancarios
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.text('INSTRUCCIONES DE PAGO', margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Banco: ${bankInfo.banco}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Titular: ${bankInfo.titular}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Cuenta: ${bankInfo.cuenta}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`CLABE: ${bankInfo.clabe}`, margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(11);
+      doc.setTextColor(220, 38, 38);
+      doc.text(`Referencia obligatoria: ${bankInfo.referencia}`, margin, yPosition, { maxWidth: contentWidth });
+      yPosition += 12;
+
+      // Desglose de Cuota
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.text('DESGLOSE DE CUOTA', margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+
+      // Afiliaciones
+      const presidenteAf = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2);
+      const jugadorAf = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4);
+
+      if (presidenteAf) {
+        const subtotal = presidenteAf.CostoActual;
+        doc.text(`${presidenteAf.NombreAfiliacion} (x1)`, margin, yPosition);
+        doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+        yPosition += 6;
+      }
+
+      if (jugadorAf && numPersonas > 0) {
+        const subtotal = jugadorAf.CostoActual * numPersonas;
+        doc.text(`${jugadorAf.NombreAfiliacion} (x${numPersonas})`, margin, yPosition);
+        doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+        yPosition += 6;
+      }
+
+      // Seguros
+      let tieneSeguros = false;
+      catalogoSeguros.forEach(seg => {
+        if (asignacionSeguros[seg.id] > 0) {
+          tieneSeguros = true;
+          const subtotal = seg.precio * asignacionSeguros[seg.id];
+          doc.text(`${seg.nombre} (x${asignacionSeguros[seg.id]})`, margin, yPosition);
+          doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+          yPosition += 6;
+        }
+      });
+
+      // Línea divisoria
+      yPosition += 2;
+      doc.setDrawColor(11, 78, 166);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 6;
+
+      // Total
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.setFont(undefined, 'bold');
+      doc.text('TOTAL A PAGAR:', margin, yPosition);
+      doc.text(`$${totalMostrado.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+      yPosition += 10;
+
+      // Nota final
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont(undefined, 'normal');
+      doc.text('Por favor, incluye la referencia obligatoria en tu transferencia bancaria.', margin, yPosition, { maxWidth: contentWidth });
+      yPosition += 6;
+      doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro.', margin, yPosition, { maxWidth: contentWidth });
+
+      // Descargar PDF
+      const nombreArchivo = `Cuota_AFAEM_${ordenId}_${today.replace(/\//g, '-')}.pdf`;
+      doc.save(nombreArchivo);
+    } catch (err) {
+      console.error('Error al generar PDF:', err);
+      Swal.fire({ title: 'Error', text: 'No se pudo generar el PDF de la cuota', icon: 'error' });
+    }
+  };
 
   // ================== METODOS DE NAVEGACIÓN ==================
   const handleGuardarYSalir = async () => {
@@ -445,9 +581,17 @@ function PreRegistroPresidente() {
           const newOrdenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
           setOrdenPendienteId(newOrdenId);
           
+          // Cargar detalles de la orden inmediatamente
+          await cargarDetalleOrdenDirecto(newOrdenId, token);
+          
+          // Generar PDF de cuota
+          setTimeout(() => {
+            generarPDFCuota(newOrdenId);
+          }, 500);
+          
           Swal.fire({
             title: '¡Orden Generada!',
-            text: 'Ahora utiliza los datos bancarios para realizar tu pago y sube el comprobante aquí mismo.',
+            text: 'Se ha descargado tu ficha de pago en PDF. Ahora utiliza los datos bancarios para realizar tu transferencia y sube el comprobante aquí mismo.',
             icon: 'success',
             confirmButtonColor: '#0b4ea6'
           });
@@ -487,14 +631,7 @@ function PreRegistroPresidente() {
         // Ir a pantalla de espera
         setEstadoPago(1); // Pendiente
         setPasoActual(2);
-      } catch (err) {
-        console.error('Error al procesar el pago:', err);
-        Swal.fire({
-          title: 'Error',
-          text: err.message,
-          icon: 'error'
-        });
-      }
+      } 
     }
   };
 
@@ -1356,6 +1493,27 @@ function PreRegistroPresidente() {
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>(Recuerda: Deberás asignar un seguro por cada jugador, más un seguro extra para ti como Presidente)</span>
                 </div>
 
+                {numPersonas >= 0 && (
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', marginTop: '20px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <div style={{ width: '3px', height: '14px', background: 'linear-gradient(180deg, #10b981, #059669)', borderRadius: '2px' }} />
+                      <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,0.75)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costos de Afiliación</p>
+                    </div>
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '24px 0 16px' }}>
                   <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
                   <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -1428,6 +1586,22 @@ function PreRegistroPresidente() {
                       <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
                     </div>
                   )
+                )}
+                {!ordenPendienteId && numPersonas > 0 && (
+                  <>
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x1)</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x{numPersonas})</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual * numPersonas}</span>
+                      </div>
+                    ))}
+                  </>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
@@ -1509,7 +1683,8 @@ function PreRegistroPresidente() {
               <button
                 className="btn-nav-blue"
                 onClick={irSiguientePaso}
-                disabled={ordenPendienteId && !comprobantePago}
+                disabled={!ordenPendienteId ? (numPersonas <= 0 || totalAsignados !== segurosRequeridos) : !comprobantePago}
+                title={!ordenPendienteId && (numPersonas <= 0 || totalAsignados !== segurosRequeridos) ? 'Asigna un seguro a todos los jugadores y al presidente para continuar' : ''}
               >
                 {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
               </button>

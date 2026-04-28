@@ -43,7 +43,7 @@ const DashboardTable = ({
             {data.length > 0 ? (
               data.map((row, rowIdx) => (
                 <tr 
-                  key={rowIdx} 
+                  key={row?.EquipoId ?? row?.id ?? row?.equipo_id ?? rowIdx} 
                   onClick={() => onRowClick && onRowClick(row)}
                   style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                 >

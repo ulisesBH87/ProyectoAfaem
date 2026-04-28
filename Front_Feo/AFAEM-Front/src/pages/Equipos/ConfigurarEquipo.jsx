@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaSearchPlus, FaSyncAlt} from 'react-icons/fa';
+import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle, FaSearchPlus, FaSyncAlt} from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -11,24 +11,38 @@ import teamsService from "../../services/teams";
 import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 import { useRBAC } from '../../hooks/useRBAC';
 
+const ESTATUS_PAGO = {
+  NO_ENVIADO: 1,
+  EN_ESPERA: 2,
+  APROBADO: 3,
+  RECHAZADO: 4
+};
+
 export default function ConfigurarEquipo() {
   const navigate = useNavigate();
   const { hasRole } = useRBAC();
   const isAdmin = hasRole && (hasRole('ADMINISTRADOR') || hasRole('ADMIN'));
 
   const preRegistro = JSON.parse(localStorage.getItem('afaem_pre_registro') || '{}');
-  const numPersonasPagadas = isAdmin ? 999 : (preRegistro.numPersonas || 25); 
-  const asignacionSeguros = isAdmin 
+  const [pagoEquipo, setPagoEquipo] = useState({
+    loading: !isAdmin,
+    aprobado: isAdmin,
+    estado: null,
+    ordenId: null,
+    total: 0,
+    cantidadJugadores: 0,
+    tieneComprobante: false
+  });
+  const [numJugadoresPago, setNumJugadoresPago] = useState(preRegistro.numPersonas || '');
+  const [asignacionSeguros, setAsignacionSeguros] = useState(isAdmin
     ? { '1': 999, '2': 999, '3': 999 }
-    : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0) 
-        ? preRegistro.asignacionSeguros 
-        : { '1': 15, '2': 15, '3': 15 });
-
-  const catalogoSeguros = [
-    { id: '1', nombre: 'Seguro Básico (Futbol 7/9/Sala)', precio: 350 },
-    { id: '2', nombre: 'Seguro Profesional (Futbol 11)', precio: 550 },
-    { id: '3', nombre: 'Seguro Premier (Todas las categorías)', precio: 750 }
-  ];
+    : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0)
+        ? preRegistro.asignacionSeguros
+        : {}));
+  const [comprobantePagoEquipo, setComprobantePagoEquipo] = useState(null);
+  const [pagoError, setPagoError] = useState(null);
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [catalogoAfiliacionesPago, setCatalogoAfiliacionesPago] = useState([]);
 
   const [formData, setFormData] = useState({
     modality: '',
@@ -89,6 +103,7 @@ export default function ConfigurarEquipo() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [pendingPlayer, setPendingPlayer] = useState(null);
+  const [editingPlayerId, setEditingPlayerId] = useState(null);
 
   // Lógica de Borradores
   const saveDraft = () => {
@@ -154,6 +169,7 @@ export default function ConfigurarEquipo() {
   });
 
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
+  const numPersonasPagadas = isAdmin ? 999 : Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
 
   // Cargar catálogos al montar
   useEffect(() => {
@@ -162,6 +178,14 @@ export default function ConfigurarEquipo() {
         setLoadingCatalogs(true);
         const data = await teamsService.getCatalogs();
         setCatalogs(data);
+
+        if (!isAdmin) {
+          const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
+          if (resAfiliaciones.ok) {
+            const afiliaciones = await resAfiliaciones.json();
+            setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
+          }
+        }
 
         if (isAdmin) {
           const presidents = await teamsService.getPresidentesActivos();
@@ -177,6 +201,203 @@ export default function ConfigurarEquipo() {
     };
     loadCatalogs();
   }, []);
+
+  useEffect(() => {
+    const cargarEstadoPagoEquipo = async () => {
+      if (isAdmin) return;
+
+      try {
+        setPagoEquipo(prev => ({ ...prev, loading: true }));
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
+
+        const data = await res.json();
+        if (!data.tiene_orden) {
+          setPagoEquipo({
+            loading: false,
+            aprobado: false,
+            estado: null,
+            ordenId: null,
+            total: 0,
+            cantidadJugadores: 0,
+            tieneComprobante: false
+          });
+          return;
+        }
+
+        const seguros = {};
+        (data.seguros || []).forEach(seguro => {
+          const id = String(seguro.SeguroId || seguro.seguro_id);
+          seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
+        });
+
+        if (Object.keys(seguros).length > 0) {
+          setAsignacionSeguros(seguros);
+        }
+
+        if (data.cantidad_jugadores) {
+          setNumJugadoresPago(data.cantidad_jugadores);
+        }
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: Boolean(data.disponible_para_equipo),
+          estado: Number(data.estatus),
+          ordenId: data.orden_pago_id,
+          total: Number(data.total || 0),
+          cantidadJugadores: Number(data.cantidad_jugadores || 0),
+          tieneComprobante: Boolean(data.tiene_comprobante)
+        });
+      } catch (error) {
+        console.error('Error al cargar pago de equipo:', error);
+        setPagoEquipo(prev => ({ ...prev, loading: false }));
+        setPagoError(error.message);
+      }
+    };
+
+    cargarEstadoPagoEquipo();
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin || pagoEquipo.ordenId || !numJugadoresPago || catalogs.seguros.length === 0) return;
+
+    const totalNecesario = Number(numJugadoresPago) + 1;
+    const nuevaAsignacion = {};
+    catalogs.seguros.forEach((seguro, index) => {
+      nuevaAsignacion[String(seguro.id)] = index === 0 ? totalNecesario : 0;
+    });
+    setAsignacionSeguros(nuevaAsignacion);
+  }, [catalogs.seguros, isAdmin, numJugadoresPago, pagoEquipo.ordenId]);
+
+  const segurosRequeridosPago = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) + 1 : 0;
+  const totalAsignadosPago = Object.values(asignacionSeguros).reduce((sum, value) => sum + Number(value || 0), 0);
+  const segurosPendientesPago = segurosRequeridosPago - totalAsignadosPago;
+  const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
+  const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
+  const totalPagoEstimado = (
+    costoAfiliacionPresidente +
+    (costoAfiliacionJugador * Number(numJugadoresPago || 0)) +
+    catalogs.seguros.reduce((sum, seguro) => {
+      const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+      return sum + (Number(seguro.precio || 0) * cantidad);
+    }, 0)
+  );
+  const totalPagoMostrado = pagoEquipo.total || totalPagoEstimado;
+
+  const handleCrearOrdenPagoEquipo = async () => {
+    setPagoError(null);
+
+    if (Number(numJugadoresPago) < 1) {
+      setPagoError('Debes ingresar el numero de jugadores.');
+      return;
+    }
+
+    if (totalAsignadosPago !== segurosRequeridosPago) {
+      setPagoError(`Debes asignar un seguro por jugador y uno para ti. Faltan ${segurosPendientesPago}.`);
+      return;
+    }
+
+    try {
+      setProcesandoPago(true);
+      const token = localStorage.getItem('token');
+      const segurosPayload = Object.entries(asignacionSeguros)
+        .filter(([, cantidad]) => Number(cantidad) > 0)
+        .map(([seguroId, cantidad]) => ({
+          SeguroId: Number(seguroId),
+          Cantidad: Number(cantidad)
+        }));
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          CantidadJugadores: Number(numJugadoresPago),
+          Seguros: segurosPayload
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo crear la orden de pago');
+      }
+
+      const data = await res.json();
+      setPagoEquipo({
+        loading: false,
+        aprobado: false,
+        estado: ESTATUS_PAGO.NO_ENVIADO,
+        ordenId: data.orden_pago_id || data.OrdenPagoId || data.id,
+        total: Number(data.total || totalPagoEstimado || 0),
+        cantidadJugadores: Number(numJugadoresPago),
+        tieneComprobante: false
+      });
+
+      Swal.fire({
+        title: 'Orden generada',
+        text: 'Ahora realiza el pago y sube tu comprobante para revision.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      setPagoError(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
+
+  const handleSubirComprobanteEquipo = async () => {
+    setPagoError(null);
+
+    if (!comprobantePagoEquipo) {
+      setPagoError('Debes subir tu comprobante de pago.');
+      return;
+    }
+
+    try {
+      setProcesandoPago(true);
+      const token = localStorage.getItem('token');
+      const formDataPago = new FormData();
+      formDataPago.append('archivo', comprobantePagoEquipo);
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/${pagoEquipo.ordenId}/comprobante`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataPago
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo subir el comprobante');
+      }
+
+      setPagoEquipo(prev => ({
+        ...prev,
+        estado: ESTATUS_PAGO.EN_ESPERA,
+        tieneComprobante: true
+      }));
+      setComprobantePagoEquipo(null);
+
+      Swal.fire({
+        title: 'Comprobante recibido',
+        text: 'Un administrador debe aprobar el pago antes de configurar el equipo.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      setPagoError(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
 
   const handleOptionChange = (field, value) => {
     setFormData(prev => ({
@@ -552,6 +773,223 @@ export default function ConfigurarEquipo() {
 };
 
   return(
+  const resetPlayerForm = () => {
+    setCurrentPlayer({
+      id: Date.now(),
+      firstName: '',
+      lastNamePaterno: '',
+      lastNameMaterno: '',
+      curp: '',
+      nui: '',
+      birthDate: '',
+      lugarNacimiento: '',
+      email: '',
+      telefono: '',
+      sexo_id: 1,
+      insuranceType: '',
+      esForaneo: false,
+      nacionalidadJugador: 'MEXICANA',
+      paisResidencia: 'MÉXICO',
+      haVividoExtranjero: false,
+      dondeVividoExtranjero: '',
+      nacionalidadPadre: '',
+      nacionalidadMadre: '',
+      registroAsociacionExtranjera: '',
+      nacAbueloPaterno: '',
+      nacAbuelaPaterna: '',
+      nacAbueloMaterno: '',
+      nacAbuelaMaterna: '',
+      juegoClubExtranjero: '',
+      shirtNumber: '',
+      positionId: '',
+      documents: {}
+    });
+    setEditingPlayerId(null);
+  };
+
+  const loadPlayerForEditing = (playerId) => {
+    const playerToEdit = players.find(p => p.id === playerId);
+    if (playerToEdit) {
+      setCurrentPlayer({ ...playerToEdit });
+      setEditingPlayerId(playerId);
+      // Scroll al formulario
+      setTimeout(() => {
+        document.querySelector('[data-player-form]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  };
+
+  const renderPagoPrevioEquipo = () => {
+    const ordenCreada = Boolean(pagoEquipo.ordenId);
+    const pagoEnRevision = pagoEquipo.estado === ESTATUS_PAGO.EN_ESPERA && pagoEquipo.tieneComprobante;
+    const pagoRechazado = pagoEquipo.estado === ESTATUS_PAGO.RECHAZADO;
+
+    if (pagoEquipo.loading || loadingCatalogs) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <FaClock style={{ fontSize: '42px', color: '#0b4ea6', marginBottom: '18px' }} />
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Revisando estado de pago</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>Un momento mientras validamos si tienes una orden aprobada disponible.</p>
+        </div>
+      );
+    }
+
+    if (pagoEnRevision) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ width: '82px', height: '82px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: '36px' }}>
+            <FaClock />
+          </div>
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Pago en revision</h2>
+          <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
+            Ya recibimos tu comprobante de la orden #{pagoEquipo.ordenId}. Un administrador debe aprobarlo antes de que puedas configurar este equipo.
+          </p>
+          <button onClick={() => navigate('/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
+            Volver al panel
+          </button>
+        </div>
+      );
+    }
+
+    if (pagoEquipo.estado === ESTATUS_PAGO.APROBADO && pagoEquipo.aprobado) {
+      return null;
+    }
+
+    return (
+      <div style={{ maxWidth: '980px', margin: '0 auto', animation: 'slideUp 0.4s ease' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: '0 12px 24px rgba(11,78,166,0.22)' }}>
+            <FaMoneyBillWave />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>
+            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+          </p>
+        </div>
+
+        {pagoRechazado && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '16px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <FaTimesCircle />
+            <span style={{ fontWeight: '700' }}>El comprobante fue rechazado. Sube un nuevo archivo para enviarlo otra vez a revision.</span>
+          </div>
+        )}
+
+        {pagoError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', fontWeight: '700' }}>
+            {pagoError}
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            {!ordenCreada ? (
+              <>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={numJugadoresPago}
+                  onChange={(e) => setNumJugadoresPago(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '100%', padding: '14px 16px', border: '2px solid #dbeafe', borderRadius: '12px', fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '18px' }}
+                />
+
+                <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {catalogs.seguros.map(seguro => {
+                    const id = String(seguro.id);
+                    return (
+                      <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
+                        <div>
+                          <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                          <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={asignacionSeguros[id] ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                            setAsignacionSeguros(prev => ({ ...prev, [id]: value }));
+                          }}
+                          style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPago === segurosRequeridosPago && segurosRequeridosPago > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPago === segurosRequeridosPago && segurosRequeridosPago > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                  Seguros asignados: {totalAsignadosPago}/{segurosRequeridosPago || 0}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: '#ecfdf5', color: '#047857', fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
+                  <FaCheckCircle /> Orden activa #{pagoEquipo.ordenId}
+                </div>
+                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
+                  Adjunta un PDF o imagen del comprobante. La configuracion se habilitara cuando el administrador apruebe esta orden.
+                </p>
+                <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
+                  <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
+                  <input
+                    id="comprobante-equipo"
+                    type="file"
+                    accept=".pdf,image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setComprobantePagoEquipo(e.target.files?.[0] || null)}
+                  />
+                  <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
+                    {comprobantePagoEquipo ? comprobantePagoEquipo.name : 'No se ha seleccionado archivo'}
+                  </div>
+                  <button onClick={() => document.getElementById('comprobante-equipo').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}>
+                    {comprobantePagoEquipo ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+              <span>Afiliacion presidente</span>
+              <strong style={{ color: '#1e293b' }}>${costoAfiliacionPresidente.toFixed(2)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+              <span>Afiliacion jugadores x{Number(numJugadoresPago || 0)}</span>
+              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresPago || 0)).toFixed(2)}</strong>
+            </div>
+            {catalogs.seguros.map(seguro => {
+              const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+              if (!cantidad) return null;
+              return (
+                <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+                  <span>{seguro.nombre} x{cantidad}</span>
+                  <strong style={{ color: '#1e293b' }}>${(Number(seguro.precio || 0) * cantidad).toFixed(2)}</strong>
+                </div>
+              );
+            })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
+              <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${Number(totalPagoMostrado || 0).toFixed(2)}</span>
+            </div>
+
+            <button
+              disabled={procesandoPago || (!ordenCreada && (Number(numJugadoresPago) < 1 || totalAsignadosPago !== segurosRequeridosPago)) || (ordenCreada && !comprobantePagoEquipo)}
+              onClick={ordenCreada ? handleSubirComprobanteEquipo : handleCrearOrdenPagoEquipo}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPago ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: (!ordenCreada && (Number(numJugadoresPago) < 1 || totalAsignadosPago !== segurosRequeridosPago)) || (ordenCreada && !comprobantePagoEquipo) ? 0.55 : 1 }}
+            >
+              {procesandoPago ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
     <>
       <style>
         {`
@@ -576,6 +1014,10 @@ export default function ConfigurarEquipo() {
         `}
       </style>
       <div className="dashboard-content">
+        {!isAdmin && !pagoEquipo.aprobado ? (
+          renderPagoPrevioEquipo()
+        ) : (
+          <>
         {/* STEP INDICATOR */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '25px', padding: '10px' }}>
               {isAdmin && <div className={`step-pill ${activeStep === 0 ? 'active' : ''}`}>0. Presidente</div>}
@@ -683,7 +1125,7 @@ export default function ConfigurarEquipo() {
                            {isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}
                          </div>
                          <div style={{ fontSize: '12px', color: '#60a5fa' }}>
-                           {isAdmin ? 'Crea equipos y registra jugadores directamente en la base de datos.' : 'Las opciones se habilitan según tu pago previo.'}
+                           {isAdmin ? 'Crea equipos y registra jugadores directamente en el sistema.' : 'Las opciones se habilitan según tu pago previo.'}
                          </div>
                        </div>
                     </div>
@@ -825,11 +1267,11 @@ export default function ConfigurarEquipo() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '30px' }}>
                   {/* FORMULARIO DE JUGADOR */}
-                  <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                  <div data-player-form style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: editingPlayerId ? '2px solid #0b4ea6' : '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', transition: 'all 0.3s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
                       <div>
-                        <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registrar Jugador</h3>
-                        <p style={{ fontSize: '13px', color: '#64748b', margin: '5px 0 0 0' }}>Sube los documentos para autocompletar la información.</p>
+                        <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>{editingPlayerId ? '✏️ Editar Jugador' : 'Registrar Jugador'}</h3>
+                        <p style={{ fontSize: '13px', color: '#64748b', margin: '5px 0 0 0' }}>{editingPlayerId ? 'Modifica la información del jugador seleccionado.' : 'Sube los documentos para autocompletar la información.'}</p>
                       </div>
                       <div style={{ background: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', textAlign: 'center' }}>
                         <span style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>Jugadores</span>
@@ -1139,7 +1581,7 @@ export default function ConfigurarEquipo() {
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac.</label>
                          <input 
-                           type="text" 
+                           type="date" 
                            value={currentPlayer.birthDate}
                            onChange={e => setCurrentPlayer({...currentPlayer, birthDate: e.target.value})}
                            placeholder="DD/MM/AAAA" 
@@ -1328,69 +1770,6 @@ export default function ConfigurarEquipo() {
                         })}
                       </div>
                     </div>
-                    
-                    {/* 
-                    <div style={{ marginBottom: '30px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Documentación Requerida</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                        {[
-                          { key: 'acta', label: 'Acta Nac.', icon: '📜' },
-                          { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
-                          { key: 'foto', label: 'Foto', icon: '📸' }
-                        ].map(doc => {
-                          const isFormato = doc.key === 'formato';
-                          const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
-                          
-                          return (
-                            <div key={doc.key} style={{ 
-                              textAlign: 'center', padding: '20px 10px', border: '1px dashed', borderRadius: '16px',
-                              backgroundColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#f0fdf4' : (isFormato && !canUploadFormato ? '#f1f5f9' : '#f8fafc'),
-                              borderColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#22c55e' : (isFormato && !canUploadFormato ? '#e2e8f0' : '#cbd5e1'),
-                              transition: 'all 0.2s',
-                              opacity: isFormato && !canUploadFormato ? 0.6 : 1
-                            }}>
-                               <div style={{ fontSize: '28px', marginBottom: '8px' }}>{doc.icon}</div>
-                               <div style={{ fontSize: '10px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>{doc.label}</div>
-                               
-                               {(currentPlayer.documents && currentPlayer.documents[doc.key]) ? (
-                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>Cargado ✓</div>
-                               ) : (
-                                 <button 
-                                   disabled={isFormato && !canUploadFormato}
-                                   onClick={() => {
-                                     const input = document.createElement('input');
-                                     input.type = 'file';
-                                     input.onchange = (e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                          if (doc.key === 'foto') {
-                                            procesarFotografiaJugador(file);
-                                          } else if (['acta', 'ine'].includes(doc.key)) {
-                                            procesarOCRReal(doc.key, file);
-                                          } else {
-                                            setCurrentPlayer(prev => ({
-                                              ...prev,
-                                              documents: { ...prev.documents, [doc.key]: file }
-                                            }));
-                                          }
-                                        }
-                                     };
-                                     input.click();
-                                   }}
-                                   style={{ 
-                                     fontSize: '10px', padding: '5px 10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', 
-                                     cursor: (isFormato && !canUploadFormato) ? 'not-allowed' : 'pointer', fontWeight: '800', color: '#0b4ea6' 
-                                   }}
-                                 >
-                                   Subir
-                                 </button>
-                               )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    */}
 
                     {/* ANTECEDENTES INTERNACIONALES */}
                     <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
@@ -1472,18 +1851,32 @@ export default function ConfigurarEquipo() {
                        )}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9' }}>
-                       <button 
-                        disabled={!currentPlayer.firstName}
-                        style={{ 
-                          background: 'none', border: 'none', color: !currentPlayer.firstName ? '#94a3b8' : '#0b4ea6', 
-                          fontSize: '14px', fontWeight: '800', cursor: !currentPlayer.firstName ? 'not-allowed' : 'pointer', 
-                          display: 'flex', alignItems: 'center', gap: '8px', opacity: !currentPlayer.firstName ? 0.6 : 1
-                        }}
-                        onClick={handleDownloadPlayerPDF}
-                      >
-                         📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato Pre-llenado</span>
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9', gap: '15px' }}>
+                       <div style={{ display: 'flex', gap: '10px' }}>
+                         <button 
+                          disabled={!currentPlayer.firstName}
+                          style={{ 
+                            background: 'none', border: 'none', color: !currentPlayer.firstName ? '#94a3b8' : '#0b4ea6', 
+                            fontSize: '14px', fontWeight: '800', cursor: !currentPlayer.firstName ? 'not-allowed' : 'pointer', 
+                            display: 'flex', alignItems: 'center', gap: '8px', opacity: !currentPlayer.firstName ? 0.6 : 1
+                          }}
+                          onClick={handleDownloadPlayerPDF}
+                        >
+                           📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato</span>
+                        </button>
+                        {editingPlayerId && (
+                          <button
+                            onClick={resetPlayerForm}
+                            style={{
+                              background: 'none', border: 'none', color: '#64748b',
+                              fontSize: '14px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '8px'
+                            }}
+                          >
+                            ✕ Limpiar
+                          </button>
+                        )}
+                       </div>
 
                       <button 
                         onClick={async () => {
@@ -1514,23 +1907,37 @@ export default function ConfigurarEquipo() {
 
                           // Validar número de camiseta único
                           if (currentPlayer.shirtNumber) {
-                            const duplicate = players.find(p => p.shirtNumber === currentPlayer.shirtNumber);
+                            const duplicate = players.find(p => p.shirtNumber === currentPlayer.shirtNumber && p.id !== editingPlayerId);
                             if (duplicate) {
                               Swal.fire('Atención', `El número de camiseta ${currentPlayer.shirtNumber} ya está asignado a ${duplicate.firstName}.`, 'error');
                               return;
                             }
                           }
 
-                          // 1. Descargamos el PDF
-                          await handleDownloadPlayerPDF();
-                          // 2. Guardamos el jugador pendiente y abrimos el modal premium
-                          setPendingPlayer({ ...currentPlayer });
-                          setSignedForm(null);
-                          setShowFinishModal(true);
+                          if (editingPlayerId) {
+                            // Editar jugador existente
+                            setPlayers(players.map(p => p.id === editingPlayerId ? { ...currentPlayer } : p));
+                            Swal.fire({
+                              title: '¡Actualizado!',
+                              text: `La información de ${currentPlayer.firstName} ha sido actualizada.`,
+                              icon: 'success',
+                              timer: 2000,
+                              showConfirmButton: false
+                            });
+                            resetPlayerForm();
+                          } else {
+                            // Registrar nuevo jugador
+                            // 1. Descargamos el PDF
+                            await handleDownloadPlayerPDF();
+                            // 2. Guardamos el jugador pendiente y abrimos el modal premium
+                            setPendingPlayer({ ...currentPlayer });
+                            setSignedForm(null);
+                            setShowFinishModal(true);
+                          }
                         }}
                         style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(11, 78, 166, 0.3)', fontSize: '15px' }}
                       >
-                        + Registrar Jugador
+                        {editingPlayerId ? '💾 Guardar Cambios' : '+ Registrar Jugador'}
                       </button>
                     </div>
                   </div>
@@ -1570,15 +1977,40 @@ export default function ConfigurarEquipo() {
                           </div>
                         ) : (
                           players.map(p => (
-                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '14px', border: '1px solid #f1f5f9' }}>
-                               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: '#0b4ea6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px' }}>
+                            <div 
+                              key={p.id} 
+                              onClick={() => loadPlayerForEditing(p.id)}
+                              style={{ 
+                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
+                                background: editingPlayerId === p.id ? '#dbeafe' : '#f8fafc', 
+                                borderRadius: '14px', 
+                                border: editingPlayerId === p.id ? '2px solid #0b4ea6' : '1px solid #f1f5f9',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s',
+                                boxShadow: editingPlayerId === p.id ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none'
+                              }}
+                            >
+                               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: editingPlayerId === p.id ? 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px', transition: 'all 0.3s' }}>
                                  {p.firstName?.charAt(0) || 'J'}
                                </div>
                                <div style={{ flex: 1 }}>
-                                 <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{p.firstName} {p.lastNamePaterno}</div>
+                                 <div style={{ fontSize: '13px', fontWeight: editingPlayerId === p.id ? '900' : '800', color: editingPlayerId === p.id ? '#0b4ea6' : '#1e293b', transition: 'all 0.3s' }}>{p.firstName} {p.lastNamePaterno}</div>
                                  <div style={{ fontSize: '11px', color: '#64748b' }}>{catalogs.seguros.find(s => s.id.toString() === p.insuranceType)?.nombre}</div>
                                </div>
-                               <button onClick={() => setPlayers(players.filter(pl => pl.id !== p.id))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                               <button 
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setPlayers(players.filter(pl => pl.id !== p.id));
+                                   if (editingPlayerId === p.id) {
+                                     resetPlayerForm();
+                                   }
+                                 }} 
+                                 style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                                 onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
+                                 onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
+                               >
+                                 ×
+                               </button>
                             </div>
                           ))
                         )}
@@ -1615,11 +2047,13 @@ export default function ConfigurarEquipo() {
                             teamLogo: modalData.teamLogo
                           });
 
-                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente en la base de datos.`);
+                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
                           setShowSuccessModal(true);
                           Swal.close();
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
+                          //Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
+                          // Para debuguear: 
                           Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
                     }}
@@ -1636,6 +2070,9 @@ export default function ConfigurarEquipo() {
               </div>
             )}
           </div>
+
+          </>
+        )}
 
       {/* MODAL CONFIGURACIÓN EQUIPO */}
       {showModal && (

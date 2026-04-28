@@ -179,18 +179,40 @@ export const exportarJugadorDocumentos = async (miembroEquipoId) => {
   });
 };
 
+export const exportarEquipoDocumentos = async (equipoId) => {
+  return api.get(`/equipo-temporal/equipo/${equipoId}/exportar`, {
+    responseType: 'blob',
+  });
+};
+
 /**
- * ACTUALIZA UN EQUIPO (NOMBRE Y ESTATUS)
+ * ACTUALIZA UN EQUIPO (NOMBRE, ESTATUS, PRESIDENTE Y CATEGORÍAS)
  */
-export const updateEquipo = async (equipoId, nombre, estatus) => {
-  const response = await api.patch(`/equipo-temporal/update-equipo/${equipoId}`, {
+export const updateEquipo = async (equipoId, nombre, estatus, extras = {}) => {
+  const payload = {
     NombreEquipo: nombre,
     Estatus: estatus === "1" || estatus === 1 || estatus === true
-  });
+  };
+
+  // Añadir campos opcionales si vienen
+  if (extras.presidenteEquipoId != null) payload.PresidenteEquipoId = extras.presidenteEquipoId;
+  if (extras.ligaId != null) payload.LigaId = extras.ligaId;
+  if (extras.modalidadId != null) payload.ModalidadId = extras.modalidadId;
+  if (extras.categoriaId != null) payload.CategoriaId = extras.categoriaId;
+  if (extras.ramaId != null) payload.RamaId = extras.ramaId;
+
+  const response = await api.patch(`/equipo-temporal/update-equipo/${equipoId}`, payload);
   // Invalida catálogos relacionados
   serviceCache.clear('/equipo-temporal/directorio-equipos');
-  serviceCache.clear('/equipo-temporal/directorio-jugadores'); // Jugadores pueden tener el nombre del equipo
+  serviceCache.clear('/equipo-temporal/directorio-jugadores');
   return response.data;
+};
+
+/**
+ * OBTIENE CATÁLOGOS DE REGISTRO (LIGAS, MODALIDADES, CATEGORÍAS, RAMAS)
+ */
+export const getCatalogosRegistro = async () => {
+  return fetchWithCache('/equipo-temporal/catalogos-registro');
 };
 
 /**
@@ -212,7 +234,7 @@ export const updateJugador = async (miembroEquipoId, data) => {
  * OBTIENE EL DIRECTORIO DE PRESIDENTES
  */
 export const getPresidentesDirectorio = async (forceRefresh = false) => {
-  return fetchWithCache('/equipo-temporal/directorio-presidentes', { forceRefresh });
+  return fetchWithCache('/equipo-temporal/directorio-presidentes-activos', { forceRefresh });
 };
 
 /**
@@ -281,6 +303,18 @@ export const agregarJugadorEquipoExistente = async (formData) => {
   return response.data;
 };
 
+export const registrarPresidenteAdmin = async (data) => {
+  try {
+    const response = await api.post('/equipo-temporal/registrar-presidente-admin', data);
+    // Invalidar caché del directorio
+    serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
+    return response.data;
+  } catch (error) {
+    console.error('Error registrando presidente (admin):', error);
+    throw error;
+  }
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -294,6 +328,7 @@ export default {
   getJugadoresDirectorio,
   getJugadorDocumentos,
   exportarJugadorDocumentos,
+  exportarEquipoDocumentos,
   updateEquipo,
   updateJugador,
   getPresidentesDirectorio,
@@ -302,5 +337,7 @@ export default {
   getPresidentesDisponibles,
   vincularPresidenteEquipo,
   getAuditorias,
-  agregarJugadorEquipoExistente
+  agregarJugadorEquipoExistente,
+  registrarPresidenteAdmin,
+  getCatalogosRegistro
 };

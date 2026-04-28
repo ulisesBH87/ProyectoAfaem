@@ -74,9 +74,14 @@ class DirectorioEquipoResponse(BaseModel):
     EquipoId: int
     NombreEquipo: str
     Liga: str
+    LigaId: int
     Categoria: str
+    CategoriaId: int
     Modalidad: str
+    ModalidadId: int
     Rama: str
+    RamaId: int
+    PresidenteEquipoId: int
     PresidenteNombreCompleto: str
     PresidenteEmail: str
     NumeroJugadoresRegistrados: int
@@ -109,9 +114,25 @@ class EquipoUpdate(BaseModel):
     NombreEquipo: Optional[str] = None
     Estatus: Optional[bool] = None
 
+class EquipoUpdateCompleto(BaseModel):
+    NombreEquipo: Optional[str] = None
+    Estatus: Optional[bool] = None
+    PresidenteEquipoId: Optional[int] = None  # ID del nuevo presidente responsable
+    LigaId: Optional[int] = None
+    ModalidadId: Optional[int] = None
+    CategoriaId: Optional[int] = None
+    RamaId: Optional[int] = None
+
 class JugadorUpdate(BaseModel):
     Nombre: Optional[str] = None
     PrimerApellido: Optional[str] = None
     SegundoApellido: Optional[str] = None
     CURP: Optional[str] = None
     Estatus: Optional[bool] = None
+
+class PresidenteAdminCreate(BaseModel):
+    nombre: str
+    correo: str
+    telefono: Optional[str] = None
+    curp: str
+    numPersonas: int

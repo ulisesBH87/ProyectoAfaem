@@ -73,7 +73,8 @@ export default function AdminCrearJugador() {
     actaNacimiento: null,
     identificacion: null,
     fotografia: null,
-    formatoAfiliacion: null
+    formatoAfiliacion: null,
+    documentoEstudiante: null
   });
 
   // Previsualizaciones (URLs locales)
@@ -81,8 +82,21 @@ export default function AdminCrearJugador() {
     actaNacimiento: null,
     identificacion: null,
     fotografia: null,
-    formatoAfiliacion: null
+    formatoAfiliacion: null,
+    documentoEstudiante: null
   });
+
+  // ── Detección de minoría de edad ──
+  const esMenorDeEdad = React.useMemo(() => {
+    if (!extractedData.fechaNacimiento) return false;
+    const hoy = new Date();
+    const nac = new Date(extractedData.fechaNacimiento);
+    if (isNaN(nac.getTime())) return false;
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const mDiff = hoy.getMonth() - nac.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad < 18;
+  }, [extractedData.fechaNacimiento]);
 
   const [catalogs, setCatalogs] = useState({
     ligas: [],
@@ -576,7 +590,12 @@ export default function AdminCrearJugador() {
       if (documents.actaNacimiento) formData.append('acta', documents.actaNacimiento);
       if (documents.identificacion) formData.append('ine', documents.identificacion);
       if (documents.fotografia) formData.append('foto', documents.fotografia);
-      
+
+      // Documento de estudiante (solo si el jugador es menor de edad)
+      if (esMenorDeEdad && documents.documentoEstudiante) {
+        formData.append('documento_estudiante', documents.documentoEstudiante);
+      }
+
       // El formato firmado desde el modal
       formData.append('formato_firmado', signedForm);
 
@@ -949,16 +968,31 @@ export default function AdminCrearJugador() {
               </div>
             </div>
 
+            {/* ── Instrucción de flujo ── */}
+            <div style={{
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '12px',
+              padding: '12px 18px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '13px',
+              color: '#0369a1',
+              fontWeight: '600'
+            }}>
+              <span style={{ fontSize: '18px' }}>📋</span>
+              Sube primero el <strong style={{ marginLeft: 4 }}>Acta de Nacimiento</strong>. El sistema detectará automáticamente si el jugador es mayor o menor de edad.
+            </div>
+
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               gap: '20px'
             }}>
-              {[
-                { key: 'actaNacimiento', title: 'Acta de Nacimiento' },
-                { key: 'identificacion', title: 'Identificación (INE/Pasaporte)' },
-                { key: 'fotografia', title: 'Fotografía Infantil' }
-              ].map(doc => (
+              {/* ─── 1. ACTA DE NACIMIENTO (siempre visible) ─── */}
+              {[{ key: 'actaNacimiento', title: 'Acta de Nacimiento' }].map(doc => (
                 <div
                   key={doc.key}
                   className="document-card"
@@ -1102,6 +1136,113 @@ export default function AdminCrearJugador() {
                 </div>
               ))}
             </div>
+
+            {/* ── INE para mayores (aparece tras OCR del acta) ── */}
+            {documents.actaNacimiento && extractedData.fechaNacimiento && !esMenorDeEdad && (
+              <div
+                className="fade-in"
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}
+              >
+                {[{ key: 'identificacion', title: 'Identificación (INE / Pasaporte)' }].map(doc => (
+                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f1f5f9' }}>
+                      {previews[doc.key] ? (
+                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                          {documents[doc.key]?.type === 'application/pdf'
+                            ? <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}><FaFilePdf /><span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span></div>
+                            : <img src={previews[doc.key]} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
+                          <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,41,59,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: documents[doc.key]?.type === 'application/pdf' ? 'pdf' : 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSearchPlus /></button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${doc.key}`).click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSyncAlt /></button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div onClick={() => document.getElementById(`file-${doc.key}`).click()} style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}>
+                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                        </div>
+                      )}
+                    </div>
+                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '10px', fontWeight: '800' }}>
+                      {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                    </div>
+                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── Documento Estudiante para menores (aparece tras OCR del acta) ── */}
+            {documents.actaNacimiento && extractedData.fechaNacimiento && esMenorDeEdad && (
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                <div className="document-card" style={{ borderRadius: '20px', border: documents.documentoEstudiante ? '2px solid #10b981' : '2px solid #fbbf24', background: documents.documentoEstudiante ? 'rgba(16,185,129,0.04)' : 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
+                  <div style={{ height: '140px', width: '100%', backgroundColor: '#fef9ec', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fde68a' }}>
+                    {previews.documentoEstudiante ? (
+                      <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                        {documents.documentoEstudiante?.type === 'application/pdf'
+                          ? <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}><FaFilePdf /><span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span></div>
+                          : <img src={previews.documentoEstudiante} alt="Doc estudiante" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
+                        <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,41,59,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease' }}>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews.documentoEstudiante, type: documents.documentoEstudiante?.type === 'application/pdf' ? 'pdf' : 'image', title: 'Documento de Estudiante' }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSearchPlus /></button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById('file-documentoEstudiante').click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSyncAlt /></button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div onClick={() => document.getElementById('file-documentoEstudiante').click()} style={{ textAlign: 'center', color: '#f59e0b', cursor: 'pointer' }}>
+                        <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '800', color: '#92400e' }}>SUBIR DOCUMENTO</p>
+                      </div>
+                    )}
+                  </div>
+                  <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 4px 0', color: '#78350f' }}>Documento de Estudiante</h4>
+                  <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#92400e' }}>Credencial escolar, certificado o carta de residencia</p>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents.documentoEstudiante ? '#dcfce7' : '#fef3c7', color: documents.documentoEstudiante ? '#166534' : '#92400e', fontSize: '10px', fontWeight: '800' }}>
+                    {documents.documentoEstudiante ? <><FaCheckCircle /> Listo</> : '⏳ Pendiente'}
+                  </div>
+                  <input type="file" id="file-documentoEstudiante" style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload('documentoEstudiante', e.target.files[0])} />
+                </div>
+              </div>
+            )}
+
+            {/* ── FOTOGRAFÍA (aparece tras OCR del acta) ── */}
+            {documents.actaNacimiento && extractedData.fechaNacimiento && (
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
+                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f1f5f9' }}>
+                      {previews[doc.key] ? (
+                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                          <img src={previews[doc.key]} alt="Preview foto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,41,59,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSearchPlus /></button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${doc.key}`).click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSyncAlt /></button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div onClick={() => document.getElementById(`file-${doc.key}`).click()} style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}>
+                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                        </div>
+                      )}
+                    </div>
+                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '10px', fontWeight: '800' }}>
+                      {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                    </div>
+                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Hint mientras el OCR analiza el acta */}
+            {documents.actaNacimiento && !extractedData.fechaNacimiento && (
+              <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                ⏳ Analizando el Acta de Nacimiento... Los documentos adicionales aparecerán en breve.
+              </div>
+            )}
 
             {!isStep2Done && (
               <div style={{ textAlign: 'center', marginTop: '25px' }}>

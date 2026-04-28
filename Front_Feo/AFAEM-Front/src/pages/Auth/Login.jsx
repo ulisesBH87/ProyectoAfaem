@@ -77,13 +77,19 @@ export default function Login() {
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
       console.log('ROL USUARIO (Login.jsx):', role);
 
+      // Verificación de Suspensión (Acordado con Backend estatusId: 0)
+      const estatusId = data?.usuario?.estatusId !== undefined ? data?.usuario?.estatusId : data?.estatusId;
+      if (estatusId !== null && estatusId !== undefined && parseInt(estatusId) === 0) {
+        navigate('/suspendido');
+        return;
+      }
+
       if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
         navigate('/admin/dashboard');
       } else if (role === 'ENTRENADOR') {
         navigate('/coach/dashboard');
       } else if (role.includes('PRESIDENTE') || role === 'INVITADO') {
         // Redirigir según el estatus (Aprobado >= 4)
-        const estatusId = data?.usuario?.estatusId || data?.estatusId;
         if (role !== 'INVITADO' && estatusId && parseInt(estatusId) >= 4) {
           navigate('/presidente-equipo');
         } else {
