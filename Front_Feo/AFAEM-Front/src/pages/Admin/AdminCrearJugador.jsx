@@ -596,6 +596,7 @@ export default function AdminCrearJugador() {
     } finally {
       setUploading(false);
     }
+    
   };
 
   return (
@@ -984,7 +985,18 @@ export default function AdminCrearJugador() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     border: '1px solid #f1f5f9'
-                  }}>
+                  }}
+                  
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                  }}
+
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    handleFileUpload(doc.key, file);
+                  }}
+                  >
                     {previews[doc.key] ? (
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                         {/* MINIATURA */}

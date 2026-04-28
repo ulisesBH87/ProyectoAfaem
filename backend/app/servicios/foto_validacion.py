@@ -111,7 +111,7 @@ def validacion_fotografia(imagen_bytes):
         return 0, "No se pudo cargar la imagen"
     
     # RESOLUCION, DIMENSIONES, COLOR
-    for funcion in [resolucion, dimensiones, formato_color, iluminacion_foto]:
+    for funcion in [resolucion, dimensiones, formato_color]:
         valido, mensaje = funcion(imagen_bgr if funcion != resolucion else imagen_bytes)
         if not valido:
             return 0, mensaje
@@ -163,6 +163,11 @@ def validacion_fotografia(imagen_bytes):
      # =====================
     # CRITERIOS PRE-RECORTE 
     # =====================
+    
+    #ILUMINACION DE LA FOTO
+    valido, mensaje = iluminacion_foto(imagen_bgr)
+    if not valido:
+        return 0, mensaje
     
     # ROSTRO COPLETO
     valido, mensaje = rostro_completo(imagen_bgr, face_landmarks)
@@ -248,9 +253,9 @@ def validacion_fotografia(imagen_bytes):
         return 0, mensaje 
     
     # CABEZA INCLINADA
-    valido, mensaje = orientacion(face_landmarks)
-    if not valido:
-        return 0, mensaje
+    #valido, mensaje = orientacion(face_landmarks)
+    #if not valido:
+    #    return 0, mensaje
     
     # --- RESULTADO FINAL ---
     
