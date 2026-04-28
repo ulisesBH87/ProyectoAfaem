@@ -242,13 +242,16 @@ export const getPresidentesDirectorio = async (forceRefresh = false) => {
  */
 export const updatePresidente = async (presidenteId, data) => {
   const response = await api.patch(`/equipo-temporal/update-presidente/${presidenteId}`, {
-    Nombre: data.nombre,
-    Email: data.email,
-    Telefono: data.telefono,
-    CURP: data.curp,
-    Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true
+    primerNombre:    data.primerNombre,
+    primerApellido:  data.primerApellido,
+    segundoApellido: data.segundoApellido,
+    correo:          data.correo,
+    telefono:        data.telefono,
+    curp:            data.curp,
+    estatusId:       Number(data.estatusId)
   });
   serviceCache.clear('/equipo-temporal/directorio-presidentes');
+  serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
   return response.data;
 };
 

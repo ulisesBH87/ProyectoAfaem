@@ -11,39 +11,39 @@ import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresid
 
 /* ─── Catálogos ─── */
 const CATALOGO_SEGUROS_INICIAL = [
-  { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege ante accidentes deportivos.',   precio: 150 },
-  { id: '2', nombre: 'Seguro de vida',           descripcion: 'Cobertura en caso de fallecimiento.',   precio: 200 },
-  { id: '3', nombre: 'Seguro médico',            descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 },
+  { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege ante accidentes deportivos.', precio: 150 },
+  { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
+  { id: '3', nombre: 'Seguro médico', descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 },
 ];
 
 const REQUISITOS = [
-  { documento: 'actaNacimiento',    nombre: 'Acta de nacimiento',             icon: '📜' },
-  { documento: 'identificacion',    nombre: 'Identificación oficial',         icon: '🪪' },
-  { documento: 'fotografia',        nombre: 'Fotografía (Imagen)',            icon: '📸' },
-  { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado',  icon: '📝', hasDownload: true },
+  { documento: 'actaNacimiento', nombre: 'Acta de nacimiento', icon: '📜' },
+  { documento: 'identificacion', nombre: 'Identificación oficial', icon: '🪪' },
+  { documento: 'fotografia', nombre: 'Fotografía (Imagen)', icon: '📸' },
+  { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', icon: '📝', hasDownload: true },
 ];
 
 /* ─── Catálogos para Selectores ─── */
 const CATALOGO_LIGAS = [
   { valor: 'LIGA AFAEM NORTE', etiqueta: 'Ligue AFAEM Norte' },
-  { valor: 'LIGA AFAEM SUR',   etiqueta: 'Ligue AFAEM Sur' },
-  { valor: 'VARONIL PRIMERA',  etiqueta: 'Varonil Primera Plus' },
-  { valor: 'FEMENIL ELITE',    etiqueta: 'Femenil Elite' },
-  { valor: 'OTRA',             etiqueta: 'Otra Liga (Especificar)' },
+  { valor: 'LIGA AFAEM SUR', etiqueta: 'Ligue AFAEM Sur' },
+  { valor: 'VARONIL PRIMERA', etiqueta: 'Varonil Primera Plus' },
+  { valor: 'FEMENIL ELITE', etiqueta: 'Femenil Elite' },
+  { valor: 'OTRA', etiqueta: 'Otra Liga (Especificar)' },
 ];
 
 const CATALOGO_ASOCIACIONES = [
-  { valor: 'MORELOS',      etiqueta: 'Morelos (AFEMOR)' },
+  { valor: 'MORELOS', etiqueta: 'Morelos (AFEMOR)' },
   { valor: 'ESTADO DE MEX', etiqueta: 'Estado de México' },
-  { valor: 'CDMX',         etiqueta: 'Ciudad de México' },
-  { valor: 'PUEBLA',       etiqueta: 'Puebla' },
-  { valor: 'QUERETARO',    etiqueta: 'Querétaro' },
+  { valor: 'CDMX', etiqueta: 'Ciudad de México' },
+  { valor: 'PUEBLA', etiqueta: 'Puebla' },
+  { valor: 'QUERETARO', etiqueta: 'Querétaro' },
 ];
 
 const CATALOGO_ROLES = [
-  { valor: 'PRESIDENTE',   etiqueta: 'Presidente de Equipo' },
-  { valor: 'DIRECTIVO',    etiqueta: 'Directivo de Club' },
-  { valor: 'DELEGADO',     etiqueta: 'Delegado Deportivo' },
+  { valor: 'PRESIDENTE', etiqueta: 'Presidente de Equipo' },
+  { valor: 'DIRECTIVO', etiqueta: 'Directivo de Club' },
+  { valor: 'DELEGADO', etiqueta: 'Delegado Deportivo' },
   { valor: 'REPRESENTANTE', etiqueta: 'Representante Legal' },
 ];
 
@@ -52,22 +52,24 @@ const StepCircle = ({ num, label, active, done }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
     <div style={{
       width: 44, height: 44, borderRadius: 14,
-      background: done  ? 'rgba(16,185,129,.15)'
-                : active ? 'linear-gradient(135deg,#0b4ea6,#1e40af)'
-                         : 'rgba(255,255,255,.05)',
-      border: done  ? '1px solid rgba(16,185,129,.4)'
-            : active ? '1px solid rgba(93,135,229,.5)'
-                     : '1px solid rgba(255,255,255,.1)',
+      background: done ? 'rgba(16,185,129,.15)'
+        : active ? 'linear-gradient(135deg,#0b4ea6,#1e40af)'
+          : 'rgba(255,255,255,.05)',
+      border: done ? '1px solid rgba(16,185,129,.4)'
+        : active ? '1px solid rgba(93,135,229,.5)'
+          : '1px solid rgba(255,255,255,.1)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
       boxShadow: active ? '0 8px 20px rgba(11,78,166,.4)' : 'none',
       transition: 'all .4s',
     }}>
       {done ? <span style={{ color: '#34d399' }}>✓</span>
-            : num === 1 ? <FaMoneyBillWave style={{ color: active ? 'white' : 'rgba(255,255,255,.3)' }} />
-                        : <FaFileAlt      style={{ color: active ? 'white' : 'rgba(255,255,255,.3)' }} />}
+        : num === 1 ? <FaMoneyBillWave style={{ color: active ? 'white' : 'rgba(255,255,255,.3)' }} />
+          : <FaFileAlt style={{ color: active ? 'white' : 'rgba(255,255,255,.3)' }} />}
     </div>
-    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
-      color: done ? 'rgba(52,211,153,.8)' : active ? '#5d87e5' : 'rgba(255,255,255,.25)' }}>
+    <span style={{
+      fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
+      color: done ? 'rgba(52,211,153,.8)' : active ? '#5d87e5' : 'rgba(255,255,255,.25)'
+    }}>
       {label}
     </span>
   </div>
@@ -78,8 +80,8 @@ const StepCircle = ({ num, label, active, done }) => (
 ══════════════════════════════════════════════════════════════════════ */
 export default function AdminPresidentes() {
 
-  const [presidentes,  setPresidentes]  = useState([]);
-  const [cargando,     setCargando]     = useState(true);
+  const [presidentes, setPresidentes] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
   // Estados para filtros, búsqueda y paginación
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
@@ -94,27 +96,28 @@ export default function AdminPresidentes() {
 
   /* ── Modal ── */
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [paso,         setPaso]         = useState(1); // 1 = Cuotas, 2 = Datos + Documentos
+  const [paso, setPaso] = useState(1); // 1 = Cuotas, 2 = Datos + Documentos
 
   /* Paso 1 – Cuotas */
-  const [numPersonas,       setNumPersonas]       = useState('');
+  const [numPersonas, setNumPersonas] = useState('');
   const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
 
   /* Paso 2 – Datos de afiliación (nombre/CURP vienen del OCR) */
   const [infoPersonal, setInfoPersonal] = useState({
     correo: '', telefono: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '',
   });
-  const [documents,   setDocuments]   = useState({});
-  const [ocrResults,  setOcrResults]  = useState({});
+  const [documents, setDocuments] = useState({});
+  const [ocrResults, setOcrResults] = useState({});
   const [detailsOpen, setDetailsOpen] = useState({});
-  const [loading,     setLoading]     = useState(false);
+  const [loading, setLoading] = useState(false);
 
   /* ── Edición ── */
   const [modalEdicion, setModalEdicion] = useState(false);
   const [presidenteEnEdicion, setPresidenteEnEdicion] = useState(null);
   const [datosEditables, setDatosEditables] = useState({
-    nombre: '', email: '', telefono: '', curp: '', estatus: '1'
+    primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', curp: '', estatusId: 6
   });
+
 
   /* ── Reasignación ── */
   const [modalReasignacion, setModalReasignacion] = useState(false);
@@ -125,8 +128,8 @@ export default function AdminPresidentes() {
   const [loadingReasignacion, setLoadingReasignacion] = useState(false);
 
   /* Cálculos */
-  const totalAsignados    = Object.values(asignacionSeguros).reduce((a, v) => a + Number(v || 0), 0);
-  const totalPagar        = seguros.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
+  const totalAsignados = Object.values(asignacionSeguros).reduce((a, v) => a + Number(v || 0), 0);
+  const totalPagar = seguros.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
   const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas) + 1 : 0;
 
   /* ─── Carga inicial ─── */
@@ -139,9 +142,9 @@ export default function AdminPresidentes() {
       console.error("Error al cargar presidentes:", err);
       // Fallback para desarrollo si el back falla
       setPresidentes([
-        { id: 1, nombre: 'Carlos Ruiz',  correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true, equipo: 'Rayados', equipoId: 101 },
-        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com',         telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true, equipo: 'Tigres', equipoId: 102 },
-        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com',     telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null },
+        { id: 1, nombre: 'Carlos Ruiz', correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true, equipo: 'Rayados', equipoId: 101 },
+        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com', telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true, equipo: 'Tigres', equipoId: 102 },
+        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com', telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null },
       ]);
     } finally {
       setCargando(false);
@@ -163,13 +166,13 @@ export default function AdminPresidentes() {
       });
       if (!res.ok) throw new Error('Error al cargar seguros');
       const data = await res.json();
-      
+
       // Extraer el array de seguros (puede estar en diferentes ubicaciones según la API)
-      let arrSeguros = Array.isArray(data) ? data : 
-                       Array.isArray(data.data) ? data.data :
-                       Array.isArray(data.seguros) ? data.seguros :
-                       Array.isArray(data.results) ? data.results : [];
-      
+      let arrSeguros = Array.isArray(data) ? data :
+        Array.isArray(data.data) ? data.data :
+          Array.isArray(data.seguros) ? data.seguros :
+            Array.isArray(data.results) ? data.results : [];
+
       if (arrSeguros.length === 0) {
         setSeguros(CATALOGO_SEGUROS_INICIAL);
         return;
@@ -182,7 +185,7 @@ export default function AdminPresidentes() {
         descripcion: seg.descripcion || seg.Descripcion || seg.description || '',
         precio: Number(seg.costo || seg.Costo || seg.precio || seg.Precio || seg.price || 0),
       }));
-      
+
       setSeguros(segurosMapeados);
     } catch (err) {
       console.error("Error al cargar seguros:", err);
@@ -228,7 +231,7 @@ export default function AdminPresidentes() {
 
   const filteredPresidentes = useMemo(() => {
     let result = [...presidentes];
-    
+
     // Filtrado por estatus
     if (filtroEstatus !== 'todos') {
       if (filtroEstatus === 'activos') {
@@ -237,11 +240,11 @@ export default function AdminPresidentes() {
         result = result.filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1"));
       }
     }
-    
+
     // Búsqueda por término
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(p => 
+      result = result.filter(p =>
         (p.nombre && p.nombre.toLowerCase().includes(query)) ||
         (p.Nombre && p.Nombre.toLowerCase().includes(query)) ||
         (p.correo && p.correo.toLowerCase().includes(query)) ||
@@ -250,7 +253,7 @@ export default function AdminPresidentes() {
         (p.CURP && p.CURP.toLowerCase().includes(query))
       );
     }
-    
+
     // Ordenamiento
     result.sort((a, b) => {
       const idA = a.id || a.UsuarioId || 0;
@@ -258,7 +261,7 @@ export default function AdminPresidentes() {
       if (sortOrder === 'asc') return idA - idB;
       return idB - idA;
     });
-    
+
     return result;
   }, [presidentes, filtroEstatus, searchTerm, sortOrder]);
 
@@ -285,16 +288,16 @@ export default function AdminPresidentes() {
       let nombres = '', ap1 = '', ap2 = '';
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i + 1 < lines.length)      nombres = lines[i + 1];
-        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1     = lines[i + 1];
-        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2    = lines[i + 1];
+        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) nombres = lines[i + 1];
+        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1 = lines[i + 1];
+        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2 = lines[i + 1];
       }
       if (nombres && ap1) data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
     }
     if (!data.fecha_nac || data.fecha_nac === 'No detectada') {
-      const meses = { ENERO:'01',FEBRERO:'02',MARZO:'03',ABRIL:'04',MAYO:'05',JUNIO:'06',JULIO:'07',AGOSTO:'08',SEPTIEMBRE:'09',OCTUBRE:'10',NOVIEMBRE:'11',DICIEMBRE:'12' };
+      const meses = { ENERO: '01', FEBRERO: '02', MARZO: '03', ABRIL: '04', MAYO: '05', JUNIO: '06', JULIO: '07', AGOSTO: '08', SEPTIEMBRE: '09', OCTUBRE: '10', NOVIEMBRE: '11', DICIEMBRE: '12' };
       const m = rawText.match(/(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i);
-      if (m && meses[m[2].toUpperCase()]) data.fecha_nac = `${m[1].padStart(2,'0')}/${meses[m[2].toUpperCase()]}/${m[3]}`;
+      if (m && meses[m[2].toUpperCase()]) data.fecha_nac = `${m[1].padStart(2, '0')}/${meses[m[2].toUpperCase()]}/${m[3]}`;
     }
     return data;
   };
@@ -310,13 +313,13 @@ export default function AdminPresidentes() {
       let extracted = {};
       doc.querySelectorAll('.dato-fila').forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const val   = row.querySelector('.valor')?.textContent?.trim() || '';
-        if (label.includes('curp'))                extracted.curp        = val;
-        if (label.includes('nombre'))              extracted.nombre      = val;
-        if (label.includes('nacionalidad'))        extracted.nacionalidad = val;
-        if (label.includes('fecha de nacimiento')) extracted.fecha_nac   = val;
-        if (label.includes('edad'))                extracted.edad        = val;
-        if (label.includes('documento'))           extracted.documento   = val;
+        const val = row.querySelector('.valor')?.textContent?.trim() || '';
+        if (label.includes('curp')) extracted.curp = val;
+        if (label.includes('nombre')) extracted.nombre = val;
+        if (label.includes('nacionalidad')) extracted.nacionalidad = val;
+        if (label.includes('fecha de nacimiento')) extracted.fecha_nac = val;
+        if (label.includes('edad')) extracted.edad = val;
+        if (label.includes('documento')) extracted.documento = val;
       });
       const rawText = doc.querySelector('pre')?.textContent;
       if (rawText && (docKey === 'actaNacimiento' || extracted.documento?.includes('ACTA'))) {
@@ -325,7 +328,7 @@ export default function AdminPresidentes() {
       setOcrResults(prev => ({ ...prev, ...extracted, [docKey]: `OCR Procesado: ${extracted.nombre}` }));
       Swal.fire({
         title: extracted.nombre ? '¡Lectura Exitosa!' : 'Documento procesado',
-        text:  extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Se leyó el documento pero no se extrajo el nombre automáticamente.',
+        text: extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Se leyó el documento pero no se extrajo el nombre automáticamente.',
         icon: 'success', timer: 2000, showConfirmButton: false
       });
     } catch (_err) {
@@ -364,14 +367,14 @@ export default function AdminPresidentes() {
       Swal.fire({ title: 'Generando PDF...', text: 'Preparando formato de afiliación pre-llenado.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       const existingPdfBytes = await fetch('/formato_afiliacion_directivo.pdf').then(r => r.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      const form   = pdfDoc.getForm();
-      const page   = pdfDoc.getPages()[0];
+      const form = pdfDoc.getForm();
+      const page = pdfDoc.getPages()[0];
 
       if (documents.fotografia) {
         try {
           const photoBytes = await documents.fotografia.arrayBuffer();
           const isJpg = !documents.fotografia.name.toLowerCase().endsWith('.png');
-          const img   = isJpg ? await pdfDoc.embedJpg(photoBytes) : await pdfDoc.embedPng(photoBytes);
+          const img = isJpg ? await pdfDoc.embedJpg(photoBytes) : await pdfDoc.embedPng(photoBytes);
           page.drawImage(img, { x: 479, y: 676, width: 76, height: 90 });
         } catch (_e) { /* silenciar */ }
       }
@@ -387,30 +390,30 @@ export default function AdminPresidentes() {
           form.getTextField('Nombres')?.setText(nombre);
         }
       }
-      if (curp && curp !== 'No detectado')           form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
+      if (curp && curp !== 'No detectado') form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       if (fecha_nac && fecha_nac !== 'No detectada') form.getTextField('Fecha de Nacimiento')?.setText(fecha_nac);
-      if (infoPersonal.correo)                       form.getTextField('Correo electrónico')?.setText(infoPersonal.correo);
-      if (infoPersonal.telefono)                     form.getTextField('Teléfono')?.setText(infoPersonal.telefono);
-      if (infoPersonal.tipoAfiliacion)               form.getTextField('fill_20')?.setText(infoPersonal.tipoAfiliacion);
-      if (infoPersonal.asociacion)                   form.getTextField('Asociación')?.setText(infoPersonal.asociacion.toUpperCase());
-      if (infoPersonal.liga)                         form.getTextField('Liga')?.setText(infoPersonal.liga.toUpperCase());
-      if (infoPersonal.equipo)                       form.getTextField('Equipo')?.setText(infoPersonal.equipo.toUpperCase());
-      if (nacionalidad)                              form.getTextField('Lugar de Nacimiento')?.setText(nacionalidad);
+      if (infoPersonal.correo) form.getTextField('Correo electrónico')?.setText(infoPersonal.correo);
+      if (infoPersonal.telefono) form.getTextField('Teléfono')?.setText(infoPersonal.telefono);
+      if (infoPersonal.tipoAfiliacion) form.getTextField('fill_20')?.setText(infoPersonal.tipoAfiliacion);
+      if (infoPersonal.asociacion) form.getTextField('Asociación')?.setText(infoPersonal.asociacion.toUpperCase());
+      if (infoPersonal.liga) form.getTextField('Liga')?.setText(infoPersonal.liga.toUpperCase());
+      if (infoPersonal.equipo) form.getTextField('Equipo')?.setText(infoPersonal.equipo.toUpperCase());
+      if (nacionalidad) form.getTextField('Lugar de Nacimiento')?.setText(nacionalidad);
       if (curp && curp.length >= 11) {
         const sx = curp.charAt(10).toUpperCase();
         form.getTextField('Sexo')?.setText(sx === 'H' ? 'MASCULINO' : sx === 'M' ? 'FEMENINO' : '');
       }
-      const hoy   = new Date();
-      const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+      const hoy = new Date();
+      const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       form.getTextField('A')?.setText(String(hoy.getDate()).padStart(2, '0'));
       form.getTextField('de')?.setText(MESES[hoy.getMonth()]);
       form.getTextField('del 20')?.setText(String(hoy.getFullYear()).slice(-2));
       form.getTextField('Cargo')?.setText('PRESIDENTE');
 
-      const blob  = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
-      const url   = URL.createObjectURL(blob);
-      const link  = document.createElement('a');
-      const safe  = (nombre || 'Presidente').replace(/[^a-zA-Z0-9_\s]/g, '').trim();
+      const blob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safe = (nombre || 'Presidente').replace(/[^a-zA-Z0-9_\s]/g, '').trim();
       link.href = url; link.download = `Formato_Afiliacion_${safe}.pdf`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       URL.revokeObjectURL(url);
@@ -437,7 +440,7 @@ export default function AdminPresidentes() {
   /* ═══ Finalizar registro (auto-aprobado) ═══ */
   const procesarRegistro = async () => {
     const nombreDetectado = ocrResults.nombre || 'Presidente Registrado';
-    const curpDetectada   = ocrResults.curp   || '';
+    const curpDetectada = ocrResults.curp || '';
     try {
       setLoading(true);
       Swal.fire({ title: 'Registrando Presidente...', text: 'Procesando registro con aprobación automática.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -449,7 +452,7 @@ export default function AdminPresidentes() {
         telefono: infoPersonal.telefono,
         numPersonas: Number(numPersonas) || 0,
       };
-      
+
       const result = await registrarPresidenteAdmin(payload);
 
       // Refresh data
@@ -469,15 +472,27 @@ export default function AdminPresidentes() {
   };
 
 
-  /* ═══ Edición ═══ */
+  /* Mapa de estatus del catálogo */
+  const ESTATUS_CATALOGO = [
+    { id: 1, nombre: 'PAGO_PENDIENTE',        label: 'Pago Pendiente',       bg: '#fee2e2', color: '#991b1b' },
+    { id: 2, nombre: 'PAGO_EN_REVISION',       label: 'Pago en Revisión',     bg: '#e0f2fe', color: '#075985' },
+    { id: 3, nombre: 'DOCUMENTOS_PENDIENTES',  label: 'Docs. Pendientes',     bg: '#fef3c7', color: '#92400e' },
+    { id: 4, nombre: 'DOCUMENTOS_EN_REVISION', label: 'Docs. en Revisión',    bg: '#fef9c3', color: '#854d0e' },
+    { id: 5, nombre: 'PRE_APROBADO',           label: 'Pre-Aprobado',         bg: '#d1fae5', color: '#065f46' },
+    { id: 6, nombre: 'REGISTRO_PENDIENTE',     label: 'Registro Pendiente',   bg: '#f1f5f9', color: '#475569' },
+    { id: 7, nombre: 'ACTIVO',                 label: 'Activo',               bg: '#dcfce7', color: '#166534' },
+  ];
+
   const handleEditarPresidente = (pres) => {
     setPresidenteEnEdicion(pres);
     setDatosEditables({
-      nombre: pres.nombre || pres.Nombre || '',
-      email: pres.correo || pres.Email || '',
-      telefono: pres.telefono || pres.Telefono || '',
-      curp: pres.curp || pres.CURP || '',
-      estatus: pres.estatus ? '1' : '0'
+      primerNombre:    pres.primerNombre    || '',
+      primerApellido:  pres.primerApellido  || '',
+      segundoApellido: pres.segundoApellido || '',
+      correo:          pres.correo          || '',
+      telefono:        pres.telefono        || '',
+      curp:            pres.curp            || '',
+      estatusId:       pres.estatus         || 6,
     });
     setModalEdicion(true);
   };
@@ -490,12 +505,13 @@ export default function AdminPresidentes() {
   const guardarEdicion = async () => {
     setLoading(true);
     try {
-      await updatePresidente(presidenteEnEdicion.id || presidenteEnEdicion.UsuarioId, datosEditables);
+      await updatePresidente(presidenteEnEdicion.id, datosEditables);
       await cargarPresidentes();
       setModalEdicion(false);
       Swal.fire('¡Éxito!', 'Los datos del presidente han sido actualizados.', 'success');
     } catch (err) {
-      Swal.fire('Error', 'No se pudieron guardar los cambios.', 'error');
+      const msg = err?.response?.data?.detail || 'No se pudieron guardar los cambios.';
+      Swal.fire('Error', msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -523,7 +539,7 @@ export default function AdminPresidentes() {
           Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
           await deletePresidente(id);
           await cargarPresidentes();
-          
+
           if (equipoId) {
             Swal.fire({
               title: 'Presidente Eliminado',
@@ -588,24 +604,29 @@ export default function AdminPresidentes() {
   ];
 
   const dataTransformada = paginatedPresidentes.map(p => ({
-    id:         <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
+    id: <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
     presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
-    contacto:   <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo || p.Email || 'Sin correo'}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div></div>,
-    curp:       <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
-    estatus:    (p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")
-      ? <span style={{ background: '#dcfce7', color: '#166534', padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>ACTIVO</span>
-      : <span style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>SUSPENDIDO</span>,
+    contacto: <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo || p.Email || 'Sin correo'}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div></div>,
+    curp: <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
+    estatus: (() => {
+      const cfg = ESTATUS_CATALOGO.find(e => e.id === p.estatus || e.nombre === p.estatusNombre);
+      const bg    = cfg?.bg    || '#f1f5f9';
+      const color = cfg?.color || '#475569';
+      const label = cfg?.label || p.estatusNombre || String(p.estatus) || '—';
+      return <span style={{ background: bg, color, padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>{label}</span>;
+    })(),
+
     acciones: (
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-        <button 
+        <button
           onClick={() => handleEditarPresidente(p)}
           style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
           title="Ver / Editar"
         >
           <FaEdit />
         </button>
-        <button 
-          onClick={() => handleEliminar(p)} 
+        <button
+          onClick={() => handleEliminar(p)}
           style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
           title="Eliminar Permanente"
         >
@@ -665,8 +686,8 @@ export default function AdminPresidentes() {
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button 
-            onClick={() => cargarPresidentes(true)} 
+          <button
+            onClick={() => cargarPresidentes(true)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
@@ -681,20 +702,20 @@ export default function AdminPresidentes() {
       {/* ─── Stats ─── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
-          { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos'    },
-          { icon: <FaCheck />,   bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS',          val: stats.activos, key: 'activos'  },
-          { icon: <FaTimes />,   bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS',         val: stats.inactivos, key: 'inactivos' },
+          { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
+          { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
+          { icon: <FaTimes />, bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
         ].map(({ icon, bg, color, label, val, key }) => (
-          <div 
-            key={label} 
+          <div
+            key={label}
             onClick={() => setFiltroEstatus(key)}
-            style={{ 
-              background: 'white', 
-              padding: 24, 
-              borderRadius: 16, 
-              border: filtroEstatus === key ? `2px solid ${color}` : '1px solid #e2e8f0', 
-              display: 'flex', 
-              alignItems: 'center', 
+            style={{
+              background: 'white',
+              padding: 24,
+              borderRadius: 16,
+              border: filtroEstatus === key ? `2px solid ${color}` : '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
               gap: 20,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -718,17 +739,17 @@ export default function AdminPresidentes() {
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
             <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <SearchBar 
+            <SearchBar
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Nombre, CURP o correo..."
               width="280px"
             />
 
-            <button 
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} 
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
               style={{ background: 'white', border: '1.5px solid #e2e8f0', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', cursor: 'pointer' }}
             >
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
@@ -736,18 +757,18 @@ export default function AdminPresidentes() {
 
             <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '5px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
               {['todos', 'activos', 'inactivos'].map((val) => (
-                <button 
-                  key={val} 
-                  onClick={() => setFiltroEstatus(val)} 
-                  style={{ 
-                    padding: '8px 16px', 
-                    borderRadius: '10px', 
-                    border: 'none', 
-                    background: filtroEstatus === val ? 'white' : 'transparent', 
-                    color: filtroEstatus === val ? '#0b4ea6' : '#64748b', 
-                    boxShadow: filtroEstatus === val ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', 
-                    fontSize: '11px', 
-                    fontWeight: '800', 
+                <button
+                  key={val}
+                  onClick={() => setFiltroEstatus(val)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: filtroEstatus === val ? 'white' : 'transparent',
+                    color: filtroEstatus === val ? '#0b4ea6' : '#64748b',
+                    boxShadow: filtroEstatus === val ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    fontSize: '11px',
+                    fontWeight: '800',
                     textTransform: 'uppercase',
                     cursor: 'pointer'
                   }}
@@ -759,15 +780,15 @@ export default function AdminPresidentes() {
           </div>
         </div>
 
-        <DashboardTable 
-          columns={columns} 
-          data={dataTransformada} 
-          isLoading={cargando} 
+        <DashboardTable
+          columns={columns}
+          data={dataTransformada}
+          isLoading={cargando}
           totalItems={filteredPresidentes.length}
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
-          emptyMessage="No se encontraron presidentes con los criterios de búsqueda." 
+          emptyMessage="No se encontraron presidentes con los criterios de búsqueda."
         />
       </div>
 
@@ -912,9 +933,9 @@ export default function AdminPresidentes() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                   <div>
                     <label className="premium-label-admin">Rol / Cargo</label>
-                    <select 
-                      value={infoPersonal.tipoAfiliacion} 
-                      onChange={e => setInfoPersonal(p => ({ ...p, tipoAfiliacion: e.target.value }))} 
+                    <select
+                      value={infoPersonal.tipoAfiliacion}
+                      onChange={e => setInfoPersonal(p => ({ ...p, tipoAfiliacion: e.target.value }))}
                       className="premium-input-admin"
                       style={{ cursor: 'pointer' }}
                     >
@@ -924,9 +945,9 @@ export default function AdminPresidentes() {
                   </div>
                   <div>
                     <label className="premium-label-admin">Asociación</label>
-                    <select 
-                      value={infoPersonal.asociacion} 
-                      onChange={e => setInfoPersonal(p => ({ ...p, asociacion: e.target.value }))} 
+                    <select
+                      value={infoPersonal.asociacion}
+                      onChange={e => setInfoPersonal(p => ({ ...p, asociacion: e.target.value }))}
                       className="premium-input-admin"
                       style={{ cursor: 'pointer' }}
                     >
@@ -936,9 +957,9 @@ export default function AdminPresidentes() {
                   </div>
                   <div>
                     <label className="premium-label-admin">Liga Destino</label>
-                    <select 
-                      value={infoPersonal.liga} 
-                      onChange={e => setInfoPersonal(p => ({ ...p, liga: e.target.value }))} 
+                    <select
+                      value={infoPersonal.liga}
+                      onChange={e => setInfoPersonal(p => ({ ...p, liga: e.target.value }))}
                       className="premium-input-admin"
                       style={{ cursor: 'pointer' }}
                     >
@@ -957,8 +978,8 @@ export default function AdminPresidentes() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, marginBottom: 20 }}>
                 {REQUISITOS.map((doc, idx) => {
                   const isUploaded = !!documents[doc.documento];
-                  const isOcrDoc   = ['actaNacimiento','identificacion'].includes(doc.documento);
-                  const ocrDone    = isOcrDoc && ocrResults[doc.documento];
+                  const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
+                  const ocrDone = isOcrDoc && ocrResults[doc.documento];
 
                   let statusLabel, statusColor, statusBg, statusDot;
                   if (ocrDone || isUploaded) {
@@ -1009,10 +1030,10 @@ export default function AdminPresidentes() {
                               {isOcrDoc && Object.keys(ocrResults).length > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                                   {[
-                                    { label: 'Nombre',       value: ocrResults.nombre },
-                                    { label: 'CURP',         value: ocrResults.curp },
-                                    { label: 'Fecha Nac.',   value: ocrResults.fecha_nac },
-                                    { label: 'Edad',         value: ocrResults.edad },
+                                    { label: 'Nombre', value: ocrResults.nombre },
+                                    { label: 'CURP', value: ocrResults.curp },
+                                    { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
+                                    { label: 'Edad', value: ocrResults.edad },
                                     { label: 'Nacionalidad', value: ocrResults.nacionalidad },
                                   ].map((row, i) => (
                                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
@@ -1046,7 +1067,7 @@ export default function AdminPresidentes() {
 
         </div>
       </Modal>
-      
+
       {/* ══ MODAL DE EDICIÓN ══ */}
       <Modal
         estaAbierto={modalEdicion}
@@ -1056,57 +1077,73 @@ export default function AdminPresidentes() {
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setModalEdicion(false)} />
-            <BotonPrimario 
-              etiqueta={loading ? 'Guardando...' : 'Guardar Cambios'} 
-              alHacerClick={guardarEdicion} 
+            <BotonPrimario
+              etiqueta={loading ? 'Guardando...' : 'Guardar Cambios'}
+              alHacerClick={guardarEdicion}
               deshabilitado={loading}
               icono={<FaSave />}
             />
           </>
         }
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          <div style={{ gridColumn: 'span 2' }}>
-            <EntradaFormulario 
-              etiqueta="Nombre Completo" 
-              nombre="nombre" 
-              valor={datosEditables.nombre} 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Fila de nombre — 3 columnas */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+            <EntradaFormulario
+              etiqueta="Nombre(s)"
+              nombre="primerNombre"
+              valor={datosEditables.primerNombre}
               onChange={manejarCambioInput}
-              placeholder="Ej: Juan Pérez"
+              placeholder="Ej: Juan"
+            />
+            <EntradaFormulario
+              etiqueta="Primer Apellido"
+              nombre="primerApellido"
+              valor={datosEditables.primerApellido}
+              onChange={manejarCambioInput}
+              placeholder="Ej: Pérez"
+            />
+            <EntradaFormulario
+              etiqueta="Segundo Apellido"
+              nombre="segundoApellido"
+              valor={datosEditables.segundoApellido}
+              onChange={manejarCambioInput}
+              placeholder="Ej: García"
             />
           </div>
-          <EntradaFormulario 
-            etiqueta="Correo Electrónico" 
-            nombre="email" 
-            valor={datosEditables.email} 
-            onChange={manejarCambioInput}
-            placeholder="ejemplo@correo.com"
-          />
-          <EntradaFormulario 
-            etiqueta="Teléfono" 
-            nombre="telefono" 
-            valor={datosEditables.telefono} 
-            onChange={manejarCambioInput}
-            placeholder="55 0000 0000"
-          />
-          <EntradaFormulario 
-            etiqueta="CURP" 
-            nombre="curp" 
-            valor={datosEditables.curp} 
-            onChange={manejarCambioInput}
-            placeholder="CURP de 18 caracteres"
-          />
-          <EntradaSeleccion 
-            etiqueta="Estatus del Usuario" 
-            nombre="estatus" 
-            valor={datosEditables.estatus} 
-            onChange={manejarCambioInput}
-            opciones={[
-              { valor: '1', etiqueta: 'Activo (Acceso Total)' },
-              { valor: '0', etiqueta: 'Suspendido (Sin Acceso)' }
-            ]}
-          />
+          {/* Resto de campos — 2 columnas */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <EntradaFormulario
+              etiqueta="Correo Electrónico"
+              nombre="correo"
+              valor={datosEditables.correo}
+              onChange={manejarCambioInput}
+              placeholder="ejemplo@correo.com"
+            />
+            <EntradaFormulario
+              etiqueta="Teléfono"
+              nombre="telefono"
+              valor={datosEditables.telefono}
+              onChange={manejarCambioInput}
+              placeholder="55 0000 0000"
+            />
+            <EntradaFormulario
+              etiqueta="CURP"
+              nombre="curp"
+              valor={datosEditables.curp}
+              onChange={manejarCambioInput}
+              placeholder="CURP de 18 caracteres"
+            />
+            <EntradaSeleccion
+              etiqueta="Estatus del Presidente"
+              nombre="estatusId"
+              valor={String(datosEditables.estatusId || '')}
+              onChange={manejarCambioInput}
+              opciones={ESTATUS_CATALOGO.map(e => ({ valor: String(e.id), etiqueta: e.label }))}
+            />
+          </div>
         </div>
+
       </Modal>
 
       {/* ══ MODAL DE REASIGNACIÓN ══ */}
@@ -1117,15 +1154,15 @@ export default function AdminPresidentes() {
         tamanio="medio"
       >
         <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-          <div style={{ 
-            fontSize: '32px', 
-            background: 'rgba(59, 130, 246, 0.1)', 
-            color: '#3b82f6', 
-            width: '70px', 
-            height: '70px', 
-            borderRadius: '20px', 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            fontSize: '32px',
+            background: 'rgba(59, 130, 246, 0.1)',
+            color: '#3b82f6',
+            width: '70px',
+            height: '70px',
+            borderRadius: '20px',
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 15px',
             boxShadow: '0 8px 16px rgba(59, 130, 246, 0.15)'
@@ -1140,16 +1177,16 @@ export default function AdminPresidentes() {
           <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
             <FaSearch />
           </div>
-          <input 
-            type="text" 
-            placeholder="Buscar presidente por nombre..." 
+          <input
+            type="text"
+            placeholder="Buscar presidente por nombre..."
             value={searchDisponibles}
             onChange={(e) => setSearchDisponibles(e.target.value)}
-            style={{ 
-              width: '100%', 
-              padding: '14px 14px 14px 45px', 
-              borderRadius: '16px', 
-              border: '2px solid #f1f5f9', 
+            style={{
+              width: '100%',
+              padding: '14px 14px 14px 45px',
+              borderRadius: '16px',
+              border: '2px solid #f1f5f9',
               background: '#f8fafc',
               fontSize: '15px',
               outline: 'none',
@@ -1168,59 +1205,59 @@ export default function AdminPresidentes() {
             disponibles
               .filter(d => d.nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()) || d.Nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()))
               .map(pres => (
-              <div 
-                key={pres.id || pres.UsuarioId} 
-                className="pres-item-hover"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '15px',
-                  borderRadius: '16px',
-                  marginBottom: '10px',
-                  border: '1px solid #f1f5f9',
-                  transition: 'all 0.2s',
-                  background: 'white'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ 
-                    width: '44px', 
-                    height: '44px', 
-                    borderRadius: '12px', 
-                    background: 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
-                    color: 'white',
+                <div
+                  key={pres.id || pres.UsuarioId}
+                  className="pres-item-hover"
+                  style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '800',
-                    fontSize: '16px'
-                  }}>
-                    {(pres.nombre || pres.Nombre || '?').charAt(0)}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{pres.nombre || pres.Nombre}</div>
-                    <div style={{ color: '#64748b', fontSize: '12px' }}>{pres.correo || pres.Email}</div>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => ejecutarReasignacion(pres.id || pres.UsuarioId, pres.nombre || pres.Nombre)}
-                  style={{ 
-                    padding: '8px 16px', 
-                    borderRadius: '10px', 
-                    background: '#eff6ff', 
-                    color: '#2563eb', 
-                    border: 'none', 
-                    fontWeight: '700', 
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    justifyContent: 'space-between',
+                    padding: '15px',
+                    borderRadius: '16px',
+                    marginBottom: '10px',
+                    border: '1px solid #f1f5f9',
+                    transition: 'all 0.2s',
+                    background: 'white'
                   }}
                 >
-                  Asignar
-                </button>
-              </div>
-            ))
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '800',
+                      fontSize: '16px'
+                    }}>
+                      {(pres.nombre || pres.Nombre || '?').charAt(0)}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{pres.nombre || pres.Nombre}</div>
+                      <div style={{ color: '#64748b', fontSize: '12px' }}>{pres.correo || pres.Email}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => ejecutarReasignacion(pres.id || pres.UsuarioId, pres.nombre || pres.Nombre)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      border: 'none',
+                      fontWeight: '700',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Asignar
+                  </button>
+                </div>
+              ))
           ) : (
             <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
               <FaUserTie style={{ fontSize: '40px', opacity: 0.3, marginBottom: '10px' }} />

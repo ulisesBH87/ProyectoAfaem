@@ -449,29 +449,116 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
         raise HTTPException(status_code=403, detail="Acceso denegado: No tienes permisos para acceder a este recurso")
     
     try:
-        # Buscamos presidentes que tengan una persona asociada
+        from app.modelos.usuario_modelo import Usuario
+        from app.modelos.catalogo_estatus_presidente import EstatusPresidente
+
         query = db.query(
             PresidenteEquipo.PresidenteEquipoId,
             Personas.Nombre,
             Personas.PrimerApellido,
             Personas.SegundoApellido,
             Personas.CURP,
-            PresidenteEquipo.EstatusId
-        ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)
-        
+            PresidenteEquipo.EstatusId,
+            EstatusPresidente.Nombre.label('EstatusNombre'),
+            Usuario.Correo.label('CorreoLogin')
+        ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
+         .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
+         .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
+
         resultados = query.all()
-        
+
         return [
             {
-                "id": r.PresidenteEquipoId,
-                "nombre": f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip(),
-                "curp": r.CURP,
-                "estatus": r.EstatusId
+                "id":             r.PresidenteEquipoId,
+                "nombre":         f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip(),
+                "primerNombre":   r.Nombre          or '',
+                "primerApellido": r.PrimerApellido   or '',
+                "segundoApellido":r.SegundoApellido  or '',
+                "curp":           r.CURP,
+                "estatus":        r.EstatusId,
+                "estatusNombre":  r.EstatusNombre    or '',
+                "correo":         r.CorreoLogin      or ''
             } for r in resultados
         ]
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error al obtener directorio de presidentes: {str(e)}")
+
+
+@router.patch("/update-presidente/{presidente_id}")
+def update_presidente(presidente_id: int, data: dict, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+
+    try:
+        from app.modelos.usuario_modelo import Usuario
+        from app.modelos.catalogo_estatus_presidente import EstatusPresidente
+
+        presidente = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PresidenteEquipoId == presidente_id
+        ).first()
+        if not presidente:
+            raise HTTPException(status_code=404, detail="Presidente no encontrado")
+
+        persona = db.query(Personas).filter(Personas.PersonaId == presidente.PersonaId).first()
+        if not persona:
+            raise HTTPException(status_code=404, detail="Persona asociada no encontrada")
+
+        # --- Actualizar Personas ---
+        if 'primerNombre' in data and data['primerNombre']:
+            persona.Nombre = data['primerNombre'].strip()
+
+        if 'primerApellido' in data and data['primerApellido']:
+            persona.PrimerApellido = data['primerApellido'].strip()
+
+        if 'segundoApellido' in data:
+            persona.SegundoApellido = data['segundoApellido'].strip() or None
+
+        if 'curp' in data and data['curp'] is not None:
+            persona.CURP = data['curp'].strip() or None
+
+        if 'telefono' in data and data['telefono'] is not None:
+            persona.NumeroTelefono = data['telefono'].strip() or None
+
+
+        # --- Actualizar Usuarios (correo de login) ---
+        if 'correo' in data and data['correo']:
+            usuario_db = db.query(Usuario).filter(Usuario.PersonaId == persona.PersonaId).first()
+            if usuario_db:
+                correo_nuevo = data['correo'].strip()
+                # Verificar que el correo no esté en uso por otro usuario
+                duplicado = db.query(Usuario).filter(
+                    Usuario.Correo == correo_nuevo,
+                    Usuario.UsuarioId != usuario_db.UsuarioId
+                ).first()
+                if duplicado:
+                    raise HTTPException(status_code=400, detail="El correo ya está registrado por otro usuario")
+                usuario_db.Correo = correo_nuevo
+
+        # --- Actualizar EstatusId en PresidentesDeEquipo ---
+        if 'estatusId' in data and data['estatusId'] is not None:
+            estatus_id = int(data['estatusId'])
+            estatus_valido = db.query(EstatusPresidente).filter(
+                EstatusPresidente.EstatusPresidenteId == estatus_id
+            ).first()
+            if not estatus_valido:
+                raise HTTPException(status_code=400, detail=f"EstatusId {estatus_id} no válido")
+            presidente.EstatusId = estatus_id
+
+        db.commit()
+        return {"message": "Presidente actualizado correctamente", "id": presidente_id}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al actualizar presidente: {str(e)}")
+
+
+
 
 @router.get("/directorio-equipos", response_model=List[DirectorioEquipoResponse])
 def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
