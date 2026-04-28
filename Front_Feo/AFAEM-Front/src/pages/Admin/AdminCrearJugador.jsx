@@ -86,17 +86,7 @@ export default function AdminCrearJugador() {
     documentoEstudiante: null
   });
 
-  // ── Detección de minoría de edad ──
-  const esMenorDeEdad = React.useMemo(() => {
-    if (!extractedData.fechaNacimiento) return false;
-    const hoy = new Date();
-    const nac = new Date(extractedData.fechaNacimiento);
-    if (isNaN(nac.getTime())) return false;
-    let edad = hoy.getFullYear() - nac.getFullYear();
-    const mDiff = hoy.getMonth() - nac.getMonth();
-    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
-    return edad < 18;
-  }, [extractedData.fechaNacimiento]);
+
 
   const [catalogs, setCatalogs] = useState({
     ligas: [],
@@ -162,6 +152,18 @@ export default function AdminCrearJugador() {
     nacAbuelaMaterna: '',
     juegoClubExtranjero: ''
   });
+
+  // ── Detección de minoría de edad ──
+  const esMenorDeEdad = React.useMemo(() => {
+    if (!extractedData.fechaNacimiento) return false;
+    const hoy = new Date();
+    const nac = new Date(extractedData.fechaNacimiento);
+    if (isNaN(nac.getTime())) return false;
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const mDiff = hoy.getMonth() - nac.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad < 18;
+  }, [extractedData.fechaNacimiento]);
 
   // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
   const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
