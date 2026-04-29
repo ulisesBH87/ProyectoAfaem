@@ -11,7 +11,6 @@ const Loader = ({ text = "AFAEM DIGITAL", inline = false }) => {
         </div>
         <div className="afaem-loader-text-group">
           <div className="afaem-loader-text">{text}</div>
-          <div className="afaem-loader-subtitle">Cargando experiencia premium...</div>
         </div>
       </div>
       {!inline && (
