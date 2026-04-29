@@ -2,11 +2,17 @@ import os
 from datetime import datetime
 
 from app.modelos.persona_modelo import Personas
+from app.modelos.equipo_modelo import Equipos
 from app.repositorios import documentos_repositorio, personas_repositorio
 from app.core.seguridad import obtener_usuario_actual
 from app.repositorios.documentos_repositorio import obtener_solicitud_borrador
 
 from app.excepciones import documentos_excepciones
+from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+import zipfile
+from io import BytesIO
+from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+from app.repositorios import equipo_repositorio
 
 UPLOAD_DIR = "uploads/documentos"
 
@@ -34,20 +40,35 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
 
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    # Obtener CURP de la persona
+    # Obtener persona
     persona = db.query(Personas).filter(Personas.PersonaId == persona_id).first()
     if not persona:
         raise documentos_excepciones.PersonaNoEncontradaError()
     
+    #Obtener CURP y año para nombrar archivos
     curp = persona.CURP
     año = datetime.now().year
+
+    #Obtener los documentos
+    doc_afiliaciones = db.query(DocumentoAfiliacion).filter(
+        DocumentoAfiliacion.DocumentoAfiliacionId.in_(documento_afiliacion_ids)
+    ).all()
+
+    doc_map = {d.DocumentoAfiliacionId: d for d in doc_afiliaciones}
 
     documentos_creados = []
 
     for archivo, doc_id in zip(archivos, documento_afiliacion_ids):
 
+        d = doc_map.get(doc_id)
+
+        if not d:
+            raise Exception(f"No se encontró DocumentoAfiliacionId {doc_id}")
+    
+        nombre_doc = d.Documento.NombreDocumento.upper()
+        
         extension = archivo.filename.split(".")[-1]
-        nombre = f"{curp}_{doc_id}_{año}.{extension}"
+        nombre = f"{nombre_doc}_{curp}_{año}.{extension}"
         ruta = os.path.join(UPLOAD_DIR, nombre)
 
         with open(ruta, "wb") as buffer:
@@ -93,3 +114,96 @@ def presidente_solicitud(db, usuario):
     usuario_id = usuario.UsuarioId
     solicitud_id = obtener_solicitud_borrador(db, usuario_id)
     return solicitud_id
+
+#DESCARGAR DOCUMENTOS COMPRIMIDOS
+def generar_zip_documentos(db, miembro_id):
+    miembro = db.query(MiembrosEquipo).filter(
+        MiembrosEquipo.MiembroEquipoId == miembro_id
+    ).first()
+
+    if not miembro:
+        raise Exception("Jugador no encontrado")
+
+    persona_id = miembro.PersonaId
+
+    documentos = equipo_repositorio.obtener_documentos_jugador_repo(db, persona_id)
+
+    if not documentos:
+        raise Exception("No hay documentos para este jugador")
+
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for doc in documentos:
+            ruta = doc["RutaArchivo"]
+
+            if not os.path.exists(ruta):
+                continue
+
+            nombre_archivo = os.path.basename(ruta)
+
+            zipf.write(ruta, arcname=nombre_archivo)
+
+    zip_buffer.seek(0)
+
+    nombre_zip = f"documentos_jugador_{persona_id}.zip"
+
+    return zip_buffer.read(), nombre_zip
+
+
+def generar_zip_documentos_equipo(db, equipo_id):
+    """
+    Genera un ZIP con los documentos de todos los jugadores del equipo.
+    Cada jugador tendrá su propia carpeta dentro del ZIP.
+    """
+    from datetime import datetime as dt
+    
+    # Obtener el equipo para el nombre
+    equipo = db.query(Equipos).filter(
+        Equipos.EquipoId == equipo_id
+    ).first()
+
+    if not equipo:
+        raise Exception("Equipo no encontrado")
+
+    # Obtener todos los miembros del equipo
+    miembros = equipo_repositorio.obtener_miembros_equipo_por_id_repo(db, equipo_id)
+
+    if not miembros:
+        raise Exception("No hay jugadores en este equipo")
+
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for miembro in miembros:
+            persona_id = miembro["PersonaId"]
+            nombre_carpeta = f"{miembro['NombreCompleto'].replace(' ', '_')}"
+
+            # Obtener documentos del jugador
+            documentos = equipo_repositorio.obtener_documentos_jugador_repo(db, persona_id)
+
+            if not documentos:
+                continue
+
+            # Agregar cada documento a su carpeta
+            for doc in documentos:
+                ruta = doc["RutaArchivo"]
+
+                if not os.path.exists(ruta):
+                    continue
+
+                nombre_archivo = os.path.basename(ruta)
+                
+                # Ruta dentro del ZIP: NombreCarpeta/NombreArchivo
+                arcname = f"{nombre_carpeta}/{nombre_archivo}"
+
+                zipf.write(ruta, arcname=arcname)
+
+    zip_buffer.seek(0)
+
+    # Nombre del archivo con la fecha actual
+    fecha_hoy = dt.now().strftime("%Y-%m-%d")
+    nombre_limpio = equipo.NombreEquipo.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    nombre_zip = f"{nombre_limpio}_{fecha_hoy}.zip"
+
+    return zip_buffer.read(), nombre_zip

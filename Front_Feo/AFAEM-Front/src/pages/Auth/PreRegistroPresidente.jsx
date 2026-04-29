@@ -7,6 +7,7 @@ import AmateurLogo from '../../assets/amateur-logo.png';
 import { validarFotografia } from "../../services/foto";
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
+import { jsPDF } from 'jspdf';
 import { API_BASE } from '../../config/config';
 import { parseJwt } from '../../services/auth';
 
@@ -26,7 +27,12 @@ function PreRegistroPresidente() {
 
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState('');
-  const [asignacionSeguros, setAsignacionSeguros] = useState({ '1': '', '2': '', '3': '' });
+  const [catalogoSeguros, setCatalogoSeguros] = useState([]);
+  const [catalogoAfiliaciones, setCatalogoAfiliaciones] = useState([]);
+  const [cargandoSeguros, setCargandoSeguros] = useState(false);
+  const [asignacionSeguros, setAsignacionSeguros] = useState({});
+  const [detalleInscripciones, setDetalleInscripciones] = useState([]);
+  const [totalOrdenPendiente, setTotalOrdenPendiente] = useState(0);
   const [comprobantePago, setComprobantePago] = useState(null);
 
   // PASO 2: Documentos
@@ -42,6 +48,7 @@ function PreRegistroPresidente() {
 
   // Verificar estado de pago al cargar
   useEffect(() => {
+
     const verificarEstadoPago = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -65,7 +72,10 @@ function PreRegistroPresidente() {
         if (res.ok) {
           const data = await res.json();
           if (data.tiene_orden) {
+            const ordenId = data.orden_pago_id || data.OrdenPagoId;
             setEstadoPago(data.estatus);
+            setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
+            if (ordenId) cargarDetalleOrdenDirecto(ordenId, token);
             // Si ya tiene orden, ir a la pantalla correcta
             if (data.estatus === 3) {
               // Pago aprobado → mostrar pantalla de validado
@@ -73,16 +83,16 @@ function PreRegistroPresidente() {
             } else if (data.estatus === 1 || data.estatus === 2) {
               if (data.tiene_comprobante) {
                 // Pago pendiente revisión
-                setOrdenPendienteId(data.orden_pago_id);
+                setOrdenPendienteId(ordenId);
                 setPasoActual(2);
               } else {
                 // Generó orden pero no subió comprobante (Guardar y salir)
-                setOrdenPendienteId(data.orden_pago_id);
+                setOrdenPendienteId(ordenId);
                 setPasoActual(1);
               }
             } else if (data.estatus === 4) {
               // Rechazado
-              setOrdenPendienteId(data.orden_pago_id);
+              setOrdenPendienteId(ordenId);
               setPasoActual(2);
             }
           }
@@ -106,7 +116,55 @@ function PreRegistroPresidente() {
         console.warn('No se pudo cargar catálogos:', err);
       }
     };
+
+    const fetchSeguros = async () => {
+      setCargandoSeguros(true);
+      try {
+        const res = await fetch(`${API_BASE}/ordenes-pago/seguros`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) throw new Error('Error al cargar seguros');
+        const data = await res.json();
+        const arrSeguros = Array.isArray(data) ? data :
+          Array.isArray(data.data) ? data.data :
+            Array.isArray(data.seguros) ? data.seguros :
+              Array.isArray(data.results) ? data.results : [];
+
+        const segurosMapeados = arrSeguros.map((seg, idx) => ({
+          id: String(seg.id || seg.SeguroId || idx + 1),
+          nombre: seg.nombre || seg.Nombre || seg.name || seg.nombre_seguro || 'Seguro sin nombre',
+          descripcion: seg.descripcion || seg.Descripcion || seg.description || '',
+          precio: Number(seg.costo || seg.Costo || seg.precio || seg.Precio || seg.price || 0),
+        }));
+
+        setCatalogoSeguros(segurosMapeados);
+      } catch (err) {
+        console.warn('No se pudo cargar seguros:', err);
+        setCatalogoSeguros([]);
+      } finally {
+        setCargandoSeguros(false);
+      }
+    };
+
+    const fetchAfiliaciones = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) throw new Error('Error al cargar afiliaciones');
+        const data = await res.json();
+        setCatalogoAfiliaciones(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.warn('No se pudo cargar afiliaciones:', err);
+        setCatalogoAfiliaciones([]);
+      }
+    };
+
     fetchLigas();
+    fetchSeguros();
+    fetchAfiliaciones();
   }, []);
 
   // SINCRONIZAR PASO ACTUAL CON EL ESTATUS REAL DEL BACKEND
@@ -137,27 +195,20 @@ function PreRegistroPresidente() {
 
   /* ─── Efecto de Auto-cálculo ─── */
   useEffect(() => {
-    if (numPersonas !== '' && pasoActual === 1) {
+    if (numPersonas !== '' && pasoActual === 1 && catalogoSeguros.length > 0) {
       const totalNecesario = Number(numPersonas) + 1;
-      setAsignacionSeguros({
-        '1': totalNecesario, // Por defecto asignar todo al seguro de accidentes
-        '2': 0,
-        '3': 0
+      const nuevaAsignacion = {};
+      catalogoSeguros.forEach((seg, idx) => {
+        nuevaAsignacion[seg.id] = idx === 0 ? totalNecesario : 0;
       });
+      setAsignacionSeguros(nuevaAsignacion);
     }
-  }, [numPersonas, pasoActual]);
-
-  // PASO 1: Pago y Seguros
-  const catalogoSeguros = [
-    { id: '1', nombre: 'Seguro contra accidentes', descripcion: 'Protege a los jugadores ante accidentes deportivos.', precio: 150 },
-    { id: '2', nombre: 'Seguro de vida', descripcion: 'Cobertura en caso de fallecimiento.', precio: 200 },
-    { id: '3', nombre: 'Seguro médico', descripcion: 'Incluye atención médica y hospitalaria.', precio: 180 }
-  ];
+  }, [numPersonas, pasoActual, catalogoSeguros]);
 
   /* ─── Catálogos para Selectores ─── */
   const CATALOGO_ROLES = [
-    { valor: 'PRESIDENTE DE EQUIPO',   etiqueta: 'Presidente de Equipo' },
-    { valor: 'ENTRENADOR',             etiqueta: 'Entrenador' },
+    { valor: 'PRESIDENTE DE EQUIPO', etiqueta: 'Presidente de Equipo' },
+    { valor: 'ENTRENADOR', etiqueta: 'Entrenador' },
   ];
 
   const bankInfo = {
@@ -168,8 +219,45 @@ function PreRegistroPresidente() {
     referencia: 'RHX-CL26-001'
   };
 
+  // ================== FUNCIÓN PARA CARGAR DETALLES DE ORDEN ==================
+  const cargarDetalleOrdenDirecto = async (ordenId, token) => {
+    try {
+      const res = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Error al cargar detalle de orden');
+      const data = await res.json();
+
+      setTotalOrdenPendiente(Number(data.TotalPagar || data.total || 0));
+
+      const detalles = data.OrdenPagoDetalleRelacion || data.detalles || [];
+      const segurosOrden = {};
+      const inscripcionesOrden = [];
+      detalles.forEach(detalle => {
+        const seguroId = detalle.SeguroId || detalle.seguro_id;
+        if (seguroId) {
+          segurosOrden[String(seguroId)] = detalle.Cantidad || detalle.cantidad || 0;
+        } else {
+          inscripcionesOrden.push(detalle);
+        }
+      });
+      setAsignacionSeguros(segurosOrden);
+      setDetalleInscripciones(inscripcionesOrden);
+    } catch (err) {
+      console.warn('No se pudo cargar detalle de la orden:', err);
+    }
+  };
+
   const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + Number(val || 0), 0);
-  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const precioPresidente = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0;
+  const precioJugador = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0;
+  const costoAfiliaciones = precioPresidente + (Number(numPersonas || 0) * precioJugador);
+  const totalPagar = costoAfiliaciones + catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const totalMostrado = ordenPendienteId ? totalOrdenPendiente : totalPagar;
+  const nombreAfiliacion = (tipoAfiliacionId) => {
+    const afiliacion = catalogoAfiliaciones.find(a => String(a.TipoAfiliacionId) === String(tipoAfiliacionId));
+    return afiliacion?.NombreAfiliacion || 'Inscripción';
+  };
   const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas || 0) + 1 : 0; // Jugadores + Presidente
   const jugadoresRestantes = segurosRequeridos - totalAsignados;
 
@@ -181,6 +269,136 @@ function PreRegistroPresidente() {
     { documento: 'fotografia', nombre: 'Fotografía (Imagen)' },
     { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', hasDownload: true }
   ];
+
+  // ================== FUNCIÓN PARA GENERAR PDF DE CUOTA ==================
+  const generarPDFCuota = (ordenId) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'letter'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 15;
+      const margin = 15;
+      const contentWidth = pageWidth - 2 * margin;
+
+      // Encabezado
+      doc.setFontSize(16);
+      doc.setTextColor(11, 78, 166);
+      doc.text('FICHA DE PAGO - AFAEM', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Número de Orden: ${ordenId}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+      const today = new Date().toLocaleDateString('es-MX');
+      doc.text(`Fecha: ${today}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 12;
+
+      // Datos del Usuario
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.text('DATOS DEL SOLICITANTE', margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Nombre: ${user.Nombre || user.NombreUsuario || 'N/A'}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Correo: ${user.Correo || user.email || 'N/A'}`, margin, yPosition);
+      yPosition += 10;
+
+      // Datos Bancarios
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.text('INSTRUCCIONES DE PAGO', margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Banco: ${bankInfo.banco}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Titular: ${bankInfo.titular}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Cuenta: ${bankInfo.cuenta}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`CLABE: ${bankInfo.clabe}`, margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(11);
+      doc.setTextColor(220, 38, 38);
+      doc.text(`Referencia obligatoria: ${bankInfo.referencia}`, margin, yPosition, { maxWidth: contentWidth });
+      yPosition += 12;
+
+      // Desglose de Cuota
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.text('DESGLOSE DE CUOTA', margin, yPosition);
+      yPosition += 8;
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+
+      // Afiliaciones
+      const presidenteAf = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2);
+      const jugadorAf = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4);
+
+      if (presidenteAf) {
+        const subtotal = presidenteAf.CostoActual;
+        doc.text(`${presidenteAf.NombreAfiliacion} (x1)`, margin, yPosition);
+        doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+        yPosition += 6;
+      }
+
+      if (jugadorAf && numPersonas > 0) {
+        const subtotal = jugadorAf.CostoActual * numPersonas;
+        doc.text(`${jugadorAf.NombreAfiliacion} (x${numPersonas})`, margin, yPosition);
+        doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+        yPosition += 6;
+      }
+
+      // Seguros
+      let tieneSeguros = false;
+      catalogoSeguros.forEach(seg => {
+        if (asignacionSeguros[seg.id] > 0) {
+          tieneSeguros = true;
+          const subtotal = seg.precio * asignacionSeguros[seg.id];
+          doc.text(`${seg.nombre} (x${asignacionSeguros[seg.id]})`, margin, yPosition);
+          doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+          yPosition += 6;
+        }
+      });
+
+      // Línea divisoria
+      yPosition += 2;
+      doc.setDrawColor(11, 78, 166);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 6;
+
+      // Total
+      doc.setFontSize(12);
+      doc.setTextColor(11, 78, 166);
+      doc.setFont(undefined, 'bold');
+      doc.text('TOTAL A PAGAR:', margin, yPosition);
+      doc.text(`$${totalMostrado.toFixed(2)}`, pageWidth - margin - 30, yPosition);
+      yPosition += 10;
+
+      // Nota final
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont(undefined, 'normal');
+      doc.text('Por favor, incluye la referencia obligatoria en tu transferencia bancaria.', margin, yPosition, { maxWidth: contentWidth });
+      yPosition += 6;
+      doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro.', margin, yPosition, { maxWidth: contentWidth });
+
+      // Descargar PDF
+      const nombreArchivo = `Cuota_AFAEM_${ordenId}_${today.replace(/\//g, '-')}.pdf`;
+      doc.save(nombreArchivo);
+    } catch (err) {
+      console.error('Error al generar PDF:', err);
+      Swal.fire({ title: 'Error', text: 'No se pudo generar el PDF de la cuota', icon: 'error' });
+    }
+  };
 
   // ================== METODOS DE NAVEGACIÓN ==================
   const handleGuardarYSalir = async () => {
@@ -363,16 +581,57 @@ function PreRegistroPresidente() {
           const newOrdenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
           setOrdenPendienteId(newOrdenId);
           
+          // Cargar detalles de la orden inmediatamente
+          await cargarDetalleOrdenDirecto(newOrdenId, token);
+          
+          // Generar PDF de cuota
+          setTimeout(() => {
+            generarPDFCuota(newOrdenId);
+          }, 500);
+          
           Swal.fire({
             title: '¡Orden Generada!',
-            text: 'Ahora utiliza los datos bancarios para realizar tu pago y sube el comprobante aquí mismo.',
+            text: 'Se ha descargado tu ficha de pago en PDF. Ahora utiliza los datos bancarios para realizar tu transferencia y sube el comprobante aquí mismo.',
             icon: 'success',
             confirmButtonColor: '#0b4ea6'
           });
         } catch (err) {
           Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
         }
-      }
+
+        // 2. Subir Comprobante
+        const formData = new FormData();
+        formData.append('archivo', comprobantePago);
+
+        const resComprobante = await fetch(`${API_BASE}/ordenes-pago/${idParaComprobante}/comprobante`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        if (!resComprobante.ok) {
+          const errData = await resComprobante.json().catch(() => ({}));
+          throw new Error('La orden se creó pero falló al subir el comprobante: ' + (errData.detail || ''));
+        }
+
+        Swal.fire({
+          title: '¡Evidencia Recibida!',
+          text: 'Se ha creado la orden de pago y enviado tu comprobante a revisión.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        // Actualizar el rol del usuario en la sesión local
+        // para que la interfaz sepa que ya es Presidente (o está en proceso).
+        localStorage.setItem('rol', 'PRESIDENTE_EQUIPO');
+
+        // Ir a pantalla de espera
+        setEstadoPago(1); // Pendiente
+        setPasoActual(2);
+      } 
     }
   };
 
@@ -408,21 +667,21 @@ function PreRegistroPresidente() {
   const mejorarExtraccionActa = (rawText, currentData) => {
     if (!rawText) return currentData;
     const data = { ...currentData };
-    
+
     // 1. RESCATE DE NOMBRE (Especialmente para actas digitales mexicanas)
     // Buscamos patrones de etiquetas seguidas de valores en líneas subsecuentes
     if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2) {
       // Intento 1: Formato "Nombre(s) \n VALOR \n Primer Apellido \n VALOR ..."
       const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
-      
-      for(let i=0; i<lines.length; i++) {
+
+      for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i+1 < lines.length) nombres = lines[i+1];
-        if (l.includes('PRIMER APELLIDO') && i+1 < lines.length) ap1 = lines[i+1];
-        if (l.includes('SEGUNDO APELLIDO') && i+1 < lines.length) ap2 = lines[i+1];
+        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) nombres = lines[i + 1];
+        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1 = lines[i + 1];
+        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2 = lines[i + 1];
       }
-      
+
       if (nombres && ap1) {
         data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
       }
@@ -434,18 +693,18 @@ function PreRegistroPresidente() {
         'ENERO': '01', 'FEBRERO': '02', 'MARZO': '03', 'ABRIL': '04', 'MAYO': '05', 'JUNIO': '06',
         'JULIO': '07', 'AGOSTO': '08', 'SEPTIEMBRE': '09', 'OCTUBRE': '10', 'NOVIEMBRE': '11', 'DICIEMBRE': '12'
       };
-      
+
       const regexFechaTexto = /(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i;
       const matchFecha = rawText.match(regexFechaTexto);
-      
+
       if (matchFecha) {
         const dia = matchFecha[1].padStart(2, '0');
         const mesNombre = matchFecha[2].toUpperCase();
         const anio = matchFecha[3];
-        
+
         if (meses[mesNombre]) {
           data.fecha_nac = `${dia}/${meses[mesNombre]}/${anio}`;
-          
+
           // Intentar recalcular edad
           try {
             const hoy = new Date();
@@ -453,7 +712,7 @@ function PreRegistroPresidente() {
             let edad = hoy.getFullYear() - a;
             if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
             data.edad = `${edad} años`;
-          } catch(e) {}
+          } catch (e) { }
         }
       }
     }
@@ -544,6 +803,19 @@ function PreRegistroPresidente() {
     }
   };
 
+  // ── HELPER: Escritura segura en campos del PDF ──────────────────────
+  // pdf-lib lanza una excepción si el campo no existe (no retorna null),
+  // por lo que el operador ?. solo es ineficiente. Este helper lo captura.
+  const safeSetField = (form, fieldName, value) => {
+    if (value === null || value === undefined || value === '') return;
+    try {
+      const field = form.getTextField(fieldName);
+      if (field) field.setText(String(value));
+    } catch (e) {
+      console.warn(`[PDF] Campo no encontrado: "${fieldName}" → omitido.`);
+    }
+  };
+
   const handleDownloadFormato = async () => {
     try {
       Swal.fire({
@@ -573,16 +845,14 @@ function PreRegistroPresidente() {
             photoImage = await pdfDoc.embedJpg(photoBytes);
           }
 
-          // Coordenadas calculadas para el recuadro superior derecho
           firstPage.drawImage(photoImage, {
             x: 479,
             y: 676,
             width: 76,
             height: 90,
           });
-          console.log("✅ Fotografía incrustada en el PDF");
         } catch (photoErr) {
-          console.warn("⚠️ Error al incrustar foto:", photoErr);
+          console.warn("Error al incrustar foto:", photoErr);
         }
       }
 
@@ -592,58 +862,52 @@ function PreRegistroPresidente() {
       if (nombre && nombre !== "No detectado") {
         const parts = nombre.split(' ');
         if (parts.length >= 3) {
-          form.getTextField('Apellido Paterno')?.setText(parts[0]);
-          form.getTextField('Apellido Materno')?.setText(parts[1]);
-          form.getTextField('Nombres')?.setText(parts.slice(2).join(' '));
+          safeSetField(form, 'Apellido Paterno', parts[0]);
+          safeSetField(form, 'Apellido Materno', parts[1]);
+          safeSetField(form, 'Nombres', parts.slice(2).join(' '));
         } else if (parts.length === 2) {
-          form.getTextField('Apellido Paterno')?.setText(parts[0]);
-          form.getTextField('Nombres')?.setText(parts[1]);
+          safeSetField(form, 'Apellido Paterno', parts[0]);
+          safeSetField(form, 'Nombres', parts[1]);
         } else {
-          form.getTextField('Nombres')?.setText(nombre);
+          safeSetField(form, 'Nombres', nombre);
         }
       }
 
       // CURP
       if (curp && curp !== "No detectado") {
-        form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
+        safeSetField(form, 'CURP o Clave Única de Registro de Población', curp);
       }
 
       // Fecha de Nacimiento
       if (fecha_nac && fecha_nac !== "No detectada") {
-        form.getTextField('Fecha de Nacimiento')?.setText(fecha_nac);
+        safeSetField(form, 'Fecha de Nacimiento', fecha_nac);
       }
 
       // Correo electrónico
       const email = user.Correo || user.correo || user.email || localStorage.getItem('email') || '';
-      if (email) {
-        form.getTextField('Correo electrónico')?.setText(email);
-      }
+      safeSetField(form, 'Correo electrónico', email);
 
       // Sexo (extraer de CURP: posición 10, H=Hombre, M=Mujer)
       if (curp && curp.length >= 11) {
         const sexoChar = curp.charAt(10).toUpperCase();
         const sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
-        if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
+        safeSetField(form, 'Sexo', sexoTexto);
       }
 
-      // Nacionalidad
-      if (nacionalidad) {
-        form.getTextField('Lugar de Nacimiento')?.setText(nacionalidad);
-      }
+      // Nacionalidad / Lugar de Nacimiento
+      safeSetField(form, 'Lugar de Nacimiento', nacionalidad);
 
-      // Teléfono
-      // Teléfono es llenado por defecto o removido
-      form.getTextField('fill_24')?.setText('');
+      // Teléfono (fill_24 en la plantilla directivo — puede no existir)
+      safeSetField(form, 'fill_24', '');
+      safeSetField(form, 'Teléfono', '');
 
       // Tipo de afiliación
-      if (tipoAfiliacion) {
-        form.getTextField('fill_20')?.setText(tipoAfiliacion);
-      }
+      safeSetField(form, 'fill_20', tipoAfiliacion);
 
       // Asociación, Liga, Equipo
-      if (asociacion) form.getTextField('Asociación')?.setText(asociacion.toUpperCase());
-      if (liga) form.getTextField('Liga')?.setText(liga.toUpperCase());
-      form.getTextField('Equipo')?.setText('');
+      if (asociacion) safeSetField(form, 'Asociación', asociacion.toUpperCase());
+      if (liga) safeSetField(form, 'Liga', liga.toUpperCase());
+      safeSetField(form, 'Equipo', '');
 
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
@@ -652,12 +916,12 @@ function PreRegistroPresidente() {
       const mes = meses[hoy.getMonth()];
       const anio = String(hoy.getFullYear()).slice(-2);
 
-      form.getTextField('A')?.setText(dia);
-      form.getTextField('de')?.setText(mes);
-      form.getTextField('del 20')?.setText(anio);
+      safeSetField(form, 'A', dia);
+      safeSetField(form, 'de', mes);
+      safeSetField(form, 'del 20', anio);
 
       // Cargo: Presidente
-      form.getTextField('Cargo')?.setText('PRESIDENTE');
+      safeSetField(form, 'Cargo', 'PRESIDENTE');
 
       // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
@@ -679,6 +943,7 @@ function PreRegistroPresidente() {
       Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
     }
   };
+
 
   const procesarFotografia = async (archivo) => {
     Swal.fire({
@@ -775,48 +1040,51 @@ function PreRegistroPresidente() {
 
       const token = localStorage.getItem('token');
 
-      // Upload each document
-      /* 
-      // TODO: Rehabilitar este bloque cuando se cuente con un servidor de almacenamiento de archivos.
-      for (const docKey of requiredDocs) {
-        const file = documents[docKey];
-        const formData = new FormData();
-        formData.append('documento_afiliacion_ids', 3); 
-        formData.append('archivo', file);
+      // ── SUBIDA REAL DE LOS 4 DOCUMENTOS DEL PRESIDENTE ──────────────
+      // IDs de DocumentoAfiliacion confirmados en base de datos:
+      //   actaNacimiento   → 8  (ACTA_NACIMIENTO, Presidente de Equipo)
+      //   identificacion   → 38 (INE, Presidente de Equipo)
+      //   fotografia       → 37 (FOTOGRAFIA, Presidente de Equipo)
+      //   formatoAfiliacion→ 10 (FORMATO_DIRECTIVO, Presidente de Equipo)
+      const docMapping = [
+        { key: 'actaNacimiento',    docAfiliacionId: 8  },
+        { key: 'identificacion',    docAfiliacionId: 38 },
+        { key: 'fotografia',        docAfiliacionId: 37 },
+        { key: 'formatoAfiliacion', docAfiliacionId: 10 },
+      ];
 
-        const response = await fetch(`${API_BASE}/documentos/`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(`Error subiendo ${docKey}: ${errData.detail || response.statusText}`);
-        }
+      console.log('📤 Subiendo documentos del presidente al servidor...');
+      const formDataDocs = new FormData();
+      for (const { key, docAfiliacionId } of docMapping) {
+        formDataDocs.append('documento_afiliacion_ids', docAfiliacionId);
+        formDataDocs.append('archivo', documents[key]);
       }
-      */
 
-      // --- BYPASS DE DOCUMENTOS ---
-      // Obtenemos la solicitud actual del usuario para marcarla como completa
-      console.log('🔄 Marcando solicitud como completa (Bypass de archivos)...');
-      
+      const resUpload = await fetch(`${API_BASE}/documentos/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formDataDocs
+      });
+
+      if (!resUpload.ok) {
+        const errData = await resUpload.json().catch(() => ({}));
+        throw new Error(`Error al subir documentos: ${errData.detail || resUpload.statusText}`);
+      }
+      console.log('✅ Documentos subidos correctamente.');
+
+      // ── MARCAR SOLICITUD COMO COMPLETA (Status 4 – Revisión) ─────────
       const resMisSolicitudes = await fetch(`${API_BASE}/solicitud/solicitudes-usuarios`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!resMisSolicitudes.ok) throw new Error('No se pudo verificar el estado de la solicitud.');
       const solicitudesData = await resMisSolicitudes.json();
-      
-      // Buscamos la solicitud del usuario (usualmente es la más reciente o la única pendiente)
-      const miSolicitud = Array.isArray(solicitudesData) 
-        ? solicitudesData.find(s => String(s.UsuarioId) === String(personaId)) 
+
+      const miSolicitud = Array.isArray(solicitudesData)
+        ? solicitudesData.find(s => String(s.UsuarioId) === String(personaId))
         : null;
 
       if (miSolicitud && miSolicitud.SolicitudId) {
-        // Marcamos la solicitud como completa (Status 4 - Revisión)
         const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?solicitud_id=${miSolicitud.SolicitudId}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
@@ -838,7 +1106,7 @@ function PreRegistroPresidente() {
 
       // Refresh RBAC permissions before navigating
       if (refreshAccess) await refreshAccess();
-      
+
       Swal.fire({
         title: '¡Registro Exitoso!',
         text: 'Tus documentos han sido subidos correctamente. El administrador procederá a validarlos.',
@@ -1089,10 +1357,10 @@ function PreRegistroPresidente() {
 
       {/* HEADER LOGOS */}
       <div style={{ width: '100%', maxWidth: '1000px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <img 
-          src={AfaemLogo} 
-          alt="AFAEM" 
-          style={{ height: '70px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }} 
+        <img
+          src={AfaemLogo}
+          alt="AFAEM"
+          style={{ height: '70px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }}
         />
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <img src={FmfLogo} alt="FMF" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
@@ -1225,6 +1493,27 @@ function PreRegistroPresidente() {
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>(Recuerda: Deberás asignar un seguro por cada jugador, más un seguro extra para ti como Presidente)</span>
                 </div>
 
+                {numPersonas >= 0 && (
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', marginTop: '20px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <div style={{ width: '3px', height: '14px', background: 'linear-gradient(180deg, #10b981, #059669)', borderRadius: '2px' }} />
+                      <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,0.75)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costos de Afiliación</p>
+                    </div>
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '24px 0 16px' }}>
                   <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
                   <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -1233,23 +1522,32 @@ function PreRegistroPresidente() {
                   <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
                 </div>
 
-                {catalogoSeguros.map(seg => (
-                  <div key={seg.id} className="insurance-card">
+                {cargandoSeguros ? (
+                  <div className="insurance-card">
                     <div className="insurance-info">
-                      <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
-                      <p>{seg.descripcion}</p>
+                      <h4>Cargando seguros...</h4>
+                      <p>Obteniendo costos actualizados.</p>
                     </div>
-                    <input
-                      type="number"
-                      className="insurance-input"
-                    value={asignacionSeguros[seg.id]}
-                    onChange={(e) => {
-                      const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                      setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                    }}
-                    />
                   </div>
-                ))}
+                ) : (
+                  catalogoSeguros.map(seg => (
+                    <div key={seg.id} className="insurance-card">
+                      <div className="insurance-info">
+                        <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
+                        <p>{seg.descripcion}</p>
+                      </div>
+                      <input
+                        type="number"
+                        className="insurance-input"
+                        value={asignacionSeguros[seg.id] ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                          setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                        }}
+                      />
+                    </div>
+                  ))
+                )}
 
                 <div className="assigned-bar">
                   <span>Seguros asignados (Jugadores + Presid.): {totalAsignados}/{segurosRequeridos}</span>
@@ -1275,6 +1573,12 @@ function PreRegistroPresidente() {
                     {ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}
                   </h5>
                 </div>
+                {ordenPendienteId && detalleInscripciones.map(detalle => (
+                  <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.55)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
+                    <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
+                  </div>
+                ))}
                 {catalogoSeguros.map(seg =>
                   asignacionSeguros[seg.id] > 0 && (
                     <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
@@ -1283,9 +1587,25 @@ function PreRegistroPresidente() {
                     </div>
                   )
                 )}
+                {!ordenPendienteId && numPersonas > 0 && (
+                  <>
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x1)</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual}</span>
+                      </div>
+                    ))}
+                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x{numPersonas})</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual * numPersonas}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
-                  <span style={{ color: '#5d87e5' }}>${totalPagar}</span>
+                  <span style={{ color: '#5d87e5' }}>${totalMostrado}</span>
                 </div>
               </div>
 
@@ -1363,7 +1683,8 @@ function PreRegistroPresidente() {
               <button
                 className="btn-nav-blue"
                 onClick={irSiguientePaso}
-                disabled={ordenPendienteId && !comprobantePago}
+                disabled={!ordenPendienteId ? (numPersonas <= 0 || totalAsignados !== segurosRequeridos) : !comprobantePago}
+                title={!ordenPendienteId && (numPersonas <= 0 || totalAsignados !== segurosRequeridos) ? 'Asigna un seguro a todos los jugadores y al presidente para continuar' : ''}
               >
                 {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
               </button>
@@ -1376,25 +1697,25 @@ function PreRegistroPresidente() {
           <div className="welcome-content">
             {estadoPago === 3 ? (
               /* PAGO VALIDADO */
-              <div className="fade-in" style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <div className="fade-in" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '40px 20px',
                 textAlign: 'center',
                 minHeight: '400px'
               }}>
-                <div style={{ 
-                  width: '80px', 
-                  height: '80px', 
+                <div style={{
+                  width: '80px',
+                  height: '80px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '32px', 
-                  background: 'rgba(16, 185, 129, 0.1)', 
-                  color: 'var(--secondary)', 
+                  fontSize: '32px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: 'var(--secondary)',
                   marginBottom: '25px',
                   border: '2px solid rgba(16, 185, 129, 0.2)'
                 }}>
@@ -1404,9 +1725,9 @@ function PreRegistroPresidente() {
                 <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
                   ¡Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}!
                 </h1>
-                
+
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ 
+                  <div style={{
                     display: 'inline-block',
                     background: 'rgba(16, 185, 129, 0.1)',
                     color: 'var(--secondary)',
@@ -1426,12 +1747,12 @@ function PreRegistroPresidente() {
                     Continuar con documentos
                   </button>
                   <br />
-                  <button style={{ 
-                    marginTop: '20px', 
-                    background: 'none', 
-                    border: 'none', 
-                    color: 'var(--text-muted)', 
-                    cursor: 'pointer', 
+                  <button style={{
+                    marginTop: '20px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
                     fontSize: '14px',
                     fontWeight: '600'
                   }} onClick={handleLogout}>Cerrar sesión</button>
@@ -1439,25 +1760,25 @@ function PreRegistroPresidente() {
               </div>
             ) : estadoPago === 4 || estadoPago === 2 ? (
               /* PAGO RECHAZADO */
-              <div className="fade-in" style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <div className="fade-in" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '40px 20px',
                 textAlign: 'center',
                 minHeight: '400px'
               }}>
-                <div style={{ 
-                  width: '80px', 
-                  height: '80px', 
+                <div style={{
+                  width: '80px',
+                  height: '80px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '32px', 
-                  background: 'rgba(239, 68, 68, 0.1)', 
-                  color: 'var(--danger)', 
+                  fontSize: '32px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: 'var(--danger)',
                   marginBottom: '25px',
                   border: '2px solid rgba(239, 68, 68, 0.2)'
                 }}>
@@ -1467,9 +1788,9 @@ function PreRegistroPresidente() {
                 <h1 style={{ fontSize: '30px', fontWeight: '800', color: 'var(--danger)', marginBottom: '15px' }}>
                   Un administrador ha revisado el pago y haz sido rechazado
                 </h1>
-                
+
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ 
+                  <div style={{
                     display: 'inline-block',
                     background: 'rgba(239, 68, 68, 0.1)',
                     color: 'var(--danger)',
@@ -1485,23 +1806,23 @@ function PreRegistroPresidente() {
                   <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
                     <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: 'var(--danger)' }}>Administrador: haz sido rechazado por este motivo:</h4>
                     <p style={{ fontSize: '14px', color: 'var(--text-main)', fontStyle: 'italic', margin: 0 }}>
-                      "{ (ordenPendienteId && localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`)) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
+                      "{(ordenPendienteId && localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`)) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
                     </p>
                   </div>
 
                   <button className="btn-premium" style={{ padding: '16px 60px' }} onClick={() => {
-                     setEstadoPago(null);
-                     setPasoActual(1);
+                    setEstadoPago(null);
+                    setPasoActual(1);
                   }}>
                     Subir nuevo comprobante
                   </button>
                   <br />
-                  <button style={{ 
-                    marginTop: '20px', 
-                    background: 'none', 
-                    border: 'none', 
-                    color: 'var(--text-muted)', 
-                    cursor: 'pointer', 
+                  <button style={{
+                    marginTop: '20px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
                     fontSize: '14px',
                     fontWeight: '600'
                   }} onClick={handleLogout}>Cerrar sesión</button>
@@ -1509,25 +1830,25 @@ function PreRegistroPresidente() {
               </div>
             ) : (
               /* ESPERANDO VALIDACIÓN */
-              <div className="fade-in" style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+              <div className="fade-in" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: '40px 20px',
                 textAlign: 'center',
                 minHeight: '400px'
               }}>
-                <div style={{ 
-                  width: '80px', 
-                  height: '80px', 
+                <div style={{
+                  width: '80px',
+                  height: '80px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '32px', 
-                  background: 'rgba(245, 158, 11, 0.1)', 
-                  color: 'var(--warning)', 
+                  fontSize: '32px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  color: 'var(--warning)',
                   marginBottom: '25px',
                   border: '2px solid rgba(245, 158, 11, 0.2)'
                 }}>
@@ -1537,9 +1858,9 @@ function PreRegistroPresidente() {
                 <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
                   Esperando Validación
                 </h1>
-                
+
                 <div style={{ maxWidth: '500px' }}>
-                  <div style={{ 
+                  <div style={{
                     display: 'inline-block',
                     background: 'rgba(245, 158, 11, 0.1)',
                     color: 'var(--warning)',
@@ -1553,10 +1874,10 @@ function PreRegistroPresidente() {
                     PAGO EN REVISIÓN
                   </div>
                   <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
-                    Hemos recibido tu comprobante de pago. Será validado en un plazo de 24 a 48 horas hábiles. 
+                    Hemos recibido tu comprobante de pago. Será validado en un plazo de 24 a 48 horas hábiles.
                     Una vez validado, podrás continuar con la carga de documentos necesarios para tu afiliación oficial.
                   </p>
-                  
+
                   <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
                     <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>📄 Documentos a preparar:</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -1620,9 +1941,9 @@ function PreRegistroPresidente() {
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Liga Destino</label>
-                  <select 
-                    value={liga} 
-                    onChange={(e) => setLiga(e.target.value)} 
+                  <select
+                    value={liga}
+                    onChange={(e) => setLiga(e.target.value)}
                     className="premium-input"
                     style={{ cursor: 'pointer' }}
                   >
@@ -1632,9 +1953,9 @@ function PreRegistroPresidente() {
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Tipo de afiliación *</label>
-                  <select 
-                    value={tipoAfiliacion} 
-                    onChange={(e) => setTipoAfiliacion(e.target.value)} 
+                  <select
+                    value={tipoAfiliacion}
+                    onChange={(e) => setTipoAfiliacion(e.target.value)}
                     className="premium-input"
                     style={{ cursor: 'pointer' }}
                   >

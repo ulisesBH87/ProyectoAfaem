@@ -5,6 +5,10 @@ backend/venv/
 backend/.venv/
 backend/env/
 backend/ENV/
+venv/
+.venv/
+env/
+ENV/
 
 # =========================
 # 🔹 Backend - Variables de entorno
@@ -23,6 +27,7 @@ backend/uploads/
 # =========================
 OCR/afaem-487315-9fef755ac1dc.json
 OCR/__pycache__
+OCR/__pycache__/
 # =========================
 # 🔹 Python
 # =========================
@@ -71,3 +76,21 @@ Front_Feo/afaem-front/node_modules
 .agent/
 .gemini/
 antigravity-skill-creator.md
+
+# Python global
+__pycache__/
+*.py[cod]
+*.pyo
+*$py.class
+
+.python-version
+.pytest_cache/
+.mypy_cache/
+
+.env
+.env.*
+
+# Logs y basura
+*.log
+.DS_Store
+Thumbs.db

@@ -37,3 +37,5 @@ from .rel_usuario_roles_modelo import RelUsuarioRoles
 
 from .catalogo_accion import CatalogoAccion
 from .auditoria import Auditoria
+
+from .catalogo_tipos_solicitud import CatalogoTiposSolicitud
