@@ -3,6 +3,7 @@ import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, 
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
+import Loader from '../../components/Loader';
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -639,6 +640,10 @@ export default function AdminPresidentes() {
   /* ══════════════════════════════════════════════════════════════
      RENDER
   ══════════════════════════════════════════════════════════════ */
+  if (cargando) {
+    return <Loader text="Cargando directorio de presidentes..." />;
+  }
+
   return (
     <div style={{ padding: 30 }}>
       <style>{`
@@ -1197,10 +1202,7 @@ export default function AdminPresidentes() {
 
         <div style={{ maxHeight: '350px', overflowY: 'auto', padding: '5px' }}>
           {loadingReasignacion ? (
-            <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div className="spinner-border text-primary" style={{ width: '2rem', height: '2rem' }}></div>
-              <p style={{ marginTop: '10px', color: '#64748b', fontSize: '14px' }}>Buscando candidatos...</p>
-            </div>
+            <Loader inline text="Buscando candidatos..." />
           ) : disponibles.filter(d => d.nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()) || d.Nombre?.toLowerCase().includes(searchDisponibles.toLowerCase())).length > 0 ? (
             disponibles
               .filter(d => d.nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()) || d.Nombre?.toLowerCase().includes(searchDisponibles.toLowerCase()))

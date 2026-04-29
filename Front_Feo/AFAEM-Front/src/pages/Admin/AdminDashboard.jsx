@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { getSolicitudes } from '../../services/solicitud';
 import { getPagosGenerales } from '../../services/admin';
-import Skeleton from '../../components/Common/Skeleton';
+import Loader from '../../components/Loader';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -76,11 +76,15 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoading(false); // Retraso artificial de 800ms eliminado
+        setLoading(false); 
       }
     };
     fetchData();
   }, []);
+
+  if (loading) {
+    return <Loader text="Cargando panel de control..." />;
+  }
 
   const StatCard = ({ icon, bg, color, label, val, ruta, badge }) => (
     <div
@@ -101,10 +105,7 @@ const AdminDashboard = () => {
       <h3 className="heading-outfit" style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>
         {label}
       </h3>
-      {loading
-        ? <Skeleton width="80px" height="32px" />
-        : <h2 className="data-fira" style={{ fontSize: '32px', fontWeight: '800', margin: 0 }}>{val}</h2>
-      }
+      <h2 className="data-fira" style={{ fontSize: '32px', fontWeight: '800', margin: 0 }}>{val}</h2>
       {ruta && <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>Clic para ver →</p>}
     </div>
   );
@@ -224,7 +225,7 @@ const AdminDashboard = () => {
           bg="rgba(139, 92, 246, 0.1)"
           color="#8b5cf6"
           label="Jugadores Activos"
-          val={loading ? '—' : (statsData.jugadoresActivos || 'N/D')}
+          val={statsData.jugadoresActivos || 'N/D'}
           ruta="/admin/jugadores"
         />
 

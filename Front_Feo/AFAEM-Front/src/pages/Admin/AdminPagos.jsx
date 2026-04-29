@@ -3,7 +3,7 @@ import DashboardTable from '../../components/DashboardTable';
 import { getPagosGenerales, updateEstatusPago } from '../../services/admin';
 import { API_BASE } from '../../config/config';
 import Swal from 'sweetalert2';
-import Skeleton from '../../components/Common/Skeleton';
+import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWallet, FaCheckCircle, FaTimesCircle, FaClock, FaFileInvoice } from 'react-icons/fa';
 
@@ -302,6 +302,10 @@ const AdminPagos = () => {
     }
   ];
 
+  if (loading) {
+    return <Loader text="Cargando historial de pagos..." />;
+  }
+
   return (
     <div className="fade-in">
       <div style={{ marginBottom: '32px' }}>
@@ -339,7 +343,7 @@ const AdminPagos = () => {
             </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{stat.label}</div>
-              {loading ? <Skeleton width="100px" height="20px" /> : <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{stat.value}</div>}
+              <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{stat.value}</div>
             </div>
           </div>
         ))}
