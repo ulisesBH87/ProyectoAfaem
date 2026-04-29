@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fa';
 import teamsService from '../../services/teams';
 import { getMisSolicitudes } from '../../services/solicitud';
-import Skeleton from '../../components/Common/Skeleton';
+import Loader from '../../components/Loader';
 
 export default function PresidenteEquipo() {
   const navigate = useNavigate();
@@ -81,10 +81,7 @@ export default function PresidenteEquipo() {
         <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
           {label}
         </div>
-        {loading
-          ? <Skeleton width="64px" height="28px" />
-          : <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>{value}</div>
-        }
+        <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>{value}</div>
       </div>
       {ruta && (
         <FaArrowRight style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '14px', flexShrink: 0 }} />
@@ -137,6 +134,10 @@ export default function PresidenteEquipo() {
     { label: 'Aprobadas', value: stats.solicitudesAprobadas, color: 'var(--secondary)', icon: <FaCheckCircle /> },
     { label: 'Rechazadas', value: stats.solicitudesRechazadas, color: 'var(--danger)', icon: <FaTimesCircle /> },
   ];
+
+  if (loading) {
+    return <Loader text="Cargando tu dashboard..." />;
+  }
 
   return (
     <div className="fade-in-up" style={{ padding: '4px 0 32px' }}>
@@ -233,10 +234,7 @@ export default function PresidenteEquipo() {
                 <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   {e.label}
                 </div>
-                {loading
-                  ? <div style={{ display: 'flex', justifyContent: 'center' }}><Skeleton width="40px" height="24px" /></div>
-                  : <div style={{ fontSize: '24px', fontWeight: '900', color: e.color }}>{e.value}</div>
-                }
+                <div style={{ fontSize: '24px', fontWeight: '900', color: e.color }}>{e.value}</div>
               </div>
             ))}
           </div>
