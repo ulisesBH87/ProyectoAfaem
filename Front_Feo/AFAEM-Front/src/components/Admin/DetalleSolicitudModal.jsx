@@ -292,7 +292,6 @@ export default function DetalleSolicitudModal({
               </div>
             )}
           </div>
-          </div>
         )
       }
     >
