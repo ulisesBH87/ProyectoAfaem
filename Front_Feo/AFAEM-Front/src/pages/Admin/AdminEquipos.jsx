@@ -6,6 +6,7 @@ import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable, FaFileArchive } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
+import Loader from '../../components/Loader';
 
 export default function AdminEquipos() {
   const navigate = useNavigate();
@@ -339,16 +340,7 @@ export default function AdminEquipos() {
 
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando directorio de equipos...</p>
-        </div>
-      </div>
-    );
+    return <Loader text="Cargando directorio de equipos..." />;
   }
 
   return (
@@ -578,7 +570,7 @@ export default function AdminEquipos() {
                         : equipoEdicion.PresidenteNombreCompleto}
                     </div>
                   </div>
-                  {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Cargando...</span>}
+                  {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Sincronizando...</span>}
                 </div>
 
                 <div style={{ padding: '16px 20px', background: 'white' }}>
@@ -591,7 +583,7 @@ export default function AdminEquipos() {
                   />
                   <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
                     {loadingExtras ? (
-                      <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Cargando presidentes...</div>
+                      <Loader inline text="Cargando presidentes..." />
                     ) : presidentes.filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase())).length === 0 ? (
                       <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No se encontraron presidentes</div>
                     ) : (
@@ -659,7 +651,7 @@ export default function AdminEquipos() {
                     {isOpen && (
                       <div style={{ padding: '12px 16px', background: 'white', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {loadingExtras ? (
-                          <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px' }}>Cargando...</div>
+                          <Loader inline text="Cargando opciones..." />
                         ) : items.length === 0 ? (
                           <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px' }}>Sin opciones disponibles</div>
                         ) : items.map(item => (

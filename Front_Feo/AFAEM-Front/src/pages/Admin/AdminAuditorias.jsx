@@ -3,7 +3,7 @@ import DashboardTable from '../../components/DashboardTable';
 import { getAuditorias } from '../../services/admin';
 import Modal from '../../components/partials/Forms/Modal';
 import { FaHistory, FaEye, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaSearch } from 'react-icons/fa';
-import Skeleton from '../../components/Common/Skeleton';
+import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 
 const AdminAuditorias = () => {
@@ -171,6 +171,10 @@ const AdminAuditorias = () => {
     }
   ];
 
+  if (loading) {
+    return <Loader text="Cargando registros de auditoría..." />;
+  }
+
   return (
     <div className="fade-in">
       {/* HEADER SECTION */}
@@ -198,7 +202,7 @@ const AdminAuditorias = () => {
           </div>
           <div>
             <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Registros</div>
-            {loading ? <Skeleton width="100px" height="20px" /> : <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{totalItems}</div>}
+            <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{totalItems}</div>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import '../styles/dashboard.css';
+import Loader from './Loader';
 
 const DashboardTable = ({ 
   columns = [], 
@@ -15,8 +16,8 @@ const DashboardTable = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="table-container">
-        <div className="skeleton" style={{ height: '300px' }}></div>
+      <div className="table-container" style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader inline text="Cargando información de la tabla..." />
       </div>
     );
   }

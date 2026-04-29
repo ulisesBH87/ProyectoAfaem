@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, BotonPrimario, BotonSecundario, Insignia } from '../partials';
 import { FaUser, FaFileAlt, FaEye, FaCheck, FaTimes, FaInfoCircle, FaChevronRight } from 'react-icons/fa';
+import Loader from '../Loader';
 
 /**
  * CENTRO DE REVISIÓN DE DOCUMENTOS AFAEM
@@ -116,7 +117,12 @@ export default function DetalleSolicitudModal({
         </div>
       }
       hijos={
-        <div style={{ display: 'flex', height: '70vh', margin: '-24px' }}>
+        cargando ? (
+          <div style={{ height: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            <Loader inline text="Cargando expedientes y documentos..." />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', height: '70vh', margin: '-24px' }}>
           {/* SIDEBAR IZQUIERDA: LISTA DE JUGADORES Y DOCS */}
           <div style={{
             width: '380px',
@@ -286,7 +292,8 @@ export default function DetalleSolicitudModal({
               </div>
             )}
           </div>
-        </div>
+          </div>
+        )
       }
     >
       {/* OVERLAY DE MOTIVO DE RECHAZO */}
