@@ -75,7 +75,8 @@ export const getPagosGenerales = async (forceRefresh = false) => {
  * ACTUALIZA EL ESTATUS DE UNA ORDEN DE PAGO
  */
 export const updateEstatusPago = async (ordenPagoId, estatus) => {
-  // estatus: 1 = Pendiente, 2 = Rechazado, 3 = Aprobado
+  
+  // 3 = APROBADO. 4 = RECHAZADO
   const response = await api.post('/ordenes-pago/estatus-pago', null, {
     params: { orden_pago_id: ordenPagoId, estatus: estatus }
   });

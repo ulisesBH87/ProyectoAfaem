@@ -17,8 +17,10 @@ from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
+    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales
     EquipoTemporal, Usuario, AntecedentesInternacionales, OrdenPago
 )
+from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
 
@@ -49,7 +51,12 @@ async def obtener_slots(equipo_temporal_id: int,db: Session = Depends(get_db)):
     slots = obtener_equipo_temporal_servicio(db, equipo_temporal_id)
     return slots
 
+@router.get("/hay-slots")
+async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
+    #Servicio de busqueda de slots
+    slots = equipo_servicio.hay_slots(db, equipo_id)
 
+    return slots
 
 # == REGISTROS ==
 @router.get("/catalogos-registro", response_model=CatalogosRegistroResponse)
@@ -80,7 +87,6 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
 async def crear_equipo_completo(request: Request, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
         form_data = await request.form()
-        print(type(form_data.get("team_logo")))
         result = await crear_equipo_completo_servicio(form_data=form_data, db=db, usuario=usuario)
 
         return result
@@ -345,7 +351,13 @@ async def registrar_jugador(
 @router.get("/user-real-teams", response_model=List[EquipoResponse])
 def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
-        # 1. Base query with joins
+        # 1. Subquery para contar slots comprados por equipo
+        slots_subquery = db.query(
+            EquipoTemporal.EquipoId.label("EquipoId"),
+            func.count(EquipoTemporalJugador.EquipoTemporalJugadorId).label("SlotsComprados")
+        ).join(EquipoTemporalJugador, EquipoTemporal.EquipoTemporalId == EquipoTemporalJugador.EquipoTemporalId).group_by(EquipoTemporal.EquipoId).subquery()
+
+        # 2. Base query with joins
         query = db.query(
             Equipos.EquipoId,
             Equipos.NombreEquipo,
@@ -357,7 +369,8 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             CatalogoRamas.Nombre.label("Rama"),
             EquiposJugando.CantidadJugadores.label("NumeroJugadores"),
             Equipos.Estatus,
-            EquipoTemporal.SolicitudId
+            EquipoTemporal.SolicitudId,
+            func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados")
         ).join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
          .join(CatalogoCategorias, EquiposJugando.CategoriaId == CatalogoCategorias.CategoriaId)\
          .join(Ligas, EquiposJugando.LigaId == Ligas.LigaId)\
@@ -365,9 +378,10 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
          .join(CatalogoRamas, EquiposJugando.RamaId == CatalogoRamas.RamaId)\
          .join(PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
          .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
-         .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)
+         .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)\
+         .outerjoin(slots_subquery, Equipos.EquipoId == slots_subquery.c.EquipoId)
 
-        # 2. Add filter if not ADMINISTRADOR (RolId == 1)
+        # 3. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
         
         if rol_id != 1:
@@ -390,7 +404,8 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
                "NumeroJugadores": r.NumeroJugadores,
                "Estatus": bool(r.Estatus),
                "RutaLogo": r.RutaLogo,
-               "SolicitudId": r.SolicitudId
+               "SolicitudId": r.SolicitudId,
+               "SlotsComprados": int(r.SlotsComprados or 0)
            } for r in resultados
         ]
     except Exception as e:

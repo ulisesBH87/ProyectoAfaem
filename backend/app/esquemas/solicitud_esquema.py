@@ -117,6 +117,9 @@ class CrearPersonaSolicitud(BaseModel):
     PersonaId: int
     Documentos: List[CrearDocumentoSolicitud]
 
+class SolicitudEquipo(BaseModel):
+    TipoAfiliacionId: int
+
 class CrearSolicitud(BaseModel):
     TipoAfiliacionId: int
     Persona: List[CrearPersonaSolicitud]
