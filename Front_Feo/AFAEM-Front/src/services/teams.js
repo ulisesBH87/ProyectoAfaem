@@ -438,7 +438,7 @@ export const checkTeamSlots = async (equipoId, navigate) => {
     });
     
     // Si la respuesta indica que hay slots disponibles
-    if (response.data === true || (typeof response.data === 'object' && response.data.slots_disponibles > 0)) {
+    if(response.data.haySlots) {
       // Hay slots disponibles, ir directamente al formulario de jugador
       navigate(`/presidente-equipo/configurar-equipo?equipoId=${equipoId}&agregarJugador=true`);
     } else {

@@ -82,16 +82,20 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
 
 
 def hay_slots(db, equipo_id):
-    disponibilidad = equipo_repositorio.hay_slots(db, equipo_id)
 
-    if not disponibilidad:
-        slots = False
-    
-    else:
-        slots = True
-        
-    return slots
+    data = equipo_repositorio.hay_slots(db, equipo_id)
 
+    if not data:
+        return {
+            "hay_slots": False,
+            "slots_disponibles": 0,
+            "seguros_disponibles": []
+        }
+
+    return {
+        "hay_slots": data["slots_disponibles"] > 0,
+        **data
+    }
 
 async def crear_equipo_completo_servicio(form_data, db, usuario):
     try:

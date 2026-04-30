@@ -20,7 +20,7 @@ from app.modelos.documentos_entregados_modelo import DocumentosEntregados
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.servicios.documentos_servicio import subir_documento_servicio2
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
@@ -71,13 +71,38 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso):
     return equipo
 
 def hay_slots(db, equipo_id):
-    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoId and EquipoTemporal.Activo == True)
+
+    equipo_temporal = (
+        db.query(EquipoTemporal)
+        .options(selectinload(EquipoTemporal.EquipoTemporalJugadorRelacion))
+        .filter(
+            EquipoTemporal.EquipoId == equipo_id,
+            EquipoTemporal.Activo == True
+        )
+        .first()
+    )
 
     if not equipo_temporal:
-        return
+        return None
 
-    return equipo_temporal
+    slots = equipo_temporal.EquipoTemporalJugadorRelacion
 
+    # slots disponibles
+    disponibles = sum(1 for s in slots if s.Completo == 0)
+
+    # seguros disponibles (solo slots NO completos)
+    seguros = {}
+    for s in slots:
+        if s.Completo == 0 and s.SeguroId:
+            seguros[s.SeguroId] = seguros.get(s.SeguroId, 0) + 1
+
+    return {
+        "slots_disponibles": disponibles,
+        "seguros_disponibles": [
+            {"SeguroId": k, "Cantidad": v}
+            for k, v in seguros.items()
+        ]
+    }
 
 def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
     return db.query(EquipoTemporal).filter(
