@@ -136,8 +136,15 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                 )
         
             seguros_request = Counter()
+
+
+
             for p in players_info:
-                seguro_id = p.get("seguro_id")
+                try:
+                    seguro_id = int(p.get("seguro_id"))
+                except (TypeError, ValueError):
+                    raise HTTPException(400, "Seguro inválido")                
+                
                 if not seguro_id:
                     raise HTTPException(400, "Todos los jugadores deben tener seguro seleccionado")
                 seguros_request[seguro_id] += 1

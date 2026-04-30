@@ -401,7 +401,10 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
         AntecedentesId=antecedentes_id
     )
 
-    seguro_id = p_data.get("seguro_id")
+    try:
+        seguro_id = int(p_data.get("seguro_id"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Seguro inválido")
     
     if not seguro_id:
         raise HTTPException(400, "Debe seleccionar un seguro")
