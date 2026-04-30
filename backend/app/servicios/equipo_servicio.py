@@ -6,6 +6,7 @@ from app.repositorios import documentos_repositorio
 from app.servicios import documentos_servicio
 from app.modelos.catalogo_seguros import Seguro
 from app.utilidades.file_handler import guardar_logo, parse_form_data
+from app.enums.estatus_pago_enum import EstatusValidacionPago
 
 def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
     return equipo_repositorio.obtener_equipos_temporales_por_usuario_repo(db, usuario_id)
@@ -95,17 +96,35 @@ def hay_slots(db, equipo_id):
 async def crear_equipo_completo_servicio(form_data, db, usuario):
     try:
         team_info, players_info = parse_form_data(form_data)
+        equipo_temporal_id = team_info.get("equipo_temporal_id") or team_info.get("equipoTemporalId")
 
         presidente_id, presidente, rol_id = equipo_repositorio.obtener_presidente(
             db, usuario, team_info
         )
 
-        pago_equipo = None
-        if rol_id != 1:
-            pago_equipo = equipo_repositorio.obtener_equipo_temporal_pagado_activo(
-                db, usuario.UsuarioId
-            )
+        pago_equipo = None #Si no es afiliación inicial de presidente
+        if rol_id != 1: #Se obtiene el equipo temporal activo
+            if equipo_temporal_id:
+                try:
+                    equipo_temporal_id_int = int(equipo_temporal_id)
+                except (TypeError, ValueError):
+                    raise HTTPException(status_code=400, detail="equipo_temporal_id inválido")
+                
+            pago_equipo = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
 
+            if (not pago_equipo) or (pago_equipo.UsuarioId != usuario.UsuarioId):
+                raise HTTPException(status_code=403, detail="EquipoTemporal no válido para este usuario")
+
+            if (not pago_equipo.Activo) or (pago_equipo.EquipoId is not None):
+                raise HTTPException(status_code=403,detail="Equipo temporal no está disponible para configuración")
+
+            if (not pago_equipo.OrdenPagoRelacion) or (int(pago_equipo.OrdenPagoRelacion.EstatusPagoId) != int(EstatusValidacionPago.ACTIVO.value)):
+                raise HTTPException(status_code=403, detail="El pago no está aprobado para configurar un nuevo equipo")
+            else:
+                pago_equipo = equipo_repositorio.obtener_equipo_temporal_pagado_activo(
+                    db, usuario.UsuarioId
+                )
+            
             if not pago_equipo:
                 raise HTTPException(
                     status_code=403,
@@ -122,6 +141,11 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             db, team_info["nombre_equipo"]
         )
 
+        if pago_equipo:
+            #vincular el equipo creado al equipo temporal
+            pago_equipo.EquipoId = equipo.EquipoId
+            db.flush()
+            
         equipo_repositorio.crear_equipo_jugando(
             db, equipo, team_info, presidente_id, len(players_info)
         )
@@ -129,15 +153,16 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         await guardar_logo(form_data, equipo, db)
 
         # Crear solicitud administrativa si el usuario es admin (rol_id == 1)
-        solicitud_id = None
-        if rol_id == 1:  # ADMINISTRADOR
-            solicitud_id = equipo_repositorio.crear_solicitud_administrativa(db, usuario.UsuarioId)
-        else:  # PRESIDENTE
-            solicitud_id = equipo_repositorio.crear_solicitud_presidente(
-            db, usuario.UsuarioId
-        )
+        #solicitud_id = None
+        #if rol_id == 1:  # ADMINISTRADOR
+         #   solicitud_id = equipo_repositorio.crear_solicitud_administrativa(db, usuario.UsuarioId)
+        #else:  # PRESIDENTE
+         #   solicitud_id = equipo_repositorio.crear_solicitud_presidente(
+          #  db, usuario.UsuarioId
+        #)
 
-        
+        solicitud_id = pago_equipo.SolicitudId
+
         for index, player in enumerate(players_info):
             await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
 

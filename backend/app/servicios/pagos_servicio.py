@@ -252,6 +252,7 @@ class PagosServicio:
 
             return {
                 "estado": EstadoEquipo.LISTO_PARA_CREAR_EQUIPO,
+                "equipo_temporal_id": equipo_temporal.EquipoTemporalId,
                 "orden_pago_id": orden.OrdenPagoId,
                 "total": float(orden.TotalPagar or 0),
                 "cantidad_jugadores": cantidad_jugadores,

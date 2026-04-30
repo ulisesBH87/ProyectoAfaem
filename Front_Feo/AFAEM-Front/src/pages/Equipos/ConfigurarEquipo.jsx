@@ -36,6 +36,7 @@ export default function ConfigurarEquipo() {
     loading: !isAdmin,
     aprobado: isAdmin,
     estadoEquipo: null,
+    equipoTemporalId: preRegistro.equipo_temporal_id || null,
     estado: null,
     ordenId: null,
     total: 0,
@@ -294,10 +295,17 @@ export default function ConfigurarEquipo() {
         const total = Number(data.total || 0);
 
         if (estadoEquipo === ESTADO_EQUIPO.SIN_ORDEN || !estadoEquipo) {
+          try {
+            const nextPreRegistro = { ...(preRegistro || {}) };
+            delete nextPreRegistro.equipo_temporal_id;
+            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+          } catch {}
+
           setPagoEquipo({
             loading: false,
             aprobado: false,
             estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+            equipoTemporalId: null,
             estado: null,
             ordenId: null,
             total: 0,
@@ -308,6 +316,14 @@ export default function ConfigurarEquipo() {
         }
 
         if (estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
+          const equipoTemporalId = data.equipo_temporal_id || data.equipoTemporalId || null;
+          if (equipoTemporalId) {
+            try {
+              const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
+              localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+            } catch {}
+          }
+
           const seguros = {};
           (data.seguros || []).forEach(seguro => {
             const id = String(seguro.SeguroId || seguro.seguro_id);
@@ -326,6 +342,7 @@ export default function ConfigurarEquipo() {
             loading: false,
             aprobado: true,
             estadoEquipo: ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO,
+            equipoTemporalId,
             estado: ESTATUS_PAGO.APROBADO,
             ordenId,
             total: Number(data.total || 0),
@@ -341,6 +358,7 @@ export default function ConfigurarEquipo() {
             loading: false,
             aprobado: false,
             estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
+            equipoTemporalId: prev.equipoTemporalId || null,
             estado: ESTATUS_PAGO.NO_ENVIADO,
             ordenId,
             total,
@@ -356,6 +374,7 @@ export default function ConfigurarEquipo() {
             loading: false,
             aprobado: false,
             estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
+            equipoTemporalId: prev.equipoTemporalId || null,
             estado: ESTATUS_PAGO.EN_ESPERA,
             ordenId,
             total,
@@ -369,6 +388,7 @@ export default function ConfigurarEquipo() {
           loading: false,
           aprobado: false,
           estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+          equipoTemporalId: null,
           estado: null,
           ordenId: null,
           total: 0,
@@ -1121,7 +1141,7 @@ export default function ConfigurarEquipo() {
           </div>
           <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Pago en revision</h2>
           <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
-            Ya recibimos tu comprobante de la orden #{pagoEquipo.ordenId}. Un administrador debe aprobarlo antes de que puedas configurar este equipo.
+            Ya recibimos tu comprobante de la orden #{pagoEquipo.ordenId}. Un administrador debe aprobarlo antes de que puedas configurar tu equipo.
           </p>
           <button onClick={() => navigate('/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
             Volver al panel
@@ -2344,6 +2364,7 @@ export default function ConfigurarEquipo() {
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
                             presidente_id: isAdmin ? (selectedPresidentId || null) : null,
+                            equipo_temporal_id: !isAdmin ? (pagoEquipo.equipoTemporalId || null) : null,
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
@@ -2351,6 +2372,12 @@ export default function ConfigurarEquipo() {
                             players: players,
                             teamLogo: modalData.teamLogo
                           });
+
+                          try {
+                            const nextPreRegistro = { ...(preRegistro || {}) };
+                            delete nextPreRegistro.equipo_temporal_id;
+                            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+                          } catch {}
 
                           setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
                           setShowSuccessModal(true);

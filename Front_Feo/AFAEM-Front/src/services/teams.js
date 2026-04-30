@@ -343,6 +343,7 @@ export const createTeamCompleto = async (data) => {
     // Separamos metadatos de archivos
     const teamMetadata = {
       nombre_equipo: data.teamName,
+      equipo_temporal_id: data.equipo_temporal_id || data.equipoTemporalId || null,
       liga_id: data.liga_id,
       modalidad_id: data.modalidad_id,
       categoria_id: data.categoria_id,
