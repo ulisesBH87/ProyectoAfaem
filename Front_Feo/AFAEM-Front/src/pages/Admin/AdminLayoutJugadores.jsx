@@ -34,6 +34,16 @@ export default function AdminLayoutJugadores() {
     fetchData();
   }, []);
 
+  // Sincronizar filtro con la URL
+  useEffect(() => {
+    const q = searchParams.get('equipo');
+    if (q) {
+      setFiltroEquipo(q);
+    } else {
+      setFiltroEquipo('todos');
+    }
+  }, [searchParams]);
+
   const handleCopy = (text, cellId) => {
     if (!text || text === '—') return;
     navigator.clipboard.writeText(String(text)).then(() => {
