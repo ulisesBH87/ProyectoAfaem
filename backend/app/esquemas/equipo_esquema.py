@@ -24,6 +24,7 @@ class EquipoResponse(BaseModel):
     Estatus: bool
     RutaLogo: Optional[str] = None
     SolicitudId: Optional[int] = None
+    SlotsComprados: Optional[int] = 0
 
     class Config:
         from_attributes = True

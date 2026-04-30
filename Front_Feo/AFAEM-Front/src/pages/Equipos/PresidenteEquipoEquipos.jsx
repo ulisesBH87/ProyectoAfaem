@@ -13,7 +13,8 @@ import {
   FaCheckCircle, 
   FaExclamationCircle, 
   FaTrophy, 
-  FaPlus 
+  FaPlus,
+  FaUserPlus 
 } from 'react-icons/fa';
 
 export default function PresidenteEquipoEquipos() {
@@ -132,10 +133,12 @@ export default function PresidenteEquipoEquipos() {
     { 
       key: 'NumeroJugadores', 
       label: 'Plantilla',
-      render: (val) => (
+      render: (val, row) => (
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--bg-main)', padding: '5px 12px', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
           <FaUsers size={14} style={{ color: 'var(--primary)' }} />
-          <span style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '13px' }}>{val || 0}</span>
+          <span style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '13px' }}>
+            {val || 0}/{row.SlotsComprados || 0}
+          </span>
         </div>
       )
     },
@@ -153,6 +156,35 @@ export default function PresidenteEquipoEquipos() {
           {status ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
           {status ? 'ACTIVO' : 'INACTIVO'}
         </span>
+      )
+    },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (_, row) => (
+        <button
+          onClick={async () => {
+            try {
+              const slots = await teamsService.checkTeamSlots(row.EquipoId, navigate);
+              console.log(slots);
+            } catch (err) {
+              console.error('Error al verificar slots:', err);
+            }
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '18px',
+            color: 'var(--primary)',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <FaUserPlus />
+        </button>
       )
     }
   ];
@@ -289,10 +321,6 @@ export default function PresidenteEquipoEquipos() {
           currentPage={currentPage} 
           onPageChange={setCurrentPage} 
           emptyMessage="No se encontraron equipos en la búsqueda." 
-          onRowClick={(team) => {
-            const id = team.EquipoId || team.id;
-            if (id) navigate(`/presidente-equipo/admin-equipo/${id}`);
-          }}
         />
       </div>
     </div>
