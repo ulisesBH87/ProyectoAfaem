@@ -3,6 +3,7 @@ import { getJugadoresDirectorio, getEquiposDirectorio } from '../../services/adm
 import { FaSyncAlt, FaCopy, FaCheck, FaFilter } from 'react-icons/fa';
 import { useSearchParams } from 'react-router-dom';
 import SearchBar from '../../components/Common/SearchBar';
+import Loader from '../../components/Loader';
 
 export default function AdminLayoutJugadores() {
   const [jugadores, setJugadores] = useState([]);
@@ -32,6 +33,16 @@ export default function AdminLayoutJugadores() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Sincronizar filtro con la URL
+  useEffect(() => {
+    const q = searchParams.get('equipo');
+    if (q) {
+      setFiltroEquipo(q);
+    } else {
+      setFiltroEquipo('todos');
+    }
+  }, [searchParams]);
 
   const handleCopy = (text, cellId) => {
     if (!text || text === '—') return;
@@ -89,6 +100,10 @@ export default function AdminLayoutJugadores() {
     );
   };
 
+  if (loading) {
+    return <Loader text="Cargando layout de jugadores..." />;
+  }
+
   return (
     <div className="dashboard-content">
       <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -144,52 +159,43 @@ export default function AdminLayoutJugadores() {
 
       {/* TABLA */}
       <div className="card" style={{ padding: 0, overflowX: 'auto', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-        {loading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Cargando...</span>
-            </div>
-            <p style={{ marginTop: '16px' }}>Cargando jugadores...</p>
-          </div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                {['#', 'Nombre completo', 'CURP', 'Sexo', 'Equipo', 'Liga', 'Email', 'Fecha Nac.', 'NUI'].map(col => (
-                  <th key={col} style={{ padding: '12px 14px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap' }}>
-                    {col}
-                  </th>
-                ))}
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+          <thead>
+            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+              {['#', 'Nombre completo', 'CURP', 'Sexo', 'Equipo', 'Liga', 'Email', 'Fecha Nac.', 'NUI'].map(col => (
+                <th key={col} style={{ padding: '12px 14px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredJugadores.length === 0 ? (
+              <tr>
+                <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                  No se encontraron jugadores con los filtros actuales.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredJugadores.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-                    No se encontraron jugadores con los filtros actuales.
-                  </td>
+            ) : (
+              filteredJugadores.map((j, idx) => (
+                <tr key={j.MiembroEquipoId} style={{ borderBottom: '1px solid #f1f5f9' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <CeldaCopia value={String(j.MiembroEquipoId)} id={`id-${idx}`} />
+                  <CeldaCopia value={j.NombreCompleto} id={`nombre-${idx}`} />
+                  <CeldaCopia value={j.CURP} id={`curp-${idx}`} />
+                  <CeldaCopia value={j.Sexo} id={`sexo-${idx}`} />
+                  <CeldaCopia value={j.EquipoNombre} id={`equipo-${idx}`} />
+                  <CeldaCopia value={j.Liga} id={`liga-${idx}`} />
+                  <CeldaCopia value={j.Email} id={`email-${idx}`} />
+                  <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX', {timeZone:'UTC'}) : null} id={`fnac-${idx}`} />
+                  <CeldaCopia value={j.NUI} id={`nui-${idx}`} />
                 </tr>
-              ) : (
-                filteredJugadores.map((j, idx) => (
-                  <tr key={j.MiembroEquipoId} style={{ borderBottom: '1px solid #f1f5f9' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <CeldaCopia value={String(j.MiembroEquipoId)} id={`id-${idx}`} />
-                    <CeldaCopia value={j.NombreCompleto} id={`nombre-${idx}`} />
-                    <CeldaCopia value={j.CURP} id={`curp-${idx}`} />
-                    <CeldaCopia value={j.Sexo} id={`sexo-${idx}`} />
-                    <CeldaCopia value={j.EquipoNombre} id={`equipo-${idx}`} />
-                    <CeldaCopia value={j.Liga} id={`liga-${idx}`} />
-                    <CeldaCopia value={j.Email} id={`email-${idx}`} />
-                    <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX', {timeZone:'UTC'}) : null} id={`fnac-${idx}`} />
-                    <CeldaCopia value={j.NUI} id={`nui-${idx}`} />
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       <p style={{ marginTop: '16px', fontSize: '12px', color: '#cbd5e1', textAlign: 'center' }}>

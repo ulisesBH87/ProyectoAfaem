@@ -9,15 +9,15 @@ import sys
 import json
 import os
 from datetime import datetime
-from app.core.seguridad import obtener_usuario_actual
+from app.core.seguridad import obtener_usuario_actual, generar_salt, generar_hash
 
 from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
-from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, JugadorUpdate
+from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, EquipoUpdateCompleto, JugadorUpdate, PresidenteAdminCreate
 from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
-    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales
+    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales, Usuario, OrdenPago
 )
 from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
@@ -463,29 +463,116 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
         raise HTTPException(status_code=403, detail="Acceso denegado: No tienes permisos para acceder a este recurso")
     
     try:
-        # Buscamos presidentes que tengan una persona asociada
+        from app.modelos.usuario_modelo import Usuario
+        from app.modelos.catalogo_estatus_presidente import EstatusPresidente
+
         query = db.query(
             PresidenteEquipo.PresidenteEquipoId,
             Personas.Nombre,
             Personas.PrimerApellido,
             Personas.SegundoApellido,
             Personas.CURP,
-            PresidenteEquipo.EstatusId
-        ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)
-        
+            PresidenteEquipo.EstatusId,
+            EstatusPresidente.Nombre.label('EstatusNombre'),
+            Usuario.Correo.label('CorreoLogin')
+        ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
+         .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
+         .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
+
         resultados = query.all()
-        
+
         return [
             {
-                "id": r.PresidenteEquipoId,
-                "nombre": f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip(),
-                "curp": r.CURP,
-                "estatus": r.EstatusId
+                "id":             r.PresidenteEquipoId,
+                "nombre":         f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip(),
+                "primerNombre":   r.Nombre          or '',
+                "primerApellido": r.PrimerApellido   or '',
+                "segundoApellido":r.SegundoApellido  or '',
+                "curp":           r.CURP,
+                "estatus":        r.EstatusId,
+                "estatusNombre":  r.EstatusNombre    or '',
+                "correo":         r.CorreoLogin      or ''
             } for r in resultados
         ]
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error al obtener directorio de presidentes: {str(e)}")
+
+
+@router.patch("/update-presidente/{presidente_id}")
+def update_presidente(presidente_id: int, data: dict, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+
+    try:
+        from app.modelos.usuario_modelo import Usuario
+        from app.modelos.catalogo_estatus_presidente import EstatusPresidente
+
+        presidente = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PresidenteEquipoId == presidente_id
+        ).first()
+        if not presidente:
+            raise HTTPException(status_code=404, detail="Presidente no encontrado")
+
+        persona = db.query(Personas).filter(Personas.PersonaId == presidente.PersonaId).first()
+        if not persona:
+            raise HTTPException(status_code=404, detail="Persona asociada no encontrada")
+
+        # --- Actualizar Personas ---
+        if 'primerNombre' in data and data['primerNombre']:
+            persona.Nombre = data['primerNombre'].strip()
+
+        if 'primerApellido' in data and data['primerApellido']:
+            persona.PrimerApellido = data['primerApellido'].strip()
+
+        if 'segundoApellido' in data:
+            persona.SegundoApellido = data['segundoApellido'].strip() or None
+
+        if 'curp' in data and data['curp'] is not None:
+            persona.CURP = data['curp'].strip() or None
+
+        if 'telefono' in data and data['telefono'] is not None:
+            persona.NumeroTelefono = data['telefono'].strip() or None
+
+
+        # --- Actualizar Usuarios (correo de login) ---
+        if 'correo' in data and data['correo']:
+            usuario_db = db.query(Usuario).filter(Usuario.PersonaId == persona.PersonaId).first()
+            if usuario_db:
+                correo_nuevo = data['correo'].strip()
+                # Verificar que el correo no esté en uso por otro usuario
+                duplicado = db.query(Usuario).filter(
+                    Usuario.Correo == correo_nuevo,
+                    Usuario.UsuarioId != usuario_db.UsuarioId
+                ).first()
+                if duplicado:
+                    raise HTTPException(status_code=400, detail="El correo ya está registrado por otro usuario")
+                usuario_db.Correo = correo_nuevo
+
+        # --- Actualizar EstatusId en PresidentesDeEquipo ---
+        if 'estatusId' in data and data['estatusId'] is not None:
+            estatus_id = int(data['estatusId'])
+            estatus_valido = db.query(EstatusPresidente).filter(
+                EstatusPresidente.EstatusPresidenteId == estatus_id
+            ).first()
+            if not estatus_valido:
+                raise HTTPException(status_code=400, detail=f"EstatusId {estatus_id} no válido")
+            presidente.EstatusId = estatus_id
+
+        db.commit()
+        return {"message": "Presidente actualizado correctamente", "id": presidente_id}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al actualizar presidente: {str(e)}")
+
+
+
 
 @router.get("/directorio-equipos", response_model=List[DirectorioEquipoResponse])
 def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -574,17 +661,38 @@ def exportar_documentos_equipo(equipo_id: int, db:Session = Depends(get_db), usu
 
 # == ACTUALIZACIÓN DE EQUIPO Y JUGADOR == 
 @router.patch("/update-equipo/{equipo_id}")
-def update_equipo(equipo_id: int, equipo_data: EquipoUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+def update_equipo(equipo_id: int, equipo_data: EquipoUpdateCompleto, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
-    
+
+    # Validar que el nuevo presidente exista si se proporciona
+    if equipo_data.PresidenteEquipoId is not None:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        presidente = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PresidenteEquipoId == equipo_data.PresidenteEquipoId
+        ).first()
+        if not presidente:
+            raise HTTPException(status_code=404, detail="Presidente no encontrado con el ID proporcionado")
+
     try:
         from app.repositorios.equipo_repositorio import actualizar_equipo_repo
-        equipo = actualizar_equipo_repo(db, equipo_id, equipo_data.NombreEquipo, equipo_data.Estatus)
+        equipo = actualizar_equipo_repo(
+            db,
+            equipo_id,
+            equipo_data.NombreEquipo,
+            equipo_data.Estatus,
+            presidente_equipo_id=equipo_data.PresidenteEquipoId,
+            liga_id=equipo_data.LigaId,
+            modalidad_id=equipo_data.ModalidadId,
+            categoria_id=equipo_data.CategoriaId,
+            rama_id=equipo_data.RamaId
+        )
         if not equipo:
             raise HTTPException(status_code=404, detail="Equipo no encontrado")
         return {"mensaje": "Equipo actualizado correctamente", "equipo_id": equipo.EquipoId}
+    except HTTPException:
+        raise
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
@@ -610,5 +718,100 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
             raise HTTPException(status_code=404, detail="Jugador no encontrado")
         return {"mensaje": "Jugador actualizado correctamente", "miembro_equipo_id": miembro.MiembroEquipoId}
     except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.post("/registrar-presidente-admin")
+def registrar_presidente_admin(
+    data: PresidenteAdminCreate,
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        # Check if email exists
+        usuario_existente = db.query(Usuario).filter(Usuario.Correo == data.correo).first()
+        if usuario_existente:
+            raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+        # Descomentar para permitir validar curp y no permitir dos presidentes con la misma curp
+        # persona_existente = db.query(Personas).filter(Personas.CURP == data.curp).first()
+        # if persona_existente:
+        #      raise HTTPException(status_code=400, detail="El CURP ya está registrado.")
+
+        # Create Persona
+        nueva_persona = Personas(
+            Nombre=data.nombre,
+            PrimerApellido="",
+            CURP=data.curp,
+            NumeroTelefono=data.telefono
+        )
+        db.add(nueva_persona)
+        db.flush()
+        
+        # Hash password "Hola1234?"
+        salt = generar_salt()
+        hash_pass = generar_hash(salt, "Hola1234?")
+        
+        # Create Usuario
+        nuevo_usuario = Usuario(
+            PersonaId=nueva_persona.PersonaId,
+            Correo=data.correo,
+            Contrasena=hash_pass,
+            Salt=salt,
+            RolId=3, # Presidente
+            Estatus=True
+        )
+        db.add(nuevo_usuario)
+        db.flush()
+        
+        # Create PresidenteEquipo
+        nuevo_presidente = PresidenteEquipo(
+            PersonaId=nueva_persona.PersonaId,
+            EstatusId=7 # Activo
+        )
+        db.add(nuevo_presidente)
+        db.flush()
+        
+        # Create OrdenPago
+        nueva_orden = OrdenPago(
+            UsuarioId=nuevo_usuario.UsuarioId,
+            EstatusPagoId=3, # Aprobado
+            FechaEnvio=datetime.now(),
+            FechaDePago=datetime.now(),
+            TotalPagar=0 # Opcional: calcular monto
+        )
+        db.add(nueva_orden)
+        db.flush()
+        
+        # Create EquipoTemporal
+        nuevo_equipo_temporal = EquipoTemporal(
+            UsuarioId=nuevo_usuario.UsuarioId,
+            CantidadJugadoresPagados=data.numPersonas,
+            Activo=True,
+            OrdenPagoId=nueva_orden.OrdenPagoId,
+            TipoProcesoId=1 # asumiendo que 1 es el tipo de proceso general
+        )
+        db.add(nuevo_equipo_temporal)
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "mensaje": "Presidente creado correctamente",
+            "presidente": {
+                "nombre": nueva_persona.Nombre,
+                "correo": nuevo_usuario.Correo,
+                "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados
+            }
+        }
+        
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

@@ -91,6 +91,8 @@ def hay_slots(db, equipo_id):
     if not data:
         return {
             "hay_slots": False,
+            "equipo_temporal_activo": False,
+            "equipo_temporal_id": None,
             "slots_disponibles": 0,
             "seguros_disponibles": []
         }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
-import Skeleton from '../../components/Common/Skeleton';
+import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 import { 
   FaShieldAlt, 
@@ -165,8 +165,13 @@ export default function PresidenteEquipoEquipos() {
         <button
           onClick={async () => {
             try {
-              const slots = await teamsService.checkTeamSlots(row.EquipoId, navigate);
-              console.log(slots);
+              const slots = await teamsService.checkTeamSlots(row.EquipoId);
+
+              if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
+                navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&agregarJugador=true`);
+              } else {
+                navigate(`/presidente-equipo/configurar-equipo?equipoId=${row.EquipoId}&agregarJugador=true&requirePago=true`);
+              }
             } catch (err) {
               console.error('Error al verificar slots:', err);
             }
@@ -188,6 +193,10 @@ export default function PresidenteEquipoEquipos() {
       )
     }
   ];
+
+  if (loading) {
+    return <Loader text="Cargando tus equipos..." />;
+  }
 
   return (
     <div className="fade-in">
@@ -240,7 +249,7 @@ export default function PresidenteEquipoEquipos() {
             </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{stat.label}</div>
-              {loading ? <Skeleton width="80px" height="24px" /> : <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>{stat.value}</div>}
+              <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>{stat.value}</div>
             </div>
           </div>
         ))}

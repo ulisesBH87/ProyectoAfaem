@@ -1,166 +1,162 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  TablaSimple, 
-  BotonPrimario, 
-  BotonSecundario, 
-  Insignia,
-  Cargador 
-} from '../../components/partials';
-import Swal from 'sweetalert2';
+import React from 'react';
+import { FaCog, FaKey, FaCompass } from 'react-icons/fa';
 
+/**
+ * MÓDULO EN PREPARACIÓN
+ * La configuración avanzada del sistema requiere endpoints del backend aún no implementados:
+ *   - GET  /configuracion/permisos        → Listar identificadores de acceso
+ *   - POST /configuracion/permisos        → Crear un nuevo permiso
+ *   - DELETE /configuracion/permisos/{id} → Eliminar un permiso
+ *   - GET  /configuracion/menus           → Listar estructura de menús dinámicos
+ *   - POST /configuracion/menus           → Crear un elemento de menú
+ *   - PATCH /configuracion/menus/{id}     → Actualizar un elemento de menú
+ *
+ * Una vez implementados, las tabs de "Permisos" y "Menús" deben conectarse con estos.
+ */
 export default function ConfiguracionAdmin() {
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('permisos');
-  
-  // Datos simulados
-  const [permisos, setPermisos] = useState([]);
-  const [menus, setMenus] = useState([]);
-
-  useEffect(() => {
-    const cargarDatos = async () => {
-      setLoading(true);
-      setTimeout(() => {
-        setPermisos([
-          { id: 1, clave: 'LEER_EQUIPOS', descripcion: 'Ver lista de equipos', modificado: 'Ayer' },
-          { id: 2, clave: 'CREAR_EQUIPOS', descripcion: 'Crear un nuevo equipo', modificado: 'Hace 2 días' },
-          { id: 3, clave: 'ADMINISTRAR_PAGOS', descripcion: 'Aprobar o rechazar pagos', modificado: 'Hace 1 hora' },
-          { id: 4, clave: 'CONFIGURAR_SISTEMA', descripcion: 'Acceso total a configuración', modificado: 'Hoy' }
-        ]);
-
-        setMenus([
-          { id: 1, nombre: 'Dashboard Principal', ruta: '/admin/dashboard', icono: 'FaChartLine', roles: ['Administrador', 'Super Admin'] },
-          { id: 2, nombre: 'Solicitudes', ruta: '/admin/solicitudes', icono: 'FaClipboardList', roles: ['Administrador', 'Presidente Liga'] },
-          { id: 3, nombre: 'Control de Pagos', ruta: '/admin/pagos', icono: 'FaShieldAlt', roles: ['Administrador'] },
-          { id: 4, nombre: 'Mi Equipo', ruta: '/presidente-equipo', icono: 'FaFutbol', roles: ['Presidente de Equipo'] }
-        ]);
-        setLoading(false);
-      }, 700);
-    };
-
-    cargarDatos();
-  }, []);
-
-  const handleCrear = (tipo) => {
-    Swal.fire({
-      title: `Crear Nuevo ${tipo === 'permisos' ? 'Permiso' : 'Menú'}`,
-      text: 'Simulando creación de registros en el frontend',
-      icon: 'info',
-      confirmButtonColor: '#0b4ea6'
-    });
-  };
-
-  const columnasPermisos = [
-    { cabecera: 'Clave', render: (p) => <span style={{ fontWeight: '800', color: '#1e293b' }}>{p.clave}</span> },
-    { cabecera: 'Descripción', clave: 'descripcion' },
-    { cabecera: 'Última Mod.', clave: 'modificado' },
-    {
-      cabecera: 'Acciones',
-      render: () => (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <BotonSecundario etiqueta="Editar" tamanio="pequeno" alHacerClick={() => {}} />
-          <BotonSecundario etiqueta="Eliminar" tamanio="pequeno" alHacerClick={() => {}} estilo={{ color: '#ef4444', borderColor: '#fca5a5' }} />
-        </div>
-      )
-    }
-  ];
-
-  const columnasMenus = [
-    { cabecera: 'Nombre del Menú', render: (m) => <span style={{ fontWeight: '800' }}>{m.nombre}</span> },
-    { cabecera: 'Ruta', render: (m) => <span style={{ color: '#64748b', fontSize: '13px' }}>{m.ruta}</span> },
-    { cabecera: 'Ícono Asignado', clave: 'icono' },
-    { 
-      cabecera: 'Permitido para', 
-      render: (m) => (
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          {m.roles.map(r => (
-            <span key={r} style={{ background: '#f1f5f9', color: '#0b4ea6', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
-              {r}
-            </span>
-          ))}
-        </div>
-      )
-    },
-    {
-      cabecera: 'Acciones',
-      render: () => (
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <BotonSecundario etiqueta="Editar" tamanio="pequeno" alHacerClick={() => {}} />
-        </div>
-      )
-    }
+  const funciones = [
+    { icon: <FaKey />, seccion: 'Diccionario de Permisos', desc: 'Ver, crear y eliminar los identificadores de acceso (claves de permisos) del sistema.' },
+    { icon: <FaCompass />, seccion: 'Estructura de Menús', desc: 'Gestionar qué rutas y opciones aparecen en la barra lateral según el rol del usuario.' },
   ];
 
   return (
-    <div className="dashboard-content">
-      {/* TABS */}
-          <div style={{
-            borderBottom: '2px solid #e2e8f0',
-            marginBottom: '30px',
+    <div className="fade-in-up" style={{ padding: '4px 0 32px' }}>
+      {/* ENCABEZADO */}
+      <header style={{ marginBottom: '32px' }}>
+        <h2
+          className="heading-outfit"
+          style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}
+        >
+          Configuración del Sistema
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px' }}>
+          Gestión avanzada de permisos y estructura de navegación.
+        </p>
+      </header>
+
+      {/* TARJETA PRINCIPAL */}
+      <div
+        className="card glass"
+        style={{
+          padding: '56px 40px',
+          borderRadius: '24px',
+          textAlign: 'center',
+          maxWidth: '620px',
+          margin: '0 auto',
+        }}
+      >
+        {/* ÍCONO */}
+        <div
+          style={{
+            width: '88px',
+            height: '88px',
+            borderRadius: '28px',
+            background: 'rgba(37, 99, 235, 0.08)',
+            color: 'var(--primary)',
             display: 'flex',
-            gap: '30px',
-            backgroundColor: 'white',
-            borderRadius: '16px 16px 0 0',
-            padding: '20px 30px 0'
-          }}>
-            <button
-              onClick={() => setActiveTab('permisos')}
-              style={{
-                padding: '12px 0', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px',
-                fontWeight: activeTab === 'permisos' ? '800' : '600',
-                color: activeTab === 'permisos' ? '#0b4ea6' : '#64748b',
-                borderBottom: activeTab === 'permisos' ? '3px solid #0b4ea6' : '3px solid transparent',
-                marginBottom: '-2px', transition: 'all 0.3s'
-              }}
-            >
-              🔑 Diccionario de Permisos
-            </button>
-            <button
-              onClick={() => setActiveTab('menus')}
-              style={{
-                padding: '12px 0', border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px',
-                fontWeight: activeTab === 'menus' ? '800' : '600',
-                color: activeTab === 'menus' ? '#0b4ea6' : '#64748b',
-                borderBottom: activeTab === 'menus' ? '3px solid #0b4ea6' : '3px solid transparent',
-                marginBottom: '-2px', transition: 'all 0.3s'
-              }}
-            >
-              🧭 Estructura de Menús
-            </button>
-          </div>
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '36px',
+            margin: '0 auto 24px',
+            border: '2px solid rgba(37, 99, 235, 0.15)',
+          }}
+        >
+          <FaCog style={{ animation: 'spin 4s linear infinite' }} />
+        </div>
 
-          <div style={{ padding: '0 10px' }}>
-            {loading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
-                <Cargador tamanio="grande" mensaje="Cargando configuración..." />
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+
+        {/* BADGE */}
+        <span
+          style={{
+            display: 'inline-block',
+            padding: '6px 16px',
+            background: 'rgba(37, 99, 235, 0.07)',
+            color: 'var(--primary)',
+            borderRadius: '20px',
+            fontSize: '11px',
+            fontWeight: '800',
+            letterSpacing: '0.6px',
+            textTransform: 'uppercase',
+            marginBottom: '16px',
+            border: '1px solid rgba(37, 99, 235, 0.2)',
+          }}
+        >
+          🔧 En preparación — Requiere Backend
+        </span>
+
+        <h3
+          style={{
+            fontSize: '20px',
+            fontWeight: '800',
+            color: 'var(--text-main)',
+            margin: '0 0 12px',
+          }}
+        >
+          Módulo en construcción
+        </h3>
+        <p
+          style={{
+            color: 'var(--text-muted)',
+            fontSize: '14px',
+            lineHeight: '1.7',
+            marginBottom: '32px',
+          }}
+        >
+          Este módulo de configuración estará disponible en cuanto el equipo de backend
+          implemente los endpoints de gestión de permisos y menús dinámicos.
+        </p>
+
+        {/* SECCIONES */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px', textAlign: 'left' }}>
+          {funciones.map((f, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '20px',
+                background: 'var(--bg-main)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-light)',
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'flex-start',
+              }}
+            >
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: 'rgba(37,99,235,0.08)',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '17px',
+                  flexShrink: 0,
+                }}
+              >
+                {f.icon}
               </div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
-                      {activeTab === 'permisos' ? 'Identificadores de Acceso' : 'Navegación Dinámica'}
-                    </h3>
-                    <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '14px' }}>
-                      {activeTab === 'permisos' 
-                        ? 'Lista maestra de acciones protegidas en el sistema.' 
-                        : 'Gestiona qué rutas y opciones aparecen en la barra lateral por rol.'}
-                    </p>
-                  </div>
-                  <BotonPrimario 
-                    etiqueta={activeTab === 'permisos' ? '+ Nuevo Permiso' : '+ Nuevo Menú'} 
-                    alHacerClick={() => handleCrear(activeTab)} 
-                  />
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+                  {f.seccion}
                 </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                  {f.desc}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-                <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <TablaSimple 
-                    columnas={activeTab === 'permisos' ? columnasPermisos : columnasMenus} 
-                    datos={activeTab === 'permisos' ? permisos : menus} 
-                  />
-                </div>
-              </>
-            )}
-          </div>
+
+      </div>
     </div>
   );
 }

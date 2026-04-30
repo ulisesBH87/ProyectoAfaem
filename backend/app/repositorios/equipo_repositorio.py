@@ -116,6 +116,8 @@ def obtener_disponibilidad_equipo(db, equipo_id):
             seguros[s.SeguroId] = seguros.get(s.SeguroId, 0) + 1
 
     return {
+        "equipo_temporal_activo": True,
+        "equipo_temporal_id": equipo_temporal.EquipoTemporalId,
         "slots_disponibles": disponibles,
         "seguros_disponibles": [
             {"SeguroId": k, "Cantidad": v}
@@ -472,17 +474,38 @@ def actualizar_usuario_y_presidente(db, usuario, presidente, rol_id):
         if usuario_db:
             usuario_db.RolId = 3
 
-def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool):
-    from app.modelos.equipo_modelo import Equipos
+def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
+                          presidente_equipo_id: int = None, liga_id: int = None,
+                          modalidad_id: int = None, categoria_id: int = None,
+                          rama_id: int = None):
+    from app.modelos.equipo_modelo import Equipos, EquiposJugando
     equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo_id).first()
     if not equipo:
         return None
-    
+
     if nombre is not None:
         equipo.NombreEquipo = nombre
     if estatus is not None:
         equipo.Estatus = estatus
-        
+
+    # Actualizar EquiposJugando si se enviaron campos de categoría o presidente
+    hay_cambios_jugando = any(v is not None for v in [
+        presidente_equipo_id, liga_id, modalidad_id, categoria_id, rama_id
+    ])
+    if hay_cambios_jugando:
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
+        if eq_jugando:
+            if presidente_equipo_id is not None:
+                eq_jugando.PresidenteEquipoId = presidente_equipo_id
+            if liga_id is not None:
+                eq_jugando.LigaId = liga_id
+            if modalidad_id is not None:
+                eq_jugando.ModalidadId = modalidad_id
+            if categoria_id is not None:
+                eq_jugando.CategoriaId = categoria_id
+            if rama_id is not None:
+                eq_jugando.RamaId = rama_id
+
     db.commit()
     db.refresh(equipo)
     return equipo
@@ -553,9 +576,14 @@ def obtener_directorio_equipos_repo(db):
             "EquipoId": ej.EquipoId,
             "NombreEquipo": eq_nombre,
             "Liga": liga,
+            "LigaId": ej.LigaId,
             "Categoria": categoria,
+            "CategoriaId": ej.CategoriaId,
             "Modalidad": modalidad,
+            "ModalidadId": ej.ModalidadId,
             "Rama": rama,
+            "RamaId": ej.RamaId,
+            "PresidenteEquipoId": ej.PresidenteEquipoId,
             "PresidenteNombreCompleto": f"{p_nombre} {p_apellido}",
             "PresidenteEmail": email or "Sin correo",
             "NumeroJugadoresRegistrados": ej.CantidadJugadores,

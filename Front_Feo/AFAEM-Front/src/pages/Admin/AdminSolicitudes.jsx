@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import DetalleSolicitudModal from '../../components/Admin/DetalleSolicitudModal';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import Loader from '../../components/Loader';
 
 export default function AdminSolicitudes() {
   const navigate = useNavigate();
@@ -275,6 +276,32 @@ export default function AdminSolicitudes() {
     }
   };
 
+  const handleCambiarEstatusTerminal = async (id, estatusActual) => {
+    const esAprobado = estatusActual === 2;
+    const mensaje = esAprobado 
+      ? "¿Estás a punto de rechazar una solicitud que ya ha sido aceptada, estás seguro?"
+      : "¿Estás a punto de aceptar una solicitud que ya ha sido rechazada, estás seguro?";
+    
+    const { isConfirmed } = await Swal.fire({
+      title: 'Cambiar Estado',
+      text: mensaje,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, continuar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: esAprobado ? '#ef4444' : '#10b981',
+      cancelButtonColor: '#94a3b8'
+    });
+
+    if (isConfirmed) {
+      if (esAprobado) {
+        handleRechazarSolicitud(id);
+      } else {
+        handleAprobarSolicitud(id);
+      }
+    }
+  };
+
   const handleUpdateStatus = (id, label) => {
     Swal.fire({
       title: `${label} Solicitud`,
@@ -398,7 +425,8 @@ export default function AdminSolicitudes() {
           >
             Ver
           </button>
-          <button
+          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4) && (
+            <button
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
                 padding: '7px 14px', background: '#6366f1', color: 'white',
@@ -408,26 +436,43 @@ export default function AdminSolicitudes() {
             >
               Docs
             </button>
-          <button
-            onClick={() => handleAprobarSolicitud(row.SolicitudId)}
-            style={{
-              padding: '7px 14px', background: '#10b981', color: 'white',
-              border: 'none', borderRadius: '8px', cursor: 'pointer',
-              fontSize: '12px', fontWeight: '700'
-            }}
-          >
-            Aprobar
-          </button>
-          <button
-            onClick={() => handleRechazarSolicitud(row.SolicitudId)}
-            style={{
-              padding: '7px 14px', background: '#ef4444', color: 'white',
-              border: 'none', borderRadius: '8px', cursor: 'pointer',
-              fontSize: '12px', fontWeight: '700'
-            }}
-          >
-            Rechazar
-          </button>
+          )}
+          
+          {((filtroEstatus === '2' || filtroEstatus === '3') && (row.EstatusValidacion === 2 || row.EstatusValidacion === 3)) ? (
+            <button
+              onClick={() => handleCambiarEstatusTerminal(row.SolicitudId, row.EstatusValidacion)}
+              style={{
+                padding: '7px 14px', background: '#f59e0b', color: 'white',
+                border: 'none', borderRadius: '8px', cursor: 'pointer',
+                fontSize: '12px', fontWeight: '700'
+              }}
+            >
+              Editar
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => handleAprobarSolicitud(row.SolicitudId)}
+                style={{
+                  padding: '7px 14px', background: '#10b981', color: 'white',
+                  border: 'none', borderRadius: '8px', cursor: 'pointer',
+                  fontSize: '12px', fontWeight: '700'
+                }}
+              >
+                Aprobar
+              </button>
+              <button
+                onClick={() => handleRechazarSolicitud(row.SolicitudId)}
+                style={{
+                  padding: '7px 14px', background: '#ef4444', color: 'white',
+                  border: 'none', borderRadius: '8px', cursor: 'pointer',
+                  fontSize: '12px', fontWeight: '700'
+                }}
+              >
+                Rechazar
+              </button>
+            </>
+          )}
         </div>
       )
     }
@@ -435,16 +480,7 @@ export default function AdminSolicitudes() {
 
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando solicitudes...</p>
-        </div>
-      </div>
-    );
+    return <Loader text="Cargando solicitudes..." />;
   }
 
 

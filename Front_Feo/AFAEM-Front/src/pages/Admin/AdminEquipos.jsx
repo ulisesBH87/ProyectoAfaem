@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos } from '../../services/admin';
+import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos, getPresidentesDirectorio, getCatalogosRegistro } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable, FaFileArchive } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
+import Loader from '../../components/Loader';
 
 export default function AdminEquipos() {
   const navigate = useNavigate();
@@ -27,6 +28,15 @@ export default function AdminEquipos() {
   const [datosEditables, setDatosEditables] = useState({});
   const [haCambiado, setHaCambiado] = useState(false);
   const [guardando, setGuardando] = useState(false);
+
+  // ESTADO PARA PRESIDENTE Y CATÁLOGOS
+  const [presidentes, setPresidentes] = useState([]);
+  const [searchPresidente, setSearchPresidente] = useState('');
+  const [presidenteSeleccionado, setPresidenteSeleccionado] = useState(null);
+  const [catalogos, setCatalogos] = useState({ ligas: [], modalidades: [], categorias: [], ramas: [] });
+  const [collapseOpen, setCollapseOpen] = useState({ liga: false, modalidad: false, categoria: false, rama: false });
+  const [catSeleccionada, setCatSeleccionada] = useState({ ligaId: null, modalidadId: null, categoriaId: null, ramaId: null });
+  const [loadingExtras, setLoadingExtras] = useState(false);
 
   useEffect(() => {
     loadEquipos();
@@ -122,14 +132,44 @@ export default function AdminEquipos() {
     });
   };
 
-  const handleEditarEquipo = (equipo) => {
+  const handleEditarEquipo = async (equipo) => {
     setEquipoEdicion(equipo);
     setDatosEditables({
       nombre: equipo.NombreEquipo || '',
       estatus: equipo.Estatus ? '1' : '0'
     });
+    // Pre-seleccionar presidente y categorías actuales
+    setPresidenteSeleccionado(equipo.PresidenteEquipoId || null);
+    setCatSeleccionada({
+      ligaId: equipo.LigaId || null,
+      modalidadId: equipo.ModalidadId || null,
+      categoriaId: equipo.CategoriaId || null,
+      ramaId: equipo.RamaId || null
+    });
+    setSearchPresidente('');
+    setCollapseOpen({ liga: false, modalidad: false, categoria: false, rama: false });
     setHaCambiado(false);
     setModalEdicion(true);
+
+    // Cargar presidentes y catálogos en paralelo
+    try {
+      setLoadingExtras(true);
+      const [presData, catData] = await Promise.all([
+        getPresidentesDirectorio(),
+        getCatalogosRegistro()
+      ]);
+      setPresidentes(presData || []);
+      setCatalogos({
+        ligas: catData?.ligas || [],
+        modalidades: catData?.modalidades || [],
+        categorias: catData?.categorias || [],
+        ramas: catData?.ramas || []
+      });
+    } catch (err) {
+      console.error('Error cargando catálogos/presidentes:', err);
+    } finally {
+      setLoadingExtras(false);
+    }
   };
 
   const handleCerrarModal = () => {
@@ -146,10 +186,12 @@ export default function AdminEquipos() {
       }).then((result) => {
         if (result.isConfirmed) {
           setModalEdicion(false);
+          setSearchPresidente('');
         }
       });
     } else {
       setModalEdicion(false);
+      setSearchPresidente('');
     }
   };
 
@@ -167,11 +209,21 @@ export default function AdminEquipos() {
 
     try {
       setGuardando(true);
-      await updateEquipo(equipoEdicion.EquipoId, datosEditables.nombre, datosEditables.estatus);
-      
+      await updateEquipo(
+        equipoEdicion.EquipoId,
+        datosEditables.nombre,
+        datosEditables.estatus,
+        {
+          presidenteEquipoId: presidenteSeleccionado,
+          ligaId: catSeleccionada.ligaId,
+          modalidadId: catSeleccionada.modalidadId,
+          categoriaId: catSeleccionada.categoriaId,
+          ramaId: catSeleccionada.ramaId
+        }
+      );
       Swal.fire('¡Éxito!', 'Información del equipo actualizada correctamente.', 'success');
       setModalEdicion(false);
-      loadEquipos();
+      loadEquipos(true);
     } catch (error) {
       console.error(error);
       Swal.fire('Error', 'No se pudieron guardar los cambios.', 'error');
@@ -288,16 +340,7 @@ export default function AdminEquipos() {
 
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando directorio de equipos...</p>
-        </div>
-      </div>
-    );
+    return <Loader text="Cargando directorio de equipos..." />;
   }
 
   return (
@@ -513,39 +556,142 @@ export default function AdminEquipos() {
           />
 
           {equipoEdicion && (
-            <div style={{ 
-              gridColumn: 'span 2', 
-              marginTop: '15px', 
-              padding: '24px', 
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', 
-              borderRadius: '20px',
-              border: '1px solid #e2e8f0',
-              display: 'grid',
-              gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr)',
-              gap: '24px',
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-            }}>
-              <div style={{ display: 'flex', gap: '14px' }}>
-                <div style={{ color: '#0b4ea6', fontSize: '18px', marginTop: '4px' }}><FaUser /></div>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Presidente responsable</label>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginTop: '2px' }}>{equipoEdicion.PresidenteNombreCompleto}</div>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>{equipoEdicion.PresidenteEmail}</div>
+            <div style={{ gridColumn: 'span 2' }}>
+
+              {/* ── SECCIÓN: PRESIDENTE RESPONSABLE ── */}
+              <div style={{ marginBottom: '16px', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <FaUser style={{ color: '#0b4ea6', fontSize: '16px' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e3a8a' }}>Presidente responsable</div>
+                    <div style={{ fontSize: '12px', color: '#3b82f6', marginTop: '1px' }}>
+                      {presidenteSeleccionado
+                        ? (() => { const p = presidentes.find(x => x.id === presidenteSeleccionado); return p ? p.nombre : equipoEdicion.PresidenteNombreCompleto; })()
+                        : equipoEdicion.PresidenteNombreCompleto}
+                    </div>
+                  </div>
+                  {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Sincronizando...</span>}
+                </div>
+
+                <div style={{ padding: '16px 20px', background: 'white' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar presidente por nombre..."
+                    value={searchPresidente}
+                    onChange={e => setSearchPresidente(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dbeafe', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
+                    {loadingExtras ? (
+                      <Loader inline text="Cargando presidentes..." />
+                    ) : presidentes.filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase())).length === 0 ? (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No se encontraron presidentes</div>
+                    ) : (
+                      presidentes
+                        .filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase()))
+                        .map(p => (
+                          <div
+                            key={p.id}
+                            onClick={() => { setPresidenteSeleccionado(p.id); setHaCambiado(true); }}
+                            style={{
+                              padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                              borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
+                              backgroundColor: presidenteSeleccionado === p.id ? '#eff6ff' : 'white'
+                            }}
+                          >
+                            <div style={{
+                              width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                              background: presidenteSeleccionado === p.id ? '#0b4ea6' : '#f1f5f9',
+                              color: presidenteSeleccionado === p.id ? 'white' : '#64748b',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '11px', fontWeight: '800'
+                            }}>
+                              {p.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: '13px', fontWeight: presidenteSeleccionado === p.id ? '700' : '500', color: '#1e293b', flex: 1 }}>{p.nombre}</span>
+                            {presidenteSeleccionado === p.id && <span style={{ color: '#0b4ea6', fontWeight: '800' }}>✓</span>}
+                          </div>
+                        ))
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              <div style={{ display: 'flex', gap: '14px' }}>
-                <div style={{ color: '#059669', fontSize: '18px', marginTop: '4px' }}>🏆</div>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Liga del Equipo</label>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginTop: '2px' }}>{equipoEdicion.Liga}</div>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>Categoría: {equipoEdicion.Categoria}</div>
-                </div>
-              </div>
+
+              {/* ── COLLAPSES: CATEGORÍAS ── */}
+              {[
+                { key: 'liga', label: 'Liga', icon: '🏆', items: catalogos.ligas, selKey: 'ligaId' },
+                { key: 'modalidad', label: 'Modalidad', icon: '⚽', items: catalogos.modalidades, selKey: 'modalidadId' },
+                { key: 'categoria', label: 'Categoría', icon: '🏅', items: catalogos.categorias, selKey: 'categoriaId' },
+                { key: 'rama', label: 'Rama', icon: '🌿', items: catalogos.ramas, selKey: 'ramaId' }
+              ].map(({ key, label, icon, items, selKey }) => {
+                const isOpen = collapseOpen[key];
+                const currentId = catSeleccionada[selKey];
+                const currentItem = items.find(i => i.id === currentId);
+                return (
+                  <div key={key} style={{ marginBottom: '10px', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCollapseOpen(prev => ({ ...prev, [key]: !prev[key] }))}
+                      style={{
+                        width: '100%', padding: '13px 18px', background: isOpen ? '#f8fafc' : 'white',
+                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                        borderBottom: isOpen ? '1px solid #e2e8f0' : 'none', transition: 'background 0.2s'
+                      }}
+                    >
+                      <span style={{ fontSize: '16px' }}>{icon}</span>
+                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b', flex: 1, textAlign: 'left' }}>{label}</span>
+                      {currentItem && (
+                        <span style={{ fontSize: '11px', background: '#eff6ff', color: '#0b4ea6', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
+                          {currentItem.nombre}
+                        </span>
+                      )}
+                      <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '6px' }}>{isOpen ? '▲' : '▼'}</span>
+                    </button>
+
+                    {isOpen && (
+                      <div style={{ padding: '12px 16px', background: 'white', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {loadingExtras ? (
+                          <Loader inline text="Cargando opciones..." />
+                        ) : items.length === 0 ? (
+                          <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px' }}>Sin opciones disponibles</div>
+                        ) : items.map(item => (
+                          <label
+                            key={item.id}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
+                              borderRadius: '10px', cursor: 'pointer', transition: 'background 0.15s',
+                              border: '1.5px solid',
+                              borderColor: currentId === item.id ? '#0b4ea6' : '#f1f5f9',
+                              background: currentId === item.id ? '#eff6ff' : 'white'
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name={`cat_${key}`}
+                              value={item.id}
+                              checked={currentId === item.id}
+                              onChange={() => {
+                                setCatSeleccionada(prev => ({ ...prev, [selKey]: item.id }));
+                                setHaCambiado(true);
+                              }}
+                              style={{ accentColor: '#0b4ea6' }}
+                            />
+                            <span style={{ fontSize: '13px', fontWeight: currentId === item.id ? '700' : '500', color: '#1e293b' }}>
+                              {item.nombre}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
             </div>
           )}
 
            {/* SECCIÓN: CUERPO TÉCNICO REMOVIDA A PETICIÓN */}
+
 
           {/* SECCIÓN: NÓMINA DE JUGADORES (ACCESO RÁPIDO) */}
           <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
@@ -566,7 +712,7 @@ export default function AdminEquipos() {
                 </div>
               </div>
               <button 
-                onClick={() => navigate(`/admin/layout-jugadores?equipo=${equipoEdicion.EquipoId}`)}
+                onClick={() => navigate(`/admin/layout-jugadores?equipo=${encodeURIComponent(equipoEdicion.NombreEquipo)}`)}
                 className="btn-premium" 
                 style={{ padding: '10px 18px', fontSize: '12px', background: 'white', color: '#0b4ea6', border: '1.5px solid #0b4ea6', boxShadow: 'none' }}
               >
