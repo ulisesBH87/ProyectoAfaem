@@ -133,10 +133,12 @@ export default function PresidenteEquipoEquipos() {
     { 
       key: 'NumeroJugadores', 
       label: 'Plantilla',
-      render: (val) => (
+      render: (val, row) => (
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--bg-main)', padding: '5px 12px', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
           <FaUsers size={14} style={{ color: 'var(--primary)' }} />
-          <span style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '13px' }}>{val || 0}</span>
+          <span style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '13px' }}>
+            {val || 0}/{row.SlotsComprados || 0}
+          </span>
         </div>
       )
     },
