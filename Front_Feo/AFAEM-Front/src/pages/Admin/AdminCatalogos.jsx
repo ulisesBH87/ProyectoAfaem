@@ -3,6 +3,7 @@ import { FaPlus, FaEdit, FaTrash, FaListAlt, FaNetworkWired, FaTrophy, FaTags } 
 import DashboardTable from '../../components/DashboardTable';
 import Swal from 'sweetalert2';
 import api from '../../services/auth';
+import Loader from '../../components/Loader';
 
 export default function AdminCatalogos() {
   const [catalogos, setCatalogos] = useState({
@@ -45,6 +46,9 @@ export default function AdminCatalogos() {
       setCargando(false);
     }
   };
+  if (cargando && catalogos.ligas.length === 0) {
+    return <Loader text="Cargando catálogos del sistema..." />;
+  }
 
   const iconos = {
     ligas: <FaTrophy />,

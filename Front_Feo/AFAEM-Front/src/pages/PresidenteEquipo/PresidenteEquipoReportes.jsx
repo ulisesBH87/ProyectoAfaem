@@ -1,344 +1,165 @@
-import React, { useEffect, useState } from 'react';
-import { FaChartBar, FaDownload } from 'react-icons/fa';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import '../../styles/dashboard.css';
+import React from 'react';
+import { FaChartBar, FaFileAlt, FaDownload, FaCalendarAlt } from 'react-icons/fa';
 
-// Componentes
-import { TablaSimple, EntradaFormulario, EntradaSeleccion, Insignia, BotonPrimario } from '../../components/partials';
-
+/**
+ * MÓDULO EN PREPARACIÓN
+ * Los reportes requieren endpoints del backend aún no implementados.
+ * Cuando el backend los implemente, conectar:
+ *   - GET /reportes/resumen       → Reporte general de afiliaciones y equipos
+ *   - GET /reportes/jugadores     → Estadísticas por jugador/equipo
+ *   - GET /reportes/pdf/{tipo}    → Descarga de un PDF generado
+ */
 export default function PresidenteEquipoReportes() {
-  const userEmail = localStorage.getItem('email');
-  
-  const [reportes, setReportes] = useState([]);
-  const [filtroTipoReporte, setFiltroTipoReporte] = useState('resumen');
-  const [fechaInicio, setFechaInicio] = useState('2026-02-01');
-  const [fechaFin, setFechaFin] = useState('2026-02-28');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [estadisticas, setEstadisticas] = useState({
-    equiposTotales: 0,
-    jugadoresTotales: 0,
-    tasaAprobacion: 0,
-    actividadPromedio: 0
-  });
-
-  useEffect(() => {
-    const cargarReportes = async () => {
-      try {
-        setLoading(true);
-        // Aquí iría la llamada a API para obtener reportes
-        const datosEjemplo = [
-          {
-            id: 1,
-            nombre: 'Desempeño del Equipo A',
-            tipo: 'desempenio',
-            fechaGeneracion: '2026-02-25',
-            periodo: 'Febrero 2026',
-            estado: 'disponible',
-            jugadoresEvaluados: 15,
-            tasaAprobacion: '87%'
-          },
-          {
-            id: 2,
-            nombre: 'Resumen de Afiliaciones',
-            tipo: 'resumen',
-            fechaGeneracion: '2026-02-25',
-            periodo: 'Febrero 2026',
-            estado: 'disponible',
-            totalAfiliaciones: 23,
-            nuevasAfiliaciones: 5
-          },
-          {
-            id: 3,
-            nombre: 'Análisis de Actividad',
-            tipo: 'actividad',
-            fechaGeneracion: '2026-02-24',
-            periodo: 'Últimos 7 días',
-            estado: 'disponible',
-            actividadTotal: 156,
-            cambiosRegistrados: 24
-          },
-          {
-            id: 4,
-            nombre: 'Comparativa de Equipos',
-            tipo: 'comparativa',
-            fechaGeneracion: '2026-02-23',
-            periodo: 'Febrero 2026',
-            estado: 'disponible',
-            equiposComparados: 5,
-            metricasUsadas: 8
-          }
-        ];
-        
-        setReportes(datosEjemplo);
-        calcularEstadisticas();
-        setError(null);
-      } catch (err) {
-        console.error('Error al cargar reportes:', err);
-        setError('No se pudieron cargar los reportes');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (userEmail) {
-      cargarReportes();
-    }
-  }, [userEmail]);
-
-  const calcularEstadisticas = () => {
-    setEstadisticas({
-      equiposTotales: 12,
-      jugadoresTotales: 267,
-      tasaAprobacion: 82,
-      actividadPromedio: 34
-    });
-  };
-
-  const obtenerEtiquetaTipoReporte = (tipo) => {
-    switch(tipo) {
-      case 'desempenio': return 'Desempeño';
-      case 'resumen': return 'Resumen';
-      case 'actividad': return 'Actividad';
-      case 'comparativa': return 'Comparativa';
-      default: return 'General';
-    }
-  };
-
-  const columnasTabla = [
-    {
-      clave: 'nombre',
-      etiqueta: 'Nombre del Reporte',
-      renderizar: (valor) => valor
-    },
-    {
-      clave: 'tipo',
-      etiqueta: 'Tipo',
-      renderizar: (valor) => (
-        <Insignia
-          etiqueta={obtenerEtiquetaTipoReporte(valor)}
-          tipo="info"
-          tamanio="pequeno"
-        />
-      )
-    },
-    {
-      clave: 'periodo',
-      etiqueta: 'Período',
-      renderizar: (valor) => valor
-    },
-    {
-      clave: 'fechaGeneracion',
-      etiqueta: 'Fecha de Generación',
-      renderizar: (valor) => new Date(valor).toLocaleDateString('es-MX')
-    },
-    {
-      clave: 'estado',
-      etiqueta: 'Estado',
-      renderizar: () => (
-        <Insignia
-          etiqueta="Disponible"
-          tipo="exito"
-          tamanio="pequeno"
-        />
-      )
-    },
-    {
-      clave: 'id',
-      etiqueta: 'Descargar',
-      renderizar: (id) => (
-        <BotonPrimario
-          etiqueta="Descargar PDF"
-          alHacerClick={() => manejarDescargar(id)}
-          tamanio="pequeno"
-          icono={<FaDownload style={{ marginRight: '6px' }} />}
-        />
-      )
-    }
+  const tiposReporte = [
+    { icon: <FaFileAlt />, nombre: 'Resumen de Afiliaciones', desc: 'Total de jugadores y equipos registrados en el periodo.' },
+    { icon: <FaChartBar />, nombre: 'Desempeño del Equipo', desc: 'Métricas de jugadores evaluados y tasa de aprobación.' },
+    { icon: <FaCalendarAlt />, nombre: 'Análisis de Actividad', desc: 'Historial de cambios y eventos registrados en el sistema.' },
   ];
 
-  const manejarDescargar = (idReporte) => {
-    // Simular descarga de PDF
-    const reporte = reportes.find(r => r.id === idReporte);
-    if (reporte) {
-      const elemento = document.createElement('a');
-      elemento.href = '#';
-      elemento.download = `${reporte.nombre}.pdf`;
-      document.body.appendChild(elemento);
-      elemento.click();
-      setTimeout(() => {
-        document.body.removeChild(elemento);
-      }, 100);
-    }
-  };
-
-  const manejarGenerarReporte = () => {
-    // Simular generación de nuevo reporte
-    const nuevoReporte = {
-      id: reportes.length + 1,
-      nombre: `Reporte ${obtenerEtiquetaTipoReporte(filtroTipoReporte)} ${new Date().toLocaleDateString()}`,
-      tipo: filtroTipoReporte,
-      fechaGeneracion: new Date().toISOString().split('T')[0],
-      periodo: `${fechaInicio} al ${fechaFin}`,
-      estado: 'disponible',
-      jugadoresEvaluados: Math.floor(Math.random() * 50) + 10,
-      tasaAprobacion: Math.floor(Math.random() * 30) + 70 + '%'
-    };
-    setReportes([nuevoReporte, ...reportes]);
-  };
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Cargando reportes...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="dashboard-content">
-      {error && (
-        <div style={{
-          backgroundColor: '#fee2e2',
-          border: '1px solid #fecaca',
-          color: '#991b1b',
-          padding: '12px 16px',
-          borderRadius: '6px',
-          marginBottom: '20px'
-        }}>
-          {error}
+    <div className="fade-in-up" style={{ padding: '4px 0 32px' }}>
+      {/* ENCABEZADO */}
+      <header style={{ marginBottom: '32px' }}>
+        <h2
+          className="heading-outfit"
+          style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}
+        >
+          Reportes
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px' }}>
+          Consulta y descarga informes de tu equipo.
+        </p>
+      </header>
+
+      {/* TARJETA PRINCIPAL */}
+      <div
+        className="card glass"
+        style={{
+          padding: '56px 40px',
+          borderRadius: '24px',
+          textAlign: 'center',
+          maxWidth: '600px',
+          margin: '0 auto',
+        }}
+      >
+        {/* ÍCONO */}
+        <div
+          style={{
+            width: '88px',
+            height: '88px',
+            borderRadius: '28px',
+            background: 'rgba(139, 92, 246, 0.1)',
+            color: '#8b5cf6',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '36px',
+            margin: '0 auto 24px',
+            border: '2px solid rgba(139, 92, 246, 0.2)',
+          }}
+        >
+          <FaChartBar />
         </div>
-      )}
 
-            {/* TARJETAS DE ESTADÍSTICAS */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-              marginBottom: '30px'
-            }}>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>EQUIPOS TOTALES</div>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: '#0b4ea6' }}>{estadisticas.equiposTotales}</div>
+        {/* BADGE */}
+        <span
+          style={{
+            display: 'inline-block',
+            padding: '6px 16px',
+            background: 'rgba(139, 92, 246, 0.08)',
+            color: '#8b5cf6',
+            borderRadius: '20px',
+            fontSize: '11px',
+            fontWeight: '800',
+            letterSpacing: '0.6px',
+            textTransform: 'uppercase',
+            marginBottom: '16px',
+            border: '1px solid rgba(139, 92, 246, 0.2)',
+          }}
+        >
+          📊 Próximamente disponible
+        </span>
+
+        <h3
+          style={{
+            fontSize: '20px',
+            fontWeight: '800',
+            color: 'var(--text-main)',
+            margin: '0 0 12px',
+          }}
+        >
+          Reportes en construcción
+        </h3>
+        <p
+          style={{
+            color: 'var(--text-muted)',
+            fontSize: '14px',
+            lineHeight: '1.7',
+            marginBottom: '32px',
+          }}
+        >
+          El módulo de reportes estará disponible próximamente. Podrás generar
+          y descargar informes de tu equipo en formato PDF.
+        </p>
+
+        {/* TIPOS DE REPORTE DISPONIBLES */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px', textAlign: 'left' }}>
+          {tiposReporte.map((r, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '16px 18px',
+                background: 'var(--bg-main)',
+                borderRadius: '14px',
+                border: '1px solid var(--border-light)',
+                display: 'flex',
+                gap: '14px',
+                alignItems: 'center',
+                opacity: 0.7,
+              }}
+            >
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'rgba(139, 92, 246, 0.08)',
+                  color: '#8b5cf6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '15px',
+                  flexShrink: 0,
+                }}
+              >
+                {r.icon}
               </div>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>JUGADORES TOTALES</div>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: '#28a745' }}>{estadisticas.jugadoresTotales}</div>
-              </div>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>TASA DE APROBACIÓN</div>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: '#ffc107' }}>{estadisticas.tasaAprobacion}%</div>
-              </div>
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ color: '#64748b', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>ACTIVIDAD PROMEDIO</div>
-                <div style={{ fontSize: '28px', fontWeight: '700', color: '#6c757d' }}>{estadisticas.actividadPromedio}</div>
-              </div>
-            </div>
-
-            {/* GENERADOR DE REPORTES */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: '#1e293b' }}>
-                Generar Nuevo Reporte
-              </h3>
-              
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '16px',
-                alignItems: 'flex-end'
-              }}>
-                <EntradaSeleccion
-                  etiqueta="Tipo de Reporte"
-                  valor={filtroTipoReporte}
-                  alCambiar={(e) => setFiltroTipoReporte(e.target.value)}
-                  opciones={[
-                    { valor: 'resumen', etiqueta: 'Resumen General' },
-                    { valor: 'desempenio', etiqueta: 'Desempeño de Equipos' },
-                    { valor: 'actividad', etiqueta: 'Análisis de Actividad' },
-                    { valor: 'comparativa', etiqueta: 'Comparativa' }
-                  ]}
-                />
-
-                <EntradaFormulario
-                  etiqueta="Fecha de Inicio"
-                  tipo="date"
-                  valor={fechaInicio}
-                  alCambiar={(e) => setFechaInicio(e.target.value)}
-                />
-
-                <EntradaFormulario
-                  etiqueta="Fecha de Término"
-                  tipo="date"
-                  valor={fechaFin}
-                  alCambiar={(e) => setFechaFin(e.target.value)}
-                />
-
-                <div>
-                  <BotonPrimario
-                    etiqueta="Generar Reporte"
-                    alHacerClick={manejarGenerarReporte}
-                    icono={<FaChartBar style={{ marginRight: '6px' }} />}
-                  />
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '2px' }}>
+                  {r.nombre}
                 </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.desc}</div>
+              </div>
+              <div
+                style={{
+                  marginLeft: 'auto',
+                  padding: '4px 10px',
+                  background: 'rgba(0,0,0,0.04)',
+                  borderRadius: '8px',
+                  fontSize: '10px',
+                  fontWeight: '800',
+                  color: 'var(--text-muted)',
+                  flexShrink: 0,
+                }}
+              >
+                PRONTO
               </div>
             </div>
+          ))}
+        </div>
 
-            {/* TABLA DE REPORTES */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '20px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: '#1e293b' }}>
-                Reportes Disponibles
-              </h3>
-              
-              {reportes.length > 0 ? (
-                <TablaSimple
-                  columnas={columnasTabla}
-                  datos={reportes}
-                  conRayas={true}
-                  conEfectoHover={true}
-                />
-              ) : (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '60px 20px',
-                  color: '#64748b'
-                }}>
-                  <FaChartBar style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }} />
-                  <p>No hay reportes disponibles</p>
-                  <p style={{ fontSize: '14px' }}>Genera un reporte con los parámetros anteriores</p>
-                </div>
-              )}
-            </div>
+
+      </div>
     </div>
   );
 }

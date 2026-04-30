@@ -152,6 +152,14 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     if not orden:
         return None
 
+    # Lógica de suspensión/reactivación
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
+    if usuario:
+        if estatus == 4: # 4 = Rechazado -> Suspender
+            usuario.Estatus = False
+        elif estatus == 3: # 3 = Aprobado -> Reactivar
+            usuario.Estatus = True
+
     #Estatus de la orden cambiado
     orden.EstatusPagoId = estatus
     

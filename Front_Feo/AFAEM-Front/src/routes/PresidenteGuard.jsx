@@ -1,13 +1,16 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useRBAC } from '../hooks/useRBAC';
+import Loader from '../components/Loader';
 
 const PresidenteGuard = ({ children }) => {
   const { hasRole, estatusId, isLoading, roles = [] } = useRBAC();
   const token = localStorage.getItem('token');
   const location = useLocation();
 
-  if (isLoading) return null; // O un loader pequeño
+  if (isLoading) {
+    return <Loader text="Verificando permisos..." />;
+  }
 
   // El administrador siempre tiene permiso de ver todo si es necesario, 
   // pero para presidentes somos estrictos con su estatus.
@@ -29,15 +32,15 @@ const PresidenteGuard = ({ children }) => {
     return <Navigate to="/ingresar" state={{ from: location }} replace />;
   }
 
+  // Verificación de Suspensión (Acordado con Backend estatusId: 0)
+  // IMPORTANTE: Solo activa si el backend devuelve EXPLÍCITAMENTE 0, nunca si es null/undefined
+  if (estatusId !== null && estatusId !== undefined && parseInt(estatusId) === 0) {
+    return <Navigate to="/suspendido" replace />;
+  }
+
   // Si no estamos cargando, pero no tenemos roles aún, esperar un momento (puede ser un refresh)
   if (!isLoading && roles.length === 0 && token) {
-    return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando permisos...</span>
-        </div>
-      </div>
-    );
+    return <Loader text="Validando sesión..." />;
   }
 
   if (!isAuthorized) {
