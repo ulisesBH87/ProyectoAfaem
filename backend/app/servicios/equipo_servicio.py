@@ -1,3 +1,5 @@
+from collections import Counter
+
 from fastapi import HTTPException
 
 from app.repositorios import equipo_repositorio
@@ -7,6 +9,7 @@ from app.servicios import documentos_servicio
 from app.modelos.catalogo_seguros import Seguro
 from app.utilidades.file_handler import guardar_logo, parse_form_data
 from app.enums.estatus_pago_enum import EstatusValidacionPago
+from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 
 def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
     return equipo_repositorio.obtener_equipos_temporales_por_usuario_repo(db, usuario_id)
@@ -83,7 +86,7 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
 
 def hay_slots(db, equipo_id):
 
-    data = equipo_repositorio.hay_slots(db, equipo_id)
+    data = equipo_repositorio.obtener_disponibilidad_equipo(db, equipo_id)
 
     if not data:
         return {
@@ -108,12 +111,7 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
 
         pago_equipo = None #Si no es afiliación inicial de presidente
         if rol_id != 1: #Se obtiene el equipo temporal activo
-            if equipo_temporal_id:
-                try:
-                    equipo_temporal_id_int = int(equipo_temporal_id)
-                except (TypeError, ValueError):
-                    raise HTTPException(status_code=400, detail="equipo_temporal_id inválido")
-                
+               
             pago_equipo = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
 
             if (not pago_equipo) or (pago_equipo.UsuarioId != usuario.UsuarioId):
@@ -124,22 +122,39 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
 
             if (not pago_equipo.OrdenPagoRelacion) or (int(pago_equipo.OrdenPagoRelacion.EstatusPagoId) != int(EstatusValidacionPago.ACTIVO.value)):
                 raise HTTPException(status_code=403, detail="El pago no está aprobado para configurar un nuevo equipo")
-            else:
-                pago_equipo = equipo_repositorio.obtener_equipo_temporal_pagado_activo(
-                    db, usuario.UsuarioId
-                )
             
-            if not pago_equipo:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Debes tener un pago aprobado para configurar un nuevo equipo"
-                )
+                                
+            slots_disponibles = db.query(EquipoTemporalJugador).filter(
+                EquipoTemporalJugador.EquipoTemporalId == pago_equipo.EquipoTemporalId,
+                EquipoTemporalJugador.Completo == False
+            ).count()
 
-            if len(players_info) > (pago_equipo.CantidadJugadoresPagados or 0):
+            if len(players_info) > slots_disponibles:
                 raise HTTPException(
                     status_code=400,
-                    detail="El número de jugadores excede la cantidad pagada"
+                    detail="El número de jugadores excede los espacios disponibles"
                 )
+        
+            seguros_request = Counter()
+            for p in players_info:
+                seguro_id = p.get("seguro_id")
+                if not seguro_id:
+                    raise HTTPException(400, "Todos los jugadores deben tener seguro seleccionado")
+                seguros_request[seguro_id] += 1
+
+            slots = db.query(EquipoTemporalJugador).filter(
+                EquipoTemporalJugador.EquipoTemporalId == pago_equipo.EquipoTemporalId,
+                EquipoTemporalJugador.Completo == False
+            ).all()
+
+            disponibles_por_seguro = Counter(s.SeguroId for s in slots)
+
+            for seguro_id, cantidad in seguros_request.items():
+                if cantidad > disponibles_por_seguro.get(seguro_id, 0):
+                    raise HTTPException(
+                        400,
+                        f"No hay suficientes slots disponibles para el seguro {seguro_id}"
+                    )
 
         equipo = equipo_repositorio.obtener_o_crear_equipo(
             db, team_info["nombre_equipo"]
@@ -156,16 +171,7 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
 
         await guardar_logo(form_data, equipo, db)
 
-        # Crear solicitud administrativa si el usuario es admin (rol_id == 1)
-        #solicitud_id = None
-        #if rol_id == 1:  # ADMINISTRADOR
-         #   solicitud_id = equipo_repositorio.crear_solicitud_administrativa(db, usuario.UsuarioId)
-        #else:  # PRESIDENTE
-         #   solicitud_id = equipo_repositorio.crear_solicitud_presidente(
-          #  db, usuario.UsuarioId
-        #)
-
-        solicitud_id = pago_equipo.SolicitudId
+        solicitud_id = pago_equipo.SolicitudId if pago_equipo else None
 
         for index, player in enumerate(players_info):
             await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
@@ -175,7 +181,13 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         )
 
         if pago_equipo:
-            pago_equipo.Activo = False
+            slots_restantes = db.query(EquipoTemporalJugador).filter(
+                EquipoTemporalJugador.EquipoTemporalId == pago_equipo.EquipoTemporalId,
+                EquipoTemporalJugador.Completo == False
+            ).count()
+
+            if slots_restantes == 0:
+                pago_equipo.Activo = False
 
 
         equipo_repositorio.actualizar_orden(db, solicitud_id)
