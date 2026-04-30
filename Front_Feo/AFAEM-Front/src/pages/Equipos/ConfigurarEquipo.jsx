@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle } from 'react-icons/fa';
+import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle, FaSearchPlus, FaSyncAlt} from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -67,6 +67,7 @@ export default function ConfigurarEquipo() {
   const [selectedPresidentId, setSelectedPresidentId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [players, setPlayers] = useState([]);
+  
   const [currentPlayer, setCurrentPlayer] = useState({
     id: Date.now(),
     firstName: '',
@@ -104,6 +105,7 @@ export default function ConfigurarEquipo() {
     teamLogo: null
   });
 
+  
   const [errors, setErrors] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -1083,6 +1085,50 @@ export default function ConfigurarEquipo() {
 
   const userEmail = localStorage.getItem('email') || '';
 
+  const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  
+   // Previsualizaciones (URLs locales)
+  const [previews, setPreviews] = useState({
+    actaNacimiento: null,
+    identificacion: null,
+    fotografia: null,
+    formatoAfiliacion: null
+  });
+
+  const handleFileUpload = async (docKey, file) => {
+      if (!file) return;
+
+        setCurrentPlayer(prev => ({
+          ...prev,
+          documents:{
+            ...(prev.documents || {}),
+            [docKey]: file
+          }
+        }));
+  
+  // PREVIEW
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviews(prev => ({
+        ...prev,
+        [docKey]: reader.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  } else if (file.type === 'application/pdf') {
+      const url = URL.createObjectURL(file);
+      setPreviews(prev => ({ ...prev, [docKey]: url }));
+  }
+
+  // LÓGICA 
+  if (docKey === 'foto') {
+    procesarFotografiaJugador(file);
+  } else if (['acta', 'ine'].includes(docKey)) {
+    procesarOCRReal(docKey, file);
+  }
+};
+
   const resetPlayerForm = () => {
     setCurrentPlayer({
       id: Date.now(),
@@ -1759,67 +1805,213 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ marginBottom: '30px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Documentación Requerida</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                    <section className="fade-in" style={{ marginBottom: '40px' }}>
+                    
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '20px'
+                      }}>
                         {[
-                          { key: 'acta', label: 'Acta Nac.', icon: '📜' },
-                          { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
-                          { key: 'foto', label: 'Foto', icon: '📸' }
+                          { key: 'acta', title: 'Acta de Nacimiento' },
+                          { key: 'ine', title: 'Identificación (INE/Pasaporte)' },
+                          { key: 'foto', title: 'Fotografía Infantil' }
                         ].map(doc => {
                           const isFormato = doc.key === 'formato';
                           const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
-                          
                           return (
-                            <div key={doc.key} style={{ 
-                              textAlign: 'center', padding: '20px 10px', border: '1px dashed', borderRadius: '16px',
-                              backgroundColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#f0fdf4' : (isFormato && !canUploadFormato ? '#f1f5f9' : '#f8fafc'),
-                              borderColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#22c55e' : (isFormato && !canUploadFormato ? '#e2e8f0' : '#cbd5e1'),
-                              transition: 'all 0.2s',
-                              opacity: isFormato && !canUploadFormato ? 0.6 : 1
+                            <div key={doc.key} 
+                              className="document-card"
+                              style={{ 
+                                backgroundColor: 'white',
+                                borderRadius: '20px',
+                                border: currentPlayer.documents[doc.key] ? '2px solid #10b981': isFormato && !canUploadFormato ? '2px solid #e2e8f0': '2px dashed #cbd5e1',
+                                padding: '15px',
+                                textAlign: 'center',
+                                transition: 'all 0.3s',
+                                position: 'relative',
+                                overflow: 'hidden'
                             }}>
-                               <div style={{ fontSize: '28px', marginBottom: '8px' }}>{doc.icon}</div>
-                               <div style={{ fontSize: '10px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>{doc.label}</div>
-                               
-                               {(currentPlayer.documents && currentPlayer.documents[doc.key]) ? (
-                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>Cargado ✓</div>
-                               ) : (
-                                 <button 
-                                   disabled={isFormato && !canUploadFormato}
-                                   onClick={() => {
-                                     const input = document.createElement('input');
-                                     input.type = 'file';
-                                     input.onchange = (e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                          if (doc.key === 'foto') {
-                                            procesarFotografiaJugador(file);
-                                          } else if (['acta', 'ine'].includes(doc.key)) {
-                                            procesarOCRReal(doc.key, file);
-                                          } else {
-                                            setCurrentPlayer(prev => ({
-                                              ...prev,
-                                              documents: { ...prev.documents, [doc.key]: file }
-                                            }));
-                                          }
-                                        }
-                                     };
-                                     input.click();
-                                   }}
-                                   style={{ 
-                                     fontSize: '10px', padding: '5px 10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', 
-                                     cursor: (isFormato && !canUploadFormato) ? 'not-allowed' : 'pointer', fontWeight: '800', color: '#0b4ea6' 
-                                   }}
-                                 >
-                                   Subir
-                                 </button>
-                               )}
+                              <div
+                                style={{
+                                  height: '140px',
+                                  width: '100%',
+                                  backgroundColor: '#f8fafc',
+                                  borderRadius: '12px',
+                                  marginBottom: '10px',
+                                  position: 'relative',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid #f1f5f9'
+                                }}
+                                onDragOver = {(e) => {
+                                  e.preventDefault();
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  const file = e.dataTransfer.files[0];
+                                  handleFileUpload(doc.key, file);
+                                }}
+                              >
+                                {previews[doc.key] ? (
+                                  <div className="preview-container" style={{ 
+                                    width: '100%', height: '100%', position: 'relative' 
+
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      const overlay =
+                                      e.currentTarget.querySelector('.overlay-actions');
+                                      if (overlay) overlay.style.opacity = '1';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      const overlay =
+                                      e.currentTarget.querySelector('.overlay-actions');
+                                      if (overlay) overlay.style.opacity = '0';
+                                    }}
+                                  >
+                                    {(previews[doc.key].startsWith('blob:') && currentPlayer.documents[doc.key]?.type === 'application/pdf') || previews[doc.key] === 'pdf' ? (
+                                      <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                        <FaFilePdf />
+                                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                                        </div>
+                                        ) : (
+                                        <img
+                                          src={previews[doc.key]}
+                                          alt="Preview"
+                                          style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'contain'
+                                          }}
+                                        />
+                                    )}
+                                    <div className="overlay-actions" style={{
+                                      position: 'absolute',
+                                      top: 0, left: 0, right: 0, bottom: 0,
+                                      backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '12px',
+                                      opacity: 0,
+                                      transition: 'opacity 0.2s ease',
+                                      backdropFilter: 'blur(2px)'
+                                    }}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const isPdf = currentPlayer.documents[doc.key]?.type === 'application/pdf';
+                                          setPreviewDoc({
+                                            open: true,
+                                            url: previews[doc.key],
+                                            type: isPdf ? 'pdf' : 'image',
+                                            title: doc.title
+                                          });
+                                        }}
+                                        className="btn-zoom"
+                                        style={{
+                                          width: '36px', height: '36px', borderRadius: '50%',
+                                          backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <FaSearchPlus/>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          document.getElementById(`file-${doc.key}`).click();
+                                        }}
+                                        className="btn-change"
+                                        style={{
+                                          width: '36px', height: '36px', borderRadius: '50%',
+                                          backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <FaSyncAlt />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div 
+                                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                                    style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                                  >
+                                    <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                                    <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                  </div>
+                                )}
+                              </div>
+                              <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                backgroundColor: currentPlayer.documents[doc.key] ? '#dcfce7' : '#f1f5f9',
+                                color: currentPlayer.documents[doc.key] ? '#166534' : '#64748b',
+                                fontSize: '10px',
+                                fontWeight: '800'
+                              }}>
+                                {currentPlayer.documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                              </div>
+                              <input
+                                type="file"
+                                id={`file-${doc.key}`}
+                                style={{ display: 'none' }}
+                                accept="image/*,.pdf"
+                                onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
+                              />
                             </div>
-                          );
+                          )
                         })}
                       </div>
-                    </div>
+                    </section>
+                      
+                    {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
+                    <Modal
+                      estaAbierto={previewDoc.open}
+                      titulo={previewDoc.title}
+                      alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+                      tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+                      pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+                    >
+                      <div style={{
+                        width: '100%',
+                        height: previewDoc.type === 'pdf' ? '100%' : 'auto',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: '#0f172a', // más elegante para PDF
+                        borderRadius: '12px',
+                        overflow: 'hidden'
+                      }}>
+                        {previewDoc.type === 'pdf' ? (
+                          <iframe
+                            src={previewDoc.url}
+                            style={{ width: '1800px', height: '70vh', border: 'none' }}title="Visor de PDF"
+                          />
+                        ) : (
+                          <img
+                            src={previewDoc.url}
+                            alt="Preview Grande"
+                            style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+                          />
+                        )}
+                      </div>
+                    </Modal>
 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Formulario de afiliación</h3>
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s)</label>
@@ -2104,8 +2296,6 @@ export default function ConfigurarEquipo() {
                         })}
                       </div>
                     </div>
-
-                    
 
                     {/* ANTECEDENTES INTERNACIONALES */}
                     <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>

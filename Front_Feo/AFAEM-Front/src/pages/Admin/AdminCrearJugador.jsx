@@ -239,13 +239,44 @@ export default function AdminCrearJugador() {
         didOpen: () => { Swal.showLoading(); }
       });
       try {
+        
         const data = await validarFotografia(file);
         if (data.valido) {
+
+          // convertir base64 a URL
+          const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
+
+          // convertir base64 a archivo
+          const byteCharacters = atob(data.imagen);
+          const byteNumbers = new Array(byteCharacters.length);
+
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+
+          const byteArray = new Uint8Array(byteNumbers);
+
+          const newFile = new File([byteArray], "foto_validada.jpg", {
+            type: data.tipo_imagen
+          });
+
+          //  guardar foto válida
+          setDocuments(prev => ({
+            ...prev,
+            fotografia: newFile
+          }));
+
+          setPreviews(prev => ({
+            ...prev,
+            fotografia: imageUrl
+          }));
+
           Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
         } else {
           Swal.fire('Error en la fotografía', data.mensaje, 'error');
           setDocuments(prev => ({ ...prev, [documentKey]: null }));
         }
+
       } catch (err) {
         Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
       }
@@ -587,6 +618,7 @@ export default function AdminCrearJugador() {
     } finally {
       setUploading(false);
     }
+    
   };
 
   return (
@@ -987,7 +1019,18 @@ export default function AdminCrearJugador() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     border: '1px solid #f1f5f9'
-                  }}>
+                  }}
+                  
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                  }}
+
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    handleFileUpload(doc.key, file);
+                  }}
+                  >
                     {previews[doc.key] ? (
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                         {/* MINIATURA */}
@@ -1484,7 +1527,7 @@ export default function AdminCrearJugador() {
           {previewDoc.type === 'pdf' ? (
             <iframe
               src={previewDoc.url}
-              style={{ width: '100%', height: '70vh', border: 'none' }}
+              style={{ width: '1800px', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />
           ) : (
