@@ -17,8 +17,7 @@ from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
-    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales
-    EquipoTemporal, Usuario, AntecedentesInternacionales, OrdenPago
+    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales, Usuario, OrdenPago
 )
 from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
