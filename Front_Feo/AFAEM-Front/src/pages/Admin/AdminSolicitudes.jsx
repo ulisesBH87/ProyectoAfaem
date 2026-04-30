@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import DetalleSolicitudModal from '../../components/Admin/DetalleSolicitudModal';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import Loader from '../../components/Loader';
 
 export default function AdminSolicitudes() {
   const navigate = useNavigate();
@@ -479,16 +480,7 @@ export default function AdminSolicitudes() {
 
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando solicitudes...</p>
-        </div>
-      </div>
-    );
+    return <Loader text="Cargando solicitudes..." />;
   }
 
 
