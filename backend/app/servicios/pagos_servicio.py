@@ -41,7 +41,8 @@ class PagosServicio:
             detalles = []
             total = 0
 
-            if(solicitud_id == 1 or solicitud_id == 2):
+            #Si se crea presidente inicial o equipo nuevo se cobra afiliación de presidente
+            if(orden.TipoSolicitud == 1 or orden.TipoSolicitud == 2):
                 #Afiliación del presidente de equipo
                 afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_PRESIDENTE)
 
@@ -110,7 +111,7 @@ class PagosServicio:
                 pagos_repositorio.crear_detalle_pago_repo(db=self.db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
 
             #Si se va a crear presidente de equipo
-            if(solicitud_id == 1): #Presidente de equipo (Hacer enum en el futuro)
+            if(orden.TipoSolicitud == 1): #Presidente de equipo (Hacer enum en el futuro)
                 try:        
                     pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
                 except Exception:
