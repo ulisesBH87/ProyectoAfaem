@@ -26,6 +26,7 @@ import {
   Cargador,
   Modal
 } from '../../components/partials';
+import Loader from '../../components/Loader';
 
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
@@ -694,10 +695,7 @@ export default function AdminCrearJugador() {
               </div>
 
               {loadingTeams ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>
-                  <div className="spinner-border text-primary" role="status"></div>
-                  <div style={{ marginTop: '10px', color: '#64748b' }}>Cargando equipos...</div>
-                </div>
+                <Loader inline text="Cargando equipos..." />
               ) : (
                 <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '20px' }}>
                   {equiposDb

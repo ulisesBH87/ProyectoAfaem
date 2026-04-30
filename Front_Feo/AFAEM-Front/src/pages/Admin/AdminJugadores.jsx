@@ -6,6 +6,7 @@ import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
+import Loader from '../../components/Loader';
 
 export default function AdminJugadores() {
   const navigate = useNavigate();
@@ -344,16 +345,7 @@ export default function AdminJugadores() {
 
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p style={{ marginTop: '10px', color: '#64748b' }}>Cargando catálogo de jugadores...</p>
-        </div>
-      </div>
-    );
+    return <Loader text="Cargando catálogo de jugadores..." />;
   }
 
   return (

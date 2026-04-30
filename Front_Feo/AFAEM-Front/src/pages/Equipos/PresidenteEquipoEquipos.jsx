@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
-import Skeleton from '../../components/Common/Skeleton';
+import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 import { 
   FaShieldAlt, 
@@ -157,6 +157,10 @@ export default function PresidenteEquipoEquipos() {
     }
   ];
 
+  if (loading) {
+    return <Loader text="Cargando tus equipos..." />;
+  }
+
   return (
     <div className="fade-in">
       {/* CABECERA ESTILO PREMIUM */}
@@ -208,7 +212,7 @@ export default function PresidenteEquipoEquipos() {
             </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{stat.label}</div>
-              {loading ? <Skeleton width="80px" height="24px" /> : <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>{stat.value}</div>}
+              <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>{stat.value}</div>
             </div>
           </div>
         ))}

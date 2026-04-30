@@ -6,7 +6,7 @@ import {
 } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import teamsService from '../../services/teams';
-import Skeleton from '../../components/Common/Skeleton';
+import Loader from '../../components/Loader';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '../../config/config';
 import axios from 'axios';
@@ -91,13 +91,7 @@ export default function PresidenteEquipoConfiguracion() {
   // ESTADO: CARGANDO
   // ─────────────────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px 0' }}>
-        <Skeleton width="300px" height="36px" />
-        <Skeleton width="100%" height="180px" borderRadius="20px" />
-        <Skeleton width="100%" height="220px" borderRadius="20px" />
-      </div>
-    );
+    return <Loader text="Cargando configuración de equipo..." />;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
