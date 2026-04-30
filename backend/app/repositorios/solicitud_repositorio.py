@@ -64,12 +64,13 @@ def ver_requisitos_afiliacion_repo(db: Session, tipo_afiliacion_id: int):
 
 #SOLICITUDES
 #CREAR SOLICITUD (NO ENVIAR)
-def crear_solicitud_repo(db, usuario_id, estatus_validacion_id, tipo_afiliacion_id):
+def crear_solicitud_repo(db, tipo_afiliacion_id, tipo_solicitud, usuario_id):
 
     nueva = Solicitud(
+        TipoAfiliacionId = tipo_afiliacion_id,
+        TipoSolicitudId = tipo_solicitud,
         UsuarioId = usuario_id,
-        EstatusValidacion = estatus_validacion_id,
-        TipoAfiliacionId = tipo_afiliacion_id
+        EstatusValidacion = 4 # BORRADOR
     )
     
     db.add(nueva)

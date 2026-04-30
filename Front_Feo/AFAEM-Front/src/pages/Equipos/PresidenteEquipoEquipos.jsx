@@ -13,7 +13,8 @@ import {
   FaCheckCircle, 
   FaExclamationCircle, 
   FaTrophy, 
-  FaPlus 
+  FaPlus,
+  FaUserPlus 
 } from 'react-icons/fa';
 
 export default function PresidenteEquipoEquipos() {
@@ -154,6 +155,35 @@ export default function PresidenteEquipoEquipos() {
           {status ? 'ACTIVO' : 'INACTIVO'}
         </span>
       )
+    },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (_, row) => (
+        <button
+          onClick={async () => {
+            try {
+              const slots = await teamsService.checkTeamSlots(row.EquipoId, navigate);
+              console.log(slots);
+            } catch (err) {
+              console.error('Error al verificar slots:', err);
+            }
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '18px',
+            color: 'var(--primary)',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <FaUserPlus />
+        </button>
+      )
     }
   ];
 
@@ -289,10 +319,6 @@ export default function PresidenteEquipoEquipos() {
           currentPage={currentPage} 
           onPageChange={setCurrentPage} 
           emptyMessage="No se encontraron equipos en la búsqueda." 
-          onRowClick={(team) => {
-            const id = team.EquipoId || team.id;
-            if (id) navigate(`/presidente-equipo/admin-equipo/${id}`);
-          }}
         />
       </div>
     </div>

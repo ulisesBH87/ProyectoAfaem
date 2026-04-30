@@ -3,9 +3,15 @@ import os
 from datetime import date
 
 from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase, ListaPagos
+from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.repositorios import pagos_repositorio
 from app.excepciones import pagos_excepciones
 
+class EstadoEquipo:
+    SIN_ORDEN = "SIN_ORDEN"
+    ORDEN_SIN_COMPROBANTE = "ORDEN_SIN_COMPROBANTE"
+    COMPROBANTE_EN_REVISION = "COMPROBANTE_EN_REVISION"
+    LISTO_PARA_CREAR_EQUIPO = "LISTO_PARA_CREAR_EQUIPO"
 class PagosServicio:
 
     TIPO_AFILIACION_PRESIDENTE = 2
@@ -15,49 +21,59 @@ class PagosServicio:
     def __init__(self, db:Session):
         self.db = db
 
-    def crear_orden_pago(self, usuario_id, orden):
+    def crear_orden_pago(self, usuario_id, orden, solicitud_id):
         if orden.CantidadJugadores < 1:
             raise pagos_excepciones.CantidadJugadoresError()
         
-        total_personas = orden.CantidadJugadores + 1
+        total_personas = orden.CantidadJugadores
+
+        #Si se va a crear equipo se cobra afiliación de presidente
+        if (orden.TipoSolicitud == 1 or orden.TipoSolicitud == 2):
+            total_personas += 1
+
         total_seguros = sum(s.Cantidad for s in orden.Seguros)
         
         if total_seguros != total_personas:
             raise pagos_excepciones.CantidadSegurosPersonasError()
         
         try:
+            
             detalles = []
             total = 0
-            
-            #PRESIDENTE
-            
-            afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_PRESIDENTE)
 
-            if not afiliacion_presidente:
-                raise pagos_excepciones.PagoInvalidoError()
-        
-            subtotal = afiliacion_presidente.CostoActual * 1
+            if(solicitud_id == 1 or solicitud_id == 2):
+                #Afiliación del presidente de equipo
+                afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_PRESIDENTE)
+
+                if not afiliacion_presidente:
+                    raise pagos_excepciones.NoAfiliacionError()
             
-            detalles.append({
-                "tipo_concepto": 1,
-                "tipo_afiliacion_id": self.TIPO_AFILIACION_PRESIDENTE,
-                "seguro_id": None,
-                "cantidad": 1,
-                "precio": afiliacion_presidente.CostoActual,
-                "subtotal": subtotal
-            })
+                subtotal = afiliacion_presidente.CostoActual * 1
             
-            total += subtotal
+                #Detalles de la orden para el presidente de equipo
+                # (Solo si: 1. Se crea el presidente por primera vez o 2. Se crea un equipo nuevo)
+                detalles.append({
+                    "tipo_concepto": 2, #AFILIACION
+                    "tipo_afiliacion_id": self.TIPO_AFILIACION_PRESIDENTE,
+                    "seguro_id": None,
+                    "cantidad": 1,
+                    "precio": afiliacion_presidente.CostoActual,
+                    "subtotal": subtotal
+                })
+                
+                total += subtotal
             
-            #JUGADORES
+            #Si se va a añadir a un jugador a un equipo ya hecho, no se cobra la afiliación de presidente
+            
+            #Se obtienen los costos de afiliación de jugador
             afiliacion_jugador = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_JUGADOR)
             if not afiliacion_jugador:
-                raise pagos_excepciones.PagoInvalidoError()
+                raise pagos_excepciones.NoAfiliacionError()
 
             subtotal = afiliacion_jugador.CostoActual * orden.CantidadJugadores
             
             detalles.append({
-                "tipo_concepto": 1,
+                "tipo_concepto": 2,
                 "tipo_afiliacion_id": self.TIPO_AFILIACION_JUGADOR,
                 "seguro_id": None,
                 "cantidad": orden.CantidadJugadores,
@@ -73,13 +89,13 @@ class PagosServicio:
                 seguro = pagos_repositorio.obtener_seguro_repo(self.db, s.SeguroId)
                 
                 if not seguro:
-                    raise pagos_excepciones.SeguroNoExiste(f"Seguro {s.SeguroId} no existe")
+                    raise pagos_excepciones.SeguroNoExisteError(f"Seguro {s.SeguroId} no existe")
                 
                 subtotal = seguro.Precio * s.Cantidad
                 
                 detalles.append({
-                    "tipo_concepto": 2,
-                    "tipo_afiliacion_id": None,
+                    "tipo_concepto": 1, #Seguro (Hacer enum en el futuro)
+                    "tipo_afiliacion_id": None, #None porque estamos agregando un seguro, no un tipo de afiliación
                     "seguro_id": seguro.SeguroId,
                     "cantidad": s.Cantidad,
                     "precio": seguro.Precio,
@@ -87,31 +103,34 @@ class PagosServicio:
                 })
                 
                 total += subtotal
-                
-            orden_pago = pagos_repositorio.crear_orden_pago_repo(self.db, usuario_id, total)
-                
+            
+            orden_pago = pagos_repositorio.crear_orden_pago_repo(self.db, usuario_id, total, solicitud_id)
+            
             for d in detalles:
                 pagos_repositorio.crear_detalle_pago_repo(db=self.db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
 
-
-            try:        
-                pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
-                self.db.commit()
-            except Exception:
-                self.db.rollback()
-                raise pagos_excepciones.UsuarioNoEncontradoError()
-
+            #Si se va a crear presidente de equipo
+            if(solicitud_id == 1): #Presidente de equipo (Hacer enum en el futuro)
+                try:        
+                    pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
+                except Exception:
+                    self.db.rollback()
+                    raise pagos_excepciones.UsuarioNoEncontradoError()
                 
+            self.db.commit()
+
             return {
                 "orden_pago_id": orden_pago.OrdenPagoId,
                 "total": total
             }
-    
+                    
         except Exception:
             self.db.rollback()
             raise pagos_excepciones.PagoInvalidoError()
-        
-        
+
+    # ============================
+    # == SUBIDA DE COMPROBANTE ==
+    # ========================== 
     async def subir_comprobante(self, orden_id, archivo):
         orden = pagos_repositorio.obtener_orden_repo(self.db, orden_id)
         
@@ -181,9 +200,9 @@ class PagosServicio:
         return result
 
     def estatus_pago(self, orden_pago_id, estatus):
-        response = pagos_repositorio.estatus_pago_repo(self.db, orden_pago_id, estatus)
+        orden = pagos_repositorio.estatus_pago_repo(self.db, orden_pago_id, estatus)
 
-        return response
+        return orden
 
     def orden_pago_individual(self, orden_pago_id):
 
@@ -208,35 +227,72 @@ class PagosServicio:
             "total": float(orden.TotalPagar) if orden.TotalPagar else 0
         }
 
+
+    #VERIFICA SI HAY EQUIPOS VACIOS Y DISPONIBLES
     def mi_estado_pago_equipo(self, usuario_id):
-        orden = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
+        data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
+
+        equipo_temporal = data["equipo_temporal"]
+        orden = data["orden"]
+
+        #CASO 1: HAY EQUIPO DISPONIBLE
+        if equipo_temporal:
+
+            cantidad_jugadores = 0
+            seguros = []
+            for detalle in orden.OrdenPagoDetalleRelacion:
+                if detalle.TipoAfiliacionId == self.TIPO_AFILIACION_JUGADOR:
+                    cantidad_jugadores = detalle.Cantidad
+      
+                if detalle.SeguroId:
+                    seguros.append({
+                        "SeguroId": detalle.SeguroId,
+                        "Cantidad": detalle.Cantidad
+                    })
+
+            return {
+                "estado": EstadoEquipo.LISTO_PARA_CREAR_EQUIPO,
+                "orden_pago_id": orden.OrdenPagoId,
+                "total": float(orden.TotalPagar or 0),
+                "cantidad_jugadores": cantidad_jugadores,
+                "seguros": seguros
+            }
+
+        #CASO 2: NO HAY EQUIPO DISPONIBLE, PASAR A FLUJO DE ORDEN
 
         if not orden:
-            return {"tiene_orden": False}
+            return {
+                "estado": EstadoEquipo.SIN_ORDEN
+            }
 
-        cantidad_jugadores = 0
-        seguros = []
-        for detalle in orden.OrdenPagoDetalleRelacion:
-            if detalle.TipoAfiliacionId == self.TIPO_AFILIACION_JUGADOR:
-                cantidad_jugadores = detalle.Cantidad
-            if detalle.SeguroId:
-                seguros.append({
-                    "SeguroId": detalle.SeguroId,
-                    "Cantidad": detalle.Cantidad
-                })
+        estatus = orden.EstatusPagoId
 
-        disponible_para_equipo = bool(
-            orden.EstatusPagoId == 3
-            and any(equipo.Activo for equipo in orden.EquipoTemporalRelacion)
-        )
 
+        # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
+        if estatus in (1, 4):
+            return {
+                "estado": EstadoEquipo.ORDEN_SIN_COMPROBANTE,
+                "orden_pago_id": orden.OrdenPagoId,
+                "total": float(orden.TotalPagar or 0)
+            }
+        
+        # HAY ORDEN, SE ENVÍO COMPROBANTE, EN ESPERA
+        if estatus == 2:
+            return {
+                "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
+                "orden_pago_id": orden.OrdenPagoId,
+                "total": float(orden.TotalPagar or 0)
+            }
+    
+
+        # ACTIVO pero sin equipo temporal → inconsistencia
+        if estatus == 3:
+            return {
+                "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
+                "warning": "Orden activa sin equipo temporal generado"
+            }
+
+        # fallback (por seguridad)
         return {
-            "tiene_orden": True,
-            "orden_pago_id": orden.OrdenPagoId,
-            "estatus": orden.EstatusPagoId,
-            "tiene_comprobante": bool(orden.RutaVoucher),
-            "total": float(orden.TotalPagar) if orden.TotalPagar else 0,
-            "cantidad_jugadores": cantidad_jugadores,
-            "seguros": seguros,
-            "disponible_para_equipo": disponible_para_equipo
+            "estado": EstadoEquipo.SIN_ORDEN
         }

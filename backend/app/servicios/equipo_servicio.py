@@ -80,6 +80,18 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
     }
 
 
+def hay_slots(db, equipo_id):
+    disponibilidad = equipo_repositorio.hay_slots(db, equipo_id)
+
+    if not disponibilidad:
+        slots = False
+    
+    else:
+        slots = True
+        
+    return slots
+
+
 async def crear_equipo_completo_servicio(form_data, db, usuario):
     try:
         team_info, players_info = parse_form_data(form_data)
@@ -103,7 +115,7 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             if len(players_info) > (pago_equipo.CantidadJugadoresPagados or 0):
                 raise HTTPException(
                     status_code=400,
-                    detail="El nÃºmero de jugadores excede la cantidad pagada"
+                    detail="El número de jugadores excede la cantidad pagada"
                 )
 
         equipo = equipo_repositorio.obtener_o_crear_equipo(
@@ -136,6 +148,8 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         if pago_equipo:
             pago_equipo.Activo = False
 
+
+        equipo_repositorio.actualizar_orden(db, solicitud_id)
         db.commit()
 
         return {

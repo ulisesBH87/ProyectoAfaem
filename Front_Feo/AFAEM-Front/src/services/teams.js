@@ -361,7 +361,7 @@ export const createTeamCompleto = async (data) => {
       telefono: p.telefono,
       sexo_id: p.sexo_id,
       fecha_nacimiento: p.birthDate,
-      seguro_tipo_id: p.insuranceType,
+      seguro_id: p.insuranceType,
       numero_camiseta: p.shirtNumber,
       extranjero: p.esForaneo,
       nacionalidad: p.nacionalidadJugador,
@@ -423,6 +423,35 @@ export const finalizarSolicitudCompleta = async (solicitudId) => {
   }
 };
 
+/**
+ * VERIFICA SI UN EQUIPO TIENE SLOTS DISPONIBLES Y REDIRIGE SEGÚN CORRESPONDA
+ * Si hay slots → redirige a formulario de jugador
+ * Si NO hay slots → redirige a vista de pago para agregar jugador
+ * @param {number} equipoId - ID del equipo
+ * @param {function} navigate - Función navigate de React Router
+ */
+export const checkTeamSlots = async (equipoId, navigate) => {
+  try {
+    const response = await api.get(`/equipo-temporal/hay-slots`, {
+      params: { equipo_id: equipoId }
+    });
+    
+    // Si la respuesta indica que hay slots disponibles
+    if (response.data === true || (typeof response.data === 'object' && response.data.slots_disponibles > 0)) {
+      // Hay slots disponibles, ir directamente al formulario de jugador
+      navigate(`/presidente-equipo/configurar-equipo?equipoId=${equipoId}&agregarJugador=true`);
+    } else {
+      // No hay slots, redirige a vista de pago para agregar jugador
+      navigate(`/presidente-equipo/configurar-equipo?equipoId=${equipoId}&agregarJugador=true&requirePago=true`);
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error verificando slots del equipo:', error);
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   getUserTeams,
@@ -437,5 +466,6 @@ export default {
   getAvailableSlots,
   getEquipoTemporalInfo,
   getPresidentesActivos,
-  finalizarSolicitudCompleta
+  finalizarSolicitudCompleta,
+  checkTeamSlots
 };

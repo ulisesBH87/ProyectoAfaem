@@ -27,7 +27,7 @@ from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from app.enums.estatus_pago_enum import EstatusValidacionPago
 
 
-def crear_equipo_temporal_repo(db, orden, solicitud_id):
+def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso):
     #obtener cantidad de jugadores pagados
     detalles = db.query(OrdenPagoDetalle).filter(OrdenPagoDetalle.OrdenPagoId == orden.OrdenPagoId).all()
     existe = db.query(EquipoTemporal).filter(
@@ -42,11 +42,10 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id):
 
 
     for d in detalles:
-        print("detalle:", d.TipoConceptoId, d.TipoAfiliacionId, d.Cantidad)
-        if d.TipoConceptoId == 1:   #INSCRIPCION
+        #print("detalle:", d.TipoConceptoId, d.TipoAfiliacionId, d.Cantidad) DEBUG SOLAMENTE
+        if d.TipoConceptoId == 2:   #INSCRIPCION DE JUGADOR
             if d.TipoAfiliacionId == 4: #JUGADOR MAYOR
                 cantidad_jugadores = d.Cantidad
-
 
     # crear equipo temporal        
     equipo = EquipoTemporal(
@@ -55,7 +54,7 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id):
         OrdenPagoId=orden.OrdenPagoId,
         Activo=True,
         CantidadJugadoresPagados=cantidad_jugadores,
-        TipoProcesoId=1 #REGISTRO INICIAL
+        TipoProcesoId=tipo_proceso
     )
 
     db.add(equipo)
@@ -70,6 +69,14 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id):
         db.add(slot)
 
     return equipo
+
+def hay_slots(db, equipo_id):
+    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoId and EquipoTemporal.Activo == True)
+
+    if not equipo_temporal:
+        return
+
+    return equipo_temporal
 
 
 def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
@@ -237,13 +244,32 @@ def crear_solicitud_presidente(db, usuario_id):
 
 
 #CREACIÓN DE EQUIPO
-def actualizar_slot_repo(db, slot, persona_id, seguro_id):
+def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int):
 
-    slot.PersonaId = persona_id
-    slot.SeguroId = seguro_id
-    slot.Completo = True
+    #añadir filter completo = false
+    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoId == equipo_id).first()
+    equipo_temporal_id = equipo_temporal.EquipoTemporalId
+
+    slots = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalId == equipo_temporal_id).all()
+    for slot in slots:
+        if slot.Completo == True:
+            continue
+        
+        if slot.Completo == False:
+            slot.PersonaId = persona_id
+            slot.SeguroId = seguro_id
+            slot.Completo = True
+            break;
 
     return slot
+
+def actualizar_orden(db, solicitud_id: int):
+    orden = db.query(OrdenPago).filter(OrdenPago.SolicitudId == solicitud_id).first()
+    
+    if not orden:
+        raise ValueError("Orden de pago no encontrada")
+
+    orden.EstatusPagoId = int(EstatusValidacionPago.CADUCADO)
 
 
 def parse_fecha(fecha: str):
@@ -320,7 +346,11 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
         AntecedentesId=antecedentes_id
     )
 
+    seguro_id = p_data.get("seguro_id")
+    slot_jugador = actualizar_slot_repo(db, equipo.EquipoId, nueva_persona.PersonaId, seguro_id)
+
     db.add(miembro)
+    db.add(slot_jugador)
 
     archivos = []
     documento_ids = []

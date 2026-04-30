@@ -19,6 +19,7 @@ from app.modelos import (
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
     EquipoTemporal, Usuario, AntecedentesInternacionales
 )
+from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
 
@@ -49,7 +50,12 @@ async def obtener_slots(equipo_temporal_id: int,db: Session = Depends(get_db)):
     slots = obtener_equipo_temporal_servicio(db, equipo_temporal_id)
     return slots
 
+@router.get("/hay-slots")
+async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
+    #Servicio de busqueda de slots
+    slots = equipo_servicio.hay_slots(db, equipo_id)
 
+    return slots
 
 # == REGISTROS ==
 @router.get("/catalogos-registro", response_model=CatalogosRegistroResponse)
@@ -80,7 +86,6 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
 async def crear_equipo_completo(request: Request, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
         form_data = await request.form()
-        print(type(form_data.get("team_logo")))
         result = await crear_equipo_completo_servicio(form_data=form_data, db=db, usuario=usuario)
 
         return result
