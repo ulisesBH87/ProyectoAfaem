@@ -116,6 +116,8 @@ def obtener_disponibilidad_equipo(db, equipo_id):
             seguros[s.SeguroId] = seguros.get(s.SeguroId, 0) + 1
 
     return {
+        "equipo_temporal_activo": True,
+        "equipo_temporal_id": equipo_temporal.EquipoTemporalId,
         "slots_disponibles": disponibles,
         "seguros_disponibles": [
             {"SeguroId": k, "Cantidad": v}

@@ -165,8 +165,13 @@ export default function PresidenteEquipoEquipos() {
         <button
           onClick={async () => {
             try {
-              const slots = await teamsService.checkTeamSlots(row.EquipoId, navigate);
-              console.log(slots);
+              const slots = await teamsService.checkTeamSlots(row.EquipoId);
+
+              if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
+                navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&agregarJugador=true`);
+              } else {
+                navigate(`/presidente-equipo/configurar-equipo?equipoId=${row.EquipoId}&agregarJugador=true&requirePago=true`);
+              }
             } catch (err) {
               console.error('Error al verificar slots:', err);
             }

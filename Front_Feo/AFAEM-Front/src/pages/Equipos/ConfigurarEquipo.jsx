@@ -419,12 +419,23 @@ export default function ConfigurarEquipo() {
   // Detectar parámetros de ruta para modo agregar jugador
   useEffect(() => {
     const equipoId = searchParams.get('equipoId');
+    const equipoTemporalId = searchParams.get('equipoTemporalId');
     const agregarJugador = searchParams.get('agregarJugador');
+    const requirePago = searchParams.get('requirePago') === 'true';
 
-    if (equipoId && agregarJugador === 'true') {
-      setEquipoTemporalIdAgregar(parseInt(equipoId));
-      setModoAgregarJugador(false); // Mostrar formulario, no pago
-      setActiveStep(2); // Ir al paso 2 (jugadores)
+    if (agregarJugador === 'true') {
+      if (equipoTemporalId) {
+        setEquipoTemporalIdAgregar(parseInt(equipoTemporalId, 10));
+        setModoAgregarJugador(false);
+        setActiveStep(2);
+        return;
+      }
+
+      if (equipoId) {
+        setEquipoTemporalIdAgregar(parseInt(equipoId, 10));
+        setModoAgregarJugador(requirePago);
+        setActiveStep(2);
+      }
     }
   }, [searchParams]);
 
