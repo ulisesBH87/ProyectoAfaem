@@ -135,7 +135,7 @@ export default function AdminLayoutJugadores() {
           >
             <option value="todos">Todos los equipos</option>
             {equipos.map(eq => (
-              <option key={eq.EquipoId} value={eq.NombreEquipo}>
+              <option key={eq.EquipoId} value={eq.EquipoI}>
                 {eq.NombreEquipo}
               </option>
             ))}
