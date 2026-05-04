@@ -23,3 +23,5 @@ class EquipoTemporal(Base):
     TipoProcesoRelacion = relationship("CatalogoTipoProceso", back_populates="EquipoTemporalRelacion")
 
     EquipoTemporalJugadorRelacion = relationship("EquipoTemporalJugador", back_populates="EquipoTemporalRelacion")
+
+    EquipoId = Column(ForeignKey("Equipos.EquipoId"), nullable=True)

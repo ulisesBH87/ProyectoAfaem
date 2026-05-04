@@ -10,6 +10,7 @@ class SeguroSeleccionado(BaseModel):
 class CrearOrdenPago(BaseModel):
     CantidadJugadores: int
     Seguros: List[SeguroSeleccionado]
+    TipoSolicitud: int
 
 class SubirComprobanteRespuesta(BaseModel):
     Mensaje: str
