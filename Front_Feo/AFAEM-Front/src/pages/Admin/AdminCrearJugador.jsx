@@ -9,8 +9,7 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas,
-  FaMapMarkerAlt
+  FaGlobeAmericas
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -239,13 +238,44 @@ export default function AdminCrearJugador() {
         didOpen: () => { Swal.showLoading(); }
       });
       try {
+        
         const data = await validarFotografia(file);
         if (data.valido) {
+
+          // convertir base64 a URL
+          const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
+
+          // convertir base64 a archivo
+          const byteCharacters = atob(data.imagen);
+          const byteNumbers = new Array(byteCharacters.length);
+
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+
+          const byteArray = new Uint8Array(byteNumbers);
+
+          const newFile = new File([byteArray], "foto_validada.jpg", {
+            type: data.tipo_imagen
+          });
+
+          //  guardar foto válida
+          setDocuments(prev => ({
+            ...prev,
+            fotografia: newFile
+          }));
+
+          setPreviews(prev => ({
+            ...prev,
+            fotografia: imageUrl
+          }));
+
           Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
         } else {
           Swal.fire('Error en la fotografía', data.mensaje, 'error');
           setDocuments(prev => ({ ...prev, [documentKey]: null }));
         }
+
       } catch (err) {
         Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
       }
@@ -587,6 +617,7 @@ export default function AdminCrearJugador() {
     } finally {
       setUploading(false);
     }
+    
   };
 
   return (
@@ -794,122 +825,6 @@ export default function AdminCrearJugador() {
           </div>
         </section>
 
-        {/* PREVISUALIZACIÓN DE DATOS Y ANTECEDENTES PARA EXTRANJEROS */}
-        {extractedData.esForaneo && !showStep3 && (
-          <section className="fade-in" style={{ marginBottom: '40px', padding: '24px', background: '#f0f9ff', borderRadius: '16px', border: '1px solid #bae6fd' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-              <FaMapMarkerAlt style={{ color: '#0369a1' }} />
-              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>Pre-llenado de Identidad y Antecedentes Internacionales</h4>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-              <EntradaFormulario
-                etiqueta="Nombre(s)"
-                valor={extractedData.nombreJugador}
-                alCambiar={(e) => setExtractedData({...extractedData, nombreJugador: e.target.value})}
-              />
-              <EntradaFormulario
-                etiqueta="Apellido Paterno"
-                valor={extractedData.apellidoPaterno}
-                alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})}
-              />
-              <EntradaFormulario
-                etiqueta="Apellido Materno"
-                valor={extractedData.apellidoMaterno}
-                alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})}
-              />
-              <EntradaFormulario
-                etiqueta="Nacionalidad del jugador (País de Origen)"
-                valor={extractedData.nacionalidadJugador}
-                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
-                obligatorio={true}
-              />
-              <EntradaFormulario
-                etiqueta="País de residencia actual"
-                valor={extractedData.paisResidencia}
-                alCambiar={(e) => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
-                obligatorio={true}
-              />
-              <EntradaSeleccion
-                etiqueta="¿El jugador ha vivido en el extranjero?"
-                valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                alCambiar={(e) => setExtractedData({ ...extractedData, haVividoExtranjero: e.target.value === '1' })}
-                opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
-                obligatorio={true}
-              />
-              {extractedData.haVividoExtranjero && (
-                <EntradaFormulario
-                  etiqueta="¿En qué país?"
-                  valor={extractedData.dondeVividoExtranjero}
-                  alCambiar={(e) => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
-                  obligatorio={true}
-                />
-              )}
-              <EntradaFormulario
-                etiqueta="Nacionalidades del padre"
-                valor={extractedData.nacionalidadPadre}
-                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
-                obligatorio={true}
-              />
-              <EntradaFormulario
-                etiqueta="Nacionalidades de la madre"
-                valor={extractedData.nacionalidadMadre}
-                alCambiar={(e) => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
-                obligatorio={true}
-              />
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <AreaTexto
-                  etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF."
-                  valor={extractedData.registroAsociacionExtranjera}
-                  alCambiar={(e) => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
-                  filas={2}
-                  obligatorio={true}
-                />
-              </div>
-
-              <EntradaFormulario
-                etiqueta="Nacionalidades del abuelo paterno"
-                valor={extractedData.nacAbueloPaterno}
-                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })}
-                obligatorio={true}
-              />
-              <EntradaFormulario
-                etiqueta="Nacionalidades de la abuela paterna"
-                valor={extractedData.nacAbuelaPaterna}
-                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })}
-                obligatorio={true}
-              />
-              <EntradaFormulario
-                etiqueta="Nacionalidades del abuelo materno"
-                valor={extractedData.nacAbueloMaterno}
-                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })}
-                obligatorio={true}
-              />
-              <EntradaFormulario
-                etiqueta="Nacionalidades de la abuela materna"
-                valor={extractedData.nacAbuelaMaterna}
-                alCambiar={(e) => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })}
-                obligatorio={true}
-              />
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <AreaTexto
-                  etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?"
-                  valor={extractedData.juegoClubExtranjero}
-                  alCambiar={(e) => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
-                  filas={3}
-                  obligatorio={true}
-                />
-              </div>
-            </div>
-            
-            <p style={{ margin: '15px 0 0', fontSize: '12px', color: '#0c4a6e', fontStyle: 'italic' }}>
-              💡 Al ser extranjero, debes completar todos estos antecedentes internacionales. Se validarán automáticamente al subir los documentos.
-            </p>
-          </section>
-        )}
-
         {/* PASO 2: CARGA DE DOCUMENTOS */}
         {showStep2 && (
           <section className="fade-in" style={{ marginBottom: '40px' }}>
@@ -987,7 +902,18 @@ export default function AdminCrearJugador() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     border: '1px solid #f1f5f9'
-                  }}>
+                  }}
+                  
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                  }}
+
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    handleFileUpload(doc.key, file);
+                  }}
+                  >
                     {previews[doc.key] ? (
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                         {/* MINIATURA */}
@@ -1344,26 +1270,11 @@ export default function AdminCrearJugador() {
 
               {/* SECCIÓN MODO PREMIUM: ANTECEDENTES INTERNACIONALES */}
               <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
-                      <FaGlobeAmericas />
-                    </div>
-                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                    <FaGlobeAmericas />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'white', padding: '8px 16px', borderRadius: '12px', border: '1px solid #ffedd5' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>¿Jugador foráneo?</span>
-                    <div className="form-check form-switch" style={{ margin: 0, padding: 0, minHeight: 'auto' }}>
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        role="switch"
-                        checked={extractedData.esForaneo}
-                        onChange={e => setExtractedData({...extractedData, esForaneo: e.target.checked})}
-                        style={{ cursor: 'pointer', margin: 0, width: '36px', height: '20px' }}
-                      />
-                    </div>
-                  </div>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
                 </div>
 
                 {extractedData.esForaneo ? (
@@ -1484,7 +1395,7 @@ export default function AdminCrearJugador() {
           {previewDoc.type === 'pdf' ? (
             <iframe
               src={previewDoc.url}
-              style={{ width: '100%', height: '70vh', border: 'none' }}
+              style={{ width: '1800px', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />
           ) : (
