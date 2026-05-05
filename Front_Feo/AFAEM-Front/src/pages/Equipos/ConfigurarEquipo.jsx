@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle, FaSyncAlt} from 'react-icons/fa';
+import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle, FaSearchPlus, FaSyncAlt} from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
