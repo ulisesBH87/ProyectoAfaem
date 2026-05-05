@@ -343,6 +343,7 @@ export const createTeamCompleto = async (data) => {
     // Separamos metadatos de archivos
     const teamMetadata = {
       nombre_equipo: data.teamName,
+      equipo_temporal_id: data.equipo_temporal_id || data.equipoTemporalId || null,
       liga_id: data.liga_id,
       modalidad_id: data.modalidad_id,
       categoria_id: data.categoria_id,
@@ -361,7 +362,7 @@ export const createTeamCompleto = async (data) => {
       telefono: p.telefono,
       sexo_id: p.sexo_id,
       fecha_nacimiento: p.birthDate,
-      seguro_tipo_id: p.insuranceType,
+      seguro_id: p.insuranceType,
       numero_camiseta: p.shirtNumber,
       extranjero: p.esForaneo,
       nacionalidad: p.nacionalidadJugador,
@@ -423,6 +424,23 @@ export const finalizarSolicitudCompleta = async (solicitudId) => {
   }
 };
 
+/**
+ * CONSULTA SI UN EQUIPO TIENE UN EquipoTemporal ACTIVO Y CUÁNTOS SLOTS/SEGUROS ESTÁN DISPONIBLES
+ * El componente llama a este servicio y decide la redirección.
+ * @param {number} equipoId - ID del equipo
+ */
+export const checkTeamSlots = async (equipoId) => {
+  try {
+    const response = await api.get(`/equipo-temporal/hay-slots`, {
+      params: { equipo_id: equipoId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error verificando slots del equipo:', error);
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   getUserTeams,
@@ -437,5 +455,6 @@ export default {
   getAvailableSlots,
   getEquipoTemporalInfo,
   getPresidentesActivos,
-  finalizarSolicitudCompleta
+  finalizarSolicitudCompleta,
+  checkTeamSlots
 };

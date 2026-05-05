@@ -20,3 +20,5 @@ class OrdenPago(Base):
     OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="OrdenPagoRelacion", lazy="selectin")
 
     EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="OrdenPagoRelacion")
+
+    SolicitudId = Column(Integer, ForeignKey("Solicitudes.SolicitudId"), nullable=False)

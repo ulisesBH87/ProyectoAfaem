@@ -712,7 +712,7 @@ export default function AdminEquipos() {
                 </div>
               </div>
               <button 
-                onClick={() => navigate(`/admin/layout-jugadores?equipo=${equipoEdicion.EquipoId}`)}
+                onClick={() => navigate(`/admin/layout-jugadores?equipo=${encodeURIComponent(equipoEdicion.NombreEquipo)}`)}
                 className="btn-premium" 
                 style={{ padding: '10px 18px', fontSize: '12px', background: 'white', color: '#0b4ea6', border: '1.5px solid #0b4ea6', boxShadow: 'none' }}
               >

@@ -220,7 +220,8 @@ const AdminPagos = () => {
         const config = { 
           2: { label: 'Pendiente', bg: '#fef3c7', color: '#92400e', icon: <FaClock /> }, 
           3: { label: 'Aprobado', bg: '#dcfce7', color: '#166534', icon: <FaCheckCircle /> }, 
-          4: { label: 'Rechazado', bg: '#fee2e2', color: '#991b1b', icon: <FaTimesCircle /> } 
+          4: { label: 'Rechazado', bg: '#fee2e2', color: '#991b1b', icon: <FaTimesCircle /> },
+          5: { label: 'Caducado', bg: '#fee2e2', color: '#006774', icon: <FaTimesCircle /> } 
         };
         const c = config[val] || { label: 'Desconocido', bg: '#f1f5f9', color: '#64748b', icon: null };
         return (

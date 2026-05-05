@@ -81,6 +81,7 @@ def obtener_solicitud_detalle_servicio(db, solicitud_id):
 def obtener_solicitud_individual_servicio(db: Session, solicitud_id: int):
     return solicitud_repositorio.obtener_solicitud_individual_repo(db, solicitud_id)
 
+# == REQUISITOS DE AFILIACIÓN ==
 def agregar_requisitos_servicio(db: Session, tipo_afiliacion_id: int, documentos_persona_ids: list[int]):
     existentes = solicitud_repositorio.obtener_por_tipo_afiliacion(db, tipo_afiliacion_id)
 
@@ -106,10 +107,15 @@ def ver_requisitos_afiliacion_servicio(db, tipo_afiliacion_id: int):
 
     return requisitos
 
-def crear_solicitud_servicio(db, solicitud, usuarioid):
-    solicitud.UsuarioId = usuarioid
-    nueva_solicitud = solicitud_repositorio.crear_solicitud_repo(db, solicitud.TipoAfiliacionId, solicitud.UsuarioId)
+def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario):
+    usuario_id = usuario.UsuarioId
+    
+    nueva_solicitud = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id)
 
+
+    #NO SE CREAN DOCUMENTOS POR QUE LA SOLICITUD NO HA SIDO APROBADA.
+    #CREAR OTRO SERVICIO PARA AÑADIR DOCUMENTOS DE LAS PERSONAS
+    """
     for persona in solicitud.Persona:
 
         for doc in persona.Documentos:
@@ -122,8 +128,9 @@ def crear_solicitud_servicio(db, solicitud, usuarioid):
                 RutaArchivo = doc.ruta_archivo
             )
     db.commit()
-
-    return {"solicitud_id": nueva_solicitud.SolicitudId, "mensaje": "Solicitud enviada correctamente"}
+    """
+    
+    return nueva_solicitud
 
 def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
 

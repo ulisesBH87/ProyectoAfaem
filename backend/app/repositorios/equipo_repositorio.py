@@ -20,16 +20,17 @@ from app.modelos.documentos_entregados_modelo import DocumentosEntregados
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.servicios.documentos_servicio import subir_documento_servicio2
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from app.enums.estatus_pago_enum import EstatusValidacionPago
 
 
-def crear_equipo_temporal_repo(db, orden, solicitud_id):
+def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso):
     #obtener cantidad de jugadores pagados
     detalles = db.query(OrdenPagoDetalle).filter(OrdenPagoDetalle.OrdenPagoId == orden.OrdenPagoId).all()
+
     existe = db.query(EquipoTemporal).filter(
         EquipoTemporal.OrdenPagoId == orden.OrdenPagoId
     ).first()
@@ -38,15 +39,12 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id):
         return existe
     
     cantidad_jugadores = 0
-    cantidad_seguros = 0
 
-
+    #obtener cantidad de jugadores
     for d in detalles:
-        print("detalle:", d.TipoConceptoId, d.TipoAfiliacionId, d.Cantidad)
-        if d.TipoConceptoId == 1:   #INSCRIPCION
-            if d.TipoAfiliacionId == 4: #JUGADOR MAYOR
-                cantidad_jugadores = d.Cantidad
-
+        #print("detalle:", d.TipoConceptoId, d.TipoAfiliacionId, d.Cantidad) DEBUG SOLAMENTE
+        if d.TipoConceptoId == 2:   #INSCRIPCION DE JUGADOR
+            cantidad_jugadores += d.Cantidad
 
     # crear equipo temporal        
     equipo = EquipoTemporal(
@@ -55,22 +53,77 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id):
         OrdenPagoId=orden.OrdenPagoId,
         Activo=True,
         CantidadJugadoresPagados=cantidad_jugadores,
-        TipoProcesoId=1 #REGISTRO INICIAL
+        TipoProcesoId=tipo_proceso
     )
 
     db.add(equipo)
     db.flush()
 
     #creación de slots
-    for i in range(cantidad_jugadores):
-        slot = EquipoTemporalJugador(
-            EquipoTemporalId = equipo.EquipoTemporalId,
-            Completo=False
+    total_slots_creados = 0
+
+    for d in detalles:
+        if (
+            d.TipoConceptoId == 1 and  # SEGURO
+            d.SeguroId is not None
+        ):
+            for _ in range(d.Cantidad):
+                slot = EquipoTemporalJugador(
+                    EquipoTemporalId=equipo.EquipoTemporalId,
+                    Completo=False,
+                    PersonaId=None,
+                    SeguroId=d.SeguroId  #Asignar seguro desde el inicio
+                )
+                db.add(slot)
+                total_slots_creados += 1
+
+    # validación
+    if total_slots_creados != cantidad_jugadores:
+        raise ValueError(
+            f"Inconsistencia: personas={cantidad_jugadores}, slots={total_slots_creados}"
         )
-        db.add(slot)
 
     return equipo
 
+# =============================
+# == DISPONIBLIDAD DE SLOTS ==
+# =============================
+
+def obtener_disponibilidad_equipo(db, equipo_id):
+
+    equipo_temporal = (
+        db.query(EquipoTemporal)
+        .options(selectinload(EquipoTemporal.EquipoTemporalJugadorRelacion))
+        .filter(
+            EquipoTemporal.EquipoId == equipo_id,
+            EquipoTemporal.Activo == True
+        )
+        .first()
+    )
+
+    if not equipo_temporal:
+        return None
+
+    slots = equipo_temporal.EquipoTemporalJugadorRelacion
+
+    # total disponibles
+    disponibles = sum(1 for s in slots if s.Completo == 0)
+
+    # seguros disponibles (solo slots libres)
+    seguros = {}
+    for s in slots:
+        if s.Completo == 0 and s.SeguroId:
+            seguros[s.SeguroId] = seguros.get(s.SeguroId, 0) + 1
+
+    return {
+        "equipo_temporal_activo": True,
+        "equipo_temporal_id": equipo_temporal.EquipoTemporalId,
+        "slots_disponibles": disponibles,
+        "seguros_disponibles": [
+            {"SeguroId": k, "Cantidad": v}
+            for k, v in seguros.items()
+        ]
+    }
 
 def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
     return db.query(EquipoTemporal).filter(
@@ -237,13 +290,44 @@ def crear_solicitud_presidente(db, usuario_id):
 
 
 #CREACIÓN DE EQUIPO
-def actualizar_slot_repo(db, slot, persona_id, seguro_id):
+def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int):
+    
+    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoId == equipo_id, EquipoTemporal.Activo == True).with_for_update().first()
+    
+    if not equipo_temporal:
+        raise HTTPException(status_code=404, detail="Equipo temporal no encontrado o no activo")
 
+    # Buscar slots disponibles con el seguro correcto
+    slot = (
+        db.query(EquipoTemporalJugador)
+        .filter(
+            EquipoTemporalJugador.EquipoTemporalId == equipo_temporal.EquipoTemporalId,
+            EquipoTemporalJugador.Completo == False,
+            EquipoTemporalJugador.SeguroId == seguro_id
+        )
+        .with_for_update()
+        .first()
+    )
+
+    if not slot:
+        raise HTTPException(
+            400,
+            "No hay disponibilidad para el seguro seleccionado"
+        )
+
+    # Asignar persona al slot (NO tocar SeguroId)
     slot.PersonaId = persona_id
-    slot.SeguroId = seguro_id
     slot.Completo = True
 
     return slot
+
+def actualizar_orden(db, solicitud_id: int):
+    orden = db.query(OrdenPago).filter(OrdenPago.SolicitudId == solicitud_id).first()
+    
+    if not orden:
+        raise ValueError("Orden de pago no encontrada")
+
+    orden.EstatusPagoId = int(EstatusValidacionPago.CADUCADO)
 
 
 def parse_fecha(fecha: str):
@@ -275,7 +359,6 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
         db.flush()
 
     except IntegrityError as e:
-        db.rollback()
 
         if "check_curp_persona_longitud" in str(e):
             raise HTTPException(
@@ -319,6 +402,16 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
         Extranjero=p_data.get("extranjero", False),
         AntecedentesId=antecedentes_id
     )
+
+    try:
+        seguro_id = int(p_data.get("seguro_id"))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Seguro inválido")
+    
+    if not seguro_id:
+        raise HTTPException(400, "Debe seleccionar un seguro")
+    
+    slot_jugador = actualizar_slot_repo(db, equipo.EquipoId, nueva_persona.PersonaId, seguro_id)
 
     db.add(miembro)
 

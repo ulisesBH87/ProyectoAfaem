@@ -219,7 +219,8 @@ async def app_error_handler(request: Request, exc: AppError):
         content={
             "success": False,
             "code": exc.code,
-            "message": exc.message
+            "message": exc.message,
+            "detail": exc.detail
         }
     )
 
