@@ -69,6 +69,7 @@ export default function ConfigurarEquipo() {
   const [selectedPresidentId, setSelectedPresidentId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [players, setPlayers] = useState([]);
+  const [equipoTemporalInfo, setEquipoTemporalInfo] = useState(null);
   const [currentPlayer, setCurrentPlayer] = useState({
     id: Date.now(),
     firstName: '',
@@ -332,6 +333,8 @@ export default function ConfigurarEquipo() {
             seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
           });
 
+          console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
+
           if (Object.keys(seguros).length > 0) {
             setAsignacionSeguros(seguros);
           }
@@ -440,6 +443,22 @@ export default function ConfigurarEquipo() {
       }
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const equipoId = equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId;
+    if (!equipoId) return;
+
+    const loadEquipoTemporalInfo = async () => {
+      try {
+        const info = await teamsService.getAvailableSlots(equipoId);
+        setEquipoTemporalInfo(info);
+      } catch (error) {
+        console.warn('No se pudo cargar info de equipo temporal:', error);
+      }
+    };
+
+    loadEquipoTemporalInfo();
+  }, [equipoTemporalIdAgregar, pagoEquipo.equipoTemporalId]);
 
   const TIPO_SOLICITUD = {
     PRESIDENTE: 1,
@@ -2099,7 +2118,8 @@ export default function ConfigurarEquipo() {
                         {catalogs.seguros.map(seg => {
                           const id = seg.id.toString();
                           const count = players.filter(p => p.insuranceType === id).length;
-                          const available = (asignacionSeguros[id] || 0) - count;
+                          const dbSeguro = equipoTemporalInfo?.seguros?.find(s => String(s.seguro_id) === id);
+                          const available = dbSeguro ? (dbSeguro.disponibles - count) : ((asignacionSeguros[id] || 0) - count);
                           return (
                             <button
                               key={id}
