@@ -1,6 +1,7 @@
-
-from sympy import re
-
+from pydantic import BaseModel, EmailStr, field_validator, model_validator, Field
+from datetime import datetime, date
+import re
+from typing import List, Optional
 
 def validacion_curp(value: str):
         val = value.upper()
