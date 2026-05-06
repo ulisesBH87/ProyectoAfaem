@@ -48,7 +48,7 @@ def detector_face_landmarks(imagen):
     imagen_result = face_landmarks.detect(mp_imagen)
 
     if not imagen_result.face_landmarks:
-        return 0, "El rostro no es detectable. Asegúrate de que la cara esté visible y bien iluminada"
+        return 0, "El rostro no es detectable. Asegúrate de que esté visible y bien iluminada"
 
     return imagen_result
 
@@ -68,7 +68,7 @@ def detector_pose_landmarks(imagen):
     imagen_result = pose.detect(mp_imagen)
     
     if not imagen_result.pose_landmarks:
-        return 0, "No se detectó la pose. Verifica que el cuerpo esté completo y visible"
+        return 0, "No se detectó la pose. Verifica que el cuerpo esté visible"
 
     return imagen_result
 
