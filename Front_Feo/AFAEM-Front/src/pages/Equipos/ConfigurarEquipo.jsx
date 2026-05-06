@@ -62,12 +62,14 @@ export default function ConfigurarEquipo() {
     agreedToTerms: false
   });
 
+  const [formErrors, setFormErrors] = useState({});
+
   const [activeStep, setActiveStep] = useState(isAdmin ? 0 : 1); // 0: Select President (Admin), 1: Config, 2: Players
   const [activePresidents, setActivePresidents] = useState([]);
   const [selectedPresidentId, setSelectedPresidentId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [players, setPlayers] = useState([]);
-  
+  const [equipoTemporalInfo, setEquipoTemporalInfo] = useState(null);
   const [currentPlayer, setCurrentPlayer] = useState({
     id: Date.now(),
     firstName: '',
@@ -332,6 +334,8 @@ export default function ConfigurarEquipo() {
             seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
           });
 
+          console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
+
           if (Object.keys(seguros).length > 0) {
             setAsignacionSeguros(seguros);
           }
@@ -441,6 +445,22 @@ export default function ConfigurarEquipo() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const equipoId = equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId;
+    if (!equipoId) return;
+
+    const loadEquipoTemporalInfo = async () => {
+      try {
+        const info = await teamsService.getAvailableSlots(equipoId);
+        setEquipoTemporalInfo(info);
+      } catch (error) {
+        console.warn('No se pudo cargar info de equipo temporal:', error);
+      }
+    };
+
+    loadEquipoTemporalInfo();
+  }, [equipoTemporalIdAgregar, pagoEquipo.equipoTemporalId]);
+
   const TIPO_SOLICITUD = {
     PRESIDENTE: 1,
     EQUIPO: 2,
@@ -448,6 +468,16 @@ export default function ConfigurarEquipo() {
   };
 
   const segurosRequeridosPago = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) + 1 : 0;
+
+  const validateCurp = (value) => {
+    if (!/^[A-Z0-9]*$/.test(value)) {
+      return 'Solo se permiten letras mayúsculas y números.';
+    }
+    if (value.length > 18) {
+      return 'La CURP no puede tener más de 18 caracteres.';
+    }
+    return '';
+  };
   const totalAsignadosPago = Object.values(asignacionSeguros).reduce((sum, value) => sum + Number(value || 0), 0);
   const segurosPendientesPago = segurosRequeridosPago - totalAsignadosPago;
   const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
@@ -1161,12 +1191,14 @@ export default function ConfigurarEquipo() {
       documents: {}
     });
     setEditingPlayerId(null);
+    setFormErrors({});
   };
 
   const loadPlayerForEditing = (playerId) => {
     const playerToEdit = players.find(p => p.id === playerId);
     if (playerToEdit) {
       setCurrentPlayer({ ...playerToEdit });
+      setFormErrors({});
       setEditingPlayerId(playerId);
       // Scroll al formulario
       setTimeout(() => {
@@ -2078,18 +2110,23 @@ export default function ConfigurarEquipo() {
                            type="text" 
                            value={currentPlayer.curp}
                            onChange={(e) => {
-                             const val = e.target.value.toUpperCase();
+                             const rawValue = e.target.value.toUpperCase();
+                             const filteredValue = rawValue.replace(/[^A-Z0-9]/g, '');
+                             const error = validateCurp(filteredValue);
+                             setFormErrors({ ...formErrors, curp: error });
                              let sId = currentPlayer.sexo_id;
-                             if (val.length >= 11) {
-                               const char = val.charAt(10);
+                             if (filteredValue.length >= 11) {
+                               const char = filteredValue.charAt(10);
                                if (char === 'M') sId = 2;
                                else if (char === 'H') sId = 1;
                              }
-                             setCurrentPlayer({...currentPlayer, curp: val, sexo_id: sId});
+                             setCurrentPlayer({...currentPlayer, curp: filteredValue, sexo_id: sId});
                            }}
                            placeholder="ABCD..." 
+                           maxLength={18}
                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
                          />
+                         {formErrors.curp && <small style={{ color: 'red', fontSize: '12px' }}>{formErrors.curp}</small>}
                        </div>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI</label>
@@ -2272,7 +2309,8 @@ export default function ConfigurarEquipo() {
                         {catalogs.seguros.map(seg => {
                           const id = seg.id.toString();
                           const count = players.filter(p => p.insuranceType === id).length;
-                          const available = (asignacionSeguros[id] || 0) - count;
+                          const dbSeguro = equipoTemporalInfo?.seguros?.find(s => String(s.seguro_id) === id);
+                          const available = dbSeguro ? (dbSeguro.disponibles - count) : ((asignacionSeguros[id] || 0) - count);
                           return (
                             <button
                               key={id}
@@ -2565,7 +2603,7 @@ export default function ConfigurarEquipo() {
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
                             presidente_id: isAdmin ? (selectedPresidentId || null) : null,
-                            equipo_temporal_id: !isAdmin ? (pagoEquipo.equipoTemporalId || null) : null,
+                            equipo_temporal_id: !isAdmin ? (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null) : null,
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
@@ -2586,6 +2624,7 @@ export default function ConfigurarEquipo() {
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
                           //Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
+                          
                           // Para debuguear: 
                           Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
