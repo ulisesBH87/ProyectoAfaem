@@ -90,7 +90,7 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso):
 # == DISPONIBLIDAD DE SLOTS ==
 # =============================
 
-def  obtener_disponibilidad_equipo(db, equipo_id):
+def obtener_disponibilidad_equipo(db, equipo_id):
 
     equipo_temporal = (
         db.query(EquipoTemporal)
@@ -105,6 +105,7 @@ def  obtener_disponibilidad_equipo(db, equipo_id):
     if not equipo_temporal:
         return None
 
+    #Si hay slots
     slots = equipo_temporal.EquipoTemporalJugadorRelacion
 
     # total disponibles
