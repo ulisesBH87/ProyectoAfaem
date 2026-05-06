@@ -140,8 +140,8 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             if (not equipo_tem) or (equipo_tem.UsuarioId != usuario.UsuarioId):
                 raise HTTPException(status_code=403, detail="EquipoTemporal no válido para este usuario")                
 
-            if (not equipo_tem.Activo) or (equipo_tem.EquipoId is None):
-                raise HTTPException(status_code=403,detail="Equipo temporal no está disponible para configuración")
+           # if (not equipo_tem.Activo) or (equipo_tem.EquipoId is None):
+             #   raise HTTPException(status_code=403,detail="Equipo temporal no está disponible para configuración")
 
            # if (not equipo_tem.OrdenPagoRelacion) or (int(equipo_tem.OrdenPagoRelacion.EstatusPagoId) != int(EstatusValidacionPago.ACTIVO.value)):
               #  raise HTTPException(status_code=403, detail="El pago no está aprobado para configurar un nuevo equipo")
