@@ -436,6 +436,7 @@ export const checkTeamSlots = async (equipoId) => {
     });
     return response.data;
   } catch (error) {
+    alert('Error verificando slots del equipo. Por favor, intenta de nuevo más tarde.');
     console.error('Error verificando slots del equipo:', error);
     throw error;
   }

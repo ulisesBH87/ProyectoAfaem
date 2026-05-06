@@ -120,6 +120,7 @@ export default function ConfigurarEquipo() {
   // Estados para Agregar Jugador a Equipo Existente
   const [modoAgregarJugador, setModoAgregarJugador] = useState(false);
   const [equipoTemporalIdAgregar, setEquipoTemporalIdAgregar] = useState(null);
+  const [tieneSlotDisponible, setTieneSlotDisponible] = useState(false);
   const [pagoJugador, setPagoJugador] = useState({
     loading: false,
     aprobado: false,
@@ -433,6 +434,7 @@ export default function ConfigurarEquipo() {
       if (equipoTemporalId) {
         setEquipoTemporalIdAgregar(parseInt(equipoTemporalId, 10));
         setModoAgregarJugador(false);
+        setTieneSlotDisponible(true);
         setActiveStep(2);
         return;
       }
@@ -440,6 +442,7 @@ export default function ConfigurarEquipo() {
       if (equipoId) {
         setEquipoTemporalIdAgregar(parseInt(equipoId, 10));
         setModoAgregarJugador(requirePago);
+        setTieneSlotDisponible(false);
         setActiveStep(2);
       }
     }
@@ -1570,9 +1573,9 @@ export default function ConfigurarEquipo() {
         `}
       </style>
       <div className="dashboard-content">
-        {modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
+        {!tieneSlotDisponible && modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
           renderPagoPrevioJugador()
-        ) : !isAdmin && !pagoEquipo.aprobado ? (
+        ) : !isAdmin && !pagoEquipo.aprobado && !tieneSlotDisponible ? (
           renderPagoPrevioEquipo()
         ) : (
           <>
@@ -2434,24 +2437,57 @@ export default function ConfigurarEquipo() {
                   {/* LATERAL: RESUMEN DE EQUIPO */}
                   <div>
                     <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>Resumen de Seguros</h4>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>
+                        {tieneSlotDisponible ? 'Seguros Disponibles' : 'Resumen de Seguros'}
+                      </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                         {catalogs.seguros.map(seg => {
                           const id = seg.id.toString();
-                          const count = players.filter(p => p.insuranceType === id).length;
-                          const total = asignacionSeguros[id] || 0;
-                          const percent = total > 0 ? (count / total) * 100 : 0;
-                          return (
-                            <div key={id}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-                                 <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
-                                 <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
+
+                          if (tieneSlotDisponible) {
+                            const disponible = equipoTemporalInfo?.seguros?.find(s => s.seguro_id === seg.id)?.disponibles || 0;
+                            const registrados = players.filter(p => p.insuranceType === id).length;
+                            const quedan = disponible - registrados;
+
+                            return (
+                              <div key={id}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                   <span style={{ fontWeight: '900', color: quedan > 0 ? '#047857' : '#dc2626' }}>
+                                     {registrados} / {disponible}
+                                   </span>
+                                </div>
+                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                   <div style={{
+                                     width: `${disponible > 0 ? (registrados / disponible) * 100 : 0}%`,
+                                     height: '100%',
+                                     background: quedan > 0 ? 'linear-gradient(90deg, #10b981, #6ee7b7)' : 'linear-gradient(90deg, #dc2626, #ef4444)',
+                                     borderRadius: '5px',
+                                     transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                                   }}></div>
+                                </div>
+                                <div style={{ fontSize: '11px', color: quedan > 0 ? '#059669' : '#991b1b', marginTop: '4px', fontWeight: '600' }}>
+                                  {quedan > 0 ? `${quedan} disponible${quedan !== 1 ? 's' : ''}` : 'Sin disponibilidad'}
+                                </div>
                               </div>
-                              <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                                 <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
+                            );
+                          } else {
+                            const count = players.filter(p => p.insuranceType === id).length;
+                            const total = asignacionSeguros[id] || 0;
+                            const percent = total > 0 ? (count / total) * 100 : 0;
+
+                            return (
+                              <div key={id}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                   <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
+                                </div>
+                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                   <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
+                                </div>
                               </div>
-                            </div>
-                          );
+                            );
+                          }
                         })}
                       </div>
                     </div>
