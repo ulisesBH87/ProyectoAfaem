@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/auth';
 import { RBACContext } from './RBACContextObject';
 
+const PERMISSIONS_REFRESH_MS = 30 * 60 * 1000;
+
 export const RBACProvider = ({ children }) => {
   const [access, setAccess] = useState({
     roles: [],
@@ -87,8 +89,8 @@ export const RBACProvider = ({ children }) => {
     const handleLogin = () => fetchAccess(false);
     window.addEventListener('user-logged-in', handleLogin);
     
-    // Polling silencioso cada 2 minutos para no interrumpir al usuario
-    const interval = setInterval(() => fetchAccess(true), 2 * 60 * 1000);
+    // Refresco espaciado: suficiente para cambios de permisos, sin castigar la sesión.
+    const interval = setInterval(() => fetchAccess(true), PERMISSIONS_REFRESH_MS);
     
     return () => {
         clearTimeout(id);
