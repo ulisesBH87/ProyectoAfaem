@@ -352,6 +352,15 @@ def parse_fecha(fecha: str):
 
 async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     try:
+        #Validar fecha de nacimiento
+        if p_data.get("fecha_nacimiento"):
+            fecha_nacimiento = parse_fecha(p_data["fecha_nacimiento"])
+
+            try:
+                validaciones.validacion_fecha(fecha_nacimiento)
+            except ValueError:
+                raise HTTPException(status_code=400)
+            
         #si nacional
         #Verificar curp
         if not p_data.get("extranjero"):

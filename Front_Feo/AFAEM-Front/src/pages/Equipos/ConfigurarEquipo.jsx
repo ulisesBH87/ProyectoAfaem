@@ -470,6 +470,46 @@ export default function ConfigurarEquipo() {
     JUGADOR: 3
   };
 
+  function validarFechaNacimiento(fechaStr) {
+    if (!fechaStr) {
+      return "La fecha de nacimiento es obligatoria";
+    }
+    const minima = 5
+    const fecha = new Date(fechaStr);
+    const hoy = new Date();
+
+    // Evitar fechas inválidas
+    if (isNaN(fecha.getTime())) {
+      return "Fecha inválida";
+    }
+
+    // No futura
+    if (fecha > hoy) {
+      return "La fecha no puede ser futura";
+    }
+
+    // No antes de 1900
+    const minFecha = new Date(1900, 0, 1);
+    if (fecha < minFecha) {
+      return "La fecha no puede ser anterior a 01-01-1900";
+    }
+
+    // Calcular edad correctamente
+    let edad = hoy.getFullYear() - fecha.getFullYear();
+    const m = hoy.getMonth() - fecha.getMonth();
+
+    if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+      edad--;
+    }
+
+    if (edad < minima) {
+      return `La edad mínima debe ser de ${minima} años`;
+    }
+
+    return null; // todo bien
+  }
+
+
   const segurosRequeridosPago = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) + 1 : 0;
 
   const validateCurp = (value) => {
@@ -2372,6 +2412,13 @@ export default function ConfigurarEquipo() {
 
                       <button 
                         onClick={async () => {
+
+                          const errorFecha = validarFechaNacimiento(currentPlayer.birthDate);
+                          if (errorFecha) {
+                            Swal.fire('Atención', errorFecha, 'warning');
+                            return;
+                          }
+                          
                           const docs = currentPlayer.documents || {};
                           const hasMinDocs = docs.ine && docs.foto;
                           
