@@ -62,12 +62,14 @@ export default function ConfigurarEquipo() {
     agreedToTerms: false
   });
 
+  const [formErrors, setFormErrors] = useState({});
+
   const [activeStep, setActiveStep] = useState(isAdmin ? 0 : 1); // 0: Select President (Admin), 1: Config, 2: Players
   const [activePresidents, setActivePresidents] = useState([]);
   const [selectedPresidentId, setSelectedPresidentId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [players, setPlayers] = useState([]);
-  
+  const [equipoTemporalInfo, setEquipoTemporalInfo] = useState(null);
   const [currentPlayer, setCurrentPlayer] = useState({
     id: Date.now(),
     firstName: '',
@@ -118,6 +120,7 @@ export default function ConfigurarEquipo() {
   // Estados para Agregar Jugador a Equipo Existente
   const [modoAgregarJugador, setModoAgregarJugador] = useState(false);
   const [equipoTemporalIdAgregar, setEquipoTemporalIdAgregar] = useState(null);
+  const [tieneSlotDisponible, setTieneSlotDisponible] = useState(false);
   const [pagoJugador, setPagoJugador] = useState({
     loading: false,
     aprobado: false,
@@ -332,6 +335,8 @@ export default function ConfigurarEquipo() {
             seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
           });
 
+          console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
+
           if (Object.keys(seguros).length > 0) {
             setAsignacionSeguros(seguros);
           }
@@ -429,6 +434,7 @@ export default function ConfigurarEquipo() {
       if (equipoTemporalId) {
         setEquipoTemporalIdAgregar(parseInt(equipoTemporalId, 10));
         setModoAgregarJugador(false);
+        setTieneSlotDisponible(true);
         setActiveStep(2);
         return;
       }
@@ -436,10 +442,27 @@ export default function ConfigurarEquipo() {
       if (equipoId) {
         setEquipoTemporalIdAgregar(parseInt(equipoId, 10));
         setModoAgregarJugador(requirePago);
+        setTieneSlotDisponible(false);
         setActiveStep(2);
       }
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const equipoId = equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId;
+    if (!equipoId) return;
+
+    const loadEquipoTemporalInfo = async () => {
+      try {
+        const info = await teamsService.getAvailableSlots(equipoId);
+        setEquipoTemporalInfo(info);
+      } catch (error) {
+        console.warn('No se pudo cargar info de equipo temporal:', error);
+      }
+    };
+
+    loadEquipoTemporalInfo();
+  }, [equipoTemporalIdAgregar, pagoEquipo.equipoTemporalId]);
 
   const TIPO_SOLICITUD = {
     PRESIDENTE: 1,
@@ -447,7 +470,57 @@ export default function ConfigurarEquipo() {
     JUGADOR: 3
   };
 
+  function validarFechaNacimiento(fechaStr) {
+    if (!fechaStr) {
+      return "La fecha de nacimiento es obligatoria";
+    }
+    const minima = 5
+    const fecha = new Date(fechaStr);
+    const hoy = new Date();
+
+    // Evitar fechas inválidas
+    if (isNaN(fecha.getTime())) {
+      return "Fecha inválida";
+    }
+
+    // No futura
+    if (fecha > hoy) {
+      return "La fecha no puede ser futura";
+    }
+
+    // No antes de 1900
+    const minFecha = new Date(1900, 0, 1);
+    if (fecha < minFecha) {
+      return "La fecha no puede ser anterior a 01-01-1900";
+    }
+
+    // Calcular edad correctamente
+    let edad = hoy.getFullYear() - fecha.getFullYear();
+    const m = hoy.getMonth() - fecha.getMonth();
+
+    if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+      edad--;
+    }
+
+    if (edad < minima) {
+      return `La edad mínima debe ser de ${minima} años`;
+    }
+
+    return null; // todo bien
+  }
+
+
   const segurosRequeridosPago = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) + 1 : 0;
+
+  const validateCurp = (value) => {
+    if (!/^[A-Z0-9]*$/.test(value)) {
+      return 'Solo se permiten letras mayúsculas y números.';
+    }
+    if (value.length > 18) {
+      return 'La CURP no puede tener más de 18 caracteres.';
+    }
+    return '';
+  };
   const totalAsignadosPago = Object.values(asignacionSeguros).reduce((sum, value) => sum + Number(value || 0), 0);
   const segurosPendientesPago = segurosRequeridosPago - totalAsignadosPago;
   const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
@@ -1161,12 +1234,14 @@ export default function ConfigurarEquipo() {
       documents: {}
     });
     setEditingPlayerId(null);
+    setFormErrors({});
   };
 
   const loadPlayerForEditing = (playerId) => {
     const playerToEdit = players.find(p => p.id === playerId);
     if (playerToEdit) {
       setCurrentPlayer({ ...playerToEdit });
+      setFormErrors({});
       setEditingPlayerId(playerId);
       // Scroll al formulario
       setTimeout(() => {
@@ -1538,9 +1613,9 @@ export default function ConfigurarEquipo() {
         `}
       </style>
       <div className="dashboard-content">
-        {modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
+        {!tieneSlotDisponible && modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
           renderPagoPrevioJugador()
-        ) : !isAdmin && !pagoEquipo.aprobado ? (
+        ) : !isAdmin && !pagoEquipo.aprobado && !tieneSlotDisponible ? (
           renderPagoPrevioEquipo()
         ) : (
           <>
@@ -2078,18 +2153,23 @@ export default function ConfigurarEquipo() {
                            type="text" 
                            value={currentPlayer.curp}
                            onChange={(e) => {
-                             const val = e.target.value.toUpperCase();
+                             const rawValue = e.target.value.toUpperCase();
+                             const filteredValue = rawValue.replace(/[^A-Z0-9]/g, '');
+                             const error = validateCurp(filteredValue);
+                             setFormErrors({ ...formErrors, curp: error });
                              let sId = currentPlayer.sexo_id;
-                             if (val.length >= 11) {
-                               const char = val.charAt(10);
+                             if (filteredValue.length >= 11) {
+                               const char = filteredValue.charAt(10);
                                if (char === 'M') sId = 2;
                                else if (char === 'H') sId = 1;
                              }
-                             setCurrentPlayer({...currentPlayer, curp: val, sexo_id: sId});
+                             setCurrentPlayer({...currentPlayer, curp: filteredValue, sexo_id: sId});
                            }}
                            placeholder="ABCD..." 
+                           maxLength={18}
                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
                          />
+                         {formErrors.curp && <small style={{ color: 'red', fontSize: '12px' }}>{formErrors.curp}</small>}
                        </div>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI</label>
@@ -2197,7 +2277,8 @@ export default function ConfigurarEquipo() {
                         {catalogs.seguros.map(seg => {
                           const id = seg.id.toString();
                           const count = players.filter(p => p.insuranceType === id).length;
-                          const available = (asignacionSeguros[id] || 0) - count;
+                          const dbSeguro = equipoTemporalInfo?.seguros?.find(s => String(s.seguro_id) === id);
+                          const available = dbSeguro ? (dbSeguro.disponibles - count) : ((asignacionSeguros[id] || 0) - count);
                           return (
                             <button
                               key={id}
@@ -2331,6 +2412,13 @@ export default function ConfigurarEquipo() {
 
                       <button 
                         onClick={async () => {
+
+                          const errorFecha = validarFechaNacimiento(currentPlayer.birthDate);
+                          if (errorFecha) {
+                            Swal.fire('Atención', errorFecha, 'warning');
+                            return;
+                          }
+                          
                           const docs = currentPlayer.documents || {};
                           const hasMinDocs = docs.ine && docs.foto;
                           
@@ -2396,24 +2484,57 @@ export default function ConfigurarEquipo() {
                   {/* LATERAL: RESUMEN DE EQUIPO */}
                   <div>
                     <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>Resumen de Seguros</h4>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>
+                        {tieneSlotDisponible ? 'Seguros Disponibles' : 'Resumen de Seguros'}
+                      </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                         {catalogs.seguros.map(seg => {
                           const id = seg.id.toString();
-                          const count = players.filter(p => p.insuranceType === id).length;
-                          const total = asignacionSeguros[id] || 0;
-                          const percent = total > 0 ? (count / total) * 100 : 0;
-                          return (
-                            <div key={id}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-                                 <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
-                                 <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
+
+                          if (tieneSlotDisponible) {
+                            const disponible = equipoTemporalInfo?.seguros?.find(s => s.seguro_id === seg.id)?.disponibles || 0;
+                            const registrados = players.filter(p => p.insuranceType === id).length;
+                            const quedan = disponible - registrados;
+
+                            return (
+                              <div key={id}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                   <span style={{ fontWeight: '900', color: quedan > 0 ? '#047857' : '#dc2626' }}>
+                                     {registrados} / {disponible}
+                                   </span>
+                                </div>
+                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                   <div style={{
+                                     width: `${disponible > 0 ? (registrados / disponible) * 100 : 0}%`,
+                                     height: '100%',
+                                     background: quedan > 0 ? 'linear-gradient(90deg, #10b981, #6ee7b7)' : 'linear-gradient(90deg, #dc2626, #ef4444)',
+                                     borderRadius: '5px',
+                                     transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                                   }}></div>
+                                </div>
+                                <div style={{ fontSize: '11px', color: quedan > 0 ? '#059669' : '#991b1b', marginTop: '4px', fontWeight: '600' }}>
+                                  {quedan > 0 ? `${quedan} disponible${quedan !== 1 ? 's' : ''}` : 'Sin disponibilidad'}
+                                </div>
                               </div>
-                              <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                                 <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
+                            );
+                          } else {
+                            const count = players.filter(p => p.insuranceType === id).length;
+                            const total = asignacionSeguros[id] || 0;
+                            const percent = total > 0 ? (count / total) * 100 : 0;
+
+                            return (
+                              <div key={id}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                   <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
+                                </div>
+                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                   <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
+                                </div>
                               </div>
-                            </div>
-                          );
+                            );
+                          }
                         })}
                       </div>
                     </div>
@@ -2490,7 +2611,7 @@ export default function ConfigurarEquipo() {
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
                             presidente_id: isAdmin ? (selectedPresidentId || null) : null,
-                            equipo_temporal_id: !isAdmin ? (pagoEquipo.equipoTemporalId || null) : null,
+                            equipo_temporal_id: !isAdmin ? (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null) : null,
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
@@ -2511,6 +2632,7 @@ export default function ConfigurarEquipo() {
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
                           //Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
+                          
                           // Para debuguear: 
                           Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }

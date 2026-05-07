@@ -20,6 +20,7 @@ from app.modelos.documentos_entregados_modelo import DocumentosEntregados
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
 
+from app.utilidades import validaciones
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.servicios.documentos_servicio import subir_documento_servicio2
@@ -104,6 +105,7 @@ def obtener_disponibilidad_equipo(db, equipo_id):
     if not equipo_temporal:
         return None
 
+    #Si hay slots
     slots = equipo_temporal.EquipoTemporalJugadorRelacion
 
     # total disponibles
@@ -131,9 +133,12 @@ def obtener_equipos_temporales_por_usuario_repo(db, usuario_id):
     ).all()
 
 def obtener_equipo_temporal(db, equipo_temporal_id):
-    return db.query(EquipoTemporal).filter(
+    
+    equipo_temporal = db.query(EquipoTemporal).filter(
         EquipoTemporal.EquipoTemporalId == equipo_temporal_id
     ).first()
+    
+    return equipo_temporal
 
 def obtener_seguros_pagados(db, orden_pago_id):
     detalles = db.query(OrdenPagoDetalle).filter(OrdenPagoDetalle.OrdenPagoId == orden_pago_id, OrdenPagoDetalle.SeguroId != None).all()
@@ -152,7 +157,7 @@ def contar_seguros_usados(slots):
     usados = {}
 
     for slot in slots:
-        if slot.SeguroId:
+        if slot.SeguroId and slot.Completo and slot.PersonaId:
             usados[slot.SeguroId] = usados.get(slot.SeguroId, 0) + 1
 
     return usados
@@ -184,9 +189,15 @@ def obtener_presidente(db, usuario, team_info):
     presidente_id = None
     presidente = None
 
+    #Si usuario es administrador, busca al presidente
     if rol_id == 1:
+        #debug
+        #print("SOY ADMINISTRADOR")
         presidente_id = team_info.get("presidente_id")
     else:
+        #debug
+        #print("SOY PRESIDENTE DE EQUIPO")
+        
         presidente = db.query(PresidenteEquipo).filter(
             PresidenteEquipo.PersonaId == usuario.PersonaId
         ).first()
@@ -341,6 +352,20 @@ def parse_fecha(fecha: str):
 
 async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     try:
+        #Validar fecha de nacimiento
+        if p_data.get("fecha_nacimiento"):
+            fecha_nacimiento = parse_fecha(p_data["fecha_nacimiento"])
+
+            try:
+                validaciones.validacion_fecha(fecha_nacimiento)
+            except ValueError:
+                raise HTTPException(status_code=400)
+            
+        #si nacional
+        #Verificar curp
+        if not p_data.get("extranjero"):
+            validaciones.validacion_curp(p_data["curp"])
+        
         nueva_persona = Personas(
             Nombre=p_data["nombre"],
             PrimerApellido=p_data["primer_apellido"],
@@ -669,6 +694,9 @@ def obtener_miembros_equipo_por_id_repo(db, equipo_id):
         })
     
     return miembros
+
+def obtener_equipo_por_id(db, equipo_id):
+    return db.query(Equipos).filter(Equipos.EquipoId == equipo_id).first()
 
 def obtener_o_crear_equipo(db, nombre_equipo):
     equipo = db.query(Equipos).filter(

@@ -349,8 +349,8 @@ export default function RegistroJugadores() {
       Swal.fire({ title: 'Registro Exitoso!', text: 'El jugador ha sido enviado a revisión por el administrador.', icon: 'success' })
         .then(() => navigate(`/presidente-equipo/admin-equipo/${teamId}`));
     } catch (err) { 
-      console.error(err);
-      Swal.fire('Error', 'No se pudo completar el registro.', 'error'); 
+      Swal.fire('Error', 'No se pudo completar el registro.'); 
+      //DESCOMENTAR PARA DEBUG. Swal.fire('Error', 'No se pudo completar el registro.', 'error'); 
     } finally { setUploading(false); }
   };
 
