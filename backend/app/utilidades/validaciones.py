@@ -18,3 +18,26 @@ def validacion_curp(value: str):
         if not re.fullmatch(curp_regex, val):
             raise ValueError('Formato de CURP inválido')
         return val
+
+def validacion_fecha(value: date):
+    
+    minima = 5
+    hoy = date.today()
+
+    if value > date.today():
+        raise ValueError('La fecha no puede ser futura')
+        
+
+    if value < date(1900, 1, 1):
+        raise ValueError('La fecha no puede ser anterior a 01-01-1900')
+    
+    #Edad mínima
+    age = hoy.year - value.year - (
+        (hoy.month, hoy.day) < (value.month, value.day)
+    )
+
+    if age < minima:
+        raise ValueError(f'La edad mínima debe ser de {minima} años')
+    
+    
+    return value
