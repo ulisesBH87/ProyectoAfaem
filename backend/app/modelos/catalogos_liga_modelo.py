@@ -6,26 +6,23 @@ class CatalogoCategorias(Base):
     __tablename__ = "CatalogoCategorias"
     CategoriaId = Column(Integer, primary_key=True, index=True)
     NombreCategoria = Column(String(100), nullable=False)
-    LigaModRelacion = relationship("LigaModalidadCategoriaRama", back_populates="CategoriaRelacion")
     EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="CategoriaRelacion")
 
 class Ligas(Base):
     __tablename__ = "Ligas"
     LigaId = Column(Integer, primary_key=True, index=True)
     Nombreliga = Column(String(100), nullable=False)
-    LigaModRelacion = relationship("LigaModalidadCategoriaRama", back_populates="LigaRelacion")
+    Descripcionliga = Column(String(200), nullable=False)
     EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="LigaRelacion")
 
 class CatalogoModalidad(Base):
     __tablename__ = "CatalogoModalidad"
     ModalidadId = Column(Integer, primary_key=True, index=True)
     NombreModalidad = Column(String(100), nullable=False)
-    LigaModRelacion = relationship("LigaModalidadCategoriaRama", back_populates="ModalidadRelacion")
     EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="ModalidadRelacion")
 
 class CatalogoRamas(Base):
     __tablename__ = "CatalogoRamas"
     RamaId = Column(Integer, primary_key=True, index=True)
     Nombre = Column(String(100), nullable=False)
-    LigaModRelacion = relationship("LigaModalidadCategoriaRama", back_populates="RamaRelacion")
     EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="RamaRelacion")

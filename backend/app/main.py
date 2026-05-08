@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles # Importación necesaria
-from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta, auditoria_ruta
+from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta, auditoria_ruta, catalogos_ruta
 from app.utilidades.context import usuario_actual_id, ip_actual
 from app.db.sesion import SessionLocal
 from app.core.seguridad import obtener_usuario_desde_token
@@ -209,6 +209,7 @@ app.include_router(permisos_ruta.router)
 app.include_router(gestion_ruta.router)
 app.include_router(personas_ruta.router)
 app.include_router(auditoria_ruta.router)
+app.include_router(catalogos_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
 @app.exception_handler(AppError)
