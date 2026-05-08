@@ -19,6 +19,8 @@ from app.repositorios.solicitud_repositorio import crear_solicitud_repo
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
 from app.enums.estatus_pago_enum  import EstatusValidacionPago
 from app.modelos.catalogo_tipos_solicitud import CatalogoTiposSolicitud
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
+from app.enums.procesos_equipo_temporal import ProcesosEquipoTemporalEnum
 
 #Tipos de afiliación
 def obtener_afiliaciones_repo(db):
@@ -114,14 +116,11 @@ def crear_presidente_equipo_repo(db, usuario_id):
     ).first()
 
     if presidente_existente:
-        if not _presidente_esta_activo(presidente_existente):
-            presidente_existente.EstatusId = PresidenteEquipoEstatus.PAGO_PENDIENTE
-        usuario.RolId = Rol.PRESIDENTE_EQUIPO.value
-        return presidente_existente
+        raise Exception("Ya existe un presidente registrado para esta persona")
     
     nuevo_presidente = PresidenteEquipo(
         PersonaId = persona.PersonaId,
-        EstatusId = PresidenteEquipoEstatus.PAGO_PENDIENTE
+        EstatusId = PresidenteEquipoEstatus.ACTIVO.value
     )
 
     db.add(nuevo_presidente)
@@ -152,50 +151,41 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     if not orden:
         return None
 
-    # Lógica de suspensión/reactivación
-    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
-    if usuario:
-        if estatus == 4: # 4 = Rechazado -> Suspender
-            usuario.Estatus = False
-        elif estatus == 3: # 3 = Aprobado -> Reactivar
-            usuario.Estatus = True
-
     #Estatus de la orden cambiado
     orden.EstatusPagoId = estatus
     
     #Implementar lógica para el rechazo
-    if estatus != 3: #si el pago no es aceptado solo se cambia el estatus
+    if estatus == EstatusValidacionPago.RECHAZADO.value: #si el pago no es aceptado se cambia el estatus
         db.commit()
         return orden 
 
     #SI SE APROBÓ (Estatus = 3)
-    #solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
     #Anteriormente se creaba la solicitud después de aprobar la orden. Ahora, se crea la solicitud, se crea la orden y se relacionan mediante el id de la solicitud
     
+    #Búsqueda de la solicitud relacionada a la orden de pago
     solicitud_id = orden.SolicitudId
-    
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+
     solicitud_tipo = db.query(CatalogoTiposSolicitud).filter(CatalogoTiposSolicitud.TipoSolicitudId == solicitud.TipoSolicitudId).first()
     tipo_id = solicitud_tipo.TipoSolicitudId
 
-    if(tipo_id == 1 or tipo_id == 2):
-        tipo_proceso = 1 #REGISTRO INICIAL
 
-    if(tipo_id == 3):
-        tipo_proceso = 2 #AMPLIACION
+    #Procesos
+    if(tipo_id == TiposSolicitudEnum.PRESIDENTE_EQUIPO.value or tipo_id == TiposSolicitudEnum.EQUIPO.value):
+        tipo_proceso = ProcesosEquipoTemporalEnum.REGISTRO_INICIAL.value
+        crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso)
 
-    crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso)
-
-    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
-    persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
-
-    #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
-    """
-    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
+    elif(tipo_id == TiposSolicitudEnum.JUGADOR.value):
+        equipo_id = solicitud.EquipoId
+        tipo_proceso = ProcesosEquipoTemporalEnum.AMPLIACION.value
+        crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id)
+    else:
+        raise Exception("Tipo de solicitud no reconocido para proceso de creación de equipo")
     
-    if presidente and not _presidente_esta_activo(presidente):
-        presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
-    """
+
+
+
+    #usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
 
     db.commit()
 
