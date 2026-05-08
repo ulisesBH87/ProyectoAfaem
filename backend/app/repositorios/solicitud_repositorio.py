@@ -13,6 +13,7 @@ from app.modelos import (
     CatalogoDocumentosPersonas, DocumentosEntregados, EquipoTemporal, 
     OrdenPago, Equipos, PresidenteEquipo, EquiposJugando, RelUsuarioRoles
 )
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 
 #REQUISITOS
 def crear_requisito_repo(db: Session, tipo_afiliacion_id: int, documento_persona_id: int):
@@ -64,15 +65,25 @@ def ver_requisitos_afiliacion_repo(db: Session, tipo_afiliacion_id: int):
 
 #SOLICITUDES
 #CREAR SOLICITUD (NO ENVIAR)
-def crear_solicitud_repo(db, tipo_afiliacion_id, tipo_solicitud, usuario_id):
+def crear_solicitud_repo(db, tipo_afiliacion_id, tipo_solicitud, usuario_id, equipo_id=None):
 
-    nueva = Solicitud(
-        TipoAfiliacionId = tipo_afiliacion_id,
-        TipoSolicitudId = tipo_solicitud,
-        UsuarioId = usuario_id,
-        EstatusValidacion = 4 # BORRADOR
-    )
+    if tipo_solicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO or tipo_solicitud == TiposSolicitudEnum.EQUIPO:
+        nueva = Solicitud(
+            TipoAfiliacionId = tipo_afiliacion_id,
+            TipoSolicitudId = tipo_solicitud,
+            UsuarioId = usuario_id,
+            EstatusValidacion = 4 # BORRADOR
+        )
     
+    elif tipo_solicitud == TiposSolicitudEnum.JUGADOR:
+        nueva = Solicitud(
+            TipoAfiliacionId = tipo_afiliacion_id,
+            TipoSolicitudId = tipo_solicitud,
+            UsuarioId = usuario_id,
+            EstatusValidacion = 4, # BORRADOR
+            EquipoId = equipo_id
+        )
+
     db.add(nueva)
     db.flush()
 

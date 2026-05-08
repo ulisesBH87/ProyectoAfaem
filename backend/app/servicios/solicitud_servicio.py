@@ -7,6 +7,7 @@ from app.core.seguridad import obtener_usuario_actual
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from fastapi import HTTPException
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 
 #Se crea la solicitud parcialmente, aún no se envía a administrador
 def crear_solicitud(db: Session, data, usuario):
@@ -107,10 +108,14 @@ def ver_requisitos_afiliacion_servicio(db, tipo_afiliacion_id: int):
 
     return requisitos
 
-def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario):
+def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, equipo_id=None):
     usuario_id = usuario.UsuarioId
     
-    nueva_solicitud = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id)
+    if tipo_solicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO or tipo_solicitud == TiposSolicitudEnum.EQUIPO:
+        solicitud_nueva = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id)
+
+    elif tipo_solicitud == TiposSolicitudEnum.JUGADOR:
+        solicitud_nueva = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id, equipo_id)
 
 
     #NO SE CREAN DOCUMENTOS POR QUE LA SOLICITUD NO HA SIDO APROBADA.
@@ -130,7 +135,7 @@ def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario):
     db.commit()
     """
     
-    return nueva_solicitud
+    return solicitud_nueva
 
 def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
 

@@ -744,7 +744,8 @@ export default function ConfigurarEquipo() {
         body: JSON.stringify({
           CantidadJugadores: Number(numJugadoresAgregar),
           Seguros: segurosPayload,
-          TipoSolicitud: TIPO_SOLICITUD.JUGADOR
+          TipoSolicitud: TIPO_SOLICITUD.JUGADOR,
+          EquipoId: searchParams.get('equipoId') ? Number(searchParams.get('equipoId')) : undefined
         })
       });
 
