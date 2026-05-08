@@ -6,6 +6,7 @@ from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase, ListaPagos
 from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.repositorios import pagos_repositorio
 from app.excepciones import pagos_excepciones
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 
 class EstadoEquipo:
     SIN_ORDEN = "SIN_ORDEN"
@@ -111,13 +112,13 @@ class PagosServicio:
                 pagos_repositorio.crear_detalle_pago_repo(db=self.db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
 
             #Si se va a crear presidente de equipo
-            if(orden.TipoSolicitud == 1): #Presidente de equipo (Hacer enum en el futuro)
-                try:        
-                    pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
-                except Exception:
-                    self.db.rollback()
-                    raise pagos_excepciones.UsuarioNoEncontradoError()
-                
+            #if(orden.TipoSolicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO): #Presidente de equipo (Hacer enum en el futuro)
+                #try:        
+               #     pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
+              #  except Exception:
+             #       self.db.rollback()
+            #        raise pagos_excepciones.UsuarioNoEncontradoError()
+            
             self.db.commit()
 
             return {

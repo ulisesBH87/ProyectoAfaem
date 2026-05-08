@@ -210,10 +210,6 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             for index, player in enumerate(players_info):
                 await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
 
-            equipo_repositorio.actualizar_usuario_y_presidente(
-                db, usuario, presidente, rol_id
-            )
-
             slots_restantes = db.query(EquipoTemporalJugador).filter(
                 EquipoTemporalJugador.EquipoTemporalId == equipo_tem.EquipoTemporalId,
                 EquipoTemporalJugador.Completo == False
