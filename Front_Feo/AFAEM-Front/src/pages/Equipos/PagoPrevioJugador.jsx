@@ -5,6 +5,7 @@ import '../../styles/dashboard.css';
 import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
+import teamsService from '../../services/teams';
 
 /**
  * PagoPrevioJugador - Componente que maneja el flujo de pago previo para agregar jugadores
@@ -19,6 +20,8 @@ export default function PagoPrevioJugador() {
   const [estadoPago, setEstadoPago] = useState(null);
   const [comprobante, setComprobante] = useState(null);
   const [uploadingComprobante, setUploadingComprobante] = useState(false);
+  const [orderDetails, setOrderDetails] = useState([]);
+  const [segurosCatalogo, setSegurosCatalogo] = useState([]);
 
   const pathSegments = location.pathname.split('/');
   const accion = pathSegments[pathSegments.length - 1];
@@ -57,6 +60,41 @@ export default function PagoPrevioJugador() {
 
     cargarEstadoPago();
   }, [equipoId]);
+
+  useEffect(() => {
+    const cargarResumenOrden = async () => {
+      if (!resolvedOrdenId || (accion !== 'subir-comprobante' && accion !== 'reenviar-comprobante')) {
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        const [ordenRes, catalogs] = await Promise.all([
+          fetch(`${API_BASE}/ordenes-pago/${resolvedOrdenId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          teamsService.getCatalogs()
+        ]);
+
+        if (ordenRes.ok) {
+          const orden = await ordenRes.json();
+          setOrderDetails(Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : []);
+        }
+
+        setSegurosCatalogo(Array.isArray(catalogs?.seguros) ? catalogs.seguros : []);
+      } catch (err) {
+        console.warn('No se pudo cargar el resumen de la orden:', err);
+      }
+    };
+
+    cargarResumenOrden();
+  }, [accion, resolvedOrdenId]);
+
+  const totalResumen = Number(pagoData?.total || total || 0);
+  const detallesAfiliacionJugador = orderDetails.filter(detalle => Number(detalle.TipoAfiliacionId) === 4);
+  const cantidadJugadoresOrden = detallesAfiliacionJugador.reduce((sum, detalle) => sum + Number(detalle.Cantidad || 0), 0);
+  const subtotalAfiliacionJugadores = detallesAfiliacionJugador.reduce((sum, detalle) => sum + Number(detalle.Subtotal || 0), 0);
+  const detallesSeguros = orderDetails.filter(detalle => Number(detalle.SeguroId) > 0);
 
   const handleSubirComprobante = async (e) => {
     const file = e.target.files?.[0];
@@ -143,6 +181,33 @@ export default function PagoPrevioJugador() {
         </button>
       </div>
     </>
+  );
+
+  const renderResumenOrden = () => (
+    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+      <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+        <span>Orden de pago</span>
+        <strong style={{ color: '#1e293b' }}>#{resolvedOrdenId || '-'}</strong>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+        <span>Afiliacion jugadores x{cantidadJugadoresOrden}</span>
+        <strong style={{ color: '#1e293b' }}>${subtotalAfiliacionJugadores.toFixed(2)}</strong>
+      </div>
+      {detallesSeguros.map((detalle, index) => {
+        const seguro = segurosCatalogo.find(item => Number(item.id) === Number(detalle.SeguroId));
+        return (
+          <div key={`${detalle.SeguroId}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+            <span>{seguro?.nombre || `Seguro ${detalle.SeguroId}`} x{Number(detalle.Cantidad || 0)}</span>
+            <strong style={{ color: '#1e293b' }}>${Number(detalle.Subtotal || 0).toFixed(2)}</strong>
+          </div>
+        );
+      })}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
+        <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
+        <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${totalResumen.toFixed(2)}</span>
+      </div>
+    </div>
   );
 
   if (loading) {
@@ -260,51 +325,54 @@ export default function PagoPrevioJugador() {
           <FaArrowLeft /> Volver
         </button>
 
-        <div className="card" style={{ padding: '40px', borderRadius: '24px', border: 'none' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              background: '#fef3c7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '40px',
-              margin: '0 auto 20px'
-            }}>
-              <FaFileUpload style={{ color: '#b45309' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+          <div className="card" style={{ padding: '40px', borderRadius: '24px', border: 'none' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: '#fef3c7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '40px',
+                margin: '0 auto 20px'
+              }}>
+                <FaFileUpload style={{ color: '#b45309' }} />
+              </div>
+              <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '12px' }}>
+                Pago Previo para Nuevo Jugador(es)
+              </h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>
+                Sube el comprobante de pago de tu orden
+              </p>
             </div>
-            <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '12px' }}>
-              Pago Previo para Nuevo Jugador(es)
-            </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>
-              Sube el comprobante de pago de tu orden
-            </p>
+
+            <div style={{
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '24px'
+            }}>
+              <p style={{ color: '#92400e', fontWeight: '600', marginBottom: '8px' }}>
+                ⚠️ Información importante:
+              </p>
+              <ul style={{ marginLeft: '20px', color: '#92400e', lineHeight: '1.8', marginBottom: 0 }}>
+                <li>Acepta PDF, JPG o PNG (máximo 5MB)</li>
+                <li>El comprobante será revisado por administración</li>
+                <li>Recibirás confirmación una vez sea aprobado</li>
+              </ul>
+            </div>
+
+            {renderComprobanteBox({
+              helperText: 'Adjunta un PDF o imagen del comprobante. El registro del jugador se habilitara cuando el administrador apruebe esta orden.',
+              buttonText: comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'
+            })}
           </div>
 
-          <div style={{
-            background: '#fffbeb',
-            border: '1px solid #fde68a',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '24px'
-          }}>
-            <p style={{ color: '#92400e', fontWeight: '600', marginBottom: '8px' }}>
-              ⚠️ Información importante:
-            </p>
-            <ul style={{ marginLeft: '20px', color: '#92400e', lineHeight: '1.8', marginBottom: 0 }}>
-              <li>Acepta PDF, JPG o PNG (máximo 5MB)</li>
-              <li>El comprobante será revisado por administración</li>
-              <li>Recibirás confirmación una vez sea aprobado</li>
-            </ul>
-          </div>
-
-
-          {renderComprobanteBox({
-            helperText: 'Adjunta un PDF o imagen del comprobante. El registro del jugador se habilitara cuando el administrador apruebe esta orden.',
-            buttonText: comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'
-          })}
+          {renderResumenOrden()}
         </div>
       </div>
     );
@@ -490,4 +558,5 @@ export default function PagoPrevioJugador() {
   // Default: mostrar loader
   return <Loader text="Cargando..." />;
 }
+
 
