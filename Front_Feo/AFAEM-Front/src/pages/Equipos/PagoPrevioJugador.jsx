@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaCheckCircle, FaClock, FaFileUpload, FaMoneyBillWave } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaClock, FaFileUpload, FaMoneyBillWave, FaUpload } from 'react-icons/fa';
 import '../../styles/dashboard.css';
 import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
@@ -24,6 +24,8 @@ export default function PagoPrevioJugador() {
   const accion = pathSegments[pathSegments.length - 1];
   const state = location.state || {};
   const { equipoId, ordenId, total } = state;
+  const resolvedOrdenId = pagoData?.orden_id || pagoData?.orden_pago_id || pagoData?.OrdenPagoId || pagoData?.id || ordenId;
+  const uploadInputId = accion === 'reenviar-comprobante' ? 'comprobante-jugador-reenvio' : 'comprobante-jugador';
 
   // Cargar estado de pago al montar
   useEffect(() => {
@@ -59,6 +61,7 @@ export default function PagoPrevioJugador() {
   const handleSubirComprobante = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setComprobante(file.name);
 
     // Validar tipo de archivo
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
@@ -78,7 +81,7 @@ export default function PagoPrevioJugador() {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('archivo', file);
-      formData.append('orden_id', ordenId || pagoData?.orden_id);
+      formData.append('orden_id', resolvedOrdenId);
       formData.append('equipo_id', equipoId);
 
       const res = await fetch(`${API_BASE}/ordenes-pago/subir-comprobante`, {
@@ -97,15 +100,50 @@ export default function PagoPrevioJugador() {
         setTimeout(() => navigate('/presidente-equipo/equipos'), 2000);
       } else {
         const error = await res.json();
+        setComprobante(null);
         Swal.fire('Error', error.detail || 'Error al subir comprobante', 'error');
       }
     } catch (err) {
       console.error('Error subiendo comprobante:', err);
+      setComprobante(null);
       Swal.fire('Error', 'Error al subir el comprobante', 'error');
     } finally {
       setUploadingComprobante(false);
     }
   };
+
+  const renderComprobanteBox = ({ helperText, buttonText }) => (
+    <>
+      {resolvedOrdenId && (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: '#ecfdf5', color: '#047857', fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
+          <FaCheckCircle /> Orden activa #{resolvedOrdenId}
+        </div>
+      )}
+      <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
+      <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>{helperText}</p>
+      <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
+        <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
+        <input
+          id={uploadInputId}
+          type="file"
+          onChange={handleSubirComprobante}
+          disabled={uploadingComprobante}
+          style={{ display: 'none' }}
+          accept=".pdf,.jpg,.jpeg,.png"
+        />
+        <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
+          {comprobante || 'No se ha seleccionado archivo'}
+        </div>
+        <button
+          onClick={() => document.getElementById(uploadInputId)?.click()}
+          disabled={uploadingComprobante}
+          style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: uploadingComprobante ? 'not-allowed' : 'pointer', opacity: uploadingComprobante ? 0.7 : 1 }}
+        >
+          {uploadingComprobante ? 'Cargando...' : buttonText}
+        </button>
+      </div>
+    </>
+  );
 
   if (loading) {
     return <Loader text="Cargando información de pago..." />;
@@ -262,63 +300,11 @@ export default function PagoPrevioJugador() {
             </ul>
           </div>
 
-          <label style={{
-            display: 'block',
-            border: '2px dashed var(--primary)',
-            borderRadius: '12px',
-            padding: '40px 20px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            background: '#f0f9ff',
-            transition: 'all 0.3s',
-            marginBottom: '24px'
-          }}>
-            <input
-              type="file"
-              onChange={handleSubirComprobante}
-              disabled={uploadingComprobante}
-              style={{ display: 'none' }}
-              accept=".pdf,.jpg,.jpeg,.png"
-            />
-            {comprobante ? (
-              <div>
-                <FaCheckCircle style={{ fontSize: '32px', color: '#10b981', marginBottom: '12px' }} />
-                <p style={{ fontWeight: '800', color: 'var(--text-main)' }}>{comprobante}</p>
-                <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Click para cambiar archivo</p>
-              </div>
-            ) : (
-              <div>
-                <FaFileUpload style={{ fontSize: '32px', color: 'var(--primary)', marginBottom: '12px' }} />
-                <p style={{ fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
-                  Haz clic o arrastra tu comprobante aquí
-                </p>
-                <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                  PDF, JPG o PNG - Máximo 5MB
-                </p>
-              </div>
-            )}
-          </label>
 
-          <button
-            onClick={() => document.querySelector('input[type="file"]').click()}
-            disabled={uploadingComprobante}
-            style={{
-              width: '100%',
-              padding: '14px 24px',
-              background: uploadingComprobante ? '#ccc' : 'var(--primary)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: '800',
-              cursor: uploadingComprobante ? 'not-allowed' : 'pointer',
-              transition: 'all 0.3s'
-            }}
-            onMouseEnter={(e) => !uploadingComprobante && (e.currentTarget.style.opacity = '0.9')}
-            onMouseLeave={(e) => !uploadingComprobante && (e.currentTarget.style.opacity = '1')}
-          >
-            {uploadingComprobante ? 'Cargando...' : 'Seleccionar Comprobante'}
-          </button>
+          {renderComprobanteBox({
+            helperText: 'Adjunta un PDF o imagen del comprobante. El registro del jugador se habilitara cuando el administrador apruebe esta orden.',
+            buttonText: comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'
+          })}
         </div>
       </div>
     );
@@ -491,63 +477,11 @@ export default function PagoPrevioJugador() {
             </p>
           </div>
 
-          <label style={{
-            display: 'block',
-            border: '2px dashed var(--primary)',
-            borderRadius: '12px',
-            padding: '40px 20px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            background: '#f0f9ff',
-            transition: 'all 0.3s',
-            marginBottom: '24px'
-          }}>
-            <input
-              type="file"
-              onChange={handleSubirComprobante}
-              disabled={uploadingComprobante}
-              style={{ display: 'none' }}
-              accept=".pdf,.jpg,.jpeg,.png"
-            />
-            {comprobante ? (
-              <div>
-                <FaCheckCircle style={{ fontSize: '32px', color: '#10b981', marginBottom: '12px' }} />
-                <p style={{ fontWeight: '800', color: 'var(--text-main)' }}>{comprobante}</p>
-                <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Click para cambiar archivo</p>
-              </div>
-            ) : (
-              <div>
-                <FaFileUpload style={{ fontSize: '32px', color: 'var(--primary)', marginBottom: '12px' }} />
-                <p style={{ fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
-                  Haz clic o arrastra tu nuevo comprobante aquí
-                </p>
-                <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                  PDF, JPG o PNG - Máximo 5MB
-                </p>
-              </div>
-            )}
-          </label>
 
-          <button
-            onClick={() => document.querySelector('input[type="file"]').click()}
-            disabled={uploadingComprobante}
-            style={{
-              width: '100%',
-              padding: '14px 24px',
-              background: uploadingComprobante ? '#ccc' : 'var(--primary)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: '800',
-              cursor: uploadingComprobante ? 'not-allowed' : 'pointer',
-              transition: 'all 0.3s'
-            }}
-            onMouseEnter={(e) => !uploadingComprobante && (e.currentTarget.style.opacity = '0.9')}
-            onMouseLeave={(e) => !uploadingComprobante && (e.currentTarget.style.opacity = '1')}
-          >
-            {uploadingComprobante ? 'Cargando...' : 'Seleccionar Nuevo Comprobante'}
-          </button>
+          {renderComprobanteBox({
+            helperText: 'Adjunta un PDF o imagen del comprobante corregido. El registro del jugador se habilitara cuando el administrador apruebe esta orden.',
+            buttonText: comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'
+          })}
         </div>
       </div>
     );
@@ -556,3 +490,4 @@ export default function PagoPrevioJugador() {
   // Default: mostrar loader
   return <Loader text="Cargando..." />;
 }
+
