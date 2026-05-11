@@ -24,7 +24,6 @@ from .equipo_temporal_modelo import EquipoTemporal
 from .equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from .rol_equipo_modelo import RolesDeEquipo
 from .catalogos_liga_modelo import CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas
-from .liga_modelo import LigaModalidadCategoriaRama
 from .equipo_modelo import Equipos, EquiposJugando
 from .antecedentes_internacionales_modelo import AntecedentesInternacionales
 from .miembro_equipo_modelo import MiembrosEquipo

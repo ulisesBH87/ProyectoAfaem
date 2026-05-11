@@ -23,24 +23,29 @@ export default function AdminCatalogos() {
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      // Re-utilizamos el endpoint existente para inicializar la información
-      const response = await api.get('/equipo-temporal/catalogos-registro');
+      // Cargamos todos los catálogos en paralelo desde los nuevos endpoints
+      const [ligas, categorias, modalidades, ramas] = await Promise.all([
+        api.get('/catalogos/ligas'),
+        api.get('/catalogos/categorias'),
+        api.get('/catalogos/modalidades'),
+        api.get('/catalogos/ramas')
+      ]);
       
-      const data = response.data;
       setCatalogos({
-        ligas: data.ligas || [],
-        categorias: data.categorias || [],
-        modalidades: data.modalidades || [],
-        ramas: data.ramas || []
+        ligas: ligas.data,
+        categorias: categorias.data,
+        modalidades: modalidades.data,
+        ramas: ramas.data
       });
       
     } catch (error) {
-      console.warn("Fallo backend, usando mock data general", error);
+      console.warn("Fallo al cargar catálogos desde endpoints específicos", error);
+      // Fallback a mock data si algo sale mal
       setCatalogos({
-        ligas: [{ id: 1, nombre: 'Liga Moflito' }, { id: 2, nombre: 'CONADEIP' }],
-        categorias: [{ id: 1, nombre: 'Juvenil' }, { id: 2, nombre: 'Mayor' }],
-        modalidades: [{ id: 1, nombre: '11 vs 11' }, { id: 2, nombre: 'Arena 8 vs 8' }],
-        ramas: [{ id: 1, nombre: 'Varonil' }, { id: 2, nombre: 'Femenil' }]
+        ligas: [{ id: 1, nombre: 'Liga Moflito', descripcion: 'Descripción mock' }],
+        categorias: [{ id: 1, nombre: 'Juvenil' }],
+        modalidades: [{ id: 1, nombre: '11 vs 11' }],
+        ramas: [{ id: 1, nombre: 'Varonil' }]
       });
     } finally {
       setCargando(false);
@@ -62,66 +67,138 @@ export default function AdminCatalogos() {
   const columns = [
     { key: "id", label: "ID" },
     { key: "nombre", label: "Nombre del Registro" },
+    { key: "descripcion", label: "Descripción" },
     { key: "acciones", label: "Acciones", style: { width: '120px', textAlign: 'center' } }
   ];
 
   const handleEliminar = (id) => {
     Swal.fire({
       title: '¿Eliminar registro?',
-      text: "Esta acción no se guardará en la base de datos hasta que el backend se implemente.",
+      text: "Esta acción eliminará permanentemente el registro de la base de datos.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+      cancelButtonText: 'Cancelar',
+      showLoaderOnConfirm: true,
+      preConfirm: async () => {
+        try {
+          await api.delete(`/catalogos/${seccionActiva}/${id}`);
+          return true;
+        } catch (error) {
+          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo eliminar'}`);
+          return false;
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
     }).then((result) => {
-      if (result.isConfirmed) {
+      if (result.isConfirmed && result.value) {
         setCatalogos(prev => ({
           ...prev,
           [seccionActiva]: prev[seccionActiva].filter(item => item.id !== id)
         }));
-        Swal.fire('Eliminado', 'El registro se eliminó del listado local.', 'success');
+        Swal.fire('¡Eliminado!', 'El registro se eliminó correctamente.', 'success');
       }
     });
   };
 
   const handleEditar = (item) => {
+    const isLiga = seccionActiva === 'ligas';
+    
     Swal.fire({
       title: 'Editar Registro',
-      input: 'text',
-      inputValue: item.nombre,
+      html: `
+        <div style="text-align: left;">
+          <label class="swal2-label">Nombre</label>
+          <input id="swal-input1" class="swal2-input" value="${item.nombre}">
+          ${isLiga ? `
+            <label class="swal2-label">Descripción</label>
+            <input id="swal-input2" class="swal2-input" value="${item.descripcion || ''}">
+          ` : ''}
+        </div>
+      `,
       showCancelButton: true,
       confirmButtonText: 'Guardar',
-      inputValidator: (value) => {
-        if (!value) return 'El nombre no puede estar vacío';
-      }
+      showLoaderOnConfirm: true,
+      preConfirm: async () => {
+        const nombre = document.getElementById('swal-input1').value;
+        const descripcion = isLiga ? document.getElementById('swal-input2').value : null;
+        
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre no puede estar vacío');
+          return false;
+        }
+
+        try {
+          const response = await api.put(`/catalogos/${seccionActiva}/${item.id}`, { 
+            nombre, 
+            descripcion 
+          });
+          return response.data;
+        } catch (error) {
+          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo actualizar'}`);
+          return false;
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
     }).then((result) => {
-      if (result.isConfirmed) {
+      if (result.isConfirmed && result.value) {
+        const itemActualizado = result.value;
         setCatalogos(prev => ({
           ...prev,
-          [seccionActiva]: prev[seccionActiva].map(i => i.id === item.id ? { ...i, nombre: result.value } : i)
+          [seccionActiva]: prev[seccionActiva].map(i => i.id === item.id ? itemActualizado : i)
         }));
+        Swal.fire('¡Actualizado!', 'El registro se ha guardado correctamente.', 'success');
       }
     });
   };
 
   const handleCrear = () => {
+    const isLiga = seccionActiva === 'ligas';
+
     Swal.fire({
       title: `Nuevo Registro en ${seccionActiva.toUpperCase()}`,
-      input: 'text',
-      inputPlaceholder: `Ingresa el nombre...`,
+      html: `
+        <div style="text-align: left;">
+          <label class="swal2-label">Nombre</label>
+          <input id="swal-input1" class="swal2-input" placeholder="Nombre...">
+          ${isLiga ? `
+            <label class="swal2-label">Descripción</label>
+            <input id="swal-input2" class="swal2-input" placeholder="Descripción...">
+          ` : ''}
+        </div>
+      `,
       showCancelButton: true,
       confirmButtonText: 'Crear',
-      inputValidator: (value) => {
-        if (!value) return 'Debes ingresar un nombre';
-      }
+      showLoaderOnConfirm: true,
+      preConfirm: async () => {
+        const nombre = document.getElementById('swal-input1').value;
+        const descripcion = isLiga ? document.getElementById('swal-input2').value : null;
+
+        if (!nombre) {
+          Swal.showValidationMessage('Debes ingresar un nombre');
+          return false;
+        }
+
+        try {
+          const response = await api.post(`/catalogos/${seccionActiva}`, { 
+            nombre, 
+            descripcion 
+          });
+          return response.data;
+        } catch (error) {
+          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo crear'}`);
+          return false;
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
     }).then((result) => {
-      if (result.isConfirmed) {
-        const nuevoId = Math.floor(Math.random() * 1000) + 100;
+      if (result.isConfirmed && result.value) {
+        const nuevoRegistro = result.value;
         setCatalogos(prev => ({
           ...prev,
-          [seccionActiva]: [...prev[seccionActiva], { id: nuevoId, nombre: result.value }]
+          [seccionActiva]: [...prev[seccionActiva], nuevoRegistro]
         }));
-        Swal.fire('¡Éxito!', 'Registro simulado con éxito', 'success');
+        Swal.fire('¡Éxito!', 'El registro se ha creado correctamente.', 'success');
       }
     });
   };
@@ -129,6 +206,7 @@ export default function AdminCatalogos() {
   const dataTransformada = dataActual.map(item => ({
     id: <span style={{ fontWeight: '700', color: '#64748b' }}>#{item.id}</span>,
     nombre: <span style={{ fontWeight: '600' }}>{item.nombre}</span>,
+    descripcion: <span style={{ color: '#64748b' }}>{item.descripcion || '-'}</span>,
     acciones: (
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
         <button 

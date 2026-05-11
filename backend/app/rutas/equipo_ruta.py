@@ -711,11 +711,16 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
             jugador_data.PrimerApellido, 
             jugador_data.SegundoApellido, 
             jugador_data.CURP, 
-            jugador_data.Estatus
+            jugador_data.Estatus,
+            email=jugador_data.Email,
+            sexo_id=jugador_data.SexoId,
+            fecha_nacimiento=jugador_data.FechaNacimiento
         )
         if not miembro:
             raise HTTPException(status_code=404, detail="Jugador no encontrado")
         return {"mensaje": "Jugador actualizado correctamente", "miembro_equipo_id": miembro.MiembroEquipoId}
+    except HTTPException:
+        raise
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

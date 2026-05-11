@@ -529,7 +529,9 @@ def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
     db.refresh(equipo)
     return equipo
 
-def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apellido: str, segundo_apellido: str, curp: str, estatus: bool):
+def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apellido: str,
+                            segundo_apellido: str, curp: str, estatus: bool,
+                            email: str = None, sexo_id: int = None, fecha_nacimiento=None):
     from app.modelos.miembro_equipo_modelo import MiembrosEquipo
     from app.modelos.persona_modelo import Personas
     
@@ -549,6 +551,12 @@ def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apel
         persona.SegundoApellido = segundo_apellido
     if curp is not None:
         persona.CURP = curp
+    if email is not None:
+        persona.CorreoElectronico = email if email.strip() else None
+    if sexo_id is not None:
+        persona.SexoId = sexo_id
+    if fecha_nacimiento is not None:
+        persona.FechaNacimiento = fecha_nacimiento
         
     if estatus is not None:
         miembro.Estatus = estatus
