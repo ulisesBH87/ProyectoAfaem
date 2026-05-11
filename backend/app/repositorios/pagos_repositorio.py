@@ -21,6 +21,7 @@ from app.enums.estatus_pago_enum  import EstatusValidacionPago
 from app.modelos.catalogo_tipos_solicitud import CatalogoTiposSolicitud
 from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 from app.enums.procesos_equipo_temporal import ProcesosEquipoTemporalEnum
+from typing import Optional
 
 #Tipos de afiliación
 def obtener_afiliaciones_repo(db):
@@ -53,9 +54,7 @@ def obtener_orden_repo(db, orden_id):
     return (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_id).first())
 
 
-def buscar_orden_pago_repo(db, tipo_solicitud, equipo_id, usuario):
-    usuario_id = usuario.UsuarioId
-
+def buscar_orden_pago_repo(db, tipo_solicitud, usuario_id, equipo_id: Optional[int] = None):
     consulta = db.query(OrdenPago)\
         .join(Solicitud)\
         .filter(
@@ -69,7 +68,6 @@ def buscar_orden_pago_repo(db, tipo_solicitud, equipo_id, usuario):
         )
 
     if tipo_solicitud == TiposSolicitudEnum.JUGADOR:
-        print("ESTMOS EN REPO")
         consulta = consulta.filter(
             Solicitud.EquipoId == equipo_id
         )
@@ -247,22 +245,9 @@ def mi_estado_pago_equipo_repo(db, usuario_id):
             "orden": equipo_vacio.OrdenPagoRelacion
         }
 
-    #Si no hay equipo disponible, pasar a proceso de buscar estado de orden
-    orden = (
-        db.query(OrdenPago)
-        .options(selectinload(OrdenPago.OrdenPagoDetalleRelacion))
-        .filter(
-            OrdenPago.UsuarioId == usuario_id,
-            OrdenPago.EstatusPagoId != 5  # ❌ excluir CADUCADO
-        )
-        .order_by(desc(OrdenPago.OrdenPagoId))
-        .first()
-    )
-
     #NO HAY EQUIPOS VACIOS
     return {
         "equipo_temporal": None,
-        "orden": orden
     }
 
     """

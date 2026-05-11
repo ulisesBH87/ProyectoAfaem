@@ -24,7 +24,8 @@ class PagosServicio:
         self.db = db
 
     def buscar_orden_pago(self, tipo_solicitud, equipo_id, usuario):
-        orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, equipo_id, usuario)
+        usuario_id = usuario.UsuarioId
+        orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, equipo_id)
         
         if not orden_pago:
             print("NO HAY ORDEN")
@@ -273,11 +274,10 @@ class PagosServicio:
         data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
 
         equipo_temporal = data["equipo_temporal"]
-        orden = data["orden"]
 
-        #CASO 1: HAY EQUIPO DISPONIBLE
+        #CASO 1: HAY EQUIPO TEMPORAL DISPONIBLE
         if equipo_temporal:
-
+            orden = data["orden"]
             cantidad_jugadores = 0
             seguros = []
             for detalle in orden.OrdenPagoDetalleRelacion:
@@ -299,40 +299,42 @@ class PagosServicio:
                 "seguros": seguros
             }
 
-        #CASO 2: NO HAY EQUIPO DISPONIBLE, PASAR A FLUJO DE ORDEN
-
-        if not orden:
-            return {
-                "estado": EstadoEquipo.SIN_ORDEN
-            }
-
-        estatus = orden.EstatusPagoId
+        #CASO 2: NO HAY EQUIPO TEMPORAL DISPONIBLE, PASAR A FLUJO DE ORDEN
+        if not equipo_temporal:
+            print("NO HAY EQUIPO TEMPORAL")
+            tipo_solicitud = 2
+            orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, None)
 
 
-        # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
-        if estatus in (1, 4):
-            return {
-                "estado": EstadoEquipo.ORDEN_SIN_COMPROBANTE,
-                "orden_pago_id": orden.OrdenPagoId,
-                "total": float(orden.TotalPagar or 0)
-            }
-        
-        # HAY ORDEN, SE ENVÍO COMPROBANTE, EN ESPERA
-        if estatus == 2:
-            return {
-                "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
-                "orden_pago_id": orden.OrdenPagoId,
-                "total": float(orden.TotalPagar or 0)
-            }
-    
+            if orden_pago:
+                print("SI HAY ORDEN")
+                estatus = orden_pago.EstatusPagoId
 
-        # ACTIVO pero sin equipo temporal → inconsistencia
-        if estatus == 3:
-            return {
-                "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
-                "warning": "Orden activa sin equipo temporal generado"
-            }
+                # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
+                if estatus in (1, 4):
+                    return {
+                        "estado": EstadoEquipo.ORDEN_SIN_COMPROBANTE,
+                        "orden_pago_id": orden_pago.OrdenPagoId,
+                        "total": float(orden_pago.TotalPagar or 0)
+                    }
+                
+                # HAY ORDEN, SE ENVÍO COMPROBANTE, EN ESPERA
+                if estatus == 2:
+                    return {
+                        "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
+                        "orden_pago_id": orden_pago.OrdenPagoId,
+                        "total": float(orden_pago.TotalPagar or 0)
+                    }
+            
 
+                # ACTIVO pero sin equipo temporal → inconsistencia
+                if estatus == 3:
+                    return {
+                        "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
+                        "warning": "Orden activa sin equipo temporal generado"
+                    }
+            else:
+                print("No hubo orden")
         # fallback (por seguridad)
         return {
             "estado": EstadoEquipo.SIN_ORDEN
