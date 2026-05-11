@@ -35,9 +35,9 @@ export default function PresidenteEquipoEquipos() {
   const verificarEstadoPagoJugador = async (equipoId) => {
     try {
       const token = localStorage.getItem('token');
-
+      
       const resOrdenes = await fetch(
-        `${API_BASE}/hay-orden/?tipo_solicitud=3&equipo_id=${equipoId}`,
+        `${API_BASE}/ordenes-pago/hay-orden/?tipo_solicitud=3&equipo_id=${equipoId}`,
         {
           method: "POST",
           headers: {
@@ -46,10 +46,12 @@ export default function PresidenteEquipoEquipos() {
         }
       );
 
-      if (!res.ok) {
+      if (!resOrdenes.ok) {
+        alert("NOOO TIENES ORDEN")
         return {
           tieneOrden: false,
           accion: "CREAR_ORDEN"
+          
         };
       }
 
@@ -63,7 +65,7 @@ export default function PresidenteEquipoEquipos() {
       };
 
     } catch (err) {
-      alert("ERROR VERIFICANDO EL PAGO");
+      alert("ERROR VERIFICANDO EL PAGO " + err);
       console.error('Error verificando pago de jugador:', err);
       return {
         tieneOrden: false,
