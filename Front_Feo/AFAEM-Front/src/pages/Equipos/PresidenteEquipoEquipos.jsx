@@ -135,6 +135,44 @@ export default function PresidenteEquipoEquipos() {
     return filteredTeams.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTeams, currentPage]);
 
+  // Determina la ruta de navegación según la acción de pago
+  const determinarRutaPago = (accion, estadoPago, equipoId) => {
+    const baseParams = {
+      equipoId,
+      tieneOrden: estadoPago.tieneOrden,
+      ordenId: estadoPago.ordenId || null,
+      total: estadoPago.total || 0
+    };
+
+    switch (accion) {
+      case 'CREAR_ORDEN':
+        return {
+          path: '/presidente-equipo/pago-jugador/crear-orden',
+          state: baseParams
+        };
+      case 'SUBIR_COMPROBANTE':
+        return {
+          path: '/presidente-equipo/pago-jugador/subir-comprobante',
+          state: baseParams
+        };
+      case 'EN_REVISION':
+        return {
+          path: '/presidente-equipo/pago-jugador/en-revision',
+          state: baseParams
+        };
+      case 'REENVIAR_COMPROBANTE':
+        return {
+          path: '/presidente-equipo/pago-jugador/reenviar-comprobante',
+          state: baseParams
+        };
+      default:
+        return {
+          path: '/presidente-equipo/pago-jugador/crear-orden',
+          state: baseParams
+        };
+    }
+  };
+
   const columns = [
     { 
       key: 'NombreEquipo', 
@@ -215,23 +253,19 @@ export default function PresidenteEquipoEquipos() {
 
               if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
                 navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&agregarJugador=true`);
+                return;
               }
 
-              //NO HAY SLOTS. VERIFICAR ODEN DE PAGO
+              //NO HAY SLOTS. VERIFICAR ORDEN DE PAGO
               const estadoPago = await verificarEstadoPagoJugador(row.EquipoId);
 
-              navigate(`/presidente-equipo/configurar-equipo`,{
-                  state: {
-                    equipoId: row.EquipoId,
-                    agregarJugador: true,
-                    requirePago: true,
-                    orden: estadoPago
-                  }
-                }
-              );
+              // Determinar ruta según acción de pago
+              const navegacion = determinarRutaPago(estadoPago.accion, estadoPago, row.EquipoId);
+              navigate(navegacion.path, { state: navegacion.state });
 
             } catch (err) {
               console.error('Error al verificar slots:', err);
+              Swal.fire('Error', 'No se pudo verificar el estado de pago del equipo', 'error');
             }
           }}
           style={{
