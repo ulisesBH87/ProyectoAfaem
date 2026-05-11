@@ -19,6 +19,7 @@ export default function PagoPrevioJugador() {
   const [pagoData, setPagoData] = useState(null);
   const [estadoPago, setEstadoPago] = useState(null);
   const [comprobante, setComprobante] = useState(null);
+  const [comprobanteFile, setComprobanteFile] = useState(null);
   const [uploadingComprobante, setUploadingComprobante] = useState(false);
   const [orderDetails, setOrderDetails] = useState([]);
   const [segurosCatalogo, setSegurosCatalogo] = useState([]);
@@ -96,10 +97,9 @@ export default function PagoPrevioJugador() {
   const subtotalAfiliacionJugadores = detallesAfiliacionJugador.reduce((sum, detalle) => sum + Number(detalle.Subtotal || 0), 0);
   const detallesSeguros = orderDetails.filter(detalle => Number(detalle.SeguroId) > 0);
 
-  const handleSubirComprobante = async (e) => {
+  const handleSeleccionarComprobante = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setComprobante(file.name);
 
     // Validar tipo de archivo
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
@@ -114,15 +114,22 @@ export default function PagoPrevioJugador() {
       return;
     }
 
+    setComprobanteFile(file);
+    setComprobante(file.name);
+  };
+
+  const handleSubirComprobante = async () => {
+    if (!comprobanteFile) return;
+
     setUploadingComprobante(true);
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      formData.append('archivo', file);
+      formData.append('archivo', comprobanteFile);
       formData.append('orden_id', resolvedOrdenId);
       formData.append('equipo_id', equipoId);
 
-      const res = await fetch(`${API_BASE}/ordenes-pago/subir-comprobante`, {
+      const res = await fetch(`${API_BASE}/ordenes-pago/${resolvedOrdenId}/comprobante`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -133,17 +140,19 @@ export default function PagoPrevioJugador() {
           icon: 'success',
           title: '¡Comprobante cargado!',
           text: 'El comprobante fue enviado correctamente. Será revisado por administración.',
-          timer: 2000
+          timer: 5000
         });
         setTimeout(() => navigate('/presidente-equipo/equipos'), 2000);
       } else {
         const error = await res.json();
         setComprobante(null);
+        setComprobanteFile(null);
         Swal.fire('Error', error.detail || 'Error al subir comprobante', 'error');
       }
     } catch (err) {
       console.error('Error subiendo comprobante:', err);
       setComprobante(null);
+      setComprobanteFile(null);
       Swal.fire('Error', 'Error al subir el comprobante', 'error');
     } finally {
       setUploadingComprobante(false);
@@ -164,7 +173,7 @@ export default function PagoPrevioJugador() {
         <input
           id={uploadInputId}
           type="file"
-          onChange={handleSubirComprobante}
+          onChange={handleSeleccionarComprobante}
           disabled={uploadingComprobante}
           style={{ display: 'none' }}
           accept=".pdf,.jpg,.jpeg,.png"
@@ -177,9 +186,16 @@ export default function PagoPrevioJugador() {
           disabled={uploadingComprobante}
           style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: uploadingComprobante ? 'not-allowed' : 'pointer', opacity: uploadingComprobante ? 0.7 : 1 }}
         >
-          {uploadingComprobante ? 'Cargando...' : buttonText}
+          {buttonText}
         </button>
       </div>
+      <button
+        onClick={handleSubirComprobante}
+        disabled={uploadingComprobante || !comprobanteFile}
+        style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: uploadingComprobante ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: uploadingComprobante ? 'wait' : (!comprobanteFile ? 'not-allowed' : 'pointer'), opacity: comprobanteFile ? 1 : 0.55 }}
+      >
+        {uploadingComprobante ? 'Procesando...' : 'Enviar comprobante'}
+      </button>
     </>
   );
 
