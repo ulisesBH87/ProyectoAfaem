@@ -13,7 +13,7 @@ from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.modelos.solicitud_modelo import Solicitud
 from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
-from sqlalchemy import desc, null, or_
+from sqlalchemy import desc, join, null, or_
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
@@ -51,6 +51,32 @@ def obtener_seguro_repo(db, seguro_id):
 #ORDEN DE PAGO
 def obtener_orden_repo(db, orden_id):
     return (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_id).first())
+
+
+def buscar_orden_pago_repo(db, tipo_solicitud, equipo_id, usuario):
+    usuario_id = usuario.UsuarioId
+
+    query = db.query(OrdenPago)\
+        .join(Solicitud)\
+        .filter(
+            OrdenPago.UsuarioId == usuario_id,
+            Solicitud.TipoSolicitudId == tipo_solicitud,
+            OrdenPago.EstatusPagoId.in_([
+                EstatusValidacionPago.NO_ENVIADA,
+                EstatusValidacionPago.ESPERA,
+                EstatusValidacionPago.RECHAZADA
+            ])
+        )
+
+    if tipo_solicitud == TiposSolicitudEnum.JUGADOR:
+        query = query.filter(
+            Solicitud.EquipoId == equipo_id
+        )
+
+    orden = query().first()
+    
+    return orden
+
 
 def crear_orden_pago_repo(db, usuario_id, total, solicitud_id):
 

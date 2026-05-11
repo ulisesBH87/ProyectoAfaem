@@ -7,6 +7,7 @@ from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.repositorios import pagos_repositorio
 from app.excepciones import pagos_excepciones
 from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
+from app.enums.estatus_pago_enum import EstatusValidacionPago
 
 class EstadoEquipo:
     SIN_ORDEN = "SIN_ORDEN"
@@ -21,6 +22,35 @@ class PagosServicio:
 
     def __init__(self, db:Session):
         self.db = db
+
+    def buscar_orden_pago(self, tipo_solicitud, equipo_id, usuario):
+        orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, equipo_id, usuario)
+
+        if not orden_pago: 
+            return {
+                "tiene_orden": False,
+                "accion": "CREAR_ORDEN"
+            }
+        
+        accion = None
+        if orden_pago.EstatusPagoId == EstatusValidacionPago.NO_ENVIADA:
+            accion = "SUBIR_COMPROBANTE"
+
+        elif orden_pago.EstatusPagoId == EstatusValidacionPago.ESPERA:
+            accion = "EN_REVISION"
+
+        elif orden_pago.EstatusPagoId == EstatusValidacionPago.RECHAZADA:
+            accion = "REENVIAR_COMPROBANTE"
+
+        return {
+            "tiene_orden": True,
+            "accion": accion,
+            "orden_id": orden_pago.OrdenPagoId,
+            "estatus_pago_id": orden_pago.EstatusPagoId,
+            "total": float(orden_pago.TotalPagar)
+        }
+
+
 
     def crear_orden_pago(self, usuario_id, orden, solicitud_id):
         if orden.CantidadJugadores < 1:
