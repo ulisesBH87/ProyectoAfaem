@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import IntEnum
 
 #ESTATUS
-class EstatusValidacionPago(str, Enum):
+class EstatusValidacionPago(IntEnum):
     NOENVIADO = 1
     ESPERA = 2
     ACTIVO = 3

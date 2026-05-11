@@ -234,6 +234,7 @@ export default function ConfigurarEquipo() {
   //VERIFICA EL ESTADO DE PAGO PARA DECIDIR QUÉ VISTA MOSTRAR
   useEffect(() => {
     const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
+      alert("Estamos en cargar detalle de orden")
       if (!ordenId) return;
 
       try {
@@ -429,6 +430,10 @@ export default function ConfigurarEquipo() {
     const equipoTemporalId = searchParams.get('equipoTemporalId');
     const agregarJugador = searchParams.get('agregarJugador');
     const requirePago = searchParams.get('requirePago') === 'true';
+    const estadoPagoJugador = searchParams.get('estadoPagoJugador');
+    const ordenPagoIdJugador = searchParams.get('ordenPagoIdJugador');
+    const totalOrdenJugador = searchParams.get('totalOrdenJugador');
+    const tieneComprobanteJugador = searchParams.get('tieneComprobanteJugador') === 'true';
 
     if (agregarJugador === 'true') {
       if (equipoTemporalId) {
@@ -444,6 +449,19 @@ export default function ConfigurarEquipo() {
         setModoAgregarJugador(requirePago);
         setTieneSlotDisponible(false);
         setActiveStep(2);
+
+        // Precargar estado de pago de jugador si existe
+        if (estadoPagoJugador && ordenPagoIdJugador) {
+          const estadoNumerico = parseInt(estadoPagoJugador, 10);
+          setPagoJugador({
+            loading: false,
+            aprobado: estadoNumerico === 3, // 3 = APROBADO
+            estado: estadoNumerico,
+            ordenId: parseInt(ordenPagoIdJugador, 10),
+            total: Number(totalOrdenJugador || 0),
+            tieneComprobante: tieneComprobanteJugador
+          });
+        }
       }
     }
   }, [searchParams]);
@@ -744,7 +762,8 @@ export default function ConfigurarEquipo() {
         body: JSON.stringify({
           CantidadJugadores: Number(numJugadoresAgregar),
           Seguros: segurosPayload,
-          TipoSolicitud: TIPO_SOLICITUD.JUGADOR
+          TipoSolicitud: TIPO_SOLICITUD.JUGADOR,
+          EquipoId: searchParams.get('equipoId') ? Number(searchParams.get('equipoId')) : undefined
         })
       });
 

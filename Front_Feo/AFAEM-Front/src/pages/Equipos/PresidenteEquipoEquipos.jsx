@@ -4,6 +4,8 @@ import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
+import { API_BASE } from '../../config/config';
+import Swal from 'sweetalert2';
 import { 
   FaShieldAlt, 
   FaUsers, 
@@ -28,6 +30,49 @@ export default function PresidenteEquipoEquipos() {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+  // Función para verificar estado de pago para agregar jugador
+  const verificarEstadoPagoJugador = async (equipoId) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const resOrdenes = await fetch(
+        `${API_BASE}/ordenes-pago/hay-orden/?tipo_solicitud=3&equipo_id=${equipoId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!resOrdenes.ok) {
+        alert("NOOO TIENES ORDEN")
+        return {
+          tieneOrden: false,
+          accion: "CREAR_ORDEN"
+          
+        };
+      }
+
+      const data = await resOrdenes.json();
+
+      return {
+        tieneOrden: data.tiene_orden,
+        accion: data.accion,
+        ordenId: data.orden_id,
+        total: data.total
+      };
+
+    } catch (err) {
+      alert("ERROR VERIFICANDO EL PAGO " + err);
+      console.error('Error verificando pago de jugador:', err);
+      return {
+        tieneOrden: false,
+        accion: "CREAR_ORDEN"
+      }; 
+    }
+  };
 
   const loadTeams = async () => {
     try {
@@ -89,6 +134,44 @@ export default function PresidenteEquipoEquipos() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredTeams.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTeams, currentPage]);
+
+  // Determina la ruta de navegación según la acción de pago
+  const determinarRutaPago = (accion, estadoPago, equipoId) => {
+    const baseParams = {
+      equipoId,
+      tieneOrden: estadoPago.tieneOrden,
+      ordenId: estadoPago.ordenId || null,
+      total: estadoPago.total || 0
+    };
+
+    switch (accion) {
+      case 'CREAR_ORDEN':
+        return {
+          path: '/presidente-equipo/pago-jugador/crear-orden',
+          state: baseParams
+        };
+      case 'SUBIR_COMPROBANTE':
+        return {
+          path: '/presidente-equipo/pago-jugador/subir-comprobante',
+          state: baseParams
+        };
+      case 'EN_REVISION':
+        return {
+          path: '/presidente-equipo/pago-jugador/en-revision',
+          state: baseParams
+        };
+      case 'REENVIAR_COMPROBANTE':
+        return {
+          path: '/presidente-equipo/pago-jugador/reenviar-comprobante',
+          state: baseParams
+        };
+      default:
+        return {
+          path: '/presidente-equipo/pago-jugador/crear-orden',
+          state: baseParams
+        };
+    }
+  };
 
   const columns = [
     { 
@@ -165,15 +248,24 @@ export default function PresidenteEquipoEquipos() {
         <button
           onClick={async () => {
             try {
+              //verifica si hay slots en el equipo
               const slots = await teamsService.checkTeamSlots(row.EquipoId);
 
               if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
                 navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&agregarJugador=true`);
-              } else {
-                navigate(`/presidente-equipo/configurar-equipo?equipoId=${row.EquipoId}&agregarJugador=true&requirePago=true`);
+                return;
               }
+
+              //NO HAY SLOTS. VERIFICAR ORDEN DE PAGO
+              const estadoPago = await verificarEstadoPagoJugador(row.EquipoId);
+
+              // Determinar ruta según acción de pago
+              const navegacion = determinarRutaPago(estadoPago.accion, estadoPago, row.EquipoId);
+              navigate(navegacion.path, { state: navegacion.state });
+
             } catch (err) {
               console.error('Error al verificar slots:', err);
+              Swal.fire('Error', 'No se pudo verificar el estado de pago del equipo', 'error');
             }
           }}
           style={{

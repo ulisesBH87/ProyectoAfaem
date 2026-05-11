@@ -6,6 +6,8 @@ from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase, ListaPagos
 from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.repositorios import pagos_repositorio
 from app.excepciones import pagos_excepciones
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
+from app.enums.estatus_pago_enum import EstatusValidacionPago
 
 class EstadoEquipo:
     SIN_ORDEN = "SIN_ORDEN"
@@ -20,6 +22,44 @@ class PagosServicio:
 
     def __init__(self, db:Session):
         self.db = db
+
+    def buscar_orden_pago(self, tipo_solicitud, equipo_id, usuario):
+        usuario_id = usuario.UsuarioId
+        orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, equipo_id)
+        
+        if not orden_pago:
+            print("NO HAY ORDEN")
+            return {
+                "tiene_orden": False,
+                "accion": "CREAR_ORDEN"
+            }
+        
+        accion = None
+        if orden_pago.EstatusPagoId == EstatusValidacionPago.NOENVIADO:
+            print("SUBIDA DE COMPROBATNE")
+            accion = "SUBIR_COMPROBANTE"
+
+        elif orden_pago.EstatusPagoId == EstatusValidacionPago.ESPERA:
+            print("EN REVISIÓN")
+            accion = "EN_REVISION"
+
+        elif orden_pago.EstatusPagoId == EstatusValidacionPago.RECHAZADO:
+            print("REENVIALO")
+            accion = "REENVIAR_COMPROBANTE"
+        else:
+            print("no se que pasó ")
+            print(orden_pago.EstatusPagoId)
+            print("ORDEN ID: ")
+            print(orden_pago.OrdenPagoId)
+        return {
+            "tiene_orden": True,
+            "accion": accion,
+            "orden_id": orden_pago.OrdenPagoId,
+            "estatus_pago_id": orden_pago.EstatusPagoId,
+            "total": float(orden_pago.TotalPagar)
+        }
+
+
 
     def crear_orden_pago(self, usuario_id, orden, solicitud_id):
         if orden.CantidadJugadores < 1:
@@ -111,13 +151,13 @@ class PagosServicio:
                 pagos_repositorio.crear_detalle_pago_repo(db=self.db, orden_pago_id=orden_pago.OrdenPagoId, detalle=d)
 
             #Si se va a crear presidente de equipo
-            if(orden.TipoSolicitud == 1): #Presidente de equipo (Hacer enum en el futuro)
-                try:        
-                    pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
-                except Exception:
-                    self.db.rollback()
-                    raise pagos_excepciones.UsuarioNoEncontradoError()
-                
+            #if(orden.TipoSolicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO): #Presidente de equipo (Hacer enum en el futuro)
+                #try:        
+               #     pagos_repositorio.crear_presidente_equipo_repo(self.db, usuario_id)
+              #  except Exception:
+             #       self.db.rollback()
+            #        raise pagos_excepciones.UsuarioNoEncontradoError()
+            
             self.db.commit()
 
             return {
@@ -234,11 +274,10 @@ class PagosServicio:
         data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
 
         equipo_temporal = data["equipo_temporal"]
-        orden = data["orden"]
 
-        #CASO 1: HAY EQUIPO DISPONIBLE
+        #CASO 1: HAY EQUIPO TEMPORAL DISPONIBLE
         if equipo_temporal:
-
+            orden = data["orden"]
             cantidad_jugadores = 0
             seguros = []
             for detalle in orden.OrdenPagoDetalleRelacion:
@@ -260,40 +299,42 @@ class PagosServicio:
                 "seguros": seguros
             }
 
-        #CASO 2: NO HAY EQUIPO DISPONIBLE, PASAR A FLUJO DE ORDEN
-
-        if not orden:
-            return {
-                "estado": EstadoEquipo.SIN_ORDEN
-            }
-
-        estatus = orden.EstatusPagoId
+        #CASO 2: NO HAY EQUIPO TEMPORAL DISPONIBLE, PASAR A FLUJO DE ORDEN
+        if not equipo_temporal:
+            print("NO HAY EQUIPO TEMPORAL")
+            tipo_solicitud = 2
+            orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, None)
 
 
-        # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
-        if estatus in (1, 4):
-            return {
-                "estado": EstadoEquipo.ORDEN_SIN_COMPROBANTE,
-                "orden_pago_id": orden.OrdenPagoId,
-                "total": float(orden.TotalPagar or 0)
-            }
-        
-        # HAY ORDEN, SE ENVÍO COMPROBANTE, EN ESPERA
-        if estatus == 2:
-            return {
-                "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
-                "orden_pago_id": orden.OrdenPagoId,
-                "total": float(orden.TotalPagar or 0)
-            }
-    
+            if orden_pago:
+                print("SI HAY ORDEN")
+                estatus = orden_pago.EstatusPagoId
 
-        # ACTIVO pero sin equipo temporal → inconsistencia
-        if estatus == 3:
-            return {
-                "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
-                "warning": "Orden activa sin equipo temporal generado"
-            }
+                # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
+                if estatus in (1, 4):
+                    return {
+                        "estado": EstadoEquipo.ORDEN_SIN_COMPROBANTE,
+                        "orden_pago_id": orden_pago.OrdenPagoId,
+                        "total": float(orden_pago.TotalPagar or 0)
+                    }
+                
+                # HAY ORDEN, SE ENVÍO COMPROBANTE, EN ESPERA
+                if estatus == 2:
+                    return {
+                        "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
+                        "orden_pago_id": orden_pago.OrdenPagoId,
+                        "total": float(orden_pago.TotalPagar or 0)
+                    }
+            
 
+                # ACTIVO pero sin equipo temporal → inconsistencia
+                if estatus == 3:
+                    return {
+                        "estado": EstadoEquipo.COMPROBANTE_EN_REVISION,
+                        "warning": "Orden activa sin equipo temporal generado"
+                    }
+            else:
+                print("No hubo orden")
         # fallback (por seguridad)
         return {
             "estado": EstadoEquipo.SIN_ORDEN
