@@ -21,8 +21,8 @@ router = APIRouter(
 
 # == CREACIÓN DE ORDEN DE PAGO ==
 @router.post("/hay-orden/")
-def hay_orden_pago(tipo_solicitud: int, equipo_id: int | None = None, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
-    orden_pago = solicitud_servicio.buscar_orden_pago(db, tipo_solicitud, equipo_id, usuario)
+def hay_orden_pago(tipo_solicitud: int, equipo_id: int | None = None, service: PagosServicio = Depends(get_pagos_servicio), db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    orden_pago = service.buscar_orden_pago(tipo_solicitud, equipo_id, usuario)
 
     return orden_pago
 

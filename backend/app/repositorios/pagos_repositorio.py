@@ -56,24 +56,25 @@ def obtener_orden_repo(db, orden_id):
 def buscar_orden_pago_repo(db, tipo_solicitud, equipo_id, usuario):
     usuario_id = usuario.UsuarioId
 
-    query = db.query(OrdenPago)\
+    consulta = db.query(OrdenPago)\
         .join(Solicitud)\
         .filter(
             OrdenPago.UsuarioId == usuario_id,
             Solicitud.TipoSolicitudId == tipo_solicitud,
             OrdenPago.EstatusPagoId.in_([
-                EstatusValidacionPago.NO_ENVIADA,
+                EstatusValidacionPago.NOENVIADO,
                 EstatusValidacionPago.ESPERA,
-                EstatusValidacionPago.RECHAZADA
+                EstatusValidacionPago.RECHAZADO
             ])
         )
 
     if tipo_solicitud == TiposSolicitudEnum.JUGADOR:
-        query = query.filter(
+        print("ESTMOS EN REPO")
+        consulta = consulta.filter(
             Solicitud.EquipoId == equipo_id
         )
 
-    orden = query().first()
+    orden = consulta.first()
     
     return orden
 

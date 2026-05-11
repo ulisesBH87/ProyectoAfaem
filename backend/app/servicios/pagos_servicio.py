@@ -25,23 +25,31 @@ class PagosServicio:
 
     def buscar_orden_pago(self, tipo_solicitud, equipo_id, usuario):
         orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, equipo_id, usuario)
-
-        if not orden_pago: 
+        
+        if not orden_pago:
+            print("NO HAY ORDEN")
             return {
                 "tiene_orden": False,
                 "accion": "CREAR_ORDEN"
             }
         
         accion = None
-        if orden_pago.EstatusPagoId == EstatusValidacionPago.NO_ENVIADA:
+        if orden_pago.EstatusPagoId == EstatusValidacionPago.NOENVIADO:
+            print("SUBIDA DE COMPROBATNE")
             accion = "SUBIR_COMPROBANTE"
 
         elif orden_pago.EstatusPagoId == EstatusValidacionPago.ESPERA:
+            print("EN REVISIÓN")
             accion = "EN_REVISION"
 
-        elif orden_pago.EstatusPagoId == EstatusValidacionPago.RECHAZADA:
+        elif orden_pago.EstatusPagoId == EstatusValidacionPago.RECHAZADO:
+            print("REENVIALO")
             accion = "REENVIAR_COMPROBANTE"
-
+        else:
+            print("no se que pasó ")
+            print(orden_pago.EstatusPagoId)
+            print("ORDEN ID: ")
+            print(orden_pago.OrdenPagoId)
         return {
             "tiene_orden": True,
             "accion": accion,
