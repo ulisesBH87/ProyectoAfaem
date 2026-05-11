@@ -4,6 +4,8 @@ import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
+import { API_BASE } from '../../config/config';
+import Swal from 'sweetalert2';
 import { 
   FaShieldAlt, 
   FaUsers, 
@@ -28,6 +30,47 @@ export default function PresidenteEquipoEquipos() {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+  // Función para verificar estado de pago para agregar jugador
+  const verificarEstadoPagoJugador = async (equipoId) => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const resOrdenes = await fetch(
+        `${API_BASE}/hay-orden/?tipo_solicitud=3&equipo_id=${equipoId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!res.ok) {
+        return {
+          tieneOrden: false,
+          accion: "CREAR_ORDEN"
+        };
+      }
+
+      const data = await resOrdenes.json();
+
+      return {
+        tieneOrden: data.tiene_orden,
+        accion: data.accion,
+        ordenId: data.orden_id,
+        total: data.total
+      };
+
+    } catch (err) {
+      alert("ERROR VERIFICANDO EL PAGO");
+      console.error('Error verificando pago de jugador:', err);
+      return {
+        tieneOrden: false,
+        accion: "CREAR_ORDEN"
+      }; 
+    }
+  };
 
   const loadTeams = async () => {
     try {
@@ -165,13 +208,26 @@ export default function PresidenteEquipoEquipos() {
         <button
           onClick={async () => {
             try {
+              //verifica si hay slots en el equipo
               const slots = await teamsService.checkTeamSlots(row.EquipoId);
 
               if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
                 navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&agregarJugador=true`);
-              } else {
-                navigate(`/presidente-equipo/configurar-equipo?equipoId=${row.EquipoId}&agregarJugador=true&requirePago=true`);
               }
+
+              //NO HAY SLOTS. VERIFICAR ODEN DE PAGO
+              const estadoPago = await verificarEstadoPagoJugador(row.EquipoId);
+
+              navigate(`/presidente-equipo/configurar-equipo`,{
+                  state: {
+                    equipoId: row.EquipoId,
+                    agregarJugador: true,
+                    requirePago: true,
+                    orden: estadoPago
+                  }
+                }
+              );
+
             } catch (err) {
               console.error('Error al verificar slots:', err);
             }
