@@ -36,6 +36,7 @@ const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPreside
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
 const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
+const PagoPrevioJugador = lazy(() => import('./pages/Equipos/PagoPrevioJugador'));
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 const Suspended = lazy(() => import('./pages/Auth/Suspended'));
@@ -131,6 +132,10 @@ function App() {
             <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<PresidenteGuard><AdminEquipo /></PresidenteGuard>} />
             <Route path="/inscribir-equipo-liga/:equipoId" element={<PresidenteGuard><InscribirEquipoALiga /></PresidenteGuard>} />
             <Route path="/presidente-equipo/configurar-equipo" element={<PresidenteGuard><ConfigurarEquipo /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/crear-orden" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/subir-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/en-revision" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/reenviar-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
             <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
 
             <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />

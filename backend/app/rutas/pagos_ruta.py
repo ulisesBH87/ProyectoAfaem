@@ -10,6 +10,9 @@ from app.servicios.pagos_servicio import PagosServicio
 from app.servicios import solicitud_servicio
 from app.excepciones import pagos_excepciones
 
+from app.enums.tipos_afiliacion_enum import TiposAfiliacionEnum
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
+
 router = APIRouter(
     prefix="/ordenes-pago",
     tags=["Ordenes de pago"]
@@ -17,6 +20,12 @@ router = APIRouter(
 
 
 # == CREACIÓN DE ORDEN DE PAGO ==
+@router.post("/hay-orden/")
+def hay_orden_pago(tipo_solicitud: int, equipo_id: int | None = None, service: PagosServicio = Depends(get_pagos_servicio), db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    orden_pago = service.buscar_orden_pago(tipo_solicitud, equipo_id, usuario)
+
+    return orden_pago
+
 # NUEVO. Requiere el tipo de Solicitud (presidente/equipo/jugador)
 @router.post("/")
 def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get_pagos_servicio), db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -24,8 +33,15 @@ def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get
     #Se crea primero la solicitud
     tipo_solicitud = datos.TipoSolicitud #La que viene del frontend. Se relaciona con tabla solicitudes
 
-    tipo_afiliacion = SolicitudEquipo.TipoAfiliacionId = 2
-    solicitud_nueva = solicitud_servicio.crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario)
+
+    tipo_afiliacion = SolicitudEquipo.TipoAfiliacionId = TiposAfiliacionEnum.PRESIDENTE_DE_EQUIPO #Los tipos de afiliación tienen los costos
+    tipo_afiliacion = datos.TipoAfiliacionId
+
+    if tipo_solicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO or tipo_solicitud == TiposSolicitudEnum.EQUIPO:
+        solicitud_nueva = solicitud_servicio.crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario)
+    
+    elif tipo_solicitud == TiposSolicitudEnum.JUGADOR:
+        solicitud_nueva = solicitud_servicio.crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, datos.EquipoId)
 
     solicitud_id = solicitud_nueva.SolicitudId
 
@@ -42,7 +58,9 @@ async def subir_comprobante(orden_id: int, archivo: UploadFile = File(...), serv
     return resultado
 
 
+# =================================================
 # == CONSULTAS DE SEGUROS Y AFILIACIONES ==
+# =================================================
 @router.get("/seguros", response_model=list[SeguroBase])
 def obtener_seguros(service: PagosServicio = Depends(get_pagos_servicio)):
     seguros = service.obtener_seguros()
@@ -55,12 +73,21 @@ def obtener_afiliaciones(service: PagosServicio =Depends(get_pagos_servicio)):
 
     return afiliaciones
 
+
+
+# =================================================
 # == OBTENER LAS ORDENES DE PAGO. TODAS E INDIVIDUALES ==
+# =================================================
 @router.get("/generales", response_model=list[ListaPagos])
 def obtener_pagos(service: PagosServicio = Depends(get_pagos_servicio)):
     pagos = service.obtener_pagos_servicio()
 
     return pagos
+
+
+
+
+
 
 #BORRAR ESTE
 @router.get("/mi-estado")
@@ -76,8 +103,12 @@ def mi_estado_pago_equipo(service: PagosServicio = Depends(get_pagos_servicio), 
 
     return orden
 
+
+
+# =================================================
 #Cambiar el estatus de pago
 #Se usa para que el administrador apruebe o rechace un pago
+# =================================================
 @router.post("/estatus-pago")
 def estatus_pago(orden_pago_id: int, estatus: int, service: PagosServicio = Depends(get_pagos_servicio)):
     orden = service.estatus_pago(orden_pago_id, estatus)

@@ -434,6 +434,7 @@ export const checkTeamSlots = async (equipoId) => {
     const response = await api.get(`/equipo-temporal/hay-slots`, {
       params: { equipo_id: equipoId }
     });
+    alert('LOS DATOS SON: ' + JSON.stringify(response.data));
     return response.data;
   } catch (error) {
     alert('Error verificando slots del equipo. Por favor, intenta de nuevo más tarde.');
