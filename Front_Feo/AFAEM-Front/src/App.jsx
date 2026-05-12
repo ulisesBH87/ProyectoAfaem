@@ -39,6 +39,7 @@ const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 const Suspended = lazy(() => import('./pages/Auth/Suspended'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 import SplashScreen from './components/Common/SplashScreen';
 
 function App() {
@@ -129,6 +130,9 @@ function App() {
           </Route>
 
           <Route path="/registrar-admin" element={<RegistrarAdmin />} />
+
+          {/* Catch-all: Página 404 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </Router>
