@@ -376,3 +376,57 @@ h1, h2, h3, h4 {
   font-size: 17px !important;
   border-radius: 14px !important;
 }
+
+/* ═══════════════════════════════════════
+   7. RESPONSIVE: MÓVIL (<768px)
+   ═══════════════════════════════════════ */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 280px !important;
+  }
+
+  /* Sidebar como drawer oculto por defecto */
+  .dashboard-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .dashboard-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* Main content sin margen izquierdo */
+  .main-content-wrapper {
+    margin-left: 0 !important;
+  }
+
+  /* Botón hamburguesa visible */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+
+  /* Header más compacto */
+  .main-header-fixed {
+    padding: 0 16px !important;
+  }
+
+  /* Título del header más pequeño */
+  .header-title {
+    font-size: 16px !important;
+  }
+
+  /* Main content con padding reducido */
+  .dashboard-content,
+  .fade-in {
+    padding: 16px !important;
+  }
+
+  /* Bento grid responsive */
+  .bento-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Premium card responsive */
+  .premium-card {
+    padding: 24px !important;
+  }
+}
