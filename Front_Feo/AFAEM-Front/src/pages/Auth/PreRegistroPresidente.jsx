@@ -568,7 +568,8 @@ function PreRegistroPresidente() {
             },
             body: JSON.stringify({
               CantidadJugadores: numPersonas,
-              Seguros: segurosPayload
+              Seguros: segurosPayload,
+              TipoSolicitud: 1
             })
           });
 
