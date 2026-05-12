@@ -75,7 +75,7 @@ export const getPagosGenerales = async (forceRefresh = false) => {
  * ACTUALIZA EL ESTATUS DE UNA ORDEN DE PAGO
  */
 export const updateEstatusPago = async (ordenPagoId, estatus) => {
-  
+
   // 3 = APROBADO. 4 = RECHAZADO
   const response = await api.post('/ordenes-pago/estatus-pago', null, {
     params: { orden_pago_id: ordenPagoId, estatus: estatus }
@@ -233,6 +233,7 @@ export const updateJugador = async (miembroEquipoId, data) => {
     Email: data.email || null,
     SexoId: sexoId,
     FechaNacimiento: data.fechaNacimiento || null,
+    NUI: data.NUI || null,
   });
   serviceCache.clear('/equipo-temporal/directorio-jugadores');
   return response.data;
@@ -250,13 +251,13 @@ export const getPresidentesDirectorio = async (forceRefresh = false) => {
  */
 export const updatePresidente = async (presidenteId, data) => {
   const response = await api.patch(`/equipo-temporal/update-presidente/${presidenteId}`, {
-    primerNombre:    data.primerNombre,
-    primerApellido:  data.primerApellido,
+    primerNombre: data.primerNombre,
+    primerApellido: data.primerApellido,
     segundoApellido: data.segundoApellido,
-    correo:          data.correo,
-    telefono:        data.telefono,
-    curp:            data.curp,
-    estatusId:       Number(data.estatusId)
+    correo: data.correo,
+    telefono: data.telefono,
+    curp: data.curp,
+    estatusId: Number(data.estatusId)
   });
   serviceCache.clear('/equipo-temporal/directorio-presidentes');
   serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
