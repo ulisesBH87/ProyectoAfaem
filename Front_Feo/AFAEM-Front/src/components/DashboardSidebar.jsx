@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FaSignOutAlt,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaGavel
 } from 'react-icons/fa';
 
 import { useRBAC } from '../hooks/useRBAC';
@@ -13,12 +14,8 @@ import AfaemLogo from '../assets/afaem-logo@4x.png';
 const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const { menus, isLoading, hasRole } = useRBAC();
 
-  useEffect(() => {
-    document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '90px' : '280px');
-  }, [isCollapsed]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -69,7 +66,7 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
         padding: '16px 12px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: isCollapsed ? 'center' : 'flex-start',
+        justifyContent: 'flex-start',
         gap: '10px',
         borderBottom: `1px solid ${theme.border}`
       }}>
@@ -77,15 +74,14 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
           src={AfaemLogo}
           alt="AFAEM"
           style={{
-            width: isCollapsed ? '32px' : '36px',
-            height: isCollapsed ? '32px' : '36px',
+            width: '36px',
+            height: '36px',
             objectFit: 'contain',
             flexShrink: 0,
             filter: isAdmin ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.1))' : 'drop-shadow(0 2px 4px rgba(11, 78, 166, 0.15))',
             transition: 'all 0.3s'
           }}
         />
-        {!isCollapsed && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <h1 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px' }}>
               AFAEM
@@ -94,7 +90,6 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
               Management System
             </p>
           </div>
-        )}
       </div>
 
       {/* MENU ITEMS */}
@@ -146,7 +141,7 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
                   backgroundColor: isActive ? theme.activeBg : 'transparent',
                   color: isActive ? theme.activeText : theme.text,
                   boxShadow: isActive ? (isAdmin ? '0 4px 12px rgba(37, 99, 235, 0.4)' : '0 4px 8px rgba(11, 78, 166, 0.3)') : 'none',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start'
+                  justifyContent: 'flex-start'
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
@@ -164,15 +159,13 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
                 <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center' }}>
                   {getIcon(item.Icono)}
                 </span>
-                {!isCollapsed && (
-                  <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '600' }}>
-                    {item.Nombre}
-                  </span>
-                )}
+                <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '600' }}>
+                  {item.Nombre}
+                </span>
               </div>
 
               {/* Submenus if present */}
-              {hasChildren && !isCollapsed && filteredSubMenus.map((child, cIdx) => {
+              {hasChildren && filteredSubMenus.map((child, cIdx) => {
                 const isChildActive = location.pathname === child.Ruta;
                 return (
                   <div
@@ -204,6 +197,25 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
       {/* FOOTER ACTIONS */}
       <div style={{ padding: '8px 10px', borderTop: `1px solid ${theme.border}` }}>
         <div
+          onClick={() => navigate('/reglamentos')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 12px',
+            margin: '2px 0',
+            borderRadius: '10px',
+            cursor: 'pointer',
+            color: theme.text,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.hover}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <FaGavel style={{ fontSize: '18px' }} />
+          <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Reglamentos</span>
+        </div>
+
+        <div
           onClick={handleLogout}
           style={{
             display: 'flex',
@@ -214,35 +226,15 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
             cursor: 'pointer',
             color: 'var(--danger)',
             transition: 'all 0.2s',
-            justifyContent: isCollapsed ? 'center' : 'flex-start'
           }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <FaSignOutAlt style={{ fontSize: '18px' }} />
-          {!isCollapsed && (
-            <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Cerrar Sesión</span>
-          )}
+          <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Cerrar Sesión</span>
         </div>
 
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            padding: '10px',
-            borderRadius: '10px',
-            backgroundColor: 'transparent',
-            color: theme.textMuted,
-            marginTop: '4px'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = isAdmin ? '#ffffff' : 'var(--primary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = theme.textMuted}
-        >
-          {isCollapsed ? <FaChevronRight size={14} /> : <FaChevronLeft size={14} />}
-        </button>
+
       </div>
     </aside>
   );
