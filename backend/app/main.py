@@ -150,14 +150,17 @@ async def custom_docs():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+
+        # Desarrollo local
         "http://localhost:3000",
         "http://192.168.0.172:3000",
-
         "http://localhost:5173",
         "http://192.168.0.172:5173",
-        
         "http://localhost:5174",
         "http://192.168.0.172:5174",
+        # Producción
+        "http://afaem.scholatek.com",
+        "https://afaem.scholatek.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],

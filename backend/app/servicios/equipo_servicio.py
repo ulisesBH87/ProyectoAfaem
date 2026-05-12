@@ -11,6 +11,7 @@ from app.utilidades.file_handler import guardar_logo, parse_form_data
 from app.enums.estatus_pago_enum import EstatusValidacionPago
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
+from app.modelos.solicitud_modelo import Solicitud
 
 def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
     return equipo_repositorio.obtener_equipos_temporales_por_usuario_repo(db, usuario_id)
@@ -125,6 +126,7 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             equipo_tem = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
             solicitud_id = equipo_tem.SolicitudId if equipo_tem else None
 
+            #Si hay equipo temporal y tiene equipo asociado = MODO AGREGAR JUGADORES
             if equipo_tem and equipo_tem.EquipoId:
                 equipo = equipo_repositorio.obtener_equipo_por_id(db, equipo_tem.EquipoId)
                 await add_jugador_equipo_existente_servicio(
@@ -219,8 +221,13 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                 equipo_tem.Activo = False
 
 
-        #solo si es inscripción inicial
-        equipo_repositorio.actualizar_orden(db, solicitud_id) #mejorar
+        if rol_id != 1:
+            solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id)
+            if solicitud.TipoSolicitud != 3:
+            #solo si es inscripción inicial
+                equipo_repositorio.actualizar_orden(db, solicitud_id) #mejorar
+            
+        
         db.commit()
 
         return {
