@@ -49,6 +49,12 @@ const StepBadge = ({ number, isActive, isDone }) => (
 
 export default function AdminCrearJugador() {
   const navigate = useNavigate();
+  
+  // Límites de fecha para el registro de jugadores
+  const today = new Date().toISOString().split('T')[0];
+  const minDate = new Date();
+  minDate.setFullYear(minDate.getFullYear() - 100);
+  const minDateStr = minDate.toISOString().split('T')[0];
 
   // ESTILO DINÁMICO PARA HOVER
   const hoverStyles = `
@@ -1198,7 +1204,14 @@ export default function AdminCrearJugador() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
-                  <input type="date" value={extractedData.fechaNacimiento || ''} onChange={e => setExtractedData({...extractedData, fechaNacimiento: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <input 
+                    type="date" 
+                    value={extractedData.fechaNacimiento || ''} 
+                    min={minDateStr}
+                    max={today}
+                    onChange={e => setExtractedData({...extractedData, fechaNacimiento: e.target.value})} 
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                  />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
