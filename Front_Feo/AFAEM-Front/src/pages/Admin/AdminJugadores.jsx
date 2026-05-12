@@ -84,6 +84,10 @@ export default function AdminJugadores() {
           const sexo = s.Sexo?.toLowerCase() || '';
           return sexo.includes('femenino') || sexo.includes('mujer') || sexo === 'm';
         });
+      } else if (filtroEstatus === 'conNUI') {
+        result = result.filter(s => s.NUI && s.NUI !== 'N/A' && s.NUI.trim() !== '');
+      } else if (filtroEstatus === 'sinNUI') {
+        result = result.filter(s => !s.NUI || s.NUI === 'N/A' || s.NUI.trim() === '');
       }
     }
 
@@ -128,8 +132,8 @@ export default function AdminJugadores() {
       mujeres: femeninos,
       activos: jugadores.filter(j => j.Estatus === true).length,
       inactivos: jugadores.filter(j => j.Estatus === false).length,
-      conNUI: jugadores.filter(j => !!(j.NUI)).length,
-      sinNUI: jugadores.filter(j => !(j.NUI)).length,
+      conNUI: jugadores.filter(j => j.NUI && j.NUI !== 'N/A' && j.NUI.trim() !== '').length,
+      sinNUI: jugadores.filter(j => !j.NUI || j.NUI === 'N/A' || j.NUI.trim() === '').length,
     };
   }, [jugadores]);
 
@@ -218,6 +222,7 @@ export default function AdminJugadores() {
       email: jugador.Email || '',
       sexo: jugador.Sexo || '',
       fechaNacimiento: jugador.FechaNacimiento ? jugador.FechaNacimiento.split('T')[0] : '',
+      NUI: jugador.NUI || '',
       estatus: jugador.Estatus ? '1' : '0'
     });
     setHaCambiado(false);
@@ -288,7 +293,8 @@ export default function AdminJugadores() {
           ...(lastNameP && { primerApellido: lastNameP }),
           ...(lastNameM && { segundoApellido: lastNameM }),
           ...(curpEncontrada && { curp: curpEncontrada }),
-          ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada })
+          ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada }),
+          ...(NUI && { NUI: NUI })
         }));
         setHaCambiado(true);
         Swal.fire({ title: '¡Lectura exitosa!', text: `Se detectó: ${nombreEncontrado || curpEncontrada}`, icon: 'success', timer: 2000, showConfirmButton: false });
@@ -351,6 +357,7 @@ export default function AdminJugadores() {
         email: datosEditables.email,
         sexo: datosEditables.sexo,
         fechaNacimiento: datosEditables.fechaNacimiento,
+        NUI: datosEditables.NUI,
         estatus: datosEditables.estatus
       });
 
@@ -781,6 +788,12 @@ export default function AdminJugadores() {
             onChange={manejarCambioInput}
             nombre="fechaNacimiento"
             tipo="date"
+          />
+          <EntradaFormulario
+            etiqueta="NUI"
+            valor={datosEditables.NUI}
+            onChange={manejarCambioInput}
+            nombre="NUI"
           />
           <EntradaSeleccion
             etiqueta="Estatus del jugador"
