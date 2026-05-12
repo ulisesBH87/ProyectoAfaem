@@ -10,7 +10,7 @@ import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
 import AfaemLogo from '../assets/afaem-logo@4x.png';
 
-const DashboardSidebar = () => {
+const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -45,16 +45,17 @@ const DashboardSidebar = () => {
 
   return (
     <aside
+      className={`dashboard-sidebar ${mobileOpen ? 'mobile-open' : ''}`}
       style={{
         width: 'var(--sidebar-width)',
         height: '100vh',
         position: 'fixed',
         left: 0,
         top: 0,
-        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 1000,
+        zIndex: 1100,
         backgroundColor: theme.bg,
         backdropFilter: 'blur(15px)',
         WebkitBackdropFilter: 'blur(15px)',

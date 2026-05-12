@@ -47,8 +47,6 @@ const getTeamsLocally = (email) => {
     const allTeams = JSON.parse(localStorage.getItem('teams') || '[]');
     const userTeams = allTeams.filter(team => team.owner_email.toLowerCase() === email.toLowerCase());
 
-    console.log('📋 Equipos obtenidos desde localStorage:', userTeams);
-
     return {
       teams: userTeams,
       total: userTeams.length,
@@ -160,8 +158,6 @@ const saveTeamLocally = (teamData) => {
     // AGREGAR A LA LISTA
     existingTeams.push(newTeam);
     localStorage.setItem('teams', JSON.stringify(existingTeams));
-
-    console.log('✅ Equipo guardado localmente:', newTeam);
 
     return {
       ok: true,

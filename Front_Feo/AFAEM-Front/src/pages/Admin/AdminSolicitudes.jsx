@@ -40,10 +40,7 @@ export default function AdminSolicitudes() {
       const email = localStorage.getItem('email');
       const token = localStorage.getItem('token');
 
-      console.log('Cargando solicitudes...');
-      
       if (!email || !token) {
-        console.warn('❌ Sesión no válida');
         setError('Sesión expirada. Por favor inicia sesión.');
         setTimeout(() => navigate('/ingresar'), 2000);
         return;
@@ -51,9 +48,7 @@ export default function AdminSolicitudes() {
 
       setLoading(true);
 
-      // Obtener solicitudes del servidor con opción de forzar refresco
       const response = await getSolicitudes(forceRefresh);
-      console.log('Respuesta de solicitudes:', response);
 
       // Manejar diferentes estructuras de respuesta
       let solicitudesList = [];

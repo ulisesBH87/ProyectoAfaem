@@ -3,6 +3,7 @@ import StadiumBg from '../../assets/stadium.jpg';
 import { Link, useNavigate } from 'react-router-dom';
 import { login, setAuthToken, pingBackend, parseJwt } from '../../services/auth';
 import { useRBAC } from '../../hooks/useRBAC';
+import Swal from 'sweetalert2';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -22,13 +23,11 @@ export default function Ingresar() {
     (async () => {
       try {
         const r = await pingBackend();
-        console.log('pingBackend response:', r);
         setBackendOk(!!r.ok);
         if (!r.ok) setBackendDiag(r.tried || '');
       } catch (e) {
         setBackendOk(false);
         setBackendDiag('Error comprobando backend');
-        console.log('pingBackend error:', e);
       }
     })();
   }, []);
@@ -41,14 +40,11 @@ export default function Ingresar() {
     try {
       const data = await login(email.toLowerCase(), password);
       const token = data?.token || data?.access || data?.access_token || null;
-      console.log('TOKEN RECIBIDO:', token);
       let currentEstatusId = null;
       if (token) {
         setAuthToken(token);
         localStorage.setItem('token', token);
-        console.log('🔄 Sincronizando permisos con el backend...');
-        const accessData = await refreshAccess(); // ESPERAR a que el backend confirme quién es este usuario
-        // Fallback: Prioridad a la respuesta del login, luego al servicio de permisos
+        const accessData = await refreshAccess();
         currentEstatusId = data?.usuario?.estatusId || accessData?.estatusId;
         window.dispatchEvent(new Event('user-logged-in'));
       }
@@ -63,8 +59,6 @@ export default function Ingresar() {
       localStorage.setItem('token_timestamp', Date.now().toString()); // CONTROL DE 5 HORAS
 
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
-      console.log('ROL USUARIO (desde respuesta login):', role);
-      console.log('ESTATUS ID detectado:', currentEstatusId);
 
       // GUARDAR UsuarioId SI EXISTE EN LA RESPUESTA
       if (data?.UsuarioId) {
@@ -74,21 +68,25 @@ export default function Ingresar() {
       } else if (data?.id) {
         localStorage.setItem('UsuarioId', data.id);
       } else {
-        // FALLBACK: Extraer ID del JWT si no viene en el primer nivel del JSON
         const decoded = parseJwt(token);
         if (decoded && decoded.sub) {
           localStorage.setItem('UsuarioId', decoded.sub);
-          console.log('🆔 ID extraído del Token:', decoded.sub);
         }
       }
-
-      console.log('ROL USUARIO:', role);
 
       // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---
       if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
         navigate('/admin/dashboard');
       } else if (role === 'ENTRENADOR') {
-        navigate('/coach/dashboard');
+        Swal.fire({
+          icon: 'info',
+          title: 'Módulo en desarrollo',
+          text: 'El módulo de entrenador estará disponible próximamente.',
+          confirmButtonColor: 'var(--primary)',
+          timer: 4000,
+          showConfirmButton: true,
+        });
+        navigate('/ingresar');
       } else if (role.includes('PRESIDENTE') || role === 'INVITADO') {
         // Solo entra al dashboard si ya está aprobado/activo o en revisión (Estatus 4, 5, 6 o 7)
         // Pero si es INVITADO, siempre va a pre-registro

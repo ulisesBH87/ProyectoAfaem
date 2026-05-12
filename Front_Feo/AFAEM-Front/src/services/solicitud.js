@@ -75,16 +75,12 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
     let usuarioIdFromStorage = localStorage.getItem('UsuarioId');
     if (usuarioIdFromStorage) {
       usuarioId = usuarioIdFromStorage;
-      console.log('✅ UsuarioId obtenido del localStorage:', usuarioId);
     }
     
     // 2. SI NO ESTÁ EN localStorage, INTENTAR DECODIFICAR EL TOKEN
     if (!usuarioId) {
       const decoded = decodeToken(token);
       usuarioId = decoded?.sub;
-      if (usuarioId) {
-        console.log('✅ UsuarioId obtenido del token (sub):', usuarioId);
-      }
     }
     
     // 3. SI AÚN NO EXISTE, USAR FALLBACK (CUALQUIER MÁQUINA, NO SOLO LOCALHOST)
@@ -123,21 +119,11 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
       'Content-Type': 'application/json'
     };
 
-    console.log('📤 Enviando solicitud:', payload); // DEBUG
-    console.log('📋 Fecha de nacimiento recibida:', {
-      valor: fechaNacimiento,
-      tipo: typeof fechaNacimiento,
-      largo: fechaNacimiento?.length
-    });
-    console.log('🔐 Header Authorization:', `Bearer ${token.substring(0, 20)}...`); // DEBUG
-    
     const response = await api.post('/solicitud/enviar-solicitud', payload, { headers });
-    console.log('✅ Solicitud enviada:', response.data); // DEBUG
     return response.data;
   } catch (error) {
     const errorDetail = error.response?.data?.detail;
     console.error('Error enviando solicitud:', errorDetail);
-    console.log('📋 Error completo:', JSON.stringify(error.response?.data, null, 2)); // DEBUG COMPLETO
     throw error;
   }
 };
@@ -164,14 +150,11 @@ export const getSolicitudes = async (forceRefresh = false) => {
     const cacheKey = '/solicitud/solicitudes-usuarios';
     const cachedData = serviceCache.get(cacheKey);
     if (cachedData && !forceRefresh) {
-      console.log(`[Cache Hit] ${cacheKey}`);
       return cachedData;
     }
 
-    console.log('Obteniendo solicitudes...');
     const response = await api.get('/solicitud/solicitudes-usuarios', { headers });
     serviceCache.set(cacheKey, response.data);
-    console.log('Solicitudes obtenidas:', response.data);
     return response.data;
   } catch (error) {
     if (error.response?.status === 500 || !error.response) {
