@@ -56,12 +56,10 @@ export async function login(email, password) {
   
   try {
     const res = await api.post('/auth/iniciar-sesion', payload);
-    console.log('✅ Login exitoso:', res.data); // DEBUG
     return res.data;
   } catch (error) {
     const errorDetail = error.response?.data?.detail;
-    console.error('❌ Error en login:', errorDetail); // DEBUG
-    console.log('📋 Error completo:', JSON.stringify(error.response?.data, null, 2)); // DEBUG COMPLETO
+    console.error('Error en login:', errorDetail);
     throw error;
   }
 }

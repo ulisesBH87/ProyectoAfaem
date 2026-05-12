@@ -12,7 +12,7 @@ const AdminGuard = ({ children }) => {
   const isAuthorized = (hasRole('ADMIN') || hasRole('ADMINISTRADOR'));
 
   if (!token || !isAuthorized) {
-    console.log('🚫 Acceso no autorizado en AdminGuard (Backend Strict Mode)');
+    console.warn('Acceso no autorizado en AdminGuard');
     return <Navigate to="/ingresar" replace />;
   }
 
