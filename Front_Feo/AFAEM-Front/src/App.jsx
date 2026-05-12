@@ -40,6 +40,8 @@ const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin')
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 const Suspended = lazy(() => import('./pages/Auth/Suspended'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const GeneralGuard = lazy(() => import('./routes/GeneralGuard'));
+const Reglamentos = lazy(() => import('./pages/Legales/Reglamentos'));
 import SplashScreen from './components/Common/SplashScreen';
 
 function App() {
@@ -98,8 +100,8 @@ function App() {
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
           <Route path="/suspendido" element={<Suspended />} />
 
-          {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT */}
-          <Route element={<MainLayout userEmail={userEmail} />}>
+          {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT AND GENERALGUARD */}
+          <Route element={<GeneralGuard><MainLayout userEmail={userEmail} /></GeneralGuard>}>
             <Route path="/presidente-equipo" element={<PresidenteGuard><PresidenteEquipo /></PresidenteGuard>} />
             <Route path="/presidente-equipo/jugadores" element={<PresidenteGuard><PresidenteEquipoJugadores /></PresidenteGuard>} />
             <Route path="/presidente-equipo/solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
@@ -127,6 +129,11 @@ function App() {
             <Route path="/admin/layout-jugadores" element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path="/admin/usuarios-roles" element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path="/admin/configuracion" element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
+            
+            {/* SECCIÓN LEGAL */}
+            <Route path="/reglamentos" element={<Reglamentos />} />
+            <Route path="/admin/reglamentos" element={<Reglamentos />} />
+            <Route path="/presidente-equipo/reglamentos" element={<Reglamentos />} />
           </Route>
 
           <Route path="/registrar-admin" element={<RegistrarAdmin />} />
