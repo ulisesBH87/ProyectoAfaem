@@ -373,7 +373,6 @@ function Registrarse() {
 					estado: 'pendiente',
 				};
 				setJsonResult(final);
-				console.log('JSON Generado (con hash):', final);
 				alert('¡JSON GENERADO CORRECTAMENTE!');
 			} catch (err) {
 				console.error('Error hasheando la contraseña:', err);

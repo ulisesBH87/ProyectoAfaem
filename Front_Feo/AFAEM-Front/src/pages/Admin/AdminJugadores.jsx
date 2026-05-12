@@ -788,8 +788,8 @@ export default function AdminJugadores() {
             onChange={manejarCambioInput}
             nombre="estatus"
             opciones={[
-              { valor: '1', etiqueta: 'Aprobado (Matrícula Activa)' },
-              { valor: '0', etiqueta: 'Baja (Inactivo)' }
+              { valor: '1', etiqueta: 'Activo' },
+              { valor: '0', etiqueta: 'Baja' }
             ]}
           />
         </div>

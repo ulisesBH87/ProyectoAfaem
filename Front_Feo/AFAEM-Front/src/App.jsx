@@ -40,6 +40,7 @@ const PagoPrevioJugador = lazy(() => import('./pages/Equipos/PagoPrevioJugador')
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 const Suspended = lazy(() => import('./pages/Auth/Suspended'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 import SplashScreen from './components/Common/SplashScreen';
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
@@ -154,6 +155,9 @@ function App() {
           </Route>
 
           <Route path="/registrar-admin" element={<RegistrarAdmin />} />
+
+          {/* Catch-all: Página 404 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </Router>

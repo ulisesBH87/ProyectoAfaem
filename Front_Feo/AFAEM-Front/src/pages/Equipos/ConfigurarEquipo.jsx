@@ -10,6 +10,7 @@ import { validarFotografia } from "../../services/foto";
 import teamsService from "../../services/teams";
 import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 import { useRBAC } from '../../hooks/useRBAC';
+import { DEFAULT_BANK_INFO, generarPDFCuota } from '../../utils/paymentPdf';
 
 const ESTATUS_PAGO = {
   NO_ENVIADO: 1,
@@ -30,6 +31,8 @@ export default function ConfigurarEquipo() {
   const [searchParams] = useSearchParams();
   const { hasRole } = useRBAC();
   const isAdmin = hasRole && (hasRole('ADMINISTRADOR') || hasRole('ADMIN'));
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const bankInfo = DEFAULT_BANK_INFO;
 
   const preRegistro = JSON.parse(localStorage.getItem('afaem_pre_registro') || '{}');
   const [pagoEquipo, setPagoEquipo] = useState({
@@ -634,20 +637,34 @@ export default function ConfigurarEquipo() {
       }
 
       const data = await res.json();
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || data.id;
+      const totalOrden = Number(data.total || totalPagoEstimado || 0);
       setPagoEquipo({
         loading: false,
         aprobado: false,
         estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
         estado: ESTATUS_PAGO.NO_ENVIADO,
-        ordenId: data.orden_pago_id || data.OrdenPagoId || data.id,
-        total: Number(data.total || totalPagoEstimado || 0),
+        ordenId,
+        total: totalOrden,
         cantidadJugadores: Number(numJugadoresPago),
         tieneComprobante: false
       });
 
+      generarPDFCuota({
+        ordenId,
+        user,
+        bankInfo,
+        catalogoAfiliaciones: catalogoAfiliacionesPago,
+        catalogoSeguros: catalogs.seguros,
+        asignacionSeguros,
+        total: totalOrden,
+        cantidadJugadores: Number(numJugadoresPago || 0),
+        incluirPresidente: true
+      });
+
       Swal.fire({
         title: 'Orden generada',
-        text: 'Ahora realiza el pago y sube tu comprobante para revision.',
+        text: 'Se descargo tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revision.',
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
       });
