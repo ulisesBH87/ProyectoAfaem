@@ -221,7 +221,26 @@ def mi_estado_pago_repo(db, usuario_id):
 
     return orden
 
-def mi_estado_pago_equipo_repo(db, usuario_id):
+def obtener_usuario_id_por_presidente_repo(db, presidente_id):
+    return (
+        db.query(Usuario.UsuarioId)
+        .join(Personas, Personas.PersonaId == Usuario.PersonaId)
+        .join(PresidenteEquipo, PresidenteEquipo.PersonaId == Personas.PersonaId)
+        .filter(
+            PresidenteEquipo.PresidenteEquipoId == presidente_id,
+            PresidenteEquipo.EstatusId == PresidenteEquipoEstatus.ACTIVO.value
+        )
+        .scalar()
+    )
+
+def mi_estado_pago_equipo_repo(db, usuario_id, presidente_id: Optional[int] = None):
+    if presidente_id is not None:
+        usuario_id = obtener_usuario_id_por_presidente_repo(db, presidente_id)
+        if not usuario_id:
+            return {
+                "equipo_temporal": None,
+                "orden": None
+            }
 
     #VERIFICAR SI EXISTE UN EQUIPO TEMPORAL ACTIVO Y VACÍO (SIN EQUIPO ID))
     equipo_vacio = (

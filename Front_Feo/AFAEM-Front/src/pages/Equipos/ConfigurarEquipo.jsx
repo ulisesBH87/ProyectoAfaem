@@ -203,6 +203,220 @@ export default function ConfigurarEquipo() {
 
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
   const numPersonasPagadas = isAdmin ? 999 : Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
+  const shouldShowPagoPrevioEquipo = !tieneSlotDisponible && !pagoEquipo.aprobado && (!isAdmin || Boolean(selectedPresidentId && pagoEquipo.estadoEquipo));
+
+  const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
+    if (!ordenId) return;
+
+    try {
+      const resOrden = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
+
+      if (!resOrden.ok) return;
+
+      const orden = await resOrden.json();
+      const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
+      const estatusOrden = Number(orden.EstatusPagoId || orden.estatus || 0);
+      if (estatusOrden) {
+        setPagoEquipo(prev => ({ ...prev, estado: estatusOrden }));
+      }
+
+      let cantidadJugadores = null;
+      const seguros = {};
+
+      detalles.forEach(detalle => {
+        if (Number(detalle.TipoAfiliacionId) === 4) {
+          cantidadJugadores = Number(detalle.Cantidad || 0);
+        }
+        if (detalle.SeguroId) {
+          const id = String(detalle.SeguroId);
+          seguros[id] = Number(detalle.Cantidad || 0);
+        }
+      });
+
+      if (cantidadJugadores !== null && !Number.isNaN(cantidadJugadores)) {
+        setNumJugadoresPago(cantidadJugadores);
+        setPagoEquipo(prev => ({ ...prev, cantidadJugadores }));
+      }
+
+      if (Object.keys(seguros).length > 0) {
+        setAsignacionSeguros(prev => ({ ...prev, ...seguros }));
+      }
+
+      const totalOrden = Number(orden.TotalPagar || orden.total || 0);
+      if (!Number.isNaN(totalOrden) && totalOrden > 0) {
+        setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar el detalle de la orden de pago:', error);
+    }
+  };
+
+  const cargarEstadoPagoEquipo = async ({ presidenteId = null } = {}) => {
+    const esConsultaAdmin = Boolean(isAdmin && presidenteId);
+    if (isAdmin && !esConsultaAdmin) return false;
+
+    try {
+      setPagoEquipo(prev => ({ ...prev, loading: true }));
+      setPagoError(null);
+
+      const token = localStorage.getItem('token');
+      const query = esConsultaAdmin ? `?presidente_id=${presidenteId}` : '';
+      const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
+
+      const data = await res.json();
+
+      const estadoEquipo = data.estado;
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || null;
+      const total = Number(data.total || 0);
+
+      if (estadoEquipo === ESTADO_EQUIPO.SIN_ORDEN || !estadoEquipo) {
+        try {
+          const nextPreRegistro = { ...(preRegistro || {}) };
+          delete nextPreRegistro.equipo_temporal_id;
+          localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+        } catch {}
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+          equipoTemporalId: null,
+          estado: null,
+          ordenId: null,
+          total: 0,
+          cantidadJugadores: 0,
+          tieneComprobante: false
+        });
+
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago pendiente',
+            text: 'El presidente seleccionado no tiene una orden aprobada disponible para crear el equipo.',
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
+        const equipoTemporalId = data.equipo_temporal_id || data.equipoTemporalId || null;
+        if (equipoTemporalId) {
+          try {
+            const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
+            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+          } catch {}
+        }
+
+        const seguros = {};
+        (data.seguros || []).forEach(seguro => {
+          const id = String(seguro.SeguroId || seguro.seguro_id);
+          seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
+        });
+
+        if (Object.keys(seguros).length > 0) {
+          setAsignacionSeguros(seguros);
+        }
+
+        if (data.cantidad_jugadores) {
+          setNumJugadoresPago(data.cantidad_jugadores);
+        }
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: true,
+          estadoEquipo: ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO,
+          equipoTemporalId,
+          estado: ESTATUS_PAGO.APROBADO,
+          ordenId,
+          total: Number(data.total || 0),
+          cantidadJugadores: Number(data.cantidad_jugadores || 0),
+          tieneComprobante: true
+        });
+
+        if (esConsultaAdmin) {
+          setActiveStep(1);
+        }
+        return true;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.NO_ENVIADO,
+          ordenId,
+          total,
+          tieneComprobante: false
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Orden incompleta',
+            text: `El presidente seleccionado tiene una orden${ordenId ? ` #${ordenId}` : ''} pendiente de comprobante.`,
+            icon: 'warning',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.COMPROBANTE_EN_REVISION) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.EN_ESPERA,
+          ordenId,
+          total,
+          tieneComprobante: true
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago en revisión',
+            text: `El comprobante${ordenId ? ` de la orden #${ordenId}` : ''} del presidente seleccionado sigue en revisión.`,
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      setPagoEquipo({
+        loading: false,
+        aprobado: false,
+        estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+        equipoTemporalId: null,
+        estado: null,
+        ordenId: null,
+        total: 0,
+        cantidadJugadores: 0,
+        tieneComprobante: false
+      });
+      return false;
+    } catch (error) {
+      console.error('Error al cargar pago de equipo:', error);
+      setPagoEquipo(prev => ({ ...prev, loading: false }));
+      setPagoError(error.message);
+
+      if (esConsultaAdmin) {
+        await Swal.fire('Error', error.message, 'error');
+      }
+      return false;
+    }
+  };
 
   // Cargar catálogos al montar
   useEffect(() => {
@@ -237,7 +451,6 @@ export default function ConfigurarEquipo() {
   //VERIFICA EL ESTADO DE PAGO PARA DECIDIR QUÉ VISTA MOSTRAR
   useEffect(() => {
     const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
-      alert("Estamos en cargar detalle de orden")
       if (!ordenId) return;
 
       try {
@@ -602,7 +815,8 @@ export default function ConfigurarEquipo() {
         body: JSON.stringify({
           CantidadJugadores: Number(numJugadoresPago),
           Seguros: segurosPayload,
-          TipoSolicitud: TIPO_SOLICITUD.EQUIPO
+          TipoSolicitud: TIPO_SOLICITUD.EQUIPO,
+          PresidenteId: isAdmin ? Number(selectedPresidentId) : null
         })
       });
 
@@ -1651,7 +1865,7 @@ export default function ConfigurarEquipo() {
       <div className="dashboard-content">
         {!tieneSlotDisponible && modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
           renderPagoPrevioJugador()
-        ) : !isAdmin && !pagoEquipo.aprobado && !tieneSlotDisponible ? (
+        ) : shouldShowPagoPrevioEquipo ? (
           renderPagoPrevioEquipo()
         ) : (
           <>
@@ -1728,7 +1942,7 @@ export default function ConfigurarEquipo() {
                       </button>
                       <button 
                         disabled={!selectedPresidentId}
-                        onClick={() => setActiveStep(1)}
+                        onClick={() => cargarEstadoPagoEquipo({ presidenteId: selectedPresidentId })}
                         style={{ 
                           padding: '10px 30px', borderRadius: '8px', border: 'none', 
                           background: !selectedPresidentId ? '#cbd5e1' : '#0b4ea6', 

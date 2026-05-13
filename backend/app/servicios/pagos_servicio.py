@@ -270,8 +270,8 @@ class PagosServicio:
 
 
     #VERIFICA SI HAY EQUIPOS VACIOS Y DISPONIBLES
-    def mi_estado_pago_equipo(self, usuario_id):
-        data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
+    def mi_estado_pago_equipo(self, usuario_id, presidente_id=None):
+        data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id, presidente_id)
 
         equipo_temporal = data["equipo_temporal"]
 
