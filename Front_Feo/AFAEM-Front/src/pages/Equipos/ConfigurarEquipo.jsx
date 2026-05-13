@@ -48,7 +48,7 @@ export default function ConfigurarEquipo() {
   });
   const [numJugadoresPago, setNumJugadoresPago] = useState(preRegistro.numPersonas || '');
   const [asignacionSeguros, setAsignacionSeguros] = useState(isAdmin
-    ? { '1': 999, '2': 999, '3': 999 }
+    ? {}
     : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0)
         ? preRegistro.asignacionSeguros
         : {}));
@@ -202,7 +202,7 @@ export default function ConfigurarEquipo() {
   });
 
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
-  const numPersonasPagadas = isAdmin ? 999 : Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
+  const numPersonasPagadas = Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
   const shouldShowPagoPrevioEquipo = !tieneSlotDisponible && !pagoEquipo.aprobado && (!isAdmin || Boolean(selectedPresidentId && pagoEquipo.estadoEquipo));
 
   const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
@@ -426,12 +426,10 @@ export default function ConfigurarEquipo() {
         const data = await teamsService.getCatalogs();
         setCatalogs(data);
 
-        if (!isAdmin) {
-          const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
-          if (resAfiliaciones.ok) {
-            const afiliaciones = await resAfiliaciones.json();
-            setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
-          }
+        const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
+        if (resAfiliaciones.ok) {
+          const afiliaciones = await resAfiliaciones.json();
+          setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
         }
 
         if (isAdmin) {
