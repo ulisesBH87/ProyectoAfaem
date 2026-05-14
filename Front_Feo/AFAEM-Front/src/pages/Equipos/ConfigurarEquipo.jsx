@@ -379,13 +379,15 @@ export default function ConfigurarEquipo() {
         if (esConsultaAdmin) {
           const { isConfirmed } = await Swal.fire({
             title: 'Orden sin comprobante',
-            text: 'El presidente tiene una orden pero no ha subido el comprobante de pago, deseas aprobarla?',
+            text: 'El presidente tiene una orden pero no ha subido el comprobante de pago, ¿deseas aprobarla?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, aprobar',
-            cancelButtonText: 'No, cancelar',
+            cancelButtonText: 'No, esperar a que realice el pago',
             confirmButtonColor: '#10b981',
-            cancelButtonColor: '#64748b'
+            cancelButtonColor: '#64748b',
+            allowOutsideClick: false,
+            allowEscapeKey: false
           });
 
           if (!isConfirmed) {
@@ -928,10 +930,12 @@ export default function ConfigurarEquipo() {
       });
 
       Swal.fire({
-        title: 'Orden generada',
-        text: 'Se descargo tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revision.',
-        icon: 'success',
-        confirmButtonColor: '#0b4ea6'
+      title: 'Orden generada',
+      text: isAdmin
+        ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediátamente o esperar a que el presidente haga el pago y suba el comprobante'
+        : 'Se descargó tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revisión.',
+      icon: 'success',
+      confirmButtonColor: '#0b4ea6'
       });
     } catch (error) {
       setPagoError(error.message);
@@ -1590,10 +1594,15 @@ export default function ConfigurarEquipo() {
           </div>
           <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
           <p style={{ color: '#64748b', margin: 0 }}>
-            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+            {isAdmin
+              ? 'Genera la orden de pago con el número de jugadores y tipos de seguros'
+              : 'Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.'
+            }
           </p>
           <p style={{ color: '#ff0000', margin: 0 }}>
-            *Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*
+            {isAdmin
+              ? '*Registro de equipo como administrador*'
+              : '*Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*'}
           </p>
         </div>
 
@@ -2908,7 +2917,7 @@ export default function ConfigurarEquipo() {
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
                             presidente_id: isAdmin ? (selectedPresidentId || null) : null,
-                            equipo_temporal_id: !isAdmin ? (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null) : null,
+                            equipo_temporal_id: (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null),
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
@@ -2923,7 +2932,7 @@ export default function ConfigurarEquipo() {
                             localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
                           } catch {}
 
-                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
+                          setSuccessMessage(`Se ha sido registrado exitosamente el equipo/jugadores.`);
                           setShowSuccessModal(true);
                           Swal.close();
                         } catch (err) {
