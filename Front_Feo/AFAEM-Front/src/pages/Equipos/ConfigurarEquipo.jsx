@@ -253,6 +253,23 @@ export default function ConfigurarEquipo() {
     }
   };
 
+  const aprobarOrdenPagoEquipoAdmin = async (ordenId) => {
+    if (!ordenId) throw new Error('No se encontro la orden de pago a aprobar');
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE}/ordenes-pago/estatus-pago?orden_pago_id=${ordenId}&estatus=${ESTATUS_PAGO.APROBADO}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'No se pudo aprobar la orden de pago');
+    }
+
+    return res.json();
+  };
+
   const cargarEstadoPagoEquipo = async ({ presidenteId = null } = {}) => {
     const esConsultaAdmin = Boolean(isAdmin && presidenteId);
     if (isAdmin && !esConsultaAdmin) return false;
