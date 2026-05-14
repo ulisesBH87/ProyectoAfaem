@@ -119,8 +119,8 @@ def mi_estado_pago_equipo(
     service: PagosServicio = Depends(get_pagos_servicio),
     usuario = Depends(obtener_usuario_actual)
 ):
-    print("🎈🎈🎈🎈ID DEL PRESIDENTE")
-    print(presidente_id)
+    #print("🎈🎈🎈🎈ID DEL PRESIDENTE")
+    #print(presidente_id)
     
     presidente_consulta = None
     if presidente_id is not None:

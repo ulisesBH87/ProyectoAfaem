@@ -28,7 +28,7 @@ class PagosServicio:
         orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, equipo_id)
         
         if not orden_pago:
-            print("NO HAY ORDEN")
+            #print("NO HAY ORDEN")
             return {
                 "tiene_orden": False,
                 "accion": "CREAR_ORDEN"
@@ -36,21 +36,21 @@ class PagosServicio:
         
         accion = None
         if orden_pago.EstatusPagoId == EstatusValidacionPago.NOENVIADO:
-            print("SUBIDA DE COMPROBATNE")
+            #print("SUBIDA DE COMPROBATNE")
             accion = "SUBIR_COMPROBANTE"
 
         elif orden_pago.EstatusPagoId == EstatusValidacionPago.ESPERA:
-            print("EN REVISIÓN")
+            #print("EN REVISIÓN")
             accion = "EN_REVISION"
 
         elif orden_pago.EstatusPagoId == EstatusValidacionPago.RECHAZADO:
-            print("REENVIALO")
+            #print("REENVIALO")
             accion = "REENVIAR_COMPROBANTE"
         else:
-            print("no se que pasó ")
-            print(orden_pago.EstatusPagoId)
-            print("ORDEN ID: ")
-            print(orden_pago.OrdenPagoId)
+            #print("no se que pasó ")
+            #print(orden_pago.EstatusPagoId)
+            #print("ORDEN ID: ")
+            #print(orden_pago.OrdenPagoId)
         return {
             "tiene_orden": True,
             "accion": accion,
@@ -303,17 +303,17 @@ class PagosServicio:
 
         #CASO 2: NO HAY EQUIPO TEMPORAL DISPONIBLE, PASAR A FLUJO DE ORDEN
         if not equipo_temporal:
-            print("NO HAY EQUIPO TEMPORAL")
+            #print("NO HAY EQUIPO TEMPORAL")
             tipo_solicitud = 2
             orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, None)
-            print("🎈🎈🎈🎈🎈PRESIDENTE ID: ")
-            print(presidente_id)
+            #print("🎈🎈🎈🎈🎈PRESIDENTE ID: ")
+            #print(presidente_id)
 
             if orden_pago:
-                print("SI HAY ORDEN🎈🎈🎈🎈")
+                #print("SI HAY ORDEN🎈🎈🎈🎈")
                 estatus = orden_pago.EstatusPagoId
-                print("ESTADO: ")
-                print(estatus)
+                #print("ESTADO: ")
+                #print(estatus)
                 # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
                 if estatus in (1, 4):
                     return {
@@ -338,7 +338,7 @@ class PagosServicio:
                         "warning": "Orden activa sin equipo temporal generado"
                     }
             else:
-                print("No hubo orden")
+                #print("No hubo orden")
         # fallback (por seguridad)
         return {
             "estado": EstadoEquipo.SIN_ORDEN
