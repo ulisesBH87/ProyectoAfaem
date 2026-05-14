@@ -360,12 +360,48 @@ export default function ConfigurarEquipo() {
         }));
         if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
         if (esConsultaAdmin) {
-          await Swal.fire({
-            title: 'Orden incompleta',
-            text: `El presidente seleccionado tiene una orden${ordenId ? ` #${ordenId}` : ''} pendiente de comprobante.`,
+          const { isConfirmed } = await Swal.fire({
+            title: 'Orden sin comprobante',
+            text: 'El presidente tiene una orden pero no ha subido el comprobante de pago, deseas aprobarla?',
             icon: 'warning',
-            confirmButtonColor: '#0b4ea6'
+            showCancelButton: true,
+            confirmButtonText: 'Sí, aprobar',
+            cancelButtonText: 'No, cancelar',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b'
           });
+
+          if (!isConfirmed) {
+            setPagoEquipo({
+              loading: false,
+              aprobado: false,
+              estadoEquipo: null,
+              equipoTemporalId: null,
+              estado: null,
+              ordenId: null,
+              total: 0,
+              cantidadJugadores: 0,
+              tieneComprobante: false
+            });
+            return false;
+          }
+
+          try {
+            setPagoEquipo(prev => ({ ...prev, loading: true }));
+            await aprobarOrdenPagoEquipoAdmin(ordenId);
+            await Swal.fire({
+              title: 'Orden aprobada',
+              text: `La orden${ordenId ? ` #${ordenId}` : ''} se aprobo correctamente.`,
+              icon: 'success',
+              confirmButtonColor: '#0b4ea6'
+            });
+            return await cargarEstadoPagoEquipo({ presidenteId });
+          } catch (error) {
+            setPagoEquipo(prev => ({ ...prev, loading: false }));
+            setPagoError(error.message);
+            await Swal.fire('Error', error.message, 'error');
+            return false;
+          }
         }
         return false;
       }
