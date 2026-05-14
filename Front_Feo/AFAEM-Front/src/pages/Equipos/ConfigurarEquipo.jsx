@@ -1360,7 +1360,7 @@ export default function ConfigurarEquipo() {
         }
       }
 
-      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, lugarNacimiento, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
+      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, birthPlace, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
 
       // Nombre y Apellidos
       form.getTextField('Nombres')?.setText(firstName || '');
@@ -1370,7 +1370,7 @@ export default function ConfigurarEquipo() {
       // Identificadores y Nacimiento
       if (curp) form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       if (birthDate) form.getTextField('Fecha de Nacimiento')?.setText(birthDate);
-      if (lugarNacimiento) form.getTextField('Lugar de Nacimiento')?.setText(lugarNacimiento);
+      if (birthPlace) form.getTextField('Lugar de Nacimiento')?.setText(birthPlace);
       
       // Tipo de Afiliación (Mapeado empíricamente a fill_24) y Asociación
       // El campo 'Tipo' corresponde a 'Tipo de Sangre', no lo llenaremos con AFAEM.
