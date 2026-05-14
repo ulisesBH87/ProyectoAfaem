@@ -52,7 +52,7 @@ def calcular_datos_curp(curp):
         fecha_nac = datetime(anio, mm, dd)
         hoy = datetime.now()
         edad = hoy.year - anio - ((hoy.month, hoy.day) < (mm, dd))
-        return edad, fecha_nac.strftime("%d/%m/%Y")
+        return edad, fecha_nac.strftime("%Y-%m-%d")
     except:
         return "No calculada", "No detectada"
 
