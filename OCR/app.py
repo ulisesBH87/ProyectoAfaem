@@ -52,7 +52,7 @@ def calcular_datos_curp(curp):
         fecha_nac = datetime(anio, mm, dd)
         hoy = datetime.now()
         edad = hoy.year - anio - ((hoy.month, hoy.day) < (mm, dd))
-        return edad, fecha_nac.strftime("%d/%m/%Y")
+        return edad, fecha_nac.strftime("%Y-%m-%d")
     except:
         return "No calculada", "No detectada"
 
@@ -84,6 +84,49 @@ def determinar_tipo_documento(texto_up):
     return "DOCUMENTO NO RECONOCIDO"
 
 # --- EL CEREBRO DE EXTRACCIÓN (NUEVO) ---
+def obtener_estado_curp(curp):
+    estados = {
+        "AS": "AGUASCALIENTES",
+        "BC": "BAJA CALIFORNIA",
+        "BS": "BAJA CALIFORNIA SUR",
+        "CC": "CAMPECHE",
+        "CL": "COAHUILA",
+        "CM": "COLIMA",
+        "CS": "CHIAPAS",
+        "CH": "CHIHUAHUA",
+        "DF": "CIUDAD DE MEXICO",
+        "DG": "DURANGO",
+        "GT": "GUANAJUATO",
+        "GR": "GUERRERO",
+        "HG": "HIDALGO",
+        "JC": "JALISCO",
+        "MC": "MEXICO",
+        "MN": "MICHOACAN",
+        "MS": "MORELOS",
+        "NT": "NAYARIT",
+        "NL": "NUEVO LEON",
+        "OC": "OAXACA",
+        "PL": "PUEBLA",
+        "QT": "QUERETARO",
+        "QR": "QUINTANA ROO",
+        "SP": "SAN LUIS POTOSI",
+        "SL": "SINALOA",
+        "SR": "SONORA",
+        "TC": "TABASCO",
+        "TS": "TAMAULIPAS",
+        "TL": "TLAXCALA",
+        "VZ": "VERACRUZ",
+        "YN": "YUCATAN",
+        "ZS": "ZACATECAS",
+        "NE": "NACIDO EN EL EXTRANJERO"
+    }
+
+    if curp and len(curp) >= 13:
+        clave_estado = curp[11:13]
+        return estados.get(clave_estado, "No detectado")
+
+    return "No detectado"
+
 
 def extraer_nombre_mrz(texto_crudo):
     """Busca el nombre en las líneas de código <<< (INE reverso y Pasaporte)"""
@@ -230,6 +273,10 @@ def procesar_texto(texto):
 
     # Ubicaciones y Estado
     lugar_nac, lugar_res = extraer_ubicaciones(texto, tipo_doc)
+    lugar_nac, lugar_res = extraer_ubicaciones(texto, tipo_doc)
+
+    if lugar_nac == "No detectado" and curp != "No detectado":
+        lugar_nac = obtener_estado_curp(curp)
     nacionalidad = "MEXICANA" if "MEXIC" in texto_norm else "EXTRANJERA"
     estado = "MENOR DE EDAD" if isinstance(edad, int) and edad < 18 else "ADULTO"
     

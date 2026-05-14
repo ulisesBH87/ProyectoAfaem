@@ -8,7 +8,7 @@ from app.repositorios import pagos_repositorio
 from app.excepciones import pagos_excepciones
 from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 from app.enums.estatus_pago_enum import EstatusValidacionPago
-
+from app.repositorios import usuario_repositorio
 class EstadoEquipo:
     SIN_ORDEN = "SIN_ORDEN"
     ORDEN_SIN_COMPROBANTE = "ORDEN_SIN_COMPROBANTE"
@@ -270,9 +270,11 @@ class PagosServicio:
 
 
     #VERIFICA SI HAY EQUIPOS VACIOS Y DISPONIBLES
-    def mi_estado_pago_equipo(self, usuario_id):
-        data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
+    def mi_estado_pago_equipo(self, usuario_id, presidente_id=None):
+        data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id, presidente_id)
 
+        if presidente_id:
+            usuario_id = usuario_repositorio.obtener_usuario_por_presidente(self.db, presidente_id)
         equipo_temporal = data["equipo_temporal"]
 
         #CASO 1: HAY EQUIPO TEMPORAL DISPONIBLE
@@ -304,12 +306,14 @@ class PagosServicio:
             print("NO HAY EQUIPO TEMPORAL")
             tipo_solicitud = 2
             orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, None)
-
+            print("🎈🎈🎈🎈🎈PRESIDENTE ID: ")
+            print(presidente_id)
 
             if orden_pago:
-                print("SI HAY ORDEN")
+                print("SI HAY ORDEN🎈🎈🎈🎈")
                 estatus = orden_pago.EstatusPagoId
-
+                print("ESTADO: ")
+                print(estatus)
                 # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
                 if estatus in (1, 4):
                     return {
