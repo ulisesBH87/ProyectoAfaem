@@ -379,11 +379,11 @@ export default function ConfigurarEquipo() {
         if (esConsultaAdmin) {
           const { isConfirmed } = await Swal.fire({
             title: 'Orden sin comprobante',
-            text: 'El presidente tiene una orden pero no ha subido el comprobante de pago, deseas aprobarla?',
+            text: 'El presidente tiene una orden pero no ha subido el comprobante de pago, ¿deseas aprobarla?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, aprobar',
-            cancelButtonText: 'No, cancelar',
+            cancelButtonText: 'No, esperar a que realice el pago',
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#64748b',
             allowOutsideClick: false,
