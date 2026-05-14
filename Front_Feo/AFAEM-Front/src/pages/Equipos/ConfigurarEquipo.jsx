@@ -249,7 +249,7 @@ export default function ConfigurarEquipo() {
         setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
       }
     } catch (error) {
-      console.warn('No se pudo cargar el detalle de la orden de pago:', error);
+      console.warn('No se pudo cargar el detalle de la orden de pago:');
     }
   };
 
@@ -545,7 +545,7 @@ export default function ConfigurarEquipo() {
           setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
         }
       } catch (error) {
-        console.warn('No se pudo cargar el detalle de la orden de pago:', error);
+        console.warn('No se pudo cargar el detalle de la orden de pago:');
       }
     };
 
@@ -1006,7 +1006,6 @@ export default function ConfigurarEquipo() {
         setPagoJugador(prev => ({ ...prev, loading: false }));
       }
     } catch (error) {
-      console.error('Error verificando slots:', error);
       setPagoErrorJugador('Error al verificar disponibilidad de slots');
       setPagoJugador(prev => ({ ...prev, loading: false }));
     }

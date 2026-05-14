@@ -320,7 +320,7 @@ export const registrarPresidenteAdmin = async (data) => {
     serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
     return response.data;
   } catch (error) {
-    console.error('Error registrando presidente (admin):', error);
+    //console.error('Error registrando presidente (admin):', error);
     throw error;
   }
 };
