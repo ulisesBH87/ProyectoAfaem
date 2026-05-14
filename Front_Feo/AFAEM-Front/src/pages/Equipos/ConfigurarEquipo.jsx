@@ -605,7 +605,7 @@ export default function ConfigurarEquipo() {
             seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
           });
 
-          console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
+          //console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
 
           if (Object.keys(seguros).length > 0) {
             setAsignacionSeguros(seguros);
