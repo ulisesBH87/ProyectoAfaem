@@ -1590,10 +1590,15 @@ export default function ConfigurarEquipo() {
           </div>
           <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
           <p style={{ color: '#64748b', margin: 0 }}>
-            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+            {isAdmin
+              ? 'Genera la orden de pago con el número de jugadores y tipos de seguros'
+              : 'Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.'
+            }
           </p>
           <p style={{ color: '#ff0000', margin: 0 }}>
-            *Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*
+            {isAdmin
+              ? '*Registro de equipo como administrador*'
+              : '*Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*'}
           </p>
         </div>
 
@@ -2908,7 +2913,7 @@ export default function ConfigurarEquipo() {
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
                             presidente_id: isAdmin ? (selectedPresidentId || null) : null,
-                            equipo_temporal_id: !isAdmin ? (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null) : null,
+                            equipo_temporal_id: (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null),
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
@@ -2923,7 +2928,7 @@ export default function ConfigurarEquipo() {
                             localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
                           } catch {}
 
-                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
+                          setSuccessMessage(`Se ha sido registrado exitosamente el equipo/jugadores.`);
                           setShowSuccessModal(true);
                           Swal.close();
                         } catch (err) {
