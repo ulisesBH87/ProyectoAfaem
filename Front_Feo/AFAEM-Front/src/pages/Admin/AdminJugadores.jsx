@@ -155,7 +155,7 @@ export default function AdminJugadores() {
 
       let htmlBotones = '';
       docs.forEach((doc, idx) => {
-        htmlBotones += `<a href="${doc.url}" target="_blank" class="btn btn-primary m-1" style="display:block; text-align:center; padding: 12px; border-radius: 8px; font-weight: 600;">📄 Ver documento ${idx + 1} (${new Date(doc.FechaEntrega).toLocaleDateString()})</a>`;
+        htmlBotones += `<a href="${doc.url}" target="_blank" class="btn btn-primary m-1" style="display:block; text-align:center; padding: 12px; border-radius: 8px; font-weight: 600;">📄 ${doc.nombre}. Subido el: ${new Date(doc.FechaEntrega).toLocaleDateString()}</a>`;
       });
 
       Swal.fire({
