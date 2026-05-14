@@ -66,7 +66,11 @@ def buscar_orden_pago_repo(db, tipo_solicitud, usuario_id, equipo_id: Optional[i
                 EstatusValidacionPago.RECHAZADO
             ])
         )
-
+    print("🎈🎈🎈🎈REPO")
+    print("🎈🎈🎈🎈TIPO DE SOLICITUD: ")
+    print(tipo_solicitud)
+    print("🎈🎈🎈🎈Usuario id")
+    print(usuario_id)
     if tipo_solicitud == TiposSolicitudEnum.JUGADOR:
         consulta = consulta.filter(
             Solicitud.EquipoId == equipo_id
