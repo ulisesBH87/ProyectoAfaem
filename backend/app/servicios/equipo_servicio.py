@@ -113,8 +113,8 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         
         #Se obtiene el equipo temporal activo para verificar que tenga disponibilidad de slots
         equipo_tem = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
-        print("EQUIPO TEMPORAL")
-        print(equipo_tem.EquipoTemporalId)
+        #print("EQUIPO TEMPORAL")
+        #print(equipo_tem.EquipoTemporalId)
         #Se busca al presidente del equipo, sin importar si el usuario es presidente o admin, para validar su estatus y obtener su id
         #El presidente de equipo ya debe existir
         presidente_id, presidente, rol_id = equipo_repositorio.obtener_presidente(
@@ -187,20 +187,20 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         # == CREACIÓN DE PRESIDENTE O EQUIPO = INSCRIPCIÓN INICIAL
         # == NO EXISTE EL EQUIPO ==
         if equipo_tem.TipoProcesoId == EquipoTemporalProcesoEnum.INSCRIPCION_INICIAL:
-            print("el tipo de proceso es: ")
-            print(equipo_tem.TipoProcesoId)
-            print("el equipo temporal es:  🍦🍦🍦 ")
-            print(equipo_tem.EquipoTemporalId)
-            print("🍦🍦🍦🍦🍦🍦")
+            #print("el tipo de proceso es: ")
+            #print(equipo_tem.TipoProcesoId)
+            #print("el equipo temporal es:  🍦🍦🍦 ")
+            #print(equipo_tem.EquipoTemporalId)
+            #print("🍦🍦🍦🍦🍦🍦")
             equipo = equipo_repositorio.obtener_o_crear_equipo(
                 db, team_info["nombre_equipo"]
             )
-            print("EL EQUIPO ES: ")
-            print(equipo.EquipoId)
-            print("ANTES DE VINCULAR")
+            #print("EL EQUIPO ES: ")
+            #print(equipo.EquipoId)
+            #print("ANTES DE VINCULAR")
             #vincular el equipo creado al equipo temporal
             equipo_tem.EquipoId = equipo.EquipoId
-            print("DESPUÉS DE VINCULAR")
+            #print("DESPUÉS DE VINCULAR")
             db.flush()
         
             equipo_repositorio.crear_equipo_jugando(
