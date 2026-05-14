@@ -1237,24 +1237,17 @@ export default function ConfigurarEquipo() {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
         const value = row.querySelector('.valor')?.textContent?.trim() || '';
         if (label.includes('nombre')) extractedData.nombre = value;
+        if (label.includes('nombres')) extractedData.nombres = value;
+        if (label.includes('apellido paterno')) extractedData.apellido_paterno = value;
+        if (label.includes('apellido materno')) extractedData.apellido_materno = value;
         if (label.includes('curp')) extractedData.curp = value;
         if (label.includes('fecha de nacimiento')) extractedData.fecha_nac = value;
       });
 
       if (extractedData.nombre) {
-        const parts = extractedData.nombre.split(' ');
-        let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
-        
-        if (parts.length >= 3) {
-          lastNamePaterno = parts[0];
-          lastNameMaterno = parts[1];
-          firstName = parts.slice(2).join(' ');
-        } else if (parts.length === 2) {
-          lastNamePaterno = parts[0];
-          firstName = parts[1];
-        } else {
-          firstName = extractedData.nombre;
-        }
+        const firstName = extractedData.nombres || '';
+        const lastNamePaterno = extractedData.apellido_paterno || '';
+        const lastNameMaterno = extractedData.apellido_materno || '';
 
         // Inferir sexo desde CURP si está disponible
         let inferredSexo = 1;
@@ -1277,7 +1270,7 @@ export default function ConfigurarEquipo() {
 
         Swal.fire({
           title: '¡Lectura Exitosa!',
-          text: `Se detectó a: ${extractedData.nombre}`,
+          text: `Se detectó a: ${extractedData.nombre} ${extractedData.apellido_paterno} ${extractedData.apellido_materno}`,
           icon: 'success',
           timer: 2000,
           showConfirmButton: false
