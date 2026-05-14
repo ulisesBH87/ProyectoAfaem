@@ -161,13 +161,13 @@ export default function PresidenteEquipoMisJugadores() {
           <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Mi directorio de jugadores</h1>
           <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Visualización y gestión de miembros activos en tus equipos registrados.</p>
         </div>
-        <button 
+        {/*<button 
           className="btn-premium" 
           onClick={() => navigate('/presidente-equipo/registro-jugadores')}
           style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
         >
           <FaUserPlus /> Registrar nuevo jugador
-        </button>
+        </button>*/}
       </div>
 
       {/* TARJETAS MÉTRICAS ESTILO ADMIN/PAGOS */}
