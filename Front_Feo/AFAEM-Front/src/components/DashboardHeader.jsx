@@ -53,7 +53,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
           fontWeight: '800', 
           color: 'var(--primary)', 
           margin: 0,
-          letterSpacing: '-0.5px'
+          letterSpacing: '-0.5px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }}>
           {pageTitle}
         </h2>
