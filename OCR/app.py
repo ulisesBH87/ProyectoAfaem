@@ -201,20 +201,67 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
                         return datos
 
     elif tipo_doc == "ACTA DE NACIMIENTO":
-        # En el acta, buscamos lo que hay entre "DATOS DE LA PERSONA" y "FECHA DE NACIMIENTO"
-        match = re.search(r'(NOMBRE|NOMBRE S|NOMBRES)(.*?)FECHA', texto_norm)
-        if match:
-            bloque = match.group(2).strip()
-            # Quitamos etiquetas sueltas que suelen colarse en el acta
-            bloque = re.sub(r'(PRIMER APELLIDO|SEGUNDO APELLIDO|SEXO|CURP)', ' ', bloque)
-            bloque = re.sub(r'\s+', ' ', bloque).strip()
-            
-            partes = bloque.split()
+
+        # Buscar estructura oficial moderna
+        patron = re.search(
+            r'NOMBRE\s+([A-Z\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z\s]+)',
+            texto_norm
+        )
+
+        if patron:
+            nombres = patron.group(1).strip()
+            ap1 = patron.group(2).strip()
+            ap2 = patron.group(3).strip()
+
+            datos["nombres"] = nombres
+            datos["apellido_paterno"] = ap1
+            datos["apellido_materno"] = ap2
+            datos["nombre_completo"] = f"{nombres} {ap1} {ap2}"
+
+            return datos
+
+        # Fallback simple
+        patron_simple = re.search(
+            r'DATOS\s+DEL\s+REGISTRADO.*?NOMBRE\s+([A-Z\s]+)',
+            texto_norm
+        )
+
+        if patron_simple:
+            nombre_linea = patron_simple.group(1).strip()
+
+            # Cortar basura frecuente
+            nombre_linea = re.split(
+                r'FECHA|SEXO|CURP|NACIONALIDAD|ENTIDAD|MUNICIPIO',
+                nombre_linea
+            )[0].strip()
+
+            # Limpiar palabras basura del OCR
+            PALABRAS_BASURA = [
+                "OFICIALIA",
+                "LIBRO",
+                "ACTA",
+                "LOCALIDAD",
+                "MUNICIPIO",
+                "ENTIDAD",
+                "CRIP",
+                "REGISTRADO",
+                "DATOS"
+            ]
+
+            for basura in PALABRAS_BASURA:
+                nombre_linea = nombre_linea.replace(basura, "")
+
+            # Limpiar espacios dobles
+            nombre_linea = re.sub(r'\s+', ' ', nombre_linea).strip()
+
+            partes = nombre_linea.split()
+
             if len(partes) >= 3:
                 datos["nombres"] = " ".join(partes[:-2])
                 datos["apellido_paterno"] = partes[-2]
                 datos["apellido_materno"] = partes[-1]
-                datos["nombre_completo"] = bloque
+                datos["nombre_completo"] = nombre_linea
+
                 return datos
 
     # PRIORIDAD 3: Rescate Genérico si todo falla
