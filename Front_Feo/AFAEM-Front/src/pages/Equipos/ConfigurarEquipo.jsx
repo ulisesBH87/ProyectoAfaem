@@ -2019,7 +2019,8 @@ export default function ConfigurarEquipo() {
                        <div style={{ fontSize: '24px' }}>ℹ️</div>
                        <div>
                          <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e3a8a' }}>
-                           {isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}
+                           {/*{isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}*/}
+                           {`Seguros pre-pagados: ${numPersonasPagadas}`}
                          </div>
                          <div style={{ fontSize: '12px', color: '#60a5fa' }}>
                            {isAdmin ? 'Crea equipos y registra jugadores directamente en el sistema.' : 'Las opciones se habilitan según tu pago previo.'}
@@ -2927,10 +2928,9 @@ export default function ConfigurarEquipo() {
                           Swal.close();
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
-                          //Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
-                          
+                          Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
                           // Para debuguear: 
-                          Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
+                          //Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
                     }}
                     disabled={players.length === 0}
