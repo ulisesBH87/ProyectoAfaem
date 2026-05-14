@@ -1242,6 +1242,7 @@ export default function ConfigurarEquipo() {
         if (label.includes('apellido materno')) extractedData.apellido_materno = value;
         if (label.includes('curp')) extractedData.curp = value;
         if (label.includes('fecha de nacimiento')) extractedData.fecha_nac = value;
+        if (label.includes('lugar de nacimiento')) extractedData.lugar_nacimiento = value;
       });
 
       if (extractedData.nombre) {
@@ -1255,7 +1256,8 @@ export default function ConfigurarEquipo() {
           const char = extractedData.curp.charAt(10).toUpperCase();
           if (char === 'M') inferredSexo = 2;
         }
-
+      
+      
         setCurrentPlayer(prev => ({
           ...prev,
           firstName,
@@ -1264,7 +1266,8 @@ export default function ConfigurarEquipo() {
           curp: extractedData.curp || prev.curp,
           birthDate: extractedData.fecha_nac || prev.birthDate,
           sexo_id: inferredSexo,
-          seguro_id: 1, 
+          seguro_id: 1,
+          birthPlace: extractedData.lugar_nacimiento || prev.birthPlace,
           documents: { ...prev.documents, [docKey]: file }
         }));
 
@@ -2492,7 +2495,7 @@ export default function ConfigurarEquipo() {
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento</label>
                          <input 
                            type="text" 
-                           value={currentPlayer.lugarNacimiento}
+                           value={currentPlayer.birthPlace}
                            onChange={e => setCurrentPlayer({...currentPlayer, lugarNacimiento: e.target.value})}
                            placeholder="Ej. Monterrey, NL" 
                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
