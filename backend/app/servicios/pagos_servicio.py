@@ -48,7 +48,7 @@ class PagosServicio:
             accion = "REENVIAR_COMPROBANTE"
         else:
             #print("no se que pasó ")
-            #print(orden_pago.EstatusPagoId)
+            print(orden_pago.EstatusPagoId)
             #print("ORDEN ID: ")
             #print(orden_pago.OrdenPagoId)
         return {
@@ -338,7 +338,7 @@ class PagosServicio:
                         "warning": "Orden activa sin equipo temporal generado"
                     }
             else:
-                #print("No hubo orden")
+                print("No hubo orden")
         # fallback (por seguridad)
         return {
             "estado": EstadoEquipo.SIN_ORDEN
