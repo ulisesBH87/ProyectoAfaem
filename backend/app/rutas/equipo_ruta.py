@@ -714,7 +714,8 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
             jugador_data.Estatus,
             email=jugador_data.Email,
             sexo_id=jugador_data.SexoId,
-            fecha_nacimiento=jugador_data.FechaNacimiento
+            fecha_nacimiento=jugador_data.FechaNacimiento,
+            nui=jugador_data.NUI
         )
         if not miembro:
             raise HTTPException(status_code=404, detail="Jugador no encontrado")
