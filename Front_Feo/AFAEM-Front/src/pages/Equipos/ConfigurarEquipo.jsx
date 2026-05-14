@@ -385,7 +385,9 @@ export default function ConfigurarEquipo() {
             confirmButtonText: 'Sí, aprobar',
             cancelButtonText: 'No, cancelar',
             confirmButtonColor: '#10b981',
-            cancelButtonColor: '#64748b'
+            cancelButtonColor: '#64748b',
+            allowOutsideClick: false,
+            allowEscapeKey: false
           });
 
           if (!isConfirmed) {
@@ -928,10 +930,12 @@ export default function ConfigurarEquipo() {
       });
 
       Swal.fire({
-        title: 'Orden generada',
-        text: 'Se descargo tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revision.',
-        icon: 'success',
-        confirmButtonColor: '#0b4ea6'
+      title: 'Orden generada',
+      text: isAdmin
+        ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediátamente o esperar a que el presidente haga el pago y suba el comprobante'
+        : 'Se descargó tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revisión.',
+      icon: 'success',
+      confirmButtonColor: '#0b4ea6'
       });
     } catch (error) {
       setPagoError(error.message);
