@@ -21,13 +21,16 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM' }) =>
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: 0}}>
         <h2 style={{ 
           fontSize: '22px', 
           fontWeight: '800', 
           color: 'var(--primary)', 
           margin: 0,
-          letterSpacing: '-0.5px'
+          letterSpacing: '-0.5px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }}>
           {pageTitle}
         </h2>
