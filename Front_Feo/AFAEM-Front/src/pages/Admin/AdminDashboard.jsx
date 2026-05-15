@@ -10,7 +10,7 @@ import {
   BarChart, Bar, Cell, LabelList
 } from 'recharts';
 import { getSolicitudes } from '../../services/solicitud';
-import { getPagosGenerales } from '../../services/admin';
+import { getPagosGenerales, getJugadoresDirectorio } from '../../services/admin';
 import Loader from '../../components/Loader';
 
 const AdminDashboard = () => {
@@ -54,13 +54,15 @@ const AdminDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [solicitudes, pagos] = await Promise.all([
+        const [solicitudes, pagos, jugadores] = await Promise.all([
           getSolicitudes(),
-          getPagosGenerales()
+          getPagosGenerales(),
+          getJugadoresDirectorio()
         ]);
 
         const solicitudesList = Array.isArray(solicitudes) ? solicitudes : (solicitudes.solicitudes || []);
         const pagosList = Array.isArray(pagos) ? pagos : [];
+        const jugadoresList = Array.isArray(jugadores) ? jugadores : [];
 
         const totalIngreso = pagosList
           .filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 3)
@@ -71,7 +73,7 @@ const AdminDashboard = () => {
           pagosPendientes: pagosList.filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 2).length,
           totalIngreso: totalIngreso,
           equipos: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
-          jugadoresActivos: 0 // Mock hasta endpoint de backend
+          jugadoresActivos: jugadoresList.filter(j => j.Estatus === true).length
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -225,7 +227,7 @@ const AdminDashboard = () => {
           bg="rgba(139, 92, 246, 0.1)"
           color="#8b5cf6"
           label="Jugadores Activos"
-          val={statsData.jugadoresActivos || 'N/D'}
+          val={statsData.jugadoresActivos ?? 'N/D'}
           ruta="/admin/jugadores"
         />
 
