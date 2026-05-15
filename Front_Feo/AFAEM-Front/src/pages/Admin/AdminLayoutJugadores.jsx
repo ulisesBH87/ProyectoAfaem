@@ -145,7 +145,7 @@ export default function AdminLayoutJugadores() {
           >
             <option value="todos">Todos los equipos</option>
             {equipos.map(eq => (
-              <option key={eq.EquipoId} value={eq.NombreEquipo}>
+              <option key={eq.EquipoId} value={eq.EquipoI}>
                 {eq.NombreEquipo}
               </option>
             ))}
@@ -198,7 +198,7 @@ export default function AdminLayoutJugadores() {
         </table>
       </div>
 
-      <p style={{ marginTop: '16px', fontSize: '12px', color: '#cbd5e1', textAlign: 'center' }}>
+      <p style={{ marginTop: '16px', fontSize: '12px', color: '#7c8b9d', textAlign: 'center' }}>
         💡 Tip: Clic en cualquier celda para copiar el dato al portapapeles. La columna NUI se llena cuando el backend asigne el identificador.
       </p>
     </div>

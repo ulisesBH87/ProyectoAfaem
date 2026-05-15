@@ -16,6 +16,8 @@ class Equipos(Base):
     EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="EquipoRelacion")
     MiembrosRelacion = relationship("MiembrosEquipo", back_populates="EquipoRelacion")
 
+    SolicitudRelacion = relationship("Solicitud", back_populates="EquipoRelacion")
+
 class EquiposJugando(Base):
     __tablename__ = "EquiposJugando"
 

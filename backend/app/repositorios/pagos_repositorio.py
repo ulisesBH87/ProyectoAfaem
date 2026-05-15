@@ -13,11 +13,15 @@ from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.modelos.solicitud_modelo import Solicitud
 from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
-from sqlalchemy import or_
+from sqlalchemy import desc, join, null, or_
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
 from app.modelos.equipo_temporal_modelo import EquipoTemporal
 from app.enums.estatus_pago_enum  import EstatusValidacionPago
+from app.modelos.catalogo_tipos_solicitud import CatalogoTiposSolicitud
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
+from app.enums.procesos_equipo_temporal import ProcesosEquipoTemporalEnum
+from typing import Optional
 
 #Tipos de afiliación
 def obtener_afiliaciones_repo(db):
@@ -49,12 +53,41 @@ def obtener_seguro_repo(db, seguro_id):
 def obtener_orden_repo(db, orden_id):
     return (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_id).first())
 
-def crear_orden_pago_repo(db, usuario_id, total):
+
+def buscar_orden_pago_repo(db, tipo_solicitud, usuario_id, equipo_id: Optional[int] = None):
+    consulta = db.query(OrdenPago)\
+        .join(Solicitud)\
+        .filter(
+            OrdenPago.UsuarioId == usuario_id,
+            Solicitud.TipoSolicitudId == tipo_solicitud,
+            OrdenPago.EstatusPagoId.in_([
+                EstatusValidacionPago.NOENVIADO,
+                EstatusValidacionPago.ESPERA,
+                EstatusValidacionPago.RECHAZADO
+            ])
+        )
+    #("🎈🎈🎈🎈REPO")
+    #print("🎈🎈🎈🎈TIPO DE SOLICITUD: ")
+    #print(tipo_solicitud)
+    #print("🎈🎈🎈🎈Usuario id")
+    #print(usuario_id)
+    if tipo_solicitud == TiposSolicitudEnum.JUGADOR:
+        consulta = consulta.filter(
+            Solicitud.EquipoId == equipo_id
+        )
+
+    orden = consulta.first()
+    
+    return orden
+
+
+def crear_orden_pago_repo(db, usuario_id, total, solicitud_id):
 
     orden = OrdenPago(
         UsuarioId=usuario_id,
         TotalPagar=total,
-        EstatusPagoId=EstatusValidacionPago.NOENVIADO
+        EstatusPagoId=EstatusValidacionPago.NOENVIADO,
+        SolicitudId=solicitud_id
     )
 
     db.add(orden)
@@ -112,14 +145,11 @@ def crear_presidente_equipo_repo(db, usuario_id):
     ).first()
 
     if presidente_existente:
-        if not _presidente_esta_activo(presidente_existente):
-            presidente_existente.EstatusId = PresidenteEquipoEstatus.PAGO_PENDIENTE
-        usuario.RolId = Rol.PRESIDENTE_EQUIPO.value
-        return presidente_existente
+        raise Exception("Ya existe un presidente registrado para esta persona")
     
     nuevo_presidente = PresidenteEquipo(
         PersonaId = persona.PersonaId,
-        EstatusId = PresidenteEquipoEstatus.PAGO_PENDIENTE
+        EstatusId = PresidenteEquipoEstatus.ACTIVO.value
     )
 
     db.add(nuevo_presidente)
@@ -150,34 +180,41 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     if not orden:
         return None
 
-    # Lógica de suspensión/reactivación
-    usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
-    if usuario:
-        if estatus == 4: # 4 = Rechazado -> Suspender
-            usuario.Estatus = False
-        elif estatus == 3: # 3 = Aprobado -> Reactivar
-            usuario.Estatus = True
-
+    #Estatus de la orden cambiado
     orden.EstatusPagoId = estatus
     
-    if estatus != 3: #si el pago no es aceptado
+    #Implementar lógica para el rechazo
+    if estatus == EstatusValidacionPago.RECHAZADO.value: #si el pago no es aceptado se cambia el estatus
         db.commit()
         return orden 
-    
-    # Verificar si ya existe un EquipoTemporal para esta orden para evitar duplicar solicitud y equipo
-    equipo_existente = db.query(EquipoTemporal).filter(EquipoTemporal.OrdenPagoId == orden.OrdenPagoId).first()
-    if not equipo_existente:
-        solicitud = crear_solicitud_repo(db, orden.UsuarioId, EstatusValidacionSolicitud.BORRADOR,  2) #CAMBIAR EN EL FUTURO PARA DISTINTOS TIPOS DE AFILIACION
-        crear_equipo_temporal_repo(db, orden, solicitud.SolicitudId)
 
-    if usuario:
-        persona = db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
-        if persona:
-            #FIX FUTURO: Implementar if que según el tipo de afiliacion haga modificaciones correspondientes
-            presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona.PersonaId).first()
-            
-            if presidente and not _presidente_esta_activo(presidente):
-                presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES
+    #SI SE APROBÓ (Estatus = 3)
+    #Anteriormente se creaba la solicitud después de aprobar la orden. Ahora, se crea la solicitud, se crea la orden y se relacionan mediante el id de la solicitud
+    
+    #Búsqueda de la solicitud relacionada a la orden de pago
+    solicitud_id = orden.SolicitudId
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+
+    solicitud_tipo = db.query(CatalogoTiposSolicitud).filter(CatalogoTiposSolicitud.TipoSolicitudId == solicitud.TipoSolicitudId).first()
+    tipo_id = solicitud_tipo.TipoSolicitudId
+
+
+    #Procesos
+    if(tipo_id == TiposSolicitudEnum.PRESIDENTE_EQUIPO.value or tipo_id == TiposSolicitudEnum.EQUIPO.value):
+        tipo_proceso = ProcesosEquipoTemporalEnum.REGISTRO_INICIAL.value
+        crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso)
+
+    elif(tipo_id == TiposSolicitudEnum.JUGADOR.value):
+        equipo_id = solicitud.EquipoId
+        tipo_proceso = ProcesosEquipoTemporalEnum.AMPLIACION.value
+        crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id)
+    else:
+        raise Exception("Tipo de solicitud no reconocido para proceso de creación de equipo")
+    
+
+
+
+    #usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
 
     db.commit()
 
@@ -188,7 +225,55 @@ def mi_estado_pago_repo(db, usuario_id):
 
     return orden
 
-def mi_estado_pago_equipo_repo(db, usuario_id):
+def obtener_usuario_id_por_presidente_repo(db, presidente_id):
+    return (
+        db.query(Usuario.UsuarioId)
+        .join(Personas, Personas.PersonaId == Usuario.PersonaId)
+        .join(PresidenteEquipo, PresidenteEquipo.PersonaId == Personas.PersonaId)
+        .filter(
+            PresidenteEquipo.PresidenteEquipoId == presidente_id,
+            PresidenteEquipo.EstatusId == PresidenteEquipoEstatus.ACTIVO.value
+        )
+        .scalar()
+    )
+
+def mi_estado_pago_equipo_repo(db, usuario_id, presidente_id: Optional[int] = None):
+    if presidente_id is not None:
+        usuario_id = obtener_usuario_id_por_presidente_repo(db, presidente_id)
+        if not usuario_id:
+            return {
+                "equipo_temporal": None,
+                "orden": None
+            }
+
+    #VERIFICAR SI EXISTE UN EQUIPO TEMPORAL ACTIVO Y VACÍO (SIN EQUIPO ID))
+    equipo_vacio = (
+        db.query(EquipoTemporal)
+        .options(
+            selectinload(EquipoTemporal.OrdenPagoRelacion)
+            .selectinload(OrdenPago.OrdenPagoDetalleRelacion)
+        )
+        .filter(
+            EquipoTemporal.UsuarioId == usuario_id,
+            EquipoTemporal.Activo == True,
+            EquipoTemporal.EquipoId.is_(None)
+        )
+        .first()
+    )
+
+    #Si hay un equipo vacio y activo, usar ese
+    if equipo_vacio:
+        return {
+            "equipo_temporal": equipo_vacio,
+            "orden": equipo_vacio.OrdenPagoRelacion
+        }
+
+    #NO HAY EQUIPOS VACIOS
+    return {
+        "equipo_temporal": None,
+    }
+
+    """
     return (
         db.query(OrdenPago)
         .outerjoin(EquipoTemporal, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
@@ -198,3 +283,4 @@ def mi_estado_pago_equipo_repo(db, usuario_id):
         .order_by(OrdenPago.OrdenPagoId.desc())
         .first()
     )
+"""

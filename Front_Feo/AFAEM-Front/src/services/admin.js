@@ -74,7 +74,8 @@ export const getPagosGenerales = async (forceRefresh = false) => {
  * ACTUALIZA EL ESTATUS DE UNA ORDEN DE PAGO
  */
 export const updateEstatusPago = async (ordenPagoId, estatus) => {
-  // estatus: 1 = Pendiente, 2 = Rechazado, 3 = Aprobado
+
+  // 3 = APROBADO. 4 = RECHAZADO
   const response = await api.post('/ordenes-pago/estatus-pago', null, {
     params: { orden_pago_id: ordenPagoId, estatus: estatus }
   });
@@ -218,12 +219,20 @@ export const getCatalogosRegistro = async () => {
  * ACTUALIZA UN JUGADOR (NOMBRE, APELLIDOS, CURP Y ESTATUS)
  */
 export const updateJugador = async (miembroEquipoId, data) => {
+  // Mapear string de sexo a SexoId numérico
+  const sexoMap = { 'Masculino': 1, 'Femenino': 2, 'No Binario': 3 };
+  const sexoId = data.sexo ? (sexoMap[data.sexo] ?? null) : null;
+
   const response = await api.patch(`/equipo-temporal/update-jugador/${miembroEquipoId}`, {
-    Nombre: data.nombre,
-    PrimerApellido: data.primerApellido,
-    SegundoApellido: data.segundoApellido,
-    CURP: data.curp,
-    Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true
+    Nombre: data.nombre || null,
+    PrimerApellido: data.primerApellido || null,
+    SegundoApellido: data.segundoApellido || null,
+    CURP: data.curp || null,
+    Estatus: data.estatus === "1" || data.estatus === 1 || data.estatus === true,
+    Email: data.email || null,
+    SexoId: sexoId,
+    FechaNacimiento: data.fechaNacimiento || null,
+    NUI: data.NUI || null,
   });
   serviceCache.clear('/equipo-temporal/directorio-jugadores');
   return response.data;
@@ -241,13 +250,13 @@ export const getPresidentesDirectorio = async (forceRefresh = false) => {
  */
 export const updatePresidente = async (presidenteId, data) => {
   const response = await api.patch(`/equipo-temporal/update-presidente/${presidenteId}`, {
-    primerNombre:    data.primerNombre,
-    primerApellido:  data.primerApellido,
+    primerNombre: data.primerNombre,
+    primerApellido: data.primerApellido,
     segundoApellido: data.segundoApellido,
-    correo:          data.correo,
-    telefono:        data.telefono,
-    curp:            data.curp,
-    estatusId:       Number(data.estatusId)
+    correo: data.correo,
+    telefono: data.telefono,
+    curp: data.curp,
+    estatusId: Number(data.estatusId)
   });
   serviceCache.clear('/equipo-temporal/directorio-presidentes');
   serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
@@ -312,7 +321,7 @@ export const registrarPresidenteAdmin = async (data) => {
     serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
     return response.data;
   } catch (error) {
-    console.error('Error registrando presidente (admin):', error);
+    //console.error('Error registrando presidente (admin):', error);
     throw error;
   }
 };

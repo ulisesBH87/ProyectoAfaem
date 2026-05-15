@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle } from 'react-icons/fa';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle, FaSearchPlus, FaSyncAlt} from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -10,6 +10,7 @@ import { validarFotografia } from "../../services/foto";
 import teamsService from "../../services/teams";
 import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 import { useRBAC } from '../../hooks/useRBAC';
+import { DEFAULT_BANK_INFO, generarPDFCuota } from '../../utils/paymentPdf';
 
 const ESTATUS_PAGO = {
   NO_ENVIADO: 1,
@@ -18,15 +19,27 @@ const ESTATUS_PAGO = {
   RECHAZADO: 4
 };
 
+const ESTADO_EQUIPO = {
+  SIN_ORDEN: 'SIN_ORDEN',
+  ORDEN_SIN_COMPROBANTE: 'ORDEN_SIN_COMPROBANTE',
+  COMPROBANTE_EN_REVISION: 'COMPROBANTE_EN_REVISION',
+  LISTO_PARA_CREAR_EQUIPO: 'LISTO_PARA_CREAR_EQUIPO'
+};
+
 export default function ConfigurarEquipo() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { hasRole } = useRBAC();
   const isAdmin = hasRole && (hasRole('ADMINISTRADOR') || hasRole('ADMIN'));
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const bankInfo = DEFAULT_BANK_INFO;
 
   const preRegistro = JSON.parse(localStorage.getItem('afaem_pre_registro') || '{}');
   const [pagoEquipo, setPagoEquipo] = useState({
     loading: !isAdmin,
     aprobado: isAdmin,
+    estadoEquipo: null,
+    equipoTemporalId: preRegistro.equipo_temporal_id || null,
     estado: null,
     ordenId: null,
     total: 0,
@@ -35,7 +48,7 @@ export default function ConfigurarEquipo() {
   });
   const [numJugadoresPago, setNumJugadoresPago] = useState(preRegistro.numPersonas || '');
   const [asignacionSeguros, setAsignacionSeguros] = useState(isAdmin
-    ? { '1': 999, '2': 999, '3': 999 }
+    ? {}
     : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0)
         ? preRegistro.asignacionSeguros
         : {}));
@@ -52,11 +65,14 @@ export default function ConfigurarEquipo() {
     agreedToTerms: false
   });
 
+  const [formErrors, setFormErrors] = useState({});
+
   const [activeStep, setActiveStep] = useState(isAdmin ? 0 : 1); // 0: Select President (Admin), 1: Config, 2: Players
   const [activePresidents, setActivePresidents] = useState([]);
   const [selectedPresidentId, setSelectedPresidentId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [players, setPlayers] = useState([]);
+  const [equipoTemporalInfo, setEquipoTemporalInfo] = useState(null);
   const [currentPlayer, setCurrentPlayer] = useState({
     id: Date.now(),
     firstName: '',
@@ -94,6 +110,7 @@ export default function ConfigurarEquipo() {
     teamLogo: null
   });
 
+  
   const [errors, setErrors] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -102,6 +119,24 @@ export default function ConfigurarEquipo() {
   const [signedForm, setSignedForm] = useState(null);
   const [pendingPlayer, setPendingPlayer] = useState(null);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
+
+  // Estados para Agregar Jugador a Equipo Existente
+  const [modoAgregarJugador, setModoAgregarJugador] = useState(false);
+  const [equipoTemporalIdAgregar, setEquipoTemporalIdAgregar] = useState(null);
+  const [tieneSlotDisponible, setTieneSlotDisponible] = useState(false);
+  const [pagoJugador, setPagoJugador] = useState({
+    loading: false,
+    aprobado: false,
+    estado: null,
+    ordenId: null,
+    total: 0,
+    tieneComprobante: false
+  });
+  const [numJugadoresAgregar, setNumJugadoresAgregar] = useState('1');
+  const [asignacionSegurosAgregar, setAsignacionSegurosAgregar] = useState({});
+  const [comprobantePagoJugador, setComprobantePagoJugador] = useState(null);
+  const [pagoErrorJugador, setPagoErrorJugador] = useState(null);
+  const [procesandoPagoJugador, setProcesandoPagoJugador] = useState(false);
 
   // Lógica de Borradores
   const saveDraft = () => {
@@ -167,64 +202,133 @@ export default function ConfigurarEquipo() {
   });
 
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
-  const numPersonasPagadas = isAdmin ? 999 : Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
+  const numPersonasPagadas = Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
+  const shouldShowPagoPrevioEquipo = !tieneSlotDisponible && !pagoEquipo.aprobado && (!isAdmin || Boolean(selectedPresidentId && pagoEquipo.estadoEquipo));
 
-  // Cargar catálogos al montar
-  useEffect(() => {
-    const loadCatalogs = async () => {
-      try {
-        setLoadingCatalogs(true);
-        const data = await teamsService.getCatalogs();
-        setCatalogs(data);
+  const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
+    if (!ordenId) return;
 
-        if (!isAdmin) {
-          const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
-          if (resAfiliaciones.ok) {
-            const afiliaciones = await resAfiliaciones.json();
-            setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
-          }
-        }
+    try {
+      const resOrden = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
 
-        if (isAdmin) {
-          const presidents = await teamsService.getPresidentesActivos();
-          setActivePresidents(presidents);
-        }
+      if (!resOrden.ok) return;
 
-      } catch (error) {
-        console.error("Error al cargar catálogos:", error);
-        Swal.fire('Error', 'No se pudieron cargar los catálogos del servidor.', 'error');
-      } finally {
-        setLoadingCatalogs(false);
+      const orden = await resOrden.json();
+      const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
+      const estatusOrden = Number(orden.EstatusPagoId || orden.estatus || 0);
+      if (estatusOrden) {
+        setPagoEquipo(prev => ({ ...prev, estado: estatusOrden }));
       }
-    };
-    loadCatalogs();
-  }, []);
 
-  useEffect(() => {
-    const cargarEstadoPagoEquipo = async () => {
-      if (isAdmin) return;
+      let cantidadJugadores = null;
+      const seguros = {};
 
-      try {
-        setPagoEquipo(prev => ({ ...prev, loading: true }));
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo`, {
-          headers: { Authorization: `Bearer ${token}` }
+      detalles.forEach(detalle => {
+        if (Number(detalle.TipoAfiliacionId) === 4) {
+          cantidadJugadores = Number(detalle.Cantidad || 0);
+        }
+        if (detalle.SeguroId) {
+          const id = String(detalle.SeguroId);
+          seguros[id] = Number(detalle.Cantidad || 0);
+        }
+      });
+
+      if (cantidadJugadores !== null && !Number.isNaN(cantidadJugadores)) {
+        setNumJugadoresPago(cantidadJugadores);
+        setPagoEquipo(prev => ({ ...prev, cantidadJugadores }));
+      }
+
+      if (Object.keys(seguros).length > 0) {
+        setAsignacionSeguros(prev => ({ ...prev, ...seguros }));
+      }
+
+      const totalOrden = Number(orden.TotalPagar || orden.total || 0);
+      if (!Number.isNaN(totalOrden) && totalOrden > 0) {
+        setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar el detalle de la orden de pago:');
+    }
+  };
+
+  const aprobarOrdenPagoEquipoAdmin = async (ordenId) => {
+    if (!ordenId) throw new Error('No se encontro la orden de pago a aprobar');
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE}/ordenes-pago/estatus-pago?orden_pago_id=${ordenId}&estatus=${ESTATUS_PAGO.APROBADO}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'No se pudo aprobar la orden de pago');
+    }
+
+    return res.json();
+  };
+
+  const cargarEstadoPagoEquipo = async ({ presidenteId = null } = {}) => {
+    const esConsultaAdmin = Boolean(isAdmin && presidenteId);
+    if (isAdmin && !esConsultaAdmin) return false;
+
+    try {
+      setPagoEquipo(prev => ({ ...prev, loading: true }));
+      setPagoError(null);
+
+      const token = localStorage.getItem('token');
+      const query = esConsultaAdmin ? `?presidente_id=${presidenteId}` : '';
+      const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
+
+      const data = await res.json();
+
+      const estadoEquipo = data.estado;
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || null;
+      const total = Number(data.total || 0);
+
+      if (estadoEquipo === ESTADO_EQUIPO.SIN_ORDEN || !estadoEquipo) {
+        try {
+          const nextPreRegistro = { ...(preRegistro || {}) };
+          delete nextPreRegistro.equipo_temporal_id;
+          localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+        } catch {}
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+          equipoTemporalId: null,
+          estado: null,
+          ordenId: null,
+          total: 0,
+          cantidadJugadores: 0,
+          tieneComprobante: false
         });
 
-        if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
-
-        const data = await res.json();
-        if (!data.tiene_orden) {
-          setPagoEquipo({
-            loading: false,
-            aprobado: false,
-            estado: null,
-            ordenId: null,
-            total: 0,
-            cantidadJugadores: 0,
-            tieneComprobante: false
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago pendiente',
+            text: 'El presidente seleccionado no tiene una orden aprobada disponible para crear el equipo.',
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
           });
-          return;
+        }
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
+        const equipoTemporalId = data.equipo_temporal_id || data.equipoTemporalId || null;
+        if (equipoTemporalId) {
+          try {
+            const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
+            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+          } catch {}
         }
 
         const seguros = {};
@@ -243,12 +347,330 @@ export default function ConfigurarEquipo() {
 
         setPagoEquipo({
           loading: false,
-          aprobado: Boolean(data.disponible_para_equipo),
-          estado: Number(data.estatus),
-          ordenId: data.orden_pago_id,
+          aprobado: true,
+          estadoEquipo: ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO,
+          equipoTemporalId,
+          estado: ESTATUS_PAGO.APROBADO,
+          ordenId,
           total: Number(data.total || 0),
           cantidadJugadores: Number(data.cantidad_jugadores || 0),
-          tieneComprobante: Boolean(data.tiene_comprobante)
+          tieneComprobante: true
+        });
+
+        if (esConsultaAdmin) {
+          setActiveStep(1);
+        }
+        return true;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.NO_ENVIADO,
+          ordenId,
+          total,
+          tieneComprobante: false
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        if (esConsultaAdmin) {
+          const { isConfirmed } = await Swal.fire({
+            title: 'Orden sin comprobante',
+            text: 'El presidente tiene una orden pero no ha subido el comprobante de pago, ¿deseas aprobarla?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, aprobar',
+            cancelButtonText: 'No, esperar a que realice el pago',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+          });
+
+          if (!isConfirmed) {
+            setPagoEquipo({
+              loading: false,
+              aprobado: false,
+              estadoEquipo: null,
+              equipoTemporalId: null,
+              estado: null,
+              ordenId: null,
+              total: 0,
+              cantidadJugadores: 0,
+              tieneComprobante: false
+            });
+            return false;
+          }
+
+          try {
+            setPagoEquipo(prev => ({ ...prev, loading: true }));
+            await aprobarOrdenPagoEquipoAdmin(ordenId);
+            await Swal.fire({
+              title: 'Orden aprobada',
+              text: `La orden${ordenId ? ` #${ordenId}` : ''} se aprobo correctamente.`,
+              icon: 'success',
+              confirmButtonColor: '#0b4ea6'
+            });
+            return await cargarEstadoPagoEquipo({ presidenteId });
+          } catch (error) {
+            setPagoEquipo(prev => ({ ...prev, loading: false }));
+            setPagoError(error.message);
+            await Swal.fire('Error', error.message, 'error');
+            return false;
+          }
+        }
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.COMPROBANTE_EN_REVISION) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.EN_ESPERA,
+          ordenId,
+          total,
+          tieneComprobante: true
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago en revisión',
+            text: `El comprobante${ordenId ? ` de la orden #${ordenId}` : ''} del presidente seleccionado sigue en revisión.`,
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      setPagoEquipo({
+        loading: false,
+        aprobado: false,
+        estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+        equipoTemporalId: null,
+        estado: null,
+        ordenId: null,
+        total: 0,
+        cantidadJugadores: 0,
+        tieneComprobante: false
+      });
+      return false;
+    } catch (error) {
+      console.error('Error al cargar pago de equipo:', error);
+      setPagoEquipo(prev => ({ ...prev, loading: false }));
+      setPagoError(error.message);
+
+      if (esConsultaAdmin) {
+        await Swal.fire('Error', error.message, 'error');
+      }
+      return false;
+    }
+  };
+
+  // Cargar catálogos al montar
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      try {
+        setLoadingCatalogs(true);
+        const data = await teamsService.getCatalogs();
+        setCatalogs(data);
+
+        const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
+        if (resAfiliaciones.ok) {
+          const afiliaciones = await resAfiliaciones.json();
+          setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
+        }
+
+        if (isAdmin) {
+          const presidents = await teamsService.getPresidentesActivos();
+          setActivePresidents(presidents);
+        }
+
+      } catch (error) {
+        console.error("Error al cargar catálogos:", error);
+        Swal.fire('Error', 'No se pudieron cargar los catálogos del servidor.', 'error');
+      } finally {
+        setLoadingCatalogs(false);
+      }
+    };
+    loadCatalogs();
+  }, []);
+  //VERIFICA EL ESTADO DE PAGO PARA DECIDIR QUÉ VISTA MOSTRAR
+  useEffect(() => {
+    const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
+      if (!ordenId) return;
+
+      try {
+        const resOrden = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+
+        if (!resOrden.ok) return;
+
+        const orden = await resOrden.json();
+        const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
+        const estatusOrden = Number(orden.EstatusPagoId || orden.estatus || 0);
+        if (estatusOrden) {
+          setPagoEquipo(prev => ({ ...prev, estado: estatusOrden }));
+        }
+
+        let cantidadJugadores = null;
+        const seguros = {};
+
+        detalles.forEach(detalle => {
+          if (Number(detalle.TipoAfiliacionId) === 4) {
+            cantidadJugadores = Number(detalle.Cantidad || 0);
+          }
+          if (detalle.SeguroId) {
+            const id = String(detalle.SeguroId);
+            seguros[id] = Number(detalle.Cantidad || 0);
+          }
+        });
+
+        if (cantidadJugadores !== null && !Number.isNaN(cantidadJugadores)) {
+          setNumJugadoresPago(cantidadJugadores);
+          setPagoEquipo(prev => ({ ...prev, cantidadJugadores }));
+        }
+
+        if (Object.keys(seguros).length > 0) {
+          setAsignacionSeguros(prev => ({ ...prev, ...seguros }));
+        }
+
+        const totalOrden = Number(orden.TotalPagar || orden.total || 0);
+        if (!Number.isNaN(totalOrden) && totalOrden > 0) {
+          setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
+        }
+      } catch (error) {
+        console.warn('No se pudo cargar el detalle de la orden de pago:');
+      }
+    };
+
+    const cargarEstadoPagoEquipo = async () => {
+      if (isAdmin) return;
+
+      try {
+        setPagoEquipo(prev => ({ ...prev, loading: true }));
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
+
+        const data = await res.json();
+
+        const estadoEquipo = data.estado;
+        const ordenId = data.orden_pago_id || data.OrdenPagoId || null;
+        const total = Number(data.total || 0);
+
+        if (estadoEquipo === ESTADO_EQUIPO.SIN_ORDEN || !estadoEquipo) {
+          try {
+            const nextPreRegistro = { ...(preRegistro || {}) };
+            delete nextPreRegistro.equipo_temporal_id;
+            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+          } catch {}
+
+          setPagoEquipo({
+            loading: false,
+            aprobado: false,
+            estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+            equipoTemporalId: null,
+            estado: null,
+            ordenId: null,
+            total: 0,
+            cantidadJugadores: 0,
+            tieneComprobante: false
+          });
+          return;
+        }
+
+        if (estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
+          const equipoTemporalId = data.equipo_temporal_id || data.equipoTemporalId || null;
+          if (equipoTemporalId) {
+            try {
+              const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
+              localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+            } catch {}
+          }
+
+          const seguros = {};
+          (data.seguros || []).forEach(seguro => {
+            const id = String(seguro.SeguroId || seguro.seguro_id);
+            seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
+          });
+
+          //console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
+
+          if (Object.keys(seguros).length > 0) {
+            setAsignacionSeguros(seguros);
+          }
+
+          if (data.cantidad_jugadores) {
+            setNumJugadoresPago(data.cantidad_jugadores);
+          }
+
+          setPagoEquipo({
+            loading: false,
+            aprobado: true,
+            estadoEquipo: ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO,
+            equipoTemporalId,
+            estado: ESTATUS_PAGO.APROBADO,
+            ordenId,
+            total: Number(data.total || 0),
+            cantidadJugadores: Number(data.cantidad_jugadores || 0),
+            tieneComprobante: true
+          });
+          return;
+        }
+
+        if (estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE) {
+          setPagoEquipo(prev => ({
+            ...prev,
+            loading: false,
+            aprobado: false,
+            estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
+            equipoTemporalId: prev.equipoTemporalId || null,
+            estado: ESTATUS_PAGO.NO_ENVIADO,
+            ordenId,
+            total,
+            tieneComprobante: false
+          }));
+          if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+          return;
+        }
+
+        if (estadoEquipo === ESTADO_EQUIPO.COMPROBANTE_EN_REVISION) {
+          setPagoEquipo(prev => ({
+            ...prev,
+            loading: false,
+            aprobado: false,
+            estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
+            equipoTemporalId: prev.equipoTemporalId || null,
+            estado: ESTATUS_PAGO.EN_ESPERA,
+            ordenId,
+            total,
+            tieneComprobante: true
+          }));
+          if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+          return;
+        }
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+          equipoTemporalId: null,
+          estado: null,
+          ordenId: null,
+          total: 0,
+          cantidadJugadores: 0,
+          tieneComprobante: false
         });
       } catch (error) {
         console.error('Error al cargar pago de equipo:', error);
@@ -271,7 +693,121 @@ export default function ConfigurarEquipo() {
     setAsignacionSeguros(nuevaAsignacion);
   }, [catalogs.seguros, isAdmin, numJugadoresPago, pagoEquipo.ordenId]);
 
+  // Detectar parámetros de ruta para modo agregar jugador
+  useEffect(() => {
+    const equipoId = searchParams.get('equipoId');
+    const equipoTemporalId = searchParams.get('equipoTemporalId');
+    const agregarJugador = searchParams.get('agregarJugador');
+    const requirePago = searchParams.get('requirePago') === 'true';
+    const estadoPagoJugador = searchParams.get('estadoPagoJugador');
+    const ordenPagoIdJugador = searchParams.get('ordenPagoIdJugador');
+    const totalOrdenJugador = searchParams.get('totalOrdenJugador');
+    const tieneComprobanteJugador = searchParams.get('tieneComprobanteJugador') === 'true';
+
+    if (agregarJugador === 'true') {
+      if (equipoTemporalId) {
+        setEquipoTemporalIdAgregar(parseInt(equipoTemporalId, 10));
+        setModoAgregarJugador(false);
+        setTieneSlotDisponible(true);
+        setActiveStep(2);
+        return;
+      }
+
+      if (equipoId) {
+        setEquipoTemporalIdAgregar(parseInt(equipoId, 10));
+        setModoAgregarJugador(requirePago);
+        setTieneSlotDisponible(false);
+        setActiveStep(2);
+
+        // Precargar estado de pago de jugador si existe
+        if (estadoPagoJugador && ordenPagoIdJugador) {
+          const estadoNumerico = parseInt(estadoPagoJugador, 10);
+          setPagoJugador({
+            loading: false,
+            aprobado: estadoNumerico === 3, // 3 = APROBADO
+            estado: estadoNumerico,
+            ordenId: parseInt(ordenPagoIdJugador, 10),
+            total: Number(totalOrdenJugador || 0),
+            tieneComprobante: tieneComprobanteJugador
+          });
+        }
+      }
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const equipoId = equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId;
+    if (!equipoId) return;
+
+    const loadEquipoTemporalInfo = async () => {
+      try {
+        const info = await teamsService.getAvailableSlots(equipoId);
+        setEquipoTemporalInfo(info);
+      } catch (error) {
+        console.warn('No se pudo cargar info de equipo temporal:', error);
+      }
+    };
+
+    loadEquipoTemporalInfo();
+  }, [equipoTemporalIdAgregar, pagoEquipo.equipoTemporalId]);
+
+  const TIPO_SOLICITUD = {
+    PRESIDENTE: 1,
+    EQUIPO: 2,
+    JUGADOR: 3
+  };
+
+  function validarFechaNacimiento(fechaStr) {
+    if (!fechaStr) {
+      return "La fecha de nacimiento es obligatoria";
+    }
+    const minima = 5
+    const fecha = new Date(fechaStr);
+    const hoy = new Date();
+
+    // Evitar fechas inválidas
+    if (isNaN(fecha.getTime())) {
+      return "Fecha inválida";
+    }
+
+    // No futura
+    if (fecha > hoy) {
+      return "La fecha no puede ser futura";
+    }
+
+    // No antes de 1900
+    const minFecha = new Date(1900, 0, 1);
+    if (fecha < minFecha) {
+      return "La fecha no puede ser anterior a 01-01-1900";
+    }
+
+    // Calcular edad correctamente
+    let edad = hoy.getFullYear() - fecha.getFullYear();
+    const m = hoy.getMonth() - fecha.getMonth();
+
+    if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+      edad--;
+    }
+
+    if (edad < minima) {
+      return `La edad mínima debe ser de ${minima} años`;
+    }
+
+    return null; // todo bien
+  }
+
+
   const segurosRequeridosPago = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) + 1 : 0;
+
+  const validateCurp = (value) => {
+    if (!/^[A-Z0-9]*$/.test(value)) {
+      return 'Solo se permiten letras mayúsculas y números.';
+    }
+    if (value.length > 18) {
+      return 'La CURP no puede tener más de 18 caracteres.';
+    }
+    return '';
+  };
   const totalAsignadosPago = Object.values(asignacionSeguros).reduce((sum, value) => sum + Number(value || 0), 0);
   const segurosPendientesPago = segurosRequeridosPago - totalAsignadosPago;
   const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
@@ -286,7 +822,21 @@ export default function ConfigurarEquipo() {
   );
   const totalPagoMostrado = pagoEquipo.total || totalPagoEstimado;
 
+  // CÁLCULO PARA PAGO DE AGREGAR JUGADOR (SIN PRESIDENTE, SIN +1 SEGURO)
+  const segurosRequeridosPagoJugador = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
+  const totalAsignadosPagoJugador = Object.values(asignacionSegurosAgregar).reduce((sum, value) => sum + Number(value || 0), 0);
+  const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
+  const totalPagoEstimadoJugador = (
+    (costoAfiliacionJugador * Number(numJugadoresAgregar || 0)) +
+    catalogs.seguros.reduce((sum, seguro) => {
+      const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
+      return sum + (Number(seguro.precio || 0) * cantidad);
+    }, 0)
+  );
+  const totalPagoMostradoJugador = pagoJugador.total || totalPagoEstimadoJugador;
+
   const handleCrearOrdenPagoEquipo = async () => {
+
     setPagoError(null);
 
     if (Number(numJugadoresPago) < 1) {
@@ -317,31 +867,75 @@ export default function ConfigurarEquipo() {
         },
         body: JSON.stringify({
           CantidadJugadores: Number(numJugadoresPago),
-          Seguros: segurosPayload
+          Seguros: segurosPayload,
+          TipoSolicitud: TIPO_SOLICITUD.EQUIPO,
+          PresidenteId: isAdmin ? Number(selectedPresidentId) : null
         })
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'No se pudo crear la orden de pago');
+        let errData = {};
+        let rawText = '';
+
+        try {
+          errData = await res.json();
+        } catch {
+          try {
+            rawText = await res.text();
+          } catch {}
+        }
+
+        if (errData && (errData.detail || errData.message || errData.code)) {
+          console.error('Error backend crear orden de pago:', errData);
+        } else if (rawText) {
+          console.error('Error backend (texto):', rawText);
+        }
+
+        const backendMsg =
+          errData.detail ||
+          errData.message ||
+          errData.code ||
+          rawText ||
+          'No se pudo crear la orden de pago';
+
+        setPagoError(backendMsg);
+        Swal.fire('Error', backendMsg, 'error');
+        return;
       }
 
       const data = await res.json();
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || data.id;
+      const totalOrden = Number(data.total || totalPagoEstimado || 0);
       setPagoEquipo({
         loading: false,
         aprobado: false,
+        estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
         estado: ESTATUS_PAGO.NO_ENVIADO,
-        ordenId: data.orden_pago_id || data.OrdenPagoId || data.id,
-        total: Number(data.total || totalPagoEstimado || 0),
+        ordenId,
+        total: totalOrden,
         cantidadJugadores: Number(numJugadoresPago),
         tieneComprobante: false
       });
 
+      generarPDFCuota({
+        ordenId,
+        user,
+        bankInfo,
+        catalogoAfiliaciones: catalogoAfiliacionesPago,
+        catalogoSeguros: catalogs.seguros,
+        asignacionSeguros,
+        total: totalOrden,
+        cantidadJugadores: Number(numJugadoresPago || 0),
+        incluirPresidente: true
+      });
+
       Swal.fire({
-        title: 'Orden generada',
-        text: 'Ahora realiza el pago y sube tu comprobante para revision.',
-        icon: 'success',
-        confirmButtonColor: '#0b4ea6'
+      title: 'Orden generada',
+      text: isAdmin
+        ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediátamente o esperar a que el presidente haga el pago y suba el comprobante'
+        : 'Se descargó tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revisión.',
+      icon: 'success',
+      confirmButtonColor: '#0b4ea6'
       });
     } catch (error) {
       setPagoError(error.message);
@@ -378,6 +972,7 @@ export default function ConfigurarEquipo() {
 
       setPagoEquipo(prev => ({
         ...prev,
+        estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
         estado: ESTATUS_PAGO.EN_ESPERA,
         tieneComprobante: true
       }));
@@ -397,7 +992,149 @@ export default function ConfigurarEquipo() {
     }
   };
 
+  // ===== FUNCIONES PARA AGREGAR JUGADOR A EQUIPO EXISTENTE =====
+  const handleAgregarJugador = async (equipoId) => {
+    try {
+      setPagoJugador(prev => ({ ...prev, loading: true }));
+      const slotsResponse = await teamsService.getAvailableSlots(equipoId);
+      
+      if (slotsResponse === true || (typeof slotsResponse === 'object' && slotsResponse.slots_disponibles > 0)) {
+        // Hay slots disponibles, ir directamente al formulario de jugador
+        setEquipoTemporalIdAgregar(equipoId);
+        setModoAgregarJugador(false);
+        navigate(`/presidente-equipo/configurar-equipo?equipoId=${equipoId}&agregarJugador=true`);
+      } else {
+        // No hay slots, mostrar vista de pago para agregar jugador
+        setEquipoTemporalIdAgregar(equipoId);
+        setModoAgregarJugador(true);
+        setPagoJugador(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      setPagoErrorJugador('Error al verificar disponibilidad de slots');
+      setPagoJugador(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleCrearOrdenPagoJugador = async () => {
+    setPagoErrorJugador(null);
+
+    if (Number(numJugadoresAgregar) < 1) {
+      setPagoErrorJugador('Debes ingresar el numero de jugadores.');
+      return;
+    }
+
+    if (totalAsignadosPagoJugador !== segurosRequeridosPagoJugador) {
+      setPagoErrorJugador(`Debes asignar un seguro por jugador. Faltan ${segurosPendientesPagoJugador}.`);
+      return;
+    }
+
+    try {
+      setProcesandoPagoJugador(true);
+      const token = localStorage.getItem('token');
+      const segurosPayload = Object.entries(asignacionSegurosAgregar)
+        .filter(([, cantidad]) => Number(cantidad) > 0)
+        .map(([seguroId, cantidad]) => ({
+          SeguroId: Number(seguroId),
+          Cantidad: Number(cantidad)
+        }));
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          CantidadJugadores: Number(numJugadoresAgregar),
+          Seguros: segurosPayload,
+          TipoSolicitud: TIPO_SOLICITUD.JUGADOR,
+          EquipoId: searchParams.get('equipoId') ? Number(searchParams.get('equipoId')) : undefined
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo crear la orden de pago');
+      }
+
+      const data = await res.json();
+      setPagoJugador({
+        loading: false,
+        aprobado: false,
+        estado: ESTATUS_PAGO.NO_ENVIADO,
+        ordenId: data.orden_pago_id || data.OrdenPagoId || data.id,
+        total: Number(data.total || totalPagoEstimadoJugador || 0),
+        tieneComprobante: false
+      });
+
+      Swal.fire({
+        title: 'Orden generada',
+        text: 'Ahora realiza el pago y sube tu comprobante para revision.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      setPagoErrorJugador(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPagoJugador(false);
+    }
+  };
+
+  const handleSubirComprobanteJugador = async () => {
+    setPagoErrorJugador(null);
+
+    if (!comprobantePagoJugador) {
+      setPagoErrorJugador('Debes subir tu comprobante de pago.');
+      return;
+    }
+
+    try {
+      setProcesandoPagoJugador(true);
+      const token = localStorage.getItem('token');
+      const formDataPago = new FormData();
+      formDataPago.append('archivo', comprobantePagoJugador);
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/${pagoJugador.ordenId}/comprobante`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataPago
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo subir el comprobante');
+      }
+
+      setPagoJugador(prev => ({
+        ...prev,
+        estado: ESTATUS_PAGO.EN_ESPERA,
+        tieneComprobante: true
+      }));
+      setComprobantePagoJugador(null);
+
+      Swal.fire({
+        title: 'Comprobante recibido',
+        text: 'Un administrador debe aprobar el pago antes de registrar el jugador.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+
+      // Después de 2 segundos, redirigir al formulario
+      setTimeout(() => {
+        setModoAgregarJugador(false);
+        navigate(`/presidente-equipo/configurar-equipo?equipoId=${equipoTemporalIdAgregar}&agregarJugador=true`);
+      }, 2000);
+    } catch (error) {
+      setPagoErrorJugador(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPagoJugador(false);
+    }
+  };
+
   const handleOptionChange = (field, value) => {
+
     setFormData(prev => ({
       ...prev,
       [field]: parseInt(value)
@@ -503,24 +1240,18 @@ export default function ConfigurarEquipo() {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
         const value = row.querySelector('.valor')?.textContent?.trim() || '';
         if (label.includes('nombre')) extractedData.nombre = value;
+        if (label.includes('nombres')) extractedData.nombres = value;
+        if (label.includes('apellido paterno')) extractedData.apellido_paterno = value;
+        if (label.includes('apellido materno')) extractedData.apellido_materno = value;
         if (label.includes('curp')) extractedData.curp = value;
         if (label.includes('fecha de nacimiento')) extractedData.fecha_nac = value;
+        if (label.includes('lugar de nacimiento')) extractedData.lugar_nacimiento = value;
       });
 
       if (extractedData.nombre) {
-        const parts = extractedData.nombre.split(' ');
-        let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
-        
-        if (parts.length >= 3) {
-          lastNamePaterno = parts[0];
-          lastNameMaterno = parts[1];
-          firstName = parts.slice(2).join(' ');
-        } else if (parts.length === 2) {
-          lastNamePaterno = parts[0];
-          firstName = parts[1];
-        } else {
-          firstName = extractedData.nombre;
-        }
+        const firstName = extractedData.nombres || '';
+        const lastNamePaterno = extractedData.apellido_paterno || '';
+        const lastNameMaterno = extractedData.apellido_materno || '';
 
         // Inferir sexo desde CURP si está disponible
         let inferredSexo = 1;
@@ -528,7 +1259,8 @@ export default function ConfigurarEquipo() {
           const char = extractedData.curp.charAt(10).toUpperCase();
           if (char === 'M') inferredSexo = 2;
         }
-
+      
+      
         setCurrentPlayer(prev => ({
           ...prev,
           firstName,
@@ -537,12 +1269,14 @@ export default function ConfigurarEquipo() {
           curp: extractedData.curp || prev.curp,
           birthDate: extractedData.fecha_nac || prev.birthDate,
           sexo_id: inferredSexo,
+          seguro_id: 1,
+          birthPlace: extractedData.lugar_nacimiento || prev.birthPlace,
           documents: { ...prev.documents, [docKey]: file }
         }));
 
         Swal.fire({
           title: '¡Lectura Exitosa!',
-          text: `Se detectó a: ${extractedData.nombre}`,
+          text: `Se detectó a: ${extractedData.nombre} ${extractedData.apellido_paterno} ${extractedData.apellido_materno}`,
           icon: 'success',
           timer: 2000,
           showConfirmButton: false
@@ -571,10 +1305,25 @@ export default function ConfigurarEquipo() {
     try {
       const data = await validarFotografia(file);
       if (data.valido) {
+
+         // CONVERTIR BASE64 A URL MOSTRABLE
+        const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
+
+        // GUARDAR PREVIEW
+        setPreviews(prev => ({
+          ...prev,
+          foto: imagenProcesada
+        }));
+
+        // GUARDAR DOCUMENTO
         setCurrentPlayer(prev => ({
           ...prev,
-          documents: { ...prev.documents, foto: file }
+          documents: {
+            ...prev.documents,
+            foto: file
+          }
         }));
+        
         Swal.fire({
           title: '¡Fotografía Aceptada!',
           icon: 'success',
@@ -629,7 +1378,7 @@ export default function ConfigurarEquipo() {
         }
       }
 
-      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, lugarNacimiento, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
+      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, birthPlace, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
 
       // Nombre y Apellidos
       form.getTextField('Nombres')?.setText(firstName || '');
@@ -639,7 +1388,7 @@ export default function ConfigurarEquipo() {
       // Identificadores y Nacimiento
       if (curp) form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       if (birthDate) form.getTextField('Fecha de Nacimiento')?.setText(birthDate);
-      if (lugarNacimiento) form.getTextField('Lugar de Nacimiento')?.setText(lugarNacimiento);
+      if (birthPlace) form.getTextField('Lugar de Nacimiento')?.setText(birthPlace);
       
       // Tipo de Afiliación (Mapeado empíricamente a fill_24) y Asociación
       // El campo 'Tipo' corresponde a 'Tipo de Sangre', no lo llenaremos con AFAEM.
@@ -724,6 +1473,50 @@ export default function ConfigurarEquipo() {
 
   const userEmail = localStorage.getItem('email') || '';
 
+  const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  
+   // Previsualizaciones (URLs locales)
+  const [previews, setPreviews] = useState({
+    actaNacimiento: null,
+    identificacion: null,
+    fotografia: null,
+    formatoAfiliacion: null
+  });
+
+  const handleFileUpload = async (docKey, file) => {
+      if (!file) return;
+
+        setCurrentPlayer(prev => ({
+          ...prev,
+          documents:{
+            ...(prev.documents || {}),
+            [docKey]: file
+          }
+        }));
+  
+  // PREVIEW
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviews(prev => ({
+        ...prev,
+        [docKey]: reader.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  } else if (file.type === 'application/pdf') {
+      const url = URL.createObjectURL(file);
+      setPreviews(prev => ({ ...prev, [docKey]: url }));
+  }
+
+  // LÓGICA 
+  if (docKey === 'foto') {
+    procesarFotografiaJugador(file);
+  } else if (['acta', 'ine'].includes(docKey)) {
+    procesarOCRReal(docKey, file);
+  }
+};
+
   const resetPlayerForm = () => {
     setCurrentPlayer({
       id: Date.now(),
@@ -756,12 +1549,14 @@ export default function ConfigurarEquipo() {
       documents: {}
     });
     setEditingPlayerId(null);
+    setFormErrors({});
   };
 
   const loadPlayerForEditing = (playerId) => {
     const playerToEdit = players.find(p => p.id === playerId);
     if (playerToEdit) {
       setCurrentPlayer({ ...playerToEdit });
+      setFormErrors({});
       setEditingPlayerId(playerId);
       // Scroll al formulario
       setTimeout(() => {
@@ -772,7 +1567,7 @@ export default function ConfigurarEquipo() {
 
   const renderPagoPrevioEquipo = () => {
     const ordenCreada = Boolean(pagoEquipo.ordenId);
-    const pagoEnRevision = pagoEquipo.estado === ESTATUS_PAGO.EN_ESPERA && pagoEquipo.tieneComprobante;
+    const pagoEnRevision = pagoEquipo.estadoEquipo === ESTADO_EQUIPO.COMPROBANTE_EN_REVISION;
     const pagoRechazado = pagoEquipo.estado === ESTATUS_PAGO.RECHAZADO;
 
     if (pagoEquipo.loading || loadingCatalogs) {
@@ -793,7 +1588,7 @@ export default function ConfigurarEquipo() {
           </div>
           <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Pago en revision</h2>
           <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
-            Ya recibimos tu comprobante de la orden #{pagoEquipo.ordenId}. Un administrador debe aprobarlo antes de que puedas configurar este equipo.
+            Ya recibimos tu comprobante de la orden #{pagoEquipo.ordenId}. Un administrador debe aprobarlo antes de que puedas configurar tu equipo.
           </p>
           <button onClick={() => navigate('/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
             Volver al panel
@@ -802,7 +1597,7 @@ export default function ConfigurarEquipo() {
       );
     }
 
-    if (pagoEquipo.estado === ESTATUS_PAGO.APROBADO && pagoEquipo.aprobado) {
+    if (pagoEquipo.estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
       return null;
     }
 
@@ -814,7 +1609,15 @@ export default function ConfigurarEquipo() {
           </div>
           <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
           <p style={{ color: '#64748b', margin: 0 }}>
-            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+            {isAdmin
+              ? 'Genera la orden de pago con el número de jugadores y tipos de seguros'
+              : 'Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.'
+            }
+          </p>
+          <p style={{ color: '#ff0000', margin: 0 }}>
+            {isAdmin
+              ? '*Registro de equipo como administrador*'
+              : '*Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*'}
           </p>
         </div>
 
@@ -940,6 +1743,171 @@ export default function ConfigurarEquipo() {
     );
   };
 
+  const renderPagoPrevioJugador = () => {
+    const ordenCreada = Boolean(pagoJugador.ordenId);
+    const pagoEnRevision = pagoJugador.estado === ESTATUS_PAGO.EN_ESPERA && pagoJugador.tieneComprobante;
+    const pagoRechazado = pagoJugador.estado === ESTATUS_PAGO.RECHAZADO;
+
+    if (pagoJugador.loading || loadingCatalogs) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <FaClock style={{ fontSize: '42px', color: '#0b4ea6', marginBottom: '18px' }} />
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Revisando estado de pago</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>Un momento mientras validamos si tienes una orden aprobada disponible.</p>
+        </div>
+      );
+    }
+
+    if (pagoEnRevision) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ width: '82px', height: '82px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: '36px' }}>
+            <FaClock />
+          </div>
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Pago en revision</h2>
+          <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
+            Ya recibimos tu comprobante de la orden #{pagoJugador.ordenId}. Un administrador debe aprobarlo antes de que puedas registrar el jugador.
+          </p>
+          <button onClick={() => navigate('/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
+            Volver al panel
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ maxWidth: '980px', margin: '0 auto', animation: 'slideUp 0.4s ease' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: '0 12px 24px rgba(11,78,166,0.22)' }}>
+            <FaMoneyBillWave />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para agregar jugador</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>
+            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+          </p>
+          <p style={{ color: '#ff0000', margin: 0 }}>
+            *Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*
+          </p>
+        </div>
+
+        {pagoRechazado && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '16px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <FaTimesCircle />
+            <span style={{ fontWeight: '700' }}>El comprobante fue rechazado. Sube un nuevo archivo para enviarlo otra vez a revision.</span>
+          </div>
+        )}
+
+        {pagoErrorJugador && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', fontWeight: '700' }}>
+            {pagoErrorJugador}
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            {!ordenCreada ? (
+              <>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={numJugadoresAgregar}
+                  onChange={(e) => setNumJugadoresAgregar(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '100%', padding: '14px 16px', border: '2px solid #dbeafe', borderRadius: '12px', fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '18px' }}
+                />
+
+                <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {catalogs.seguros.map(seguro => {
+                    const id = String(seguro.id);
+                    return (
+                      <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
+                        <div>
+                          <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                          <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={asignacionSegurosAgregar[id] ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                            setAsignacionSegurosAgregar(prev => ({ ...prev, [id]: value }));
+                          }}
+                          style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                  Seguros asignados: {totalAsignadosPagoJugador}/{segurosRequeridosPagoJugador || 0}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: '#ecfdf5', color: '#047857', fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
+                  <FaCheckCircle /> Orden activa #{pagoJugador.ordenId}
+                </div>
+                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
+                  Adjunta un PDF o imagen del comprobante. El registro se habilitara cuando el administrador apruebe esta orden.
+                </p>
+                <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
+                  <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
+                  <input
+                    id="comprobante-jugador"
+                    type="file"
+                    accept=".pdf,image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setComprobantePagoJugador(e.target.files?.[0] || null)}
+                  />
+                  <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
+                    {comprobantePagoJugador ? comprobantePagoJugador.name : 'No se ha seleccionado archivo'}
+                  </div>
+                  <button onClick={() => document.getElementById('comprobante-jugador').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}>
+                    {comprobantePagoJugador ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+              <span>Afiliacion jugadores x{Number(numJugadoresAgregar || 0)}</span>
+              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresAgregar || 0)).toFixed(2)}</strong>
+            </div>
+            {catalogs.seguros.map(seguro => {
+              const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
+              if (!cantidad) return null;
+              return (
+                <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+                  <span>{seguro.nombre} x{cantidad}</span>
+                  <strong style={{ color: '#1e293b' }}>${(Number(seguro.precio || 0) * cantidad).toFixed(2)}</strong>
+                </div>
+              );
+            })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
+              <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${Number(totalPagoMostradoJugador || 0).toFixed(2)}</span>
+            </div>
+
+            <button
+              disabled={procesandoPagoJugador || (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugador !== segurosRequeridosPagoJugador)) || (ordenCreada && !comprobantePagoJugador)}
+              onClick={ordenCreada ? handleSubirComprobanteJugador : handleCrearOrdenPagoJugador}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPagoJugador ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPagoJugador ? 'wait' : 'pointer', opacity: (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugador !== segurosRequeridosPagoJugador)) || (ordenCreada && !comprobantePagoJugador) ? 0.55 : 1 }}
+            >
+              {procesandoPagoJugador ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <style>
@@ -965,7 +1933,9 @@ export default function ConfigurarEquipo() {
         `}
       </style>
       <div className="dashboard-content">
-        {!isAdmin && !pagoEquipo.aprobado ? (
+        {!tieneSlotDisponible && modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
+          renderPagoPrevioJugador()
+        ) : shouldShowPagoPrevioEquipo ? (
           renderPagoPrevioEquipo()
         ) : (
           <>
@@ -1042,7 +2012,7 @@ export default function ConfigurarEquipo() {
                       </button>
                       <button 
                         disabled={!selectedPresidentId}
-                        onClick={() => setActiveStep(1)}
+                        onClick={() => cargarEstadoPagoEquipo({ presidenteId: selectedPresidentId })}
                         style={{ 
                           padding: '10px 30px', borderRadius: '8px', border: 'none', 
                           background: !selectedPresidentId ? '#cbd5e1' : '#0b4ea6', 
@@ -1257,67 +2227,213 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ marginBottom: '30px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Documentación Requerida</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                    <section className="fade-in" style={{ marginBottom: '40px' }}>
+                    
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '20px'
+                      }}>
                         {[
-                          { key: 'acta', label: 'Acta Nac.', icon: '📜' },
-                          { key: 'ine', label: 'INE / Ident.', icon: '🆔' },
-                          { key: 'foto', label: 'Foto', icon: '📸' }
+                          { key: 'acta', title: 'Acta de Nacimiento' },
+                          { key: 'ine', title: 'Identificación (INE/Pasaporte)' },
+                          { key: 'foto', title: 'Fotografía Infantil' }
                         ].map(doc => {
                           const isFormato = doc.key === 'formato';
                           const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
-                          
                           return (
-                            <div key={doc.key} style={{ 
-                              textAlign: 'center', padding: '20px 10px', border: '1px dashed', borderRadius: '16px',
-                              backgroundColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#f0fdf4' : (isFormato && !canUploadFormato ? '#f1f5f9' : '#f8fafc'),
-                              borderColor: (currentPlayer.documents && currentPlayer.documents[doc.key]) ? '#22c55e' : (isFormato && !canUploadFormato ? '#e2e8f0' : '#cbd5e1'),
-                              transition: 'all 0.2s',
-                              opacity: isFormato && !canUploadFormato ? 0.6 : 1
+                            <div key={doc.key} 
+                              className="document-card"
+                              style={{ 
+                                backgroundColor: 'white',
+                                borderRadius: '20px',
+                                border: currentPlayer.documents[doc.key] ? '2px solid #10b981': isFormato && !canUploadFormato ? '2px solid #e2e8f0': '2px dashed #cbd5e1',
+                                padding: '15px',
+                                textAlign: 'center',
+                                transition: 'all 0.3s',
+                                position: 'relative',
+                                overflow: 'hidden'
                             }}>
-                               <div style={{ fontSize: '28px', marginBottom: '8px' }}>{doc.icon}</div>
-                               <div style={{ fontSize: '10px', fontWeight: '900', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>{doc.label}</div>
-                               
-                               {(currentPlayer.documents && currentPlayer.documents[doc.key]) ? (
-                                 <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>Cargado ✓</div>
-                               ) : (
-                                 <button 
-                                   disabled={isFormato && !canUploadFormato}
-                                   onClick={() => {
-                                     const input = document.createElement('input');
-                                     input.type = 'file';
-                                     input.onchange = (e) => {
-                                        const file = e.target.files[0];
-                                        if (file) {
-                                          if (doc.key === 'foto') {
-                                            procesarFotografiaJugador(file);
-                                          } else if (['acta', 'ine'].includes(doc.key)) {
-                                            procesarOCRReal(doc.key, file);
-                                          } else {
-                                            setCurrentPlayer(prev => ({
-                                              ...prev,
-                                              documents: { ...prev.documents, [doc.key]: file }
-                                            }));
-                                          }
-                                        }
-                                     };
-                                     input.click();
-                                   }}
-                                   style={{ 
-                                     fontSize: '10px', padding: '5px 10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', 
-                                     cursor: (isFormato && !canUploadFormato) ? 'not-allowed' : 'pointer', fontWeight: '800', color: '#0b4ea6' 
-                                   }}
-                                 >
-                                   Subir
-                                 </button>
-                               )}
+                              <div
+                                style={{
+                                  height: '140px',
+                                  width: '100%',
+                                  backgroundColor: '#f8fafc',
+                                  borderRadius: '12px',
+                                  marginBottom: '10px',
+                                  position: 'relative',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid #f1f5f9'
+                                }}
+                                onDragOver = {(e) => {
+                                  e.preventDefault();
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  const file = e.dataTransfer.files[0];
+                                  handleFileUpload(doc.key, file);
+                                }}
+                              >
+                                {previews[doc.key] ? (
+                                  <div className="preview-container" style={{ 
+                                    width: '100%', height: '100%', position: 'relative' 
+
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      const overlay =
+                                      e.currentTarget.querySelector('.overlay-actions');
+                                      if (overlay) overlay.style.opacity = '1';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      const overlay =
+                                      e.currentTarget.querySelector('.overlay-actions');
+                                      if (overlay) overlay.style.opacity = '0';
+                                    }}
+                                  >
+                                    {(previews[doc.key].startsWith('blob:') && currentPlayer.documents[doc.key]?.type === 'application/pdf') || previews[doc.key] === 'pdf' ? (
+                                      <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                        <FaFilePdf />
+                                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                                        </div>
+                                        ) : (
+                                        <img
+                                          src={previews[doc.key]}
+                                          alt="Preview"
+                                          style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'contain'
+                                          }}
+                                        />
+                                    )}
+                                    <div className="overlay-actions" style={{
+                                      position: 'absolute',
+                                      top: 0, left: 0, right: 0, bottom: 0,
+                                      backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '12px',
+                                      opacity: 0,
+                                      transition: 'opacity 0.2s ease',
+                                      backdropFilter: 'blur(2px)'
+                                    }}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const isPdf = currentPlayer.documents[doc.key]?.type === 'application/pdf';
+                                          setPreviewDoc({
+                                            open: true,
+                                            url: previews[doc.key],
+                                            type: isPdf ? 'pdf' : 'image',
+                                            title: doc.title
+                                          });
+                                        }}
+                                        className="btn-zoom"
+                                        style={{
+                                          width: '36px', height: '36px', borderRadius: '50%',
+                                          backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <FaSearchPlus/>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          document.getElementById(`file-${doc.key}`).click();
+                                        }}
+                                        className="btn-change"
+                                        style={{
+                                          width: '36px', height: '36px', borderRadius: '50%',
+                                          backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                        }}
+                                      >
+                                        <FaSyncAlt />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div 
+                                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                                    style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                                  >
+                                    <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                                    <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                  </div>
+                                )}
+                              </div>
+                              <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                backgroundColor: currentPlayer.documents[doc.key] ? '#dcfce7' : '#f1f5f9',
+                                color: currentPlayer.documents[doc.key] ? '#166534' : '#64748b',
+                                fontSize: '10px',
+                                fontWeight: '800'
+                              }}>
+                                {currentPlayer.documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                              </div>
+                              <input
+                                type="file"
+                                id={`file-${doc.key}`}
+                                style={{ display: 'none' }}
+                                accept="image/*,.pdf"
+                                onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
+                              />
                             </div>
-                          );
+                          )
                         })}
                       </div>
-                    </div>
+                    </section>
+                      
+                    {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
+                    <Modal
+                      estaAbierto={previewDoc.open}
+                      titulo={previewDoc.title}
+                      alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+                      tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+                      pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+                    >
+                      <div style={{
+                        width: '100%',
+                        height: previewDoc.type === 'pdf' ? '100%' : 'auto',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: '#0f172a', // más elegante para PDF
+                        borderRadius: '12px',
+                        overflow: 'hidden'
+                      }}>
+                        {previewDoc.type === 'pdf' ? (
+                          <iframe
+                            src={previewDoc.url}
+                            style={{ width: '1800px', height: '70vh', border: 'none' }}title="Visor de PDF"
+                          />
+                        ) : (
+                          <img
+                            src={previewDoc.url}
+                            alt="Preview Grande"
+                            style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+                          />
+                        )}
+                      </div>
+                    </Modal>
 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Formulario de afiliación</h3>
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s)</label>
@@ -1384,18 +2500,23 @@ export default function ConfigurarEquipo() {
                            type="text" 
                            value={currentPlayer.curp}
                            onChange={(e) => {
-                             const val = e.target.value.toUpperCase();
+                             const rawValue = e.target.value.toUpperCase();
+                             const filteredValue = rawValue.replace(/[^A-Z0-9]/g, '');
+                             const error = validateCurp(filteredValue);
+                             setFormErrors({ ...formErrors, curp: error });
                              let sId = currentPlayer.sexo_id;
-                             if (val.length >= 11) {
-                               const char = val.charAt(10);
+                             if (filteredValue.length >= 11) {
+                               const char = filteredValue.charAt(10);
                                if (char === 'M') sId = 2;
                                else if (char === 'H') sId = 1;
                              }
-                             setCurrentPlayer({...currentPlayer, curp: val, sexo_id: sId});
+                             setCurrentPlayer({...currentPlayer, curp: filteredValue, sexo_id: sId});
                            }}
                            placeholder="ABCD..." 
+                           maxLength={18}
                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
                          />
+                         {formErrors.curp && <small style={{ color: 'red', fontSize: '12px' }}>{formErrors.curp}</small>}
                        </div>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI</label>
@@ -1424,7 +2545,7 @@ export default function ConfigurarEquipo() {
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento</label>
                          <input 
                            type="text" 
-                           value={currentPlayer.lugarNacimiento}
+                           value={currentPlayer.birthPlace}
                            onChange={e => setCurrentPlayer({...currentPlayer, lugarNacimiento: e.target.value})}
                            placeholder="Ej. Monterrey, NL" 
                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
@@ -1503,7 +2624,8 @@ export default function ConfigurarEquipo() {
                         {catalogs.seguros.map(seg => {
                           const id = seg.id.toString();
                           const count = players.filter(p => p.insuranceType === id).length;
-                          const available = (asignacionSeguros[id] || 0) - count;
+                          const dbSeguro = equipoTemporalInfo?.seguros?.find(s => String(s.seguro_id) === id);
+                          const available = dbSeguro ? (dbSeguro.disponibles - count) : ((asignacionSeguros[id] || 0) - count);
                           return (
                             <button
                               key={id}
@@ -1527,8 +2649,6 @@ export default function ConfigurarEquipo() {
                         })}
                       </div>
                     </div>
-
-                    
 
                     {/* ANTECEDENTES INTERNACIONALES */}
                     <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
@@ -1639,6 +2759,13 @@ export default function ConfigurarEquipo() {
 
                       <button 
                         onClick={async () => {
+
+                          const errorFecha = validarFechaNacimiento(currentPlayer.birthDate);
+                          if (errorFecha) {
+                            Swal.fire('Atención', errorFecha, 'warning');
+                            return;
+                          }
+                          
                           const docs = currentPlayer.documents || {};
                           const hasMinDocs = docs.ine && docs.foto;
                           
@@ -1704,24 +2831,57 @@ export default function ConfigurarEquipo() {
                   {/* LATERAL: RESUMEN DE EQUIPO */}
                   <div>
                     <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>Resumen de Seguros</h4>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>
+                        {tieneSlotDisponible ? 'Seguros Disponibles' : 'Resumen de Seguros'}
+                      </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                         {catalogs.seguros.map(seg => {
                           const id = seg.id.toString();
-                          const count = players.filter(p => p.insuranceType === id).length;
-                          const total = asignacionSeguros[id] || 0;
-                          const percent = total > 0 ? (count / total) * 100 : 0;
-                          return (
-                            <div key={id}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-                                 <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
-                                 <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
+
+                          if (tieneSlotDisponible) {
+                            const disponible = equipoTemporalInfo?.seguros?.find(s => s.seguro_id === seg.id)?.disponibles || 0;
+                            const registrados = players.filter(p => p.insuranceType === id).length;
+                            const quedan = disponible - registrados;
+
+                            return (
+                              <div key={id}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                   <span style={{ fontWeight: '900', color: quedan > 0 ? '#047857' : '#dc2626' }}>
+                                     {registrados} / {disponible}
+                                   </span>
+                                </div>
+                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                   <div style={{
+                                     width: `${disponible > 0 ? (registrados / disponible) * 100 : 0}%`,
+                                     height: '100%',
+                                     background: quedan > 0 ? 'linear-gradient(90deg, #10b981, #6ee7b7)' : 'linear-gradient(90deg, #dc2626, #ef4444)',
+                                     borderRadius: '5px',
+                                     transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                                   }}></div>
+                                </div>
+                                <div style={{ fontSize: '11px', color: quedan > 0 ? '#059669' : '#991b1b', marginTop: '4px', fontWeight: '600' }}>
+                                  {quedan > 0 ? `${quedan} disponible${quedan !== 1 ? 's' : ''}` : 'Sin disponibilidad'}
+                                </div>
                               </div>
-                              <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                                 <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
+                            );
+                          } else {
+                            const count = players.filter(p => p.insuranceType === id).length;
+                            const total = asignacionSeguros[id] || 0;
+                            const percent = total > 0 ? (count / total) * 100 : 0;
+
+                            return (
+                              <div key={id}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                   <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
+                                </div>
+                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                   <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
+                                </div>
                               </div>
-                            </div>
-                          );
+                            );
+                          }
                         })}
                       </div>
                     </div>
@@ -1798,6 +2958,7 @@ export default function ConfigurarEquipo() {
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
                             presidente_id: isAdmin ? (selectedPresidentId || null) : null,
+                            equipo_temporal_id: (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null),
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
@@ -1806,14 +2967,20 @@ export default function ConfigurarEquipo() {
                             teamLogo: modalData.teamLogo
                           });
 
-                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
+                          try {
+                            const nextPreRegistro = { ...(preRegistro || {}) };
+                            delete nextPreRegistro.equipo_temporal_id;
+                            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+                          } catch {}
+
+                          setSuccessMessage(`Se ha sido registrado exitosamente el equipo/jugadores.`);
                           setShowSuccessModal(true);
                           Swal.close();
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
-                          //Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
+                          Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
                           // Para debuguear: 
-                          Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
+                          //Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
                     }}
                     disabled={players.length === 0}

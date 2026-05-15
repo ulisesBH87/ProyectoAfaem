@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles # Importación necesaria
-from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta, auditoria_ruta
+from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta, auditoria_ruta, catalogos_ruta
 from app.utilidades.context import usuario_actual_id, ip_actual
 from app.db.sesion import SessionLocal
 from app.core.seguridad import obtener_usuario_desde_token
@@ -150,14 +150,19 @@ async def custom_docs():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+
+        # Desarrollo local
         "http://localhost:3000",
         "http://192.168.0.172:3000",
-
         "http://localhost:5173",
         "http://192.168.0.172:5173",
-        
         "http://localhost:5174",
         "http://192.168.0.172:5174",
+        # Producción
+        "http://201.131.21.213",
+        "http://201.131.21.213:80",
+        "http://afaem.scholatek.com",
+        "https://afaem.scholatek.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -209,6 +214,7 @@ app.include_router(permisos_ruta.router)
 app.include_router(gestion_ruta.router)
 app.include_router(personas_ruta.router)
 app.include_router(auditoria_ruta.router)
+app.include_router(catalogos_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
 @app.exception_handler(AppError)
@@ -219,7 +225,8 @@ async def app_error_handler(request: Request, exc: AppError):
         content={
             "success": False,
             "code": exc.code,
-            "message": exc.message
+            "message": exc.message,
+            "detail": exc.detail
         }
     )
 

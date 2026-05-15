@@ -29,6 +29,23 @@ const DashboardTable = ({
   const startRange = (currentPage - 1) * itemsPerPage + 1;
   const endRange = Math.min(currentPage * itemsPerPage, totalItems);
 
+  //Limina la cantidad de páginas visibles a 3 para evitar saturar la interfaz
+  const maxVisiblePages = 3;
+
+  let startPage = Math.max(currentPage - 2, 1);
+  let endPage = startPage + maxVisiblePages - 1;
+
+  if (endPage > totalPages) {
+    endPage = totalPages;
+    startPage = Math.max(endPage - maxVisiblePages + 1, 1);
+  }
+
+  const visiblePages = [];
+
+  for (let i = startPage; i <= endPage; i++) {
+    visiblePages.push(i);
+  }
+
   return (
     <div className="table-container">
       <div className="table-wrapper">
@@ -80,6 +97,7 @@ const DashboardTable = ({
               Anterior
             </button>
             <div className="pagination-pages">
+              {/*
               {[...Array(totalPages)].map((_, i) => (
                 <button
                   key={i + 1}
@@ -89,7 +107,17 @@ const DashboardTable = ({
                   {i + 1}
                 </button>
               ))}
-            </div>
+              */}
+              {visiblePages.map((page) => (
+                <button
+                key={page}
+                className={`page-num ${currentPage === page ? 'active' : ''}`}
+                onClick={() => onPageChange(page)}
+                >
+                  {page}
+                </button>
+              ))}
+            </div> 
             <button 
               className="pagination-btn"
               disabled={currentPage === totalPages}

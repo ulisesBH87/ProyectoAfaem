@@ -10,6 +10,7 @@ import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
 import { API_BASE } from '../../config/config';
 import { parseJwt } from '../../services/auth';
+import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 
 import { useRBAC } from '../../hooks/useRBAC';
 
@@ -210,13 +211,7 @@ function PreRegistroPresidente() {
     { valor: 'ENTRENADOR', etiqueta: 'Entrenador' },
   ];
 
-  const bankInfo = {
-    banco: 'BBVA México',
-    titular: 'Asociación Deportiva Estatal AC',
-    cuenta: '0123456789 01',
-    clabe: '012 180 0001234567 89',
-    referencia: 'RHX-CL26-001'
-  };
+  const bankInfo = DEFAULT_BANK_INFO;
 
   // ================== FUNCIÓN PARA CARGAR DETALLES DE ORDEN ==================
   const cargarDetalleOrdenDirecto = async (ordenId, token) => {
@@ -567,7 +562,8 @@ function PreRegistroPresidente() {
             },
             body: JSON.stringify({
               CantidadJugadores: numPersonas,
-              Seguros: segurosPayload
+              Seguros: segurosPayload,
+              TipoSolicitud: 1
             })
           });
 
@@ -702,7 +698,7 @@ function PreRegistroPresidente() {
       formData.append('file_id', file);
 
       // Usamos el proxy configurado en vite.config.js
-      const response = await fetch('/ocr-api', {
+      const response = await fetch('ocr-api', {
         method: 'POST',
         body: formData
       });

@@ -6,6 +6,13 @@ class PagoInvalidoError(AppError):
             message="La orden de pago no es válida",
             status_code=400
         )
+class NoAfiliacionError(AppError):
+    def __init__(self):
+        super().__init__(
+            code="NO_AFILIACION",
+            message="No se encontró la afiliación correspondiente",
+            status_code=400
+        )
 
 class CantidadJugadoresError(AppError):
     def __init__(self):

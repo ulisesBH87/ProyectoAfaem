@@ -24,6 +24,7 @@ class EquipoResponse(BaseModel):
     Estatus: bool
     RutaLogo: Optional[str] = None
     SolicitudId: Optional[int] = None
+    SlotsComprados: Optional[int] = 0
 
     class Config:
         from_attributes = True
@@ -129,10 +130,15 @@ class JugadorUpdate(BaseModel):
     SegundoApellido: Optional[str] = None
     CURP: Optional[str] = None
     Estatus: Optional[bool] = None
+    # Campos adicionales editables
+    Email: Optional[str] = None
+    SexoId: Optional[int] = None        # 1=Masculino, 2=Femenino, 3=No Binario
+    FechaNacimiento: Optional[date] = None
+    NUI: Optional[str] = None
 
 class PresidenteAdminCreate(BaseModel):
     nombre: str
     correo: str
     telefono: Optional[str] = None
     curp: str
-    numPersonas: int
+    numPersonas: int

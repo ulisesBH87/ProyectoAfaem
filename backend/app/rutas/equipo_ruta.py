@@ -13,12 +13,12 @@ from app.core.seguridad import obtener_usuario_actual, generar_salt, generar_has
 
 from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
 from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, EquipoUpdateCompleto, JugadorUpdate, PresidenteAdminCreate
-from app.servicios.equipo_servicio import registrar_jugador_servicio
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
-    EquipoTemporal, Usuario, AntecedentesInternacionales, OrdenPago
+    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales, Usuario, OrdenPago
 )
+from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
 
@@ -49,7 +49,12 @@ async def obtener_slots(equipo_temporal_id: int,db: Session = Depends(get_db)):
     slots = obtener_equipo_temporal_servicio(db, equipo_temporal_id)
     return slots
 
+@router.get("/hay-slots")
+async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
+    #Servicio de busqueda de slots
+    slots = equipo_servicio.hay_slots(db, equipo_id)
 
+    return slots
 
 # == REGISTROS ==
 @router.get("/catalogos-registro", response_model=CatalogosRegistroResponse)
@@ -73,14 +78,13 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
         }
 
     except Exception as e:
-        print(f"Error en get_catalogos_registro: {str(e)}")
+        #print(f"Error en get_catalogos_registro: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/crear-equipo-completo")
 async def crear_equipo_completo(request: Request, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
         form_data = await request.form()
-        print(type(form_data.get("team_logo")))
         result = await crear_equipo_completo_servicio(form_data=form_data, db=db, usuario=usuario)
 
         return result
@@ -312,7 +316,7 @@ async def agregar_jugador_equipo_existente(
         exc_type, exc_obj, exc_tb = sys.exc_info()
         tb = traceback.format_exc()
         error_msg = str(e)
-        print("ERROR EN AGREGAR JUGADOR:", tb)
+        #print("ERROR EN AGREGAR JUGADOR:", tb)
         raise HTTPException(status_code=500, detail=f"Error interno: {error_msg} | Traceback: {tb}")
 
 @router.post("/registrar-jugador")
@@ -345,7 +349,13 @@ async def registrar_jugador(
 @router.get("/user-real-teams", response_model=List[EquipoResponse])
 def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
-        # 1. Base query with joins
+        # 1. Subquery para contar slots comprados por equipo
+        slots_subquery = db.query(
+            EquipoTemporal.EquipoId.label("EquipoId"),
+            func.count(EquipoTemporalJugador.EquipoTemporalJugadorId).label("SlotsComprados")
+        ).join(EquipoTemporalJugador, EquipoTemporal.EquipoTemporalId == EquipoTemporalJugador.EquipoTemporalId).group_by(EquipoTemporal.EquipoId).subquery()
+
+        # 2. Base query with joins
         query = db.query(
             Equipos.EquipoId,
             Equipos.NombreEquipo,
@@ -357,7 +367,8 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             CatalogoRamas.Nombre.label("Rama"),
             EquiposJugando.CantidadJugadores.label("NumeroJugadores"),
             Equipos.Estatus,
-            EquipoTemporal.SolicitudId
+            EquipoTemporal.SolicitudId,
+            func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados")
         ).join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
          .join(CatalogoCategorias, EquiposJugando.CategoriaId == CatalogoCategorias.CategoriaId)\
          .join(Ligas, EquiposJugando.LigaId == Ligas.LigaId)\
@@ -365,9 +376,10 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
          .join(CatalogoRamas, EquiposJugando.RamaId == CatalogoRamas.RamaId)\
          .join(PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
          .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
-         .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)
+         .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)\
+         .outerjoin(slots_subquery, Equipos.EquipoId == slots_subquery.c.EquipoId)
 
-        # 2. Add filter if not ADMINISTRADOR (RolId == 1)
+        # 3. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
         
         if rol_id != 1:
@@ -390,12 +402,13 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
                "NumeroJugadores": r.NumeroJugadores,
                "Estatus": bool(r.Estatus),
                "RutaLogo": r.RutaLogo,
-               "SolicitudId": r.SolicitudId
+               "SolicitudId": r.SolicitudId,
+               "SlotsComprados": int(r.SlotsComprados or 0)
            } for r in resultados
         ]
     except Exception as e:
-        print(f"Error en get_user_real_teams: {str(e)}")
-        print(traceback.format_exc())
+        #print(f"Error en get_user_real_teams: {str(e)}")
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
 
 @router.get("/mis-jugadores-reales", response_model=List[MiembroResponse])
@@ -436,8 +449,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             } for r in resultados
         ]
     except Exception as e:
-        print(f"Error en get_mis_jugadores_reales: {str(e)}")
-        print(traceback.format_exc())
+        #print(f"Error en get_mis_jugadores_reales: {str(e)}")
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
 
 
@@ -481,7 +494,7 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             } for r in resultados
         ]
     except Exception as e:
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error al obtener directorio de presidentes: {str(e)}")
 
 
@@ -554,7 +567,7 @@ def update_presidente(presidente_id: int, data: dict, db: Session = Depends(get_
         raise
     except Exception as e:
         db.rollback()
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error al actualizar presidente: {str(e)}")
 
 
@@ -571,7 +584,7 @@ def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obte
         from app.repositorios.equipo_repositorio import obtener_directorio_equipos_repo
         return obtener_directorio_equipos_repo(db)
     except Exception as e:
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @router.get("/directorio-jugadores", response_model=List[DirectorioJugadorResponse])
@@ -584,7 +597,7 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
         from app.repositorios.equipo_repositorio import obtener_directorio_jugadores_repo
         return obtener_directorio_jugadores_repo(db)
     except Exception as e:
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
@@ -615,7 +628,7 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
             doc["url"] = f"/{ruta}" if not ruta.startswith("http") else ruta
         return docs
     except Exception as e:
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @router.get("/jugador/{miembro_equipo_id}/exportar")
@@ -680,7 +693,7 @@ def update_equipo(equipo_id: int, equipo_data: EquipoUpdateCompleto, db: Session
     except HTTPException:
         raise
     except Exception as e:
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @router.patch("/update-jugador/{miembro_equipo_id}")
@@ -698,13 +711,19 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
             jugador_data.PrimerApellido, 
             jugador_data.SegundoApellido, 
             jugador_data.CURP, 
-            jugador_data.Estatus
+            jugador_data.Estatus,
+            email=jugador_data.Email,
+            sexo_id=jugador_data.SexoId,
+            fecha_nacimiento=jugador_data.FechaNacimiento,
+            nui=jugador_data.NUI
         )
         if not miembro:
             raise HTTPException(status_code=404, detail="Jugador no encontrado")
         return {"mensaje": "Jugador actualizado correctamente", "miembro_equipo_id": miembro.MiembroEquipoId}
+    except HTTPException:
+        raise
     except Exception as e:
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @router.post("/registrar-presidente-admin")
@@ -799,5 +818,5 @@ def registrar_presidente_admin(
         raise e
     except Exception as e:
         db.rollback()
-        print(traceback.format_exc())
+        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

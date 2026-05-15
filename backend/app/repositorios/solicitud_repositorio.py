@@ -13,6 +13,7 @@ from app.modelos import (
     CatalogoDocumentosPersonas, DocumentosEntregados, EquipoTemporal, 
     OrdenPago, Equipos, PresidenteEquipo, EquiposJugando, RelUsuarioRoles
 )
+from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 
 #REQUISITOS
 def crear_requisito_repo(db: Session, tipo_afiliacion_id: int, documento_persona_id: int):
@@ -64,14 +65,25 @@ def ver_requisitos_afiliacion_repo(db: Session, tipo_afiliacion_id: int):
 
 #SOLICITUDES
 #CREAR SOLICITUD (NO ENVIAR)
-def crear_solicitud_repo(db, usuario_id, estatus_validacion_id, tipo_afiliacion_id):
+def crear_solicitud_repo(db, tipo_afiliacion_id, tipo_solicitud, usuario_id, equipo_id=None):
 
-    nueva = Solicitud(
-        UsuarioId = usuario_id,
-        EstatusValidacion = estatus_validacion_id,
-        TipoAfiliacionId = tipo_afiliacion_id
-    )
+    if tipo_solicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO or tipo_solicitud == TiposSolicitudEnum.EQUIPO:
+        nueva = Solicitud(
+            TipoAfiliacionId = tipo_afiliacion_id,
+            TipoSolicitudId = tipo_solicitud,
+            UsuarioId = usuario_id,
+            EstatusValidacion = 4 # BORRADOR
+        )
     
+    elif tipo_solicitud == TiposSolicitudEnum.JUGADOR:
+        nueva = Solicitud(
+            TipoAfiliacionId = tipo_afiliacion_id,
+            TipoSolicitudId = tipo_solicitud,
+            UsuarioId = usuario_id,
+            EstatusValidacion = 4, # BORRADOR
+            EquipoId = equipo_id
+        )
+
     db.add(nueva)
     db.flush()
 
@@ -349,21 +361,21 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
     EstatusId 7 = ACTIVO.
     También actualiza el Rol del usuario a PRESIDENTE_EQUIPO (Id 3).
     """
-    print(f"--- ACTIVANDO PRESIDENTE PARA SOLICITUD #{solicitud_id} ---")
+    #print(f"--- ACTIVANDO PRESIDENTE PARA SOLICITUD #{solicitud_id} ---")
     
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     if not solicitud:
-        print(f"❌ Error: No se encontró la solicitud #{solicitud_id}")
+        #print(f"❌ Error: No se encontró la solicitud #{solicitud_id}")
         return False
         
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
     if not usuario:
-        print(f"❌ Error: Usuario {solicitud.UsuarioId} no encontrado")
+        #print(f"❌ Error: Usuario {solicitud.UsuarioId} no encontrado")
         return False
 
     # 1. Actualizar Rol Legacy (Usuarios.RolId)
     # Rol 3 = PRESIDENTE_EQUIPO
-    print(f"⚙️ Actualizando Rol Latino de {usuario.RolId} a 3 para el usuario {usuario.Correo}")
+    #print(f"⚙️ Actualizando Rol Latino de {usuario.RolId} a 3 para el usuario {usuario.Correo}")
     usuario.RolId = 3
 
     # 2. Actualizar/Insertar Rol RBAC (RelUsuarioRoles)
@@ -373,10 +385,10 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
     ).first()
 
     if rbac_rol:
-        print(f"✅ El usuario ya tenía el rol RBAC 3. Asegurando Estatus=True")
+        #print(f"✅ El usuario ya tenía el rol RBAC 3. Asegurando Estatus=True")
         rbac_rol.Estatus = True
     else:
-        print(f"🆕 Creando nueva relación RBAC (Usuario: {usuario.UsuarioId}, Rol: 3)")
+        #print(f"🆕 Creando nueva relación RBAC (Usuario: {usuario.UsuarioId}, Rol: 3)")
         nuevo_rbac = RelUsuarioRoles(
             UsuarioId=usuario.UsuarioId,
             RolId=3,
@@ -387,16 +399,16 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
     # 3. Activar en tabla PresidenteEquipo
     persona_id = usuario.PersonaId
     if not persona_id:
-        print(f"⚠️ Alerta: El usuario {usuario.UsuarioId} no tiene PersonaId vinculada.")
+        #print(f"⚠️ Alerta: El usuario {usuario.UsuarioId} no tiene PersonaId vinculada.")
         return False
 
     presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona_id).first()
     
     if presidente:
-        print(f"✅ Presidente encontrado (ID: {presidente.PresidenteEquipoId}). Actualizando EstatusId a 7 (ACTIVO)")
+        #print(f"✅ Presidente encontrado (ID: {presidente.PresidenteEquipoId}). Actualizando EstatusId a 7 (ACTIVO)")
         presidente.EstatusId = 7 # ACTIVO
     else:
-        print(f"🆕 No se encontró registro en PresidenteEquipo para Persona {persona_id}. Creando uno nuevo como ACTIVO.")
+        #print(f"🆕 No se encontró registro en PresidenteEquipo para Persona {persona_id}. Creando uno nuevo como ACTIVO.")
         # Si no existe, lo creamos directamente como Activo
         nuevo_presidente = PresidenteEquipo(
             PersonaId=persona_id,
@@ -404,7 +416,7 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
         )
         db.add(nuevo_presidente)
         
-    print("🚀 Proceso de activación completado exitosamente.")
+    #print("🚀 Proceso de activación completado exitosamente.")
     return True
 
 def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):

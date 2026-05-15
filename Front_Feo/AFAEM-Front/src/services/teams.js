@@ -18,7 +18,7 @@ export const getUserProfile = async (email) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error obteniendo perfil:', error);
+    //console.error('Error obteniendo perfil:', error);
     throw error;
   }
 };
@@ -33,7 +33,7 @@ export const getUserTeams = async (email) => {
     });
     return response.data;
   } catch (error) {
-    console.warn('⚠️ Backend no disponible, buscando equipos en localStorage...', error.message);
+    //console.warn('⚠️ Backend no disponible, buscando equipos en localStorage...', error.message);
     // FALLBACK: BUSCAR EN LOCALSTORAGE
     return getTeamsLocally(email);
   }
@@ -54,7 +54,7 @@ const getTeamsLocally = (email) => {
       message: 'Datos cargados localmente (backend no disponible)'
     };
   } catch (error) {
-    console.error('❌ Error obtiendo equipos de localStorage:', error);
+    //console.error('❌ Error obtiendo equipos de localStorage:', error);
     return { teams: [], total: 0, error: true };
   }
 };
@@ -69,7 +69,7 @@ export const getTeamDetail = async (teamId, email) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error obteniendo detalles del equipo:', error);
+    //console.error('Error obteniendo detalles del equipo:', error);
     throw error;
   }
 };
@@ -166,7 +166,7 @@ const saveTeamLocally = (teamData) => {
       message: 'Equipo guardado localmente (backend no disponible)'
     };
   } catch (error) {
-    console.error('❌ Error guardando en localStorage:', error);
+    //console.error('❌ Error guardando en localStorage:', error);
     throw error;
   }
 };
@@ -181,7 +181,7 @@ export const certifyUser = async (email) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error certificando usuario:', error);
+    //console.error('Error certificando usuario:', error);
     throw error;
   }
 };
@@ -200,7 +200,7 @@ export const registrarJugadorTemporal = async (data) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error guardando jugador temporal:', error);
+    //console.error('Error guardando jugador temporal:', error);
     throw error;
   }
 };
@@ -219,7 +219,7 @@ export const getAvailableSlots = async (equipoTemporalId) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error obteniendo slots:', error);
+    //console.error('Error obteniendo slots:', error);
     throw error;
   }
 };
@@ -237,7 +237,7 @@ export const getEquipoTemporalInfo = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error obteniendo equipo temporal info:', error);
+    //console.error('Error obteniendo equipo temporal info:', error);
     throw error;
   }
 };
@@ -275,7 +275,7 @@ export const getUserTeamsReal = async () => {
 
     return uniqueTeams;
   } catch (error) {
-    console.error('Error obteniendo equipos reales:', error);
+   // console.error('Error obteniendo equipos reales:', error);
     throw error;
   }
 };
@@ -291,7 +291,7 @@ export const getUserPlayersReal = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error obteniendo jugadores reales:', error);
+    //console.error('Error obteniendo jugadores reales:', error);
     throw error;
   }
 };
@@ -323,7 +323,7 @@ export const getPresidentesActivos = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error obteniendo directorio de presidentes:', error);
+    //console.error('Error obteniendo directorio de presidentes:', error);
     throw error;
   }
 };
@@ -339,6 +339,7 @@ export const createTeamCompleto = async (data) => {
     // Separamos metadatos de archivos
     const teamMetadata = {
       nombre_equipo: data.teamName,
+      equipo_temporal_id: data.equipo_temporal_id || data.equipoTemporalId || null,
       liga_id: data.liga_id,
       modalidad_id: data.modalidad_id,
       categoria_id: data.categoria_id,
@@ -357,7 +358,7 @@ export const createTeamCompleto = async (data) => {
       telefono: p.telefono,
       sexo_id: p.sexo_id,
       fecha_nacimiento: p.birthDate,
-      seguro_tipo_id: p.insuranceType,
+      seguro_id: p.insuranceType,
       numero_camiseta: p.shirtNumber,
       extranjero: p.esForaneo,
       nacionalidad: p.nacionalidadJugador,
@@ -398,7 +399,7 @@ export const createTeamCompleto = async (data) => {
     return response.data;
 
   } catch (error) {
-    console.error('Error creando equipo completo:', error);
+    //console.error('Error creando equipo completo:', error);
     throw error;
   }
 };
@@ -414,7 +415,26 @@ export const finalizarSolicitudCompleta = async (solicitudId) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error finalizando solicitud:', error);
+    //console.error('Error finalizando solicitud:', error);
+    throw error;
+  }
+};
+
+/**
+ * CONSULTA SI UN EQUIPO TIENE UN EquipoTemporal ACTIVO Y CUÁNTOS SLOTS/SEGUROS ESTÁN DISPONIBLES
+ * El componente llama a este servicio y decide la redirección.
+ * @param {number} equipoId - ID del equipo
+ */
+export const checkTeamSlots = async (equipoId) => {
+  try {
+    const response = await api.get(`/equipo-temporal/hay-slots`, {
+      params: { equipo_id: equipoId }
+    });
+    //alert('LOS DATOS SON: ' + JSON.stringify(response.data));
+    return response.data;
+  } catch (error) {
+    alert('Error verificando slots del equipo. Por favor, intenta de nuevo más tarde.');
+    //console.error('Error verificando slots del equipo:', error);
     throw error;
   }
 };
@@ -433,5 +453,6 @@ export default {
   getAvailableSlots,
   getEquipoTemporalInfo,
   getPresidentesActivos,
-  finalizarSolicitudCompleta
+  finalizarSolicitudCompleta,
+  checkTeamSlots
 };

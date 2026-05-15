@@ -10,6 +10,10 @@ class SeguroSeleccionado(BaseModel):
 class CrearOrdenPago(BaseModel):
     CantidadJugadores: int
     Seguros: List[SeguroSeleccionado]
+    TipoSolicitud: int
+    EquipoId: int | None = None
+    TipoAfiliacionId: int | None = None
+    PresidenteId: int | None = None
 
 class SubirComprobanteRespuesta(BaseModel):
     Mensaje: str

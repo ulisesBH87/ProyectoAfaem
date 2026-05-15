@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/',
   plugins: [react()],
   server: {
     // Evita reinicios automáticos por cambios en archivos del backend o subidas
@@ -62,13 +63,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/catalogos': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
       '/validar': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false
       },
-      // Proxy para la raíz '/' solo para peticiones JSON (evita el 404 del pingBackend)
-      '^/$': {
+      // Proxy para todas las peticiones
+      '/.*': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,

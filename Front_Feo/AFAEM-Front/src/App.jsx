@@ -5,7 +5,7 @@ import MainLayout from './layouts/MainLayout';
 import Loader from './components/Loader';
 
 const Ingresar = lazy(() => import('./pages/Auth/Ingresar'));
-const Registrarse = lazy(() =>  import('./pages/Auth/Registrarse'));
+const Registrarse = lazy(() => import('./pages/Auth/Registrarse'));
 const RegistrarseCuenta = lazy(() => import('./components/RegistrarseCuenta'));
 const PresidenteEquipo = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipo'));
 const PresidenteEquipoJugadores = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoJugadores'));
@@ -36,6 +36,7 @@ const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPreside
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
 const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
+const PagoPrevioJugador = lazy(() => import('./pages/Equipos/PagoPrevioJugador'));
 const UsuariosRolesAdmin = lazy(() => import('./pages/Admin/UsuariosRolesAdmin'));
 const ConfiguracionAdmin = lazy(() => import('./pages/Admin/ConfiguracionAdmin'));
 const Suspended = lazy(() => import('./pages/Auth/Suspended'));
@@ -44,41 +45,63 @@ const GeneralGuard = lazy(() => import('./routes/GeneralGuard'));
 const Reglamentos = lazy(() => import('./pages/Legales/Reglamentos'));
 import SplashScreen from './components/Common/SplashScreen';
 
+const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+
+function getJwtPayload(token) {
+  if (!token) return null;
+
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const normalized = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    return JSON.parse(atob(normalized));
+  } catch {
+    return null;
+  }
+}
+
 function App() {
   const [cargandoApp, setCargandoApp] = useState(true);
   const [estaSaliendo, setEstaSaliendo] = useState(false);
   const userEmail = localStorage.getItem('email') || 'usuario@afaem.com';
 
-  // CONTROL DE SESIÓN (5 HORAS CONTINUO)
   useEffect(() => {
     const verificarSesion = () => {
       const token = localStorage.getItem('token');
       const timestamp = localStorage.getItem('token_timestamp');
-      
-      if (token && timestamp) {
-        const cincoHoras = 5 * 60 * 60 * 1000;
-        const ahora = Date.now();
-        const tiempoTranscurrido = ahora - parseInt(timestamp);
-        
-        if (tiempoTranscurrido > cincoHoras) {
-          console.warn('⚠️ Sesión expirada después de 5 horas.');
+
+      if (!token) return;
+
+      const ahora = Date.now();
+      const payload = getJwtPayload(token);
+      const jwtExpMs = payload?.exp ? payload.exp * 1000 : null;
+
+      if (jwtExpMs && ahora >= jwtExpMs) {
+        localStorage.clear();
+        window.location.href = '/ingresar?motivo=sesion_expirada';
+        return;
+      }
+
+      if (timestamp) {
+        const tiempoTranscurrido = ahora - parseInt(timestamp, 10);
+
+        if (tiempoTranscurrido > FIVE_HOURS_MS) {
           localStorage.clear();
           window.location.href = '/ingresar?motivo=sesion_expirada';
         }
       }
     };
 
-    // Ejecutar inmediatamente al cargar
     verificarSesion();
-    
-    // Y verificar cada minuto para que funcione sin necesidad de recargar la página
-    const intervalSesion = setInterval(verificarSesion, 60000); 
-    
-    // Simular carga de la aplicación (Splash Screen) - Reducido para mayor velocidad
+
+    const intervalSesion = setInterval(verificarSesion, 60000);
+
     const timerCarga = setTimeout(() => {
       setEstaSaliendo(true);
-      setTimeout(() => setCargandoApp(false), 400); // Salida más rápida
-    }, 400); // 400ms en lugar de 2000ms
+      setTimeout(() => setCargandoApp(false), 400);
+    }, 400);
 
     return () => {
       clearInterval(intervalSesion);
@@ -113,9 +136,12 @@ function App() {
             <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<PresidenteGuard><AdminEquipo /></PresidenteGuard>} />
             <Route path="/inscribir-equipo-liga/:equipoId" element={<PresidenteGuard><InscribirEquipoALiga /></PresidenteGuard>} />
             <Route path="/presidente-equipo/configurar-equipo" element={<PresidenteGuard><ConfigurarEquipo /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/crear-orden" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/subir-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/en-revision" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path="/presidente-equipo/pago-jugador/reenviar-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
             <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
 
-            {/* ADMIN DASHBOARD ROUTES */}
             <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
             <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
             <Route path="/admin/pagos" element={<AdminGuard><AdminPagos /></AdminGuard>} />
