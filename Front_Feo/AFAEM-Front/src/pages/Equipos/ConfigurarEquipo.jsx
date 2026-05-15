@@ -1305,10 +1305,25 @@ export default function ConfigurarEquipo() {
     try {
       const data = await validarFotografia(file);
       if (data.valido) {
+
+         // CONVERTIR BASE64 A URL MOSTRABLE
+        const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
+
+        // GUARDAR PREVIEW
+        setPreviews(prev => ({
+          ...prev,
+          foto: imagenProcesada
+        }));
+
+        // GUARDAR DOCUMENTO
         setCurrentPlayer(prev => ({
           ...prev,
-          documents: { ...prev.documents, foto: file }
+          documents: {
+            ...prev.documents,
+            foto: file
+          }
         }));
+        
         Swal.fire({
           title: '¡Fotografía Aceptada!',
           icon: 'success',

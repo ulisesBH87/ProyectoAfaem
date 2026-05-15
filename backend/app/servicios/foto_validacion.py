@@ -179,14 +179,10 @@ def validacion_fotografia(imagen_bytes):
     if not valido:
         return 0, mensaje
     
-    # CABELLO
-    valido, mensaje = cabello(category_mask)
-    if not valido:
-        return 0, mensaje
 
     # RECORTAR FOTO
-    #imagen_recortada= recortar_foto(imagen_bgr, face_landmarks)
-    imagen_recortada= recortar_foto(imagen_bgr, category_mask, pose_landmarks)
+    imagen_recortada= recortar(imagen_bgr, face_landmarks)
+    #imagen_recortada= recortar_foto(imagen_bgr, category_mask, pose_landmarks)
     
     
     # ============================
@@ -208,6 +204,10 @@ def validacion_fotografia(imagen_bytes):
     # =======================
     # CRITERIOS PORST-RECORTE 
     # =======================
+     # CABELLO
+    valido, mensaje = cabello(category_mask)
+    if not valido:
+        return 0, mensaje
     
     # FONDO BLANCO
     imagen_validada = fondo_blanco(imagen_recortada, category_mask, confidence_mask)
