@@ -30,20 +30,11 @@ const AdminDashboard = () => {
   // Datos simulados para gráficas hasta que backend tenga endpoint
   const chartDataCompleto = {
     'Ene': [{ name: 'Ene', ingresos: 4200 }],
-    'Feb': [{ name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 }],
-    'Mar': [{ name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 }, { name: 'Mar', ingresos: 5100 }],
-    'Abr': [
-      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
-      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: statsData.totalIngreso || 6400 }
-    ],
-    'May': [
-      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
-      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: 6400 }, { name: 'May', ingresos: 0 }
-    ],
-    'Jun': [
-      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
-      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: 6400 }, { name: 'May', ingresos: 0 }, { name: 'Jun', ingresos: 0 }
-    ],
+    'Feb': [{ name: 'Feb', ingresos: 3800 }],
+    'Mar': [{ name: 'Mar', ingresos: 5100 }],
+    'Abr': [{ name: 'Abr', ingresos: statsData.totalIngreso || 6400 }],
+    'May': [{ name: 'May', ingresos: 0 }],
+    'Jun': [{ name: 'Jun', ingresos: 0 }],
   };
 
   const chartData = chartDataCompleto[mesFiltro] || chartDataCompleto['Abr'];
@@ -186,27 +177,28 @@ const AdminDashboard = () => {
           </div>
           <div style={{ flex: 1, minHeight: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <BarChart data={chartData}>
                 <defs>
                   <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.2}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)', fontSize: 12}} />
                 <YAxis hide />
                 <Tooltip
+                  cursor={{fill: 'rgba(0,0,0,0.05)'}}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '12px' }}
                   itemStyle={{ fontWeight: 700, color: 'var(--primary)' }}
                   formatter={(val) => [`$${val.toLocaleString('es-MX')}`, 'Ingresos']}
                 />
-                <Area type="monotone" dataKey="ingresos" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorIngresos)" />
-              </AreaChart>
+                <Bar dataKey="ingresos" fill="url(#colorIngresos)" radius={[8, 8, 0, 0]} maxBarSize={60} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="data-fira" style={{ marginTop: '20px', fontSize: '28px', fontWeight: '800', color: 'var(--primary)' }}>
-            ${statsData.totalIngreso.toLocaleString()}
+            ${(chartData[0]?.ingresos || 0).toLocaleString()}
           </div>
         </div>
 
