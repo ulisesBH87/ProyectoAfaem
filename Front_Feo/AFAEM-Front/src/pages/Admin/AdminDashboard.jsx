@@ -27,19 +27,18 @@ const AdminDashboard = () => {
 
   const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
 
-  // Datos simulados para gráficas hasta que backend tenga endpoint
-  const chartDataCompleto = {
-    'Ene': [{ name: 'Ene', ingresos: 4200 }],
-    'Feb': [{ name: 'Feb', ingresos: 3800 }],
-    'Mar': [{ name: 'Mar', ingresos: 5100 }],
-    'Abr': [{ name: 'Abr', ingresos: statsData.totalIngreso || 6400 }],
-    'May': [{ name: 'May', ingresos: 0 }],
-    'Jun': [{ name: 'Jun', ingresos: 0 }],
-  };
+  // Datos históricos para todos los meses
+  const chartDataTodos = [
+    { name: 'Ene', ingresos: 4200 },
+    { name: 'Feb', ingresos: 3800 },
+    { name: 'Mar', ingresos: 5100 },
+    { name: 'Abr', ingresos: statsData.totalIngreso || 6400 },
+    { name: 'May', ingresos: 0 },
+    { name: 'Jun', ingresos: 0 },
+  ];
 
-  const chartData = chartDataCompleto[mesFiltro] || chartDataCompleto['Abr'];
-
-
+  // Dato específico del mes seleccionado para el indicador numérico grande
+  const mesSeleccionadoData = chartDataTodos.find(d => d.name === mesFiltro) || chartDataTodos[3];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -177,13 +176,7 @@ const AdminDashboard = () => {
           </div>
           <div style={{ flex: 1, minHeight: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.2}/>
-                  </linearGradient>
-                </defs>
+              <BarChart data={chartDataTodos}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)', fontSize: 12}} />
                 <YAxis hide />
@@ -193,12 +186,21 @@ const AdminDashboard = () => {
                   itemStyle={{ fontWeight: 700, color: 'var(--primary)' }}
                   formatter={(val) => [`$${val.toLocaleString('es-MX')}`, 'Ingresos']}
                 />
-                <Bar dataKey="ingresos" fill="url(#colorIngresos)" radius={[8, 8, 0, 0]} maxBarSize={60} />
+                <Bar dataKey="ingresos" radius={[8, 8, 0, 0]} maxBarSize={50}>
+                  {chartDataTodos.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.name === mesFiltro ? 'var(--primary)' : '#e2e8f0'} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="data-fira" style={{ marginTop: '20px', fontSize: '28px', fontWeight: '800', color: 'var(--primary)' }}>
-            ${(chartData[0]?.ingresos || 0).toLocaleString()}
+          <div style={{ marginTop: '20px', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+            <div className="data-fira" style={{ fontSize: '32px', fontWeight: '800', color: 'var(--primary)' }}>
+              ${(mesSeleccionadoData?.ingresos || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>
+              recaudado en {mesFiltro}
+            </div>
           </div>
         </div>
 
