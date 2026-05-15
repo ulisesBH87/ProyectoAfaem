@@ -15,7 +15,14 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
-
+  
+  const handleLogoClick = () => {
+    if (isAdmin) {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/presidente-equipo/equipos');
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -73,20 +80,26 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
         <img
           src={AfaemLogo}
           alt="AFAEM"
+          onClick={handleLogoClick}
           style={{
-            width: '36px',
-            height: '36px',
+            width: '42px',
+            height: '42px',
             objectFit: 'contain',
             flexShrink: 0,
+            cursor: 'pointer',
             filter: isAdmin ? 'drop-shadow(0 2px 8px rgba(255, 255, 255, 0.1))' : 'drop-shadow(0 2px 4px rgba(11, 78, 166, 0.15))',
             transition: 'all 0.3s'
           }}
         />
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
-            <h1 style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px' }}>
+            <h1
+              onClick={handleLogoClick} 
+              style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px', cursor: 'pointer'}}>
               AFAEM
             </h1>
-            <p style={{ fontSize: '7.5px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase' }}>
+            <p
+              onClick={handleLogoClick}
+              style={{ fontSize: '7.5px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase', cursor: 'pointer' }}>
               Management System
             </p>
           </div>
