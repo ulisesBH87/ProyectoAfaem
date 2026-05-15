@@ -33,7 +33,7 @@ async function createTemplate(name) {
   const pdfBytes = await pdfDoc.save();
   const filePath = path.join(__dirname, 'Front_Feo', 'AFAEM-Front', 'public', `${name}.pdf`);
   fs.writeFileSync(filePath, pdfBytes);
-  console.log(`Created ${filePath}`);
+  //console.log(`Created ${filePath}`);
 }
 
 async function main() {

@@ -62,7 +62,7 @@ class Verification(BaseModel):
 @app.post("/send-verification/")
 async def send_verification(payload: Verification):
     # AQUÍ SOLO SIMULAMOS EL ENVÍO: EN PRODUCCIÓN REEMPLAZA POR SMTP O SERVICIO DE CORREO
-    print(f"[VERIFICACIÓN] Enviar código {payload.code} a {payload.email}")
+    #print(f"[VERIFICACIÓN] Enviar código {payload.code} a {payload.email}")
     # OPCIONAL: GUARDAR EN ARCHIVO DE LOGS
     try:
         with open("sent_verifications.log", "a", encoding="utf-8") as f:

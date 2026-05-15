@@ -52,7 +52,7 @@ def calcular_datos_curp(curp):
         fecha_nac = datetime(anio, mm, dd)
         hoy = datetime.now()
         edad = hoy.year - anio - ((hoy.month, hoy.day) < (mm, dd))
-        return edad, fecha_nac.strftime("%d/%m/%Y")
+        return edad, fecha_nac.strftime("%Y-%m-%d")
     except:
         return "No calculada", "No detectada"
 
@@ -84,6 +84,49 @@ def determinar_tipo_documento(texto_up):
     return "DOCUMENTO NO RECONOCIDO"
 
 # --- EL CEREBRO DE EXTRACCIÓN (NUEVO) ---
+def obtener_estado_curp(curp):
+    estados = {
+        "AS": "AGUASCALIENTES",
+        "BC": "BAJA CALIFORNIA",
+        "BS": "BAJA CALIFORNIA SUR",
+        "CC": "CAMPECHE",
+        "CL": "COAHUILA",
+        "CM": "COLIMA",
+        "CS": "CHIAPAS",
+        "CH": "CHIHUAHUA",
+        "DF": "CIUDAD DE MEXICO",
+        "DG": "DURANGO",
+        "GT": "GUANAJUATO",
+        "GR": "GUERRERO",
+        "HG": "HIDALGO",
+        "JC": "JALISCO",
+        "MC": "MEXICO",
+        "MN": "MICHOACAN",
+        "MS": "MORELOS",
+        "NT": "NAYARIT",
+        "NL": "NUEVO LEON",
+        "OC": "OAXACA",
+        "PL": "PUEBLA",
+        "QT": "QUERETARO",
+        "QR": "QUINTANA ROO",
+        "SP": "SAN LUIS POTOSI",
+        "SL": "SINALOA",
+        "SR": "SONORA",
+        "TC": "TABASCO",
+        "TS": "TAMAULIPAS",
+        "TL": "TLAXCALA",
+        "VZ": "VERACRUZ",
+        "YN": "YUCATAN",
+        "ZS": "ZACATECAS",
+        "NE": "NACIDO EN EL EXTRANJERO"
+    }
+
+    if curp and len(curp) >= 13:
+        clave_estado = curp[11:13]
+        return estados.get(clave_estado, "No detectado")
+
+    return "No detectado"
+
 
 def extraer_nombre_mrz(texto_crudo):
     """Busca el nombre en las líneas de código <<< (INE reverso y Pasaporte)"""
@@ -158,20 +201,67 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
                         return datos
 
     elif tipo_doc == "ACTA DE NACIMIENTO":
-        # En el acta, buscamos lo que hay entre "DATOS DE LA PERSONA" y "FECHA DE NACIMIENTO"
-        match = re.search(r'(NOMBRE|NOMBRE S|NOMBRES)(.*?)FECHA', texto_norm)
-        if match:
-            bloque = match.group(2).strip()
-            # Quitamos etiquetas sueltas que suelen colarse en el acta
-            bloque = re.sub(r'(PRIMER APELLIDO|SEGUNDO APELLIDO|SEXO|CURP)', ' ', bloque)
-            bloque = re.sub(r'\s+', ' ', bloque).strip()
-            
-            partes = bloque.split()
+
+        # Buscar estructura oficial moderna
+        patron = re.search(
+            r'NOMBRE\s+([A-Z\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z\s]+)',
+            texto_norm
+        )
+
+        if patron:
+            nombres = patron.group(1).strip()
+            ap1 = patron.group(2).strip()
+            ap2 = patron.group(3).strip()
+
+            datos["nombres"] = nombres
+            datos["apellido_paterno"] = ap1
+            datos["apellido_materno"] = ap2
+            datos["nombre_completo"] = f"{nombres} {ap1} {ap2}"
+
+            return datos
+
+        # Fallback simple
+        patron_simple = re.search(
+            r'DATOS\s+DEL\s+REGISTRADO.*?NOMBRE\s+([A-Z\s]+)',
+            texto_norm
+        )
+
+        if patron_simple:
+            nombre_linea = patron_simple.group(1).strip()
+
+            # Cortar basura frecuente
+            nombre_linea = re.split(
+                r'FECHA|SEXO|CURP|NACIONALIDAD|ENTIDAD|MUNICIPIO',
+                nombre_linea
+            )[0].strip()
+
+            # Limpiar palabras basura del OCR
+            PALABRAS_BASURA = [
+                "OFICIALIA",
+                "LIBRO",
+                "ACTA",
+                "LOCALIDAD",
+                "MUNICIPIO",
+                "ENTIDAD",
+                "CRIP",
+                "REGISTRADO",
+                "DATOS"
+            ]
+
+            for basura in PALABRAS_BASURA:
+                nombre_linea = nombre_linea.replace(basura, "")
+
+            # Limpiar espacios dobles
+            nombre_linea = re.sub(r'\s+', ' ', nombre_linea).strip()
+
+            partes = nombre_linea.split()
+
             if len(partes) >= 3:
                 datos["nombres"] = " ".join(partes[:-2])
                 datos["apellido_paterno"] = partes[-2]
                 datos["apellido_materno"] = partes[-1]
-                datos["nombre_completo"] = bloque
+                datos["nombre_completo"] = nombre_linea
+
                 return datos
 
     # PRIORIDAD 3: Rescate Genérico si todo falla
@@ -230,6 +320,10 @@ def procesar_texto(texto):
 
     # Ubicaciones y Estado
     lugar_nac, lugar_res = extraer_ubicaciones(texto, tipo_doc)
+    lugar_nac, lugar_res = extraer_ubicaciones(texto, tipo_doc)
+
+    if lugar_nac == "No detectado" and curp != "No detectado":
+        lugar_nac = obtener_estado_curp(curp)
     nacionalidad = "MEXICANA" if "MEXIC" in texto_norm else "EXTRANJERA"
     estado = "MENOR DE EDAD" if isinstance(edad, int) and edad < 18 else "ADULTO"
     

@@ -59,7 +59,7 @@ export async function login(email, password) {
     return res.data;
   } catch (error) {
     const errorDetail = error.response?.data?.detail;
-    console.error('Error en login:', errorDetail);
+    //console.error('Error en login:', errorDetail);
     throw error;
   }
 }

@@ -250,7 +250,7 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
     ).filter(
         DocumentosEntregados.PersonaId == persona_id
     ).all()
-    print("DOCS RAW:", docs)
+    #print("DOCS RAW:", docs)
     return [
         {
             "DocumentosSolicitudId": d.DocumentosSolicitudId,

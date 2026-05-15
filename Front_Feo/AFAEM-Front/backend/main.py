@@ -197,7 +197,7 @@ async def signup(req: SignupRequest = Body(...)):
         "NumeroTelefono": req.NumeroTelefono       
     }
     _users.append(user)
-    print(f"[DEBUG] Usuario guardado: {user}")
+    #print(f"[DEBUG] Usuario guardado: {user}")
     return {"ok": True, "user": {"Nombre": user["Nombre"], "PrimerApellido": user["PrimerApellido"], "SegundoApellido": user["SegundoApellido"], "Correo": user["Correo"], "Contrasena": user["Contrasena"], "NumeroTelefono": user["NumeroTelefono"]}}
 
 # ALIAS PARA CONSISTENCIA CON RUTAS /auth/*
@@ -250,7 +250,7 @@ async def send_verification(req: SendVerificationRequest):
     code = str(req.code)
     _verification_codes[email] = code
     # EN DEMO IMPRIMIMOS EN CONSOLA PARA VER EL CÓDIGO
-    print(f"[demo] Código de verificación para {email}: {code}")
+    #(f"[demo] Código de verificación para {email}: {code}")
     return {"ok": True, "Correo": email}
 
 @app.post("/auth/recuperar-contrasena")
@@ -261,7 +261,7 @@ async def forgot_password(req: ForgotPasswordRequest):
     if not user:
         # Por razones de seguridad, no decimos si el email existe o no
         # Pero para demostración, lo logueamos
-        print(f"[forgot-pwd] Email no encontrado: {email}")
+        #print(f"[forgot-pwd] Email no encontrado: {email}")
         return {"ok": True, "message": "Si el correo existe, recibirás un enlace de recuperación"}
     
     # GENERAR TOKEN ÚNICO
@@ -273,7 +273,7 @@ async def forgot_password(req: ForgotPasswordRequest):
     }
     
     # EN DEMO IMPRIMIMOS EL TOKEN PARA VER
-    print(f"[demo] Token de recuperación para {email}: {reset_token}")
+    #print(f"[demo] Token de recuperación para {email}: {reset_token}")
     
     # DEVOLVER EL TOKEN PARA TESTING LOCAL
     return {
@@ -481,7 +481,7 @@ async def create_team(
     }
     
     _teams.append(new_team)
-    print(f"[✓] Equipo creado: {teamName} por {email}")
+    #print(f"[✓] Equipo creado: {teamName} por {email}")
     return {"ok": True, "team": new_team}
 
 @app.put("/user/certify")
@@ -524,7 +524,7 @@ async def get_solicitudes_usuarios(request: Request):
     
     # AQUÍ PUEDES AGREGAR LÓGICA PARA VALIDAR EL TOKEN SI TIENES JWT
     # POR AHORA, SOLO VERIFICAMOS QUE EXISTA
-    print(f"📋 Solicitudes solicitadas con token: {token[:20]}...")
+    #print(f"📋 Solicitudes solicitadas con token: {token[:20]}...")
     
     # RETORNAR TODAS LAS SOLICITUDES
     return {
