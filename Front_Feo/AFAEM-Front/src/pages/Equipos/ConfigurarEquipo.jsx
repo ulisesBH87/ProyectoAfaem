@@ -1743,26 +1743,53 @@ export default function ConfigurarEquipo() {
               )}
               {activeStep === 1 && (
                 <div style={{ animation: 'slideUp 0.4s ease' }}>
-                  {/* HEADER DEL FORMULARIO */}
-                  <div style={{ marginBottom: '30px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                      <div style={{ fontSize: '32px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '14px', color: 'white', boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)' }}>
+                  {/* HEADER DEL FORMULARIO PREMIUM */}
+                  <div className="premium-card fade-in" style={{ 
+                    marginBottom: '40px', 
+                    padding: '30px', 
+                    background: 'white', 
+                    borderRadius: '24px', 
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                    border: '1px solid #f1f5f9'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                      <div style={{ 
+                        fontSize: '32px', 
+                        background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', 
+                        width: '70px', 
+                        height: '70px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        borderRadius: '20px', 
+                        color: 'white', 
+                        boxShadow: '0 8px 16px -4px rgba(11, 78, 166, 0.3)' 
+                      }}>
                         🛡️
                       </div>
                       <div>
-                        <h2 style={{ margin: 0, color: '#1e293b', fontSize: '24px', fontWeight: '800' }}>Configuración de Equipo</h2>
-                        <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '14px' }}>Define la modalidad y categoría de competencia.</p>
+                        <h2 style={{ margin: 0, color: '#1e293b', fontSize: '28px', fontWeight: '900', letterSpacing: '-0.5px' }}>Configuración de Equipo</h2>
+                        <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '15px', fontWeight: '500' }}>Define la modalidad y categoría de competencia oficial.</p>
                       </div>
                     </div>
                     
-                    <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                       <div style={{ fontSize: '24px' }}>ℹ️</div>
+                    <div style={{ 
+                      marginTop: '25px', 
+                      padding: '16px 20px', 
+                      backgroundColor: '#f0f9ff', 
+                      borderRadius: '16px', 
+                      border: '1px solid #bae6fd', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '15px' 
+                    }}>
+                       <div style={{ fontSize: '28px' }}>✨</div>
                        <div>
-                         <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e3a8a' }}>
-                           {isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}
+                         <div style={{ fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>
+                           {isAdmin ? 'Modo Administrador: Registro Directo' : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
                          </div>
-                         <div style={{ fontSize: '12px', color: '#60a5fa' }}>
-                           {isAdmin ? 'Crea equipos y registra jugadores directamente en el sistema.' : 'Las opciones se habilitan según tu pago previo.'}
+                         <div style={{ fontSize: '12px', color: '#0ea5e9', fontWeight: '600' }}>
+                           {isAdmin ? 'Crea y configura equipos sin restricciones de pago previo.' : 'Los seguros y cupos se asignan automáticamente según tu pago.'}
                          </div>
                        </div>
                     </div>
