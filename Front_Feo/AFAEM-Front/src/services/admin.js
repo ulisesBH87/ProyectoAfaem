@@ -47,7 +47,6 @@ const fetchWithCache = async (url, options = {}) => {
   const cacheKey = typeof url === 'string' ? url : url.url;
   const cachedData = serviceCache.get(cacheKey);
   if (cachedData && !options.forceRefresh) {
-    console.log(`[Cache Hit] ${cacheKey}`);
     return cachedData;
   }
 
@@ -322,7 +321,7 @@ export const registrarPresidenteAdmin = async (data) => {
     serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
     return response.data;
   } catch (error) {
-    console.error('Error registrando presidente (admin):', error);
+    //console.error('Error registrando presidente (admin):', error);
     throw error;
   }
 };

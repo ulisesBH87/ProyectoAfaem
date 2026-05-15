@@ -282,12 +282,11 @@ function Registrarse() {
 		const value = formDataRef.current[fieldName] || '';
 		if (!String(value).trim()) return;
 		if (!apiReachable) {
-			alert('No se puede verificar duplicados porque el backend no responde. Revisa la conexión o la URL de API.');
+			alert('No se puede verificar duplicados porque el servidor no responde. Inténtalo de nuevo más tarde.');
 			return;
 		}
 		const result = await validateUniqueField(fieldName, value);
 		if (result === 'network') {
-			console.warn('No fue posible verificar duplicados (problema de red).');
 			alert('No fue posible verificar duplicados (problema de red).');
 			return;
 		}
@@ -373,10 +372,8 @@ function Registrarse() {
 					estado: 'pendiente',
 				};
 				setJsonResult(final);
-				console.log('JSON Generado (con hash):', final);
 				alert('¡JSON GENERADO CORRECTAMENTE!');
 			} catch (err) {
-				console.error('Error hasheando la contraseña:', err);
 				alert('Error procesando la contraseña. Intenta de nuevo.');
 			} finally {
 				setSending(false);

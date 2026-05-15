@@ -37,7 +37,7 @@ async function createTemplate(name) {
   const pdfBytes = await pdfDoc.save();
   const filePath = path.join(__dirname, 'public', `${name}.pdf`);
   fs.writeFileSync(filePath, pdfBytes);
-  console.log(`Created ${filePath}`);
+  //console.log(`Created ${filePath}`);
 }
 
 async function main() {

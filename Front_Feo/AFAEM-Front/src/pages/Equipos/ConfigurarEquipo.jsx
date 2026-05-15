@@ -10,6 +10,7 @@ import { validarFotografia } from "../../services/foto";
 import teamsService from "../../services/teams";
 import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 import { useRBAC } from '../../hooks/useRBAC';
+import { DEFAULT_BANK_INFO, generarPDFCuota } from '../../utils/paymentPdf';
 
 const ESTATUS_PAGO = {
   NO_ENVIADO: 1,
@@ -30,6 +31,8 @@ export default function ConfigurarEquipo() {
   const [searchParams] = useSearchParams();
   const { hasRole } = useRBAC();
   const isAdmin = hasRole && (hasRole('ADMINISTRADOR') || hasRole('ADMIN'));
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const bankInfo = DEFAULT_BANK_INFO;
 
   const preRegistro = JSON.parse(localStorage.getItem('afaem_pre_registro') || '{}');
   const [pagoEquipo, setPagoEquipo] = useState({
@@ -45,7 +48,7 @@ export default function ConfigurarEquipo() {
   });
   const [numJugadoresPago, setNumJugadoresPago] = useState(preRegistro.numPersonas || '');
   const [asignacionSeguros, setAsignacionSeguros] = useState(isAdmin
-    ? { '1': 999, '2': 999, '3': 999 }
+    ? {}
     : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0)
         ? preRegistro.asignacionSeguros
         : {}));
@@ -199,7 +202,276 @@ export default function ConfigurarEquipo() {
   });
 
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
-  const numPersonasPagadas = isAdmin ? 999 : Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
+  const numPersonasPagadas = Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
+  const shouldShowPagoPrevioEquipo = !tieneSlotDisponible && !pagoEquipo.aprobado && (!isAdmin || Boolean(selectedPresidentId && pagoEquipo.estadoEquipo));
+
+  const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
+    if (!ordenId) return;
+
+    try {
+      const resOrden = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
+
+      if (!resOrden.ok) return;
+
+      const orden = await resOrden.json();
+      const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
+      const estatusOrden = Number(orden.EstatusPagoId || orden.estatus || 0);
+      if (estatusOrden) {
+        setPagoEquipo(prev => ({ ...prev, estado: estatusOrden }));
+      }
+
+      let cantidadJugadores = null;
+      const seguros = {};
+
+      detalles.forEach(detalle => {
+        if (Number(detalle.TipoAfiliacionId) === 4) {
+          cantidadJugadores = Number(detalle.Cantidad || 0);
+        }
+        if (detalle.SeguroId) {
+          const id = String(detalle.SeguroId);
+          seguros[id] = Number(detalle.Cantidad || 0);
+        }
+      });
+
+      if (cantidadJugadores !== null && !Number.isNaN(cantidadJugadores)) {
+        setNumJugadoresPago(cantidadJugadores);
+        setPagoEquipo(prev => ({ ...prev, cantidadJugadores }));
+      }
+
+      if (Object.keys(seguros).length > 0) {
+        setAsignacionSeguros(prev => ({ ...prev, ...seguros }));
+      }
+
+      const totalOrden = Number(orden.TotalPagar || orden.total || 0);
+      if (!Number.isNaN(totalOrden) && totalOrden > 0) {
+        setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar el detalle de la orden de pago:');
+    }
+  };
+
+  const aprobarOrdenPagoEquipoAdmin = async (ordenId) => {
+    if (!ordenId) throw new Error('No se encontro la orden de pago a aprobar');
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE}/ordenes-pago/estatus-pago?orden_pago_id=${ordenId}&estatus=${ESTATUS_PAGO.APROBADO}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'No se pudo aprobar la orden de pago');
+    }
+
+    return res.json();
+  };
+
+  const cargarEstadoPagoEquipo = async ({ presidenteId = null } = {}) => {
+    const esConsultaAdmin = Boolean(isAdmin && presidenteId);
+    if (isAdmin && !esConsultaAdmin) return false;
+
+    try {
+      setPagoEquipo(prev => ({ ...prev, loading: true }));
+      setPagoError(null);
+
+      const token = localStorage.getItem('token');
+      const query = esConsultaAdmin ? `?presidente_id=${presidenteId}` : '';
+      const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
+
+      const data = await res.json();
+
+      const estadoEquipo = data.estado;
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || null;
+      const total = Number(data.total || 0);
+
+      if (estadoEquipo === ESTADO_EQUIPO.SIN_ORDEN || !estadoEquipo) {
+        try {
+          const nextPreRegistro = { ...(preRegistro || {}) };
+          delete nextPreRegistro.equipo_temporal_id;
+          localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+        } catch {}
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+          equipoTemporalId: null,
+          estado: null,
+          ordenId: null,
+          total: 0,
+          cantidadJugadores: 0,
+          tieneComprobante: false
+        });
+
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago pendiente',
+            text: 'El presidente seleccionado no tiene una orden aprobada disponible para crear el equipo.',
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
+        const equipoTemporalId = data.equipo_temporal_id || data.equipoTemporalId || null;
+        if (equipoTemporalId) {
+          try {
+            const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
+            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+          } catch {}
+        }
+
+        const seguros = {};
+        (data.seguros || []).forEach(seguro => {
+          const id = String(seguro.SeguroId || seguro.seguro_id);
+          seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
+        });
+
+        if (Object.keys(seguros).length > 0) {
+          setAsignacionSeguros(seguros);
+        }
+
+        if (data.cantidad_jugadores) {
+          setNumJugadoresPago(data.cantidad_jugadores);
+        }
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: true,
+          estadoEquipo: ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO,
+          equipoTemporalId,
+          estado: ESTATUS_PAGO.APROBADO,
+          ordenId,
+          total: Number(data.total || 0),
+          cantidadJugadores: Number(data.cantidad_jugadores || 0),
+          tieneComprobante: true
+        });
+
+        if (esConsultaAdmin) {
+          setActiveStep(1);
+        }
+        return true;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.NO_ENVIADO,
+          ordenId,
+          total,
+          tieneComprobante: false
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        if (esConsultaAdmin) {
+          const { isConfirmed } = await Swal.fire({
+            title: 'Orden sin comprobante',
+            text: 'El presidente tiene una orden pero no ha subido el comprobante de pago, ¿deseas aprobarla?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, aprobar',
+            cancelButtonText: 'No, esperar a que realice el pago',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+          });
+
+          if (!isConfirmed) {
+            setPagoEquipo({
+              loading: false,
+              aprobado: false,
+              estadoEquipo: null,
+              equipoTemporalId: null,
+              estado: null,
+              ordenId: null,
+              total: 0,
+              cantidadJugadores: 0,
+              tieneComprobante: false
+            });
+            return false;
+          }
+
+          try {
+            setPagoEquipo(prev => ({ ...prev, loading: true }));
+            await aprobarOrdenPagoEquipoAdmin(ordenId);
+            await Swal.fire({
+              title: 'Orden aprobada',
+              text: `La orden${ordenId ? ` #${ordenId}` : ''} se aprobo correctamente.`,
+              icon: 'success',
+              confirmButtonColor: '#0b4ea6'
+            });
+            return await cargarEstadoPagoEquipo({ presidenteId });
+          } catch (error) {
+            setPagoEquipo(prev => ({ ...prev, loading: false }));
+            setPagoError(error.message);
+            await Swal.fire('Error', error.message, 'error');
+            return false;
+          }
+        }
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.COMPROBANTE_EN_REVISION) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.EN_ESPERA,
+          ordenId,
+          total,
+          tieneComprobante: true
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago en revisión',
+            text: `El comprobante${ordenId ? ` de la orden #${ordenId}` : ''} del presidente seleccionado sigue en revisión.`,
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      setPagoEquipo({
+        loading: false,
+        aprobado: false,
+        estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+        equipoTemporalId: null,
+        estado: null,
+        ordenId: null,
+        total: 0,
+        cantidadJugadores: 0,
+        tieneComprobante: false
+      });
+      return false;
+    } catch (error) {
+      console.error('Error al cargar pago de equipo:', error);
+      setPagoEquipo(prev => ({ ...prev, loading: false }));
+      setPagoError(error.message);
+
+      if (esConsultaAdmin) {
+        await Swal.fire('Error', error.message, 'error');
+      }
+      return false;
+    }
+  };
 
   // Cargar catálogos al montar
   useEffect(() => {
@@ -209,12 +481,10 @@ export default function ConfigurarEquipo() {
         const data = await teamsService.getCatalogs();
         setCatalogs(data);
 
-        if (!isAdmin) {
-          const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
-          if (resAfiliaciones.ok) {
-            const afiliaciones = await resAfiliaciones.json();
-            setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
-          }
+        const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
+        if (resAfiliaciones.ok) {
+          const afiliaciones = await resAfiliaciones.json();
+          setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
         }
 
         if (isAdmin) {
@@ -234,7 +504,6 @@ export default function ConfigurarEquipo() {
   //VERIFICA EL ESTADO DE PAGO PARA DECIDIR QUÉ VISTA MOSTRAR
   useEffect(() => {
     const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
-      alert("Estamos en cargar detalle de orden")
       if (!ordenId) return;
 
       try {
@@ -278,7 +547,7 @@ export default function ConfigurarEquipo() {
           setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
         }
       } catch (error) {
-        console.warn('No se pudo cargar el detalle de la orden de pago:', error);
+        console.warn('No se pudo cargar el detalle de la orden de pago:');
       }
     };
 
@@ -336,7 +605,7 @@ export default function ConfigurarEquipo() {
             seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
           });
 
-          console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
+          //console.log('ConfigurarEquipo - equipoTemporalId:', equipoTemporalId, 'data.seguros:', data.seguros, 'parsed seguros:', seguros);
 
           if (Object.keys(seguros).length > 0) {
             setAsignacionSeguros(seguros);
@@ -599,7 +868,8 @@ export default function ConfigurarEquipo() {
         body: JSON.stringify({
           CantidadJugadores: Number(numJugadoresPago),
           Seguros: segurosPayload,
-          TipoSolicitud: TIPO_SOLICITUD.EQUIPO
+          TipoSolicitud: TIPO_SOLICITUD.EQUIPO,
+          PresidenteId: isAdmin ? Number(selectedPresidentId) : null
         })
       });
 
@@ -634,22 +904,38 @@ export default function ConfigurarEquipo() {
       }
 
       const data = await res.json();
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || data.id;
+      const totalOrden = Number(data.total || totalPagoEstimado || 0);
       setPagoEquipo({
         loading: false,
         aprobado: false,
         estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
         estado: ESTATUS_PAGO.NO_ENVIADO,
-        ordenId: data.orden_pago_id || data.OrdenPagoId || data.id,
-        total: Number(data.total || totalPagoEstimado || 0),
+        ordenId,
+        total: totalOrden,
         cantidadJugadores: Number(numJugadoresPago),
         tieneComprobante: false
       });
 
+      generarPDFCuota({
+        ordenId,
+        user,
+        bankInfo,
+        catalogoAfiliaciones: catalogoAfiliacionesPago,
+        catalogoSeguros: catalogs.seguros,
+        asignacionSeguros,
+        total: totalOrden,
+        cantidadJugadores: Number(numJugadoresPago || 0),
+        incluirPresidente: true
+      });
+
       Swal.fire({
-        title: 'Orden generada',
-        text: 'Ahora realiza el pago y sube tu comprobante para revision.',
-        icon: 'success',
-        confirmButtonColor: '#0b4ea6'
+      title: 'Orden generada',
+      text: isAdmin
+        ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediátamente o esperar a que el presidente haga el pago y suba el comprobante'
+        : 'Se descargó tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revisión.',
+      icon: 'success',
+      confirmButtonColor: '#0b4ea6'
       });
     } catch (error) {
       setPagoError(error.message);
@@ -724,7 +1010,6 @@ export default function ConfigurarEquipo() {
         setPagoJugador(prev => ({ ...prev, loading: false }));
       }
     } catch (error) {
-      console.error('Error verificando slots:', error);
       setPagoErrorJugador('Error al verificar disponibilidad de slots');
       setPagoJugador(prev => ({ ...prev, loading: false }));
     }
@@ -955,24 +1240,18 @@ export default function ConfigurarEquipo() {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
         const value = row.querySelector('.valor')?.textContent?.trim() || '';
         if (label.includes('nombre')) extractedData.nombre = value;
+        if (label.includes('nombres')) extractedData.nombres = value;
+        if (label.includes('apellido paterno')) extractedData.apellido_paterno = value;
+        if (label.includes('apellido materno')) extractedData.apellido_materno = value;
         if (label.includes('curp')) extractedData.curp = value;
         if (label.includes('fecha de nacimiento')) extractedData.fecha_nac = value;
+        if (label.includes('lugar de nacimiento')) extractedData.lugar_nacimiento = value;
       });
 
       if (extractedData.nombre) {
-        const parts = extractedData.nombre.split(' ');
-        let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
-        
-        if (parts.length >= 3) {
-          lastNamePaterno = parts[0];
-          lastNameMaterno = parts[1];
-          firstName = parts.slice(2).join(' ');
-        } else if (parts.length === 2) {
-          lastNamePaterno = parts[0];
-          firstName = parts[1];
-        } else {
-          firstName = extractedData.nombre;
-        }
+        const firstName = extractedData.nombres || '';
+        const lastNamePaterno = extractedData.apellido_paterno || '';
+        const lastNameMaterno = extractedData.apellido_materno || '';
 
         // Inferir sexo desde CURP si está disponible
         let inferredSexo = 1;
@@ -980,7 +1259,8 @@ export default function ConfigurarEquipo() {
           const char = extractedData.curp.charAt(10).toUpperCase();
           if (char === 'M') inferredSexo = 2;
         }
-
+      
+      
         setCurrentPlayer(prev => ({
           ...prev,
           firstName,
@@ -989,13 +1269,14 @@ export default function ConfigurarEquipo() {
           curp: extractedData.curp || prev.curp,
           birthDate: extractedData.fecha_nac || prev.birthDate,
           sexo_id: inferredSexo,
-          seguro_id: 1, 
+          seguro_id: 1,
+          birthPlace: extractedData.lugar_nacimiento || prev.birthPlace,
           documents: { ...prev.documents, [docKey]: file }
         }));
 
         Swal.fire({
           title: '¡Lectura Exitosa!',
-          text: `Se detectó a: ${extractedData.nombre}`,
+          text: `Se detectó a: ${extractedData.nombre} ${extractedData.apellido_paterno} ${extractedData.apellido_materno}`,
           icon: 'success',
           timer: 2000,
           showConfirmButton: false
@@ -1024,10 +1305,25 @@ export default function ConfigurarEquipo() {
     try {
       const data = await validarFotografia(file);
       if (data.valido) {
+
+         // CONVERTIR BASE64 A URL MOSTRABLE
+        const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
+
+        // GUARDAR PREVIEW
+        setPreviews(prev => ({
+          ...prev,
+          foto: imagenProcesada
+        }));
+
+        // GUARDAR DOCUMENTO
         setCurrentPlayer(prev => ({
           ...prev,
-          documents: { ...prev.documents, foto: file }
+          documents: {
+            ...prev.documents,
+            foto: file
+          }
         }));
+        
         Swal.fire({
           title: '¡Fotografía Aceptada!',
           icon: 'success',
@@ -1082,7 +1378,7 @@ export default function ConfigurarEquipo() {
         }
       }
 
-      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, lugarNacimiento, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
+      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, birthPlace, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
 
       // Nombre y Apellidos
       form.getTextField('Nombres')?.setText(firstName || '');
@@ -1092,7 +1388,7 @@ export default function ConfigurarEquipo() {
       // Identificadores y Nacimiento
       if (curp) form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       if (birthDate) form.getTextField('Fecha de Nacimiento')?.setText(birthDate);
-      if (lugarNacimiento) form.getTextField('Lugar de Nacimiento')?.setText(lugarNacimiento);
+      if (birthPlace) form.getTextField('Lugar de Nacimiento')?.setText(birthPlace);
       
       // Tipo de Afiliación (Mapeado empíricamente a fill_24) y Asociación
       // El campo 'Tipo' corresponde a 'Tipo de Sangre', no lo llenaremos con AFAEM.
@@ -1313,10 +1609,15 @@ export default function ConfigurarEquipo() {
           </div>
           <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
           <p style={{ color: '#64748b', margin: 0 }}>
-            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+            {isAdmin
+              ? 'Genera la orden de pago con el número de jugadores y tipos de seguros'
+              : 'Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.'
+            }
           </p>
           <p style={{ color: '#ff0000', margin: 0 }}>
-            *Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*
+            {isAdmin
+              ? '*Registro de equipo como administrador*'
+              : '*Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*'}
           </p>
         </div>
 
@@ -1634,7 +1935,7 @@ export default function ConfigurarEquipo() {
       <div className="dashboard-content">
         {!tieneSlotDisponible && modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
           renderPagoPrevioJugador()
-        ) : !isAdmin && !pagoEquipo.aprobado && !tieneSlotDisponible ? (
+        ) : shouldShowPagoPrevioEquipo ? (
           renderPagoPrevioEquipo()
         ) : (
           <>
@@ -1711,7 +2012,7 @@ export default function ConfigurarEquipo() {
                       </button>
                       <button 
                         disabled={!selectedPresidentId}
-                        onClick={() => setActiveStep(1)}
+                        onClick={() => cargarEstadoPagoEquipo({ presidenteId: selectedPresidentId })}
                         style={{ 
                           padding: '10px 30px', borderRadius: '8px', border: 'none', 
                           background: !selectedPresidentId ? '#cbd5e1' : '#0b4ea6', 
@@ -1726,26 +2027,53 @@ export default function ConfigurarEquipo() {
               )}
               {activeStep === 1 && (
                 <div style={{ animation: 'slideUp 0.4s ease' }}>
-                  {/* HEADER DEL FORMULARIO */}
-                  <div style={{ marginBottom: '30px', paddingBottom: '20px', borderBottom: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                      <div style={{ fontSize: '32px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '14px', color: 'white', boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)' }}>
+                  {/* HEADER DEL FORMULARIO PREMIUM */}
+                  <div className="premium-card fade-in" style={{ 
+                    marginBottom: '40px', 
+                    padding: '30px', 
+                    background: 'white', 
+                    borderRadius: '24px', 
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                    border: '1px solid #f1f5f9'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                      <div style={{ 
+                        fontSize: '32px', 
+                        background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', 
+                        width: '70px', 
+                        height: '70px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        borderRadius: '20px', 
+                        color: 'white', 
+                        boxShadow: '0 8px 16px -4px rgba(11, 78, 166, 0.3)' 
+                      }}>
                         🛡️
                       </div>
                       <div>
-                        <h2 style={{ margin: 0, color: '#1e293b', fontSize: '24px', fontWeight: '800' }}>Configuración de Equipo</h2>
-                        <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '14px' }}>Define la modalidad y categoría de competencia.</p>
+                        <h2 style={{ margin: 0, color: '#1e293b', fontSize: '28px', fontWeight: '900', letterSpacing: '-0.5px' }}>Configuración de Equipo</h2>
+                        <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '15px', fontWeight: '500' }}>Define la modalidad y categoría de competencia oficial.</p>
                       </div>
                     </div>
                     
-                    <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                       <div style={{ fontSize: '24px' }}>ℹ️</div>
+                    <div style={{ 
+                      marginTop: '25px', 
+                      padding: '16px 20px', 
+                      backgroundColor: '#f0f9ff', 
+                      borderRadius: '16px', 
+                      border: '1px solid #bae6fd', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '15px' 
+                    }}>
+                       <div style={{ fontSize: '28px' }}>✨</div>
                        <div>
-                         <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e3a8a' }}>
-                           {isAdmin ? 'Modo Administrador: Registro sin límites' : `Seguros pre-pagados: ${numPersonasPagadas}`}
+                         <div style={{ fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>
+                           {isAdmin ? 'Modo Administrador: Registro Directo' : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
                          </div>
-                         <div style={{ fontSize: '12px', color: '#60a5fa' }}>
-                           {isAdmin ? 'Crea equipos y registra jugadores directamente en el sistema.' : 'Las opciones se habilitan según tu pago previo.'}
+                         <div style={{ fontSize: '12px', color: '#0ea5e9', fontWeight: '600' }}>
+                           {isAdmin ? 'Crea y configura equipos sin restricciones de pago previo.' : 'Los seguros y cupos se asignan automáticamente según tu pago.'}
                          </div>
                        </div>
                     </div>
@@ -2217,7 +2545,7 @@ export default function ConfigurarEquipo() {
                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento</label>
                          <input 
                            type="text" 
-                           value={currentPlayer.lugarNacimiento}
+                           value={currentPlayer.birthPlace}
                            onChange={e => setCurrentPlayer({...currentPlayer, lugarNacimiento: e.target.value})}
                            placeholder="Ej. Monterrey, NL" 
                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
@@ -2630,7 +2958,7 @@ export default function ConfigurarEquipo() {
                           await teamsService.createTeamCompleto({
                             teamName: modalData.teamName,
                             presidente_id: isAdmin ? (selectedPresidentId || null) : null,
-                            equipo_temporal_id: !isAdmin ? (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null) : null,
+                            equipo_temporal_id: (equipoTemporalIdAgregar || pagoEquipo.equipoTemporalId || null),
                             liga_id: formData.season,
                             modalidad_id: formData.modality,
                             categoria_id: formData.category,
@@ -2645,15 +2973,14 @@ export default function ConfigurarEquipo() {
                             localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
                           } catch {}
 
-                          setSuccessMessage(`El equipo "${modalData.teamName}" ha sido registrado exitosamente.`);
+                          setSuccessMessage(`Se ha sido registrado exitosamente el equipo/jugadores.`);
                           setShowSuccessModal(true);
                           Swal.close();
                         } catch (err) {
                           console.error("Error al guardar equipo:", err);
-                          //Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
-                          
+                          Swal.fire('Error', 'No se pudo completar el registro. Inténtalo de nuevo más tarde', 'error');
                           // Para debuguear: 
-                          Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
+                          //Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
                     }}
                     disabled={players.length === 0}

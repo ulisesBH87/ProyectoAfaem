@@ -158,7 +158,7 @@ app.add_middleware(
         "http://192.168.0.172:5173",
         "http://localhost:5174",
         "http://192.168.0.172:5174",
-        # Producción - Servidor IIS
+        # Producción
         "http://201.131.21.213",
         "http://201.131.21.213:80",
         "http://afaem.scholatek.com",

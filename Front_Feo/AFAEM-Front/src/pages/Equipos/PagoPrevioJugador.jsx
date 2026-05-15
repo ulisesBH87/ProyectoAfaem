@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaCheckCircle, FaClock, FaFileUpload, FaMoneyBillWave, FaUpload } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaClock, FaFileUpload, FaMoneyBillWave, FaTimesCircle, FaUpload } from 'react-icons/fa';
 import '../../styles/dashboard.css';
 import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
 import teamsService from '../../services/teams';
+
+const ESTATUS_PAGO = {
+  NO_ENVIADO: 1,
+  EN_ESPERA: 2,
+  APROBADO: 3,
+  RECHAZADO: 4
+};
+
+const TIPO_SOLICITUD = {
+  JUGADOR: 3
+};
 
 /**
  * PagoPrevioJugador - Componente que maneja el flujo de pago previo para agregar jugadores
@@ -23,6 +34,13 @@ export default function PagoPrevioJugador() {
   const [uploadingComprobante, setUploadingComprobante] = useState(false);
   const [orderDetails, setOrderDetails] = useState([]);
   const [segurosCatalogo, setSegurosCatalogo] = useState([]);
+  const [loadingCatalogs, setLoadingCatalogs] = useState(true);
+  const [catalogs, setCatalogs] = useState({ seguros: [] });
+  const [catalogoAfiliacionesPago, setCatalogoAfiliacionesPago] = useState([]);
+  const [numJugadoresAgregar, setNumJugadoresAgregar] = useState('1');
+  const [asignacionSegurosAgregar, setAsignacionSegurosAgregar] = useState({});
+  const [pagoErrorJugador, setPagoErrorJugador] = useState(null);
+  const [procesandoPagoJugador, setProcesandoPagoJugador] = useState(false);
 
   const pathSegments = location.pathname.split('/');
   const accion = pathSegments[pathSegments.length - 1];
@@ -30,6 +48,29 @@ export default function PagoPrevioJugador() {
   const { equipoId, ordenId, total } = state;
   const resolvedOrdenId = pagoData?.orden_id || pagoData?.orden_pago_id || pagoData?.OrdenPagoId || pagoData?.id || ordenId;
   const uploadInputId = accion === 'reenviar-comprobante' ? 'comprobante-jugador-reenvio' : 'comprobante-jugador';
+
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      try {
+        setLoadingCatalogs(true);
+        const data = await teamsService.getCatalogs();
+        setCatalogs({ seguros: Array.isArray(data?.seguros) ? data.seguros : [] });
+
+        const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
+        if (resAfiliaciones.ok) {
+          const afiliaciones = await resAfiliaciones.json();
+          setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
+        }
+      } catch (error) {
+        console.error('Error al cargar catálogos:', error);
+        Swal.fire('Error', 'No se pudieron cargar los catálogos del servidor.', 'error');
+      } finally {
+        setLoadingCatalogs(false);
+      }
+    };
+
+    loadCatalogs();
+  }, []);
 
   // Cargar estado de pago al montar
   useEffect(() => {
@@ -63,8 +104,19 @@ export default function PagoPrevioJugador() {
   }, [equipoId]);
 
   useEffect(() => {
+    if (resolvedOrdenId || !numJugadoresAgregar || catalogs.seguros.length === 0) return;
+
+    const totalNecesario = Number(numJugadoresAgregar) || 0;
+    const nuevaAsignacion = {};
+    catalogs.seguros.forEach((seguro, index) => {
+      nuevaAsignacion[String(seguro.id)] = index === 0 ? totalNecesario : 0;
+    });
+    setAsignacionSegurosAgregar(nuevaAsignacion);
+  }, [catalogs.seguros, numJugadoresAgregar, resolvedOrdenId]);
+
+  useEffect(() => {
     const cargarResumenOrden = async () => {
-      if (!resolvedOrdenId || (accion !== 'subir-comprobante' && accion !== 'reenviar-comprobante')) {
+      if (!resolvedOrdenId || (accion !== 'crear-orden' && accion !== 'subir-comprobante' && accion !== 'reenviar-comprobante')) {
         return;
       }
 
@@ -79,7 +131,27 @@ export default function PagoPrevioJugador() {
 
         if (ordenRes.ok) {
           const orden = await ordenRes.json();
-          setOrderDetails(Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : []);
+          const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
+          setOrderDetails(detalles);
+
+          const seguros = {};
+          let cantidadJugadores = null;
+          detalles.forEach(detalle => {
+            if (Number(detalle.TipoAfiliacionId) === 4) {
+              cantidadJugadores = Number(detalle.Cantidad || 0);
+            }
+            if (detalle.SeguroId) {
+              seguros[String(detalle.SeguroId)] = Number(detalle.Cantidad || 0);
+            }
+          });
+
+          if (cantidadJugadores !== null && !Number.isNaN(cantidadJugadores)) {
+            setNumJugadoresAgregar(cantidadJugadores);
+          }
+
+          if (Object.keys(seguros).length > 0) {
+            setAsignacionSegurosAgregar(seguros);
+          }
         }
 
         setSegurosCatalogo(Array.isArray(catalogs?.seguros) ? catalogs.seguros : []);
@@ -96,6 +168,18 @@ export default function PagoPrevioJugador() {
   const cantidadJugadoresOrden = detallesAfiliacionJugador.reduce((sum, detalle) => sum + Number(detalle.Cantidad || 0), 0);
   const subtotalAfiliacionJugadores = detallesAfiliacionJugador.reduce((sum, detalle) => sum + Number(detalle.Subtotal || 0), 0);
   const detallesSeguros = orderDetails.filter(detalle => Number(detalle.SeguroId) > 0);
+  const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
+  const segurosRequeridosPagoJugador = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
+  const totalAsignadosPagoJugador = Object.values(asignacionSegurosAgregar).reduce((sum, value) => sum + Number(value || 0), 0);
+  const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
+  const totalPagoEstimadoJugador = (
+    (costoAfiliacionJugador * Number(numJugadoresAgregar || 0)) +
+    catalogs.seguros.reduce((sum, seguro) => {
+      const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
+      return sum + (Number(seguro.precio || 0) * cantidad);
+    }, 0)
+  );
+  const totalPagoMostradoJugador = Number(pagoData?.total || totalPagoEstimadoJugador || 0);
 
   const handleSeleccionarComprobante = (e) => {
     const file = e.target.files?.[0];
@@ -156,6 +240,65 @@ export default function PagoPrevioJugador() {
       Swal.fire('Error', 'Error al subir el comprobante', 'error');
     } finally {
       setUploadingComprobante(false);
+    }
+  };
+
+  const handleCrearOrden = async () => {
+    setPagoErrorJugador(null);
+
+    if (Number(numJugadoresAgregar) < 1) {
+      setPagoErrorJugador('Debes ingresar el numero de jugadores.');
+      return;
+    }
+
+    if (totalAsignadosPagoJugador !== segurosRequeridosPagoJugador) {
+      setPagoErrorJugador(`Debes asignar un seguro por jugador. Faltan ${segurosPendientesPagoJugador}.`);
+      return;
+    }
+
+    try {
+      setProcesandoPagoJugador(true);
+      const token = localStorage.getItem('token');
+      const segurosPayload = Object.entries(asignacionSegurosAgregar)
+        .filter(([, cantidad]) => Number(cantidad) > 0)
+        .map(([seguroId, cantidad]) => ({
+          SeguroId: Number(seguroId),
+          Cantidad: Number(cantidad)
+        }));
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          CantidadJugadores: Number(numJugadoresAgregar),
+          Seguros: segurosPayload,
+          TipoSolicitud: TIPO_SOLICITUD.JUGADOR,
+          EquipoId: equipoId ? Number(equipoId) : undefined
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo crear la orden de pago');
+      }
+
+      const data = await res.json();
+      setPagoData({
+        ...data,
+        accion: 'subir-comprobante',
+        estado: ESTATUS_PAGO.NO_ENVIADO,
+        tieneComprobante: false,
+        orden_id: data.orden_pago_id || data.OrdenPagoId || data.id,
+        total: Number(data.total || totalPagoEstimadoJugador || 0)
+      });
+    } catch (error) {
+      console.error('Error creando orden de pago de jugador:', error);
+      setPagoErrorJugador(error.message || 'No se pudo crear la orden de pago');
+    } finally {
+      setProcesandoPagoJugador(false);
     }
   };
 
@@ -226,12 +369,152 @@ export default function PagoPrevioJugador() {
     </div>
   );
 
-  if (loading) {
+  if (loading || (accion === 'crear-orden' && loadingCatalogs)) {
     return <Loader text="Cargando información de pago..." />;
   }
 
-  // VISTA: CREAR ORDEN
   if (accion === 'crear-orden') {
+    const ordenCreada = Boolean(resolvedOrdenId);
+    const pagoRechazado = Number(pagoData?.estado || pagoData?.estatus || 0) === ESTATUS_PAGO.RECHAZADO;
+
+    return (
+      <div style={{ maxWidth: '980px', margin: '0 auto', animation: 'slideUp 0.4s ease' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: '0 12px 24px rgba(11,78,166,0.22)' }}>
+            <FaMoneyBillWave />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para agregar jugadores</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>
+            Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
+          </p>
+          <p style={{ color: '#ff0000', margin: 0 }}>
+            *Si ya tienes una orden de pago y subiste el comprobante, contÃ¡ctate con un administrador*
+          </p>
+        </div>
+
+        {pagoRechazado && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '16px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <FaTimesCircle />
+            <span style={{ fontWeight: '700' }}>El comprobante fue rechazado. Sube un nuevo archivo para enviarlo otra vez a revision.</span>
+          </div>
+        )}
+
+        {pagoErrorJugador && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', fontWeight: '700' }}>
+            {pagoErrorJugador}
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            {!ordenCreada ? (
+              <>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={numJugadoresAgregar}
+                  onChange={(e) => setNumJugadoresAgregar(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '100%', padding: '14px 16px', border: '2px solid #dbeafe', borderRadius: '12px', fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '18px' }}
+                />
+
+                <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {catalogs.seguros.map(seguro => {
+                    const id = String(seguro.id);
+                    return (
+                      <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
+                        <div>
+                          <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                          <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={asignacionSegurosAgregar[id] ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                            setAsignacionSegurosAgregar(prev => ({ ...prev, [id]: value }));
+                          }}
+                          style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                  Seguros asignados: {totalAsignadosPagoJugador}/{segurosRequeridosPagoJugador || 0}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: '#ecfdf5', color: '#047857', fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
+                  <FaCheckCircle /> Orden activa #{resolvedOrdenId}
+                </div>
+                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
+                  Adjunta un PDF o imagen del comprobante. El registro se habilitara cuando el administrador apruebe esta orden.
+                </p>
+                <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
+                  <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
+                  <input
+                    id={uploadInputId}
+                    type="file"
+                    onChange={handleSeleccionarComprobante}
+                    style={{ display: 'none' }}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
+                    {comprobante || 'No se ha seleccionado archivo'}
+                  </div>
+                  <button
+                    onClick={() => document.getElementById(uploadInputId)?.click()}
+                    style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}
+                  >
+                    {comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+              <span>Afiliacion jugadores x{Number(numJugadoresAgregar || 0)}</span>
+              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresAgregar || 0)).toFixed(2)}</strong>
+            </div>
+            {catalogs.seguros.map(seguro => {
+              const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
+              if (!cantidad) return null;
+              return (
+                <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+                  <span>{seguro.nombre} x{cantidad}</span>
+                  <strong style={{ color: '#1e293b' }}>${(Number(seguro.precio || 0) * cantidad).toFixed(2)}</strong>
+                </div>
+              );
+            })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
+              <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${Number(totalPagoMostradoJugador || 0).toFixed(2)}</span>
+            </div>
+
+            <button
+              disabled={procesandoPagoJugador || uploadingComprobante || (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugador !== segurosRequeridosPagoJugador)) || (ordenCreada && !comprobanteFile)}
+              onClick={ordenCreada ? handleSubirComprobante : handleCrearOrden}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPagoJugador || uploadingComprobante ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPagoJugador || uploadingComprobante ? 'wait' : 'pointer', opacity: (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugador !== segurosRequeridosPagoJugador)) || (ordenCreada && !comprobanteFile) ? 0.55 : 1 }}
+            >
+              {procesandoPagoJugador || uploadingComprobante ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // VISTA LEGACY: CREAR ORDEN
+  if (false && accion === 'crear-orden') {
     return (
       <div className="fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
         <button

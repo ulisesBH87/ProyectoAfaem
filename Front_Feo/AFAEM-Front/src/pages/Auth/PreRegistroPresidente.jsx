@@ -10,6 +10,7 @@ import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
 import { API_BASE } from '../../config/config';
 import { parseJwt } from '../../services/auth';
+import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 
 import { useRBAC } from '../../hooks/useRBAC';
 
@@ -170,7 +171,6 @@ function PreRegistroPresidente() {
   // SINCRONIZAR PASO ACTUAL CON EL ESTATUS REAL DEL BACKEND
   useEffect(() => {
     if (estatusId) {
-      console.log('🔄 Sincronizando Pre-Registro con estatusId:', estatusId);
       if (estatusId >= 5) {
         // Ya está aprobado completamente
         navigate('/presidente-equipo');
@@ -211,13 +211,7 @@ function PreRegistroPresidente() {
     { valor: 'ENTRENADOR', etiqueta: 'Entrenador' },
   ];
 
-  const bankInfo = {
-    banco: 'BBVA México',
-    titular: 'Asociación Deportiva Estatal AC',
-    cuenta: '0123456789 01',
-    clabe: '012 180 0001234567 89',
-    referencia: 'RHX-CL26-001'
-  };
+  const bankInfo = DEFAULT_BANK_INFO;
 
   // ================== FUNCIÓN PARA CARGAR DETALLES DE ORDEN ==================
   const cargarDetalleOrdenDirecto = async (ordenId, token) => {
@@ -568,7 +562,8 @@ function PreRegistroPresidente() {
             },
             body: JSON.stringify({
               CantidadJugadores: numPersonas,
-              Seguros: segurosPayload
+              Seguros: segurosPayload,
+              TipoSolicitud: 1
             })
           });
 
@@ -598,39 +593,6 @@ function PreRegistroPresidente() {
         } catch (err) {
           Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
         }
-
-        // 2. Subir Comprobante
-        const formData = new FormData();
-        formData.append('archivo', comprobantePago);
-
-        const resComprobante = await fetch(`${API_BASE}/ordenes-pago/${idParaComprobante}/comprobante`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        if (!resComprobante.ok) {
-          const errData = await resComprobante.json().catch(() => ({}));
-          throw new Error('La orden se creó pero falló al subir el comprobante: ' + (errData.detail || ''));
-        }
-
-        Swal.fire({
-          title: '¡Evidencia Recibida!',
-          text: 'Se ha creado la orden de pago y enviado tu comprobante a revisión.',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
-
-        // Actualizar el rol del usuario en la sesión local
-        // para que la interfaz sepa que ya es Presidente (o está en proceso).
-        localStorage.setItem('rol', 'PRESIDENTE_EQUIPO');
-
-        // Ir a pantalla de espera
-        setEstadoPago(1); // Pendiente
-        setPasoActual(2);
       } 
     }
   };
@@ -765,7 +727,6 @@ function PreRegistroPresidente() {
       // --- REFUERZO DESDE EL FRONTEND (RESCATE DE TEXTO CRUDO) ---
       const rawText = doc.querySelector('pre')?.textContent;
       if (rawText && (docKey === 'actaNacimiento' || extractedData.documento?.includes('ACTA'))) {
-        console.log("🔍 Aplicando lógica de rescate para Acta de Nacimiento...");
         extractedData = mejorarExtraccionActa(rawText, extractedData);
       }
 
@@ -1015,7 +976,6 @@ function PreRegistroPresidente() {
         const decoded = parseJwt(token);
         if (decoded && decoded.sub) {
           personaId = decoded.sub;
-          console.log('🆔 ID recuperado del Token en PreRegistro:', personaId);
         }
       }
 
@@ -1053,7 +1013,6 @@ function PreRegistroPresidente() {
         { key: 'formatoAfiliacion', docAfiliacionId: 10 },
       ];
 
-      console.log('📤 Subiendo documentos del presidente al servidor...');
       const formDataDocs = new FormData();
       for (const { key, docAfiliacionId } of docMapping) {
         formDataDocs.append('documento_afiliacion_ids', docAfiliacionId);
@@ -1070,7 +1029,6 @@ function PreRegistroPresidente() {
         const errData = await resUpload.json().catch(() => ({}));
         throw new Error(`Error al subir documentos: ${errData.detail || resUpload.statusText}`);
       }
-      console.log('✅ Documentos subidos correctamente.');
 
       // ── MARCAR SOLICITUD COMO COMPLETA (Status 4 – Revisión) ─────────
       const resMisSolicitudes = await fetch(`${API_BASE}/solicitud/solicitudes-usuarios`, {

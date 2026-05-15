@@ -8,7 +8,7 @@ from app.repositorios import pagos_repositorio
 from app.excepciones import pagos_excepciones
 from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 from app.enums.estatus_pago_enum import EstatusValidacionPago
-
+from app.repositorios import usuario_repositorio
 class EstadoEquipo:
     SIN_ORDEN = "SIN_ORDEN"
     ORDEN_SIN_COMPROBANTE = "ORDEN_SIN_COMPROBANTE"
@@ -28,7 +28,7 @@ class PagosServicio:
         orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, equipo_id)
         
         if not orden_pago:
-            print("NO HAY ORDEN")
+            #print("NO HAY ORDEN")
             return {
                 "tiene_orden": False,
                 "accion": "CREAR_ORDEN"
@@ -36,21 +36,21 @@ class PagosServicio:
         
         accion = None
         if orden_pago.EstatusPagoId == EstatusValidacionPago.NOENVIADO:
-            print("SUBIDA DE COMPROBATNE")
+            #print("SUBIDA DE COMPROBATNE")
             accion = "SUBIR_COMPROBANTE"
 
         elif orden_pago.EstatusPagoId == EstatusValidacionPago.ESPERA:
-            print("EN REVISIÓN")
+            #print("EN REVISIÓN")
             accion = "EN_REVISION"
 
         elif orden_pago.EstatusPagoId == EstatusValidacionPago.RECHAZADO:
-            print("REENVIALO")
+            #print("REENVIALO")
             accion = "REENVIAR_COMPROBANTE"
         else:
-            print("no se que pasó ")
+            #print("no se que pasó ")
             print(orden_pago.EstatusPagoId)
-            print("ORDEN ID: ")
-            print(orden_pago.OrdenPagoId)
+            #print("ORDEN ID: ")
+            #print(orden_pago.OrdenPagoId)
         return {
             "tiene_orden": True,
             "accion": accion,
@@ -270,9 +270,11 @@ class PagosServicio:
 
 
     #VERIFICA SI HAY EQUIPOS VACIOS Y DISPONIBLES
-    def mi_estado_pago_equipo(self, usuario_id):
-        data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id)
+    def mi_estado_pago_equipo(self, usuario_id, presidente_id=None):
+        data = pagos_repositorio.mi_estado_pago_equipo_repo(self.db, usuario_id, presidente_id)
 
+        if presidente_id:
+            usuario_id = usuario_repositorio.obtener_usuario_por_presidente(self.db, presidente_id)
         equipo_temporal = data["equipo_temporal"]
 
         #CASO 1: HAY EQUIPO TEMPORAL DISPONIBLE
@@ -301,15 +303,17 @@ class PagosServicio:
 
         #CASO 2: NO HAY EQUIPO TEMPORAL DISPONIBLE, PASAR A FLUJO DE ORDEN
         if not equipo_temporal:
-            print("NO HAY EQUIPO TEMPORAL")
+            #print("NO HAY EQUIPO TEMPORAL")
             tipo_solicitud = 2
             orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, tipo_solicitud, usuario_id, None)
-
+            #print("🎈🎈🎈🎈🎈PRESIDENTE ID: ")
+            #print(presidente_id)
 
             if orden_pago:
-                print("SI HAY ORDEN")
+                #print("SI HAY ORDEN🎈🎈🎈🎈")
                 estatus = orden_pago.EstatusPagoId
-
+                #print("ESTADO: ")
+                #print(estatus)
                 # HAY ORDEN, PERO ESTÁ COMO NO ENVIADO o RECHAZADO
                 if estatus in (1, 4):
                     return {
