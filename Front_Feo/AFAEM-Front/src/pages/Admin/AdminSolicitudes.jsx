@@ -250,6 +250,11 @@ export default function AdminSolicitudes() {
       inputAttributes: {
         'aria-label': 'Escribe aquí el motivo del rechazo'
       },
+      inputValidator: (value) => {
+        if (!value || value.trim() === '') {
+          return '¡Debes ingresar un motivo para rechazar la solicitud!';
+        }
+      },
       showCancelButton: true,
       confirmButtonText: 'Rechazar',
       cancelButtonText: 'Volver',
