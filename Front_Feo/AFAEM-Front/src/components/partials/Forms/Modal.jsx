@@ -43,8 +43,9 @@ export default function Modal({
           bottom: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
+          paddingTop: '50px',
           zIndex: 1000,
         }}
       >

@@ -75,7 +75,7 @@ const MainLayout = ({ userEmail }) => {
         />
         
         <main className="fade-in" style={{ 
-          padding: '30px', 
+          padding: '24px 30px', 
           flex: 1
         }}>
           <Outlet />
