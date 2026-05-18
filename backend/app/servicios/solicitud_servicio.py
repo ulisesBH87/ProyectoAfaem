@@ -166,9 +166,8 @@ def obtener_documentos_para_revision_servicio(db: Session, solicitud_id: int):
     return resultado
 
 def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
-    """
-    Lógica para aprobar o rechazar una solicitud.
-    """
+    #Lógica para aprobar o rechazar una solicitud.
+    
     try:
         # Iniciamos transaccion explícita
         with db.begin_nested(): # Usamos nested para asegurar que si falla algo, todo regrese
