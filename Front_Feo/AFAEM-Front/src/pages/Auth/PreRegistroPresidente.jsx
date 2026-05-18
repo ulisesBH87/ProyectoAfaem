@@ -1114,7 +1114,8 @@ function PreRegistroPresidente() {
         });
 
         if (!resCompleta.ok) {
-          console.warn('⚠️ No se pudo marcar la solicitud como completa en el backend.');
+          const errData = await resCompleta.json().catch(() => ({}));
+          throw new Error(errData.detail || 'No se pudo cambiar el estado de la solicitud a ESPERA.');
         }
       }
 
@@ -1933,9 +1934,6 @@ function PreRegistroPresidente() {
                     Cerrar sesión
                   </button>
                   <br />
-                  <button className="btn-nav-test" style={{ marginTop: '25px', opacity: 0.4, border: 'none', background: 'none', fontSize: '11px', cursor: 'pointer' }} onClick={() => setPasoActual(3)}>
-                    Saltar a documentos (modo prueba) ⚡
-                  </button>
                 </div>
               </div>
             )}

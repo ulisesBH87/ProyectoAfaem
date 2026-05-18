@@ -342,6 +342,9 @@ def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus
         return solicitud
     return None
 
+def obtener_solicitud_por_id(db: Session, solicitud_id: int):
+    return db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+
 def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
     """
     Busca al presidente vinculado a la solicitud y activa su cuenta.
