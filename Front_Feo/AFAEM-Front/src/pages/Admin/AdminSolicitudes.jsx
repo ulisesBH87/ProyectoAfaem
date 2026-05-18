@@ -366,16 +366,6 @@ export default function AdminSolicitudes() {
       }
     },
     {
-      key: 'Monto',
-      label: 'Monto',
-      width: '10%',
-      render: (value) => value ? (
-        <span style={{ fontWeight: '700', color: 'var(--primary)' }}>
-          ${parseFloat(value).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-        </span>
-      ) : '-'
-    },
-    {
       key: 'EstatusValidacion',
       label: 'Estado',
       width: '15%',
@@ -394,7 +384,7 @@ export default function AdminSolicitudes() {
           label = 'Pendiente';
         } else if (estatus === 4) {
           badgeClass = 'badge-primary';
-          label = 'Revisión Docs';
+          label = 'Borrador';
         }
 
         return (
@@ -482,7 +472,6 @@ export default function AdminSolicitudes() {
   // Verificar si hay datos mock
   const tieneMock = solicitudes.some(s => s.esMock);
   const errorServidor = solicitudes.find(s => s.errorServidor)?.errorServidor;
-
   return (
     <div className="dashboard-content">
       {tieneMock && (
@@ -534,7 +523,7 @@ export default function AdminSolicitudes() {
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Validación de Solicitudes</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro entrantes.</p>
+          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro de presidente de equipo entrantes.</p>
         </div>
         <button
           onClick={() => loadSolicitudes(true)}
