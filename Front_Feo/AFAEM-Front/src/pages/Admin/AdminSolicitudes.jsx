@@ -70,7 +70,7 @@ export default function AdminSolicitudes() {
         aprobadas: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
         rechazadas: solicitudesList.filter(s => s.EstatusValidacion === 3).length
       });
-      
+
       setError(null);
     } catch (err) {
       console.error('Error cargando solicitudes:', err);
@@ -231,7 +231,7 @@ export default function AdminSolicitudes() {
           text: tieneRechazos ? 'Se han enviado las observaciones al usuario.' : 'La solicitud ha sido aprobada correctamente.',
           icon: 'success'
         }).then(() => {
-          loadSolicitudes(); // Recargar datos sin refrescar toda la página
+          loadSolicitudes(true); // Recargar datos sin refrescar toda la página
         });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
@@ -259,13 +259,13 @@ export default function AdminSolicitudes() {
       confirmButtonText: 'Rechazar',
       cancelButtonText: 'Volver',
       confirmButtonColor: '#dc3545',
-    
+
       // NUEVO
       inputValidator: (value) => {
-          if (!value || !value.trim()) {
-            return 'Debes escribir un motivo de rechazo';
-          }
+        if (!value || !value.trim()) {
+          return 'Debes escribir un motivo de rechazo';
         }
+      }
     });
 
     if (motivo?.trim()) {
@@ -273,8 +273,10 @@ export default function AdminSolicitudes() {
         setLoading(true);
         await updateSolicitudEstatus(id, 3, motivo); // 3 = Rechazado (Backend Sync)
         setModalAbierto(false);
-        Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info');
-        loadSolicitudes(); // Recargar datos localmente
+        Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info')
+          .then(() => {
+            loadSolicitudes(true); // Recargar datos forzando petición fresca
+          });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
       } finally {
@@ -285,10 +287,10 @@ export default function AdminSolicitudes() {
 
   const handleCambiarEstatusTerminal = async (id, estatusActual) => {
     const esAprobado = estatusActual === 2;
-    const mensaje = esAprobado 
+    const mensaje = esAprobado
       ? "¿Estás a punto de rechazar una solicitud que ya ha sido aceptada, estás seguro?"
       : "¿Estás a punto de aceptar una solicitud que ya ha sido rechazada, estás seguro?";
-    
+
     const { isConfirmed } = await Swal.fire({
       title: 'Cambiar Estado',
       text: mensaje,
@@ -434,7 +436,7 @@ export default function AdminSolicitudes() {
               Docs
             </button>
           )}
-          
+
           {((filtroEstatus === '2' || filtroEstatus === '3') && (row.EstatusValidacion === 2 || row.EstatusValidacion === 3)) ? (
             <button
               onClick={() => handleCambiarEstatusTerminal(row.SolicitudId, row.EstatusValidacion)}
