@@ -409,7 +409,7 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
 def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     if solicitud:
-        solicitud.EstatusValidacion = 4 # DOCUMENTOS_EN_REVISION
+        solicitud.EstatusValidacion = 1 # ESPERA
         db.commit()
         return solicitud
     return None

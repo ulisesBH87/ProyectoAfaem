@@ -22,9 +22,14 @@ function PreRegistroPresidente() {
   // Estados Generales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Esperando validación, 3 = Documentos
-  const [estadoPago, setEstadoPago] = useState(null); // null, 1=EN ESPERA, 2=RECHAZADO, 3=APROBADO
+  const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Revisión de orden, 3 = Documentos, 4 = Revisión de solicitud
+  const [estadoPago, setEstadoPago] = useState(null); // null, 1=NO ENVIADO, 2=ESPERA, 3=ACTIVO, 4=RECHAZADO
   const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
+  const [estadoSolicitud, setEstadoSolicitud] = useState(null); // 1=ESPERA, 2/3=RECHAZADA, 4=BORRADOR
+  const [solicitudActualId, setSolicitudActualId] = useState(null);
+  const [mensajeRechazoPago, setMensajeRechazoPago] = useState('');
+  const [mensajeRechazoSolicitud, setMensajeRechazoSolicitud] = useState('');
+  const [tieneEstadoBackend, setTieneEstadoBackend] = useState(false);
 
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState('');
@@ -72,31 +77,7 @@ function PreRegistroPresidente() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.tiene_orden) {
-            const ordenId = data.orden_pago_id || data.OrdenPagoId;
-            setEstadoPago(data.estatus);
-            setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
-            if (ordenId) cargarDetalleOrdenDirecto(ordenId, token);
-            // Si ya tiene orden, ir a la pantalla correcta
-            if (data.estatus === 3) {
-              // Pago aprobado → mostrar pantalla de validado
-              setPasoActual(2);
-            } else if (data.estatus === 1 || data.estatus === 2) {
-              if (data.tiene_comprobante) {
-                // Pago pendiente revisión
-                setOrdenPendienteId(ordenId);
-                setPasoActual(2);
-              } else {
-                // Generó orden pero no subió comprobante (Guardar y salir)
-                setOrdenPendienteId(ordenId);
-                setPasoActual(1);
-              }
-            } else if (data.estatus === 4) {
-              // Rechazado
-              setOrdenPendienteId(ordenId);
-              setPasoActual(2);
-            }
-          }
+          await resolverFlujoBackend(data, token);
         }
       } catch (err) {
         console.warn('No se pudo verificar estado de pago:', err);
@@ -170,6 +151,8 @@ function PreRegistroPresidente() {
 
   // SINCRONIZAR PASO ACTUAL CON EL ESTATUS REAL DEL BACKEND
   useEffect(() => {
+    if (tieneEstadoBackend) return;
+
     if (estatusId) {
       if (estatusId >= 5) {
         // Ya está aprobado completamente
@@ -191,7 +174,7 @@ function PreRegistroPresidente() {
         setPasoActual(1);
       }
     }
-  }, [estatusId, navigate]);
+  }, [estatusId, navigate, tieneEstadoBackend]);
 
   /* ─── Efecto de Auto-cálculo ─── */
   useEffect(() => {
@@ -212,6 +195,93 @@ function PreRegistroPresidente() {
   ];
 
   const bankInfo = DEFAULT_BANK_INFO;
+
+  const obtenerMensajeObservaciones = (valor, fallback) => {
+    if (typeof valor === 'string' && valor.trim()) return valor.trim();
+    return fallback;
+  };
+
+  const resolverFlujoBackend = async (data, token) => {
+    setTieneEstadoBackend(true);
+
+    if (!data?.tiene_orden) {
+      setEstadoPago(null);
+      setEstadoSolicitud(null);
+      setSolicitudActualId(null);
+      setOrdenPendienteId(null);
+      setPasoActual(1);
+      return;
+    }
+
+    const ordenId = data.orden_pago_id || data.OrdenPagoId || null;
+    const estatusOrden = Number(data.estatus);
+    const solicitud = data.solicitud || null;
+    const estatusSolicitud = Number(solicitud?.estatus ?? solicitud ?? 0) || null;
+    const solicitudId = solicitud?.solicitud_id || solicitud?.SolicitudId || null;
+    const observacionesPago = obtenerMensajeObservaciones(
+      data.observaciones || localStorage.getItem(`motivo_rechazo_${ordenId}`) || solicitud?.observaciones,
+      'El comprobante de pago no fue aceptado.'
+    );
+    const observacionesSolicitud = obtenerMensajeObservaciones(
+      solicitud?.observaciones,
+      'Tu solicitud fue rechazada.'
+    );
+
+    setOrdenPendienteId(ordenId);
+    setEstadoPago(estatusOrden);
+    setEstadoSolicitud(estatusSolicitud);
+    setSolicitudActualId(solicitudId);
+    setMensajeRechazoPago(observacionesPago);
+    setMensajeRechazoSolicitud(observacionesSolicitud);
+    setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
+
+    if (ordenId) {
+      await cargarDetalleOrdenDirecto(ordenId, token);
+    }
+
+    if (estatusOrden === 1) {
+      setPasoActual(1);
+      return;
+    }
+
+    if (estatusOrden === 2) {
+      setPasoActual(2);
+      return;
+    }
+
+    if (estatusOrden === 4) {
+      setPasoActual(1);
+      await Swal.fire({
+        title: 'Tu orden fue rechazada',
+        text: `${observacionesPago} Vuelve a subir tu comprobante de pago.`,
+        icon: 'warning',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return;
+    }
+
+    if (estatusOrden === 3) {
+      if (!estatusSolicitud || estatusSolicitud === 4) {
+        setPasoActual(3);
+        return;
+      }
+
+      if (estatusSolicitud === 1) {
+        setPasoActual(4);
+        return;
+      }
+
+      if (estatusSolicitud === 2 || estatusSolicitud === 3) {
+        setPasoActual(3);
+        await Swal.fire({
+          title: 'Tu solicitud fue rechazada',
+          text: `Motivo: ${observacionesSolicitud} Vuelve a subir tus documentos.`,
+          icon: 'warning',
+          confirmButtonColor: '#0b4ea6'
+        });
+      }
+    }
+  };
 
   // ================== FUNCIÓN PARA CARGAR DETALLES DE ORDEN ==================
   const cargarDetalleOrdenDirecto = async (ordenId, token) => {
@@ -527,7 +597,7 @@ function PreRegistroPresidente() {
             showConfirmButton: false
           });
 
-          setEstadoPago(1); // Pendiente
+          setEstadoPago(2); // En espera
           setPasoActual(2);
         } catch (err) {
           Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
@@ -999,6 +1069,9 @@ function PreRegistroPresidente() {
       });
 
       const token = localStorage.getItem('token');
+      if (!solicitudActualId) {
+        throw new Error('No se encontró la solicitud relacionada con tu orden de pago.');
+      }
 
       // ── SUBIDA REAL DE LOS 4 DOCUMENTOS DEL PRESIDENTE ──────────────
       // IDs de DocumentoAfiliacion confirmados en base de datos:
@@ -1018,6 +1091,9 @@ function PreRegistroPresidente() {
         formDataDocs.append('documento_afiliacion_ids', docAfiliacionId);
         formDataDocs.append('archivo', documents[key]);
       }
+      if (solicitudActualId) {
+        formDataDocs.append('solicitud_id', solicitudActualId);
+      }
 
       const resUpload = await fetch(`${API_BASE}/documentos/`, {
         method: 'POST',
@@ -1030,20 +1106,9 @@ function PreRegistroPresidente() {
         throw new Error(`Error al subir documentos: ${errData.detail || resUpload.statusText}`);
       }
 
-      // ── MARCAR SOLICITUD COMO COMPLETA (Status 4 – Revisión) ─────────
-      const resMisSolicitudes = await fetch(`${API_BASE}/solicitud/solicitudes-usuarios`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!resMisSolicitudes.ok) throw new Error('No se pudo verificar el estado de la solicitud.');
-      const solicitudesData = await resMisSolicitudes.json();
-
-      const miSolicitud = Array.isArray(solicitudesData)
-        ? solicitudesData.find(s => String(s.UsuarioId) === String(personaId))
-        : null;
-
-      if (miSolicitud && miSolicitud.SolicitudId) {
-        const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?solicitud_id=${miSolicitud.SolicitudId}`, {
+      // ── MARCAR SOLICITUD COMO ENVIADA (Status 1 = ESPERA) ─────────
+      if (solicitudActualId) {
+        const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?solicitud_id=${solicitudActualId}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1071,6 +1136,7 @@ function PreRegistroPresidente() {
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
       }).then(() => {
+        setEstadoSolicitud(1);
         setPasoActual(4); // Ir a la pantalla de revisión
       });
 
@@ -1405,6 +1471,23 @@ function PreRegistroPresidente() {
         {/* PASO 1: CUOTAS */}
         {pasoActual === 1 && (
           <div className="content-body" style={{ padding: '40px' }}>
+            {estadoPago === 4 && (
+              <div style={{
+                marginBottom: '24px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.28)',
+                borderRadius: '18px',
+                padding: '18px 20px',
+                color: 'var(--text-main)'
+              }}>
+                <h4 style={{ margin: '0 0 8px', color: 'var(--danger)', fontSize: '15px', fontWeight: '800' }}>
+                  Tu orden fue rechazada
+                </h4>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                  {mensajeRechazoPago || 'Vuelve a subir tu comprobante de pago para continuar con tu registro.'}
+                </p>
+              </div>
+            )}
             <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '30px' }}>Selecciona el tipo de seguro para tu plantilla inicial</h3>
 
             {ordenPendienteId ? (
@@ -1716,7 +1799,7 @@ function PreRegistroPresidente() {
                   }} onClick={handleLogout}>Cerrar sesión</button>
                 </div>
               </div>
-            ) : estadoPago === 4 || estadoPago === 2 ? (
+            ) : estadoPago === 4 ? (
               /* PAGO RECHAZADO */
               <div className="fade-in" style={{
                 display: 'flex',
@@ -1814,7 +1897,7 @@ function PreRegistroPresidente() {
                 </div>
 
                 <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
-                  Esperando Validación
+                  Tu orden será aprobada pronto
                 </h1>
 
                 <div style={{ maxWidth: '500px' }}>
@@ -1829,11 +1912,11 @@ function PreRegistroPresidente() {
                     marginBottom: '20px',
                     border: '1px solid rgba(245, 158, 11, 0.2)'
                   }}>
-                    PAGO EN REVISIÓN
+                    ORDEN EN ESPERA
                   </div>
                   <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
-                    Hemos recibido tu comprobante de pago. Será validado en un plazo de 24 a 48 horas hábiles.
-                    Una vez validado, podrás continuar con la carga de documentos necesarios para tu afiliación oficial.
+                    Hemos recibido tu comprobante de pago. Tu orden será aprobada pronto y, cuando eso ocurra,
+                    podrás continuar con la carga de documentos necesarios para tu afiliación oficial.
                   </p>
 
                   <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
@@ -1862,6 +1945,23 @@ function PreRegistroPresidente() {
         {/* PASO 3: DOCUMENTOS */}
         {pasoActual === 3 && (
           <div className="content-body" style={{ padding: '40px' }}>
+            {(estadoSolicitud === 2 || estadoSolicitud === 3) && (
+              <div style={{
+                marginBottom: '24px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.28)',
+                borderRadius: '18px',
+                padding: '18px 20px',
+                color: 'var(--text-main)'
+              }}>
+                <h4 style={{ margin: '0 0 8px', color: 'var(--danger)', fontSize: '15px', fontWeight: '800' }}>
+                  Tu solicitud fue rechazada por el siguiente motivo:
+                </h4>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                  {mensajeRechazoSolicitud || 'Vuelve a subir tus documentos para continuar con tu solicitud.'}
+                </p>
+              </div>
+            )}
 
             {/* HEADER DE SECCIÓN */}
             <div style={{ textAlign: 'center', marginBottom: '35px' }}>
@@ -2058,14 +2158,14 @@ function PreRegistroPresidente() {
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
               <div style={{ fontSize: '80px', marginBottom: '30px' }}>⏳</div>
               <h2 style={{ color: 'var(--text-main)', fontSize: '28px', fontWeight: '800', marginBottom: '15px' }}>
-                Documentos en Revisión
+                Tu solicitud será aprobada pronto
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto 40px', lineHeight: '1.6' }}>
-                Excelente. Tus documentos han sido recibidos correctamente. El administrador está validando tu identidad y acreditación.
+                Tus documentos ya fueron enviados correctamente. El administrador está revisando tu solicitud y su aprobación llegará pronto.
               </p>
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '25px', display: 'inline-block', textAlign: 'left' }}>
                 <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#34d399', fontWeight: '700' }}>✓ Pago Validado</p>
-                <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#f59e0b', fontWeight: '700' }}>⏳ Revisión de Documentos: EN PROCESO</p>
+                <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#f59e0b', fontWeight: '700' }}>⏳ Solicitud: EN ESPERA</p>
                 <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>○ Acceso al Dashboard: PENDIENTE</p>
               </div>
               <div style={{ marginTop: '40px' }}>
