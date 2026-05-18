@@ -257,6 +257,9 @@ class PagosServicio:
     def mi_estado_pago(self, usuario_id):
         orden = pagos_repositorio.mi_estado_pago_repo(self.db, usuario_id)
 
+        if orden.EstatusPagoId == 2: #ACEPTADO
+            solicitud = pagos_repositorio.buscar_solicitud(self.db, usuario_id)
+
         if not orden:
             return {"tiene_orden": False}
 
@@ -265,6 +268,7 @@ class PagosServicio:
             "orden_pago_id": orden.OrdenPagoId,
             "estatus": orden.EstatusPagoId,
             "tiene_comprobante": bool(orden.RutaVoucher),
+            "solicitud": solicitud.EstatusValidacionId,
             "total": float(orden.TotalPagar) if orden.TotalPagar else 0
         }
 
