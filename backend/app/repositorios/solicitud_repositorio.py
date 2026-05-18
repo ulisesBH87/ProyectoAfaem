@@ -147,16 +147,11 @@ def obtener_solicitudes_usuarios_repo(db: Session):
             Personas.Nombre,
             Personas.PrimerApellido,
             Usuario.Correo,
-            func.coalesce(Equipos.NombreEquipo, "Por asignar").label("Equipo"),
-            OrdenPago.TotalPagar.label("Monto")
+            func.coalesce(Equipos.NombreEquipo, "Por asignar").label("Equipo")
         )
         .join(Usuario, Solicitud.UsuarioId == Usuario.UsuarioId)
         .join(Personas, Usuario.PersonaId == Personas.PersonaId)
-        .outerjoin(EquipoTemporal, Solicitud.SolicitudId == EquipoTemporal.SolicitudId)
-        .outerjoin(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
-        .outerjoin(PresidenteEquipo, Personas.PersonaId == PresidenteEquipo.PersonaId)
-        .outerjoin(EquiposJugando, PresidenteEquipo.PresidenteEquipoId == EquiposJugando.PresidenteEquipoId)
-        .outerjoin(Equipos, EquiposJugando.EquipoId == Equipos.EquipoId)
+        .outerjoin(Equipos, Solicitud.EquipoId == Equipos.EquipoId).filter(Solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO)
         .all()
     )
 
@@ -341,14 +336,6 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
 def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus_db: int, observaciones: str = None):
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     if solicitud:
-        # Lógica de suspensión/reactivación basada en el nuevo estatus
-        usuario = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
-        if usuario:
-            if estatus_db == 3: # 3 = Rechazado -> Suspender
-                usuario.Estatus = False
-            elif estatus_db == 2: # 2 = Aprobado -> Reactivar
-                usuario.Estatus = True
-
         solicitud.EstatusValidacion = estatus_db
         if observaciones:
             solicitud.ObservacionesSolicitud = observaciones

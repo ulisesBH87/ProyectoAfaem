@@ -221,9 +221,13 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     return orden
 
 def mi_estado_pago_repo(db, usuario_id):
-    orden = db.query(OrdenPago).filter(OrdenPago.UsuarioId == usuario_id).order_by(OrdenPago.OrdenPagoId.desc()).first()
+    orden = db.query(OrdenPago).filter(OrdenPago.UsuarioId == usuario_id, OrdenPago.EstatusPagoId == 2).first()
 
     return orden
+
+def buscar_solicitud_repo(db, usuario_db):
+    solicitud = db.query(Solicitud).filter(Solicitud.UsuarioId == usuario_db).first()
+    return solicitud
 
 def obtener_usuario_id_por_presidente_repo(db, presidente_id):
     return (

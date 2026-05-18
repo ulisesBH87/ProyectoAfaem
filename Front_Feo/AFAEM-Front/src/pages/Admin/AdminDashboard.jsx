@@ -7,10 +7,10 @@ import {
 } from 'react-icons/fa';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell, LabelList
+  BarChart, Bar, Cell, LabelList, PieChart, Pie
 } from 'recharts';
 import { getSolicitudes } from '../../services/solicitud';
-import { getPagosGenerales } from '../../services/admin';
+import { getPagosGenerales, getJugadoresDirectorio } from '../../services/admin';
 import Loader from '../../components/Loader';
 
 const AdminDashboard = () => {
@@ -25,42 +25,40 @@ const AdminDashboard = () => {
     jugadoresActivos: 0
   });
 
-  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-  // Datos simulados para gráficas hasta que backend tenga endpoint
-  const chartDataCompleto = {
-    'Ene': [{ name: 'Ene', ingresos: 4200 }],
-    'Feb': [{ name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 }],
-    'Mar': [{ name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 }, { name: 'Mar', ingresos: 5100 }],
-    'Abr': [
-      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
-      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: statsData.totalIngreso || 6400 }
-    ],
-    'May': [
-      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
-      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: 6400 }, { name: 'May', ingresos: 0 }
-    ],
-    'Jun': [
-      { name: 'Ene', ingresos: 4200 }, { name: 'Feb', ingresos: 3800 },
-      { name: 'Mar', ingresos: 5100 }, { name: 'Abr', ingresos: 6400 }, { name: 'May', ingresos: 0 }, { name: 'Jun', ingresos: 0 }
-    ],
-  };
+  // Datos históricos para todos los meses
+  const chartDataTodos = [
+    { name: 'Ene', ingresos: 4200 },
+    { name: 'Feb', ingresos: 3800 },
+    { name: 'Mar', ingresos: 5100 },
+    { name: 'Abr', ingresos: statsData.totalIngreso || 6400 },
+    { name: 'May', ingresos: 0 },
+    { name: 'Jun', ingresos: 0 },
+    { name: 'Jul', ingresos: 0 },
+    { name: 'Ago', ingresos: 0 },
+    { name: 'Sep', ingresos: 0 },
+    { name: 'Oct', ingresos: 0 },
+    { name: 'Nov', ingresos: 0 },
+    { name: 'Dic', ingresos: 0 },
+  ];
 
-  const chartData = chartDataCompleto[mesFiltro] || chartDataCompleto['Abr'];
-
-
+  // Dato específico del mes seleccionado para el indicador numérico grande
+  const mesSeleccionadoData = chartDataTodos.find(d => d.name === mesFiltro) || chartDataTodos[3];
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [solicitudes, pagos] = await Promise.all([
+        const [solicitudes, pagos, jugadores] = await Promise.all([
           getSolicitudes(),
-          getPagosGenerales()
+          getPagosGenerales(),
+          getJugadoresDirectorio()
         ]);
 
         const solicitudesList = Array.isArray(solicitudes) ? solicitudes : (solicitudes.solicitudes || []);
         const pagosList = Array.isArray(pagos) ? pagos : [];
+        const jugadoresList = Array.isArray(jugadores) ? jugadores : [];
 
         const totalIngreso = pagosList
           .filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 3)
@@ -71,7 +69,7 @@ const AdminDashboard = () => {
           pagosPendientes: pagosList.filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 2).length,
           totalIngreso: totalIngreso,
           equipos: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
-          jugadoresActivos: 0 // Mock hasta endpoint de backend
+          jugadoresActivos: jugadoresList.filter(j => j.Estatus === true).length
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -96,11 +94,11 @@ const AdminDashboard = () => {
         transition: 'transform 0.2s, box-shadow 0.2s'
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div style={{ width: '48px', height: '48px', background: bg, color, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
           {icon}
         </div>
-        {badge && <span className="data-fira" style={{ fontSize: '12px', fontWeight: '700', color: badge.color, background: badge.bg, padding: '4px 10px', borderRadius: '20px' }}>{badge.text}</span>}
+        {badge && <span className="data-fira" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: badge.color, background: badge.bg, padding: '4px 10px', borderRadius: '20px', height: 'fit-content' }}>{badge.text}</span>}
       </div>
       <h3 className="heading-outfit" style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>
         {label}
@@ -157,13 +155,15 @@ const AdminDashboard = () => {
         />
 
         {/* CHART: RECAUDACIÓN (2x2) */}
-        <div className="card glass" style={{ gridColumn: 'span 2', gridRow: 'span 2', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="card glass" style={{ gridColumn: 'span 2', gridRow: 'span 2', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', background: 'radial-gradient(circle, var(--primary) 0%, transparent 60%)', opacity: 0.05, borderRadius: '50%', pointerEvents: 'none' }}></div>
+          
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
             <div>
-              <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Tendencia de ingresos</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>Histórico mensual ($ MXN)</p>
+              <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Ingresos del Mes</h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>Desempeño mensual respecto a la meta</p>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '350px' }}>
               {meses.map(m => (
                 <button
                   key={m}
@@ -182,29 +182,42 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
-          <div style={{ flex: 1, minHeight: '200px' }}>
+          
+          <div style={{ flex: 1, minHeight: '220px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted)', fontSize: 12}} />
-                <YAxis hide />
-                <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '12px' }}
-                  itemStyle={{ fontWeight: 700, color: 'var(--primary)' }}
-                  formatter={(val) => [`$${val.toLocaleString('es-MX')}`, 'Ingresos']}
-                />
-                <Area type="monotone" dataKey="ingresos" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorIngresos)" />
-              </AreaChart>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Ingresos', value: mesSeleccionadoData?.ingresos || 0 },
+                    { name: 'Restante', value: Math.max(0, 10000 - (mesSeleccionadoData?.ingresos || 0)) }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={90}
+                  outerRadius={120}
+                  startAngle={90}
+                  endAngle={-270}
+                  dataKey="value"
+                  stroke="none"
+                  cornerRadius={12}
+                >
+                  <Cell fill="var(--primary)" />
+                  <Cell fill="rgba(0,0,0,0.03)" />
+                </Pie>
+              </PieChart>
             </ResponsiveContainer>
-          </div>
-          <div className="data-fira" style={{ marginTop: '20px', fontSize: '28px', fontWeight: '800', color: 'var(--primary)' }}>
-            ${statsData.totalIngreso.toLocaleString()}
+            
+            <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px' }}>
+                {mesFiltro}
+              </div>
+              <div className="data-fira" style={{ fontSize: '40px', fontWeight: '800', color: 'var(--primary)', lineHeight: '1', textShadow: '0 4px 12px rgba(11, 78, 166, 0.15)' }}>
+                ${(mesSeleccionadoData?.ingresos || 0).toLocaleString()}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', fontWeight: '500' }}>
+                de <strong style={{ color: 'var(--text-main)' }}>$10,000</strong> meta
+              </div>
+            </div>
           </div>
         </div>
 
@@ -225,7 +238,7 @@ const AdminDashboard = () => {
           bg="rgba(139, 92, 246, 0.1)"
           color="#8b5cf6"
           label="Jugadores Activos"
-          val={statsData.jugadoresActivos || 'N/D'}
+          val={statsData.jugadoresActivos ?? 'N/D'}
           ruta="/admin/jugadores"
         />
 
