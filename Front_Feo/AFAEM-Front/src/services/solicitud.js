@@ -41,7 +41,7 @@ function decodeToken(token) {
     if (parts.length !== 3) {
       throw new Error('Token inválido');
     }
-    
+
     const payload = parts[1];
     const decoded = JSON.parse(atob(payload));
     return decoded;
@@ -63,32 +63,32 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
   try {
     // OBTENER EL TOKEN DEL LOCALSTORAGE
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       throw new Error('No se encontró token. Por favor, inicia sesión primero.');
     }
-    
+
     // INTENTAR OBTENER UsuarioId
     let usuarioId = null;
-    
+
     // 1. INTENTAR OBTENER DEL localStorage (donde se guarda en login)
     let usuarioIdFromStorage = localStorage.getItem('UsuarioId');
     if (usuarioIdFromStorage) {
       usuarioId = usuarioIdFromStorage;
     }
-    
+
     // 2. SI NO ESTÁ EN localStorage, INTENTAR DECODIFICAR EL TOKEN
     if (!usuarioId) {
       const decoded = decodeToken(token);
       usuarioId = decoded?.sub;
     }
-    
+
     // 3. SI AÚN NO EXISTE, USAR FALLBACK (CUALQUIER MÁQUINA, NO SOLO LOCALHOST)
     if (!usuarioId) {
       usuarioId = 1;
       console.warn('⚠️ UsuarioId no disponible: usando fallback ID = 1');
     }
-    
+
     // OBTENER FECHA Y HORA EXACTA DEL SISTEMA
     const now = new Date();
     const year = now.getFullYear();
@@ -98,9 +98,9 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-    
+
     const fechaSolicitud = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}Z`;
-    
+
     // EL PAYLOAD INCLUYE: UsuarioId, CURP, RFC, SexoId, FechaNacimiento, FechaSolicitud, EstatusValidacion
     const payload = {
       UsuarioId: Number(usuarioId),
@@ -136,7 +136,7 @@ export const getSolicitudes = async (forceRefresh = false) => {
   try {
     // OBTENER EL TOKEN DEL LOCALSTORAGE
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       throw new Error('No se encontró token. Por favor, inicia sesión primero.');
     }
@@ -166,7 +166,7 @@ export const getSolicitudes = async (forceRefresh = false) => {
       } else if (typeof serverDetail === 'string') {
         detail = serverDetail;
       }
-      
+
       console.warn(`Error de Servidor detectado: ${detail}. Cargando modo simulación...`);
       // DEVOLVEMOS DATOS REALISTAS PARA QUE EL ADMIN PUEDA PROBAR EL FLUJO
       return [
@@ -215,14 +215,14 @@ export const getMisSolicitudes = async () => {
     const token = localStorage.getItem('token');
     const usuarioId = localStorage.getItem('UsuarioId');
     if (!token) return [];
-    
-    const headers = { 
-      'Authorization': `Bearer ${token}`, 
-      'Content-Type': 'application/json' 
+
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
     };
-    
+
     const response = await api.get('/solicitud/solicitudes-usuarios', { headers });
-    
+
     let data = Array.isArray(response.data) ? response.data : (response.data?.solicitudes || []);
     if (usuarioId) {
       return data.filter(s => String(s.UsuarioId) === String(usuarioId));
@@ -242,7 +242,7 @@ export const getMisSolicitudes = async () => {
 export const getRequisitos = async (tipoAfiliacionId) => {
   try {
     const token = localStorage.getItem('token');
-    
+
     const headers = {
       'Content-Type': 'application/json'
     };
@@ -259,10 +259,15 @@ export const getRequisitos = async (tipoAfiliacionId) => {
     throw error;
   }
 };
+// INVALIDA EL CACHÉ DE SOLICITUDES (para uso tras modificar el estatus)
+export const clearSolicitudesCache = () => {
+  serviceCache.clear('/solicitud/solicitudes-usuarios');
+};
 
 export default {
   sendRegistroSolicitud,
   getSolicitudes,
   getMisSolicitudes,
-  getRequisitos
+  getRequisitos,
+  clearSolicitudesCache
 };
