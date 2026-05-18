@@ -174,7 +174,7 @@ export default function AdminSolicitudes() {
             <p><strong>Nombre:</strong> ${row.Nombre || ''} ${row.PrimerApellido || ''}</p>
             <p><strong>Correo:</strong> ${row.Correo || 'N/A'}</p>
             <p><strong>Equipo:</strong> ${row.Equipo || 'N/A'}</p>
-            <p><strong>Monto:</strong> ${row.Monto ? `$${parseFloat(row.Monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : 'N/A'}</p>
+            <!--<p><strong>Monto:</strong> ${row.Monto ? `$${parseFloat(row.Monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : 'N/A'}</p>-->
           </div>
         `,
         confirmButtonText: 'Cerrar',
@@ -254,9 +254,16 @@ export default function AdminSolicitudes() {
       confirmButtonText: 'Rechazar',
       cancelButtonText: 'Volver',
       confirmButtonColor: '#dc3545',
+    
+      // NUEVO
+      inputValidator: (value) => {
+          if (!value || !value.trim()) {
+            return 'Debes escribir un motivo de rechazo';
+          }
+        }
     });
 
-    if (motivo) {
+    if (motivo?.trim()) {
       try {
         setLoading(true);
         await updateSolicitudEstatus(id, 3, motivo); // 3 = Rechazado (Backend Sync)
@@ -410,7 +417,7 @@ export default function AdminSolicitudes() {
           >
             Ver
           </button>
-          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4) && (
+          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4 || row.EstatusValidacion === 1 || row.EstatusValidacion === 3) && (
             <button
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
