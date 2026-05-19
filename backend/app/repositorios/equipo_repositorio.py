@@ -51,7 +51,9 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
     for d in detalles:
         #print("detalle:", d.TipoConceptoId, d.TipoAfiliacionId, d.Cantidad) DEBUG SOLAMENTE
         if d.TipoConceptoId == ConceptoPagoEnum.INSCRIPCION.value:   #INSCRIPCION
-            cantidad_jugadores += d.Cantidad
+            # Excluimos la afiliación de presidente de equipo (ID 2) ya que no cuenta como slot de jugador
+            if d.TipoAfiliacionId != 2:
+                cantidad_jugadores += d.Cantidad
 
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()

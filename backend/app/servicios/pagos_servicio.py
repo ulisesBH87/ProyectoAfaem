@@ -67,10 +67,6 @@ class PagosServicio:
         
         total_personas = orden.CantidadJugadores
 
-        #Si se va a crear equipo se cobra afiliación de presidente
-        if (orden.TipoSolicitud == 1 or orden.TipoSolicitud == 2):
-            total_personas += 1
-
         total_seguros = sum(s.Cantidad for s in orden.Seguros)
         
         if total_seguros != total_personas:

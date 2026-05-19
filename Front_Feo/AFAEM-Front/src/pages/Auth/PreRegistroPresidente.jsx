@@ -51,6 +51,11 @@ function PreRegistroPresidente() {
   const [liga, setLiga] = useState('');
   const [ligasCatalogo, setLigasCatalogo] = useState([]);
 
+  // Estados para validación fallida de fotografía y captura manual de OCR
+  const [fotoValidacionFallida, setFotoValidacionFallida] = useState(false);
+  const [fotoArchivoPendiente, setFotoArchivoPendiente] = useState(null);
+  const [mostrarFormularioManual, setMostrarFormularioManual] = useState(false);
+
 
   // Verificar estado de pago al cargar
   useEffect(() => {
@@ -121,6 +126,12 @@ function PreRegistroPresidente() {
         }));
 
         setCatalogoSeguros(segurosMapeados);
+        // Inicializar todas las asignaciones a 0
+        const initAsignacion = {};
+        segurosMapeados.forEach(seg => {
+          initAsignacion[seg.id] = 0;
+        });
+        setAsignacionSeguros(initAsignacion);
       } catch (err) {
         console.warn('No se pudo cargar seguros:', err);
         setCatalogoSeguros([]);
@@ -176,22 +187,10 @@ function PreRegistroPresidente() {
     }
   }, [estatusId, navigate, tieneEstadoBackend]);
 
-  /* ─── Efecto de Auto-cálculo ─── */
-  useEffect(() => {
-    if (numPersonas !== '' && pasoActual === 1 && catalogoSeguros.length > 0) {
-      const totalNecesario = Number(numPersonas) + 1;
-      const nuevaAsignacion = {};
-      catalogoSeguros.forEach((seg, idx) => {
-        nuevaAsignacion[seg.id] = idx === 0 ? totalNecesario : 0;
-      });
-      setAsignacionSeguros(nuevaAsignacion);
-    }
-  }, [numPersonas, pasoActual, catalogoSeguros]);
-
   /* ─── Catálogos para Selectores ─── */
   const CATALOGO_ROLES = [
-    { valor: 'PRESIDENTE DE EQUIPO', etiqueta: 'Presidente de Equipo' },
-    { valor: 'ENTRENADOR', etiqueta: 'Entrenador' },
+    { valor: 'TIPO F', etiqueta: 'TIPO F' },
+    { valor: 'TIPO G', etiqueta: 'TIPO G' },
   ];
 
   const bankInfo = DEFAULT_BANK_INFO;
@@ -322,8 +321,17 @@ function PreRegistroPresidente() {
     const afiliacion = catalogoAfiliaciones.find(a => String(a.TipoAfiliacionId) === String(tipoAfiliacionId));
     return afiliacion?.NombreAfiliacion || 'Inscripción';
   };
-  const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas || 0) + 1 : 0; // Jugadores + Presidente
+  const segurosRequeridos = Number(numPersonas || 0);
   const jugadoresRestantes = segurosRequeridos - totalAsignados;
+
+  const segurosJugadores = catalogoSeguros.filter((seg, idx) =>
+    ['TIPO A', 'TIPO B', 'TIPO C', 'TIPO D', 'TIPO E'].includes(seg.nombre.toUpperCase().trim()) ||
+    (catalogoSeguros.length === 7 && idx < 5)
+  );
+  const segurosPresidente = catalogoSeguros.filter((seg, idx) =>
+    ['TIPO F', 'TIPO G'].includes(seg.nombre.toUpperCase().trim()) ||
+    (catalogoSeguros.length === 7 && idx >= 5)
+  );
 
   // PASO 2: Documentos
 
@@ -471,7 +479,11 @@ function PreRegistroPresidente() {
       return;
     }
     if (totalAsignados !== segurosRequeridos) {
-      setError(`Debes asignar el seguro a todos los jugadores y a ti mismo (Presidente). Faltan ${jugadoresRestantes} por asignar.`);
+      if (totalAsignados > segurosRequeridos) {
+        setError(`Has asignado más seguros de los permitidos. El límite es de ${segurosRequeridos} seguros (uno por jugador) y tienes ${totalAsignados} asignados.`);
+      } else {
+        setError(`Debes asignar un seguro a cada jugador. Faltan ${jugadoresRestantes} por asignar.`);
+      }
       return;
     }
 
@@ -554,7 +566,11 @@ function PreRegistroPresidente() {
           return;
         }
         if (totalAsignados !== segurosRequeridos) {
-          setError(`Debes asignar el seguro a todos los jugadores y a ti mismo (Presidente). Faltan ${jugadoresRestantes} por asignar.`);
+          if (totalAsignados > segurosRequeridos) {
+            setError(`Has asignado más seguros de los permitidos. El límite es de ${segurosRequeridos} seguros (uno por jugador) y tienes ${totalAsignados} asignados.`);
+          } else {
+            setError(`Debes asignar un seguro a cada jugador. Faltan ${jugadoresRestantes} por asignar.`);
+          }
           return;
         }
       }
@@ -602,7 +618,7 @@ function PreRegistroPresidente() {
         } catch (err) {
           Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
         }
-      } 
+      }
       // SI NO TENEMOS ORDEN, la creamos y nos quedamos aquí para que suba el comprobante
       else {
         try {
@@ -645,15 +661,15 @@ function PreRegistroPresidente() {
           const ordenData = await resOrden.json();
           const newOrdenId = ordenData.orden_pago_id || ordenData.OrdenPagoId || ordenData.id;
           setOrdenPendienteId(newOrdenId);
-          
+
           // Cargar detalles de la orden inmediatamente
           await cargarDetalleOrdenDirecto(newOrdenId, token);
-          
+
           // Generar PDF de cuota
           setTimeout(() => {
             generarPDFCuota(newOrdenId);
           }, 500);
-          
+
           Swal.fire({
             title: '¡Orden Generada!',
             text: 'Se ha descargado tu ficha de pago en PDF. Ahora utiliza los datos bancarios para realizar tu transferencia y sube el comprobante aquí mismo.',
@@ -663,7 +679,7 @@ function PreRegistroPresidente() {
         } catch (err) {
           Swal.fire({ title: 'Error', text: err.message, icon: 'error' });
         }
-      } 
+      }
     }
   };
 
@@ -918,10 +934,13 @@ function PreRegistroPresidente() {
       const email = user.Correo || user.correo || user.email || localStorage.getItem('email') || '';
       safeSetField(form, 'Correo electrónico', email);
 
-      // Sexo (extraer de CURP: posición 10, H=Hombre, M=Mujer)
-      if (curp && curp.length >= 11) {
+      // Sexo
+      let sexoTexto = ocrResults.sexo || '';
+      if (!sexoTexto && curp && curp.length >= 11) {
         const sexoChar = curp.charAt(10).toUpperCase();
-        const sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
+        sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
+      }
+      if (sexoTexto) {
         safeSetField(form, 'Sexo', sexoTexto);
       }
 
@@ -929,16 +948,17 @@ function PreRegistroPresidente() {
       safeSetField(form, 'Lugar de Nacimiento', nacionalidad);
 
       // Teléfono (fill_24 en la plantilla directivo — puede no existir)
-      safeSetField(form, 'fill_24', '');
-      safeSetField(form, 'Teléfono', '');
+      safeSetField(form, 'fill_24', asociacion.toUpperCase());
+      safeSetField(form, 'Teléfono', ocrResults.telefono || '');
 
       // Tipo de afiliación
       safeSetField(form, 'fill_20', tipoAfiliacion);
+      safeSetField(form, 'Tipo', tipoAfiliacion);
 
       // Asociación, Liga, Equipo
       if (asociacion) safeSetField(form, 'Asociación', asociacion.toUpperCase());
       if (liga) safeSetField(form, 'Liga', liga.toUpperCase());
-      safeSetField(form, 'Equipo', '');
+      safeSetField(form, 'Equipo', (ocrResults.equipo || '').toUpperCase());
 
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
@@ -992,6 +1012,8 @@ function PreRegistroPresidente() {
       if (data.valido) {
         setFotoPreview(`data:${data.tipo_imagen};base64,${data.imagen}`);
         setDocuments(prev => ({ ...prev, fotografia: archivo }));
+        setFotoValidacionFallida(false);
+        setFotoArchivoPendiente(null);
         Swal.fire({
           title: '¡Fotografía Aceptada!',
           icon: 'success',
@@ -1001,6 +1023,8 @@ function PreRegistroPresidente() {
       } else {
         setFotoPreview(null);
         setError(data.mensaje);
+        setFotoValidacionFallida(true);
+        setFotoArchivoPendiente(archivo);
         Swal.fire({
           title: 'Error de validación',
           text: data.mensaje,
@@ -1011,6 +1035,9 @@ function PreRegistroPresidente() {
       }
     } catch (err) {
       setFotoPreview(null);
+      setError(err.message || 'No se pudo procesar la foto.');
+      setFotoValidacionFallida(true);
+      setFotoArchivoPendiente(archivo);
       console.error("Error validando foto:", err);
       Swal.fire({
         title: 'Error de validación',
@@ -1020,6 +1047,43 @@ function PreRegistroPresidente() {
         confirmButtonColor: '#ef3030'
       });
     }
+  };
+
+  const handleForzarSubidaFoto = () => {
+    if (!fotoArchivoPendiente) return;
+    setDocuments(prev => ({ ...prev, fotografia: fotoArchivoPendiente }));
+    setFotoPreview(URL.createObjectURL(fotoArchivoPendiente));
+    setFotoValidacionFallida(false);
+    setError(null);
+    Swal.fire({
+      title: 'Fotografía Cargada',
+      text: 'Se ha subido la fotografía omitiendo la validación automática.',
+      icon: 'warning',
+      confirmButtonColor: '#0b4ea6'
+    });
+  };
+
+  const convertToDDMMYYYY = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  const convertToYYYYMMDD = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
+  const handleManualOcrChange = (field, value) => {
+    setOcrResults(prev => ({
+      ...prev,
+      [field]: value,
+      actaNacimiento: prev.actaNacimiento || 'Manual',
+      identificacion: prev.identificacion || 'Manual'
+    }));
   };
 
   const handleLogout = () => {
@@ -1080,9 +1144,9 @@ function PreRegistroPresidente() {
       //   fotografia       → 37 (FOTOGRAFIA, Presidente de Equipo)
       //   formatoAfiliacion→ 10 (FORMATO_DIRECTIVO, Presidente de Equipo)
       const docMapping = [
-        { key: 'actaNacimiento',    docAfiliacionId: 8  },
-        { key: 'identificacion',    docAfiliacionId: 38 },
-        { key: 'fotografia',        docAfiliacionId: 37 },
+        { key: 'actaNacimiento', docAfiliacionId: 8 },
+        { key: 'identificacion', docAfiliacionId: 38 },
+        { key: 'fotografia', docAfiliacionId: 37 },
         { key: 'formatoAfiliacion', docAfiliacionId: 10 },
       ];
 
@@ -1165,6 +1229,32 @@ function PreRegistroPresidente() {
       position: 'relative',
     }}>
       <style>{`
+        .insurance-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+          margin-top: 15px;
+        }
+        .insurance-col {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+        .insurance-col-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: rgba(255,255,255,0.85);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          padding-bottom: 6px;
+          margin-bottom: 5px;
+        }
+        @media (max-width: 768px) {
+          .insurance-grid {
+            grid-template-columns: 1fr;
+          }
+        }
         /* ====== DARK MODE SCOPE: Override global light vars for this page ====== */
         .prereg-dark-page {
           --text-main: rgba(255,255,255,0.92);
@@ -1521,7 +1611,7 @@ function PreRegistroPresidente() {
             ) : (
               <>
                 <div className="input-group" style={{ flexDirection: 'column', gap: '10px' }}>
-                  <label className="input-label" style={{ textAlign: 'center' }}>¿Cuántos jugadores tendrá tu equipo inicialmente?</label>
+                  <label className="input-label" style={{ textAlign: 'center' }}>Ingresa la cantidad total de seguros que deseas pagar.</label>
                   <input
                     type="number"
                     className="input-number"
@@ -1532,7 +1622,6 @@ function PreRegistroPresidente() {
                     }}
                     style={{ marginTop: '5px' }}
                   />
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>(Recuerda: Deberás asignar un seguro por cada jugador, más un seguro extra para ti como Presidente)</span>
                 </div>
 
                 {numPersonas >= 0 && (
@@ -1572,30 +1661,59 @@ function PreRegistroPresidente() {
                     </div>
                   </div>
                 ) : (
-                  catalogoSeguros.map(seg => (
-                    <div key={seg.id} className="insurance-card">
-                      <div className="insurance-info">
-                        <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
-                        <p>{seg.descripcion}</p>
-                      </div>
-                      <input
-                        type="number"
-                        className="insurance-input"
-                        value={asignacionSeguros[seg.id] ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                          setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                        }}
-                      />
+                  <div className="insurance-grid">
+                    <div className="insurance-col">
+                      <div className="insurance-col-title">Seguros Jugadores.</div>
+                      {segurosJugadores.map(seg => (
+                        <div key={seg.id} className="insurance-card" style={{ margin: 0 }}>
+                          <div className="insurance-info">
+                            <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
+                            <p>{seg.descripcion}</p>
+                          </div>
+                          <input
+                            type="number"
+                            className="insurance-input"
+                            value={asignacionSeguros[seg.id] ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                              setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                            }}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))
+                    <div className="insurance-col">
+                      <div className="insurance-col-title">Seguros Presidente.</div>
+                      {segurosPresidente.map(seg => (
+                        <div key={seg.id} className="insurance-card" style={{ margin: 0 }}>
+                          <div className="insurance-info">
+                            <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
+                            <p>{seg.descripcion}</p>
+                          </div>
+                          <input
+                            type="number"
+                            className="insurance-input"
+                            value={asignacionSeguros[seg.id] ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                              setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 <div className="assigned-bar">
-                  <span>Seguros asignados (Jugadores + Presid.): {totalAsignados}/{segurosRequeridos}</span>
-                  {numPersonas > 0 && totalAsignados === segurosRequeridos
-                    ? <span style={{ color: '#34d399', fontWeight: '800' }}>✓ Todos asignados</span>
-                    : <span style={{ color: '#f87171', fontWeight: '800' }}>● Pendientes</span>}
+                  <span>Seguros asignados: {totalAsignados}/{segurosRequeridos}</span>
+                  {Number(numPersonas || 0) > 0 && totalAsignados === segurosRequeridos ? (
+                    <span style={{ color: '#34d399', fontWeight: '800' }}>✓ Todos asignados</span>
+                  ) : (
+                    <span style={{ color: '#f87171', fontWeight: '800' }}>
+                      {totalAsignados > segurosRequeridos ? '● Límite excedido' : '● Pendientes'}
+                    </span>
+                  )}
                 </div>
               </>
             )}
@@ -1993,7 +2111,7 @@ function PreRegistroPresidente() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
                 <div className="premium-input-group">
                   <label className="premium-label">Asociación</label>
-                  <input type="text" value={asociacion} disabled className="premium-input" style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed' }} />
+                  <input type="text" value={asociacion} disabled className="premium-input" style={{ backgroundColor: '#436c95ff', cursor: 'not-allowed' }} />
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Liga Destino</label>
@@ -2021,6 +2139,150 @@ function PreRegistroPresidente() {
                 </div>
               </div>
             </div>
+
+            {/* OPCIÓN DE LLENADO MANUAL DE OCR */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '25px' }}>
+              <button
+                type="button"
+                onClick={() => setMostrarFormularioManual(!mostrarFormularioManual)}
+                className="doc-action-btn"
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(93,135,229,0.3)',
+                  background: mostrarFormularioManual ? 'rgba(93,135,229,0.15)' : 'rgba(255,255,255,0.04)',
+                  color: '#5d87e5',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>⌨️</span> {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos de OCR Manualmente'}
+              </button>
+            </div>
+
+            {mostrarFormularioManual && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(93,135,229,0.06) 0%, rgba(30,27,75,0.09) 100%)',
+                border: '1px solid rgba(93,135,229,0.2)',
+                borderRadius: '24px',
+                padding: '28px',
+                marginBottom: '35px',
+                backdropFilter: 'blur(8px)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, rgba(93,135,229,0.5), transparent)' }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ width: '5px', height: '24px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Formulario Manual de Identidad</h4>
+                </div>
+
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: '1.5' }}>
+                  Si el sistema automático de lectura (OCR) no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Nombre Completo *</label>
+                    <input
+                      type="text"
+                      placeholder="APELLIDOS NOMBRES"
+                      value={ocrResults.nombre || ''}
+                      onChange={(e) => handleManualOcrChange('nombre', e.target.value.toUpperCase())}
+                      className="premium-input"
+                    />
+                  </div>
+                  <div className="premium-input-group">
+                    <label className="premium-label">CURP *</label>
+                    <input
+                      type="text"
+                      placeholder="18 caracteres alfanuméricos"
+                      maxLength={18}
+                      value={ocrResults.curp || ''}
+                      onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
+                      className="premium-input"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Fecha de Nacimiento *</label>
+                    <input
+                      type="date"
+                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
+                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
+                      className="premium-input"
+                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
+                    />
+                  </div>
+                  {/*<div className="premium-input-group">
+                    <label className="premium-label">Edad *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. 34 años"
+                      value={ocrResults.edad || ''}
+                      onChange={(e) => handleManualOcrChange('edad', e.target.value)}
+                      className="premium-input"
+                    />
+                  </div>*/}
+                  <div className="premium-input-group">
+                    <label className="premium-label">Nacionalidad *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. MEXICANA"
+                      value={ocrResults.nacionalidad || ''}
+                      onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase())}
+                      className="premium-input"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Sexo *</label>
+                    <select
+                      value={ocrResults.sexo || ''}
+                      onChange={(e) => handleManualOcrChange('sexo', e.target.value)}
+                      className="premium-input"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <option value="">Selecciona...</option>
+                      <option value="MASCULINO">Masculino</option>
+                      <option value="FEMENINO">Femenino</option>
+                      <option value="NO BINARIO">No binario</option>
+                    </select>
+                  </div>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Teléfono *</label>
+                    <input
+                      type="tel"
+                      placeholder="10 dígitos"
+                      maxLength={10}
+                      value={ocrResults.telefono || ''}
+                      onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
+                      className="premium-input"
+                    />
+                  </div>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Equipo *</label>
+                    <input
+                      type="text"
+                      placeholder="Nombre del Equipo"
+                      value={ocrResults.equipo || ''}
+                      onChange={(e) => handleManualOcrChange('equipo', e.target.value.toUpperCase())}
+                      className="premium-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* TARJETAS DE DOCUMENTOS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '35px' }}>
@@ -2069,6 +2331,24 @@ function PreRegistroPresidente() {
                         ⚠️ {error}
                       </div>
                     )}
+                    {/* Photo validation bypass button */}
+                    {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
+                      <button
+                        onClick={handleForzarSubidaFoto}
+                        className="doc-action-btn"
+                        style={{
+                          border: '1px solid rgba(245,158,11,0.5)',
+                          background: 'rgba(245,158,11,0.15)',
+                          color: '#f59e0b',
+                          marginBottom: '14px',
+                          width: '100%',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⚠️ Omitir validación y usar esta foto
+                      </button>
+                    )}
                     {/* Action buttons */}
                     <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                       {doc.hasDownload && (
@@ -2104,6 +2384,9 @@ function PreRegistroPresidente() {
                               { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
                               { label: 'Edad', value: ocrResults.edad },
                               { label: 'Nacionalidad', value: ocrResults.nacionalidad },
+                              { label: 'Sexo', value: ocrResults.sexo },
+                              { label: 'Teléfono', value: ocrResults.telefono },
+                              { label: 'Equipo', value: ocrResults.equipo },
                             ].map((row, i) => (
                               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                                 <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
