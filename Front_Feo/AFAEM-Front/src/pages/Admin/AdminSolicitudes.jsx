@@ -70,7 +70,7 @@ export default function AdminSolicitudes() {
         aprobadas: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
         rechazadas: solicitudesList.filter(s => s.EstatusValidacion === 3).length
       });
-      
+
       setError(null);
     } catch (err) {
       console.error('Error cargando solicitudes:', err);
@@ -174,7 +174,7 @@ export default function AdminSolicitudes() {
             <p><strong>Nombre:</strong> ${row.Nombre || ''} ${row.PrimerApellido || ''}</p>
             <p><strong>Correo:</strong> ${row.Correo || 'N/A'}</p>
             <p><strong>Equipo:</strong> ${row.Equipo || 'N/A'}</p>
-            <p><strong>Monto:</strong> ${row.Monto ? `$${parseFloat(row.Monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : 'N/A'}</p>
+            <!--<p><strong>Monto:</strong> ${row.Monto ? `$${parseFloat(row.Monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : 'N/A'}</p>-->
           </div>
         `,
         confirmButtonText: 'Cerrar',
@@ -231,7 +231,7 @@ export default function AdminSolicitudes() {
           text: tieneRechazos ? 'Se han enviado las observaciones al usuario.' : 'La solicitud ha sido aprobada correctamente.',
           icon: 'success'
         }).then(() => {
-          loadSolicitudes(); // Recargar datos sin refrescar toda la página
+          loadSolicitudes(true); // Recargar datos sin refrescar toda la página
         });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
@@ -250,19 +250,26 @@ export default function AdminSolicitudes() {
       inputAttributes: {
         'aria-label': 'Escribe aquí el motivo del rechazo'
       },
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return '¡Debes ingresar un motivo para rechazar la solicitud!';
+        }
+      },
       showCancelButton: true,
       confirmButtonText: 'Rechazar',
       cancelButtonText: 'Volver',
-      confirmButtonColor: '#dc3545',
+      confirmButtonColor: '#dc3545'
     });
 
-    if (motivo) {
+    if (motivo?.trim()) {
       try {
         setLoading(true);
         await updateSolicitudEstatus(id, 3, motivo); // 3 = Rechazado (Backend Sync)
         setModalAbierto(false);
-        Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info');
-        loadSolicitudes(); // Recargar datos localmente
+        Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info')
+          .then(() => {
+            loadSolicitudes(true); // Recargar datos forzando petición fresca
+          });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
       } finally {
@@ -273,27 +280,28 @@ export default function AdminSolicitudes() {
 
   const handleCambiarEstatusTerminal = async (id, estatusActual) => {
     const esAprobado = estatusActual === 2;
-    const mensaje = esAprobado 
-      ? "¿Estás a punto de rechazar una solicitud que ya ha sido aceptada, estás seguro?"
-      : "¿Estás a punto de aceptar una solicitud que ya ha sido rechazada, estás seguro?";
-    
+    const etiqueta = esAprobado ? 'aprobada' : 'rechazada';
+
     const { isConfirmed } = await Swal.fire({
-      title: 'Cambiar Estado',
-      text: mensaje,
-      icon: 'warning',
+      title: 'Re-verificar Solicitud',
+      html: `
+        <p style="margin:0; color:#475569; font-size:14px;">
+          Esta solicitud fue <strong>${etiqueta}</strong> previamente.<br/>
+          Se abrirá el módulo de revisión para que puedas evaluarla nuevamente
+          y decidir si <strong>aprobarla o rechazarla</strong>.
+        </p>
+      `,
+      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: 'Sí, continuar',
+      confirmButtonText: 'Abrir revisión',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: esAprobado ? '#ef4444' : '#10b981',
+      confirmButtonColor: '#6366f1',
       cancelButtonColor: '#94a3b8'
     });
 
     if (isConfirmed) {
-      if (esAprobado) {
-        handleRechazarSolicitud(id);
-      } else {
-        handleAprobarSolicitud(id);
-      }
+      // Abre el modal de documentos — desde ahí el admin decide aprobar o rechazar
+      handleRevisarDocumentos(id);
     }
   };
 
@@ -366,16 +374,6 @@ export default function AdminSolicitudes() {
       }
     },
     {
-      key: 'Monto',
-      label: 'Monto',
-      width: '10%',
-      render: (value) => value ? (
-        <span style={{ fontWeight: '700', color: 'var(--primary)' }}>
-          ${parseFloat(value).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-        </span>
-      ) : '-'
-    },
-    {
       key: 'EstatusValidacion',
       label: 'Estado',
       width: '15%',
@@ -394,7 +392,7 @@ export default function AdminSolicitudes() {
           label = 'Pendiente';
         } else if (estatus === 4) {
           badgeClass = 'badge-primary';
-          label = 'Revisión Docs';
+          label = 'Borrador';
         }
 
         return (
@@ -420,7 +418,7 @@ export default function AdminSolicitudes() {
           >
             Ver
           </button>
-          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4) && (
+          {(row.EstatusValidacion === 2 || row.EstatusValidacion === 4 || row.EstatusValidacion === 1 || row.EstatusValidacion === 3) && (
             <button
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
@@ -432,7 +430,7 @@ export default function AdminSolicitudes() {
               Docs
             </button>
           )}
-          
+
           {((filtroEstatus === '2' || filtroEstatus === '3') && (row.EstatusValidacion === 2 || row.EstatusValidacion === 3)) ? (
             <button
               onClick={() => handleCambiarEstatusTerminal(row.SolicitudId, row.EstatusValidacion)}
@@ -482,7 +480,6 @@ export default function AdminSolicitudes() {
   // Verificar si hay datos mock
   const tieneMock = solicitudes.some(s => s.esMock);
   const errorServidor = solicitudes.find(s => s.errorServidor)?.errorServidor;
-
   return (
     <div className="dashboard-content">
       {tieneMock && (
@@ -534,7 +531,7 @@ export default function AdminSolicitudes() {
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Validación de Solicitudes</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro entrantes.</p>
+          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro de presidente de equipo entrantes.</p>
         </div>
         <button
           onClick={() => loadSolicitudes(true)}

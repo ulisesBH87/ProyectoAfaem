@@ -100,28 +100,31 @@ const AdminPagos = () => {
   };
 
   const handleCambiarEstatusTerminal = async (id, estatusActual) => {
-    const esAprobado = estatusActual === 3;
-    const mensaje = esAprobado 
-      ? "¿Estás a punto de rechazar un pago que ya ha sido aprobado, estás seguro?"
-      : "¿Estás a punto de aprobar un pago que ya ha sido rechazado, estás seguro?";
-    
-    const { isConfirmed } = await Swal.fire({
-      title: 'Cambiar Estado de Pago',
-      text: mensaje,
-      icon: 'warning',
+    const etiqueta = estatusActual === 3 ? 'aprobado' : 'rechazado';
+
+    const { isConfirmed, isDenied } = await Swal.fire({
+      title: 'Re-verificar Pago',
+      html: `
+        <p style="margin:0 0 12px; color:#475569; font-size:14px;">
+          Este pago fue <strong>${etiqueta}</strong> previamente.<br/>
+          Selecciona la nueva acción a realizar:
+        </p>
+      `,
+      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: 'Sí, continuar',
+      showDenyButton: true,
+      confirmButtonText: '✓ Aprobar',
+      denyButtonText: '✗ Rechazar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: esAprobado ? 'var(--danger)' : '#10b981',
-      cancelButtonColor: 'var(--text-muted)'
+      confirmButtonColor: '#10b981',
+      denyButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8'
     });
 
     if (isConfirmed) {
-      if (esAprobado) {
-        handleUpdateEstatus(id, 4, 'Rechazar');
-      } else {
-        handleUpdateEstatus(id, 3, 'Aprobar');
-      }
+      handleUpdateEstatus(id, 3, 'Aprobar');
+    } else if (isDenied) {
+      handleUpdateEstatus(id, 4, 'Rechazar');
     }
   };
 

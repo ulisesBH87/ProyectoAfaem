@@ -260,11 +260,18 @@ class PagosServicio:
         if not orden:
             return {"tiene_orden": False}
 
+        solicitud = pagos_repositorio.obtener_solicitud_repo(self.db, orden.SolicitudId)
+
         return {
             "tiene_orden": True,
             "orden_pago_id": orden.OrdenPagoId,
             "estatus": orden.EstatusPagoId,
             "tiene_comprobante": bool(orden.RutaVoucher),
+            "solicitud": {
+                "solicitud_id": solicitud.SolicitudId,
+                "estatus": solicitud.EstatusValidacion,
+                "observaciones": solicitud.ObservacionesSolicitud
+            } if solicitud else None,
             "total": float(orden.TotalPagar) if orden.TotalPagar else 0
         }
 

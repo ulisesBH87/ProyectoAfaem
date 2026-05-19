@@ -221,9 +221,32 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     return orden
 
 def mi_estado_pago_repo(db, usuario_id):
-    orden = db.query(OrdenPago).filter(OrdenPago.UsuarioId == usuario_id).order_by(OrdenPago.OrdenPagoId.desc()).first()
+    return (
+        db.query(OrdenPago)
+        .join(Solicitud, Solicitud.SolicitudId == OrdenPago.SolicitudId)
+        .filter(
+            OrdenPago.UsuarioId == usuario_id,
+            Solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO,
+            OrdenPago.EstatusPagoId.in_([
+                EstatusValidacionPago.NOENVIADO,
+                EstatusValidacionPago.ESPERA,
+                EstatusValidacionPago.ACTIVO,
+                EstatusValidacionPago.RECHAZADO,
+            ])
+        )
+        .order_by(desc(OrdenPago.OrdenPagoId))
+        .first()
+    )
 
-    return orden
+def buscar_solicitud_repo(db, usuario_db):
+    solicitud = db.query(Solicitud).filter(Solicitud.UsuarioId == usuario_db).first()
+    return solicitud
+
+def obtener_solicitud_repo(db, solicitud_id):
+    if not solicitud_id:
+        return None
+
+    return db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
 
 def obtener_usuario_id_por_presidente_repo(db, presidente_id):
     return (
