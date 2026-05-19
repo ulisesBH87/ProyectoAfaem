@@ -287,27 +287,28 @@ export default function AdminSolicitudes() {
 
   const handleCambiarEstatusTerminal = async (id, estatusActual) => {
     const esAprobado = estatusActual === 2;
-    const mensaje = esAprobado
-      ? "¿Estás a punto de rechazar una solicitud que ya ha sido aceptada, estás seguro?"
-      : "¿Estás a punto de aceptar una solicitud que ya ha sido rechazada, estás seguro?";
+    const etiqueta = esAprobado ? 'aprobada' : 'rechazada';
 
     const { isConfirmed } = await Swal.fire({
-      title: 'Cambiar Estado',
-      text: mensaje,
-      icon: 'warning',
+      title: 'Re-verificar Solicitud',
+      html: `
+        <p style="margin:0; color:#475569; font-size:14px;">
+          Esta solicitud fue <strong>${etiqueta}</strong> previamente.<br/>
+          Se abrirá el módulo de revisión para que puedas evaluarla nuevamente
+          y decidir si <strong>aprobarla o rechazarla</strong>.
+        </p>
+      `,
+      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: 'Sí, continuar',
+      confirmButtonText: 'Abrir revisión',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: esAprobado ? '#ef4444' : '#10b981',
+      confirmButtonColor: '#6366f1',
       cancelButtonColor: '#94a3b8'
     });
 
     if (isConfirmed) {
-      if (esAprobado) {
-        handleRechazarSolicitud(id);
-      } else {
-        handleAprobarSolicitud(id);
-      }
+      // Abre el modal de documentos — desde ahí el admin decide aprobar o rechazar
+      handleRevisarDocumentos(id);
     }
   };
 
