@@ -251,21 +251,14 @@ export default function AdminSolicitudes() {
         'aria-label': 'Escribe aquí el motivo del rechazo'
       },
       inputValidator: (value) => {
-        if (!value || value.trim() === '') {
+        if (!value || !value.trim()) {
           return '¡Debes ingresar un motivo para rechazar la solicitud!';
         }
       },
       showCancelButton: true,
       confirmButtonText: 'Rechazar',
       cancelButtonText: 'Volver',
-      confirmButtonColor: '#dc3545',
-
-      // NUEVO
-      inputValidator: (value) => {
-        if (!value || !value.trim()) {
-          return 'Debes escribir un motivo de rechazo';
-        }
-      }
+      confirmButtonColor: '#dc3545'
     });
 
     if (motivo?.trim()) {
