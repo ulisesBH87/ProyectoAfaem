@@ -2108,13 +2108,12 @@ export default function ConfigurarEquipo() {
                       alignItems: 'center', 
                       gap: '15px' 
                     }}>
-                       <div style={{ fontSize: '28px' }}>✨</div>
                        <div>
                          <div style={{ fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>
-                           {isAdmin ? 'Modo Administrador: Registro Directo' : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
+                           {isAdmin ? `Registro de equipo como Administrador. Jugadores pagados: ${numPersonasPagadas} ` : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
                          </div>
                          <div style={{ fontSize: '12px', color: '#0ea5e9', fontWeight: '600' }}>
-                           {isAdmin ? 'Crea y configura equipos sin restricciones de pago previo.' : 'Los seguros y cupos se asignan automáticamente según tu pago.'}
+                           {'Los seguros y cupos se asignan automáticamente según tu pago.'}
                          </div>
                        </div>
                     </div>
