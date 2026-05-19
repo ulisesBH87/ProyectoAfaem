@@ -216,19 +216,19 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             equipo = equipo_repositorio.obtener_equipo_por_id(db, equipo_tem.EquipoId)
         
         try:
-            if rol_id != 1: # Si no es administrador, se asume que es presidente y se registran los jugadores en el equipo temporal
-                solicitud_id = equipo_tem.SolicitudId if equipo_tem else None
+            #if rol_id != 1: # Si no es administrador, se asume que es presidente y se registran los jugadores en el equipo temporal
+            solicitud_id = equipo_tem.SolicitudId if equipo_tem else None
 
-                for index, player in enumerate(players_info):
-                    await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
+            for index, player in enumerate(players_info):
+                await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
 
-                slots_restantes = db.query(EquipoTemporalJugador).filter(
-                    EquipoTemporalJugador.EquipoTemporalId == equipo_tem.EquipoTemporalId,
-                    EquipoTemporalJugador.Completo == False
-                ).count()
+            slots_restantes = db.query(EquipoTemporalJugador).filter(
+                EquipoTemporalJugador.EquipoTemporalId == equipo_tem.EquipoTemporalId,
+                EquipoTemporalJugador.Completo == False
+            ).count()
 
-                if slots_restantes == 0:
-                    equipo_tem.Activo = False
+            if slots_restantes == 0:
+                equipo_tem.Activo = False
             
         except:
             db.rollback()

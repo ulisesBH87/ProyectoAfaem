@@ -17,6 +17,9 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
         justifyContent: 'space-between',
         position: 'sticky',
         top: 0,
+        left: 0,
+        width: '100%',
+        transition: 'all 0.3s ease',
         backgroundColor: '#ffffff',
         borderBottom: '1px solid #e2e8f0',
         zIndex: 1000,
@@ -25,29 +28,20 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {/* Botón hamburguesa - solo visible en móvil */}
-        {onMenuToggle && (
-          <button
-            onClick={onMenuToggle}
-            className="mobile-menu-btn"
-            aria-label="Abrir menú"
-            style={{
-              display: 'none', /* Se muestra via CSS en <768px */
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              border: '1.5px solid var(--border-light)',
-              background: 'white',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
-              fontSize: '18px',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <FaBars />
-          </button>
-        )}
+        <button
+        onClick={onMenuToggle}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer',
+          fontSize: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          color: 'var(--primary)'
+        }}
+        >
+          <FaBars />
+        </button>
         <h2 className="header-title" style={{ 
           fontSize: '22px', 
           fontWeight: '800', 
@@ -55,7 +49,7 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
           margin: 0,
           letterSpacing: '-0.5px',
           whiteSpace: 'nowrap',
-          overflow: 'hidden',
+          overflow: 'nowrap',
           textOverflow: 'ellipsis'
         }}>
           {pageTitle}

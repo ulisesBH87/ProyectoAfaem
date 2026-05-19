@@ -1308,6 +1308,21 @@ export default function ConfigurarEquipo() {
 
          // CONVERTIR BASE64 A URL MOSTRABLE
         const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
+        
+        // convertir base64 a archivo
+          const byteCharacters = atob(data.imagen);
+          const byteNumbers = new Array(byteCharacters.length);
+
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+
+          const byteArray = new Uint8Array(byteNumbers);
+
+          const newFile = new File([byteArray], "foto_validada.jpg", {
+            type: data.tipo_imagen
+          });
+
 
         // GUARDAR PREVIEW
         setPreviews(prev => ({
@@ -1320,7 +1335,7 @@ export default function ConfigurarEquipo() {
           ...prev,
           documents: {
             ...prev.documents,
-            foto: file
+            foto: newFile
           }
         }));
         
@@ -1331,9 +1346,35 @@ export default function ConfigurarEquipo() {
           showConfirmButton: false
         });
       } else {
+
+      // LIMPIAR DOCUMENTO
+      setCurrentPlayer(prev => ({
+        ...prev,
+        documents: {
+          ...prev.documents,
+          foto: null
+        }
+      }));
+
         Swal.fire('Error en la fotografía', data.mensaje, 'error');
       }
     } catch (err) {
+
+      // LIMPIAR PREVIEW
+    setPreviews(prev => ({
+      ...prev,
+      foto: null
+    }));
+
+    // LIMPIAR DOCUMENTO
+    setCurrentPlayer(prev => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        foto: null
+      }
+    }));
+
       Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
     }
   };
@@ -2067,13 +2108,12 @@ export default function ConfigurarEquipo() {
                       alignItems: 'center', 
                       gap: '15px' 
                     }}>
-                       <div style={{ fontSize: '28px' }}>✨</div>
                        <div>
                          <div style={{ fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>
-                           {isAdmin ? 'Modo Administrador: Registro Directo' : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
+                           {isAdmin ? `Registro de equipo como Administrador. Jugadores pagados: ${numPersonasPagadas} ` : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
                          </div>
                          <div style={{ fontSize: '12px', color: '#0ea5e9', fontWeight: '600' }}>
-                           {isAdmin ? 'Crea y configura equipos sin restricciones de pago previo.' : 'Los seguros y cupos se asignan automáticamente según tu pago.'}
+                           {'Los seguros y cupos se asignan automáticamente según tu pago.'}
                          </div>
                        </div>
                     </div>

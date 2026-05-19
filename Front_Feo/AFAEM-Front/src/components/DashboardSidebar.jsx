@@ -11,7 +11,7 @@ import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
 import AfaemLogo from '../assets/afaem-logo@4x.png';
 
-const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
+const DashboardSidebar = ({ collapsed}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
@@ -49,9 +49,9 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
 
   return (
     <aside
-      className={`dashboard-sidebar ${mobileOpen ? 'mobile-open' : ''}`}
+      className={`dashboard-sidebar`}
       style={{
-        width: 'var(--sidebar-width)',
+        width: collapsed ? '80px' : '260px',
         height: '100vh',
         position: 'fixed',
         left: 0,
@@ -91,6 +91,7 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
             transition: 'all 0.3s'
           }}
         />
+        {!collapsed && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <h1
               onClick={handleLogoClick} 
@@ -103,6 +104,7 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
               Management System
             </p>
           </div>
+        )}
       </div>
 
       {/* MENU ITEMS */}
@@ -146,15 +148,15 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '8px 12px',
-                  margin: '2px 0',
+                  margin: '6px 0',
                   borderRadius: '10px',
                   cursor: item.Ruta ? 'pointer' : 'default',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   backgroundColor: isActive ? theme.activeBg : 'transparent',
                   color: isActive ? theme.activeText : theme.text,
                   boxShadow: isActive ? (isAdmin ? '0 4px 12px rgba(37, 99, 235, 0.4)' : '0 4px 8px rgba(11, 78, 166, 0.3)') : 'none',
-                  justifyContent: 'flex-start'
+                  padding: collapsed ? '12px 0' : '8px 12px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
@@ -169,16 +171,26 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
                   }
                 }}
               >
-                <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center'}}>
                   {getIcon(item.Icono)}
                 </span>
-                <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '600' }}>
+                {!collapsed && (
+                <span
+                  style={{
+                    marginLeft: '12px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap',
+                    animation: 'fadeIn 0.2s ease'
+                  }}
+                >
                   {item.Nombre}
                 </span>
+              )}
               </div>
 
               {/* Submenus if present */}
-              {hasChildren && filteredSubMenus.map((child, cIdx) => {
+              {!collapsed && hasChildren && filteredSubMenus.map((child, cIdx) => {
                 const isChildActive = location.pathname === child.Ruta;
                 return (
                   <div
@@ -225,7 +237,11 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <FaGavel style={{ fontSize: '18px' }} />
-          <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Reglamentos</span>
+          {!collapsed && (
+  <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
+    Reglamentos
+  </span>
+)}
         </div>
 
         <div
@@ -244,7 +260,11 @@ const DashboardSidebar = ({ mobileOpen, onMobileClose }) => {
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <FaSignOutAlt style={{ fontSize: '18px' }} />
-          <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>Cerrar Sesión</span>
+          {!collapsed && (
+  <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
+    Cerrar Sesión
+  </span>
+)}
         </div>
 
 
