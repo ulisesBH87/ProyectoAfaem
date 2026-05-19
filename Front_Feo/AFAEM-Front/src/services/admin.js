@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_BASE } from '../config/config';
 import { applyErrorInterceptor } from '../utils/errorHandler';
+import { clearSolicitudesCache } from './solicitud';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -145,9 +146,11 @@ export const updateSolicitudEstatus = async (solicitudId, estatus, observaciones
       Estatus: estatus,
       Observaciones: observaciones
     });
+    clearSolicitudesCache(); // Invalida caché para que la tabla se actualice
     return response.data;
   } catch (error) {
     console.warn(`Backend no listo para POST /solicitud/${solicitudId}/validar. Simulando éxito.`);
+    clearSolicitudesCache(); // Invalida caché incluso en modo simulado
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ mensaje: "Estatus actualizado correctamente (Simulado)", solicitud_id: solicitudId });

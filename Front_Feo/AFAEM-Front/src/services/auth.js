@@ -71,13 +71,14 @@ export function setAuthToken(token) {
 }
 
 // PING SENCILLO PARA DIAGNÓSTICO
+// Usamos fetch nativo con HEAD para no depender de axios ni del proxy de Vite
 export async function pingBackend() {
   try {
-    // Volvemos a pedir '/' porque ahora el proxy de Vite lo maneja correctamente para JSON
-    const res = await api.get('/');
-    return { ok: true, url: '/', res: res.data };
+    const res = await fetch('/auth/iniciar-sesion', { method: 'HEAD', signal: AbortSignal.timeout(4000) });
+    // 405 (Method Not Allowed) también confirma que el servidor está vivo
+    return { ok: true, url: '/auth/iniciar-sesion' };
   } catch {
-     return { ok: false, tried: '/' };
+    return { ok: false, tried: '/auth/iniciar-sesion' };
   }
 }
 

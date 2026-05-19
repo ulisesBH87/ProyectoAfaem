@@ -57,6 +57,7 @@ export default function Modal({
             backgroundColor: 'white',
             borderRadius: '12px',
             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.2)',
+            width: '100%',
             ...estilosPorTamanio[tamanio],
             maxHeight: '90vh',
             overflow: 'auto',

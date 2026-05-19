@@ -70,7 +70,7 @@ export default function AdminSolicitudes() {
         aprobadas: solicitudesList.filter(s => s.EstatusValidacion === 2).length,
         rechazadas: solicitudesList.filter(s => s.EstatusValidacion === 3).length
       });
-      
+
       setError(null);
     } catch (err) {
       console.error('Error cargando solicitudes:', err);
@@ -231,7 +231,7 @@ export default function AdminSolicitudes() {
           text: tieneRechazos ? 'Se han enviado las observaciones al usuario.' : 'La solicitud ha sido aprobada correctamente.',
           icon: 'success'
         }).then(() => {
-          loadSolicitudes(); // Recargar datos sin refrescar toda la página
+          loadSolicitudes(true); // Recargar datos sin refrescar toda la página
         });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
@@ -250,17 +250,15 @@ export default function AdminSolicitudes() {
       inputAttributes: {
         'aria-label': 'Escribe aquí el motivo del rechazo'
       },
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return '¡Debes ingresar un motivo para rechazar la solicitud!';
+        }
+      },
       showCancelButton: true,
       confirmButtonText: 'Rechazar',
       cancelButtonText: 'Volver',
-      confirmButtonColor: '#dc3545',
-    
-      // NUEVO
-      inputValidator: (value) => {
-          if (!value || !value.trim()) {
-            return 'Debes escribir un motivo de rechazo';
-          }
-        }
+      confirmButtonColor: '#dc3545'
     });
 
     if (motivo?.trim()) {
@@ -268,8 +266,10 @@ export default function AdminSolicitudes() {
         setLoading(true);
         await updateSolicitudEstatus(id, 3, motivo); // 3 = Rechazado (Backend Sync)
         setModalAbierto(false);
-        Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info');
-        loadSolicitudes(); // Recargar datos localmente
+        Swal.fire('Rechazada', 'La solicitud ha sido rechazada y se ha notificado al presidente.', 'info')
+          .then(() => {
+            loadSolicitudes(true); // Recargar datos forzando petición fresca
+          });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
       } finally {
@@ -280,27 +280,28 @@ export default function AdminSolicitudes() {
 
   const handleCambiarEstatusTerminal = async (id, estatusActual) => {
     const esAprobado = estatusActual === 2;
-    const mensaje = esAprobado 
-      ? "¿Estás a punto de rechazar una solicitud que ya ha sido aceptada, estás seguro?"
-      : "¿Estás a punto de aceptar una solicitud que ya ha sido rechazada, estás seguro?";
-    
+    const etiqueta = esAprobado ? 'aprobada' : 'rechazada';
+
     const { isConfirmed } = await Swal.fire({
-      title: 'Cambiar Estado',
-      text: mensaje,
-      icon: 'warning',
+      title: 'Re-verificar Solicitud',
+      html: `
+        <p style="margin:0; color:#475569; font-size:14px;">
+          Esta solicitud fue <strong>${etiqueta}</strong> previamente.<br/>
+          Se abrirá el módulo de revisión para que puedas evaluarla nuevamente
+          y decidir si <strong>aprobarla o rechazarla</strong>.
+        </p>
+      `,
+      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: 'Sí, continuar',
+      confirmButtonText: 'Abrir revisión',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: esAprobado ? '#ef4444' : '#10b981',
+      confirmButtonColor: '#6366f1',
       cancelButtonColor: '#94a3b8'
     });
 
     if (isConfirmed) {
-      if (esAprobado) {
-        handleRechazarSolicitud(id);
-      } else {
-        handleAprobarSolicitud(id);
-      }
+      // Abre el modal de documentos — desde ahí el admin decide aprobar o rechazar
+      handleRevisarDocumentos(id);
     }
   };
 
@@ -429,7 +430,7 @@ export default function AdminSolicitudes() {
               Docs
             </button>
           )}
-          
+
           {((filtroEstatus === '2' || filtroEstatus === '3') && (row.EstatusValidacion === 2 || row.EstatusValidacion === 3)) ? (
             <button
               onClick={() => handleCambiarEstatusTerminal(row.SolicitudId, row.EstatusValidacion)}

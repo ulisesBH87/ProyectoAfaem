@@ -3,6 +3,7 @@ import { FaPlus, FaEdit, FaTrash, FaListAlt, FaNetworkWired, FaTrophy, FaTags } 
 import DashboardTable from '../../components/DashboardTable';
 import Swal from 'sweetalert2';
 import api from '../../services/auth';
+import { getCatalogosRegistro } from '../../services/admin';
 import Loader from '../../components/Loader';
 
 export default function AdminCatalogos() {
@@ -23,34 +24,27 @@ export default function AdminCatalogos() {
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      // Cargamos todos los catálogos en paralelo desde los nuevos endpoints
-      const [ligas, categorias, modalidades, ramas] = await Promise.all([
-        api.get('/catalogos/ligas'),
-        api.get('/catalogos/categorias'),
-        api.get('/catalogos/modalidades'),
-        api.get('/catalogos/ramas')
-      ]);
-      
+      // Usamos /equipo-temporal/catalogos-registro que ya funciona en producción
+      const data = await getCatalogosRegistro();
       setCatalogos({
-        ligas: ligas.data,
-        categorias: categorias.data,
-        modalidades: modalidades.data,
-        ramas: ramas.data
+        ligas: data.ligas || [],
+        categorias: data.categorias || [],
+        modalidades: data.modalidades || [],
+        ramas: data.ramas || []
       });
-      
     } catch (error) {
-      console.warn("Fallo al cargar catálogos desde endpoints específicos", error);
-      // Fallback a mock data si algo sale mal
+      console.warn("Fallo al cargar catálogos", error);
       setCatalogos({
-        ligas: [{ id: 1, nombre: 'Liga Moflito', descripcion: 'Descripción mock' }],
-        categorias: [{ id: 1, nombre: 'Juvenil' }],
-        modalidades: [{ id: 1, nombre: '11 vs 11' }],
-        ramas: [{ id: 1, nombre: 'Varonil' }]
+        ligas: [],
+        categorias: [],
+        modalidades: [],
+        ramas: []
       });
     } finally {
       setCargando(false);
     }
   };
+
   if (cargando && catalogos.ligas.length === 0) {
     return <Loader text="Cargando catálogos del sistema..." />;
   }
