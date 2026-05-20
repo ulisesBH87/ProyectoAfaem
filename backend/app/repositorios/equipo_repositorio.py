@@ -240,6 +240,7 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
 
     docs = db.query(
         DocumentosEntregados.DocumentosSolicitudId,
+        DocumentosEntregados.SolicitudId,
         DocumentosEntregados.DocumentoAfiliacionId,
         DocumentosEntregados.RutaArchivo,
         DocumentosEntregados.FechaEntrega,
@@ -264,6 +265,7 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
     return [
         {
             "DocumentosSolicitudId": d.DocumentosSolicitudId,
+            "SolicitudId": d.SolicitudId,
             "DocumentoAfiliacionId": d.DocumentoAfiliacionId,
             "DocumentoId": d.DocumentoId,
             "nombre": d.NombreDocumento,
@@ -300,6 +302,72 @@ def crear_solicitud_administrativa(db, usuario_id):
     db.add(solicitud)
     db.flush()
     return solicitud.SolicitudId
+
+
+def obtener_solicitud_id_para_persona(db, persona_id: int, usuario_id: int) -> int:
+    """
+    Resuelve la SolicitudId real del jugador (proceso de alta en equipo temporal),
+    no el valor erróneo que pudo quedar en DocumentosEntregados (p. ej. id 1).
+    """
+    # 1) Slot del jugador en EquipoTemporal (solicitud del registro original)
+    fila_slot = (
+        db.query(EquipoTemporal.SolicitudId)
+        .join(
+            EquipoTemporalJugador,
+            EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId,
+        )
+        .filter(
+            EquipoTemporalJugador.PersonaId == persona_id,
+            EquipoTemporal.SolicitudId.isnot(None),
+        )
+        .order_by(EquipoTemporal.EquipoTemporalId.desc())
+        .first()
+    )
+    if fila_slot and fila_slot.SolicitudId:
+        return fila_slot.SolicitudId
+
+    # 2) Equipo actual del jugador → EquipoTemporal vinculado al mismo EquipoId
+    miembro = (
+        db.query(MiembrosEquipo)
+        .filter(
+            MiembrosEquipo.PersonaId == persona_id,
+            MiembrosEquipo.Eliminado == False,
+        )
+        .order_by(MiembrosEquipo.MiembroEquipoId.desc())
+        .first()
+    )
+    if miembro and miembro.EquipoID:
+        fila_equipo = (
+            db.query(EquipoTemporal.SolicitudId)
+            .filter(
+                EquipoTemporal.EquipoId == miembro.EquipoID,
+                EquipoTemporal.SolicitudId.isnot(None),
+            )
+            .order_by(EquipoTemporal.EquipoTemporalId.desc())
+            .first()
+        )
+        if fila_equipo and fila_equipo.SolicitudId:
+            return fila_equipo.SolicitudId
+
+    # 3) Documentos entregados: solicitud más repetida (no el primer registro aislado)
+    filas_docs = (
+        db.query(
+            DocumentosEntregados.SolicitudId,
+            func.count(DocumentosEntregados.DocumentosSolicitudId).label("total"),
+        )
+        .filter(
+            DocumentosEntregados.PersonaId == persona_id,
+            DocumentosEntregados.SolicitudId.isnot(None),
+        )
+        .group_by(DocumentosEntregados.SolicitudId)
+        .order_by(func.count(DocumentosEntregados.DocumentosSolicitudId).desc())
+        .all()
+    )
+    if filas_docs:
+        return filas_docs[0].SolicitudId
+
+    return crear_solicitud_administrativa(db, usuario_id)
+
 
 def crear_solicitud_presidente(db, usuario_id):
     solicitud = Solicitud(
