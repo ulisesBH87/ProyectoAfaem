@@ -204,6 +204,11 @@ export default function ConfigurarEquipo() {
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
   const numPersonasPagadas = Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
   const shouldShowPagoPrevioEquipo = !tieneSlotDisponible && !pagoEquipo.aprobado && (!isAdmin || Boolean(selectedPresidentId && pagoEquipo.estadoEquipo));
+  const getSeguroTipoPersonaId = (seguro) => Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
+  const segurosPresidente = catalogs.seguros.filter(seguro => getSeguroTipoPersonaId(seguro) === 2);
+  const segurosJugador = catalogs.seguros.filter(seguro => getSeguroTipoPersonaId(seguro) === 4);
+  const seguroJugadorIds = new Set(segurosJugador.map(seguro => String(seguro.id)));
+  const segurosPresidenteIds = new Set(segurosPresidente.map(seguro => String(seguro.id)));
 
   const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
     if (!ordenId) return;
@@ -685,13 +690,27 @@ export default function ConfigurarEquipo() {
   useEffect(() => {
     if (isAdmin || pagoEquipo.ordenId || !numJugadoresPago || catalogs.seguros.length === 0) return;
 
-    const totalNecesario = Number(numJugadoresPago) + 1;
-    const nuevaAsignacion = {};
-    catalogs.seguros.forEach((seguro, index) => {
-      nuevaAsignacion[String(seguro.id)] = index === 0 ? totalNecesario : 0;
+    setAsignacionSeguros(prev => {
+      const yaTieneSeleccionPresidente = segurosPresidente.some(seguro => Number(prev[String(seguro.id)] || 0) > 0);
+      const yaTieneSeleccionJugador = segurosJugador.some(seguro => Number(prev[String(seguro.id)] || 0) > 0);
+
+      if (yaTieneSeleccionPresidente || yaTieneSeleccionJugador) {
+        return prev;
+      }
+
+      const next = { ...prev };
+
+      segurosPresidente.forEach((seguro, index) => {
+        next[String(seguro.id)] = index === 0 ? 1 : 0;
+      });
+
+      segurosJugador.forEach(seguro => {
+        next[String(seguro.id)] = 0;
+      });
+
+      return next;
     });
-    setAsignacionSeguros(nuevaAsignacion);
-  }, [catalogs.seguros, isAdmin, numJugadoresPago, pagoEquipo.ordenId]);
+  }, [catalogs.seguros, isAdmin, numJugadoresPago, pagoEquipo.ordenId, segurosJugador, segurosPresidente]);
 
   // Detectar parámetros de ruta para modo agregar jugador
   useEffect(() => {
@@ -797,7 +816,9 @@ export default function ConfigurarEquipo() {
   }
 
 
-  const segurosRequeridosPago = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) + 1 : 0;
+  const segurosRequeridosPagoPresidente = Number(numJugadoresPago || 0) > 0 ? 1 : 0;
+  const segurosRequeridosPagoJugador = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) : 0;
+  const segurosRequeridosPago = segurosRequeridosPagoPresidente + segurosRequeridosPagoJugador;
 
   const validateCurp = (value) => {
     if (!/^[A-Z0-9]*$/.test(value)) {
@@ -808,8 +829,19 @@ export default function ConfigurarEquipo() {
     }
     return '';
   };
-  const totalAsignadosPago = Object.values(asignacionSeguros).reduce((sum, value) => sum + Number(value || 0), 0);
+  const totalAsignadosPagoPresidente = segurosPresidente.reduce((sum, seguro) => {
+    const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+    return sum + cantidad;
+  }, 0);
+  const totalAsignadosPagoJugador = segurosJugador.reduce((sum, seguro) => {
+    const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+    return sum + cantidad;
+  }, 0);
+  const totalAsignadosPago = totalAsignadosPagoPresidente + totalAsignadosPagoJugador;
   const segurosPendientesPago = segurosRequeridosPago - totalAsignadosPago;
+  const tieneSeguroPresidenteValido = totalAsignadosPagoPresidente === segurosRequeridosPagoPresidente;
+  const tieneSegurosJugadorValidos = totalAsignadosPagoJugador === segurosRequeridosPagoJugador;
+  const canGeneratePagoEquipo = Number(numJugadoresPago) >= 1 && tieneSeguroPresidenteValido && tieneSegurosJugadorValidos;
   const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
   const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
   const totalPagoEstimado = (
@@ -823,12 +855,15 @@ export default function ConfigurarEquipo() {
   const totalPagoMostrado = pagoEquipo.total || totalPagoEstimado;
 
   // CÁLCULO PARA PAGO DE AGREGAR JUGADOR (SIN PRESIDENTE, SIN +1 SEGURO)
-  const segurosRequeridosPagoJugador = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
-  const totalAsignadosPagoJugador = Object.values(asignacionSegurosAgregar).reduce((sum, value) => sum + Number(value || 0), 0);
-  const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
+  const segurosRequeridosPagoJugadorExtra = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
+  const totalAsignadosPagoJugadorExtra = segurosJugador.reduce((sum, seguro) => {
+    const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
+    return sum + cantidad;
+  }, 0);
+  const segurosPendientesPagoJugador = segurosRequeridosPagoJugadorExtra - totalAsignadosPagoJugadorExtra;
   const totalPagoEstimadoJugador = (
     (costoAfiliacionJugador * Number(numJugadoresAgregar || 0)) +
-    catalogs.seguros.reduce((sum, seguro) => {
+    segurosJugador.reduce((sum, seguro) => {
       const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
       return sum + (Number(seguro.precio || 0) * cantidad);
     }, 0)
@@ -844,8 +879,13 @@ export default function ConfigurarEquipo() {
       return;
     }
 
-    if (totalAsignadosPago !== segurosRequeridosPago) {
-      setPagoError(`Debes asignar un seguro por jugador y uno para ti. Faltan ${segurosPendientesPago}.`);
+    if (totalAsignadosPagoPresidente !== segurosRequeridosPagoPresidente) {
+      setPagoError('Debes seleccionar exactamente un seguro para presidente.');
+      return;
+    }
+
+    if (totalAsignadosPagoJugador !== segurosRequeridosPagoJugador) {
+      setPagoError(`Debes asignar un seguro por jugador. Faltan ${segurosRequeridosPagoJugador - totalAsignadosPagoJugador}.`);
       return;
     }
 
@@ -853,6 +893,7 @@ export default function ConfigurarEquipo() {
       setProcesandoPago(true);
       const token = localStorage.getItem('token');
       const segurosPayload = Object.entries(asignacionSeguros)
+        .filter(([seguroId, cantidad]) => segurosPresidenteIds.has(seguroId) || (seguroJugadorIds.has(seguroId) && Number(cantidad) > 0))
         .filter(([, cantidad]) => Number(cantidad) > 0)
         .map(([seguroId, cantidad]) => ({
           SeguroId: Number(seguroId),
@@ -1023,7 +1064,7 @@ export default function ConfigurarEquipo() {
       return;
     }
 
-    if (totalAsignadosPagoJugador !== segurosRequeridosPagoJugador) {
+    if (totalAsignadosPagoJugadorExtra !== segurosRequeridosPagoJugadorExtra) {
       setPagoErrorJugador(`Debes asignar un seguro por jugador. Faltan ${segurosPendientesPagoJugador}.`);
       return;
     }
@@ -1032,7 +1073,7 @@ export default function ConfigurarEquipo() {
       setProcesandoPagoJugador(true);
       const token = localStorage.getItem('token');
       const segurosPayload = Object.entries(asignacionSegurosAgregar)
-        .filter(([, cantidad]) => Number(cantidad) > 0)
+        .filter(([seguroId, cantidad]) => seguroJugadorIds.has(seguroId) && Number(cantidad) > 0)
         .map(([seguroId, cantidad]) => ({
           SeguroId: Number(seguroId),
           Cantidad: Number(cantidad)
@@ -1689,33 +1730,79 @@ export default function ConfigurarEquipo() {
                 />
 
                 <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {catalogs.seguros.map(seguro => {
-                    const id = String(seguro.id);
-                    return (
-                      <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
-                        <div>
-                          <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
-                          <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          value={asignacionSeguros[id] ?? ''}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                            setAsignacionSeguros(prev => ({ ...prev, [id]: value }));
-                          }}
-                          style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
-                        />
-                      </div>
-                    );
-                  })}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px' }}>
+                    <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase' }}>Seguros para presidente</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {segurosPresidente.map(seguro => {
+                        const id = String(seguro.id);
+                        const checked = Number(asignacionSeguros[id] || 0) > 0;
+                        return (
+                          <label key={id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', border: checked ? '2px solid #0b4ea6' : '1px solid #e2e8f0', borderRadius: '14px', padding: '14px', cursor: 'pointer', background: checked ? '#eff6ff' : 'white' }}>
+                            <input
+                              type="radio"
+                              name="seguro-presidente"
+                              checked={checked}
+                              onChange={() => {
+                                const next = { ...asignacionSeguros };
+                                segurosPresidente.forEach(item => {
+                                  next[String(item.id)] = item.id === seguro.id ? 1 : 0;
+                                });
+                                setAsignacionSeguros(next);
+                              }}
+                              style={{ marginTop: '2px' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                              <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px' }}>
+                    <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase' }}>Seguros para jugador</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {segurosJugador.map(seguro => {
+                        const id = String(seguro.id);
+                        return (
+                          <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
+                            <div>
+                              <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                              <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              value={asignacionSeguros[id] ?? ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                setAsignacionSeguros(prev => ({ ...prev, [id]: value }));
+                              }}
+                              style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPago === segurosRequeridosPago && segurosRequeridosPago > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPago === segurosRequeridosPago && segurosRequeridosPago > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
-                  Seguros asignados: {totalAsignadosPago}/{segurosRequeridosPago || 0}
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? '#ecfdf5' : '#fff7ed', color: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                  Seguros asignados: presidente {totalAsignadosPagoPresidente}/{segurosRequeridosPagoPresidente || 0} y jugadores {totalAsignadosPagoJugador}/{segurosRequeridosPagoJugador || 0}
                 </div>
+                {!tieneSeguroPresidenteValido && Number(numJugadoresPago || 0) > 0 && (
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#b45309', fontWeight: '700' }}>
+                    Selecciona un seguro para presidente para habilitar la orden.
+                  </div>
+                )}
+                {tieneSeguroPresidenteValido && !tieneSegurosJugadorValidos && Number(numJugadoresPago || 0) > 0 && (
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#b45309', fontWeight: '700' }}>
+                    La suma de seguros para jugador debe ser igual al numero de jugadores seleccionado.
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -1756,9 +1843,8 @@ export default function ConfigurarEquipo() {
               <span>Afiliacion jugadores x{Number(numJugadoresPago || 0)}</span>
               <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresPago || 0)).toFixed(2)}</strong>
             </div>
-            {catalogs.seguros.map(seguro => {
+            {catalogs.seguros.filter(seguro => Number(asignacionSeguros[String(seguro.id)] || 0) > 0).map(seguro => {
               const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
-              if (!cantidad) return null;
               return (
                 <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
                   <span>{seguro.nombre} x{cantidad}</span>
@@ -1772,9 +1858,9 @@ export default function ConfigurarEquipo() {
             </div>
 
             <button
-              disabled={procesandoPago || (!ordenCreada && (Number(numJugadoresPago) < 1 || totalAsignadosPago !== segurosRequeridosPago)) || (ordenCreada && !comprobantePagoEquipo)}
+              disabled={procesandoPago || (!ordenCreada && !canGeneratePagoEquipo) || (ordenCreada && !comprobantePagoEquipo)}
               onClick={ordenCreada ? handleSubirComprobanteEquipo : handleCrearOrdenPagoEquipo}
-              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPago ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: (!ordenCreada && (Number(numJugadoresPago) < 1 || totalAsignadosPago !== segurosRequeridosPago)) || (ordenCreada && !comprobantePagoEquipo) ? 0.55 : 1 }}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPago ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: (!ordenCreada && !canGeneratePagoEquipo) || (ordenCreada && !comprobantePagoEquipo) ? 0.55 : 1 }}
             >
               {procesandoPago ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
             </button>
@@ -1859,7 +1945,7 @@ export default function ConfigurarEquipo() {
 
                 <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {catalogs.seguros.map(seguro => {
+                  {segurosJugador.map(seguro => {
                     const id = String(seguro.id);
                     return (
                       <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
@@ -1882,8 +1968,8 @@ export default function ConfigurarEquipo() {
                   })}
                 </div>
 
-                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
-                  Seguros asignados: {totalAsignadosPagoJugador}/{segurosRequeridosPagoJugador || 0}
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPagoJugadorExtra === segurosRequeridosPagoJugadorExtra && segurosRequeridosPagoJugadorExtra > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPagoJugadorExtra === segurosRequeridosPagoJugadorExtra && segurosRequeridosPagoJugadorExtra > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                  Seguros asignados: {totalAsignadosPagoJugadorExtra}/{segurosRequeridosPagoJugadorExtra || 0}
                 </div>
               </>
             ) : (
@@ -1921,7 +2007,7 @@ export default function ConfigurarEquipo() {
               <span>Afiliacion jugadores x{Number(numJugadoresAgregar || 0)}</span>
               <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresAgregar || 0)).toFixed(2)}</strong>
             </div>
-            {catalogs.seguros.map(seguro => {
+            {segurosJugador.map(seguro => {
               const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
               if (!cantidad) return null;
               return (
@@ -1937,9 +2023,9 @@ export default function ConfigurarEquipo() {
             </div>
 
             <button
-              disabled={procesandoPagoJugador || (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugador !== segurosRequeridosPagoJugador)) || (ordenCreada && !comprobantePagoJugador)}
+              disabled={procesandoPagoJugador || (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugadorExtra !== segurosRequeridosPagoJugadorExtra)) || (ordenCreada && !comprobantePagoJugador)}
               onClick={ordenCreada ? handleSubirComprobanteJugador : handleCrearOrdenPagoJugador}
-              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPagoJugador ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPagoJugador ? 'wait' : 'pointer', opacity: (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugador !== segurosRequeridosPagoJugador)) || (ordenCreada && !comprobantePagoJugador) ? 0.55 : 1 }}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPagoJugador ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPagoJugador ? 'wait' : 'pointer', opacity: (!ordenCreada && (Number(numJugadoresAgregar) < 1 || totalAsignadosPagoJugadorExtra !== segurosRequeridosPagoJugadorExtra)) || (ordenCreada && !comprobantePagoJugador) ? 0.55 : 1 }}
             >
               {procesandoPagoJugador ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
             </button>
@@ -2661,7 +2747,7 @@ export default function ConfigurarEquipo() {
                     <div style={{ marginBottom: '25px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Asignar Seguro</label>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
-                        {catalogs.seguros.map(seg => {
+                        {segurosJugador.map(seg => {
                           const id = seg.id.toString();
                           const count = players.filter(p => p.insuranceType === id).length;
                           const dbSeguro = equipoTemporalInfo?.seguros?.find(s => String(s.seguro_id) === id);
@@ -2875,7 +2961,7 @@ export default function ConfigurarEquipo() {
                         {tieneSlotDisponible ? 'Seguros Disponibles' : 'Resumen de Seguros'}
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                        {catalogs.seguros.map(seg => {
+                        {segurosJugador.map(seg => {
                           const id = seg.id.toString();
 
                           if (tieneSlotDisponible) {
@@ -2954,7 +3040,7 @@ export default function ConfigurarEquipo() {
                                </div>
                                <div style={{ flex: 1 }}>
                                  <div style={{ fontSize: '13px', fontWeight: editingPlayerId === p.id ? '900' : '800', color: editingPlayerId === p.id ? '#0b4ea6' : '#1e293b', transition: 'all 0.3s' }}>{p.firstName} {p.lastNamePaterno}</div>
-                                 <div style={{ fontSize: '11px', color: '#64748b' }}>{catalogs.seguros.find(s => s.id.toString() === p.insuranceType)?.nombre}</div>
+                                 <div style={{ fontSize: '11px', color: '#64748b' }}>{segurosJugador.find(s => s.id.toString() === p.insuranceType)?.nombre}</div>
                                </div>
                                <button 
                                  onClick={(e) => {
