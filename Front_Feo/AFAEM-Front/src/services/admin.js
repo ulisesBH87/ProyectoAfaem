@@ -338,9 +338,13 @@ export const agregarJugadorEquipoExistente = async (formData) => {
   return response.data;
 };
 
-export const registrarPresidenteAdmin = async (data) => {
+export const registrarPresidenteAdmin = async (formData) => {
   try {
-    const response = await api.post('/equipo-temporal/registrar-presidente-admin', data);
+    const response = await api.post('/equipo-temporal/registrar-presidente-admin', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     // Invalidar caché del directorio
     serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
     return response.data;
