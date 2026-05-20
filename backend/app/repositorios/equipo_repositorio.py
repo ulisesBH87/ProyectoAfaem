@@ -15,6 +15,7 @@ from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
 from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.modelos.catalogo_rol_personas import CatalogoRolesPersonas
+from app.modelos.catalogo_seguros import Seguro
 from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
 from app.modelos.documentos_entregados_modelo import DocumentosEntregados
 from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
@@ -55,6 +56,7 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
 
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
+    presidente_persona_id = usuario.PersonaId if usuario else None
 
     #SI ES PROCESO DE REGISTRO DE PRESIDENTE, SE CAMBIA EL ROL DEL USUARIO
     if solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO:
@@ -87,20 +89,26 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
 
     #creación de slots
     total_slots_creados = 0
+    slot_presidente_asignado = False
 
     for d in detalles:
         if (
             d.TipoConceptoId == 1 and  # SEGURO
             d.SeguroId is not None
         ):
+            seguro = db.query(Seguro).filter(Seguro.SeguroId == d.SeguroId).first()
+            es_seguro_presidente = bool(seguro and int(seguro.TipoPersonaId or 0) == 2)
             for _ in range(d.Cantidad):
+                asignar_presidente = es_seguro_presidente and not slot_presidente_asignado and presidente_persona_id is not None
                 slot = EquipoTemporalJugador(
                     EquipoTemporalId=equipo.EquipoTemporalId,
-                    Completo=False,
-                    PersonaId=None,
+                    Completo=asignar_presidente,
+                    PersonaId=presidente_persona_id if asignar_presidente else None,
                     SeguroId=d.SeguroId  #Asignar seguro desde el inicio
                 )
                 db.add(slot)
+                if asignar_presidente:
+                    slot_presidente_asignado = True
                 total_slots_creados += 1
 
     # validación
