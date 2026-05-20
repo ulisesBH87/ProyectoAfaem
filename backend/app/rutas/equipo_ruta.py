@@ -72,7 +72,15 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
             "categorias": [{"id": c.CategoriaId, "nombre": c.NombreCategoria} for c in categorias],
             "modalidades": [{"id": m.ModalidadId, "nombre": m.NombreModalidad} for m in modalidades],
             "ramas": [{"id": r.RamaId, "nombre": r.Nombre} for r in ramas],
-            "seguros": [{"id": s.SeguroId, "nombre": s.Nombre, "precio": float(s.Precio)} for s in seguros],
+            "seguros": [
+                {
+                    "id": s.SeguroId,
+                    "nombre": s.Nombre,
+                    "precio": float(s.Precio),
+                    "TipoPersonaId": s.TipoPersonaId
+                }
+                for s in seguros
+            ],
             "roles_equipo": [{"id": r.RolId, "nombre": r.NombreRol} for r in roles_equipo],
             "combinaciones": [] # Mantenemos el campo vacío para no romper el frontend por ahora
         }
