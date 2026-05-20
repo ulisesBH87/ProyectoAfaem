@@ -303,13 +303,18 @@ async def agregar_jugador_equipo_existente(
 
         if archivos:
             from app.servicios.documentos_servicio import subir_documento_servicio2
+            from app.repositorios.equipo_repositorio import obtener_solicitud_id_para_persona
+
+            solicitud_id_jugador = obtener_solicitud_id_para_persona(
+                db, nueva_persona.PersonaId, usuario.UsuarioId
+            )
 
             await subir_documento_servicio2(
                 db=db,
                 persona_id=nueva_persona.PersonaId,
                 documento_afiliacion_ids=documento_ids,
                 archivos=archivos,
-                solicitud_id=None
+                solicitud_id=solicitud_id_jugador,
             )
 
         db.commit()
@@ -637,6 +642,26 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
     except Exception as e:
         #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.get("/jugador/{miembro_id}/solicitud-documento")
+def get_solicitud_documento_jugador(
+    miembro_id: int,
+    db: Session = Depends(get_db),
+    usuario=Depends(obtener_usuario_actual),
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+
+    miembro = db.query(MiembrosEquipo).filter(
+        MiembrosEquipo.MiembroEquipoId == miembro_id
+    ).first()
+    if not miembro:
+        raise HTTPException(404, "Jugador no encontrado")
+
+    from app.repositorios.equipo_repositorio import obtener_solicitud_id_para_persona
+    solicitud_id = obtener_solicitud_id_para_persona(db, miembro.PersonaId, usuario.UsuarioId)
+    return {"solicitud_id": solicitud_id}
 
 @router.get("/jugador/{miembro_equipo_id}/exportar")
 def exportar_documentos_jugador(miembro_equipo_id: int, db:Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):

@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getJugadoresDirectorio, getJugadorDocumentos, exportarJugadorDocumentos, updateJugador, subirDocumentoJugador } from '../../services/admin';
+import {
+  getJugadoresDirectorio,
+  getJugadorDocumentos,
+  getJugadorSolicitudDocumento,
+  exportarJugadorDocumentos,
+  updateJugador,
+  subirDocumentoJugador,
+} from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -273,7 +280,10 @@ export default function AdminJugadores() {
     };
   }, [jugadores]);
 
-  const manejarSubidaDocumento = async (jugador, tipoDocumentoId, archivo) => {
+  const resolverSolicitudIdJugador = async (jugador) =>
+    getJugadorSolicitudDocumento(jugador.MiembroEquipoId);
+
+  const manejarSubidaDocumento = async (jugador, tipoDocumentoId, archivo, solicitudId) => {
     if (!jugador?.PersonaId) {
       Swal.fire('Error', 'No se pudo identificar al jugador para subir el documento.', 'error');
       return;
@@ -286,7 +296,15 @@ export default function AdminJugadores() {
         didOpen: () => Swal.showLoading(),
       });
 
-      await subirDocumentoJugador(jugador.PersonaId, tipoDocumentoId, archivo);
+      const solicitudIdFinal =
+        solicitudId ?? (await resolverSolicitudIdJugador(jugador));
+
+      await subirDocumentoJugador(
+        jugador.PersonaId,
+        tipoDocumentoId,
+        archivo,
+        Number(solicitudIdFinal)
+      );
       Swal.close();
       await handleDescargarDocs(jugador);
     } catch (err) {
@@ -296,7 +314,7 @@ export default function AdminJugadores() {
     }
   };
 
-  const mostrarModalDocumentos = (jugador, documentos) => {
+  const mostrarModalDocumentos = (jugador, documentos, solicitudId) => {
     const listaDocumentos = Array.isArray(documentos) ? documentos : [];
     const htmlCards = TIPOS_DOCUMENTO_JUGADOR_REQUERIDOS.map((tipo) => {
       const documento = obtenerDocumentoMasRecientePorTipo(listaDocumentos, tipo.id);
@@ -327,7 +345,7 @@ export default function AdminJugadores() {
               const archivo = e.target.files?.[0];
               if (archivo) {
                 Swal.close();
-                manejarSubidaDocumento(jugador, tipoId, archivo);
+                manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
               }
             };
             document.body.appendChild(input);
@@ -348,9 +366,12 @@ export default function AdminJugadores() {
         didOpen: () => Swal.showLoading(),
       });
 
-      const docs = await getJugadorDocumentos(jugador.MiembroEquipoId);
+      const [docs, solicitudId] = await Promise.all([
+        getJugadorDocumentos(jugador.MiembroEquipoId),
+        getJugadorSolicitudDocumento(jugador.MiembroEquipoId),
+      ]);
       Swal.close();
-      mostrarModalDocumentos(jugador, docs);
+      mostrarModalDocumentos(jugador, docs, solicitudId);
     } catch (err) {
       console.error(err);
       Swal.fire('Error', 'No se pudieron obtener los documentos del jugador.', 'error');
