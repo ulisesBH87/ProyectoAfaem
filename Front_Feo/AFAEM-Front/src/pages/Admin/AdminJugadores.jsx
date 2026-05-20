@@ -1,12 +1,148 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getJugadoresDirectorio, getJugadorDocumentos, exportarJugadorDocumentos, updateJugador } from '../../services/admin';
+import { getJugadoresDirectorio, getJugadorDocumentos, exportarJugadorDocumentos, updateJugador, subirDocumentoJugador } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Loader from '../../components/Loader';
+
+/**
+ * Tipos requeridos para jugadores. El campo `id` coincide con DocumentoAfiliacionId
+ * usado al subir documentos (ver DOC_TYPE_TO_ID en backend). También se compara con
+ * DocumentoId del catálogo por compatibilidad. Sustituir por respuesta del backend.
+ */
+const TIPOS_DOCUMENTO_JUGADOR_REQUERIDOS = [
+  { id: 22, nombre: 'Acta de nacimiento' },
+  { id: 26, nombre: 'Identificación' },
+  { id: 25, nombre: 'Fotografía' },
+  { id: 28, nombre: 'Formato de afiliación' },
+];
+
+const normalizarTextoDocumento = (texto) =>
+  String(texto ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const PALABRAS_CLAVE_POR_TIPO = {
+  22: ['acta', 'nacimiento'],
+  26: ['identificacion', 'ine', 'credencial'],
+  25: ['foto', 'fotografia'],
+  28: ['formato', 'afiliacion'],
+};
+
+const documentoCoincideConTipo = (doc, tipoId) => {
+  const afiliacionId = Number(doc?.DocumentoAfiliacionId ?? doc?.documentoAfiliacionId ?? 0);
+  const catalogoId = Number(doc?.DocumentoId ?? doc?.documentoId ?? 0);
+  if (afiliacionId === tipoId || catalogoId === tipoId) return true;
+
+  const nombre = normalizarTextoDocumento(doc?.nombre);
+  const palabras = PALABRAS_CLAVE_POR_TIPO[tipoId] || [];
+  return palabras.some((p) => nombre.includes(p));
+};
+
+const obtenerUrlDocumento = (doc) => {
+  if (!doc) return null;
+  if (doc.url) return doc.url;
+  const ruta = doc.RutaArchivo;
+  if (!ruta) return null;
+  return ruta.startsWith('http') ? ruta : `/${String(ruta).replace(/^\/+/, '')}`;
+};
+
+const formatearFechaSubida = (fecha) =>
+  fecha
+    ? new Date(fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
+    : 'fecha no disponible';
+
+const obtenerDocumentoMasRecientePorTipo = (documentos, tipoId) => {
+  const delTipo = documentos.filter((doc) => documentoCoincideConTipo(doc, tipoId));
+  if (delTipo.length === 0) return null;
+  return delTipo.sort(
+    (a, b) => new Date(b.FechaEntrega || 0) - new Date(a.FechaEntrega || 0)
+  )[0];
+};
+
+const escaparHtml = (texto) =>
+  String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+const estilosCardDocumento = `
+  aspect-ratio: 1 / 1;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px;
+  text-align: center;
+  border-radius: 18px;
+  border: 1px solid #dbe4f0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  color: #1e293b;
+`;
+
+const construirCardDocumentoHtml = (tipo, documento) => {
+  const tituloTipo = escaparHtml(tipo.nombre);
+
+  const urlDocumento = obtenerUrlDocumento(documento);
+  if (urlDocumento) {
+    const nombreDoc = escaparHtml(documento.nombre || tipo.nombre);
+    const fechaSubida = formatearFechaSubida(documento.FechaEntrega);
+    return `
+      <a
+        href="${escaparHtml(urlDocumento)}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="${estilosCardDocumento}
+          text-decoration: none;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        "
+        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 16px 30px rgba(15, 23, 42, 0.12)'"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(15, 23, 42, 0.08)'"
+      >
+        <div style="width: 60px; height: 60px; border-radius: 16px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 30px;">📄</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">${tituloTipo}</span>
+          <span style="font-size: 12px; color: #64748b; line-height: 1.45;">Subido el ${fechaSubida}</span>
+        </div>
+      </a>
+    `;
+  }
+
+  return `
+    <div style="${estilosCardDocumento} border-style: dashed; border-color: #cbd5e1; background: #f8fafc; box-shadow: none;">
+      <div style="width: 60px; height: 60px; border-radius: 16px; background: #fef2f2; display: flex; align-items: center; justify-content: center; font-size: 28px;">📋</div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 15px; font-weight: 700; line-height: 1.35;">${tituloTipo}</span>
+        <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">Documento faltante</span>
+      </div>
+      <button
+        type="button"
+        data-add-doc="${tipo.id}"
+        style="
+          margin-top: 4px;
+          padding: 8px 14px;
+          border-radius: 10px;
+          border: none;
+          background: #0b4ea6;
+          color: white;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+        "
+      >
+        Añadir documento
+      </button>
+    </div>
+  `;
+};
 
 export default function AdminJugadores() {
   const navigate = useNavigate();
@@ -137,35 +273,84 @@ export default function AdminJugadores() {
     };
   }, [jugadores]);
 
+  const manejarSubidaDocumento = async (jugador, tipoDocumentoId, archivo) => {
+    if (!jugador?.PersonaId) {
+      Swal.fire('Error', 'No se pudo identificar al jugador para subir el documento.', 'error');
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Subiendo documento...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      await subirDocumentoJugador(jugador.PersonaId, tipoDocumentoId, archivo);
+      Swal.close();
+      await handleDescargarDocs(jugador);
+    } catch (err) {
+      console.error(err);
+      const msg = err?.response?.data?.detail || 'No se pudo subir el documento.';
+      Swal.fire('Error', msg, 'error');
+    }
+  };
+
+  const mostrarModalDocumentos = (jugador, documentos) => {
+    const listaDocumentos = Array.isArray(documentos) ? documentos : [];
+    const htmlCards = TIPOS_DOCUMENTO_JUGADOR_REQUERIDOS.map((tipo) => {
+      const documento = obtenerDocumentoMasRecientePorTipo(listaDocumentos, tipo.id);
+      return construirCardDocumentoHtml(tipo, documento);
+    }).join('');
+
+    Swal.fire({
+      title: `Documentos de ${jugador.NombreCompleto}`,
+      html: `
+        <div style="max-height: 420px; overflow-y: auto; padding: 4px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+            ${htmlCards}
+          </div>
+        </div>
+      `,
+      showConfirmButton: true,
+      confirmButtonText: 'Cerrar',
+      confirmButtonColor: '#ff0000',
+      didOpen: () => {
+        document.querySelectorAll('[data-add-doc]').forEach((boton) => {
+          boton.addEventListener('click', () => {
+            const tipoId = Number(boton.getAttribute('data-add-doc'));
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.pdf,image/*';
+            input.style.display = 'none';
+            input.onchange = (e) => {
+              const archivo = e.target.files?.[0];
+              if (archivo) {
+                Swal.close();
+                manejarSubidaDocumento(jugador, tipoId, archivo);
+              }
+            };
+            document.body.appendChild(input);
+            input.click();
+            input.remove();
+          });
+        });
+      },
+    });
+  };
+
   const handleDescargarDocs = async (jugador) => {
     try {
       Swal.fire({
         title: 'Cargando documentos...',
         text: 'Buscando archivos en el sistema',
         allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
+        didOpen: () => Swal.showLoading(),
       });
 
       const docs = await getJugadorDocumentos(jugador.MiembroEquipoId);
-
-      if (!docs || docs.length === 0) {
-        Swal.fire('Sin documentos', 'Ocurrió un error al cargar los datos del jugador.', 'warning');
-        return;
-      }
-
-      let htmlBotones = '';
-      docs.forEach((doc, idx) => {
-        htmlBotones += `<a href="${doc.url}" target="_blank" class="btn btn-primary m-1" style="display:block; text-align:center; padding: 12px; border-radius: 8px; font-weight: 600;">📄 ${doc.nombre}. Subido el: ${new Date(doc.FechaEntrega).toLocaleDateString()}</a>`;
-      });
-
-      Swal.fire({
-        title: `Documentos de ${jugador.NombreCompleto}`,
-        html: `<div style="max-height: 400px; overflow-y: auto;">${htmlBotones}</div>`,
-        showConfirmButton: true,
-        confirmButtonText: 'Cerrar',
-        confirmButtonColor: '#94a3b8'
-      });
-
+      Swal.close();
+      mostrarModalDocumentos(jugador, docs);
     } catch (err) {
       console.error(err);
       Swal.fire('Error', 'No se pudieron obtener los documentos del jugador.', 'error');
