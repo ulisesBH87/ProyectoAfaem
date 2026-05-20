@@ -38,13 +38,35 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
     if len(documento_afiliacion_ids) != len(archivos):
         raise ValueError("Cantidad de archivos y tipos no coincide")
 
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-
     # Obtener persona
     persona = db.query(Personas).filter(Personas.PersonaId == persona_id).first()
     if not persona:
         raise documentos_excepciones.PersonaNoEncontradaError()
     
+    # Identificar si es solicitud de presidente
+    from app.modelos.solicitud_modelo import Solicitud
+    from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
+    
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+    is_presidente = False
+    if solicitud and solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO.value:
+        is_presidente = True
+        
+    from app.core.config import obtener_uploads_dir
+    base_uploads_dir = obtener_uploads_dir()
+    
+    if is_presidente:
+        nombre_completo = f"{persona.Nombre or ''} {persona.PrimerApellido or ''} {persona.SegundoApellido or ''}".strip()
+        nombre_completo = " ".join(nombre_completo.split())
+        if not nombre_completo:
+            nombre_completo = f"persona_{persona_id}"
+        upload_subfolder = os.path.join("presidentes", nombre_completo)
+    else:
+        upload_subfolder = "documentos"
+        
+    target_dir = os.path.join(base_uploads_dir, upload_subfolder)
+    os.makedirs(target_dir, exist_ok=True)
+
     #Obtener CURP y año para nombrar archivos
     curp = persona.CURP
     año = datetime.now().year
@@ -69,16 +91,18 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         
         extension = archivo.filename.split(".")[-1]
         nombre = f"{nombre_doc}_{curp}_{año}.{extension}"
-        ruta = os.path.join(UPLOAD_DIR, nombre)
+        
+        ruta_absoluta = os.path.join(target_dir, nombre)
+        ruta_db = os.path.join("uploads", upload_subfolder, nombre).replace("\\", "/")
 
-        with open(ruta, "wb") as buffer:
+        with open(ruta_absoluta, "wb") as buffer:
             buffer.write(await archivo.read())
 
         doc = documentos_repositorio.subir_documento_repo2(
             db,
             persona_id,
             doc_id,
-            ruta,
+            ruta_db,
             solicitud_id
         )
 
