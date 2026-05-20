@@ -177,14 +177,20 @@ export const getJugadorDocumentos = async (miembroEquipoId) => {
   return response.data;
 };
 
-export const subirDocumentoJugador = async (personaId, documentoAfiliacionId, archivo, solicitudId = null) => {
+export const getJugadorSolicitudDocumento = async (miembroEquipoId) => {
+  const response = await api.get(`/equipo-temporal/jugador/${miembroEquipoId}/solicitud-documento`);
+  return response.data?.solicitud_id ?? response.data?.SolicitudId;
+};
+
+export const subirDocumentoJugador = async (personaId, documentoAfiliacionId, archivo, solicitudId) => {
+  if (solicitudId == null || solicitudId === '') {
+    throw new Error('solicitud_id es requerido para subir el documento.');
+  }
   const formData = new FormData();
   formData.append('persona_id', personaId);
   formData.append('documento_afiliacion_ids', documentoAfiliacionId);
   formData.append('archivo', archivo);
-  if (solicitudId != null) {
-    formData.append('solicitud_id', solicitudId);
-  }
+  formData.append('solicitud_id', String(solicitudId));
   const response = await api.post('/documentos/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
