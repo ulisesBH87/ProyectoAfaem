@@ -631,9 +631,8 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
         docs = obtener_documentos_jugador_repo(db, persona_id)
         # Formatear la URL completa si RutaArchivo es relativa
         for doc in docs:
-            ruta = doc["RutaArchivo"]
-            # Fix if the route is a local path
-            doc["url"] = f"/{ruta}" if not ruta.startswith("http") else ruta
+            ruta = doc.get("RutaArchivo") or ""
+            doc["url"] = ruta if ruta.startswith("http") else f"/{ruta.lstrip('/')}" if ruta else None
         return docs
     except Exception as e:
         #print(traceback.format_exc())
