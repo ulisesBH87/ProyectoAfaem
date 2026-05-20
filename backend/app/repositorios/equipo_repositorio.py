@@ -240,9 +240,11 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
 
     docs = db.query(
         DocumentosEntregados.DocumentosSolicitudId,
+        DocumentosEntregados.DocumentoAfiliacionId,
         DocumentosEntregados.RutaArchivo,
         DocumentosEntregados.FechaEntrega,
         DocumentosEntregados.EstadoValidacionId,
+        CatalogoDocumentos.DocumentoId,
         CatalogoDocumentos.NombreDocumento,
         CatalogoRolesPersonas.Nombre.label("RolNombre"),
         DocumentoAfiliacion.Obligatorio
@@ -262,6 +264,8 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
     return [
         {
             "DocumentosSolicitudId": d.DocumentosSolicitudId,
+            "DocumentoAfiliacionId": d.DocumentoAfiliacionId,
+            "DocumentoId": d.DocumentoId,
             "nombre": d.NombreDocumento,
             "rol": d.RolNombre,
             "obligatorio": d.Obligatorio,
@@ -661,6 +665,7 @@ def obtener_directorio_jugadores_repo(db):
         # El rol del jugador debería de ser algo que identifique que es jugador, pero asumimos todos por ahora
         jugadores_response.append({
             "MiembroEquipoId": miembro.MiembroEquipoId,
+            "PersonaId": persona.PersonaId,
             "NombreCompleto": f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip(),
             "Nombre": persona.Nombre,
             "PrimerApellido": persona.PrimerApellido,
