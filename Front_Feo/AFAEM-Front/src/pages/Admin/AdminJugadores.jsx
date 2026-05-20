@@ -154,16 +154,75 @@ export default function AdminJugadores() {
       }
 
       let htmlBotones = '';
-      docs.forEach((doc, idx) => {
-        htmlBotones += `<a href="${doc.url}" target="_blank" class="btn btn-primary m-1" style="display:block; text-align:center; padding: 12px; border-radius: 8px; font-weight: 600;">📄 ${doc.nombre}. Subido el: ${new Date(doc.FechaEntrega).toLocaleDateString()}</a>`;
+      docs.forEach((doc) => {
+        const fechaSubida = doc.FechaEntrega
+          ? new Date(doc.FechaEntrega).toLocaleDateString('es-MX', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+          })
+          : 'fecha no disponible';
+
+        htmlBotones += `
+          <a
+            href="${doc.url}"
+            target="_blank"
+            rel="noopener noreferrer"
+            style="
+              aspect-ratio: 1 / 1;
+              min-height: 170px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 12px;
+              padding: 18px;
+              text-align: center;
+              text-decoration: none;
+              border-radius: 18px;
+              border: 1px solid #dbe4f0;
+              background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+              box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
+              color: #1e293b;
+            "
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 16px 30px rgba(15, 23, 42, 0.12)'"
+            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(15, 23, 42, 0.08)'"
+          >
+            <div
+              style="
+                width: 60px;
+                height: 60px;
+                border-radius: 16px;
+                background: #eff6ff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 30px;
+              "
+            >
+              📄
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 15px; font-weight: 700; line-height: 1.35;">${doc.nombre}</span>
+              <span style="font-size: 12px; color: #64748b; line-height: 1.45;">Subido el ${fechaSubida}</span>
+            </div>
+          </a>
+        `;
       });
 
       Swal.fire({
         title: `Documentos de ${jugador.NombreCompleto}`,
-        html: `<div style="max-height: 400px; overflow-y: auto;">${htmlBotones}</div>`,
+        html: `
+          <div style="max-height: 420px; overflow-y: auto; padding: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+              ${htmlBotones}
+            </div>
+          </div>
+        `,
         showConfirmButton: true,
         confirmButtonText: 'Cerrar',
-        confirmButtonColor: '#94a3b8'
+        confirmButtonColor: '#ff0000'
       });
 
     } catch (err) {
