@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, Boolean
+from sqlalchemy import Column, Integer, String, DECIMAL, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 
@@ -11,5 +11,5 @@ class Seguro(Base):
 
     OrdenPagoDetalleRelacion = relationship("OrdenPagoDetalle", back_populates="SeguroRelacion")
     EquipoTemporalJugadorRelacion= relationship("EquipoTemporalJugador", back_populates="SeguroRelacion")
-    
-    
+
+    TipoPersonaId = Column(Integer, ForeignKey("CatalogoRolesPersonas.RolPersonaId"), nullable=True)
