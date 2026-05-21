@@ -1,7 +1,7 @@
 from sqlite3 import IntegrityError
 
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, date
 from fastapi import HTTPException
 
 from app.modelos.usuario_modelo import Usuario
@@ -242,9 +242,12 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
 
     docs = db.query(
         DocumentosEntregados.DocumentosSolicitudId,
+        DocumentosEntregados.SolicitudId,
+        DocumentosEntregados.DocumentoAfiliacionId,
         DocumentosEntregados.RutaArchivo,
         DocumentosEntregados.FechaEntrega,
         DocumentosEntregados.EstadoValidacionId,
+        CatalogoDocumentos.DocumentoId,
         CatalogoDocumentos.NombreDocumento,
         CatalogoRolesPersonas.Nombre.label("RolNombre"),
         DocumentoAfiliacion.Obligatorio
@@ -264,6 +267,9 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
     return [
         {
             "DocumentosSolicitudId": d.DocumentosSolicitudId,
+            "SolicitudId": d.SolicitudId,
+            "DocumentoAfiliacionId": d.DocumentoAfiliacionId,
+            "DocumentoId": d.DocumentoId,
             "nombre": d.NombreDocumento,
             "rol": d.RolNombre,
             "obligatorio": d.Obligatorio,
@@ -298,6 +304,72 @@ def crear_solicitud_administrativa(db, usuario_id):
     db.add(solicitud)
     db.flush()
     return solicitud.SolicitudId
+
+
+def obtener_solicitud_id_para_persona(db, persona_id: int, usuario_id: int) -> int:
+    """
+    Resuelve la SolicitudId real del jugador (proceso de alta en equipo temporal),
+    no el valor erróneo que pudo quedar en DocumentosEntregados (p. ej. id 1).
+    """
+    # 1) Slot del jugador en EquipoTemporal (solicitud del registro original)
+    fila_slot = (
+        db.query(EquipoTemporal.SolicitudId)
+        .join(
+            EquipoTemporalJugador,
+            EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId,
+        )
+        .filter(
+            EquipoTemporalJugador.PersonaId == persona_id,
+            EquipoTemporal.SolicitudId.isnot(None),
+        )
+        .order_by(EquipoTemporal.EquipoTemporalId.desc())
+        .first()
+    )
+    if fila_slot and fila_slot.SolicitudId:
+        return fila_slot.SolicitudId
+
+    # 2) Equipo actual del jugador → EquipoTemporal vinculado al mismo EquipoId
+    miembro = (
+        db.query(MiembrosEquipo)
+        .filter(
+            MiembrosEquipo.PersonaId == persona_id,
+            MiembrosEquipo.Eliminado == False,
+        )
+        .order_by(MiembrosEquipo.MiembroEquipoId.desc())
+        .first()
+    )
+    if miembro and miembro.EquipoID:
+        fila_equipo = (
+            db.query(EquipoTemporal.SolicitudId)
+            .filter(
+                EquipoTemporal.EquipoId == miembro.EquipoID,
+                EquipoTemporal.SolicitudId.isnot(None),
+            )
+            .order_by(EquipoTemporal.EquipoTemporalId.desc())
+            .first()
+        )
+        if fila_equipo and fila_equipo.SolicitudId:
+            return fila_equipo.SolicitudId
+
+    # 3) Documentos entregados: solicitud más repetida (no el primer registro aislado)
+    filas_docs = (
+        db.query(
+            DocumentosEntregados.SolicitudId,
+            func.count(DocumentosEntregados.DocumentosSolicitudId).label("total"),
+        )
+        .filter(
+            DocumentosEntregados.PersonaId == persona_id,
+            DocumentosEntregados.SolicitudId.isnot(None),
+        )
+        .group_by(DocumentosEntregados.SolicitudId)
+        .order_by(func.count(DocumentosEntregados.DocumentosSolicitudId).desc())
+        .all()
+    )
+    if filas_docs:
+        return filas_docs[0].SolicitudId
+
+    return crear_solicitud_administrativa(db, usuario_id)
+
 
 def crear_solicitud_presidente(db, usuario_id):
     solicitud = Solicitud(
@@ -362,6 +434,40 @@ def parse_fecha(fecha: str):
         except ValueError:
             continue
     raise ValueError(f"Formato de fecha inválido: {fecha}")
+
+
+def es_menor_de_edad(fecha_nacimiento) -> bool:
+    if not fecha_nacimiento:
+        return False
+    if isinstance(fecha_nacimiento, datetime):
+        fecha = fecha_nacimiento.date()
+    elif isinstance(fecha_nacimiento, date):
+        fecha = fecha_nacimiento
+    else:
+        return False
+    hoy = date.today()
+    edad = hoy.year - fecha.year
+    if (hoy.month, hoy.day) < (fecha.month, fecha.day):
+        edad -= 1
+    return edad < 18
+
+
+def doc_type_to_id_jugador(es_menor: bool) -> dict:
+    """Mapeo de claves de archivo (FormData) a DocumentoAfiliacionId."""
+    if es_menor:
+        return {
+            "acta": 22,
+            "ineTutor": 33,              # INE de tutor
+            "identificacionMenor": 36,   # Identificación de menor
+            "foto": 25,
+            "formato": 28,
+        }
+    return {
+        "acta": 22,
+        "ine": 26,
+        "foto": 25,
+        "formato": 28,
+    }
 
 async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     try:
@@ -456,13 +562,14 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     archivos = []
     documento_ids = []
 
-    #ID HARDCODEADOS POR AHORA. MEJORAR EN EL FUTURO. BORRAR LÍNEA CUANDO SE HAGA LA MEJORA
-    DOC_TYPE_TO_ID = {
-        "acta": 22,     # jugador mayor
-        "ine": 26,
-        "foto": 25,
-        "formato": 28
-    }
+    fecha_nac = None
+    if p_data.get("fecha_nacimiento"):
+        try:
+            fecha_nac = parse_fecha(p_data["fecha_nacimiento"])
+        except ValueError:
+            pass
+
+    DOC_TYPE_TO_ID = doc_type_to_id_jugador(es_menor_de_edad(fecha_nac))
 
     for doc_type, doc_id in DOC_TYPE_TO_ID.items():
         file_key = f"player_{index}_{doc_type}"
@@ -663,6 +770,7 @@ def obtener_directorio_jugadores_repo(db):
         # El rol del jugador debería de ser algo que identifique que es jugador, pero asumimos todos por ahora
         jugadores_response.append({
             "MiembroEquipoId": miembro.MiembroEquipoId,
+            "PersonaId": persona.PersonaId,
             "NombreCompleto": f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip(),
             "Nombre": persona.Nombre,
             "PrimerApellido": persona.PrimerApellido,

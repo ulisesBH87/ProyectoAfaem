@@ -277,12 +277,9 @@ async def agregar_jugador_equipo_existente(
         # 6. Sumar +1 a la CantidadJugadores
         equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + 1
 
-        DOC_TYPE_TO_ID = {
-            "acta": 22,
-            "ine": 26,
-            "foto": 25,
-            "formato": 28
-        }
+        from app.repositorios.equipo_repositorio import doc_type_to_id_jugador, es_menor_de_edad
+
+        DOC_TYPE_TO_ID = doc_type_to_id_jugador(es_menor_de_edad(fn))
 
         archivos = []
         documento_ids = []
@@ -303,13 +300,18 @@ async def agregar_jugador_equipo_existente(
 
         if archivos:
             from app.servicios.documentos_servicio import subir_documento_servicio2
+            from app.repositorios.equipo_repositorio import obtener_solicitud_id_para_persona
+
+            solicitud_id_jugador = obtener_solicitud_id_para_persona(
+                db, nueva_persona.PersonaId, usuario.UsuarioId
+            )
 
             await subir_documento_servicio2(
                 db=db,
                 persona_id=nueva_persona.PersonaId,
                 documento_afiliacion_ids=documento_ids,
                 archivos=archivos,
-                solicitud_id=None
+                solicitud_id=solicitud_id_jugador,
             )
 
         db.commit()
@@ -631,13 +633,32 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
         docs = obtener_documentos_jugador_repo(db, persona_id)
         # Formatear la URL completa si RutaArchivo es relativa
         for doc in docs:
-            ruta = doc["RutaArchivo"]
-            # Fix if the route is a local path
-            doc["url"] = f"/{ruta}" if not ruta.startswith("http") else ruta
+            ruta = doc.get("RutaArchivo") or ""
+            doc["url"] = ruta if ruta.startswith("http") else f"/{ruta.lstrip('/')}" if ruta else None
         return docs
     except Exception as e:
         #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.get("/jugador/{miembro_id}/solicitud-documento")
+def get_solicitud_documento_jugador(
+    miembro_id: int,
+    db: Session = Depends(get_db),
+    usuario=Depends(obtener_usuario_actual),
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+
+    miembro = db.query(MiembrosEquipo).filter(
+        MiembrosEquipo.MiembroEquipoId == miembro_id
+    ).first()
+    if not miembro:
+        raise HTTPException(404, "Jugador no encontrado")
+
+    from app.repositorios.equipo_repositorio import obtener_solicitud_id_para_persona
+    solicitud_id = obtener_solicitud_id_para_persona(db, miembro.PersonaId, usuario.UsuarioId)
+    return {"solicitud_id": solicitud_id}
 
 @router.get("/jugador/{miembro_equipo_id}/exportar")
 def exportar_documentos_jugador(miembro_equipo_id: int, db:Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -735,8 +756,24 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @router.post("/registrar-presidente-admin")
-def registrar_presidente_admin(
-    data: PresidenteAdminCreate,
+async def registrar_presidente_admin(
+    nombre: str = Form(...),
+    primerApellido: Optional[str] = Form(None),
+    segundoApellido: Optional[str] = Form(None),
+    correo: str = Form(...),
+    telefono: Optional[str] = Form(None),
+    curp: str = Form(...),
+    rfc: Optional[str] = Form(None),
+    sexoId: Optional[int] = Form(None),
+    fechaNacimiento: Optional[str] = Form(None),
+    contrasena: Optional[str] = Form(None),
+    numPersonas: int = Form(...),
+    segurosAsignados: Optional[str] = Form(None),
+    voucher: Optional[UploadFile] = File(None),
+    actaNacimiento: Optional[UploadFile] = File(None),
+    identificacion: Optional[UploadFile] = File(None),
+    fotografia: Optional[UploadFile] = File(None),
+    formatoAfiliacion: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
@@ -746,32 +783,33 @@ def registrar_presidente_admin(
     
     try:
         # Check if email exists
-        usuario_existente = db.query(Usuario).filter(Usuario.Correo == data.correo).first()
+        usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo).first()
         if usuario_existente:
             raise HTTPException(status_code=400, detail="El correo ya está registrado.")
-        # Descomentar para permitir validar curp y no permitir dos presidentes con la misma curp
-        # persona_existente = db.query(Personas).filter(Personas.CURP == data.curp).first()
-        # if persona_existente:
-        #      raise HTTPException(status_code=400, detail="El CURP ya está registrado.")
 
-        # Create Persona
+        # Create Persona con datos completos
         nueva_persona = Personas(
-            Nombre=data.nombre,
-            PrimerApellido="",
-            CURP=data.curp,
-            NumeroTelefono=data.telefono
+            Nombre=nombre,
+            PrimerApellido=primerApellido or "",
+            SegundoApellido=segundoApellido or "",
+            CURP=curp,
+            RFC=rfc or "",
+            NumeroTelefono=telefono,
+            SexoId=sexoId if sexoId else None,
+            FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
         )
         db.add(nueva_persona)
         db.flush()
         
-        # Hash password "Hola1234?"
+        # Hash la contraseña asignada por el admin (o usar default si no se proporcionó)
+        password_to_use = contrasena if contrasena else "Hola1234?"
         salt = generar_salt()
-        hash_pass = generar_hash(salt, "Hola1234?")
+        hash_pass = generar_hash(salt, password_to_use)
         
         # Create Usuario
         nuevo_usuario = Usuario(
             PersonaId=nueva_persona.PersonaId,
-            Correo=data.correo,
+            Correo=correo,
             Contrasena=hash_pass,
             Salt=salt,
             RolId=3, # Presidente
@@ -788,27 +826,154 @@ def registrar_presidente_admin(
         db.add(nuevo_presidente)
         db.flush()
         
+        # Create Solicitud
+        from app.modelos.solicitud_modelo import Solicitud
+        nueva_solicitud = Solicitud(
+            UsuarioId=nuevo_usuario.UsuarioId,
+            TipoSolicitudId=1, # PRESIDENTE_EQUIPO
+            EstatusValidacion=2, # ACEPTADO
+            FechaSolicitud=datetime.now(),
+            ObservacionesSolicitud="Registro directo por administrador"
+        )
+        db.add(nueva_solicitud)
+        db.flush()
+        
+        # Calculate Order Detalle and Total
+        from app.modelos.catalogo_tipo_afiliacion import CatalogoTiposAfiliacion
+        from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
+        
+        afiliacion_presidente = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 2).first()
+        subtotal_pres = afiliacion_presidente.CostoActual if afiliacion_presidente else 0
+        
+        afiliacion_jugador = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 4).first()
+        subtotal_jug = (afiliacion_jugador.CostoActual * numPersonas) if (afiliacion_jugador and numPersonas > 0) else 0
+        
+        total = subtotal_pres + subtotal_jug
+        
+        detalles = []
+        if subtotal_pres > 0:
+            detalles.append({
+                "tipo_concepto": 2, # AFILIACION
+                "tipo_afiliacion_id": 2,
+                "seguro_id": None,
+                "cantidad": 1,
+                "precio": afiliacion_presidente.CostoActual,
+                "subtotal": subtotal_pres
+            })
+            
+        if subtotal_jug > 0:
+            detalles.append({
+                "tipo_concepto": 2, # AFILIACION
+                "tipo_afiliacion_id": 4,
+                "seguro_id": None,
+                "cantidad": numPersonas,
+                "precio": afiliacion_jugador.CostoActual,
+                "subtotal": subtotal_jug
+            })
+            
+        if segurosAsignados:
+            try:
+                seguros_dict = json.loads(segurosAsignados)
+                for seg_id_str, cant in seguros_dict.items():
+                    cant = int(cant)
+                    if cant > 0:
+                        seg_id = int(seg_id_str)
+                        seguro = db.query(Seguro).filter(Seguro.SeguroId == seg_id, Seguro.Activo == True).first()
+                        if seguro:
+                            subtotal_seg = seguro.Precio * cant
+                            detalles.append({
+                                "tipo_concepto": 1, # SEGURO
+                                "tipo_afiliacion_id": None,
+                                "seguro_id": seguro.SeguroId,
+                                "cantidad": cant,
+                                "precio": seguro.Precio,
+                                "subtotal": subtotal_seg
+                            })
+                            total += subtotal_seg
+            except Exception:
+                pass
+                
         # Create OrdenPago
         nueva_orden = OrdenPago(
             UsuarioId=nuevo_usuario.UsuarioId,
             EstatusPagoId=3, # Aprobado
             FechaEnvio=datetime.now(),
             FechaDePago=datetime.now(),
-            TotalPagar=0 # Opcional: calcular monto
+            TotalPagar=total,
+            SolicitudId=nueva_solicitud.SolicitudId
         )
         db.add(nueva_orden)
         db.flush()
         
-        # Create EquipoTemporal
-        nuevo_equipo_temporal = EquipoTemporal(
-            UsuarioId=nuevo_usuario.UsuarioId,
-            CantidadJugadoresPagados=data.numPersonas,
-            Activo=True,
-            OrdenPagoId=nueva_orden.OrdenPagoId,
-            TipoProcesoId=1 # asumiendo que 1 es el tipo de proceso general
-        )
-        db.add(nuevo_equipo_temporal)
+        # Create details
+        for d in detalles:
+            registro_detalle = OrdenPagoDetalle(
+                OrdenPagoId=nueva_orden.OrdenPagoId,
+                TipoConceptoId=d["tipo_concepto"],
+                TipoAfiliacionId=d["tipo_afiliacion_id"],
+                SeguroId=d["seguro_id"],
+                Cantidad=d["cantidad"],
+                PrecioUnitarioCobrado=d["precio"],
+                Subtotal=d["subtotal"]
+            )
+            db.add(registro_detalle)
+        db.flush()
         
+        # Create slots / EquipoTemporal
+        from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
+        nuevo_equipo_temporal = crear_equipo_temporal_repo(
+            db=db,
+            orden=nueva_orden,
+            solicitud_id=nueva_solicitud.SolicitudId,
+            tipo_proceso=1 # REGISTRO_INICIAL
+        )
+        
+        # Upload voucher if present
+        if voucher:
+            from app.servicios.pagos_servicio import PagosServicio
+            pagos_service = PagosServicio(db)
+            await pagos_service.subir_comprobante(nueva_orden.OrdenPagoId, voucher)
+            
+        # Upload documents if present
+        from app.servicios.documentos_servicio import subir_documento_servicio2
+        doc_ids = []
+        doc_files = []
+        if actaNacimiento:
+            doc_ids.append(8)
+            doc_files.append(actaNacimiento)
+        if identificacion:
+            doc_ids.append(38)
+            doc_files.append(identificacion)
+        if fotografia:
+            doc_ids.append(37)
+            doc_files.append(fotografia)
+        if formatoAfiliacion:
+            doc_ids.append(10)
+            doc_files.append(formatoAfiliacion)
+            
+        if doc_files:
+            await subir_documento_servicio2(
+                db=db,
+                persona_id=nueva_persona.PersonaId,
+                documento_afiliacion_ids=doc_ids,
+                archivos=doc_files,
+                solicitud_id=nueva_solicitud.SolicitudId
+            )
+            
+        # Force validation status of documents to APROBADO (1)
+        from app.modelos.documentos_entregados_modelo import DocumentosEntregados
+        from app.enums.documentos_estatus_enum import DocumentoEstatus
+        if doc_files:
+            docs_entregados = db.query(DocumentosEntregados).filter(DocumentosEntregados.PersonaId == nueva_persona.PersonaId).all()
+            for doc in docs_entregados:
+                doc.EstadoValidacionId = int(DocumentoEstatus.APROBADO)
+                doc.FechaValidacion = datetime.now()
+                
+        # Force EstatusId of PresidenteEquipo to 7 (Activo)
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == nueva_persona.PersonaId).first()
+        if presidente:
+            presidente.EstatusId = 7
+            
         db.commit()
         
         return {
@@ -820,11 +985,9 @@ def registrar_presidente_admin(
                 "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados
             }
         }
-        
     except HTTPException as e:
         db.rollback()
         raise e
     except Exception as e:
         db.rollback()
-        #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

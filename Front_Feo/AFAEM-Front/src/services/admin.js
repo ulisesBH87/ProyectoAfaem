@@ -171,8 +171,29 @@ export const getJugadoresDirectorio = async (forceRefresh = false) => {
   return fetchWithCache('/equipo-temporal/directorio-jugadores', { forceRefresh });
 };
 
-export const getJugadorDocumentos = async (personaId) => {
-  const response = await api.get(`/equipo-temporal/jugador/${personaId}/documentos`);
+/** @param {number} miembroEquipoId - ID de MiembrosEquipo (no PersonaId) */
+export const getJugadorDocumentos = async (miembroEquipoId) => {
+  const response = await api.get(`/equipo-temporal/jugador/${miembroEquipoId}/documentos`);
+  return response.data;
+};
+
+export const getJugadorSolicitudDocumento = async (miembroEquipoId) => {
+  const response = await api.get(`/equipo-temporal/jugador/${miembroEquipoId}/solicitud-documento`);
+  return response.data?.solicitud_id ?? response.data?.SolicitudId;
+};
+
+export const subirDocumentoJugador = async (personaId, documentoAfiliacionId, archivo, solicitudId) => {
+  if (solicitudId == null || solicitudId === '') {
+    throw new Error('solicitud_id es requerido para subir el documento.');
+  }
+  const formData = new FormData();
+  formData.append('persona_id', personaId);
+  formData.append('documento_afiliacion_ids', documentoAfiliacionId);
+  formData.append('archivo', archivo);
+  formData.append('solicitud_id', String(solicitudId));
+  const response = await api.post('/documentos/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return response.data;
 };
 
@@ -317,9 +338,13 @@ export const agregarJugadorEquipoExistente = async (formData) => {
   return response.data;
 };
 
-export const registrarPresidenteAdmin = async (data) => {
+export const registrarPresidenteAdmin = async (formData) => {
   try {
-    const response = await api.post('/equipo-temporal/registrar-presidente-admin', data);
+    const response = await api.post('/equipo-temporal/registrar-presidente-admin', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     // Invalidar caché del directorio
     serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
     return response.data;

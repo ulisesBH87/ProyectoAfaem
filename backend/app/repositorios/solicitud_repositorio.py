@@ -312,11 +312,17 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
 
         docs_list = []
         for d, da, cdp, cd in documentos:
-            # Construir URL absoluta
-            nombre_archivo = d.RutaArchivo.replace("\\", "/").split("/")[-1]
+            # Construir URL absoluta de forma dinámica
+            ruta_normalizada = d.RutaArchivo.replace("\\", "/")
+            if "uploads/" in ruta_normalizada:
+                partes = ruta_normalizada.split("uploads/", 1)
+                url_path = f"uploads/{partes[1]}"
+            else:
+                url_path = f"uploads/documentos/{ruta_normalizada.split('/')[-1]}"
+                
             docs_list.append({
                 "Tipo": cd.NombreDocumento,
-                "Url": f"{BASE_URL}/uploads/documentos/{nombre_archivo}",
+                "Url": f"{BASE_URL}/{url_path}",
                 "Estado": "entregado"
             })
             

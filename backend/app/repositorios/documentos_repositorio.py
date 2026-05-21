@@ -24,18 +24,8 @@ def subir_documento_repo(db, persona_id, documento_afiliacion_id, ruta):
 
 def subir_documento_repo2(db, persona_id, documento_afiliacion_id, ruta, solicitud_id):
 
-    #Si no hay id de solicitud, es porque el presidente de equipo
-    #está en el proceso de subir sus documentos, así que se busca
-    #su solicitud que está en borrador
     if not solicitud_id:
-        solicitud = db.query(Solicitud).filter(
-            Solicitud.EstatusValidacion == EstatusValidacionSolicitud.BORRADOR.value
-        ).first()
-
-        solicitud_id = solicitud.SolicitudId
-
-    if not solicitud_id:
-        raise Exception("No existe solicitud en borrador")
+        raise ValueError("solicitud_id es obligatorio para registrar el documento")
 
     doc = DocumentosEntregados(
         PersonaId=persona_id,

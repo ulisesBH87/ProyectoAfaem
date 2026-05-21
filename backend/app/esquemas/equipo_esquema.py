@@ -94,6 +94,7 @@ class DirectorioEquipoResponse(BaseModel):
 
 class DirectorioJugadorResponse(BaseModel):
     MiembroEquipoId: int
+    PersonaId: int
     NombreCompleto: str
     Nombre: str
     PrimerApellido: str

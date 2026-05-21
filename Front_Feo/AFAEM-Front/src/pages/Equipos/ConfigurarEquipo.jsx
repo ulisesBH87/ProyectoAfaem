@@ -815,6 +815,19 @@ export default function ConfigurarEquipo() {
     return null; // todo bien
   }
 
+  function esMenorDeEdadDesdeFecha(fechaStr) {
+    if (!fechaStr) return false;
+    const fecha = new Date(fechaStr);
+    if (isNaN(fecha.getTime())) return false;
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - fecha.getFullYear();
+    const m = hoy.getMonth() - fecha.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+      edad--;
+    }
+    return edad < 18;
+  }
+
 
   const segurosRequeridosPagoPresidente = Number(numJugadoresPago || 0) > 0 ? 1 : 0;
   const segurosRequeridosPagoJugador = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) : 0;
@@ -2035,6 +2048,22 @@ export default function ConfigurarEquipo() {
     );
   };
 
+  const esMenorDeEdadJugador = esMenorDeEdadDesdeFecha(currentPlayer.birthDate);
+  const docsRequeridosJugador = [
+    { key: 'acta', title: 'Acta de Nacimiento' },
+    ...(esMenorDeEdadJugador
+      ? [
+          { key: 'ineTutor', title: 'INE del padre o tutor' },
+          {
+            key: 'identificacionMenor',
+            title: 'Identificación del menor',
+            subtitle: 'Credencial escolar, constancia u otro documento oficial'
+          }
+        ]
+      : [{ key: 'ine', title: 'Identificación (INE/Pasaporte)' }]),
+    { key: 'foto', title: 'Fotografía Infantil' }
+  ];
+
   return (
     <>
       <style>
@@ -2354,17 +2383,17 @@ export default function ConfigurarEquipo() {
                     </div>
 
                     <section className="fade-in" style={{ marginBottom: '40px' }}>
-                    
+                      {esMenorDeEdadJugador && currentPlayer.birthDate && (
+                        <p style={{ fontSize: '13px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontWeight: '600' }}>
+                          El jugador es menor de edad. Sube la INE del padre o tutor, la identificación del menor (credencial escolar, constancia, etc.) y los demás documentos requeridos.
+                        </p>
+                      )}
                       <div style={{ 
                         display: 'grid', 
                         gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',
                         gap: '20px'
                       }}>
-                        {[
-                          { key: 'acta', title: 'Acta de Nacimiento' },
-                          { key: 'ine', title: 'Identificación (INE/Pasaporte)' },
-                          { key: 'foto', title: 'Fotografía Infantil' }
-                        ].map(doc => {
+                        {docsRequeridosJugador.map(doc => {
                           const isFormato = doc.key === 'formato';
                           const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
                           return (
@@ -2498,6 +2527,9 @@ export default function ConfigurarEquipo() {
                                 )}
                               </div>
                               <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                              {doc.subtitle && (
+                                <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
+                              )}
                               <div style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
@@ -2893,11 +2925,18 @@ export default function ConfigurarEquipo() {
                           }
                           
                           const docs = currentPlayer.documents || {};
-                          const hasMinDocs = docs.ine && docs.foto;
+                          const hasMinDocs = docs.foto && (
+                            esMenorDeEdadJugador
+                              ? (docs.ineTutor && docs.identificacionMenor)
+                              : docs.ine
+                          );
                           
                           // Validación básica
                           if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs || !currentPlayer.positionId) {
-                            Swal.fire('Atención', 'Por favor ingresa el nombre, selecciona posición, seguro y sube INE y Foto para continuar.', 'warning');
+                            const msgDocs = esMenorDeEdadJugador
+                              ? 'Por favor ingresa el nombre, selecciona posición, seguro y sube la INE del padre o tutor, la identificación del menor y la fotografía para continuar.'
+                              : 'Por favor ingresa el nombre, selecciona posición, seguro y sube INE y Foto para continuar.';
+                            Swal.fire('Atención', msgDocs, 'warning');
                             return;
                           }
 
