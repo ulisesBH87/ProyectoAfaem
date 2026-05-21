@@ -84,6 +84,19 @@ const escaparHtml = (texto) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+const getDocumentoEstatusInfo = (estadoId) => {
+  switch (Number(estadoId)) {
+    case 1:
+      return { texto: 'Espera', color: '#92400e', bg: '#fef3c7' };
+    case 2:
+      return { texto: 'Aceptado', color: '#14532d', bg: '#dcfce7' };
+    case 3:
+      return { texto: 'Rechazado', color: '#7f1d1d', bg: '#fee2e2' };
+    default:
+      return null;
+  }
+};
+
 const estilosCardDocumento = `
   aspect-ratio: 1 / 1;
   min-height: 170px;
@@ -108,18 +121,25 @@ const construirCardDocumentoHtml = (tipo, documento) => {
   if (urlDocumento) {
     const nombreDoc = escaparHtml(documento.nombre || tipo.nombre);
     const fechaSubida = formatearFechaSubida(documento.FechaEntrega);
+    const estadoInfo = getDocumentoEstatusInfo(documento.EstadoValidacionId);
+    const estadoBadge = estadoInfo
+      ? `<div style="position: absolute; top: 14px; right: 14px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg};">${estadoInfo.texto}</div>`
+      : '';
+
     return `
       <a
         href="${escaparHtml(urlDocumento)}"
         target="_blank"
         rel="noopener noreferrer"
         style="${estilosCardDocumento}
+          position: relative;
           text-decoration: none;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         "
         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 16px 30px rgba(15, 23, 42, 0.12)'"
         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(15, 23, 42, 0.08)'"
       >
+        ${estadoBadge}
         <div style="width: 60px; height: 60px; border-radius: 16px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 30px;">📄</div>
         <div style="display: flex; flex-direction: column; gap: 6px;">
           <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">${tituloTipo}</span>
