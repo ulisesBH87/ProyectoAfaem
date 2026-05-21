@@ -494,7 +494,11 @@ export default function ConfigurarEquipo() {
 
         if (isAdmin) {
           const presidents = await teamsService.getPresidentesActivos();
-          setActivePresidents(presidents);
+          // Solo mostrar presidentes con EstatusId = 7 (ACTIVO)
+          const soloActivos = Array.isArray(presidents)
+            ? presidents.filter(p => p.estatus === 7 || p.estatusNombre === 'ACTIVO')
+            : [];
+          setActivePresidents(soloActivos);
         }
 
       } catch (error) {
@@ -1228,13 +1232,9 @@ export default function ConfigurarEquipo() {
   };
 
   const handleGoToPlayers = () => {
-    // Validar modal antes de pasar
+    // Solo el nombre del equipo es obligatorio; el logo es opcional
     if (!modalData.teamName.trim()) {
       Swal.fire('Atención', 'Por favor ingresa el nombre del equipo', 'warning');
-      return;
-    }
-    if (!modalData.teamLogo) {
-      Swal.fire('Atención', 'Por favor carga el logo del equipo', 'warning');
       return;
     }
     setActiveStep(2);
@@ -1348,6 +1348,35 @@ export default function ConfigurarEquipo() {
     }
   };
 
+  const forceLoadFailedPhoto = () => {
+    if (!failedPhoto) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviews(prev => ({
+        ...prev,
+        foto: reader.result
+      }));
+    };
+    reader.readAsDataURL(failedPhoto);
+
+    setCurrentPlayer(prev => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        foto: failedPhoto
+      }
+    }));
+    setFailedPhoto(null);
+
+    Swal.fire({
+      title: 'Fotografía Cargada',
+      text: 'La fotografía se cargó sin validación.',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  };
+
   const procesarFotografiaJugador = async (file) => {
     Swal.fire({
       title: 'Validando Fotografía...',
@@ -1393,6 +1422,8 @@ export default function ConfigurarEquipo() {
           }
         }));
         
+        setFailedPhoto(null);
+        
         Swal.fire({
           title: '¡Fotografía Aceptada!',
           icon: 'success',
@@ -1400,6 +1431,75 @@ export default function ConfigurarEquipo() {
           showConfirmButton: false
         });
       } else {
+        // Guardar el archivo fallido en el estado
+        setFailedPhoto(file);
+
+        // LIMPIAR PREVIEW por defecto
+        setPreviews(prev => ({
+          ...prev,
+          foto: null
+        }));
+
+        // LIMPIAR DOCUMENTO por defecto
+        setCurrentPlayer(prev => ({
+          ...prev,
+          documents: {
+            ...prev.documents,
+            foto: null
+          }
+        }));
+
+        Swal.fire({
+          title: 'Error en la fotografía',
+          text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, cargar igualmente',
+          cancelButtonText: 'No, intentar de nuevo',
+          confirmButtonColor: '#0b4ea6',
+          cancelButtonColor: '#cbd5e1'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Guardar preview de la original
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setPreviews(prev => ({
+                ...prev,
+                foto: reader.result
+              }));
+            };
+            reader.readAsDataURL(file);
+
+            // Guardar documento original
+            setCurrentPlayer(prev => ({
+              ...prev,
+              documents: {
+                ...prev.documents,
+                foto: file
+              }
+            }));
+            
+            setFailedPhoto(null);
+            
+            Swal.fire({
+              title: 'Cargada',
+              text: 'Se ha cargado la fotografía original.',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          }
+        });
+      }
+    } catch (err) {
+      // Guardar el archivo fallido en el estado
+      setFailedPhoto(file);
+
+      // LIMPIAR PREVIEW
+      setPreviews(prev => ({
+        ...prev,
+        foto: null
+      }));
 
       // LIMPIAR DOCUMENTO
       setCurrentPlayer(prev => ({
@@ -1410,26 +1510,47 @@ export default function ConfigurarEquipo() {
         }
       }));
 
-        Swal.fire('Error en la fotografía', data.mensaje, 'error');
-      }
-    } catch (err) {
+      Swal.fire({
+        title: 'Error de validación',
+        text: `${err.message || 'No se pudo conectar con el servicio de validación.'} ¿Deseas cargar la fotografía igualmente?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cargar igualmente',
+        cancelButtonText: 'No, intentar de nuevo',
+        confirmButtonColor: '#0b4ea6',
+        cancelButtonColor: '#cbd5e1'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Guardar preview de la original
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setPreviews(prev => ({
+              ...prev,
+              foto: reader.result
+            }));
+          };
+          reader.readAsDataURL(file);
 
-      // LIMPIAR PREVIEW
-    setPreviews(prev => ({
-      ...prev,
-      foto: null
-    }));
-
-    // LIMPIAR DOCUMENTO
-    setCurrentPlayer(prev => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        foto: null
-      }
-    }));
-
-      Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+          // Guardar documento original
+          setCurrentPlayer(prev => ({
+            ...prev,
+            documents: {
+              ...prev.documents,
+              foto: file
+            }
+          }));
+          
+          setFailedPhoto(null);
+          
+          Swal.fire({
+            title: 'Cargada',
+            text: 'Se ha cargado la fotografía original.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
     }
   };
 
@@ -1569,6 +1690,7 @@ export default function ConfigurarEquipo() {
   const userEmail = localStorage.getItem('email') || '';
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const [failedPhoto, setFailedPhoto] = useState(null);
   
    // Previsualizaciones (URLs locales)
   const [previews, setPreviews] = useState({
@@ -1643,8 +1765,10 @@ export default function ConfigurarEquipo() {
       positionId: '',
       documents: {}
     });
+    setPreviews({});
     setEditingPlayerId(null);
     setFormErrors({});
+    setFailedPhoto(null);
   };
 
   const loadPlayerForEditing = (playerId) => {
@@ -1653,6 +1777,21 @@ export default function ConfigurarEquipo() {
       setCurrentPlayer({ ...playerToEdit });
       setFormErrors({});
       setEditingPlayerId(playerId);
+      setFailedPhoto(null);
+
+      // Restaurar previsualizaciones de documentos
+      const newPreviews = {};
+      if (playerToEdit.documents) {
+        Object.entries(playerToEdit.documents).forEach(([key, file]) => {
+          if (file instanceof File) {
+            newPreviews[key] = URL.createObjectURL(file);
+          } else if (typeof file === 'string') {
+            newPreviews[key] = file;
+          }
+        });
+      }
+      setPreviews(newPreviews);
+
       // Scroll al formulario
       setTimeout(() => {
         document.querySelector('[data-player-form]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2127,6 +2266,9 @@ export default function ConfigurarEquipo() {
                     </div>
 
                     <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '20px' }}>
+                      <div style={{ padding: '8px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: '#166534', fontWeight: '700' }}>🟢 Mostrando solo presidentes con estatus Activo</span>
+                      </div>
                       {activePresidents
                         .filter(p => !searchTerm || p.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
                         .map(p => (
@@ -2543,6 +2685,35 @@ export default function ConfigurarEquipo() {
                               }}>
                                 {currentPlayer.documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                               </div>
+                              {doc.key === 'foto' && !currentPlayer.documents.foto && failedPhoto && (
+                                <div style={{ marginTop: '8px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={forceLoadFailedPhoto}
+                                    style={{
+                                      width: '100%',
+                                      padding: '8px 12px',
+                                      backgroundColor: '#f59e0b',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '8px',
+                                      fontSize: '11px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '4px',
+                                      boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
+                                      transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
+                                    onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
+                                  >
+                                    ⚠️ Cargar igualmente
+                                  </button>
+                                </div>
+                              )}
                               <input
                                 type="file"
                                 id={`file-${doc.key}`}
@@ -2925,7 +3096,7 @@ export default function ConfigurarEquipo() {
                           }
                           
                           const docs = currentPlayer.documents || {};
-                          const hasMinDocs = docs.foto && (
+                          const hasMinDocs = docs.acta && docs.foto && (
                             esMenorDeEdadJugador
                               ? (docs.ineTutor && docs.identificacionMenor)
                               : docs.ine
@@ -2934,8 +3105,8 @@ export default function ConfigurarEquipo() {
                           // Validación básica
                           if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs || !currentPlayer.positionId) {
                             const msgDocs = esMenorDeEdadJugador
-                              ? 'Por favor ingresa el nombre, selecciona posición, seguro y sube la INE del padre o tutor, la identificación del menor y la fotografía para continuar.'
-                              : 'Por favor ingresa el nombre, selecciona posición, seguro y sube INE y Foto para continuar.';
+                              ? 'Por favor ingresa el nombre, selecciona posición, seguro y sube el acta de nacimiento, la INE del padre o tutor, la identificación del menor y la fotografía para continuar.'
+                              : 'Por favor ingresa el nombre, selecciona posición, seguro y sube el acta de nacimiento, INE y Foto para continuar.';
                             Swal.fire('Atención', msgDocs, 'warning');
                             return;
                           }
@@ -3177,21 +3348,32 @@ export default function ConfigurarEquipo() {
             </div>
 
             <div style={{ marginBottom: '25px' }}>
-              <label style={{ display: 'block', fontWeight: '800', marginBottom: '10px', color: '#1e293b', fontSize: '14px', textTransform: 'uppercase' }}>Escudo / Logo</label>
-              <div style={{ position: 'relative', height: '100px', border: '2px dashed #cbd5e1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontWeight: '800', color: '#1e293b', fontSize: '14px', textTransform: 'uppercase', margin: 0 }}>Escudo / Logo</label>
+                <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '20px', fontWeight: '600' }}>Opcional</span>
+              </div>
+              <div style={{ position: 'relative', height: '100px', border: modalData.teamLogo ? '2px solid #10b981' : '2px dashed #cbd5e1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: modalData.teamLogo ? '#f0fdf4' : '#f8fafc', overflow: 'hidden', transition: 'all 0.2s' }}>
                  {modalData.teamLogo ? (
-                   <div style={{ textAlign: 'center' }}>
+                   <div style={{ textAlign: 'center', pointerEvents: 'none' }}>
                      <div style={{ fontSize: '24px' }}>🖼️</div>
                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#059669' }}>{modalData.teamLogo.name}</div>
                    </div>
                  ) : (
-                   <div style={{ textAlign: 'center' }}>
+                   <div style={{ textAlign: 'center', pointerEvents: 'none' }}>
                      <div style={{ fontSize: '24px', opacity: 0.5 }}>📤</div>
-                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Haz click para subir</div>
+                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Haz click para subir (opcional)</div>
                    </div>
                  )}
                  <input type="file" accept="image/*" onChange={handleTeamLogoChange} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
               </div>
+              {modalData.teamLogo && (
+                <button
+                  onClick={() => setModalData(prev => ({ ...prev, teamLogo: null }))}
+                  style={{ marginTop: '8px', background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', fontWeight: '700', cursor: 'pointer', padding: '0', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  ✕ Quitar logo seleccionado
+                </button>
+              )}
             </div>
 
             <div style={{ background: '#f1f5f9', padding: '20px', borderRadius: '16px', marginBottom: '30px' }}>

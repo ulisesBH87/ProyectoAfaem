@@ -158,7 +158,11 @@ export default function AdminEquipos() {
         getPresidentesDirectorio(),
         getCatalogosRegistro()
       ]);
-      setPresidentes(presData || []);
+      setPresidentes(
+        Array.isArray(presData)
+          ? presData.filter(p => p.estatus === 7 || p.estatusNombre === 'ACTIVO')
+          : []
+      );
       setCatalogos({
         ligas: catData?.ligas || [],
         modalidades: catData?.modalidades || [],
@@ -581,6 +585,11 @@ export default function AdminEquipos() {
                     onChange={e => setSearchPresidente(e.target.value)}
                     style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dbeafe', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
                   />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                      🟢 Solo presidentes con estatus Activo
+                    </span>
+                  </div>
                   <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
                     {loadingExtras ? (
                       <Loader inline text="Cargando presidentes..." />

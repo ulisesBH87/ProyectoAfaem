@@ -128,6 +128,97 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         "total": len(documentos_creados)
     }
 
+
+async def subir_documentos_jugador_equipo(
+    db,
+    persona_id: int,
+    documento_afiliacion_ids: list,
+    archivos: list,
+    solicitud_id: int,
+    nombre_equipo: str,
+    nombre_jugador: str
+):
+    """
+    Guarda los documentos de un jugador de equipo en la ruta de producción:
+        <uploads_base>/equipos/<NombreEquipo>/<NombreJugador>/
+
+    Soporta tanto jugadores mayores como menores de edad; los documentos
+    específicos se determinan en el repositorio según la fecha de nacimiento.
+
+    Si no se reciben archivos, la función retorna sin hacer nada.
+    """
+    if not archivos or len(archivos) == 0:
+        return {"mensaje": "Sin documentos para subir", "total": 0}
+
+    if len(documento_afiliacion_ids) != len(archivos):
+        raise ValueError("Cantidad de archivos y tipos de documento no coincide")
+
+    # Obtener persona para CURP y nombre en archivos
+    persona = db.query(Personas).filter(Personas.PersonaId == persona_id).first()
+    if not persona:
+        raise documentos_excepciones.PersonaNoEncontradaError()
+
+    from app.core.config import obtener_uploads_dir
+    base_uploads_dir = obtener_uploads_dir()
+
+    # Sanitizar nombres para el sistema de archivos
+    nombre_equipo_limpio = " ".join((nombre_equipo or f"equipo_{persona_id}").strip().split())
+    nombre_equipo_limpio = nombre_equipo_limpio.replace("/", "_").replace("\\", "_")
+
+    nombre_jugador_limpio = " ".join((nombre_jugador or f"persona_{persona_id}").strip().split())
+    if not nombre_jugador_limpio:
+        nombre_jugador_limpio = f"persona_{persona_id}"
+    nombre_jugador_limpio = nombre_jugador_limpio.replace("/", "_").replace("\\", "_")
+
+    # Ruta destino: <uploads_base>/equipos/<NombreEquipo>/<NombreJugador>/
+    upload_subfolder = os.path.join("equipos", nombre_equipo_limpio, nombre_jugador_limpio)
+    target_dir = os.path.join(base_uploads_dir, upload_subfolder)
+    os.makedirs(target_dir, exist_ok=True)
+
+    curp = persona.CURP or f"sin_curp_{persona_id}"
+    año = datetime.now().year
+
+    # Obtener los metadatos de los documentos
+    doc_afiliaciones = db.query(DocumentoAfiliacion).filter(
+        DocumentoAfiliacion.DocumentoAfiliacionId.in_(documento_afiliacion_ids)
+    ).all()
+    doc_map = {d.DocumentoAfiliacionId: d for d in doc_afiliaciones}
+
+    documentos_creados = []
+
+    for archivo, doc_id in zip(archivos, documento_afiliacion_ids):
+        d = doc_map.get(doc_id)
+        if not d:
+            raise Exception(f"No se encontró DocumentoAfiliacionId {doc_id}")
+
+        nombre_doc = d.Documento.NombreDocumento.upper()
+        extension = archivo.filename.split(".")[-1]
+        nombre_archivo = f"{nombre_doc}_{curp}_{año}.{extension}"
+
+        ruta_absoluta = os.path.join(target_dir, nombre_archivo)
+        ruta_db = os.path.join("uploads", upload_subfolder, nombre_archivo).replace("\\", "/")
+
+        with open(ruta_absoluta, "wb") as buffer:
+            buffer.write(await archivo.read())
+
+        from app.repositorios import documentos_repositorio
+        doc = documentos_repositorio.subir_documento_repo2(
+            db,
+            persona_id,
+            doc_id,
+            ruta_db,
+            solicitud_id
+        )
+        documentos_creados.append(doc)
+
+    db.commit()
+
+    return {
+        "mensaje": "Documentos de jugador subidos",
+        "total": len(documentos_creados),
+        "ruta": upload_subfolder
+    }
+
 def proceso_presidente(db, usuario):
     usuario_id = usuario.UsuarioId
     persona_id = personas_repositorio.obtener_persona(db, usuario_id)
