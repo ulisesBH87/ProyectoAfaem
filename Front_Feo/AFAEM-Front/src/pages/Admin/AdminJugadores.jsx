@@ -27,6 +27,11 @@ const TIPOS_DOCUMENTO_JUGADOR_REQUERIDOS = [
   { id: 28, nombre: 'Formato de afiliación' },
 ];
 
+/** Documentos adicionales: solo se muestran en el modal si ya fueron entregados */
+const TIPOS_DOCUMENTO_OPCIONALES = [
+  { id: 33, nombre: 'INE del padre o tutor' },
+];
+
 const normalizarTextoDocumento = (texto) =>
   String(texto ?? '')
     .toLowerCase()
@@ -38,6 +43,7 @@ const PALABRAS_CLAVE_POR_TIPO = {
   26: ['identificacion', 'ine', 'credencial'],
   25: ['foto', 'fotografia'],
   28: ['formato', 'afiliacion'],
+  33: ['tutor', 'ine tutor', 'padre', 'madre'],
 };
 
 const documentoCoincideConTipo = (doc, tipoId) => {
@@ -316,10 +322,18 @@ export default function AdminJugadores() {
 
   const mostrarModalDocumentos = (jugador, documentos, solicitudId) => {
     const listaDocumentos = Array.isArray(documentos) ? documentos : [];
-    const htmlCards = TIPOS_DOCUMENTO_JUGADOR_REQUERIDOS.map((tipo) => {
+    const htmlCardsRequeridos = TIPOS_DOCUMENTO_JUGADOR_REQUERIDOS.map((tipo) => {
       const documento = obtenerDocumentoMasRecientePorTipo(listaDocumentos, tipo.id);
       return construirCardDocumentoHtml(tipo, documento);
     }).join('');
+
+    const htmlCardsOpcionales = TIPOS_DOCUMENTO_OPCIONALES.map((tipo) => {
+      const documento = obtenerDocumentoMasRecientePorTipo(listaDocumentos, tipo.id);
+      if (!documento) return '';
+      return construirCardDocumentoHtml(tipo, documento);
+    }).join('');
+
+    const htmlCards = htmlCardsRequeridos + htmlCardsOpcionales;
 
     Swal.fire({
       title: `Documentos de ${jugador.NombreCompleto}`,
