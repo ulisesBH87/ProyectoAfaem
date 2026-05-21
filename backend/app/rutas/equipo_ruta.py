@@ -277,12 +277,9 @@ async def agregar_jugador_equipo_existente(
         # 6. Sumar +1 a la CantidadJugadores
         equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + 1
 
-        DOC_TYPE_TO_ID = {
-            "acta": 22,
-            "ine": 26,
-            "foto": 25,
-            "formato": 28
-        }
+        from app.repositorios.equipo_repositorio import doc_type_to_id_jugador, es_menor_de_edad
+
+        DOC_TYPE_TO_ID = doc_type_to_id_jugador(es_menor_de_edad(fn))
 
         archivos = []
         documento_ids = []

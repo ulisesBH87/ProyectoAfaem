@@ -384,10 +384,13 @@ export const createTeamCompleto = async (data) => {
 
     // Adjuntar archivos de cada jugador
     data.players.forEach((p, index) => {
-      if (p.documents.acta) formData.append(`player_${index}_acta`, p.documents.acta);
-      if (p.documents.ine) formData.append(`player_${index}_ine`, p.documents.ine);
-      if (p.documents.foto) formData.append(`player_${index}_foto`, p.documents.foto);
-      if (p.documents.formato) formData.append(`player_${index}_formato`, p.documents.formato);
+      const docs = p.documents || {};
+      if (docs.acta) formData.append(`player_${index}_acta`, docs.acta);
+      if (docs.ine) formData.append(`player_${index}_ine`, docs.ine);
+      if (docs.ineTutor) formData.append(`player_${index}_ineTutor`, docs.ineTutor);
+      if (docs.identificacionMenor) formData.append(`player_${index}_identificacionMenor`, docs.identificacionMenor);
+      if (docs.foto) formData.append(`player_${index}_foto`, docs.foto);
+      if (docs.formato) formData.append(`player_${index}_formato`, docs.formato);
     });
 
     const response = await api.post('/equipo-temporal/crear-equipo-completo', formData, {
