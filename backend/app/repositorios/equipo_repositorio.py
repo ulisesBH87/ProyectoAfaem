@@ -1,7 +1,7 @@
 from sqlite3 import IntegrityError
 
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, date
 from fastapi import HTTPException
 
 from app.modelos.usuario_modelo import Usuario
@@ -435,6 +435,40 @@ def parse_fecha(fecha: str):
             continue
     raise ValueError(f"Formato de fecha inválido: {fecha}")
 
+
+def es_menor_de_edad(fecha_nacimiento) -> bool:
+    if not fecha_nacimiento:
+        return False
+    if isinstance(fecha_nacimiento, datetime):
+        fecha = fecha_nacimiento.date()
+    elif isinstance(fecha_nacimiento, date):
+        fecha = fecha_nacimiento
+    else:
+        return False
+    hoy = date.today()
+    edad = hoy.year - fecha.year
+    if (hoy.month, hoy.day) < (fecha.month, fecha.day):
+        edad -= 1
+    return edad < 18
+
+
+def doc_type_to_id_jugador(es_menor: bool) -> dict:
+    """Mapeo de claves de archivo (FormData) a DocumentoAfiliacionId."""
+    if es_menor:
+        return {
+            "acta": 22,
+            "ineTutor": 33,              # INE de tutor
+            "identificacionMenor": 36,   # Identificación de menor
+            "foto": 25,
+            "formato": 28,
+        }
+    return {
+        "acta": 22,
+        "ine": 26,
+        "foto": 25,
+        "formato": 28,
+    }
+
 async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     try:
         #Validar fecha de nacimiento
@@ -528,13 +562,14 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     archivos = []
     documento_ids = []
 
-    #ID HARDCODEADOS POR AHORA. MEJORAR EN EL FUTURO. BORRAR LÍNEA CUANDO SE HAGA LA MEJORA
-    DOC_TYPE_TO_ID = {
-        "acta": 22,     # jugador mayor
-        "ine": 26,
-        "foto": 25,
-        "formato": 28
-    }
+    fecha_nac = None
+    if p_data.get("fecha_nacimiento"):
+        try:
+            fecha_nac = parse_fecha(p_data["fecha_nacimiento"])
+        except ValueError:
+            pass
+
+    DOC_TYPE_TO_ID = doc_type_to_id_jugador(es_menor_de_edad(fecha_nac))
 
     for doc_type, doc_id in DOC_TYPE_TO_ID.items():
         file_key = f"player_{index}_{doc_type}"
