@@ -162,13 +162,11 @@ async def subir_documentos_jugador_equipo(
     base_uploads_dir = obtener_uploads_dir()
 
     # Sanitizar nombres para el sistema de archivos
-    nombre_equipo_limpio = " ".join((nombre_equipo or f"equipo_{persona_id}").strip().split())
-    nombre_equipo_limpio = nombre_equipo_limpio.replace("/", "_").replace("\\", "_")
+    nombre_equipo_limpio = (nombre_equipo or f"equipo_{persona_id}").strip().replace("/", "_").replace("\\", "_")
 
-    nombre_jugador_limpio = " ".join((nombre_jugador or f"persona_{persona_id}").strip().split())
+    nombre_jugador_limpio = (nombre_jugador or f"persona_{persona_id}").strip().replace("/", "_").replace("\\", "_")
     if not nombre_jugador_limpio:
         nombre_jugador_limpio = f"persona_{persona_id}"
-    nombre_jugador_limpio = nombre_jugador_limpio.replace("/", "_").replace("\\", "_")
 
     # Ruta destino: <uploads_base>/equipos/<NombreEquipo>/<NombreJugador>/
     upload_subfolder = os.path.join("equipos", nombre_equipo_limpio, nombre_jugador_limpio)
