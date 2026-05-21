@@ -203,6 +203,17 @@ export const exportarJugadorDocumentos = async (miembroEquipoId) => {
   });
 };
 
+export const updateDocumentoEstado = async (documentoId, estadoValidacionId, observacionesDocumento = null) => {
+  const payload = {
+    EstadoValidacionId: estadoValidacionId,
+  };
+  if (observacionesDocumento != null) {
+    payload.ObservacionesDocumento = observacionesDocumento;
+  }
+  const response = await api.patch(`/equipo-temporal/documento/${documentoId}/estado`, payload);
+  return response.data;
+};
+
 export const exportarEquipoDocumentos = async (equipoId) => {
   return api.get(`/equipo-temporal/equipo/${equipoId}/exportar`, {
     responseType: 'blob',
