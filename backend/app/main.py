@@ -17,8 +17,8 @@ app = FastAPI(
 )
 
 # Servir archivos estáticos (Documentos, Vouchers) con ruta absoluta
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
+from app.core.config import obtener_uploads_dir
+UPLOADS_DIR = obtener_uploads_dir()
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 @app.get("/docs", include_in_schema=False)

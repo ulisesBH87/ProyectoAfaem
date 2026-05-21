@@ -8,7 +8,8 @@ const MainLayout = ({ userEmail }) => {
   const { estatusId, hasRole, isLoading } = useRBAC();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  //const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     // Si ya cargaron los permisos y es un presidente con estatus no autorizado (<4)
@@ -19,24 +20,25 @@ const MainLayout = ({ userEmail }) => {
   }, [estatusId, isLoading, hasRole, navigate]);
 
   // Cerrar menú móvil al navegar
-  useEffect(() => {
+  //useEffect(() => {
     // eslint-disable-next-line
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
+    //setMobileMenuOpen(false);
+  //}, [location.pathname]);
 
   // Bloquear scroll del body cuando el menú móvil está abierto
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [mobileMenuOpen]);
+  //useEffect(() => {
+   // if (mobileMenuOpen) {
+     // document.body.style.overflow = 'hidden';
+    //} else {
+      //document.body.style.overflow = '';
+    //}
+    //return () => { document.body.style.overflow = ''; };
+  //}, [mobileMenuOpen]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
       {/* Backdrop oscuro en móvil */}
+       {/*
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
@@ -49,29 +51,31 @@ const MainLayout = ({ userEmail }) => {
           }}
         />
       )}
+        */}
 
       <DashboardSidebar
         userEmail={userEmail}
-        mobileOpen={mobileMenuOpen}
-        onMobileClose={() => setMobileMenuOpen(false)}
+        //mobileOpen={mobileMenuOpen}
+        //onMobileClose={() => setMobileMenuOpen(false)}
+        collapsed={sidebarCollapsed}
       />
       
       <div
         className="main-content-wrapper"
         style={{ 
           flex: 1, 
-          marginLeft: 'var(--sidebar-width)', 
+          marginLeft: sidebarCollapsed ? '80px' : '260px', 
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
           maxWidth: '100vw',
-          overflowX: 'hidden'
+          overflowX: 'auto'
         }}
       >
         <DashboardHeader
           userEmail={userEmail}
-          onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onMenuToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
         <main className="fade-in" style={{ 

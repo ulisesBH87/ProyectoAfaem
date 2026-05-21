@@ -67,10 +67,6 @@ class PagosServicio:
         
         total_personas = orden.CantidadJugadores
 
-        #Si se va a crear equipo se cobra afiliación de presidente
-        if (orden.TipoSolicitud == 1 or orden.TipoSolicitud == 2):
-            total_personas += 1
-
         total_seguros = sum(s.Cantidad for s in orden.Seguros)
         
         if total_seguros != total_personas:
@@ -179,25 +175,51 @@ class PagosServicio:
             raise pagos_excepciones.OrdenNoEncontradaError()
         
         try:
-            os.makedirs(self.UPLOAD_DIR, exist_ok=True)
+            from app.modelos.usuario_modelo import Usuario
+            from app.modelos.persona_modelo import Personas
+            from app.modelos.solicitud_modelo import Solicitud
+            
+            usuario = self.db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
+            persona = None
+            if usuario and usuario.PersonaId:
+                persona = self.db.query(Personas).filter(Personas.PersonaId == usuario.PersonaId).first()
+            
+            solicitud = self.db.query(Solicitud).filter(Solicitud.SolicitudId == orden.SolicitudId).first()
+            
+            from app.core.config import obtener_uploads_dir
+            base_uploads_dir = obtener_uploads_dir()
+            
+            is_presidente = False
+            if solicitud and solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO.value:
+                is_presidente = True
+                
+            if is_presidente and persona:
+                nombre_completo = f"{persona.Nombre or ''} {persona.PrimerApellido or ''} {persona.SegundoApellido or ''}".strip()
+                nombre_completo = " ".join(nombre_completo.split())
+                if not nombre_completo:
+                    nombre_completo = f"usuario_{orden.UsuarioId}"
+                upload_subfolder = os.path.join("presidentes", nombre_completo)
+            else:
+                upload_subfolder = "vouchers"
+                
+            target_dir = os.path.join(base_uploads_dir, upload_subfolder)
+            os.makedirs(target_dir, exist_ok=True)
             
             extension = archivo.filename.split(".")[-1]
-            
             nombre_archivo = f"orden_{orden_id}.{extension}"
+            
+            ruta_absoluta = os.path.join(target_dir, nombre_archivo)
+            ruta_db = os.path.join("uploads", upload_subfolder, nombre_archivo).replace("\\", "/")
 
-            ruta = os.path.join(self.UPLOAD_DIR, nombre_archivo)
-
-            with open(ruta, "wb") as buffer:
+            with open(ruta_absoluta, "wb") as buffer:
                 buffer.write(await archivo.read())
-                pagos_repositorio.actualizar_comprobante_repo(self.db, orden_id, ruta)
+                pagos_repositorio.actualizar_comprobante_repo(self.db, orden_id, ruta_db)
 
                 # Actualizar Estatus Presidente a PAGO_EN_REVISION
                 try:
-                    from app.modelos.usuario_modelo import Usuario
                     from app.modelos.presidente_equipo_modelo import PresidenteEquipo
                     from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
                     
-                    usuario = self.db.query(Usuario).filter(Usuario.UsuarioId == orden.UsuarioId).first()
                     if usuario:
                         presidente = self.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
                         if presidente and str(presidente.EstatusId) != str(PresidenteEquipoEstatus.ACTIVO.value):

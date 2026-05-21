@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -42,10 +43,8 @@ const CATALOGO_ASOCIACIONES = [
 ];
 
 const CATALOGO_ROLES = [
-  { valor: 'PRESIDENTE', etiqueta: 'Presidente de Equipo' },
-  { valor: 'DIRECTIVO', etiqueta: 'Directivo de Club' },
-  { valor: 'DELEGADO', etiqueta: 'Delegado Deportivo' },
-  { valor: 'REPRESENTANTE', etiqueta: 'Representante Legal' },
+  { valor: 'TIPO F', etiqueta: 'TIPO F' },
+  { valor: 'TIPO G', etiqueta: 'TIPO G' },
 ];
 
 /* ─── Step pill ─── */
@@ -80,6 +79,7 @@ const StepCircle = ({ num, label, active, done }) => (
    COMPONENTE PRINCIPAL
 ══════════════════════════════════════════════════════════════════════ */
 export default function AdminPresidentes() {
+  const navigate = useNavigate();
 
   const [presidentes, setPresidentes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -131,7 +131,16 @@ export default function AdminPresidentes() {
   /* Cálculos */
   const totalAsignados = Object.values(asignacionSeguros).reduce((a, v) => a + Number(v || 0), 0);
   const totalPagar = seguros.reduce((a, s) => a + Number(asignacionSeguros[s.id] || 0) * s.precio, 0);
-  const segurosRequeridos = Number(numPersonas || 0) > 0 ? Number(numPersonas) + 1 : 0;
+  const segurosRequeridos = Number(numPersonas || 0);
+
+  const segurosJugadores = seguros.filter((seg, idx) =>
+    ['TIPO A', 'TIPO B', 'TIPO C', 'TIPO D', 'TIPO E'].includes(seg.nombre.toUpperCase().trim()) ||
+    (seguros.length === 7 && idx < 5)
+  );
+  const segurosPresidente = seguros.filter((seg, idx) =>
+    ['TIPO F', 'TIPO G'].includes(seg.nombre.toUpperCase().trim()) ||
+    (seguros.length === 7 && idx >= 5)
+  );
 
   /* ─── Carga inicial ─── */
   const cargarPresidentes = async (forceRefresh = false) => {
@@ -197,18 +206,7 @@ export default function AdminPresidentes() {
     }
   };
 
-  /* ─── Efecto de Auto-cálculo ─── */
-  useEffect(() => {
-    if (numPersonas !== '' && paso === 1) {
-      const totalNecesario = Number(numPersonas) + 1;
-      // Inicializar con el primer seguro disponible
-      const newAsignacion = {};
-      seguros.forEach((seg, idx) => {
-        newAsignacion[seg.id] = idx === 0 ? totalNecesario : 0;
-      });
-      setAsignacionSeguros(newAsignacion);
-    }
-  }, [numPersonas, seguros]);
+
 
   /* ─── Reset / cerrar ─── */
   const resetModal = () => {
@@ -217,7 +215,7 @@ export default function AdminPresidentes() {
     // Crear un objeto de asignación vacío para todos los seguros
     const emptyAsignacion = {};
     seguros.forEach(seg => {
-      emptyAsignacion[seg.id] = '';
+      emptyAsignacion[seg.id] = 0;
     });
     setAsignacionSeguros(emptyAsignacion);
     setInfoPersonal({ correo: '', telefono: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '' });
@@ -428,7 +426,14 @@ export default function AdminPresidentes() {
   const irSiguiente = () => {
     if (paso === 1) {
       if (Number(numPersonas) <= 0) { Swal.fire('Atención', 'Ingresa el número de jugadores.', 'warning'); return; }
-      if (totalAsignados !== segurosRequeridos) { Swal.fire('Atención', `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar (Jugadores + Presidente).`, 'warning'); return; }
+      if (totalAsignados !== segurosRequeridos) {
+        if (totalAsignados > segurosRequeridos) {
+          Swal.fire('Atención', `Has asignado más seguros de los permitidos. El límite es de ${segurosRequeridos} seguros (uno por jugador) y tienes ${totalAsignados} asignados.`, 'warning');
+        } else {
+          Swal.fire('Atención', `Debes asignar un seguro a cada jugador. Faltan ${segurosRequeridos - totalAsignados} por asignar.`, 'warning');
+        }
+        return;
+      }
       setPaso(2);
     } else if (paso === 2) {
       if (!infoPersonal.correo) { Swal.fire('Atención', 'El correo electrónico es obligatorio.', 'warning'); return; }
@@ -475,25 +480,25 @@ export default function AdminPresidentes() {
 
   /* Mapa de estatus del catálogo */
   const ESTATUS_CATALOGO = [
-    { id: 1, nombre: 'PAGO_PENDIENTE',        label: 'Pago Pendiente',       bg: '#fee2e2', color: '#991b1b' },
-    { id: 2, nombre: 'PAGO_EN_REVISION',       label: 'Pago en Revisión',     bg: '#e0f2fe', color: '#075985' },
-    { id: 3, nombre: 'DOCUMENTOS_PENDIENTES',  label: 'Docs. Pendientes',     bg: '#fef3c7', color: '#92400e' },
-    { id: 4, nombre: 'DOCUMENTOS_EN_REVISION', label: 'Docs. en Revisión',    bg: '#fef9c3', color: '#854d0e' },
-    { id: 5, nombre: 'PRE_APROBADO',           label: 'Pre-Aprobado',         bg: '#d1fae5', color: '#065f46' },
-    { id: 6, nombre: 'REGISTRO_PENDIENTE',     label: 'Registro Pendiente',   bg: '#f1f5f9', color: '#475569' },
-    { id: 7, nombre: 'ACTIVO',                 label: 'Activo',               bg: '#dcfce7', color: '#166534' },
+    { id: 1, nombre: 'PAGO_PENDIENTE', label: 'Pago Pendiente', bg: '#fee2e2', color: '#991b1b' },
+    { id: 2, nombre: 'PAGO_EN_REVISION', label: 'Pago en Revisión', bg: '#e0f2fe', color: '#075985' },
+    { id: 3, nombre: 'DOCUMENTOS_PENDIENTES', label: 'Docs. Pendientes', bg: '#fef3c7', color: '#92400e' },
+    { id: 4, nombre: 'DOCUMENTOS_EN_REVISION', label: 'Docs. en Revisión', bg: '#fef9c3', color: '#854d0e' },
+    { id: 5, nombre: 'PRE_APROBADO', label: 'Pre-Aprobado', bg: '#d1fae5', color: '#065f46' },
+    { id: 6, nombre: 'REGISTRO_PENDIENTE', label: 'Registro Pendiente', bg: '#f1f5f9', color: '#475569' },
+    { id: 7, nombre: 'ACTIVO', label: 'Activo', bg: '#dcfce7', color: '#166534' },
   ];
 
   const handleEditarPresidente = (pres) => {
     setPresidenteEnEdicion(pres);
     setDatosEditables({
-      primerNombre:    pres.primerNombre    || '',
-      primerApellido:  pres.primerApellido  || '',
+      primerNombre: pres.primerNombre || '',
+      primerApellido: pres.primerApellido || '',
       segundoApellido: pres.segundoApellido || '',
-      correo:          pres.correo          || '',
-      telefono:        pres.telefono        || '',
-      curp:            pres.curp            || '',
-      estatusId:       pres.estatus         || 6,
+      correo: pres.correo || '',
+      telefono: pres.telefono || '',
+      curp: pres.curp || '',
+      estatusId: pres.estatus || 6,
     });
     setModalEdicion(true);
   };
@@ -611,7 +616,7 @@ export default function AdminPresidentes() {
     curp: <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
     estatus: (() => {
       const cfg = ESTATUS_CATALOGO.find(e => e.id === p.estatus || e.nombre === p.estatusNombre);
-      const bg    = cfg?.bg    || '#f1f5f9';
+      const bg = cfg?.bg || '#f1f5f9';
       const color = cfg?.color || '#475569';
       const label = cfg?.label || p.estatusNombre || String(p.estatus) || '—';
       return <span style={{ background: bg, color, padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>{label}</span>;
@@ -647,13 +652,61 @@ export default function AdminPresidentes() {
   return (
     <div style={{ padding: 30 }}>
       <style>{`
-        .insurance-card-admin {
-          background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 16px; padding: 18px 20px;
-          display: flex; justify-content: space-between; align-items: center;
-          margin-bottom: 12px; transition: all 0.3s ease;
+        .insurance-row-admin {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(174, 142, 142, 0.44);
+          transition: all 0.2s ease;
+          border-radius: 8px;
         }
-        .insurance-card-admin:hover { background: rgba(255,255,255,0.06); border-color: rgba(93,135,229,0.35); transform: translateX(3px); }
+        .insurance-row-admin:hover {
+          background: rgba(100, 127, 165, 1);
+        }
+        .insurance-row-admin:last-child {
+          border-bottom: none;
+        }
+        .insurance-row-info-admin {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .insurance-row-title-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .insurance-row-name {
+          font-size: 13.5px;
+          font-weight: 600;
+          color: rgba(255,255,255,0.9);
+        }
+        .insurance-row-price {
+          font-size: 11px;
+          font-weight: 700;
+          color: #ffffffff;
+          padding: 2px 6px;
+          border-radius: 6px;
+        }
+        .insurance-row-input {
+          width: 64px;
+          text-align: center;
+          padding: 6px 10px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: white;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+        .insurance-row-input:focus {
+          border-color: rgba(255, 255, 255, 0.4);
+          background: rgba(93,135,229,0.06);
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(93,135,229,0.1);
+        }
         .premium-input-admin {
           width: 100%; box-sizing: border-box; padding: 12px 14px;
           background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
@@ -675,9 +728,35 @@ export default function AdminPresidentes() {
         @keyframes glowPulse2 { 0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } 50% { box-shadow: 0 0 16px 4px rgba(16,185,129,0.18); } }
         .uploaded-admin { animation: glowPulse2 2s ease-in-out 1; }
         .doc-action-btn-admin { width: 100%; padding: 9px 12px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
-        .doc-download-btn-admin { width: 100%; padding: 9px 12px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer; background: rgba(93,135,229,0.08); border: 1px solid rgba(93,135,229,0.2); color: #5d87e5; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; }
+        .doc-download-btn-admin { width: 100%; padding: 9px 12px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer; background: rgba(93,135,229,0.08); border: 1px solid rgba(93,135,229,0.2); color: #fcfcfcff; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; }
         .doc-download-btn-admin:hover { background: rgba(93,135,229,0.16); transform: translateY(-1px); }
         .assigned-bar-admin { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 18px; font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 16px; }
+        .insurance-grid-admin {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+          margin-top: 15px;
+        }
+        .insurance-col-admin {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .insurance-col-title-admin {
+          font-size: 12px;
+          font-weight: 800;
+          color: rgba(255,255,255,0.8);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          padding-bottom: 6px;
+          margin-bottom: 5px;
+        }
+        @media (max-width: 768px) {
+          .insurance-grid-admin {
+            grid-template-columns: 1fr;
+          }
+        }
         .pres-modal-dark-bg {
           --text-main: rgba(255,255,255,0.92);
           --text-muted: rgba(255,255,255,0.45);
@@ -697,7 +776,7 @@ export default function AdminPresidentes() {
           >
             <FaSyncAlt />
           </button>
-          <button onClick={() => { resetModal(); setModalAbierto(true); }}
+          <button onClick={() => navigate('/admin/registrar-presidente')}
             style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
           </button>
@@ -739,13 +818,13 @@ export default function AdminPresidentes() {
 
       {/* ─── Tabla ─── */}
       <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
-        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden'}}>
+        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
             <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch'}}>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
             <SearchBar
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -797,281 +876,7 @@ export default function AdminPresidentes() {
         />
       </div>
 
-      {/* ══ MODAL ══ */}
-      <Modal
-        estaAbierto={modalAbierto}
-        alCerrar={cerrarModal}
-        titulo=""
-        tamanio="grande"
-        pie={
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            <BotonSecundario etiqueta="Cancelar" alHacerClick={cerrarModal} />
-            <div style={{ display: 'flex', gap: 12 }}>
-              {paso > 1 && (
-                <button onClick={() => setPaso(p => p - 1)} style={{ padding: '10px 22px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <FaArrowLeft /> Anterior
-                </button>
-              )}
-              <BotonPrimario
-                etiqueta={paso === 2 ? (loading ? 'Registrando…' : '✓ Finalizar Registro') : 'Siguiente →'}
-                alHacerClick={irSiguiente}
-                deshabilitado={loading}
-              />
-            </div>
-          </div>
-        }
-      >
-        {/* Contenedor dark glass */}
-        <div className="pres-modal-dark-bg" style={{
-          background: 'linear-gradient(135deg,#060f2e 0%,#0b2a6b 40%,#1e1b4b 100%)',
-          borderRadius: 16, padding: '30px 35px', minHeight: 480,
-        }}>
 
-          {/* ── Stepper ── */}
-          <div style={{ marginBottom: 28 }}>
-            <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, textTransform: 'uppercase', margin: '0 0 18px' }}>
-              REGISTRO DE NUEVO PRESIDENTE — APROBACIÓN AUTOMÁTICA
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <StepCircle num={1} label="Cuotas y Seguros" active={paso === 1} done={paso > 1} />
-              <div style={{ position: 'relative', width: 110, height: 2, margin: '0 12px', marginBottom: 26 }}>
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)', borderRadius: 2 }} />
-                <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: paso > 1 ? '100%' : '0%', background: 'linear-gradient(90deg,#10b981,#34d399)', borderRadius: 2, transition: 'width 0.6s', boxShadow: '0 0 8px rgba(16,185,129,.5)' }} />
-              </div>
-              <StepCircle num={2} label="Datos y Documentos" active={paso === 2} done={false} />
-            </div>
-          </div>
-
-          {/* ════ PASO 1: Solo Cuotas ════ */}
-          {paso === 1 && (
-            <div>
-              {/* Banner info */}
-              <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 16, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <FaCheckCircle style={{ color: '#34d399', fontSize: 20, flexShrink: 0 }} />
-                <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
-                  Como <strong style={{ color: '#34d399' }}>Administrador</strong>, el pago se aprueba automáticamente. El nombre y CURP del presidente serán extraídos en el siguiente paso mediante OCR.
-                </p>
-              </div>
-
-              {/* Cuotas */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: '22px 20px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,rgba(16,185,129,.35),transparent)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                  <div style={{ width: 4, height: 18, background: 'linear-gradient(180deg,#10b981,#059669)', borderRadius: 4 }} />
-                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,0.88)' }}>Plantilla Inicial y Distribución de Seguros</h4>
-                </div>
-
-                <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px', background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ flex: 1 }}>
-                    <label className="premium-label-admin">¿Cuántos jugadores tendrá el equipo inicialmente?</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '8px' }}>
-                      <input
-                        type="number" placeholder="0" min="0"
-                        value={numPersonas}
-                        onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setNumPersonas(v); }}
-                        className="premium-input-admin" style={{ width: 120, fontSize: '18px', textAlign: 'center' }}
-                      />
-                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
-                        # Jugadores + 1 Presidente = <strong style={{ color: '#5d87e5' }}>{segurosRequeridos} seguros</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {seguros.map(seg => (
-                  <div key={seg.id} className="insurance-card-admin">
-                    <div>
-                      <h4 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-main)', margin: '0 0 3px' }}>
-                        {seg.nombre} <span style={{ fontSize: 13, color: '#5d87e5' }}>${seg.precio} c/u</span>
-                      </h4>
-                      <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{seg.descripcion}</p>
-                    </div>
-                    <input
-                      type="number" min="0" value={asignacionSeguros[seg.id]}
-                      onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setAsignacionSeguros(prev => ({ ...prev, [seg.id]: v })); }}
-                      style={{ width: 70, textAlign: 'center', padding: '9px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', borderRadius: 10 }}
-                    />
-                  </div>
-                ))}
-
-                <div className="assigned-bar-admin">
-                  <span>Seguros asignados (Jugadores + Presid.): {totalAsignados}/{segurosRequeridos}</span>
-                  {Number(numPersonas) > 0 && totalAsignados === segurosRequeridos
-                    ? <span style={{ color: '#34d399', fontWeight: 800 }}>✓ Todos asignados</span>
-                    : <span style={{ color: '#f87171', fontWeight: 800 }}>● Pendientes</span>}
-                </div>
-
-                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
-                  <div style={{ background: 'rgba(93,135,229,0.1)', border: '1px solid rgba(93,135,229,0.2)', borderRadius: 12, padding: '10px 20px', fontSize: 15, fontWeight: 800, color: '#5d87e5' }}>
-                    Total estimado: ${totalPagar}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ════ PASO 2: Datos de Afiliación + Documentos ════ */}
-          {paso === 2 && (
-            <div>
-              <div style={{ textAlign: 'center', marginBottom: 22 }}>
-                <h3 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-main)', margin: '0 0 6px' }}>Datos y Documentación</h3>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>El nombre y CURP se extraerán automáticamente por OCR al subir el Acta o Identificación.</p>
-              </div>
-
-              {/* Datos de afiliación — misma sección del pre-registro */}
-              <div style={{ background: 'linear-gradient(135deg,rgba(11,78,166,.07) 0%,rgba(30,27,75,.09) 100%)', border: '1px solid rgba(93,135,229,.15)', borderRadius: 22, padding: '22px 20px', marginBottom: 26, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,rgba(93,135,229,.5),transparent)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                  <div style={{ width: 5, height: 20, background: 'linear-gradient(180deg,#5d87e5,#0b4ea6)', borderRadius: 4 }} />
-                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'var(--text-main)' }}>Datos de Registro</h4>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-                  <div>
-                    <label className="premium-label-admin">Correo Electrónico *</label>
-                    <input type="email" placeholder="correo@example.com" value={infoPersonal.correo} onChange={e => setInfoPersonal(p => ({ ...p, correo: e.target.value }))} className="premium-input-admin" />
-                  </div>
-                  <div>
-                    <label className="premium-label-admin">Teléfono</label>
-                    <input type="tel" placeholder="55 1234 5678" value={infoPersonal.telefono} onChange={e => setInfoPersonal(p => ({ ...p, telefono: e.target.value }))} className="premium-input-admin" />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                  <div>
-                    <label className="premium-label-admin">Rol / Cargo</label>
-                    <select
-                      value={infoPersonal.tipoAfiliacion}
-                      onChange={e => setInfoPersonal(p => ({ ...p, tipoAfiliacion: e.target.value }))}
-                      className="premium-input-admin"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <option value="">Selecciona...</option>
-                      {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="premium-label-admin">Asociación</label>
-                    <select
-                      value={infoPersonal.asociacion}
-                      onChange={e => setInfoPersonal(p => ({ ...p, asociacion: e.target.value }))}
-                      className="premium-input-admin"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <option value="">Selecciona...</option>
-                      {CATALOGO_ASOCIACIONES.map(a => <option key={a.valor} value={a.valor}>{a.etiqueta}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="premium-label-admin">Liga Destino</label>
-                    <select
-                      value={infoPersonal.liga}
-                      onChange={e => setInfoPersonal(p => ({ ...p, liga: e.target.value }))}
-                      className="premium-input-admin"
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <option value="">Selecciona...</option>
-                      {CATALOGO_LIGAS.map(l => <option key={l.valor} value={l.valor}>{l.etiqueta}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="premium-label-admin">Nombre del Equipo</label>
-                    <input type="text" placeholder="Ej: Rayados FC" value={infoPersonal.equipo} onChange={e => setInfoPersonal(p => ({ ...p, equipo: e.target.value }))} className="premium-input-admin" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Tarjetas de documentos */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, marginBottom: 20 }}>
-                {REQUISITOS.map((doc, idx) => {
-                  const isUploaded = !!documents[doc.documento];
-                  const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
-                  const ocrDone = isOcrDoc && ocrResults[doc.documento];
-
-                  let statusLabel, statusColor, statusBg, statusDot;
-                  if (ocrDone || isUploaded) {
-                    statusLabel = ocrDone ? 'Procesado' : 'Listo'; statusColor = '#34d399'; statusDot = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
-                  } else {
-                    statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDot = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
-                  }
-
-                  return (
-                    <div key={idx} className={`doc-glass-card-admin${isUploaded ? ' uploaded-admin' : ''}`}>
-                      {/* Sheen */}
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)' }} />
-                      {/* Status pill */}
-                      <div style={{ position: 'absolute', top: 13, right: 13, padding: '4px 10px', borderRadius: 20, fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', background: statusBg, color: statusColor, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: statusDot, boxShadow: `0 0 5px ${statusDot}` }} />
-                        {statusLabel}
-                      </div>
-                      {/* Icono */}
-                      <div style={{ width: 64, height: 64, borderRadius: 18, background: isUploaded ? 'rgba(16,185,129,0.1)' : 'rgba(11,78,166,0.1)', border: isUploaded ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(93,135,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>
-                        {doc.icon}
-                      </div>
-                      <h4 style={{ fontSize: 13, fontWeight: 800, color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>{doc.nombre}</h4>
-                      <p style={{ fontSize: 10, color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
-                        {isUploaded ? `📎 ${documents[doc.documento].name}` : 'Sin archivo seleccionado'}
-                      </p>
-
-                      {doc.hasDownload && (
-                        <button onClick={handleDownloadFormato} className="doc-download-btn-admin">⬇ Descargar formato</button>
-                      )}
-                      <button
-                        onClick={() => document.getElementById(`admin-file-${doc.documento}`).click()}
-                        className="doc-action-btn-admin"
-                        style={{ border: isUploaded ? '1px solid rgba(16,185,129,.3)' : '1px solid rgba(255,255,255,.1)', background: isUploaded ? 'rgba(16,185,129,.08)' : 'rgba(255,255,255,.04)', color: isUploaded ? '#34d399' : 'var(--text-muted)' }}
-                      >
-                        {isUploaded ? '🔄 Cambiar' : '⬆ Subir'}
-                      </button>
-                      <input type="file" id={`admin-file-${doc.documento}`} style={{ display: 'none' }} onChange={e => handleFileUpload(doc.documento, e.target.files[0])} />
-
-                      {/* OCR toggle */}
-                      {(isOcrDoc || doc.documento === 'fotografia') && (
-                        <>
-                          <button onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}
-                            style={{ marginTop: 10, background: 'none', border: 'none', color: 'rgba(255,255,255,.3)', fontSize: 10, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                            {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
-                          </button>
-                          {detailsOpen[doc.documento] && (
-                            <div style={{ width: '100%', marginTop: 10, background: 'rgba(11,78,166,.06)', border: '1px solid rgba(93,135,229,.12)', borderRadius: 12, padding: 12 }}>
-                              {isOcrDoc && Object.keys(ocrResults).length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                                  {[
-                                    { label: 'Nombre', value: ocrResults.nombre },
-                                    { label: 'CURP', value: ocrResults.curp },
-                                    { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
-                                    { label: 'Edad', value: ocrResults.edad },
-                                    { label: 'Nacionalidad', value: ocrResults.nacionalidad },
-                                  ].map((row, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                                      <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{row.label}:</span>
-                                      <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{row.value || '—'}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>
-                                  {doc.documento === 'fotografia' ? '📸 Validación automática de rostro y calidad.' : 'Sube el documento primero para ver los datos extraídos.'}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Progress pills */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
-                {REQUISITOS.map((doc, i) => (
-                  <div key={i} style={{ height: 8, borderRadius: 4, transition: 'all .4s', width: documents[doc.documento] ? 22 : 8, background: documents[doc.documento] ? '#10b981' : 'rgba(255,255,255,0.12)', boxShadow: documents[doc.documento] ? '0 0 6px rgba(16,185,129,.5)' : 'none' }} />
-                ))}
-              </div>
-            </div>
-          )}
-
-        </div>
-      </Modal>
 
       {/* ══ MODAL DE EDICIÓN ══ */}
       <Modal
