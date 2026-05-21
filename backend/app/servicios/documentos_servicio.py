@@ -228,6 +228,25 @@ def presidente_solicitud(db, usuario):
     solicitud_id = obtener_solicitud_borrador(db, usuario_id)
     return solicitud_id
 
+def resolver_ruta_absoluta(ruta: str) -> str:
+    if not ruta:
+        return ""
+    if os.path.isabs(ruta):
+        return ruta
+    
+    from app.core.config import obtener_uploads_dir
+    base_uploads_dir = obtener_uploads_dir()
+    
+    # Normalizar separadores
+    ruta_norm = ruta.replace("\\", "/")
+    if ruta_norm.startswith("uploads/"):
+        relative_path = ruta_norm[len("uploads/"):]
+    else:
+        relative_path = ruta_norm
+        
+    return os.path.join(base_uploads_dir, relative_path.replace("/", os.sep))
+
+
 #DESCARGAR DOCUMENTOS COMPRIMIDOS
 def generar_zip_documentos(db, miembro_id):
     miembro = db.query(MiembrosEquipo).filter(
@@ -248,14 +267,16 @@ def generar_zip_documentos(db, miembro_id):
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for doc in documentos:
-            ruta = doc["RutaArchivo"]
+            ruta_db = doc["RutaArchivo"]
+            ruta_absoluta = resolver_ruta_absoluta(ruta_db)
 
-            if not os.path.exists(ruta):
+            if not ruta_absoluta or not os.path.exists(ruta_absoluta):
                 continue
 
-            nombre_archivo = os.path.basename(ruta)
+            nombre_archivo = os.path.basename(ruta_absoluta)
+            nombre_archivo_ascii = eliminar_acentos(nombre_archivo)
 
-            zipf.write(ruta, arcname=nombre_archivo)
+            zipf.write(ruta_absoluta, arcname=nombre_archivo_ascii)
 
     zip_buffer.seek(0)
 
@@ -264,10 +285,18 @@ def generar_zip_documentos(db, miembro_id):
     return zip_buffer.read(), nombre_zip
 
 
+def eliminar_acentos(texto: str) -> str:
+    import unicodedata
+    if not texto:
+        return ""
+    texto_norm = unicodedata.normalize('NFKD', texto)
+    return texto_norm.encode('ascii', 'ignore').decode('ascii')
+
+
 def generar_zip_documentos_equipo(db, equipo_id):
     """
-    Genera un ZIP con los documentos de todos los jugadores del equipo.
-    Cada jugador tendrá su propia carpeta dentro del ZIP.
+    Genera un ZIP con los documentos de todos los jugadores del equipo y el logo del equipo.
+    Cada jugador tendrá su propia carpeta dentro de la carpeta del equipo en el ZIP.
     """
     from datetime import datetime as dt
     
@@ -279,44 +308,56 @@ def generar_zip_documentos_equipo(db, equipo_id):
     if not equipo:
         raise Exception("Equipo no encontrado")
 
+    # Sanitizar el nombre del equipo para la carpeta principal en el ZIP (a ASCII puro)
+    nombre_equipo_zip = eliminar_acentos(equipo.NombreEquipo).strip().replace("/", "_").replace("\\", "_")
+    nombre_equipo_zip_sin_espacios = nombre_equipo_zip.replace(' ', '_')
+
     # Obtener todos los miembros del equipo
     miembros = equipo_repositorio.obtener_miembros_equipo_por_id_repo(db, equipo_id)
-
-    if not miembros:
-        raise Exception("No hay jugadores en este equipo")
 
     zip_buffer = BytesIO()
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for miembro in miembros:
-            persona_id = miembro["PersonaId"]
-            nombre_carpeta = f"{miembro['NombreCompleto'].replace(' ', '_')}"
+        # 1. Agregar el logotipo del equipo si existe
+        if equipo.RutaLogo:
+            ruta_logo_abs = resolver_ruta_absoluta(equipo.RutaLogo)
+            if ruta_logo_abs and os.path.exists(ruta_logo_abs):
+                nombre_logo = os.path.basename(ruta_logo_abs)
+                nombre_logo_ascii = eliminar_acentos(nombre_logo)
+                zipf.write(ruta_logo_abs, arcname=f"{nombre_equipo_zip_sin_espacios}/{nombre_logo_ascii}")
 
-            # Obtener documentos del jugador
-            documentos = equipo_repositorio.obtener_documentos_jugador_repo(db, persona_id)
+        # 2. Agregar los documentos de los jugadores
+        if miembros:
+            for miembro in miembros:
+                persona_id = miembro["PersonaId"]
+                nombre_jugador_carpeta = eliminar_acentos(miembro['NombreCompleto']).replace(' ', '_')
 
-            if not documentos:
-                continue
+                # Obtener documentos del jugador
+                documentos = equipo_repositorio.obtener_documentos_jugador_repo(db, persona_id)
 
-            # Agregar cada documento a su carpeta
-            for doc in documentos:
-                ruta = doc["RutaArchivo"]
-
-                if not os.path.exists(ruta):
+                if not documentos:
                     continue
 
-                nombre_archivo = os.path.basename(ruta)
-                
-                # Ruta dentro del ZIP: NombreCarpeta/NombreArchivo
-                arcname = f"{nombre_carpeta}/{nombre_archivo}"
+                # Agregar cada documento a su carpeta
+                for doc in documentos:
+                    ruta_db = doc["RutaArchivo"]
+                    ruta_absoluta = resolver_ruta_absoluta(ruta_db)
 
-                zipf.write(ruta, arcname=arcname)
+                    if not ruta_absoluta or not os.path.exists(ruta_absoluta):
+                        continue
+
+                    nombre_archivo = os.path.basename(ruta_absoluta)
+                    nombre_archivo_ascii = eliminar_acentos(nombre_archivo)
+                    
+                    # Ruta dentro del ZIP: NombreEquipo/NombreJugador/NombreArchivo
+                    arcname = f"{nombre_equipo_zip_sin_espacios}/{nombre_jugador_carpeta}/{nombre_archivo_ascii}"
+
+                    zipf.write(ruta_absoluta, arcname=arcname)
 
     zip_buffer.seek(0)
 
     # Nombre del archivo con la fecha actual
     fecha_hoy = dt.now().strftime("%Y-%m-%d")
-    nombre_limpio = equipo.NombreEquipo.replace(' ', '_').replace('/', '_').replace('\\', '_')
-    nombre_zip = f"{nombre_limpio}_{fecha_hoy}.zip"
+    nombre_zip = f"{nombre_equipo_zip_sin_espacios}_{fecha_hoy}.zip"
 
     return zip_buffer.read(), nombre_zip

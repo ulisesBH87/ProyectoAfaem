@@ -26,7 +26,7 @@ from app.repositorios import pagos_repositorio
 from app.utilidades import validaciones
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.servicios.documentos_servicio import subir_documento_servicio2
+# from app.servicios.documentos_servicio import subir_documento_servicio2
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from app.enums.estatus_pago_enum import EstatusValidacionPago
 from app.enums.conceptos_pago import ConceptoPagoEnum

@@ -18,7 +18,7 @@ const Loader = ({ text = "AFAEM DIGITAL", inline = false }) => {
           <div className="afaem-loader-bar-bg">
             <div className="afaem-loader-bar-fill"></div>
           </div>
-          <span>AFAEM Digital Studio © 2026</span>
+          <span>AFAEM © 2026</span>
         </div>
       )}
     </div>
