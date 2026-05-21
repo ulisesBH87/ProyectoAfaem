@@ -88,11 +88,29 @@ const escaparHtml = (texto) =>
 const getDocumentoEstatusInfo = (estadoId) => {
   switch (Number(estadoId)) {
     case 1:
-      return { texto: 'Espera', color: '#92400e', bg: '#fef3c7' };
+      return {
+        texto: 'Espera',
+        color: '#92400e',
+        bg: '#fef3c7',
+        cardBg: 'linear-gradient(180deg, #fef3c7 0%, #fef08a 100%)',
+        border: '#f59e0b',
+      };
     case 2:
-      return { texto: 'Aceptado', color: '#14532d', bg: '#dcfce7' };
+      return {
+        texto: 'Aceptado',
+        color: '#14532d',
+        bg: '#dcfce7',
+        cardBg: 'linear-gradient(180deg, #dcfce7 0%, #bbf7d0 100%)',
+        border: '#4ade80',
+      };
     case 3:
-      return { texto: 'Rechazado', color: '#7f1d1d', bg: '#fee2e2' };
+      return {
+        texto: 'Rechazado',
+        color: '#7f1d1d',
+        bg: '#fee2e2',
+        cardBg: 'linear-gradient(180deg, #fee2e2 0%, #fecaca 100%)',
+        border: '#f87171',
+      };
     default:
       return null;
   }
@@ -172,6 +190,11 @@ const actualizarCardDocumentoEstadoVisual = (documentoId, nuevoEstadoId) => {
     badge.style.background = estadoInfo.bg;
   }
 
+  if (estadoInfo) {
+    card.style.background = estadoInfo.cardBg;
+    card.style.borderColor = estadoInfo.border;
+  }
+
   card.dataset.docEstadoId = nuevoEstadoId;
 
   const tipoId = card.dataset.docTipoId;
@@ -203,6 +226,7 @@ const attachActionButtonListeners = (root = document) => {
       const existingOverlay = popup.querySelector(`#${overlayId}`);
       if (existingOverlay) existingOverlay.remove();
 
+      const isRejectAction = actionKey === 'rechazar';
       const overlay = document.createElement('div');
       overlay.id = overlayId;
       overlay.style.cssText = `
@@ -217,8 +241,15 @@ const attachActionButtonListeners = (root = document) => {
       popup.style.position = 'relative';
 
       overlay.innerHTML = `
-        <div style="background: white; border-radius: 20px; padding: 24px; width: min(420px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center;">
+        <div style="background: white; border-radius: 20px; padding: 24px; width: min(480px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center;">
           <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">¿Deseas ${actionText} este documento?</div>
+          ${isRejectAction ? `
+            <div style="text-align:left; margin-bottom: 14px;">
+              <label for="rechazo-motivo" style="display:block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Motivo de rechazo</label>
+              <textarea id="rechazo-motivo" data-reject-reason rows="4" style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 12px; resize: vertical; font-size: 14px; color: #0f172a;" placeholder="Describe brevemente por qué se rechaza este documento."></textarea>
+              <div data-rejection-error style="font-size: 13px; color: #b91c1c; margin-top: 6px; min-height: 18px;"></div>
+            </div>
+          ` : ''}
           <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
             <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: #0b4ea6; color: white; font-weight: 700; cursor: pointer;">Aceptar</button>
             <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 700; cursor: pointer;">Cancelar</button>
@@ -235,6 +266,16 @@ const attachActionButtonListeners = (root = document) => {
       overlay.querySelector('[data-cancel-action]')?.addEventListener('click', removeOverlay);
       overlay.querySelector('[data-confirm-action]')?.addEventListener('click', async () => {
         const confirmButton = overlay.querySelector('[data-confirm-action]');
+        const motivoInput = overlay.querySelector('[data-reject-reason]');
+        const rejectionError = overlay.querySelector('[data-rejection-error]');
+        const motivoRechazo = motivoInput?.value.trim() || null;
+
+        if (isRejectAction && !motivoRechazo) {
+          if (rejectionError) rejectionError.textContent = 'El motivo de rechazo es obligatorio.';
+          motivoInput?.focus();
+          return;
+        }
+
         try {
           const waitingText = document.createElement('div');
           waitingText.textContent = 'Actualizando estado...';
@@ -242,7 +283,7 @@ const attachActionButtonListeners = (root = document) => {
           overlay.querySelector('div').appendChild(waitingText);
           boton.disabled = true;
           if (confirmButton) confirmButton.disabled = true;
-          await updateDocumentoEstado(Number(documentoId), nuevoEstado);
+          await updateDocumentoEstado(Number(documentoId), nuevoEstado, motivoRechazo);
           actualizarCardDocumentoEstadoVisual(documentoId, nuevoEstado);
         } catch (err) {
           console.error(err);
@@ -285,6 +326,9 @@ const construirCardDocumentoHtml = (tipo, documento) => {
     const estadoBadge = estadoInfo
       ? `<div data-doc-status-badge style="position: absolute; top: 14px; right: 14px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg};">${estadoInfo.texto}</div>`
       : '';
+    const estadoCardStyle = estadoInfo
+      ? `background: ${estadoInfo.cardBg}; border-color: ${estadoInfo.border};`
+      : '';
     const botonesEstado = getDocumentActionButtons(documento, tipo.id);
 
     return `
@@ -293,6 +337,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
         data-doc-estado-id="${escaparHtml(documento.EstadoValidacionId)}"
         data-doc-tipo-id="${escaparHtml(tipo.id)}"
         style="${estilosCardDocumento}
+          ${estadoCardStyle}
           position: relative;
           text-decoration: none;
           transition: transform 0.2s ease, box-shadow 0.2s ease;

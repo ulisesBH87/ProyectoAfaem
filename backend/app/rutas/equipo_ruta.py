@@ -618,6 +618,7 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
 # == DOCUMENTOS DE JUGADOR ==
 class ActualizarDocumentoEstadoPayload(BaseModel):
     EstadoValidacionId: int
+    ObservacionesDocumento: Optional[str] = None
 
 @router.get("/jugador/{miembro_id}/documentos")
 def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -659,21 +660,25 @@ def actualizar_estado_documento(documento_id: int, payload: ActualizarDocumentoE
     if not documento:
         raise HTTPException(404, "Documento no encontrado")
 
-    if payload.EstadoValidacionId not in (
-        int(DocumentoEstatus.APROBADO),
-        int(DocumentoEstatus.PENDIENTE),
-        int(DocumentoEstatus.RECHAZADO),
-        int(DocumentoEstatus.BORRADOR),
-    ):
+    if payload.EstadoValidacionId not in (1, 2, 3, 4):
         raise HTTPException(400, "Estado de validación inválido")
 
+    if payload.EstadoValidacionId == 3:
+        motivo = (payload.ObservacionesDocumento or '').strip()
+        if not motivo:
+            raise HTTPException(status_code=400, detail="El motivo de rechazo es obligatorio")
+        documento.ObservacionesDocumento = motivo
+    else:
+        documento.ObservacionesDocumento = None
+
     documento.EstadoValidacionId = payload.EstadoValidacionId
-    documento.FechaValidacion = datetime.now() if payload.EstadoValidacionId in (int(DocumentoEstatus.APROBADO), int(DocumentoEstatus.RECHAZADO)) else None
+    documento.FechaValidacion = datetime.now() if payload.EstadoValidacionId in (2, 3) else None
     db.commit()
 
     return {
         "DocumentosSolicitudId": documento.DocumentosSolicitudId,
         "EstadoValidacionId": documento.EstadoValidacionId,
+        "ObservacionesDocumento": documento.ObservacionesDocumento,
     }
 
 @router.get("/jugador/{miembro_id}/solicitud-documento")
