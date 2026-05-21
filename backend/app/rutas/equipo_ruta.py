@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request, Response
+from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -16,8 +17,10 @@ from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroR
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
-    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales, Usuario, OrdenPago
+    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales, OrdenPago
 )
+from app.modelos.documentos_entregados_modelo import DocumentosEntregados
+from app.enums.documentos_estatus_enum import DocumentoEstatus
 from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
@@ -613,6 +616,9 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
 
 
 # == DOCUMENTOS DE JUGADOR ==
+class ActualizarDocumentoEstadoPayload(BaseModel):
+    EstadoValidacionId: int
+
 @router.get("/jugador/{miembro_id}/documentos")
 def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
@@ -639,6 +645,36 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
     except Exception as e:
         #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+@router.patch("/documento/{documento_id}/estado")
+def actualizar_estado_documento(documento_id: int, payload: ActualizarDocumentoEstadoPayload, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+
+    documento = db.query(DocumentosEntregados).filter(
+        DocumentosEntregados.DocumentosSolicitudId == documento_id
+    ).first()
+
+    if not documento:
+        raise HTTPException(404, "Documento no encontrado")
+
+    if payload.EstadoValidacionId not in (
+        int(DocumentoEstatus.APROBADO),
+        int(DocumentoEstatus.PENDIENTE),
+        int(DocumentoEstatus.RECHAZADO),
+        int(DocumentoEstatus.BORRADOR),
+    ):
+        raise HTTPException(400, "Estado de validación inválido")
+
+    documento.EstadoValidacionId = payload.EstadoValidacionId
+    documento.FechaValidacion = datetime.now() if payload.EstadoValidacionId in (int(DocumentoEstatus.APROBADO), int(DocumentoEstatus.RECHAZADO)) else None
+    db.commit()
+
+    return {
+        "DocumentosSolicitudId": documento.DocumentosSolicitudId,
+        "EstadoValidacionId": documento.EstadoValidacionId,
+    }
 
 @router.get("/jugador/{miembro_id}/solicitud-documento")
 def get_solicitud_documento_jugador(

@@ -5,6 +5,7 @@ import {
   getJugadorDocumentos,
   getJugadorSolicitudDocumento,
   exportarJugadorDocumentos,
+  updateDocumentoEstado,
   updateJugador,
   subirDocumentoJugador,
 } from '../../services/admin';
@@ -97,6 +98,165 @@ const getDocumentoEstatusInfo = (estadoId) => {
   }
 };
 
+const mapActionKeyToEstadoId = (actionKey) => {
+  switch (actionKey) {
+    case 'espera':
+      return 1;
+    case 'aceptar':
+      return 2;
+    case 'rechazar':
+      return 3;
+    default:
+      return null;
+  }
+};
+
+const getDocumentActionButtons = (documento, tipoId) => {
+  if (!documento) return '';
+
+  const estado = Number(documento.EstadoValidacionId);
+  const acciones = [];
+  if (estado === 1) {
+    acciones.push({ key: 'aceptar', label: 'Aceptar' });
+    acciones.push({ key: 'rechazar', label: 'Rechazar' });
+  } else if (estado === 2) {
+    acciones.push({ key: 'espera', label: 'Poner en espera' });
+    acciones.push({ key: 'rechazar', label: 'Rechazar' });
+  } else if (estado === 3) {
+    acciones.push({ key: 'espera', label: 'Poner en espera' });
+    acciones.push({ key: 'aceptar', label: 'Aceptar' });
+  }
+
+  const actionStyles = {
+    aceptar: 'background: #15803d; color: white;',
+    rechazar: 'background: #dc2626; color: white;',
+    espera: 'background: #ea580c; color: white;',
+  };
+
+  return acciones
+    .map(
+      (accion) => `
+        <button
+          type="button"
+          data-action-button
+          data-action="${accion.key}"
+          data-action-text="${accion.label.toLowerCase()}"
+          data-doc-id="${escaparHtml(documento.DocumentosSolicitudId ?? documento.DocumentoId ?? documento.documentoId ?? documento.Id ?? '')}"
+          data-tipo-id="${escaparHtml(tipoId)}"
+          style="
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            ${actionStyles[accion.key] || 'background: #0b4ea6; color: white;'}
+          "
+        >
+          ${accion.label}
+        </button>
+      `
+    )
+    .join('');
+};
+
+const actualizarCardDocumentoEstadoVisual = (documentoId, nuevoEstadoId) => {
+  const card = document.querySelector(`[data-doc-card-id="${documentoId}"]`);
+  if (!card) return;
+
+  const estadoInfo = getDocumentoEstatusInfo(nuevoEstadoId);
+  const badge = card.querySelector('[data-doc-status-badge]');
+  if (badge && estadoInfo) {
+    badge.textContent = estadoInfo.texto;
+    badge.style.color = estadoInfo.color;
+    badge.style.background = estadoInfo.bg;
+  }
+
+  card.dataset.docEstadoId = nuevoEstadoId;
+
+  const tipoId = card.dataset.docTipoId;
+  const actionButtonsWrapper = card.querySelector('[data-doc-action-buttons]');
+  if (actionButtonsWrapper) {
+    actionButtonsWrapper.innerHTML = getDocumentActionButtons({ EstadoValidacionId: nuevoEstadoId, DocumentosSolicitudId: documentoId }, tipoId);
+    attachActionButtonListeners(actionButtonsWrapper);
+  }
+};
+
+const attachActionButtonListeners = (root = document) => {
+  const botones = root.querySelectorAll('[data-action-button]');
+  botones.forEach((boton) => {
+    if (boton.dataset.listenerAttached === 'true') return;
+    boton.dataset.listenerAttached = 'true';
+
+    boton.addEventListener('click', async () => {
+      const actionKey = boton.getAttribute('data-action');
+      const actionText = boton.getAttribute('data-action-text') || actionKey;
+      const documentoId = boton.getAttribute('data-doc-id');
+      const tipoId = boton.getAttribute('data-tipo-id');
+      const popup = Swal.getPopup();
+      if (!documentoId || !popup) return;
+
+      const nuevoEstado = mapActionKeyToEstadoId(actionKey);
+      if (!nuevoEstado) return;
+
+      const overlayId = 'document-action-confirmation-overlay';
+      const existingOverlay = popup.querySelector(`#${overlayId}`);
+      if (existingOverlay) existingOverlay.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = overlayId;
+      overlay.style.cssText = `
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+      `;
+      popup.style.position = 'relative';
+
+      overlay.innerHTML = `
+        <div style="background: white; border-radius: 20px; padding: 24px; width: min(420px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center;">
+          <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">¿Deseas ${actionText} este documento?</div>
+          <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: #0b4ea6; color: white; font-weight: 700; cursor: pointer;">Aceptar</button>
+            <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 700; cursor: pointer;">Cancelar</button>
+          </div>
+        </div>
+      `;
+
+      popup.appendChild(overlay);
+
+      const removeOverlay = () => {
+        overlay.remove();
+      };
+
+      overlay.querySelector('[data-cancel-action]')?.addEventListener('click', removeOverlay);
+      overlay.querySelector('[data-confirm-action]')?.addEventListener('click', async () => {
+        const confirmButton = overlay.querySelector('[data-confirm-action]');
+        try {
+          const waitingText = document.createElement('div');
+          waitingText.textContent = 'Actualizando estado...';
+          waitingText.style = 'margin-top: 14px; color: #334155; font-size: 14px;';
+          overlay.querySelector('div').appendChild(waitingText);
+          boton.disabled = true;
+          if (confirmButton) confirmButton.disabled = true;
+          await updateDocumentoEstado(Number(documentoId), nuevoEstado);
+          actualizarCardDocumentoEstadoVisual(documentoId, nuevoEstado);
+        } catch (err) {
+          console.error(err);
+          Swal.fire('Error', 'No se pudo actualizar el estado del documento.', 'error');
+        } finally {
+          if (confirmButton) confirmButton.disabled = false;
+          boton.disabled = false;
+          removeOverlay();
+        }
+      });
+    });
+  });
+};
+
 const estilosCardDocumento = `
   aspect-ratio: 1 / 1;
   min-height: 170px;
@@ -123,14 +283,15 @@ const construirCardDocumentoHtml = (tipo, documento) => {
     const fechaSubida = formatearFechaSubida(documento.FechaEntrega);
     const estadoInfo = getDocumentoEstatusInfo(documento.EstadoValidacionId);
     const estadoBadge = estadoInfo
-      ? `<div style="position: absolute; top: 14px; right: 14px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg};">${estadoInfo.texto}</div>`
+      ? `<div data-doc-status-badge style="position: absolute; top: 14px; right: 14px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg};">${estadoInfo.texto}</div>`
       : '';
+    const botonesEstado = getDocumentActionButtons(documento, tipo.id);
 
     return `
-      <a
-        href="${escaparHtml(urlDocumento)}"
-        target="_blank"
-        rel="noopener noreferrer"
+      <div
+        data-doc-card-id="${escaparHtml(documento.DocumentosSolicitudId ?? documento.DocumentoId ?? documento.documentoId ?? documento.Id ?? '')}"
+        data-doc-estado-id="${escaparHtml(documento.EstadoValidacionId)}"
+        data-doc-tipo-id="${escaparHtml(tipo.id)}"
         style="${estilosCardDocumento}
           position: relative;
           text-decoration: none;
@@ -140,12 +301,22 @@ const construirCardDocumentoHtml = (tipo, documento) => {
         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(15, 23, 42, 0.08)'"
       >
         ${estadoBadge}
-        <div style="width: 60px; height: 60px; border-radius: 16px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 30px;">📄</div>
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-          <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">${tituloTipo}</span>
-          <span style="font-size: 12px; color: #64748b; line-height: 1.45;">Subido el ${fechaSubida}</span>
+        <a
+          href="${escaparHtml(urlDocumento)}"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="display: contents;"
+        >
+          <div style="width: 60px; height: 60px; border-radius: 16px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 30px;">📄</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">${tituloTipo}</span>
+            <span style="font-size: 12px; color: #64748b; line-height: 1.45;">Subido el ${fechaSubida}</span>
+          </div>
+        </a>
+        <div data-doc-action-buttons style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: auto; width: 100%;">
+          ${botonesEstado}
         </div>
-      </a>
+      </div>
     `;
   }
 
@@ -387,6 +558,9 @@ export default function AdminJugadores() {
             input.remove();
           });
         });
+
+        const popup = Swal.getPopup();
+        attachActionButtonListeners(popup || document);
       },
     });
   };
