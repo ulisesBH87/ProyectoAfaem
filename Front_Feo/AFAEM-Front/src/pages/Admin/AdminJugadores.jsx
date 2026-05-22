@@ -12,7 +12,7 @@ import {
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Loader from '../../components/Loader';
 
@@ -971,12 +971,19 @@ export default function AdminJugadores() {
             <FaSyncAlt />
           </button>
           <button
+            className="btn btn-primary"
+            onClick={() => navigate('/admin/layout-jugadores')}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FaTable /> Tabla de jugadores
+          </button>
+          {/*<button
             className="btn btn-premium"
             onClick={() => navigate('/admin/jugadores/crear')}
             style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <FaPlus /> Registrar jugador
-          </button>
+          </button>*/}
         </div>
       </div>
 
