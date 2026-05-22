@@ -467,7 +467,7 @@ export default function AdminPresidentes() {
       cerrarModal();
       Swal.fire({
         title: '¡Presidente Registrado!',
-        html: `<p style="font-size:14px;color:#475569;">El registro de <strong>${nombreDetectado}</strong> fue completado y aprobado automáticamente. Su contraseña de acceso es <strong>Hola1234?</strong></p>`,
+        html: `<p style="font-size:14px;color:#000000;">El registro de <strong>${nombreDetectado}</strong> fue completado y aprobado automáticamente. Su contraseña de acceso es <strong>Hola1234?</strong></p>`,
         icon: 'success', confirmButtonColor: '#0b4ea6',
       });
     } catch (err) {

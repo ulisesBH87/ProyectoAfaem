@@ -460,6 +460,13 @@ export default function CompletarJugadoresEquipo() {
       safeSetField(form, 'Teléfono', extractedData.telefono);
       safeSetField(form, 'Asociación', 'AFAEM');
       safeSetField(form, 'fill_24', 'AFAEM');
+
+      // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
+      const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(selectedSeguroId));
+      if (seguroSel?.nombre) {
+        try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch(_) {}
+        try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch(_) {}
+      }
       
       safeSetField(form, 'Liga', equipo?.Liga || '');
       safeSetField(form, 'Equipo', equipo?.NombreEquipo || '');
@@ -483,6 +490,19 @@ export default function CompletarJugadoresEquipo() {
         safeSetField(form, 'Nacionalidades de la abuela materna', extractedData.nacAbuelaMaterna);
         safeSetField(form, 'El jugador ha sido registrado por la Asociación Nacional de Fútbol', extractedData.registroAsociacionExtranjera);
         safeSetField(form, 'El jugador ha jugado en un Club extranjero y participado en', extractedData.juegoClubExtranjero);
+      } else {
+        // Jugador mexicano: rellenar todos los campos con valores nacionales por defecto
+        safeSetField(form, 'Nacionalidades del jugador', 'MEXICANA');
+        safeSetField(form, 'País de residencia actual', 'MÉXICO');
+        safeSetField(form, 'El jugador ha vivido en el extranjero En que país', 'NO');
+        safeSetField(form, 'Nacionalidades del padre', 'MEXICANA');
+        safeSetField(form, 'Nacionalidades de la madre', 'MEXICANA');
+        safeSetField(form, 'Nacionalidades del abuelo paterno', 'MEXICANA');
+        safeSetField(form, 'Nacionalidades de la abuela paterna', 'MEXICANA');
+        safeSetField(form, 'Nacionalidades del abuelo materno', 'MEXICANA');
+        safeSetField(form, 'Nacionalidades de la abuela materna', 'MEXICANA');
+        safeSetField(form, 'El jugador ha sido registrado por la Asociación Nacional de Fútbol', 'NO');
+        safeSetField(form, 'El jugador ha jugado en un Club extranjero y participado en', 'NO');
       }
 
       // Fecha de descarga
@@ -595,19 +615,12 @@ export default function CompletarJugadoresEquipo() {
       }
     }
 
-    // Descargar el formato y abrir modal final
-    const success = await handleDownloadFormato();
-    if (success) {
-      setShowFinishModal(true);
-    }
+    // Abrir modal para subir el formato (opcionalmente)
+    setShowFinishModal(true);
   };
 
   // ENVÍO FINAL A BACKEND
   const handleFinalizarInscripcion = async () => {
-    if (!signedForm) {
-      Swal.fire('Archivo requerido', 'Por favor, suba el formato de afiliación firmado para finalizar.', 'warning');
-      return;
-    }
 
     setSubmitting(true);
     Swal.fire({
@@ -661,8 +674,8 @@ export default function CompletarJugadoresEquipo() {
         if (documents.ine) formData.append('ine', documents.ine);
       }
 
-      // El formato de afiliación firmado
-      formData.append('formato_firmado', signedForm);
+      // El formato de afiliación firmado (opcional)
+      if (signedForm) formData.append('formato_firmado', signedForm);
 
       await adminService.agregarJugadorEquipoExistente(formData);
 
@@ -1466,12 +1479,20 @@ export default function CompletarJugadoresEquipo() {
               etiqueta={submitting ? "Enviando..." : "Finalizar Inscripción"}
               icono={<FaCheckCircle />}
               alHacerClick={handleFinalizarInscripcion}
-              deshabilitado={submitting || !signedForm}
+              deshabilitado={submitting}
             />
           </>
         }
       >
         <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', justifyContent: 'center' }}>
+            <button
+              onClick={() => handleDownloadFormato()}
+              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0b4ea6, #063f82)', color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              📥 Descargar Formato
+            </button>
+          </div>
           <div style={{
             backgroundColor: '#f0f9ff',
             border: '1px solid #bae6fd',
@@ -1483,11 +1504,12 @@ export default function CompletarJugadoresEquipo() {
             lineHeight: '1.6'
           }}>
             <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
-              ¡Formato prellenado descargado con éxito!
+              Formato de Afiliación — Subida Opcional
             </p>
             <p style={{ margin: 0 }}>
-              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada.
-              <strong> A continuación debe subir el formato ya firmado por el jugador</strong> para finalizar con el alta e inscribirlo en el equipo.
+              Descarga el formato pre-llenado con el botón de arriba, imprímelo, fírmalo y escanéalo para subirlo.
+              <strong> Si aún no tienes el formato firmado, puedes continuar sin subirlo ahora</strong> y cargarlo después desde
+              la sección <em>AdminJugadores → Docs</em>.
             </p>
           </div>
 

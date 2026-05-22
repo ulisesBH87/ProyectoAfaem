@@ -494,7 +494,7 @@ export default function RegistrarPresidente() {
 
       await Swal.fire({
         title: '¡Presidente registrado!',
-        html: `<p style="color:#94a3b8;font-size:14px;">La cuenta de <strong style="color:#fff">${cuenta.nombre} ${cuenta.primerApellido}</strong> fue creada y activada automáticamente.</p>`,
+        html: `<p style="color:#94a3b8;font-size:14px;">La cuenta de <strong style="color:#141416">${cuenta.nombre} ${cuenta.primerApellido}</strong> fue creada y activada automáticamente.</p>`,
         icon: 'success', confirmButtonColor: C.amberDark,
       });
       navigate('/admin/presidentes');
