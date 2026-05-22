@@ -360,6 +360,27 @@ const construirCardDocumentoHtml = (tipo, documento) => {
         </a>
         <div data-doc-action-buttons style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: auto; width: 100%;">
           ${botonesEstado}
+          <button
+            type="button"
+            data-replace-doc="${tipo.id}"
+            title="Subir nueva versión de este documento"
+            style="
+              margin-top: 2px;
+              padding: 6px 12px;
+              border-radius: 10px;
+              border: 1.5px solid #0ea5e9;
+              background: white;
+              color: #0ea5e9;
+              font-size: 11px;
+              font-weight: 700;
+              cursor: pointer;
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+            "
+          >
+            📤 Reemplazar
+          </button>
         </div>
       </div>
     `;
@@ -584,6 +605,7 @@ export default function AdminJugadores() {
       confirmButtonText: 'Cerrar',
       confirmButtonColor: '#ff0000',
       didOpen: () => {
+        // Botón: Añadir documento faltante
         document.querySelectorAll('[data-add-doc]').forEach((boton) => {
           boton.addEventListener('click', () => {
             const tipoId = Number(boton.getAttribute('data-add-doc'));
@@ -593,6 +615,29 @@ export default function AdminJugadores() {
             input.style.display = 'none';
             input.onchange = (e) => {
               const archivo = e.target.files?.[0];
+              if (archivo) {
+                Swal.close();
+                manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
+              }
+            };
+            document.body.appendChild(input);
+            input.click();
+            input.remove();
+          });
+        });
+
+        // Botón: Reemplazar documento existente
+        document.querySelectorAll('[data-replace-doc]').forEach((boton) => {
+          boton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const tipoId = Number(boton.getAttribute('data-replace-doc'));
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.pdf,image/*';
+            input.style.display = 'none';
+            input.onchange = (ev) => {
+              const archivo = ev.target.files?.[0];
               if (archivo) {
                 Swal.close();
                 manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);

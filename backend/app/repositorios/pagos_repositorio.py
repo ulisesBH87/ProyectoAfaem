@@ -12,7 +12,7 @@ from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from app.modelos.usuario_modelo import Usuario
 from app.modelos.persona_modelo import Personas
 from app.modelos.solicitud_modelo import Solicitud
-from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
+# from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
 from sqlalchemy import desc, join, null, or_
 from sqlalchemy.orm import selectinload
 from app.repositorios.solicitud_repositorio import crear_solicitud_repo
@@ -175,7 +175,7 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
 
 #Validación de pago
 def estatus_pago_repo(db, orden_pago_id, estatus):
-
+    from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
     if not orden:
         return None

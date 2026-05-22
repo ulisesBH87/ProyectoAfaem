@@ -4,9 +4,8 @@ from datetime import datetime
 from app.repositorios import documentos_repositorio
 from app.enums.documentos_estatus_enum import DocumentoEstatus
 
-UPLOAD_DIR = "uploads/equipos"
-
-DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
+# Las rutas de producción se obtienen dinámicamente con obtener_uploads_dir() (config.py)
+# No se definen constantes de ruta aquí para evitar rutas relativas en producción.
 
 def parse_form_data(form_data):
     try:
@@ -23,20 +22,35 @@ def parse_form_data(form_data):
 
 
 async def guardar_logo(form_data, equipo, db):
+    """
+    Guarda el logo del equipo en la ruta de producción:
+        <uploads_base>/equipos/<NombreEquipo>/logo.<ext>
+
+    Si no se recibe logo, la función retorna sin hacer nada (logo es opcional).
+    """
     team_logo = form_data.get("team_logo")
 
     if not team_logo or not getattr(team_logo, "filename", None):
         return
 
-    LOGOS_DIR = os.path.join(UPLOAD_DIR, "logos")
-    os.makedirs(LOGOS_DIR, exist_ok=True)
+    from app.core.config import obtener_uploads_dir
+    base_uploads_dir = obtener_uploads_dir()
+
+    # Sanitizar el nombre del equipo para usarlo como carpeta del sistema de archivos
+    nombre_equipo = equipo.NombreEquipo or f"equipo_{equipo.EquipoId}"
+    nombre_carpeta = nombre_equipo.strip().replace("/", "_").replace("\\", "_")
+
+    # Crear la carpeta: <uploads_base>/equipos/<NombreEquipo>/
+    equipo_dir = os.path.join(base_uploads_dir, "equipos", nombre_carpeta)
+    os.makedirs(equipo_dir, exist_ok=True)
 
     ext = team_logo.filename.rsplit(".", 1)[-1] if "." in team_logo.filename else "bin"
-    nombre = f"Logo_{equipo.EquipoId}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}"
-    ruta = os.path.join(LOGOS_DIR, nombre)
+    nombre_archivo = f"logo.{ext}"
+    ruta_absoluta = os.path.join(equipo_dir, nombre_archivo)
 
-    with open(ruta, "wb") as buffer:
+    with open(ruta_absoluta, "wb") as buffer:
         buffer.write(await team_logo.read())
 
-    equipo.RutaLogo = os.path.join(LOGOS_DIR, nombre).replace("\\", "/")
+    # Guardar ruta relativa en la BD (relativa al directorio base de uploads)
+    equipo.RutaLogo = os.path.join("equipos", nombre_carpeta, nombre_archivo).replace("\\", "/")
     db.flush()

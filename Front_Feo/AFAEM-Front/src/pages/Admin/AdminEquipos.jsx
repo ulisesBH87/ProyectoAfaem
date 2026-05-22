@@ -158,7 +158,11 @@ export default function AdminEquipos() {
         getPresidentesDirectorio(),
         getCatalogosRegistro()
       ]);
-      setPresidentes(presData || []);
+      setPresidentes(
+        Array.isArray(presData)
+          ? presData.filter(p => p.estatus === 7 || p.estatusNombre === 'ACTIVO')
+          : []
+      );
       setCatalogos({
         ligas: catData?.ligas || [],
         modalidades: catData?.modalidades || [],
@@ -273,6 +277,12 @@ export default function AdminEquipos() {
     }
   };
 
+  const handleRowClick = (row) => {
+    if (row && row._original) {
+      navigate(`/admin/equipos/completar-jugadores/${row._original.EquipoId}`);
+    }
+  };
+
   const columns = [
     { key: "EquipoId", label: "ID" },
     { key: "NombreEquipo", label: "Equipo" },
@@ -284,6 +294,7 @@ export default function AdminEquipos() {
   ];
 
   const dataTransformada = paginatedEquipos.map(eq => ({
+    _original: eq,
     EquipoId: <span style={{ fontWeight: '700', color: '#64748b' }}>#{eq.EquipoId}</span>,
     NombreEquipo: <span style={{ fontWeight: '800', color: '#1e293b' }}>{eq.NombreEquipo}</span>,
     Liga: (
@@ -322,14 +333,14 @@ export default function AdminEquipos() {
         <button 
           className="btn btn-sm btn-primary"
           style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
-          onClick={() => handleEditarEquipo(eq)}
+          onClick={(e) => { e.stopPropagation(); handleEditarEquipo(eq); }}
         >
           <FaEdit /> Detalles y gestión
         </button>
         <button 
           className="btn btn-sm"
           style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', background: 'white', color: '#059669', border: '1.5px solid #86efac' }}
-          onClick={() => handleExportarEquipo(eq)}
+          onClick={(e) => { e.stopPropagation(); handleExportarEquipo(eq); }}
           title="Descargar documentos de todos los jugadores del equipo"
         >
           <FaFileArchive /> Descargar documentos
@@ -479,6 +490,7 @@ export default function AdminEquipos() {
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
+          onRowClick={handleRowClick}
           emptyMessage="No se encontraron equipos con los criterios de búsqueda."
         />
       </div>
@@ -581,6 +593,11 @@ export default function AdminEquipos() {
                     onChange={e => setSearchPresidente(e.target.value)}
                     style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dbeafe', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
                   />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                      🟢 Solo presidentes con estatus Activo
+                    </span>
+                  </div>
                   <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
                     {loadingExtras ? (
                       <Loader inline text="Cargando presidentes..." />

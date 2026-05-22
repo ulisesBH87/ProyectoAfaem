@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle, FaSearchPlus, FaSyncAlt} from 'react-icons/fa';
+import { FaFutbol, FaTags, FaCalendar, FaUpload, FaFilePdf, FaCheckCircle, FaMoneyBillWave, FaClock, FaTimesCircle, FaSearchPlus, FaSyncAlt } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
 import { API_BASE } from '../../config/config';
@@ -50,8 +51,8 @@ export default function ConfigurarEquipo() {
   const [asignacionSeguros, setAsignacionSeguros] = useState(isAdmin
     ? {}
     : ((preRegistro.asignacionSeguros && Object.keys(preRegistro.asignacionSeguros).length > 0)
-        ? preRegistro.asignacionSeguros
-        : {}));
+      ? preRegistro.asignacionSeguros
+      : {}));
   const [comprobantePagoEquipo, setComprobantePagoEquipo] = useState(null);
   const [pagoError, setPagoError] = useState(null);
   const [procesandoPago, setProcesandoPago] = useState(false);
@@ -110,7 +111,7 @@ export default function ConfigurarEquipo() {
     teamLogo: null
   });
 
-  
+
   const [errors, setErrors] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -302,7 +303,7 @@ export default function ConfigurarEquipo() {
           const nextPreRegistro = { ...(preRegistro || {}) };
           delete nextPreRegistro.equipo_temporal_id;
           localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
-        } catch {}
+        } catch { }
 
         setPagoEquipo({
           loading: false,
@@ -333,7 +334,7 @@ export default function ConfigurarEquipo() {
           try {
             const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
             localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
-          } catch {}
+          } catch { }
         }
 
         const seguros = {};
@@ -494,7 +495,11 @@ export default function ConfigurarEquipo() {
 
         if (isAdmin) {
           const presidents = await teamsService.getPresidentesActivos();
-          setActivePresidents(presidents);
+          // Solo mostrar presidentes con EstatusId = 7 (ACTIVO)
+          const soloActivos = Array.isArray(presidents)
+            ? presidents.filter(p => p.estatus === 7 || p.estatusNombre === 'ACTIVO')
+            : [];
+          setActivePresidents(soloActivos);
         }
 
       } catch (error) {
@@ -579,7 +584,7 @@ export default function ConfigurarEquipo() {
             const nextPreRegistro = { ...(preRegistro || {}) };
             delete nextPreRegistro.equipo_temporal_id;
             localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
-          } catch {}
+          } catch { }
 
           setPagoEquipo({
             loading: false,
@@ -601,7 +606,7 @@ export default function ConfigurarEquipo() {
             try {
               const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
               localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
-            } catch {}
+            } catch { }
           }
 
           const seguros = {};
@@ -936,7 +941,7 @@ export default function ConfigurarEquipo() {
         } catch {
           try {
             rawText = await res.text();
-          } catch {}
+          } catch { }
         }
 
         if (errData && (errData.detail || errData.message || errData.code)) {
@@ -984,12 +989,12 @@ export default function ConfigurarEquipo() {
       });
 
       Swal.fire({
-      title: 'Orden generada',
-      text: isAdmin
-        ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediátamente o esperar a que el presidente haga el pago y suba el comprobante'
-        : 'Se descargó tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revisión.',
-      icon: 'success',
-      confirmButtonColor: '#0b4ea6'
+        title: 'Orden generada',
+        text: isAdmin
+          ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediátamente o esperar a que el presidente haga el pago y suba el comprobante'
+          : 'Se descargó tu ficha de pago en PDF. Ahora realiza el pago y sube tu comprobante para revisión.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
       });
     } catch (error) {
       setPagoError(error.message);
@@ -1051,7 +1056,7 @@ export default function ConfigurarEquipo() {
     try {
       setPagoJugador(prev => ({ ...prev, loading: true }));
       const slotsResponse = await teamsService.getAvailableSlots(equipoId);
-      
+
       if (slotsResponse === true || (typeof slotsResponse === 'object' && slotsResponse.slots_disponibles > 0)) {
         // Hay slots disponibles, ir directamente al formulario de jugador
         setEquipoTemporalIdAgregar(equipoId);
@@ -1228,13 +1233,9 @@ export default function ConfigurarEquipo() {
   };
 
   const handleGoToPlayers = () => {
-    // Validar modal antes de pasar
+    // Solo el nombre del equipo es obligatorio; el logo es opcional
     if (!modalData.teamName.trim()) {
       Swal.fire('Atención', 'Por favor ingresa el nombre del equipo', 'warning');
-      return;
-    }
-    if (!modalData.teamLogo) {
-      Swal.fire('Atención', 'Por favor carga el logo del equipo', 'warning');
       return;
     }
     setActiveStep(2);
@@ -1267,7 +1268,7 @@ export default function ConfigurarEquipo() {
       }));
     }
   };
-  
+
   const procesarOCRReal = async (docKey, file) => {
     Swal.fire({
       title: 'Analizando Documento...',
@@ -1287,7 +1288,7 @@ export default function ConfigurarEquipo() {
       const htmlText = await response.text();
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, "text/html");
-      
+
       const extractedData = {};
       const rows = doc.querySelectorAll('.dato-fila');
       rows.forEach(row => {
@@ -1313,8 +1314,8 @@ export default function ConfigurarEquipo() {
           const char = extractedData.curp.charAt(10).toUpperCase();
           if (char === 'M') inferredSexo = 2;
         }
-      
-      
+
+
         setCurrentPlayer(prev => ({
           ...prev,
           firstName,
@@ -1324,7 +1325,7 @@ export default function ConfigurarEquipo() {
           birthDate: extractedData.fecha_nac || prev.birthDate,
           sexo_id: inferredSexo,
           seguro_id: 1,
-          birthPlace: extractedData.lugar_nacimiento || prev.birthPlace,
+          lugarNacimiento: extractedData.lugar_nacimiento || prev.lugarNacimiento,
           documents: { ...prev.documents, [docKey]: file }
         }));
 
@@ -1348,6 +1349,35 @@ export default function ConfigurarEquipo() {
     }
   };
 
+  const forceLoadFailedPhoto = () => {
+    if (!failedPhoto) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviews(prev => ({
+        ...prev,
+        foto: reader.result
+      }));
+    };
+    reader.readAsDataURL(failedPhoto);
+
+    setCurrentPlayer(prev => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        foto: failedPhoto
+      }
+    }));
+    setFailedPhoto(null);
+
+    Swal.fire({
+      title: 'Fotografía Cargada',
+      text: 'La fotografía se cargó sin validación.',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  };
+
   const procesarFotografiaJugador = async (file) => {
     Swal.fire({
       title: 'Validando Fotografía...',
@@ -1360,22 +1390,22 @@ export default function ConfigurarEquipo() {
       const data = await validarFotografia(file);
       if (data.valido) {
 
-         // CONVERTIR BASE64 A URL MOSTRABLE
+        // CONVERTIR BASE64 A URL MOSTRABLE
         const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
-        
+
         // convertir base64 a archivo
-          const byteCharacters = atob(data.imagen);
-          const byteNumbers = new Array(byteCharacters.length);
+        const byteCharacters = atob(data.imagen);
+        const byteNumbers = new Array(byteCharacters.length);
 
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
 
-          const byteArray = new Uint8Array(byteNumbers);
+        const byteArray = new Uint8Array(byteNumbers);
 
-          const newFile = new File([byteArray], "foto_validada.jpg", {
-            type: data.tipo_imagen
-          });
+        const newFile = new File([byteArray], "foto_validada.jpg", {
+          type: data.tipo_imagen
+        });
 
 
         // GUARDAR PREVIEW
@@ -1392,7 +1422,9 @@ export default function ConfigurarEquipo() {
             foto: newFile
           }
         }));
-        
+
+        setFailedPhoto(null);
+
         Swal.fire({
           title: '¡Fotografía Aceptada!',
           icon: 'success',
@@ -1400,6 +1432,75 @@ export default function ConfigurarEquipo() {
           showConfirmButton: false
         });
       } else {
+        // Guardar el archivo fallido en el estado
+        setFailedPhoto(file);
+
+        // LIMPIAR PREVIEW por defecto
+        setPreviews(prev => ({
+          ...prev,
+          foto: null
+        }));
+
+        // LIMPIAR DOCUMENTO por defecto
+        setCurrentPlayer(prev => ({
+          ...prev,
+          documents: {
+            ...prev.documents,
+            foto: null
+          }
+        }));
+
+        Swal.fire({
+          title: 'Error en la fotografía',
+          text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, cargar igualmente',
+          cancelButtonText: 'No, intentar de nuevo',
+          confirmButtonColor: '#0b4ea6',
+          cancelButtonColor: '#cbd5e1'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Guardar preview de la original
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setPreviews(prev => ({
+                ...prev,
+                foto: reader.result
+              }));
+            };
+            reader.readAsDataURL(file);
+
+            // Guardar documento original
+            setCurrentPlayer(prev => ({
+              ...prev,
+              documents: {
+                ...prev.documents,
+                foto: file
+              }
+            }));
+
+            setFailedPhoto(null);
+
+            Swal.fire({
+              title: 'Cargada',
+              text: 'Se ha cargado la fotografía original.',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          }
+        });
+      }
+    } catch (err) {
+      // Guardar el archivo fallido en el estado
+      setFailedPhoto(file);
+
+      // LIMPIAR PREVIEW
+      setPreviews(prev => ({
+        ...prev,
+        foto: null
+      }));
 
       // LIMPIAR DOCUMENTO
       setCurrentPlayer(prev => ({
@@ -1410,26 +1511,47 @@ export default function ConfigurarEquipo() {
         }
       }));
 
-        Swal.fire('Error en la fotografía', data.mensaje, 'error');
-      }
-    } catch (err) {
+      Swal.fire({
+        title: 'Error de validación',
+        text: `${err.message || 'No se pudo conectar con el servicio de validación.'} ¿Deseas cargar la fotografía igualmente?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cargar igualmente',
+        cancelButtonText: 'No, intentar de nuevo',
+        confirmButtonColor: '#0b4ea6',
+        cancelButtonColor: '#cbd5e1'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Guardar preview de la original
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setPreviews(prev => ({
+              ...prev,
+              foto: reader.result
+            }));
+          };
+          reader.readAsDataURL(file);
 
-      // LIMPIAR PREVIEW
-    setPreviews(prev => ({
-      ...prev,
-      foto: null
-    }));
+          // Guardar documento original
+          setCurrentPlayer(prev => ({
+            ...prev,
+            documents: {
+              ...prev.documents,
+              foto: file
+            }
+          }));
 
-    // LIMPIAR DOCUMENTO
-    setCurrentPlayer(prev => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        foto: null
-      }
-    }));
+          setFailedPhoto(null);
 
-      Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+          Swal.fire({
+            title: 'Cargada',
+            text: 'Se ha cargado la fotografía original.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
     }
   };
 
@@ -1454,7 +1576,7 @@ export default function ConfigurarEquipo() {
           const photoBytes = await currentPlayer.documents.foto.arrayBuffer();
           let photoImage;
           const fileName = currentPlayer.documents.foto.name.toLowerCase();
-          
+
           if (fileName.endsWith('.png')) {
             photoImage = await pdfDoc.embedPng(photoBytes);
           } else {
@@ -1473,7 +1595,7 @@ export default function ConfigurarEquipo() {
         }
       }
 
-      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, birthPlace, email, telefono, sexo_id, positionId, shirtNumber } = currentPlayer;
+      const { firstName, lastNamePaterno, lastNameMaterno, curp, birthDate, lugarNacimiento, email, telefono, sexo_id, positionId, shirtNumber, insuranceType } = currentPlayer;
 
       // Nombre y Apellidos
       form.getTextField('Nombres')?.setText(firstName || '');
@@ -1483,12 +1605,19 @@ export default function ConfigurarEquipo() {
       // Identificadores y Nacimiento
       if (curp) form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       if (birthDate) form.getTextField('Fecha de Nacimiento')?.setText(birthDate);
-      if (birthPlace) form.getTextField('Lugar de Nacimiento')?.setText(birthPlace);
-      
-      // Tipo de Afiliación (Mapeado empíricamente a fill_24) y Asociación
-      // El campo 'Tipo' corresponde a 'Tipo de Sangre', no lo llenaremos con AFAEM.
+      if (lugarNacimiento) form.getTextField('Lugar de Nacimiento')?.setText(lugarNacimiento);
+
+      // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
+      const seguroSeleccionado = catalogs.seguros.find(s => String(s.id) === String(insuranceType));
+      const nombreSeguro = seguroSeleccionado?.nombre || '';
+      if (nombreSeguro) {
+        try { form.getTextField('Tipo')?.setText(nombreSeguro); } catch (_) { }
+        try { form.getTextField('fill_24')?.setText(nombreSeguro); } catch (_) { }
+      }
+
+      // Asociación
       form.getTextField('Asociación')?.setText('AFAEM');
-      form.getTextField('fill_24')?.setText('AFAEM');
+      //form.getTextField('fill_24')?.setText('AFAEM');
 
       // Contacto
       const formEmail = email || localStorage.getItem('email') || '';
@@ -1499,24 +1628,21 @@ export default function ConfigurarEquipo() {
       const sexoTexto = sexo_id === 1 ? 'MASCULINO' : sexo_id === 2 ? 'FEMENINO' : curp && curp.length >= 11 ? (curp.charAt(10).toUpperCase() === 'H' ? 'MASCULINO' : 'FEMENINO') : '';
       if (sexoTexto) form.getTextField('Sexo')?.setText(sexoTexto);
 
-      // Equipo y Torneo (tomamos del estado actual del formulario, con fallback a localStorage)
+      // Equipo y Torneo
       form.getTextField('Equipo')?.setText(modalData.teamName || preRegistro.teamName || '');
-      
       const currentLigaId = formData.season || preRegistro.liga_id || '';
       const ligaObj = catalogs.ligas?.find(l => l.id.toString() === currentLigaId.toString());
       if (ligaObj) form.getTextField('Liga')?.setText(ligaObj.nombre);
-      
       const currentCatId = formData.category || preRegistro.categoria_id || '';
       const catObj = catalogs.categorias?.find(c => c.id.toString() === currentCatId.toString());
       if (catObj) form.getTextField('Categoría')?.setText(catObj.nombre);
 
-      // Fecha automática (A __ de __ del 20__)
+      // Fecha automática
       const hoy = new Date();
       const dia = String(hoy.getDate()).padStart(2, '0');
       const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const mes = meses[hoy.getMonth()];
       const anio = String(hoy.getFullYear()).slice(-2);
-      
       form.getTextField('A')?.setText(dia);
       form.getTextField('de')?.setText(mes);
       form.getTextField('del 20')?.setText(anio);
@@ -1525,9 +1651,10 @@ export default function ConfigurarEquipo() {
       const rolObj = catalogs.roles_equipo.find(r => r.id.toString() === (positionId || '').toString());
       form.getTextField('Posición')?.setText(rolObj ? rolObj.nombre : 'JUGADOR');
       if (shirtNumber) form.getTextField('Camiseta')?.setText(shirtNumber.toString());
-      
-      // ANTECEDENTES INTERNACIONALES (FORÁNEO)
+
+      // ANTECEDENTES INTERNACIONALES
       if (currentPlayer.esForaneo) {
+        // Jugador extranjero: usar los datos capturados
         form.getTextField('Nacionalidades del jugador')?.setText(currentPlayer.nacionalidadJugador || '');
         form.getTextField('País de residencia actual')?.setText(currentPlayer.paisResidencia || '');
         form.getTextField('El jugador ha vivido en el extranjero En que país')?.setText(currentPlayer.haVividoExtranjero ? (currentPlayer.dondeVividoExtranjero || 'SÍ') : 'NO');
@@ -1537,9 +1664,21 @@ export default function ConfigurarEquipo() {
         form.getTextField('Nacionalidades de la abuela paterna')?.setText(currentPlayer.nacAbuelaPaterna || '');
         form.getTextField('Nacionalidades del abuelo materno')?.setText(currentPlayer.nacAbueloMaterno || '');
         form.getTextField('Nacionalidades de la abuela materna')?.setText(currentPlayer.nacAbuelaMaterna || '');
-        
         form.getTextField('El jugador ha jugado en un Club extranjero y participado en')?.setText(currentPlayer.juegoClubExtranjero || '');
         form.getTextField('El jugador ha sido registrado por la Asociación Nacional de Fútbol')?.setText(currentPlayer.registroAsociacionExtranjera || '');
+      } else {
+        // Jugador mexicano: rellenar todos los campos con valores por defecto nacionales
+        form.getTextField('Nacionalidades del jugador')?.setText('MEXICANA');
+        form.getTextField('País de residencia actual')?.setText('MÉXICO');
+        form.getTextField('El jugador ha vivido en el extranjero En que país')?.setText('NO');
+        form.getTextField('Nacionalidades del padre')?.setText('MEXICANA');
+        form.getTextField('Nacionalidades de la madre')?.setText('MEXICANA');
+        form.getTextField('Nacionalidades del abuelo paterno')?.setText('MEXICANA');
+        form.getTextField('Nacionalidades de la abuela paterna')?.setText('MEXICANA');
+        form.getTextField('Nacionalidades del abuelo materno')?.setText('MEXICANA');
+        form.getTextField('Nacionalidades de la abuela materna')?.setText('MEXICANA');
+        form.getTextField('El jugador ha jugado en un Club extranjero y participado en')?.setText('NO');
+        form.getTextField('El jugador ha sido registrado por la Asociación Nacional de Fútbol')?.setText('NO');
       }
 
       // El campo 'Cargo' no existe en el PDF o es redundante con 'Posición'
@@ -1569,8 +1708,9 @@ export default function ConfigurarEquipo() {
   const userEmail = localStorage.getItem('email') || '';
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
-  
-   // Previsualizaciones (URLs locales)
+  const [failedPhoto, setFailedPhoto] = useState(null);
+
+  // Previsualizaciones (URLs locales)
   const [previews, setPreviews] = useState({
     actaNacimiento: null,
     identificacion: null,
@@ -1579,38 +1719,38 @@ export default function ConfigurarEquipo() {
   });
 
   const handleFileUpload = async (docKey, file) => {
-      if (!file) return;
+    if (!file) return;
 
-        setCurrentPlayer(prev => ({
+    setCurrentPlayer(prev => ({
+      ...prev,
+      documents: {
+        ...(prev.documents || {}),
+        [docKey]: file
+      }
+    }));
+
+    // PREVIEW
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => ({
           ...prev,
-          documents:{
-            ...(prev.documents || {}),
-            [docKey]: file
-          }
+          [docKey]: reader.result
         }));
-  
-  // PREVIEW
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviews(prev => ({
-        ...prev,
-        [docKey]: reader.result
-      }));
-    };
-    reader.readAsDataURL(file);
-  } else if (file.type === 'application/pdf') {
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
       const url = URL.createObjectURL(file);
       setPreviews(prev => ({ ...prev, [docKey]: url }));
-  }
+    }
 
-  // LÓGICA 
-  if (docKey === 'foto') {
-    procesarFotografiaJugador(file);
-  } else if (['acta', 'ine'].includes(docKey)) {
-    procesarOCRReal(docKey, file);
-  }
-};
+    // LÓGICA 
+    if (docKey === 'foto') {
+      procesarFotografiaJugador(file);
+    } else if (['acta', 'ine'].includes(docKey)) {
+      procesarOCRReal(docKey, file);
+    }
+  };
 
   const resetPlayerForm = () => {
     setCurrentPlayer({
@@ -1643,8 +1783,10 @@ export default function ConfigurarEquipo() {
       positionId: '',
       documents: {}
     });
+    setPreviews({});
     setEditingPlayerId(null);
     setFormErrors({});
+    setFailedPhoto(null);
   };
 
   const loadPlayerForEditing = (playerId) => {
@@ -1653,6 +1795,21 @@ export default function ConfigurarEquipo() {
       setCurrentPlayer({ ...playerToEdit });
       setFormErrors({});
       setEditingPlayerId(playerId);
+      setFailedPhoto(null);
+
+      // Restaurar previsualizaciones de documentos
+      const newPreviews = {};
+      if (playerToEdit.documents) {
+        Object.entries(playerToEdit.documents).forEach(([key, file]) => {
+          if (file instanceof File) {
+            newPreviews[key] = URL.createObjectURL(file);
+          } else if (typeof file === 'string') {
+            newPreviews[key] = file;
+          }
+        });
+      }
+      setPreviews(newPreviews);
+
       // Scroll al formulario
       setTimeout(() => {
         document.querySelector('[data-player-form]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2053,13 +2210,13 @@ export default function ConfigurarEquipo() {
     { key: 'acta', title: 'Acta de Nacimiento' },
     ...(esMenorDeEdadJugador
       ? [
-          { key: 'ineTutor', title: 'INE del padre o tutor' },
-          {
-            key: 'identificacionMenor',
-            title: 'Identificación del menor',
-            subtitle: 'Credencial escolar, constancia u otro documento oficial'
-          }
-        ]
+        { key: 'ineTutor', title: 'INE del padre o tutor' },
+        {
+          key: 'identificacionMenor',
+          title: 'Identificación del menor',
+          subtitle: 'Credencial escolar, constancia u otro documento oficial'
+        }
+      ]
       : [{ key: 'ine', title: 'Identificación (INE/Pasaporte)' }]),
     { key: 'foto', title: 'Fotografía Infantil' }
   ];
@@ -2095,7 +2252,7 @@ export default function ConfigurarEquipo() {
           renderPagoPrevioEquipo()
         ) : (
           <>
-        {/* STEP INDICATOR */}
+            {/* STEP INDICATOR */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '25px', padding: '10px' }}>
               {isAdmin && <div className={`step-pill ${activeStep === 0 ? 'active' : ''}`}>0. Presidente</div>}
               {isAdmin && <div style={{ color: '#cbd5e1', alignSelf: 'center' }}>→</div>}
@@ -2116,10 +2273,10 @@ export default function ConfigurarEquipo() {
                   <div className="card" style={{ padding: '30px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                     <div className="mb-4">
                       <label className="form-label" style={{ fontWeight: '700', fontSize: '14px' }}>Buscar Presidente</label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="Escribe nombre o apellido..." 
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Escribe nombre o apellido..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         style={{ borderRadius: '10px', padding: '12px' }}
@@ -2127,14 +2284,17 @@ export default function ConfigurarEquipo() {
                     </div>
 
                     <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '20px' }}>
+                      <div style={{ padding: '8px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', color: '#166534', fontWeight: '700' }}>🟢 Mostrando solo presidentes con estatus Activo</span>
+                      </div>
                       {activePresidents
                         .filter(p => !searchTerm || p.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
                         .map(p => (
-                          <div 
-                            key={p.id} 
+                          <div
+                            key={p.id}
                             onClick={() => setSelectedPresidentId(p.id)}
-                            style={{ 
-                              padding: '12px 20px', 
+                            style={{
+                              padding: '12px 20px',
                               cursor: 'pointer',
                               borderBottom: '1px solid #f1f5f9',
                               backgroundColor: selectedPresidentId === p.id ? '#eff6ff' : 'white',
@@ -2144,8 +2304,8 @@ export default function ConfigurarEquipo() {
                               transition: 'all 0.2s'
                             }}
                           >
-                            <div style={{ 
-                              width: '32px', height: '32px', borderRadius: '50%', 
+                            <div style={{
+                              width: '32px', height: '32px', borderRadius: '50%',
                               background: selectedPresidentId === p.id ? '#0b4ea6' : '#f1f5f9',
                               color: selectedPresidentId === p.id ? 'white' : '#64748b',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2160,19 +2320,19 @@ export default function ConfigurarEquipo() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
-                      <button 
+                      <button
                         onClick={() => navigate('/admin/equipos')}
                         style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '600' }}
                       >
                         Cancelar
                       </button>
-                      <button 
+                      <button
                         disabled={!selectedPresidentId}
                         onClick={() => cargarEstadoPagoEquipo({ presidenteId: selectedPresidentId })}
-                        style={{ 
-                          padding: '10px 30px', borderRadius: '8px', border: 'none', 
-                          background: !selectedPresidentId ? '#cbd5e1' : '#0b4ea6', 
-                          color: 'white', fontWeight: '700', cursor: !selectedPresidentId ? 'not-allowed' : 'pointer' 
+                        style={{
+                          padding: '10px 30px', borderRadius: '8px', border: 'none',
+                          background: !selectedPresidentId ? '#cbd5e1' : '#0b4ea6',
+                          color: 'white', fontWeight: '700', cursor: !selectedPresidentId ? 'not-allowed' : 'pointer'
                         }}
                       >
                         Siguiente →
@@ -2184,26 +2344,26 @@ export default function ConfigurarEquipo() {
               {activeStep === 1 && (
                 <div style={{ animation: 'slideUp 0.4s ease' }}>
                   {/* HEADER DEL FORMULARIO PREMIUM */}
-                  <div className="premium-card fade-in" style={{ 
-                    marginBottom: '40px', 
-                    padding: '30px', 
-                    background: 'white', 
-                    borderRadius: '24px', 
+                  <div className="premium-card fade-in" style={{
+                    marginBottom: '40px',
+                    padding: '30px',
+                    background: 'white',
+                    borderRadius: '24px',
                     boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
                     border: '1px solid #f1f5f9'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                      <div style={{ 
-                        fontSize: '32px', 
-                        background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', 
-                        width: '70px', 
-                        height: '70px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        borderRadius: '20px', 
-                        color: 'white', 
-                        boxShadow: '0 8px 16px -4px rgba(11, 78, 166, 0.3)' 
+                      <div style={{
+                        fontSize: '32px',
+                        background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)',
+                        width: '70px',
+                        height: '70px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '20px',
+                        color: 'white',
+                        boxShadow: '0 8px 16px -4px rgba(11, 78, 166, 0.3)'
                       }}>
                         🛡️
                       </div>
@@ -2212,25 +2372,25 @@ export default function ConfigurarEquipo() {
                         <p style={{ margin: '5px 0 0 0', color: '#64748b', fontSize: '15px', fontWeight: '500' }}>Define la modalidad y categoría de competencia oficial.</p>
                       </div>
                     </div>
-                    
-                    <div style={{ 
-                      marginTop: '25px', 
-                      padding: '16px 20px', 
-                      backgroundColor: '#f0f9ff', 
-                      borderRadius: '16px', 
-                      border: '1px solid #bae6fd', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '15px' 
+
+                    <div style={{
+                      marginTop: '25px',
+                      padding: '16px 20px',
+                      backgroundColor: '#f0f9ff',
+                      borderRadius: '16px',
+                      border: '1px solid #bae6fd',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px'
                     }}>
-                       <div>
-                         <div style={{ fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>
-                           {isAdmin ? `Registro de equipo como Administrador. Jugadores pagados: ${numPersonasPagadas} ` : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
-                         </div>
-                         <div style={{ fontSize: '12px', color: '#0ea5e9', fontWeight: '600' }}>
-                           {'Los seguros y cupos se asignan automáticamente según tu pago.'}
-                         </div>
-                       </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#0369a1' }}>
+                          {isAdmin ? `Registro de equipo como Administrador. Jugadores pagados: ${numPersonasPagadas} ` : `Capacidad de Afiliación: ${numPersonasPagadas} Jugadores`}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#0ea5e9', fontWeight: '600' }}>
+                          {'Los seguros y cupos se asignan automáticamente según tu pago.'}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -2329,12 +2489,12 @@ export default function ConfigurarEquipo() {
                       </label>
                     </div>
                     <div style={{ marginTop: '12px', paddingLeft: '35px' }}>
-                      <a 
-                        href="https://afaem.mx/reglamentos" 
-                        target="_blank" 
+                      <a
+                        href="https://afaem.mx/reglamentos"
+                        target="_blank"
                         rel="noopener noreferrer"
-                        style={{ 
-                          fontSize: '13px', color: '#0b4ea6', fontWeight: '700', 
+                        style={{
+                          fontSize: '13px', color: '#0b4ea6', fontWeight: '700',
                           textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px',
                           transition: 'color 0.2s'
                         }}
@@ -2356,104 +2516,104 @@ export default function ConfigurarEquipo() {
                 </div>
               )}
 
-            {/* SECCIÓN 2: REGISTRO DE JUGADORES (PASO 2) */}
-            {activeStep === 2 && (
-              <div style={{ animation: 'slideUp 0.4s ease' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                   <button onClick={() => setActiveStep(isAdmin ? 0 : 1)} style={{ background: 'none', border: 'none', color: '#0b4ea6', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                     ← Volver {isAdmin ? 'a Selección de Presidente' : 'a Configuración'}
-                   </button>
-                   <div style={{ background: '#dcfce7', color: '#166534', padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                     Equipo: {modalData.teamName || 'Sin nombre'}
-                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '30px' }}>
-                  {/* FORMULARIO DE JUGADOR */}
-                  <div data-player-form style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: editingPlayerId ? '2px solid #0b4ea6' : '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', transition: 'all 0.3s' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
-                      <div>
-                        <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>{editingPlayerId ? '✏️ Editar Jugador' : 'Registrar Jugador'}</h3>
-                        <p style={{ fontSize: '13px', color: '#64748b', margin: '5px 0 0 0' }}>{editingPlayerId ? 'Modifica la información del jugador seleccionado.' : 'Sube los documentos para autocompletar la información.'}</p>
-                      </div>
-                      <div style={{ background: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', textAlign: 'center' }}>
-                        <span style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>Jugadores</span>
-                        <span style={{ fontSize: '18px', fontWeight: '800', color: '#0b4ea6' }}>{players.length}</span>
-                      </div>
+              {/* SECCIÓN 2: REGISTRO DE JUGADORES (PASO 2) */}
+              {activeStep === 2 && (
+                <div style={{ animation: 'slideUp 0.4s ease' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <button onClick={() => setActiveStep(isAdmin ? 0 : 1)} style={{ background: 'none', border: 'none', color: '#0b4ea6', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      ← Volver {isAdmin ? 'a Selección de Presidente' : 'a Configuración'}
+                    </button>
+                    <div style={{ background: '#dcfce7', color: '#166534', padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                      Equipo: {modalData.teamName || 'Sin nombre'}
                     </div>
+                  </div>
 
-                    <section className="fade-in" style={{ marginBottom: '40px' }}>
-                      {esMenorDeEdadJugador && currentPlayer.birthDate && (
-                        <p style={{ fontSize: '13px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontWeight: '600' }}>
-                          El jugador es menor de edad. Sube la INE del padre o tutor, la identificación del menor (credencial escolar, constancia, etc.) y los demás documentos requeridos.
-                        </p>
-                      )}
-                      <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',
-                        gap: '20px'
-                      }}>
-                        {docsRequeridosJugador.map(doc => {
-                          const isFormato = doc.key === 'formato';
-                          const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
-                          return (
-                            <div key={doc.key} 
-                              className="document-card"
-                              style={{ 
-                                backgroundColor: 'white',
-                                borderRadius: '20px',
-                                border: currentPlayer.documents[doc.key] ? '2px solid #10b981': isFormato && !canUploadFormato ? '2px solid #e2e8f0': '2px dashed #cbd5e1',
-                                padding: '15px',
-                                textAlign: 'center',
-                                transition: 'all 0.3s',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}>
-                              <div
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '30px' }}>
+                    {/* FORMULARIO DE JUGADOR */}
+                    <div data-player-form style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: editingPlayerId ? '2px solid #0b4ea6' : '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', transition: 'all 0.3s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px' }}>
+                        <div>
+                          <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>{editingPlayerId ? '✏️ Editar Jugador' : 'Registrar Jugador'}</h3>
+                          <p style={{ fontSize: '13px', color: '#64748b', margin: '5px 0 0 0' }}>{editingPlayerId ? 'Modifica la información del jugador seleccionado.' : 'Sube los documentos para autocompletar la información.'}</p>
+                        </div>
+                        <div style={{ background: '#f1f5f9', padding: '8px 12px', borderRadius: '8px', textAlign: 'center' }}>
+                          <span style={{ display: 'block', fontSize: '10px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>Jugadores</span>
+                          <span style={{ fontSize: '18px', fontWeight: '800', color: '#0b4ea6' }}>{players.length}</span>
+                        </div>
+                      </div>
+
+                      <section className="fade-in" style={{ marginBottom: '40px' }}>
+                        {esMenorDeEdadJugador && currentPlayer.birthDate && (
+                          <p style={{ fontSize: '13px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontWeight: '600' }}>
+                            El jugador es menor de edad. Sube la INE del padre o tutor, la identificación del menor (credencial escolar, constancia, etc.) y los demás documentos requeridos.
+                          </p>
+                        )}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                          gap: '20px'
+                        }}>
+                          {docsRequeridosJugador.map(doc => {
+                            const isFormato = doc.key === 'formato';
+                            const canUploadFormato = currentPlayer.firstName && currentPlayer.firstName.trim() !== '';
+                            return (
+                              <div key={doc.key}
+                                className="document-card"
                                 style={{
-                                  height: '140px',
-                                  width: '100%',
-                                  backgroundColor: '#f8fafc',
-                                  borderRadius: '12px',
-                                  marginBottom: '10px',
+                                  backgroundColor: 'white',
+                                  borderRadius: '20px',
+                                  border: currentPlayer.documents[doc.key] ? '2px solid #10b981' : isFormato && !canUploadFormato ? '2px solid #e2e8f0' : '2px dashed #cbd5e1',
+                                  padding: '15px',
+                                  textAlign: 'center',
+                                  transition: 'all 0.3s',
                                   position: 'relative',
-                                  overflow: 'hidden',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  border: '1px solid #f1f5f9'
-                                }}
-                                onDragOver = {(e) => {
-                                  e.preventDefault();
-                                }}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  const file = e.dataTransfer.files[0];
-                                  handleFileUpload(doc.key, file);
-                                }}
-                              >
-                                {previews[doc.key] ? (
-                                  <div className="preview-container" style={{ 
-                                    width: '100%', height: '100%', position: 'relative' 
+                                  overflow: 'hidden'
+                                }}>
+                                <div
+                                  style={{
+                                    height: '140px',
+                                    width: '100%',
+                                    backgroundColor: '#f8fafc',
+                                    borderRadius: '12px',
+                                    marginBottom: '10px',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1px solid #f1f5f9'
+                                  }}
+                                  onDragOver={(e) => {
+                                    e.preventDefault();
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    const file = e.dataTransfer.files[0];
+                                    handleFileUpload(doc.key, file);
+                                  }}
+                                >
+                                  {previews[doc.key] ? (
+                                    <div className="preview-container" style={{
+                                      width: '100%', height: '100%', position: 'relative'
 
                                     }}
-                                    onMouseEnter={(e) => {
-                                      const overlay =
-                                      e.currentTarget.querySelector('.overlay-actions');
-                                      if (overlay) overlay.style.opacity = '1';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      const overlay =
-                                      e.currentTarget.querySelector('.overlay-actions');
-                                      if (overlay) overlay.style.opacity = '0';
-                                    }}
-                                  >
-                                    {(previews[doc.key].startsWith('blob:') && currentPlayer.documents[doc.key]?.type === 'application/pdf') || previews[doc.key] === 'pdf' ? (
-                                      <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                        <FaFilePdf />
-                                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                                      onMouseEnter={(e) => {
+                                        const overlay =
+                                          e.currentTarget.querySelector('.overlay-actions');
+                                        if (overlay) overlay.style.opacity = '1';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        const overlay =
+                                          e.currentTarget.querySelector('.overlay-actions');
+                                        if (overlay) overlay.style.opacity = '0';
+                                      }}
+                                    >
+                                      {(previews[doc.key].startsWith('blob:') && currentPlayer.documents[doc.key]?.type === 'application/pdf') || previews[doc.key] === 'pdf' ? (
+                                        <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                          <FaFilePdf />
+                                          <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
                                         </div>
-                                        ) : (
+                                      ) : (
                                         <img
                                           src={previews[doc.key]}
                                           alt="Preview"
@@ -2463,184 +2623,213 @@ export default function ConfigurarEquipo() {
                                             objectFit: 'contain'
                                           }}
                                         />
-                                    )}
-                                    <div className="overlay-actions" style={{
-                                      position: 'absolute',
-                                      top: 0, left: 0, right: 0, bottom: 0,
-                                      backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '12px',
-                                      opacity: 0,
-                                      transition: 'opacity 0.2s ease',
-                                      backdropFilter: 'blur(2px)'
-                                    }}>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const isPdf = currentPlayer.documents[doc.key]?.type === 'application/pdf';
-                                          setPreviewDoc({
-                                            open: true,
-                                            url: previews[doc.key],
-                                            type: isPdf ? 'pdf' : 'image',
-                                            title: doc.title
-                                          });
-                                        }}
-                                        className="btn-zoom"
-                                        style={{
-                                          width: '36px', height: '36px', borderRadius: '50%',
-                                          backgroundColor: '#fff', color: '#1e293b', border: 'none',
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                                        }}
-                                      >
-                                        <FaSearchPlus/>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          document.getElementById(`file-${doc.key}`).click();
-                                        }}
-                                        className="btn-change"
-                                        style={{
-                                          width: '36px', height: '36px', borderRadius: '50%',
-                                          backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                                        }}
-                                      >
-                                        <FaSyncAlt />
-                                      </button>
+                                      )}
+                                      <div className="overlay-actions" style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, right: 0, bottom: 0,
+                                        backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '12px',
+                                        opacity: 0,
+                                        transition: 'opacity 0.2s ease',
+                                        backdropFilter: 'blur(2px)'
+                                      }}>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const isPdf = currentPlayer.documents[doc.key]?.type === 'application/pdf';
+                                            setPreviewDoc({
+                                              open: true,
+                                              url: previews[doc.key],
+                                              type: isPdf ? 'pdf' : 'image',
+                                              title: doc.title
+                                            });
+                                          }}
+                                          className="btn-zoom"
+                                          style={{
+                                            width: '36px', height: '36px', borderRadius: '50%',
+                                            backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                          }}
+                                        >
+                                          <FaSearchPlus />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            document.getElementById(`file-${doc.key}`).click();
+                                          }}
+                                          className="btn-change"
+                                          style={{
+                                            width: '36px', height: '36px', borderRadius: '50%',
+                                            backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                          }}
+                                        >
+                                          <FaSyncAlt />
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
-                                  <div 
-                                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                                    style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
-                                  >
-                                    <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                                    <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                  ) : (
+                                    <div
+                                      onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                                      style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                                    >
+                                      <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                                      <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                    </div>
+                                  )}
+                                </div>
+                                <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                                {doc.subtitle && (
+                                  <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
+                                )}
+                                <div style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '4px 12px',
+                                  borderRadius: '20px',
+                                  backgroundColor: currentPlayer.documents[doc.key] ? '#dcfce7' : '#f1f5f9',
+                                  color: currentPlayer.documents[doc.key] ? '#166534' : '#64748b',
+                                  fontSize: '10px',
+                                  fontWeight: '800'
+                                }}>
+                                  {currentPlayer.documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                                </div>
+                                {doc.key === 'foto' && !currentPlayer.documents.foto && failedPhoto && (
+                                  <div style={{ marginTop: '8px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={forceLoadFailedPhoto}
+                                      style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        backgroundColor: '#f59e0b',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '11px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '4px',
+                                        boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
+                                        transition: 'background-color 0.2s'
+                                      }}
+                                      onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
+                                      onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
+                                    >
+                                      ⚠️ Cargar igualmente
+                                    </button>
                                   </div>
                                 )}
+                                <input
+                                  type="file"
+                                  id={`file-${doc.key}`}
+                                  style={{ display: 'none' }}
+                                  accept="image/*,.pdf"
+                                  onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
+                                />
                               </div>
-                              <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                              {doc.subtitle && (
-                                <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
-                              )}
-                              <div style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '4px 12px',
-                                borderRadius: '20px',
-                                backgroundColor: currentPlayer.documents[doc.key] ? '#dcfce7' : '#f1f5f9',
-                                color: currentPlayer.documents[doc.key] ? '#166534' : '#64748b',
-                                fontSize: '10px',
-                                fontWeight: '800'
-                              }}>
-                                {currentPlayer.documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                              </div>
-                              <input
-                                type="file"
-                                id={`file-${doc.key}`}
-                                style={{ display: 'none' }}
-                                accept="image/*,.pdf"
-                                onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
-                              />
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </section>
-                      
-                    {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
-                    <Modal
-                      estaAbierto={previewDoc.open}
-                      titulo={previewDoc.title}
-                      alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
-                      tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
-                      pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
-                    >
-                      <div style={{
-                        width: '100%',
-                        height: previewDoc.type === 'pdf' ? '100%' : 'auto',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: '#0f172a', // más elegante para PDF
-                        borderRadius: '12px',
-                        overflow: 'hidden'
-                      }}>
-                        {previewDoc.type === 'pdf' ? (
-                          <iframe
-                            src={previewDoc.url}
-                            style={{ width: '1800px', height: '70vh', border: 'none' }}title="Visor de PDF"
-                          />
-                        ) : (
-                          <img
-                            src={previewDoc.url}
-                            alt="Preview Grande"
-                            style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
-                          />
-                        )}
-                      </div>
-                    </Modal>
+                            )
+                          })}
+                        </div>
+                      </section>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Formulario de afiliación</h3>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s)</label>
-                         <input 
-                           type="text" 
-                           value={currentPlayer.firstName}
-                           onChange={e => setCurrentPlayer({...currentPlayer, firstName: e.target.value})}
-                           placeholder="Ej. Juan" 
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                         />
-                       </div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno</label>
-                         <input 
-                           type="text" 
-                           value={currentPlayer.lastNamePaterno}
-                           onChange={e => setCurrentPlayer({...currentPlayer, lastNamePaterno: e.target.value})}
-                           placeholder="Ej. Pérez" 
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                         />
-                       </div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
-                          <input 
-                            type="text" 
-                            value={currentPlayer.lastNameMaterno}
-                            onChange={e => setCurrentPlayer({...currentPlayer, lastNameMaterno: e.target.value})}
-                            placeholder="Ej. Gómez" 
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                      {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
+                      <Modal
+                        estaAbierto={previewDoc.open}
+                        titulo={previewDoc.title}
+                        alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+                        tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+                        pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+                      >
+                        <div style={{
+                          width: '100%',
+                          height: previewDoc.type === 'pdf' ? '100%' : 'auto',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          backgroundColor: '#0f172a', // más elegante para PDF
+                          borderRadius: '12px',
+                          overflow: 'hidden'
+                        }}>
+                          {previewDoc.type === 'pdf' ? (
+                            <iframe
+                              src={previewDoc.url}
+                              style={{ width: '1800px', height: '70vh', border: 'none' }} title="Visor de PDF"
+                            />
+                          ) : (
+                            <img
+                              src={previewDoc.url}
+                              alt="Preview Grande"
+                              style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+                            />
+                          )}
+                        </div>
+                      </Modal>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Formulario de afiliación</h3>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s)</label>
+                          <input
+                            type="text"
+                            value={currentPlayer.firstName}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, firstName: e.target.value })}
+                            placeholder="Ej. Juan"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                           />
                         </div>
-                     </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno</label>
+                          <input
+                            type="text"
+                            value={currentPlayer.lastNamePaterno}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, lastNamePaterno: e.target.value })}
+                            placeholder="Ej. Pérez"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
+                          <input
+                            type="text"
+                            value={currentPlayer.lastNameMaterno}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, lastNameMaterno: e.target.value })}
+                            placeholder="Ej. Gómez"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          />
+                        </div>
+                      </div>
 
-                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             value={currentPlayer.shirtNumber}
-                            onChange={e => setCurrentPlayer({...currentPlayer, shirtNumber: e.target.value})}
-                            placeholder="10" 
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, shirtNumber: e.target.value })}
+                            placeholder="10"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                           />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición</label>
-                          <select 
+                          <select
                             value={currentPlayer.positionId}
-                            onChange={e => setCurrentPlayer({...currentPlayer, positionId: parseInt(e.target.value)})}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, positionId: parseInt(e.target.value) })}
                             style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
                           >
                             <option value="">Posición...</option>
@@ -2649,469 +2838,466 @@ export default function ConfigurarEquipo() {
                             ))}
                           </select>
                         </div>
-                     </div>
+                      </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP</label>
-                         <input 
-                           type="text" 
-                           value={currentPlayer.curp}
-                           onChange={(e) => {
-                             const rawValue = e.target.value.toUpperCase();
-                             const filteredValue = rawValue.replace(/[^A-Z0-9]/g, '');
-                             const error = validateCurp(filteredValue);
-                             setFormErrors({ ...formErrors, curp: error });
-                             let sId = currentPlayer.sexo_id;
-                             if (filteredValue.length >= 11) {
-                               const char = filteredValue.charAt(10);
-                               if (char === 'M') sId = 2;
-                               else if (char === 'H') sId = 1;
-                             }
-                             setCurrentPlayer({...currentPlayer, curp: filteredValue, sexo_id: sId});
-                           }}
-                           placeholder="ABCD..." 
-                           maxLength={18}
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                         />
-                         {formErrors.curp && <small style={{ color: 'red', fontSize: '12px' }}>{formErrors.curp}</small>}
-                       </div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI</label>
-                         <input 
-                           type="text" 
-                           value={currentPlayer.nui}
-                           onChange={e => setCurrentPlayer({...currentPlayer, nui: e.target.value})}
-                           placeholder="NUI o Id FMF..." 
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                         />
-                       </div>
-                    </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP</label>
+                          <input
+                            type="text"
+                            value={currentPlayer.curp}
+                            onChange={(e) => {
+                              const rawValue = e.target.value.toUpperCase();
+                              const filteredValue = rawValue.replace(/[^A-Z0-9]/g, '');
+                              const error = validateCurp(filteredValue);
+                              setFormErrors({ ...formErrors, curp: error });
+                              let sId = currentPlayer.sexo_id;
+                              if (filteredValue.length >= 11) {
+                                const char = filteredValue.charAt(10);
+                                if (char === 'M') sId = 2;
+                                else if (char === 'H') sId = 1;
+                              }
+                              setCurrentPlayer({ ...currentPlayer, curp: filteredValue, sexo_id: sId });
+                            }}
+                            placeholder="ABCD..."
+                            maxLength={18}
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          />
+                          {formErrors.curp && <small style={{ color: 'red', fontSize: '12px' }}>{formErrors.curp}</small>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI</label>
+                          <input
+                            type="text"
+                            value={currentPlayer.nui}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, nui: e.target.value })}
+                            placeholder="NUI o Id FMF..."
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          />
+                        </div>
+                      </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac.</label>
-                         <input 
-                           type="date" 
-                           value={currentPlayer.birthDate}
-                           onChange={e => setCurrentPlayer({...currentPlayer, birthDate: e.target.value})}
-                           placeholder="DD/MM/AAAA" 
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                         />
-                       </div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento</label>
-                         <input 
-                           type="text" 
-                           value={currentPlayer.birthPlace}
-                           onChange={e => setCurrentPlayer({...currentPlayer, lugarNacimiento: e.target.value})}
-                           placeholder="Ej. Monterrey, NL" 
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                         />
-                       </div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo</label>
-                         <select 
-                           value={currentPlayer.sexo_id}
-                           onChange={e => setCurrentPlayer({...currentPlayer, sexo_id: parseInt(e.target.value)})}
-                           style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
-                         >
-                           <option value={1}>MASCULINO</option>
-                           <option value={2}>FEMENINO</option>
-                         </select>
-                       </div>
-                    </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac.</label>
+                          <input
+                            type="date"
+                            value={currentPlayer.birthDate}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, birthDate: e.target.value })}
+                            placeholder="DD/MM/AAAA"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento</label>
+                          <input
+                            type="text"
+                            value={currentPlayer.lugarNacimiento}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, lugarNacimiento: e.target.value })}
+                            placeholder="Ej. Monterrey, NL"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo</label>
+                          <select
+                            value={currentPlayer.sexo_id}
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, sexo_id: parseInt(e.target.value) })}
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
+                          >
+                            <option value={1}>MASCULINO</option>
+                            <option value={2}>FEMENINO</option>
+                          </select>
+                        </div>
+                      </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico</label>
-                          <input 
-                            type="email" 
+                          <input
+                            type="email"
                             value={currentPlayer.email}
-                            onChange={e => setCurrentPlayer({...currentPlayer, email: e.target.value})}
-                            placeholder="correo@ejemplo.com" 
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, email: e.target.value })}
+                            placeholder="correo@ejemplo.com"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                           />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Número de Teléfono</label>
-                          <input 
-                            type="tel" 
+                          <input
+                            type="tel"
                             value={currentPlayer.telefono}
-                            onChange={e => setCurrentPlayer({...currentPlayer, telefono: e.target.value})}
-                            placeholder="10 dígitos numericos" 
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                            onChange={e => setCurrentPlayer({ ...currentPlayer, telefono: e.target.value })}
+                            placeholder="10 dígitos numericos"
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                           />
                         </div>
-                     </div>
-
-                     {/* SELECTOR DE NACIONALIDAD E INTERNACIONALES */}
-                     <div style={{ marginBottom: '30px' }}>
-                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Nacionalidad del Jugador</label>
-                       <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', width: 'fit-content', marginBottom: currentPlayer.esForaneo ? '20px' : '0' }}>
-                         <button
-                           type="button"
-                           onClick={() => setCurrentPlayer({...currentPlayer, esForaneo: false})}
-                           style={{
-                             padding: '8px 20px', borderRadius: '10px', border: 'none',
-                             background: !currentPlayer.esForaneo ? 'white' : 'transparent',
-                             color: !currentPlayer.esForaneo ? '#0b4ea6' : '#64748b',
-                             fontWeight: '800', fontSize: '13px',
-                             boxShadow: !currentPlayer.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                             transition: 'all 0.2s', cursor: 'pointer'
-                           }}
-                         >🇲🇽 Mexicano</button>
-                         <button
-                           type="button"
-                           onClick={() => setCurrentPlayer({...currentPlayer, esForaneo: true})}
-                           style={{
-                             padding: '8px 20px', borderRadius: '10px', border: 'none',
-                             background: currentPlayer.esForaneo ? 'white' : 'transparent',
-                             color: currentPlayer.esForaneo ? '#0b4ea6' : '#64748b',
-                             fontWeight: '800', fontSize: '13px',
-                             boxShadow: currentPlayer.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                             transition: 'all 0.2s', cursor: 'pointer'
-                           }}
-                         >🌎 Extranjero</button>
-                       </div>
-
-                     </div>
-                    <div style={{ marginBottom: '25px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Asignar Seguro</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
-                        {segurosJugador.map(seg => {
-                          const id = seg.id.toString();
-                          const count = players.filter(p => p.insuranceType === id).length;
-                          const dbSeguro = equipoTemporalInfo?.seguros?.find(s => String(s.seguro_id) === id);
-                          const available = dbSeguro ? (dbSeguro.disponibles - count) : ((asignacionSeguros[id] || 0) - count);
-                          return (
-                            <button
-                              key={id}
-                              disabled={available <= 0}
-                              onClick={() => setCurrentPlayer({...currentPlayer, insuranceType: id})}
-                              style={{
-                                padding: '10px',
-                                borderRadius: '10px',
-                                border: currentPlayer.insuranceType === id ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
-                                backgroundColor: currentPlayer.insuranceType === id ? '#eff6ff' : (available <= 0 ? '#f8fafc' : 'white'),
-                                cursor: available <= 0 ? 'not-allowed' : 'pointer',
-                                textAlign: 'left',
-                                transition: 'all 0.2s',
-                                opacity: available <= 0 ? 0.6 : 1
-                              }}
-                            >
-                              <div style={{ fontSize: '11px', fontWeight: '700', color: currentPlayer.insuranceType === id ? '#0b4ea6' : '#1e293b' }}>{seg?.nombre}</div>
-                              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>Disponibles: {available}</div>
-                            </button>
-                          );
-                        })}
                       </div>
-                    </div>
 
-                    {/* ANTECEDENTES INTERNACIONALES */}
-                    <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
-                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                      {/* SELECTOR DE NACIONALIDAD E INTERNACIONALES */}
+                      <div style={{ marginBottom: '30px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '12px' }}>Nacionalidad del Jugador</label>
+                        <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', width: 'fit-content', marginBottom: currentPlayer.esForaneo ? '20px' : '0' }}>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentPlayer({ ...currentPlayer, esForaneo: false })}
+                            style={{
+                              padding: '8px 20px', borderRadius: '10px', border: 'none',
+                              background: !currentPlayer.esForaneo ? 'white' : 'transparent',
+                              color: !currentPlayer.esForaneo ? '#0b4ea6' : '#64748b',
+                              fontWeight: '800', fontSize: '13px',
+                              boxShadow: !currentPlayer.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                              transition: 'all 0.2s', cursor: 'pointer'
+                            }}
+                          >🇲🇽 Mexicano</button>
+                          <button
+                            type="button"
+                            onClick={() => setCurrentPlayer({ ...currentPlayer, esForaneo: true })}
+                            style={{
+                              padding: '8px 20px', borderRadius: '10px', border: 'none',
+                              background: currentPlayer.esForaneo ? 'white' : 'transparent',
+                              color: currentPlayer.esForaneo ? '#0b4ea6' : '#64748b',
+                              fontWeight: '800', fontSize: '13px',
+                              boxShadow: currentPlayer.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                              transition: 'all 0.2s', cursor: 'pointer'
+                            }}
+                          >🌎 Extranjero</button>
+                        </div>
+
+                      </div>
+                      <div style={{ marginBottom: '25px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '8px' }}>Asignar Seguro</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+                          {segurosJugador.map(seg => {
+                            const id = seg.id.toString();
+                            const count = players.filter(p => p.insuranceType === id).length;
+                            const dbSeguro = equipoTemporalInfo?.seguros?.find(s => String(s.seguro_id) === id);
+                            const available = dbSeguro ? (dbSeguro.disponibles - count) : ((asignacionSeguros[id] || 0) - count);
+                            return (
+                              <button
+                                key={id}
+                                disabled={available <= 0}
+                                onClick={() => setCurrentPlayer({ ...currentPlayer, insuranceType: id })}
+                                style={{
+                                  padding: '10px',
+                                  borderRadius: '10px',
+                                  border: currentPlayer.insuranceType === id ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+                                  backgroundColor: currentPlayer.insuranceType === id ? '#eff6ff' : (available <= 0 ? '#f8fafc' : 'white'),
+                                  cursor: available <= 0 ? 'not-allowed' : 'pointer',
+                                  textAlign: 'left',
+                                  transition: 'all 0.2s',
+                                  opacity: available <= 0 ? 0.6 : 1
+                                }}
+                              >
+                                <div style={{ fontSize: '11px', fontWeight: '700', color: currentPlayer.insuranceType === id ? '#0b4ea6' : '#1e293b' }}>{seg?.nombre}</div>
+                                <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>Disponibles: {available}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* ANTECEDENTES INTERNACIONALES */}
+                      <div style={{ marginBottom: '30px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '20px', borderRadius: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
                           <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
                             2. Antecedentes internacionales
                           </h4>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                             <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>¿Jugador foráneo?</label>
-                             <input 
-                               type="checkbox" 
-                               checked={currentPlayer.esForaneo}
-                               onChange={(e) => setCurrentPlayer({...currentPlayer, esForaneo: e.target.checked})}
-                               style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                             />
+                            <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>¿Jugador foráneo?</label>
+                            <input
+                              type="checkbox"
+                              checked={currentPlayer.esForaneo}
+                              onChange={(e) => setCurrentPlayer({ ...currentPlayer, esForaneo: e.target.checked })}
+                              style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                            />
                           </div>
-                       </div>
-                       
-                       {currentPlayer.esForaneo ? (
-                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                        </div>
+
+                        {currentPlayer.esForaneo ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad jugador</label>
-                              <input type="text" value={currentPlayer.nacionalidadJugador} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadJugador: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.nacionalidadJugador} onChange={e => setCurrentPlayer({ ...currentPlayer, nacionalidadJugador: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>País de residencia</label>
-                              <input type="text" value={currentPlayer.paisResidencia} onChange={e => setCurrentPlayer({...currentPlayer, paisResidencia: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.paisResidencia} onChange={e => setCurrentPlayer({ ...currentPlayer, paisResidencia: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿Ha vivido extranjero?</label>
-                              <select value={currentPlayer.haVividoExtranjero ? '1' : '0'} onChange={e => setCurrentPlayer({...currentPlayer, haVividoExtranjero: e.target.value === '1'})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}>
-                                 <option value="0">No</option>
-                                 <option value="1">Sí</option>
+                              <select value={currentPlayer.haVividoExtranjero ? '1' : '0'} onChange={e => setCurrentPlayer({ ...currentPlayer, haVividoExtranjero: e.target.value === '1' })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}>
+                                <option value="0">No</option>
+                                <option value="1">Sí</option>
                               </select>
                             </div>
                             {currentPlayer.haVividoExtranjero && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿Dónde?</label>
-                                <input type="text" value={currentPlayer.dondeVividoExtranjero} onChange={e => setCurrentPlayer({...currentPlayer, dondeVividoExtranjero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                                <input type="text" value={currentPlayer.dondeVividoExtranjero} onChange={e => setCurrentPlayer({ ...currentPlayer, dondeVividoExtranjero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                               </div>
                             )}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad padre</label>
-                              <input type="text" value={currentPlayer.nacionalidadPadre} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadPadre: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.nacionalidadPadre} onChange={e => setCurrentPlayer({ ...currentPlayer, nacionalidadPadre: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad madre</label>
-                              <input type="text" value={currentPlayer.nacionalidadMadre} onChange={e => setCurrentPlayer({...currentPlayer, nacionalidadMadre: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.nacionalidadMadre} onChange={e => setCurrentPlayer({ ...currentPlayer, nacionalidadMadre: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', gridColumn: '1 / -1' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Registro Asoc. Extranjera previo a FMF</label>
-                              <textarea value={currentPlayer.registroAsociacionExtranjera} onChange={e => setCurrentPlayer({...currentPlayer, registroAsociacionExtranjera: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} rows={2}></textarea>
+                              <textarea value={currentPlayer.registroAsociacionExtranjera} onChange={e => setCurrentPlayer({ ...currentPlayer, registroAsociacionExtranjera: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} rows={2}></textarea>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nacionalidad abuelo paterno</label>
-                              <input type="text" value={currentPlayer.nacAbueloPaterno} onChange={e => setCurrentPlayer({...currentPlayer, nacAbueloPaterno: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.nacAbueloPaterno} onChange={e => setCurrentPlayer({ ...currentPlayer, nacAbueloPaterno: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nac. abuela paterna</label>
-                              <input type="text" value={currentPlayer.nacAbuelaPaterna} onChange={e => setCurrentPlayer({...currentPlayer, nacAbuelaPaterna: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.nacAbuelaPaterna} onChange={e => setCurrentPlayer({ ...currentPlayer, nacAbuelaPaterna: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nac. abuelo materno</label>
-                              <input type="text" value={currentPlayer.nacAbueloMaterno} onChange={e => setCurrentPlayer({...currentPlayer, nacAbueloMaterno: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.nacAbueloMaterno} onChange={e => setCurrentPlayer({ ...currentPlayer, nacAbueloMaterno: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nac. abuela materna</label>
-                              <input type="text" value={currentPlayer.nacAbuelaMaterna} onChange={e => setCurrentPlayer({...currentPlayer, nacAbuelaMaterna: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                              <input type="text" value={currentPlayer.nacAbuelaMaterna} onChange={e => setCurrentPlayer({ ...currentPlayer, nacAbuelaMaterna: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', gridColumn: '1 / -1' }}>
                               <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>¿Club extranjero o Torneos internacionales escolares?</label>
-                              <textarea value={currentPlayer.juegoClubExtranjero} onChange={e => setCurrentPlayer({...currentPlayer, juegoClubExtranjero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} rows={2}></textarea>
+                              <textarea value={currentPlayer.juegoClubExtranjero} onChange={e => setCurrentPlayer({ ...currentPlayer, juegoClubExtranjero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} rows={2}></textarea>
                             </div>
-                         </div>
-                       ) : (
-                         <p style={{ margin: 0, fontSize: '12px', color: '#9a3412', fontStyle: 'italic' }}>
-                            El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos.
-                         </p>
-                       )}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9', gap: '15px' }}>
-                       <div style={{ display: 'flex', gap: '10px' }}>
-                         <button 
-                          disabled={!currentPlayer.firstName}
-                          style={{ 
-                            background: 'none', border: 'none', color: !currentPlayer.firstName ? '#94a3b8' : '#0b4ea6', 
-                            fontSize: '14px', fontWeight: '800', cursor: !currentPlayer.firstName ? 'not-allowed' : 'pointer', 
-                            display: 'flex', alignItems: 'center', gap: '8px', opacity: !currentPlayer.firstName ? 0.6 : 1
-                          }}
-                          onClick={handleDownloadPlayerPDF}
-                        >
-                           📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato</span>
-                        </button>
-                        {editingPlayerId && (
-                          <button
-                            onClick={resetPlayerForm}
-                            style={{
-                              background: 'none', border: 'none', color: '#64748b',
-                              fontSize: '14px', fontWeight: '800', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', gap: '8px'
-                            }}
-                          >
-                            ✕ Limpiar
-                          </button>
-                        )}
-                       </div>
-
-                      <button 
-                        onClick={async () => {
-
-                          const errorFecha = validarFechaNacimiento(currentPlayer.birthDate);
-                          if (errorFecha) {
-                            Swal.fire('Atención', errorFecha, 'warning');
-                            return;
-                          }
-                          
-                          const docs = currentPlayer.documents || {};
-                          const hasMinDocs = docs.foto && (
-                            esMenorDeEdadJugador
-                              ? (docs.ineTutor && docs.identificacionMenor)
-                              : docs.ine
-                          );
-                          
-                          // Validación básica
-                          if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs || !currentPlayer.positionId) {
-                            const msgDocs = esMenorDeEdadJugador
-                              ? 'Por favor ingresa el nombre, selecciona posición, seguro y sube la INE del padre o tutor, la identificación del menor y la fotografía para continuar.'
-                              : 'Por favor ingresa el nombre, selecciona posición, seguro y sube INE y Foto para continuar.';
-                            Swal.fire('Atención', msgDocs, 'warning');
-                            return;
-                          }
-
-                          // Validación estricta para Extranjeros
-                          if (currentPlayer.esForaneo) {
-                            const fields = [
-                              'nacionalidadJugador', 'paisResidencia', 'nacionalidadPadre', 'nacionalidadMadre',
-                              'registroAsociacionExtranjera', 'nacAbueloPaterno', 'nacAbuelaPaterna',
-                              'nacAbueloMaterno', 'nacAbuelaMaterna', 'juegoClubExtranjero'
-                            ];
-                            const incomplete = fields.some(f => !String(currentPlayer[f] || '').trim());
-                            const liveValid = !currentPlayer.haVividoExtranjero || (currentPlayer.haVividoExtranjero && String(currentPlayer.dondeVividoExtranjero || '').trim());
-                            
-                            if (incomplete || !liveValid) {
-                              Swal.fire('Atención', 'Al ser extranjero, TODOS los campos de antecedentes internacionales son obligatorios.', 'warning');
-                              return;
-                            }
-                          }
-
-                          // Validar número de camiseta único
-                          if (currentPlayer.shirtNumber) {
-                            const duplicate = players.find(p => p.shirtNumber === currentPlayer.shirtNumber && p.id !== editingPlayerId);
-                            if (duplicate) {
-                              Swal.fire('Atención', `El número de camiseta ${currentPlayer.shirtNumber} ya está asignado a ${duplicate.firstName}.`, 'error');
-                              return;
-                            }
-                          }
-
-                          if (editingPlayerId) {
-                            // Editar jugador existente
-                            setPlayers(players.map(p => p.id === editingPlayerId ? { ...currentPlayer } : p));
-                            Swal.fire({
-                              title: '¡Actualizado!',
-                              text: `La información de ${currentPlayer.firstName} ha sido actualizada.`,
-                              icon: 'success',
-                              timer: 2000,
-                              showConfirmButton: false
-                            });
-                            resetPlayerForm();
-                          } else {
-                            // Registrar nuevo jugador
-                            // 1. Descargamos el PDF
-                            await handleDownloadPlayerPDF();
-                            // 2. Guardamos el jugador pendiente y abrimos el modal premium
-                            setPendingPlayer({ ...currentPlayer });
-                            setSignedForm(null);
-                            setShowFinishModal(true);
-                          }
-                        }}
-                        style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(11, 78, 166, 0.3)', fontSize: '15px' }}
-                      >
-                        {editingPlayerId ? '💾 Guardar Cambios' : '+ Registrar Jugador'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* LATERAL: RESUMEN DE EQUIPO */}
-                  <div>
-                    <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>
-                        {tieneSlotDisponible ? 'Seguros Disponibles' : 'Resumen de Seguros'}
-                      </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                        {segurosJugador.map(seg => {
-                          const id = seg.id.toString();
-
-                          if (tieneSlotDisponible) {
-                            const disponible = equipoTemporalInfo?.seguros?.find(s => s.seguro_id === seg.id)?.disponibles || 0;
-                            const registrados = players.filter(p => p.insuranceType === id).length;
-                            const quedan = disponible - registrados;
-
-                            return (
-                              <div key={id}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
-                                   <span style={{ fontWeight: '900', color: quedan > 0 ? '#047857' : '#dc2626' }}>
-                                     {registrados} / {disponible}
-                                   </span>
-                                </div>
-                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                                   <div style={{
-                                     width: `${disponible > 0 ? (registrados / disponible) * 100 : 0}%`,
-                                     height: '100%',
-                                     background: quedan > 0 ? 'linear-gradient(90deg, #10b981, #6ee7b7)' : 'linear-gradient(90deg, #dc2626, #ef4444)',
-                                     borderRadius: '5px',
-                                     transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-                                   }}></div>
-                                </div>
-                                <div style={{ fontSize: '11px', color: quedan > 0 ? '#059669' : '#991b1b', marginTop: '4px', fontWeight: '600' }}>
-                                  {quedan > 0 ? `${quedan} disponible${quedan !== 1 ? 's' : ''}` : 'Sin disponibilidad'}
-                                </div>
-                              </div>
-                            );
-                          } else {
-                            const count = players.filter(p => p.insuranceType === id).length;
-                            const total = asignacionSeguros[id] || 0;
-                            const percent = total > 0 ? (count / total) * 100 : 0;
-
-                            return (
-                              <div key={id}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-                                   <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
-                                   <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
-                                </div>
-                                <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
-                                   <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
-                                </div>
-                              </div>
-                            );
-                          }
-                        })}
-                      </div>
-                    </div>
-
-                    <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>Jugadores Agregados</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
-                        {players.length === 0 ? (
-                          <div style={{ padding: '40px 10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '36px', marginBottom: '15px', opacity: 0.2 }}>🏃‍♂️</div>
-                            <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0, fontWeight: '600' }}>Comienza agregando un jugador.</p>
                           </div>
                         ) : (
-                          players.map(p => (
-                            <div 
-                              key={p.id} 
-                              onClick={() => loadPlayerForEditing(p.id)}
-                              style={{ 
-                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
-                                background: editingPlayerId === p.id ? '#dbeafe' : '#f8fafc', 
-                                borderRadius: '14px', 
-                                border: editingPlayerId === p.id ? '2px solid #0b4ea6' : '1px solid #f1f5f9',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s',
-                                boxShadow: editingPlayerId === p.id ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none'
+                          <p style={{ margin: 0, fontSize: '12px', color: '#9a3412', fontStyle: 'italic' }}>
+                            El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos.
+                          </p>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '25px', borderTop: '1px solid #f1f5f9', gap: '15px' }}>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button
+                            disabled={!currentPlayer.firstName}
+                            style={{
+                              background: 'none', border: 'none', color: !currentPlayer.firstName ? '#94a3b8' : '#0b4ea6',
+                              fontSize: '14px', fontWeight: '800', cursor: !currentPlayer.firstName ? 'not-allowed' : 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '8px', opacity: !currentPlayer.firstName ? 0.6 : 1
+                            }}
+                            onClick={handleDownloadPlayerPDF}
+                          >
+                            📥 <span style={{ textDecoration: !currentPlayer.firstName ? 'none' : 'underline' }}>Descargar Formato</span>
+                          </button>
+                          {editingPlayerId && (
+                            <button
+                              onClick={resetPlayerForm}
+                              style={{
+                                background: 'none', border: 'none', color: '#64748b',
+                                fontSize: '14px', fontWeight: '800', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '8px'
                               }}
                             >
-                               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: editingPlayerId === p.id ? 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px', transition: 'all 0.3s' }}>
-                                 {p.firstName?.charAt(0) || 'J'}
-                               </div>
-                               <div style={{ flex: 1 }}>
-                                 <div style={{ fontSize: '13px', fontWeight: editingPlayerId === p.id ? '900' : '800', color: editingPlayerId === p.id ? '#0b4ea6' : '#1e293b', transition: 'all 0.3s' }}>{p.firstName} {p.lastNamePaterno}</div>
-                                 <div style={{ fontSize: '11px', color: '#64748b' }}>{segurosJugador.find(s => s.id.toString() === p.insuranceType)?.nombre}</div>
-                               </div>
-                               <button 
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   setPlayers(players.filter(pl => pl.id !== p.id));
-                                   if (editingPlayerId === p.id) {
-                                     resetPlayerForm();
-                                   }
-                                 }} 
-                                 style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
-                                 onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
-                                 onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
-                               >
-                                 ×
-                               </button>
+                              ✕ Limpiar
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={async () => {
+
+                            const errorFecha = validarFechaNacimiento(currentPlayer.birthDate);
+                            if (errorFecha) {
+                              Swal.fire('Atención', errorFecha, 'warning');
+                              return;
+                            }
+
+                            const docs = currentPlayer.documents || {};
+                            const hasMinDocs = docs.acta && docs.foto && (
+                              esMenorDeEdadJugador
+                                ? (docs.ineTutor && docs.identificacionMenor)
+                                : docs.ine
+                            );
+
+                            // Validación básica
+                            if (!currentPlayer.firstName || !currentPlayer.insuranceType || !hasMinDocs || !currentPlayer.positionId) {
+                              const msgDocs = esMenorDeEdadJugador
+                                ? 'Por favor ingresa el nombre, selecciona posición, seguro y sube el acta de nacimiento, la INE del padre o tutor, la identificación del menor y la fotografía para continuar.'
+                                : 'Por favor ingresa el nombre, selecciona posición, seguro y sube el acta de nacimiento, INE y Foto para continuar.';
+                              Swal.fire('Atención', msgDocs, 'warning');
+                              return;
+                            }
+
+                            // Validación estricta para Extranjeros
+                            if (currentPlayer.esForaneo) {
+                              const fields = [
+                                'nacionalidadJugador', 'paisResidencia', 'nacionalidadPadre', 'nacionalidadMadre',
+                                'registroAsociacionExtranjera', 'nacAbueloPaterno', 'nacAbuelaPaterna',
+                                'nacAbueloMaterno', 'nacAbuelaMaterna', 'juegoClubExtranjero'
+                              ];
+                              const incomplete = fields.some(f => !String(currentPlayer[f] || '').trim());
+                              const liveValid = !currentPlayer.haVividoExtranjero || (currentPlayer.haVividoExtranjero && String(currentPlayer.dondeVividoExtranjero || '').trim());
+
+                              if (incomplete || !liveValid) {
+                                Swal.fire('Atención', 'Al ser extranjero, TODOS los campos de antecedentes internacionales son obligatorios.', 'warning');
+                                return;
+                              }
+                            }
+
+                            // Validar número de camiseta único
+                            if (currentPlayer.shirtNumber) {
+                              const duplicate = players.find(p => p.shirtNumber === currentPlayer.shirtNumber && p.id !== editingPlayerId);
+                              if (duplicate) {
+                                Swal.fire('Atención', `El número de camiseta ${currentPlayer.shirtNumber} ya está asignado a ${duplicate.firstName}.`, 'error');
+                                return;
+                              }
+                            }
+
+                            if (editingPlayerId) {
+                              // Editar jugador existente
+                              setPlayers(players.map(p => p.id === editingPlayerId ? { ...currentPlayer } : p));
+                              Swal.fire({
+                                title: '¡Actualizado!',
+                                text: `La información de ${currentPlayer.firstName} ha sido actualizada.`,
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                              });
+                              resetPlayerForm();
+                            } else {
+                              // Registrar nuevo jugador: abrir el modal de subida de formato
+                              setPendingPlayer({ ...currentPlayer });
+                              setSignedForm(null);
+                              setShowFinishModal(true);
+                            }
+                          }}
+                          style={{ padding: '14px 40px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(11, 78, 166, 0.3)', fontSize: '15px' }}
+                        >
+                          {editingPlayerId ? '💾 Guardar Cambios' : '+ Registrar Jugador'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* LATERAL: RESUMEN DE EQUIPO */}
+                    <div>
+                      <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', marginBottom: '25px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>
+                          {tieneSlotDisponible ? 'Seguros Disponibles' : 'Resumen de Seguros'}
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                          {segurosJugador.map(seg => {
+                            const id = seg.id.toString();
+
+                            if (tieneSlotDisponible) {
+                              const disponible = equipoTemporalInfo?.seguros?.find(s => s.seguro_id === seg.id)?.disponibles || 0;
+                              const registrados = players.filter(p => p.insuranceType === id).length;
+                              const quedan = disponible - registrados;
+
+                              return (
+                                <div key={id}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                    <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                    <span style={{ fontWeight: '900', color: quedan > 0 ? '#047857' : '#dc2626' }}>
+                                      {registrados} / {disponible}
+                                    </span>
+                                  </div>
+                                  <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                    <div style={{
+                                      width: `${disponible > 0 ? (registrados / disponible) * 100 : 0}%`,
+                                      height: '100%',
+                                      background: quedan > 0 ? 'linear-gradient(90deg, #10b981, #6ee7b7)' : 'linear-gradient(90deg, #dc2626, #ef4444)',
+                                      borderRadius: '5px',
+                                      transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }}></div>
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: quedan > 0 ? '#059669' : '#991b1b', marginTop: '4px', fontWeight: '600' }}>
+                                    {quedan > 0 ? `${quedan} disponible${quedan !== 1 ? 's' : ''}` : 'Sin disponibilidad'}
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              const count = players.filter(p => p.insuranceType === id).length;
+                              const total = asignacionSeguros[id] || 0;
+                              const percent = total > 0 ? (count / total) * 100 : 0;
+
+                              return (
+                                <div key={id}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
+                                    <span style={{ fontWeight: '700', color: '#475569' }}>{seg.nombre}</span>
+                                    <span style={{ fontWeight: '900', color: '#1e293b' }}>{count} / {total}</span>
+                                  </div>
+                                  <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0b4ea6, #60a5fa)', borderRadius: '5px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })}
+                        </div>
+                      </div>
+
+                      <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#0b4ea6', marginBottom: '20px', textTransform: 'uppercase' }}>Jugadores Agregados</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+                          {players.length === 0 ? (
+                            <div style={{ padding: '40px 10px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '36px', marginBottom: '15px', opacity: 0.2 }}>🏃‍♂️</div>
+                              <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0, fontWeight: '600' }}>Comienza agregando un jugador.</p>
                             </div>
-                          ))
-                        )}
+                          ) : (
+                            players.map(p => (
+                              <div
+                                key={p.id}
+                                onClick={() => loadPlayerForEditing(p.id)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                                  background: editingPlayerId === p.id ? '#dbeafe' : '#f8fafc',
+                                  borderRadius: '14px',
+                                  border: editingPlayerId === p.id ? '2px solid #0b4ea6' : '1px solid #f1f5f9',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.3s',
+                                  boxShadow: editingPlayerId === p.id ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none'
+                                }}
+                              >
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: editingPlayerId === p.id ? 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)' : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '14px', transition: 'all 0.3s' }}>
+                                  {p.firstName?.charAt(0) || 'J'}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: '13px', fontWeight: editingPlayerId === p.id ? '900' : '800', color: editingPlayerId === p.id ? '#0b4ea6' : '#1e293b', transition: 'all 0.3s' }}>{p.firstName} {p.lastNamePaterno}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748b' }}>{segurosJugador.find(s => s.id.toString() === p.insuranceType)?.nombre}</div>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPlayers(players.filter(pl => pl.id !== p.id));
+                                    if (editingPlayerId === p.id) {
+                                      resetPlayerForm();
+                                    }
+                                  }}
+                                  style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
-                   {!isAdmin && <button 
-                    onClick={saveDraft}
-                    style={{ padding: '14px 30px', background: '#f8fafc', color: '#0b4ea6', border: '1.5px solid #0b4ea6', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}
-                  >
-                    💾 Guardar Borrador
-                  </button>}
-                  <button 
-                    onClick={async () => {
+
+                  <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
+                    {!isAdmin && <button
+                      onClick={saveDraft}
+                      style={{ padding: '14px 30px', background: '#f8fafc', color: '#0b4ea6', border: '1.5px solid #0b4ea6', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '15px' }}
+                    >
+                      💾 Guardar Borrador
+                    </button>}
+                    <button
+                      onClick={async () => {
                         try {
                           Swal.fire({
                             title: 'Guardando Equipo...',
@@ -3136,7 +3322,7 @@ export default function ConfigurarEquipo() {
                             const nextPreRegistro = { ...(preRegistro || {}) };
                             delete nextPreRegistro.equipo_temporal_id;
                             localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
-                          } catch {}
+                          } catch { }
 
                           setSuccessMessage(`Se ha sido registrado exitosamente el equipo/jugadores.`);
                           setShowSuccessModal(true);
@@ -3147,204 +3333,221 @@ export default function ConfigurarEquipo() {
                           // Para debuguear: 
                           //Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
                         }
-                    }}
-                    disabled={players.length === 0}
-                    style={{ 
-                      padding: '18px 60px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '18px',
-                      cursor: players.length === 0 ? 'not-allowed' : 'pointer', opacity: players.length === 0 ? 0.5 : 1, transition: 'all 0.3s',
-                      boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)'
-                    }}
-                  >
-                    🚀 Finalizar Configuración y Registro
-                  </button>
+                      }}
+                      disabled={players.length === 0}
+                      style={{
+                        padding: '18px 60px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '18px',
+                        cursor: players.length === 0 ? 'not-allowed' : 'pointer', opacity: players.length === 0 ? 0.5 : 1, transition: 'all 0.3s',
+                        boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)'
+                      }}
+                    >
+                      🚀 Finalizar Configuración y Registro
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
           </>
         )}
 
-      {/* MODAL CONFIGURACIÓN EQUIPO */}
-      {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '500px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', animation: 'slideUp 0.3s ease-out' }}>
-            <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#0b4ea6', marginBottom: '30px', textAlign: 'center' }}>Identidad del Equipo</h2>
+        {/* MODAL CONFIGURACIÓN EQUIPO */}
+        {showModal && createPortal(
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+            <div style={{ background: 'white', borderRadius: '24px', padding: '40px', maxWidth: '500px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', animation: 'slideUp 0.3s ease-out' }}>
+              <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#0b4ea6', marginBottom: '30px', textAlign: 'center' }}>Identidad del Equipo</h2>
 
-            <div style={{ marginBottom: '25px' }}>
-              <label style={{ display: 'block', fontWeight: '800', marginBottom: '10px', color: '#1e293b', fontSize: '14px', textTransform: 'uppercase' }}>Nombre del Equipo</label>
-              <input type="text" placeholder="Ej: Rayos de Afaem" value={modalData.teamName} onChange={handleTeamNameChange} style={{ width: '100%', padding: '14px', border: '2px solid #e2e8f0', borderRadius: '12px', fontSize: '16px', fontWeight: '600' }} />
-            </div>
+              <div style={{ marginBottom: '25px' }}>
+                <label style={{ display: 'block', fontWeight: '800', marginBottom: '10px', color: '#1e293b', fontSize: '14px', textTransform: 'uppercase' }}>Nombre del Equipo</label>
+                <input type="text" placeholder="Ej: Rayos de Afaem" value={modalData.teamName} onChange={handleTeamNameChange} style={{ width: '100%', padding: '14px', border: '2px solid #e2e8f0', borderRadius: '12px', fontSize: '16px', fontWeight: '600' }} />
+              </div>
 
-            <div style={{ marginBottom: '25px' }}>
-              <label style={{ display: 'block', fontWeight: '800', marginBottom: '10px', color: '#1e293b', fontSize: '14px', textTransform: 'uppercase' }}>Escudo / Logo</label>
-              <div style={{ position: 'relative', height: '100px', border: '2px dashed #cbd5e1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
-                 {modalData.teamLogo ? (
-                   <div style={{ textAlign: 'center' }}>
-                     <div style={{ fontSize: '24px' }}>🖼️</div>
-                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#059669' }}>{modalData.teamLogo.name}</div>
-                   </div>
-                 ) : (
-                   <div style={{ textAlign: 'center' }}>
-                     <div style={{ fontSize: '24px', opacity: 0.5 }}>📤</div>
-                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Haz click para subir</div>
-                   </div>
-                 )}
-                 <input type="file" accept="image/*" onChange={handleTeamLogoChange} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
+              <div style={{ marginBottom: '25px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <label style={{ display: 'block', fontWeight: '800', color: '#1e293b', fontSize: '14px', textTransform: 'uppercase', margin: 0 }}>Escudo / Logo</label>
+                  <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '20px', fontWeight: '600' }}>Opcional</span>
+                </div>
+                <div style={{ position: 'relative', height: '100px', border: modalData.teamLogo ? '2px solid #10b981' : '2px dashed #cbd5e1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: modalData.teamLogo ? '#f0fdf4' : '#f8fafc', overflow: 'hidden', transition: 'all 0.2s' }}>
+                  {modalData.teamLogo ? (
+                    <div style={{ textAlign: 'center', pointerEvents: 'none' }}>
+                      <div style={{ fontSize: '24px' }}>🖼️</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#059669' }}>{modalData.teamLogo.name}</div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', pointerEvents: 'none' }}>
+                      <div style={{ fontSize: '24px', opacity: 0.5 }}>📤</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Haz click para subir (opcional)</div>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" onChange={handleTeamLogoChange} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} />
+                </div>
+                {modalData.teamLogo && (
+                  <button
+                    onClick={() => setModalData(prev => ({ ...prev, teamLogo: null }))}
+                    style={{ marginTop: '8px', background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', fontWeight: '700', cursor: 'pointer', padding: '0', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    ✕ Quitar logo seleccionado
+                  </button>
+                )}
+              </div>
+
+              <div style={{ background: '#f1f5f9', padding: '20px', borderRadius: '16px', marginBottom: '30px' }}>
+                <div style={{ fontSize: '14px', marginBottom: '6px' }}><strong style={{ color: '#475569' }}>Modalidad:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.modalidades.find(m => m.id === formData.modality)?.nombre}</span></div>
+                <div style={{ fontSize: '14px', marginBottom: '6px' }}><strong style={{ color: '#475569' }}>Categoría:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.categorias.find(c => c.id === formData.category)?.nombre}</span></div>
+                <div style={{ fontSize: '14px' }}><strong style={{ color: '#475569' }}>Rama:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.ramas.find(r => r.id === formData.rama)?.nombre}</span></div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <button onClick={handleCloseModal} style={{ flex: 1, padding: '14px', border: '2px solid #e2e8f0', background: 'white', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', color: '#64748b' }}>Cerrar</button>
+                <button onClick={handleGoToPlayers} style={{ flex: 1, padding: '14px', background: '#0b4ea6', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '900' }}>Confirmar y Sig. →</button>
               </div>
             </div>
+          </div>,
+          document.body
+        )}
 
-            <div style={{ background: '#f1f5f9', padding: '20px', borderRadius: '16px', marginBottom: '30px' }}>
-              <div style={{ fontSize: '14px', marginBottom: '6px' }}><strong style={{ color: '#475569' }}>Modalidad:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.modalidades.find(m => m.id === formData.modality)?.nombre}</span></div>
-              <div style={{ fontSize: '14px', marginBottom: '6px' }}><strong style={{ color: '#475569' }}>Categoría:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.categorias.find(c => c.id === formData.category)?.nombre}</span></div>
-              <div style={{ fontSize: '14px' }}><strong style={{ color: '#475569' }}>Rama:</strong> <span style={{ color: '#0b4ea6', fontWeight: '800' }}>{catalogs.ramas.find(r => r.id === formData.rama)?.nombre}</span></div>
+        {/* MODAL EXITO FINAL */}
+        {showSuccessModal && createPortal(
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(8px)' }}>
+            <div style={{ background: 'white', borderRadius: '30px', padding: '50px', textAlign: 'center', maxWidth: '450px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', animation: 'slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+              <div style={{ width: '100px', height: '100px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 30px', fontSize: '50px', color: '#10b981' }}>🏆</div>
+              <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '15px' }}>¡Registro Completo!</h2>
+              <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.6', marginBottom: '35px' }}>{successMessage}</p>
+              <button
+                onClick={handleSuccessModalContinue}
+                style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '16px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(11, 78, 166, 0.3)' }}
+              >
+                Continuar al Panel
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* MODAL PREMIUM: SUBIR FORMATO FIRMADO */}
+        <Modal
+          estaAbierto={showFinishModal}
+          titulo="Finalizar Inscripción de Jugador"
+          alCerrar={() => setShowFinishModal(false)}
+          tamanio="medio"
+          pie={
+            <>
+              <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setShowFinishModal(false)} />
+              <BotonPrimario
+                etiqueta="Finalizar Inscripción"
+                icono={<FaCheckCircle />}
+                alHacerClick={() => {
+                  // El formato firmado es opcional — se puede subir después en AdminJugadores
+                  const finalPlayer = {
+                    ...pendingPlayer,
+                    documents: { ...pendingPlayer.documents, formato: signedForm || null }
+                  };
+                  setPlayers(prev => [...prev, finalPlayer]);
+                  setCurrentPlayer({
+                    id: Date.now(),
+                    firstName: '',
+                    lastNamePaterno: '',
+                    lastNameMaterno: '',
+                    curp: '',
+                    nui: '',
+                    birthDate: '',
+                    lugarNacimiento: '',
+                    email: '',
+                    telefono: '',
+                    sexo_id: 1,
+                    insuranceType: '',
+                    esForaneo: false,
+                    nacionalidadJugador: 'MEXICANA',
+                    paisResidencia: 'MÉXICO',
+                    haVividoExtranjero: false,
+                    dondeVividoExtranjero: '',
+                    nacionalidadPadre: '',
+                    nacionalidadMadre: '',
+                    registroAsociacionExtranjera: '',
+                    nacAbueloPaterno: '',
+                    nacAbuelaPaterna: '',
+                    nacAbueloMaterno: '',
+                    nacAbuelaMaterna: '',
+                    juegoClubExtranjero: '',
+                    shirtNumber: '',
+                    positionId: '',
+                    documents: {}
+                  });
+                  setPendingPlayer(null);
+                  setSignedForm(null);
+                  setShowFinishModal(false);
+                  Swal.fire({ title: '¡Éxito!', text: 'Jugador agregado correctamente.', icon: 'success', timer: 2000, showConfirmButton: false });
+                }}
+              />
+            </>
+          }
+        >
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', justifyContent: 'center' }}>
+              <button
+                onClick={() => handleDownloadPlayerPDF()}
+                style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0b4ea6, #063f82)', color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                📥 Descargar Formato
+              </button>
+            </div>
+            <div style={{
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '25px',
+              color: '#0369a1',
+              fontSize: '14px',
+              lineHeight: '1.6'
+            }}>
+              <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
+                Formato de Afiliación — Subida Opcional
+              </p>
+              <p style={{ margin: 0 }}>
+                Descarga el formato pre-llenado con el botón de arriba, imprímelo, fírmalo y escanéalo para subirlo.
+                <strong> Si aún no tienes el formato firmado, puedes continuar sin subirlo ahora</strong> y cargarlo después desde la sección <em>AdminJugadores → Docs</em>.
+              </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '15px' }}>
-              <button onClick={handleCloseModal} style={{ flex: 1, padding: '14px', border: '2px solid #e2e8f0', background: 'white', borderRadius: '12px', cursor: 'pointer', fontWeight: '800', color: '#64748b' }}>Cerrar</button>
-              <button onClick={handleGoToPlayers} style={{ flex: 1, padding: '14px', background: '#0b4ea6', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '900' }}>Confirmar y Sig. →</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EXITO FINAL */}
-      {showSuccessModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(8px)' }}>
-          <div style={{ background: 'white', borderRadius: '30px', padding: '50px', textAlign: 'center', maxWidth: '450px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', animation: 'slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-             <div style={{ width: '100px', height: '100px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 30px', fontSize: '50px', color: '#10b981' }}>🏆</div>
-             <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '15px' }}>¡Registro Completo!</h2>
-             <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.6', marginBottom: '35px' }}>{successMessage}</p>
-             <button 
-               onClick={handleSuccessModalContinue} 
-               style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '16px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(11, 78, 166, 0.3)' }}
-             >
-               Continuar al Panel
-             </button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL PREMIUM: SUBIR FORMATO FIRMADO */}
-      <Modal
-        estaAbierto={showFinishModal}
-        titulo="Finalizar Inscripción de Jugador"
-        alCerrar={() => setShowFinishModal(false)}
-        tamanio="medio"
-        pie={
-          <>
-            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setShowFinishModal(false)} />
-            <BotonPrimario
-              etiqueta="Finalizar Inscripción"
-              icono={<FaCheckCircle />}
-              alHacerClick={() => {
-                if (!signedForm) {
-                  Swal.fire('Atención', 'Debe subir el formato firmado para continuar.', 'warning');
-                  return;
-                }
-                const finalPlayer = {
-                  ...pendingPlayer,
-                  documents: { ...pendingPlayer.documents, formato: signedForm }
-                };
-                setPlayers(prev => [...prev, finalPlayer]);
-                setCurrentPlayer({
-                  id: Date.now(),
-                  firstName: '',
-                  lastNamePaterno: '',
-                  lastNameMaterno: '',
-                  curp: '',
-                  nui: '',
-                  birthDate: '',
-                  lugarNacimiento: '',
-                  email: '',
-                  telefono: '',
-                  sexo_id: 1,
-                  insuranceType: '',
-                  esForaneo: false,
-                  nacionalidadJugador: 'MEXICANA',
-                  paisResidencia: 'MÉXICO',
-                  haVividoExtranjero: false,
-                  dondeVividoExtranjero: '',
-                  nacionalidadPadre: '',
-                  nacionalidadMadre: '',
-                  registroAsociacionExtranjera: '',
-                  nacAbueloPaterno: '',
-                  nacAbuelaPaterna: '',
-                  nacAbueloMaterno: '',
-                  nacAbuelaMaterna: '',
-                  juegoClubExtranjero: '',
-                  shirtNumber: '',
-                  positionId: '',
-                  documents: {}
-                });
-                setPendingPlayer(null);
-                setSignedForm(null);
-                setShowFinishModal(false);
-                Swal.fire({ title: '¡Éxito!', text: 'Jugador agregado correctamente.', icon: 'success', timer: 2000, showConfirmButton: false });
+            <div
+              onClick={() => document.getElementById('presidente-signed-form').click()}
+              style={{
+                border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+                borderRadius: '20px',
+                padding: '40px 20px',
+                backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+                cursor: 'pointer',
+                transition: 'all 0.3s'
               }}
-              deshabilitado={!signedForm}
-            />
-          </>
-        }
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            backgroundColor: '#f0f9ff',
-            border: '1px solid #bae6fd',
-            borderRadius: '16px',
-            padding: '20px',
-            marginBottom: '25px',
-            color: '#0369a1',
-            fontSize: '14px',
-            lineHeight: '1.6'
-          }}>
-            <p style={{ margin: 0, fontWeight: '700', marginBottom: '10px' }}>
-              ¡Formato descargado con éxito!
-            </p>
-            <p style={{ margin: 0 }}>
-              Hemos descargado automáticamente el formato de afiliación pre-llenado con la información proporcionada.
-              <strong> A continuación debe subir el formato ya firmado</strong> para finalizar con la inscripción de este nuevo jugador al equipo.
-            </p>
+            >
+              {signedForm ? (
+                <div style={{ color: '#10b981' }}>
+                  <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
+                  <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+                </div>
+              ) : (
+                <div style={{ color: '#0ea5e9' }}>
+                  <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
+                  <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+                </div>
+              )}
+              <input
+                type="file"
+                id="presidente-signed-form"
+                style={{ display: 'none' }}
+                accept=".pdf"
+                onChange={(e) => {
+                  if (e.target.files[0]) {
+                    setSignedForm(e.target.files[0]);
+                  }
+                }}
+              />
+            </div>
           </div>
-
-          <div
-            onClick={() => document.getElementById('presidente-signed-form').click()}
-            style={{
-              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
-              borderRadius: '20px',
-              padding: '40px 20px',
-              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
-              cursor: 'pointer',
-              transition: 'all 0.3s'
-            }}
-          >
-            {signedForm ? (
-              <div style={{ color: '#10b981' }}>
-                <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
-                <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
-              </div>
-            ) : (
-              <div style={{ color: '#0ea5e9' }}>
-                <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
-                <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
-              </div>
-            )}
-            <input
-              type="file"
-              id="presidente-signed-form"
-              style={{ display: 'none' }}
-              accept=".pdf"
-              onChange={(e) => {
-                if (e.target.files[0]) {
-                  setSignedForm(e.target.files[0]);
-                }
-              }}
-            />
-          </div>
-        </div>
-      </Modal>
+        </Modal>
 
       </div>
     </>

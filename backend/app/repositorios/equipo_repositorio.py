@@ -26,7 +26,7 @@ from app.repositorios import pagos_repositorio
 from app.utilidades import validaciones
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.servicios.documentos_servicio import subir_documento_servicio2
+# from app.servicios.documentos_servicio import subir_documento_servicio2
 from app.enums.estados_validacion_enum import EstatusValidacionSolicitud
 from app.enums.estatus_pago_enum import EstatusValidacionPago
 from app.enums.conceptos_pago import ConceptoPagoEnum
@@ -583,13 +583,24 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
         if not solicitud_id:
             raise HTTPException(400, "No hay solicitud_id para guardar documentos")
 
-        await subir_documento_servicio2(
+        from app.servicios.documentos_servicio import subir_documentos_jugador_equipo
+
+        nombre_jugador = " ".join(filter(None, [
+            nueva_persona.Nombre,
+            nueva_persona.PrimerApellido,
+            nueva_persona.SegundoApellido
+        ])).strip() or f"persona_{nueva_persona.PersonaId}"
+
+        await subir_documentos_jugador_equipo(
             db=db,
             persona_id=nueva_persona.PersonaId,
             documento_afiliacion_ids=documento_ids,
             archivos=archivos,
-            solicitud_id=solicitud_id
+            solicitud_id=solicitud_id,
+            nombre_equipo=equipo.NombreEquipo or f"equipo_{equipo.EquipoId}",
+            nombre_jugador=nombre_jugador
         )
+
 
 def crear_equipo_jugando(db, equipo, team_info, presidente_id, cantidad):
     nuevo = EquiposJugando(
