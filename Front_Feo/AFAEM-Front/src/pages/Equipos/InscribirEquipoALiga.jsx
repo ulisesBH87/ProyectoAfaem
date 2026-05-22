@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import teamsService from '../../services/teams';
@@ -45,18 +46,19 @@ export default function InscribirEquipoALiga() {
 
   return (
     <div className="dashboard-content">
-      <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
+      {createPortal(
+        <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
             <div style={{
               backgroundColor: 'white',
               borderRadius: '12px',
@@ -271,7 +273,9 @@ export default function InscribirEquipoALiga() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
