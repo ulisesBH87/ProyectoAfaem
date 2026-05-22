@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * MODAL REUTILIZABLE
@@ -30,7 +31,7 @@ export default function Modal({
     pantallaFull: { maxWidth: '1400px', width: '95vw' },
   };
 
-  return (
+  return createPortal(
     <>
       {/* CAPA DE FONDO */}
       <div
@@ -125,6 +126,7 @@ export default function Modal({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
