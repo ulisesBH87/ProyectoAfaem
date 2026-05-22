@@ -2452,6 +2452,7 @@ function PreRegistroPresidente() {
               <div style={{ marginTop: '40px' }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Puedes cerrar sesión y volver más tarde para revisar tu estado.</p>
               </div>
+              <a href="#" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '14px', marginTop: '20px', display: 'inline-block' }} onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
             </div>
           </div>
         )}
