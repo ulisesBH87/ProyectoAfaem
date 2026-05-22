@@ -43,15 +43,18 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
     if not persona:
         raise documentos_excepciones.PersonaNoEncontradaError()
     
-    # Identificar si es solicitud de presidente
-    from app.modelos.solicitud_modelo import Solicitud
-    from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
-    
-    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
-    is_presidente = False
-    if solicitud and solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO.value:
-        is_presidente = True
-        
+    # Identificar si la persona es presidente verificando la tabla PresidenteEquipo
+    # NOTA: NO usar el TipoSolicitudId de la solicitud porque los jugadores también
+    # quedan registrados bajo solicitudes de tipo PRESIDENTE_EQUIPO, lo que produce
+    # falsos positivos y guarda los archivos del jugador en la carpeta del presidente.
+    from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+
+    is_presidente = (
+        db.query(PresidenteEquipo)
+        .filter(PresidenteEquipo.PersonaId == persona_id)
+        .first()
+    ) is not None
+
     from app.core.config import obtener_uploads_dir
     base_uploads_dir = obtener_uploads_dir()
     
@@ -62,8 +65,29 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
             nombre_completo = f"persona_{persona_id}"
         upload_subfolder = os.path.join("presidentes", nombre_completo)
     else:
-        upload_subfolder = "documentos"
-        
+        # Jugador: guardar en equipos/<NombreEquipo>/<NombreJugador>/
+        # Buscar en qué equipo está inscrito el jugador
+        nombre_jugador = f"{persona.Nombre or ''} {persona.PrimerApellido or ''} {persona.SegundoApellido or ''}".strip()
+        nombre_jugador = " ".join(nombre_jugador.split()) or f"persona_{persona_id}"
+
+        miembro = (
+            db.query(MiembrosEquipo)
+            .filter(MiembrosEquipo.PersonaId == persona_id, MiembrosEquipo.Eliminado == False)
+            .order_by(MiembrosEquipo.FechaIngreso.desc())
+            .first()
+        )
+
+        if miembro and miembro.EquipoRelacion:
+            nombre_equipo = (miembro.EquipoRelacion.NombreEquipo or f"equipo_{miembro.EquipoID}").strip()
+        else:
+            # Fallback: si no tiene equipo asignado aún, usar carpeta genérica por id
+            nombre_equipo = f"equipo_desconocido"
+
+        nombre_equipo_limpio = nombre_equipo.replace("/", "_").replace("\\", "_")
+        nombre_jugador_limpio = nombre_jugador.replace("/", "_").replace("\\", "_")
+
+        upload_subfolder = os.path.join("equipos", nombre_equipo_limpio, nombre_jugador_limpio)
+
     target_dir = os.path.join(base_uploads_dir, upload_subfolder)
     os.makedirs(target_dir, exist_ok=True)
 
