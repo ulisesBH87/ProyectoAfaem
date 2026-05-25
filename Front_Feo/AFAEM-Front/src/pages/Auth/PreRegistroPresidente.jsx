@@ -1240,6 +1240,24 @@ function PreRegistroPresidente() {
           flex-direction: column;
           gap: 15px;
         }
+        .insurance-player-list {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 15px;
+        }
+        .insurance-player-card {
+          align-items: flex-start;
+          gap: 14px;
+        }
+        .insurance-player-card .insurance-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .insurance-player-card .insurance-input {
+          flex: 0 0 80px;
+          width: 80px;
+          max-width: 100%;
+        }
         .insurance-col-title {
           font-size: 13px;
           font-weight: 800;
@@ -1252,6 +1270,9 @@ function PreRegistroPresidente() {
         }
         @media (max-width: 768px) {
           .insurance-grid {
+            grid-template-columns: 1fr;
+          }
+          .insurance-player-list {
             grid-template-columns: 1fr;
           }
         }
@@ -1581,6 +1602,8 @@ function PreRegistroPresidente() {
             )}
             <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '30px' }}>Selecciona el tipo de seguro para tu plantilla inicial</h3>
 
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.95fr)', gap: '24px', alignItems: 'start' }}>
+              <div>
             {ordenPendienteId ? (
               <div style={{
                 background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(5,150,105,0.04) 100%)',
@@ -1664,43 +1687,74 @@ function PreRegistroPresidente() {
                   <div className="insurance-grid">
                     <div className="insurance-col">
                       <div className="insurance-col-title">Seguros Jugadores.</div>
-                      {segurosJugadores.map(seg => (
-                        <div key={seg.id} className="insurance-card" style={{ margin: 0 }}>
-                          <div className="insurance-info">
-                            <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
-                            <p>{seg.descripcion}</p>
+                      <div className="insurance-player-list">
+                        {segurosJugadores.map(seg => (
+                          <div key={seg.id} className="insurance-card insurance-player-card" style={{ margin: 0 }}>
+                            <div className="insurance-info">
+                              <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
+                              <p>{seg.descripcion}</p>
+                            </div>
+                            <input
+                              type="number"
+                              className="insurance-input"
+                              value={asignacionSeguros[seg.id] ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                              }}
+                            />
                           </div>
-                          <input
-                            type="number"
-                            className="insurance-input"
-                            value={asignacionSeguros[seg.id] ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                              setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                            }}
-                          />
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                     <div className="insurance-col">
-                      <div className="insurance-col-title">Seguros Presidente.</div>
-                      {segurosPresidente.map(seg => (
-                        <div key={seg.id} className="insurance-card" style={{ margin: 0 }}>
-                          <div className="insurance-info">
-                            <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
-                            <p>{seg.descripcion}</p>
+                      <div className="insurance-col-title">
+                        Seguros Presidente.
+                      </div>
+
+                      {segurosPresidente.map(seg => {
+                        const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
+
+                        return (
+                          <div
+                            key={seg.id}
+                            className="insurance-card"
+                            style={{ margin: 0 }}
+                          >
+                            <div className="insurance-info">
+                              <h4>
+                                {seg.nombre}
+                                <span
+                                  style={{
+                                    fontSize: '14px',
+                                    color: '#5d87e5'
+                                  }}
+                                >
+                                  ${seg.precio} c/u
+                                </span>
+                              </h4>
+
+                              <p>{seg.descripcion}</p>
+                            </div>
+
+                            <input
+                              type="radio"
+                              name="seguro-presidente" // IMPORTANTE
+                              className="insurance-input"
+                              checked={checked}
+                              onChange={() => {
+                                const next = { ...asignacionSeguros };
+
+                                segurosPresidente.forEach(item => {
+                                  next[item.id] = item.id === seg.id ? 1 : 0;
+                                });
+
+                                setAsignacionSeguros(next);
+                              }}
+                            />
                           </div>
-                          <input
-                            type="number"
-                            className="insurance-input"
-                            value={asignacionSeguros[seg.id] ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                              setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                            }}
-                          />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1718,7 +1772,10 @@ function PreRegistroPresidente() {
               </>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px' }}>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginTop: '24px' }}>
               {/* Resumen de cuotas */}
               <div style={{
                 background: 'rgba(255,255,255,0.04)',
@@ -1799,6 +1856,8 @@ function PreRegistroPresidente() {
                     {bankInfo.referencia}
                   </div>
                 </div>
+              </div>
+            </div>
               </div>
             </div>
 
