@@ -137,7 +137,7 @@ def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, equip
     
     return solicitud_nueva
 
-def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
+def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, sexo_id=None, fecha_nacimiento=None):
 
     solicitud = solicitud_repositorio.obtener_solicitud_por_id(db, solicitud_id)
 
@@ -149,6 +149,28 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id):
 
     if solicitud.EstatusValidacion == EstatusValidacionSolicitud.ESPERA:
         raise HTTPException(400, "La solicitud ya ha sido enviada")
+
+    # Guardar los datos personales en la persona vinculada al usuario
+    usuario = solicitud.UsuarioRelacion
+    if usuario and usuario.PersonaRelacion:
+        persona = usuario.PersonaRelacion
+        if curp:
+            persona.CURP = curp.strip().upper()
+        if sexo_id:
+            persona.SexoId = sexo_id
+        if fecha_nacimiento:
+            from datetime import datetime
+            try:
+                if "-" in fecha_nacimiento:
+                    persona.FechaNacimiento = datetime.strptime(fecha_nacimiento.strip(), "%Y-%m-%d").date()
+                elif "/" in fecha_nacimiento:
+                    parts = fecha_nacimiento.strip().split('/')
+                    if len(parts[-1]) == 2:
+                        persona.FechaNacimiento = datetime.strptime(fecha_nacimiento.strip(), "%d/%m/%y").date()
+                    else:
+                        persona.FechaNacimiento = datetime.strptime(fecha_nacimiento.strip(), "%d/%m/%Y").date()
+            except Exception as e:
+                print(f"Error parseando fecha_nacimiento {fecha_nacimiento}: {e}")
 
     #enviio
     solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)

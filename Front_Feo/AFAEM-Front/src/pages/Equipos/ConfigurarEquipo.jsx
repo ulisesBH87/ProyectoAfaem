@@ -206,8 +206,16 @@ export default function ConfigurarEquipo() {
   const numPersonasPagadas = Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
   const shouldShowPagoPrevioEquipo = !tieneSlotDisponible && !pagoEquipo.aprobado && (!isAdmin || Boolean(selectedPresidentId && pagoEquipo.estadoEquipo));
   const getSeguroTipoPersonaId = (seguro) => Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
-  const segurosPresidente = catalogs.seguros.filter(seguro => getSeguroTipoPersonaId(seguro) === 2);
-  const segurosJugador = catalogs.seguros.filter(seguro => getSeguroTipoPersonaId(seguro) === 4);
+  const segurosPresidente = catalogs.seguros.filter(seguro => {
+    const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+    const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+    return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+  });
+  const segurosJugador = catalogs.seguros.filter(seguro => {
+    const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+    const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+  });
   const seguroJugadorIds = new Set(segurosJugador.map(seguro => String(seguro.id)));
   const segurosPresidenteIds = new Set(segurosPresidente.map(seguro => String(seguro.id)));
 
