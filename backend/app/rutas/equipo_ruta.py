@@ -178,6 +178,15 @@ async def agregar_jugador_equipo_existente(
 
         if not p_data or "curp" not in p_data:
              raise HTTPException(status_code=400, detail="No se recibieron datos del jugador válidos.")
+
+        # Obtener y validar seguro_id
+        seguro_id_val = p_data.get("seguro_id")
+        if not seguro_id_val:
+            raise HTTPException(status_code=400, detail="El seguro_id es obligatorio para registrar un jugador.")
+        try:
+            seguro_id = int(seguro_id_val)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"ID de seguro inválido: {seguro_id_val}")
         # Comprobar si ya existe la CURP o el Email
         from app.modelos.persona_modelo import Personas
         
@@ -280,6 +289,10 @@ async def agregar_jugador_equipo_existente(
         # 6. Sumar +1 a la CantidadJugadores
         equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + 1
 
+        # 6b. Consumir y actualizar el slot en la tabla temporal
+        from app.repositorios.equipo_repositorio import actualizar_slot_repo
+        actualizar_slot_repo(db, equipo.EquipoId, nueva_persona.PersonaId, seguro_id)
+
         from app.repositorios.equipo_repositorio import doc_type_to_id_jugador, es_menor_de_edad
 
         DOC_TYPE_TO_ID = doc_type_to_id_jugador(es_menor_de_edad(fn))
@@ -302,19 +315,24 @@ async def agregar_jugador_equipo_existente(
                 documento_ids.append(doc_id)
 
         if archivos:
-            from app.servicios.documentos_servicio import subir_documento_servicio2
+            from app.servicios.documentos_servicio import subir_documentos_jugador_equipo
             from app.repositorios.equipo_repositorio import obtener_solicitud_id_para_persona
 
             solicitud_id_jugador = obtener_solicitud_id_para_persona(
                 db, nueva_persona.PersonaId, usuario.UsuarioId
             )
 
-            await subir_documento_servicio2(
+            nombre_jugador = f"{nueva_persona.Nombre or ''} {nueva_persona.PrimerApellido or ''} {nueva_persona.SegundoApellido or ''}".strip()
+            nombre_jugador = " ".join(nombre_jugador.split())
+
+            await subir_documentos_jugador_equipo(
                 db=db,
                 persona_id=nueva_persona.PersonaId,
                 documento_afiliacion_ids=documento_ids,
                 archivos=archivos,
                 solicitud_id=solicitud_id_jugador,
+                nombre_equipo=equipo.NombreEquipo,
+                nombre_jugador=nombre_jugador
             )
 
         db.commit()
