@@ -5,6 +5,12 @@ class UsuarioToken(BaseModel):
     correo: str
     rol: str
     estatusId: int | None = None
+    nombre: str | None = None
+    telefono: str | None = None
+    curp: str | None = None
+    sexoId: int | None = None
+    fechaNacimiento: str | None = None
+    lugarNacimiento: str | None = None
 
 class TokenResponse(BaseModel):
     access_token: str

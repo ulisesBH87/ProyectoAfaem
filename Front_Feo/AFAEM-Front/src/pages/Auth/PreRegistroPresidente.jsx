@@ -14,6 +14,20 @@ import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 
 import { useRBAC } from '../../hooks/useRBAC';
 
+const convertToDDMMYYYY = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
+const convertToYYYYMMDD = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+
 function PreRegistroPresidente() {
   const navigate = useNavigate();
   const { estatusId, refreshAccess } = useRBAC();
@@ -43,7 +57,39 @@ function PreRegistroPresidente() {
 
   // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
-  const [ocrResults, setOcrResults] = useState({});
+  const [ocrResults, setOcrResults] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      const uInfo = u.usuario || {};
+      let sStr = '';
+      if (uInfo.sexoId === 1) sStr = 'MASCULINO';
+      else if (uInfo.sexoId === 2) sStr = 'FEMENINO';
+      else if (uInfo.sexoId === 3) sStr = 'NO BINARIO';
+
+      let initialFechaNac = '';
+      if (uInfo.fechaNacimiento) {
+        const dateStr = uInfo.fechaNacimiento;
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          initialFechaNac = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        } else {
+          initialFechaNac = dateStr;
+        }
+      }
+
+      return {
+        nombre: (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase(),
+        telefono: uInfo.telefono || u.telefono || u.NumeroTelefono || '',
+        curp: uInfo.curp || '',
+        sexo: sStr,
+        fecha_nac: initialFechaNac,
+        nacionalidad: uInfo.lugarNacimiento || ''
+      };
+    } catch (e) {
+      console.error("Error initializing ocrResults:", e);
+      return {};
+    }
+  });
   const [, setFotoPreview] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState({});
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
@@ -55,6 +101,13 @@ function PreRegistroPresidente() {
   const [fotoValidacionFallida, setFotoValidacionFallida] = useState(false);
   const [fotoArchivoPendiente, setFotoArchivoPendiente] = useState(null);
   const [mostrarFormularioManual, setMostrarFormularioManual] = useState(false);
+
+  const segurosPresidente = catalogoSeguros.filter((seg) =>
+    ['TIPO G', 'SIN SEGURO'].includes(seg.nombre.toUpperCase().trim())
+  );
+  const segurosJugadores = catalogoSeguros.filter((seg) =>
+    !['TIPO G', 'SIN SEGURO'].includes(seg.nombre.toUpperCase().trim())
+  );
 
 
   // Verificar estado de pago al cargar
@@ -126,10 +179,13 @@ function PreRegistroPresidente() {
         }));
 
         setCatalogoSeguros(segurosMapeados);
-        // Inicializar todas las asignaciones a 0
         const initAsignacion = {};
         segurosMapeados.forEach(seg => {
-          initAsignacion[seg.id] = 0;
+          if (seg.nombre.toUpperCase().trim() === 'SIN SEGURO') {
+            initAsignacion[seg.id] = 1;
+          } else {
+            initAsignacion[seg.id] = 0;
+          }
         });
         setAsignacionSeguros(initAsignacion);
       } catch (err) {
@@ -187,10 +243,35 @@ function PreRegistroPresidente() {
     }
   }, [estatusId, navigate, tieneEstadoBackend]);
 
+  // Sincronizar nombre y teléfono desde localStorage, y rellenar Tipo de Afiliación
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      const uInfo = u.usuario || {};
+      const regNombre = (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase();
+      const regTelefono = uInfo.telefono || u.telefono || u.NumeroTelefono || '';
+      
+      setOcrResults(prev => ({
+        ...prev,
+        nombre: regNombre || prev.nombre || '',
+        telefono: regTelefono || prev.telefono || ''
+      }));
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    if (catalogoSeguros && catalogoSeguros.length > 0 && segurosPresidente.length > 0) {
+      const selectedPresSeguro = segurosPresidente.find(seg => Number(asignacionSeguros[seg.id] || 0) > 0);
+      if (selectedPresSeguro) {
+        setTipoAfiliacion(selectedPresSeguro.nombre.toUpperCase().trim());
+      }
+    }
+  }, [asignacionSeguros, catalogoSeguros, segurosPresidente]);
+
   /* ─── Catálogos para Selectores ─── */
   const CATALOGO_ROLES = [
-    { valor: 'TIPO F', etiqueta: 'TIPO F' },
     { valor: 'TIPO G', etiqueta: 'TIPO G' },
+    { valor: 'SIN SEGURO', etiqueta: 'SIN SEGURO' }
   ];
 
   const bankInfo = DEFAULT_BANK_INFO;
@@ -311,7 +392,9 @@ function PreRegistroPresidente() {
     }
   };
 
-  const totalAsignados = Object.values(asignacionSeguros).reduce((acc, val) => acc + Number(val || 0), 0);
+
+
+  const totalAsignados = segurosJugadores.reduce((acc, seg) => acc + Number(asignacionSeguros[seg.id] || 0), 0);
   const precioPresidente = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0;
   const precioJugador = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0;
   const costoAfiliaciones = precioPresidente + (Number(numPersonas || 0) * precioJugador);
@@ -323,15 +406,6 @@ function PreRegistroPresidente() {
   };
   const segurosRequeridos = Number(numPersonas || 0);
   const jugadoresRestantes = segurosRequeridos - totalAsignados;
-
-  const segurosJugadores = catalogoSeguros.filter((seg, idx) =>
-    ['TIPO A', 'TIPO B', 'TIPO C', 'TIPO D', 'TIPO E'].includes(seg.nombre.toUpperCase().trim()) ||
-    (catalogoSeguros.length === 7 && idx < 5)
-  );
-  const segurosPresidente = catalogoSeguros.filter((seg, idx) =>
-    ['TIPO F', 'TIPO G'].includes(seg.nombre.toUpperCase().trim()) ||
-    (catalogoSeguros.length === 7 && idx >= 5)
-  );
 
   // PASO 2: Documentos
 
@@ -504,6 +578,10 @@ function PreRegistroPresidente() {
         const segurosPayload = [];
         for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
           if (cant > 0) {
+            const seguroObj = catalogoSeguros.find(s => String(s.id) === String(idStr));
+            if (seguroObj && seguroObj.nombre.toUpperCase().trim() === 'SIN SEGURO') {
+              continue;
+            }
             segurosPayload.push({
               SeguroId: parseInt(idStr, 10),
               Cantidad: cant
@@ -633,6 +711,10 @@ function PreRegistroPresidente() {
           const segurosPayload = [];
           for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
             if (cant > 0) {
+              const seguroObj = catalogoSeguros.find(s => String(s.id) === String(idStr));
+              if (seguroObj && seguroObj.nombre.toUpperCase().trim() === 'SIN SEGURO') {
+                continue;
+              }
               segurosPayload.push({
                 SeguroId: parseInt(idStr, 10),
                 Cantidad: cant
@@ -816,11 +898,20 @@ function PreRegistroPresidente() {
         extractedData = mejorarExtraccionActa(rawText, extractedData);
       }
 
-      setOcrResults(prev => ({
-        ...prev,
-        ...extractedData,
-        [docKey]: `OCR Procesado: ${extractedData.nombre}`
-      }));
+      setOcrResults(prev => {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const uInfo = u.usuario || {};
+        const regNombre = (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase();
+        const regTelefono = uInfo.telefono || u.telefono || u.NumeroTelefono || '';
+
+        return {
+          ...prev,
+          ...extractedData,
+          nombre: regNombre || prev.nombre || (extractedData.nombre || '').toUpperCase(),
+          telefono: regTelefono || prev.telefono || extractedData.telefono || '',
+          [docKey]: `OCR Procesado: ${extractedData.nombre}`
+        };
+      });
 
       if (extractedData.nombre) {
         Swal.fire({
@@ -1063,21 +1154,12 @@ function PreRegistroPresidente() {
     });
   };
 
-  const convertToDDMMYYYY = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  };
 
-  const convertToYYYYMMDD = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return dateStr;
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  };
 
   const handleManualOcrChange = (field, value) => {
+    if (field === 'nombre' || field === 'telefono') {
+      return;
+    }
     setOcrResults(prev => ({
       ...prev,
       [field]: value,
@@ -1172,7 +1254,21 @@ function PreRegistroPresidente() {
 
       // ── MARCAR SOLICITUD COMO ENVIADA (Status 1 = ESPERA) ─────────
       if (solicitudActualId) {
-        const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?solicitud_id=${solicitudActualId}`, {
+        let sexoIdVal = null;
+        if (ocrResults.sexo === 'MASCULINO') sexoIdVal = 1;
+        else if (ocrResults.sexo === 'FEMENINO') sexoIdVal = 2;
+        else if (ocrResults.sexo === 'NO BINARIO') sexoIdVal = 3;
+
+        const queryParams = new URLSearchParams({
+          solicitud_id: solicitudActualId
+        });
+        if (ocrResults.curp) queryParams.append('curp', ocrResults.curp);
+        if (sexoIdVal) queryParams.append('sexo_id', sexoIdVal);
+        if (ocrResults.fecha_nac) {
+          queryParams.append('fecha_nacimiento', convertToYYYYMMDD(ocrResults.fecha_nac));
+        }
+
+        const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?${queryParams.toString()}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -1254,8 +1350,8 @@ function PreRegistroPresidente() {
           min-width: 0;
         }
         .insurance-card-list {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          display: flex;
+          flex-direction: column;
           gap: 15px;
           min-width: 0;
         }
@@ -1329,16 +1425,10 @@ function PreRegistroPresidente() {
           .insurance-grid {
             grid-template-columns: 1fr;
           }
-          .insurance-card-list {
-            grid-template-columns: 1fr;
-          }
         }
         @media (min-width: 769px) and (max-width: 1100px) {
           .cuotas-layout {
             grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.95fr);
-          }
-          .insurance-card-list {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
         /* ====== DARK MODE SCOPE: Override global light vars for this page ====== */
@@ -1436,6 +1526,40 @@ function PreRegistroPresidente() {
           border-color: rgba(93,135,229,0.35);
           transform: translateX(4px);
           box-shadow: 0 4px 20px rgba(11,78,166,0.15);
+        }
+        .insurance-card.active-insurance {
+          border-color: #5d87e5;
+          background: rgba(93, 135, 229, 0.08);
+          box-shadow: 0 0 15px rgba(93, 135, 229, 0.18);
+        }
+        .insurance-radio {
+          appearance: none;
+          -webkit-appearance: none;
+          width: 24px;
+          height: 24px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-radius: 50%;
+          outline: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          position: relative;
+          background: transparent;
+        }
+        .insurance-radio:checked {
+          border-color: #5d87e5;
+          background: transparent;
+          box-shadow: 0 0 8px rgba(93, 135, 229, 0.5);
+        }
+        .insurance-radio:checked::after {
+          content: '';
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #5d87e5;
+          display: block;
         }
         .insurance-info h4 { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
         .insurance-info p { font-size: 13px; color: var(--text-muted); margin: 0; }
@@ -1669,252 +1793,258 @@ function PreRegistroPresidente() {
 
             <div className="cuotas-layout">
               <div className="insurance-layout-left">
-            {ordenPendienteId ? (
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(5,150,105,0.04) 100%)',
-                padding: '26px',
-                borderRadius: '20px',
-                border: '1px solid rgba(16,185,129,0.25)',
-                marginBottom: '30px',
-                textAlign: 'center',
-                backdropFilter: 'blur(8px)',
-                position: 'relative',
-                overflow: 'hidden',
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(52,211,153,0.4), transparent)' }} />
-                <div style={{
-                  display: 'inline-flex', padding: '5px 16px',
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.3))',
-                  color: '#34d399', borderRadius: '30px', fontSize: '10px', fontWeight: '800', marginBottom: '12px',
-                  border: '1px solid rgba(16,185,129,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase',
-                  boxShadow: '0 4px 12px rgba(16,185,129,0.15)',
-                }}>
-                  ● ORDEN ACTIVA #{ordenPendienteId}
-                </div>
-                <h4 style={{ color: 'var(--text-main)', fontWeight: '800', margin: '0 0 8px 0', fontSize: '18px' }}>Validación en curso</h4>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
-                  Ya tienes una orden activa en el sistema. Para continuar, adjunta tu comprobante de pago.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="input-group" style={{ flexDirection: 'column', gap: '10px' }}>
-                  <label className="input-label" style={{ textAlign: 'center' }}>Ingresa la cantidad total de seguros que deseas pagar.</label>
-                  <input
-                    type="number"
-                    className="input-number"
-                    value={numPersonas}
-                    onChange={(e) => {
-                      const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                      setNumPersonas(val);
-                    }}
-                    style={{ marginTop: '5px' }}
-                  />
-                </div>
-
-                {numPersonas >= 0 && (
-                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', marginTop: '20px', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                      <div style={{ width: '3px', height: '14px', background: 'linear-gradient(180deg, #10b981, #059669)', borderRadius: '2px' }} />
-                      <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,0.75)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costos de Afiliación</p>
+                {ordenPendienteId ? (
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(5,150,105,0.04) 100%)',
+                    padding: '26px',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(16,185,129,0.25)',
+                    marginBottom: '30px',
+                    textAlign: 'center',
+                    backdropFilter: 'blur(8px)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(52,211,153,0.4), transparent)' }} />
+                    <div style={{
+                      display: 'inline-flex', padding: '5px 16px',
+                      background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.3))',
+                      color: '#34d399', borderRadius: '30px', fontSize: '10px', fontWeight: '800', marginBottom: '12px',
+                      border: '1px solid rgba(16,185,129,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase',
+                      boxShadow: '0 4px 12px rgba(16,185,129,0.15)',
+                    }}>
+                      ● ORDEN ACTIVA #{ordenPendienteId}
                     </div>
-                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
-                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
-                      </div>
-                    ))}
-                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
-                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '24px 0 16px' }}>
-                  <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
-                  <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    Distribución de Seguros
-                  </p>
-                  <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
-                </div>
-
-                {cargandoSeguros ? (
-                  <div className="insurance-card">
-                    <div className="insurance-info">
-                      <h4>Cargando seguros...</h4>
-                      <p>Obteniendo costos actualizados.</p>
-                    </div>
+                    <h4 style={{ color: 'var(--text-main)', fontWeight: '800', margin: '0 0 8px 0', fontSize: '18px' }}>Validación en curso</h4>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
+                      Ya tienes una orden activa en el sistema. Para continuar, adjunta tu comprobante de pago.
+                    </p>
                   </div>
                 ) : (
-                  <div className="insurance-grid">
-                    <div className="insurance-section">
-                      <div className="insurance-col-title">Seguros Jugadores.</div>
-                      <div className="insurance-card-list">
-                        {segurosJugadores.map(seg => (
-                          <div key={seg.id} className="insurance-card insurance-player-card" style={{ margin: 0 }}>
-                            <div className="insurance-player-content">
-                              <p className="insurance-player-name">{seg.nombre}</p>
-                              <span className="insurance-player-price">${seg.precio} c/u</span>
-                              <p className="insurance-player-description">{seg.descripcion}</p>
-                            </div>
-                            <input
-                              type="number"
-                              className="insurance-input"
-                              value={asignacionSeguros[seg.id] ?? ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                                setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                              }}
-                            />
+                  <>
+                    <div className="input-group" style={{ flexDirection: 'column', gap: '10px' }}>
+                      <label className="input-label" style={{ textAlign: 'center' }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
+                      <input
+                        type="number"
+                        className="input-number"
+                        value={numPersonas}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                          setNumPersonas(val);
+                        }}
+                        style={{ marginTop: '5px' }}
+                      />
+                    </div>
+
+                    {numPersonas >= 0 && (
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', marginTop: '20px', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <div style={{ width: '3px', height: '14px', background: 'linear-gradient(180deg, #10b981, #059669)', borderRadius: '2px' }} />
+                          <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,0.75)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costos de Afiliación</p>
+                        </div>
+                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
+                          </div>
+                        ))}
+                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
                           </div>
                         ))}
                       </div>
-                    </div>
-                    <div className="insurance-section">
-                      <div className="insurance-col-title">
-                        Seguros Presidente.
-                      </div>
-                      <div className="insurance-card-list">
-                        {segurosPresidente.map(seg => {
-                          const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
+                    )}
 
-                          return (
-                            <div
-                              key={seg.id}
-                              className="insurance-card insurance-player-card"
-                              style={{ margin: 0 }}
-                            >
-                              <div className="insurance-player-content">
-                                <p className="insurance-player-name">{seg.nombre}</p>
-                                <span className="insurance-player-price">${seg.precio} c/u</span>
-                                <p className="insurance-player-description">{seg.descripcion}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '24px 0 16px' }}>
+                      <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
+                      <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        Distribución de Seguros
+                      </p>
+                      <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
+                    </div>
+
+                    {cargandoSeguros ? (
+                      <div className="insurance-card">
+                        <div className="insurance-info">
+                          <h4>Cargando seguros...</h4>
+                          <p>Obteniendo costos actualizados.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="insurance-grid">
+                        <div className="insurance-section">
+                          <div className="insurance-col-title">Seguros Jugadores.</div>
+                          <div className="insurance-card-list">
+                            {segurosJugadores.map(seg => (
+                              <div key={seg.id} className="insurance-card insurance-player-card" style={{ margin: 0 }}>
+                                <div className="insurance-player-content">
+                                  <p className="insurance-player-name">{seg.nombre}</p>
+                                  <span className="insurance-player-price">${seg.precio} c/u</span>
+                                  <p className="insurance-player-description">{seg.descripcion}</p>
+                                </div>
+                                <input
+                                  type="number"
+                                  className="insurance-input"
+                                  value={asignacionSeguros[seg.id] ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                    setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                                  }}
+                                />
                               </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="insurance-section">
+                          <div className="insurance-col-title">
+                            Seguros Presidente.
+                          </div>
+                          <div className="insurance-card-list">
+                            {segurosPresidente.map(seg => {
+                              const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
 
-                              <input
-                                type="radio"
-                                name="seguro-presidente" // IMPORTANTE
-                                className="insurance-input"
-                                checked={checked}
-                                onChange={() => {
-                                  const next = { ...asignacionSeguros };
+                              return (
+                                <div
+                                  key={seg.id}
+                                  className={`insurance-card insurance-player-card ${checked ? 'active-insurance' : ''}`}
+                                  style={{ margin: 0, cursor: 'pointer' }}
+                                  onClick={() => {
+                                    const next = { ...asignacionSeguros };
+                                    segurosPresidente.forEach(item => {
+                                      next[item.id] = item.id === seg.id ? 1 : 0;
+                                    });
+                                    setAsignacionSeguros(next);
+                                  }}
+                                >
+                                  <div className="insurance-player-content">
+                                    <p className="insurance-player-name">{seg.nombre}</p>
+                                    <span className="insurance-player-price">${seg.precio} c/u</span>
+                                    <p className="insurance-player-description">{seg.descripcion}</p>
+                                  </div>
 
-                                  segurosPresidente.forEach(item => {
-                                    next[item.id] = item.id === seg.id ? 1 : 0;
-                                  });
-
-                                  setAsignacionSeguros(next);
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
+                                  <input
+                                    type="radio"
+                                    name="seguro-presidente"
+                                    className="insurance-radio"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      const next = { ...asignacionSeguros };
+                                      segurosPresidente.forEach(item => {
+                                        next[item.id] = item.id === seg.id ? 1 : 0;
+                                      });
+                                      setAsignacionSeguros(next);
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                <div className="assigned-bar">
-                  <span>Seguros asignados: {totalAsignados}/{segurosRequeridos}</span>
-                  {Number(numPersonas || 0) > 0 && totalAsignados === segurosRequeridos ? (
-                    <span style={{ color: '#34d399', fontWeight: '800' }}>✓ Todos asignados</span>
-                  ) : (
-                    <span style={{ color: '#f87171', fontWeight: '800' }}>
-                      {totalAsignados > segurosRequeridos ? '● Límite excedido' : '● Pendientes'}
-                    </span>
-                  )}
-                </div>
-              </>
-            )}
+                    <div className="assigned-bar">
+                      <span>Seguros asignados: {totalAsignados}/{segurosRequeridos}</span>
+                      {Number(numPersonas || 0) > 0 && totalAsignados === segurosRequeridos ? (
+                        <span style={{ color: '#34d399', fontWeight: '800' }}>✓ Todos asignados</span>
+                      ) : (
+                        <span style={{ color: '#f87171', fontWeight: '800' }}>
+                          {totalAsignados > segurosRequeridos ? '● Límite excedido' : '● Pendientes'}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
 
               </div>
 
               <div className="insurance-layout-right">
-            <div className="summary-stack">
-              {/* Resumen de cuotas */}
-              <div style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '20px', padding: '22px',
-                position: 'relative', overflow: 'hidden',
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(93,135,229,0.4),transparent)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                  <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#5d87e5,#0b4ea6)', borderRadius: '4px' }} />
-                  <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>
-                    {ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}
-                  </h5>
-                </div>
-                {ordenPendienteId && detalleInscripciones.map(detalle => (
-                  <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.55)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
-                    <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
-                  </div>
-                ))}
-                {catalogoSeguros.map(seg =>
-                  asignacionSeguros[seg.id] > 0 && (
-                    <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.55)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
-                      <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
+                <div className="summary-stack">
+                  {/* Resumen de cuotas */}
+                  <div style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '20px', padding: '22px',
+                    position: 'relative', overflow: 'hidden',
+                  }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(93,135,229,0.4),transparent)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                      <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#5d87e5,#0b4ea6)', borderRadius: '4px' }} />
+                      <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>
+                        {ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}
+                      </h5>
                     </div>
-                  )
-                )}
-                {!ordenPendienteId && numPersonas > 0 && (
-                  <>
-                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
-                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x1)</span>
-                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual}</span>
+                    {ordenPendienteId && detalleInscripciones.map(detalle => (
+                      <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
                       </div>
                     ))}
-                    {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
-                      <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x{numPersonas})</span>
-                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual * numPersonas}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
-                  <span style={{ color: '#5d87e5' }}>${totalMostrado}</span>
-                </div>
-              </div>
+                    {catalogoSeguros.map(seg =>
+                      asignacionSeguros[seg.id] > 0 && (
+                        <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.55)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                          <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
+                        </div>
+                      )
+                    )}
+                    {!ordenPendienteId && numPersonas > 0 && (
+                      <>
+                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
+                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x1)</span>
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual}</span>
+                          </div>
+                        ))}
+                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
+                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x{numPersonas})</span>
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual * numPersonas}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
+                      <span style={{ color: '#5d87e5' }}>${totalMostrado}</span>
+                    </div>
+                  </div>
 
-              {/* Datos bancarios */}
-              <div style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '20px', padding: '22px',
-                position: 'relative', overflow: 'hidden',
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#10b981,#059669)', borderRadius: '4px' }} />
-                    <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>Depósito o transferencia</h5>
+                  {/* Datos bancarios */}
+                  <div style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '20px', padding: '22px',
+                    position: 'relative', overflow: 'hidden',
+                  }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#10b981,#059669)', borderRadius: '4px' }} />
+                        <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>Depósito o transferencia</h5>
+                      </div>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(`${bankInfo.banco} | ${bankInfo.cuenta} | ${bankInfo.clabe}`)}
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}
+                      >📋 Copiar</button>
+                    </div>
+                    {[['Banco', bankInfo.banco], ['Cuenta', bankInfo.cuenta], ['CLABE', bankInfo.clabe]].map(([label, val]) => (
+                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{label}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700', fontFamily: 'monospace' }}>{val}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: '12px' }}>
+                      <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>Referencia obligatoria</span>
+                      <div style={{ marginTop: '6px', background: 'rgba(93,135,229,0.12)', border: '1px solid rgba(93,135,229,0.25)', borderRadius: '10px', padding: '8px 14px', fontFamily: 'monospace', fontWeight: '800', fontSize: '14px', color: '#5d87e5', letterSpacing: '1px' }}>
+                        {bankInfo.referencia}
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(`${bankInfo.banco} | ${bankInfo.cuenta} | ${bankInfo.clabe}`)}
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}
-                  >📋 Copiar</button>
                 </div>
-                {[['Banco', bankInfo.banco], ['Cuenta', bankInfo.cuenta], ['CLABE', bankInfo.clabe]].map(([label, val]) => (
-                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{label}</span>
-                    <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700', fontFamily: 'monospace' }}>{val}</span>
-                  </div>
-                ))}
-                <div style={{ marginTop: '12px' }}>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>Referencia obligatoria</span>
-                  <div style={{ marginTop: '6px', background: 'rgba(93,135,229,0.12)', border: '1px solid rgba(93,135,229,0.25)', borderRadius: '10px', padding: '8px 14px', fontFamily: 'monospace', fontWeight: '800', fontSize: '14px', color: '#5d87e5', letterSpacing: '1px' }}>
-                    {bankInfo.referencia}
-                  </div>
-                </div>
-              </div>
-            </div>
               </div>
             </div>
 
@@ -1960,7 +2090,7 @@ function PreRegistroPresidente() {
                 className="btn-nav-blue"
                 onClick={irSiguientePaso}
                 disabled={!ordenPendienteId ? (numPersonas <= 0 || totalAsignados !== segurosRequeridos) : !comprobantePago}
-                title={!ordenPendienteId && (numPersonas <= 0 || totalAsignados !== segurosRequeridos) ? 'Asigna un seguro a todos los jugadores y al presidente para continuar' : ''}
+                title={!ordenPendienteId && (numPersonas <= 0 || totalAsignados !== segurosRequeridos) ? 'Asigna un seguro a cada jugador para continuar' : ''}
               >
                 {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
               </button>
@@ -2247,7 +2377,8 @@ function PreRegistroPresidente() {
                     value={tipoAfiliacion}
                     onChange={(e) => setTipoAfiliacion(e.target.value)}
                     className="premium-input"
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' }}
+                    disabled={true}
                   >
                     <option value="">Selecciona...</option>
                     {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
@@ -2312,6 +2443,8 @@ function PreRegistroPresidente() {
                       value={ocrResults.nombre || ''}
                       onChange={(e) => handleManualOcrChange('nombre', e.target.value.toUpperCase())}
                       className="premium-input"
+                      disabled={true}
+                      style={{ cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' }}
                     />
                   </div>
                   <div className="premium-input-group">
@@ -2323,6 +2456,8 @@ function PreRegistroPresidente() {
                       value={ocrResults.curp || ''}
                       onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
                       className="premium-input"
+                      disabled={!!user.usuario?.curp}
+                      style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' } : {}}
                     />
                   </div>
                 </div>
@@ -2367,7 +2502,8 @@ function PreRegistroPresidente() {
                       value={ocrResults.sexo || ''}
                       onChange={(e) => handleManualOcrChange('sexo', e.target.value)}
                       className="premium-input"
-                      style={{ cursor: 'pointer' }}
+                      style={user.usuario?.sexoId ? { cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' } : { cursor: 'pointer' }}
+                      disabled={!!user.usuario?.sexoId}
                     >
                       <option value="">Selecciona...</option>
                       <option value="MASCULINO">Masculino</option>
@@ -2384,6 +2520,8 @@ function PreRegistroPresidente() {
                       value={ocrResults.telefono || ''}
                       onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
                       className="premium-input"
+                      disabled={true}
+                      style={{ cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' }}
                     />
                   </div>
                   <div className="premium-input-group">
