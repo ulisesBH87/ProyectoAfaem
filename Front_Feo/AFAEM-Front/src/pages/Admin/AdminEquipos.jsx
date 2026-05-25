@@ -62,7 +62,7 @@ export default function AdminEquipos() {
 
   const filteredEquipos = React.useMemo(() => {
     let result = [...equipos];
-    
+
     // Filtro por estatus
     if (filtroEstatus !== 'todos') {
       if (filtroEstatus === 'activos') {
@@ -71,11 +71,11 @@ export default function AdminEquipos() {
         result = result.filter(s => !s.Estatus);
       }
     }
-    
+
     // Búsqueda
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(s => 
+      result = result.filter(s =>
         (s.NombreEquipo && s.NombreEquipo.toLowerCase().includes(query)) ||
         (s.Liga && s.Liga.toLowerCase().includes(query)) ||
         (s.PresidenteNombreCompleto && s.PresidenteNombreCompleto.toLowerCase().includes(query)) ||
@@ -83,13 +83,13 @@ export default function AdminEquipos() {
         (s.EquipoId && String(s.EquipoId).includes(query))
       );
     }
-    
+
     // Ordenamiento
     result.sort((a, b) => {
       if (sortOrder === 'asc') return a.EquipoId - b.EquipoId;
       return b.EquipoId - a.EquipoId;
     });
-    
+
     return result;
   }, [equipos, filtroEstatus, searchTerm, sortOrder]);
 
@@ -103,7 +103,7 @@ export default function AdminEquipos() {
     const inactivos = equipos.filter(e => e.Estatus === false).length;
     const totalJugadores = equipos.reduce((acc, eq) => acc + (eq.NumeroJugadoresRegistrados || 0), 0);
     const avgJugadores = equipos.length > 0 ? (totalJugadores / equipos.length).toFixed(1) : 0;
-    
+
     return {
       total: equipos.length,
       activos: activos,
@@ -309,12 +309,12 @@ export default function AdminEquipos() {
         <div style={{ fontSize: '11px', color: '#64748b' }}>{eq.PresidenteEmail}</div>
       </div>
     ) : (
-      <div style={{ 
-        background: '#fee2e2', 
-        color: '#991b1b', 
-        padding: '6px 14px', 
-        borderRadius: '12px', 
-        fontSize: '11px', 
+      <div style={{
+        background: '#fee2e2',
+        color: '#991b1b',
+        padding: '6px 14px',
+        borderRadius: '12px',
+        fontSize: '11px',
         fontWeight: '800',
         border: '1px solid #fecaca',
         display: 'inline-flex',
@@ -325,19 +325,26 @@ export default function AdminEquipos() {
       </div>
     ),
     NumeroJugadoresRegistrados: <span style={{ fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '4px 10px', borderRadius: '20px' }}>{eq.NumeroJugadoresRegistrados}</span>,
-    Estatus: eq.Estatus ? 
+    Estatus: eq.Estatus ?
       <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>🟢 ACTIVO</span> :
       <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>🔴 INACTIVO</span>,
     Acciones: (
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <button 
+        <button
           className="btn btn-sm btn-primary"
           style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
           onClick={(e) => { e.stopPropagation(); handleEditarEquipo(eq); }}
         >
           <FaEdit /> Detalles y gestión
         </button>
-        <button 
+        <button
+          className="btn btn-sm btn-primary"
+          style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
+          onClick={(e) => { e.stopPropagation(); navigate(`/admin/layout-jugadores?equipo=${encodeURIComponent(eq.NombreEquipo)}`); }}
+        >
+          <FaTable /> Tabla de Jugadores.
+        </button>
+        <button
           className="btn btn-sm"
           style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', background: 'white', color: '#059669', border: '1.5px solid #86efac' }}
           onClick={(e) => { e.stopPropagation(); handleExportarEquipo(eq); }}
@@ -371,20 +378,14 @@ export default function AdminEquipos() {
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza los equipos que han completado su registro oficial.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
-          <button 
+          <button
             className="btn btn-primary"
             onClick={() => loadEquipos(true)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
           </button>
-          <button 
-            onClick={() => navigate('/admin/layout-jugadores')}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <FaTable /> Layout Jugadores
-          </button>
-          <button 
+          <button
             className="btn btn-premium"
             onClick={() => navigate('/admin/equipos/crear')}
             style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
@@ -459,9 +460,9 @@ export default function AdminEquipos() {
       <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
         <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de equipos confirmados</h3>
-          
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch'}}>
-            <SearchBar 
+
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
+            <SearchBar
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar equipo por nombre o id..."
@@ -504,9 +505,9 @@ export default function AdminEquipos() {
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
-            <BotonPrimario 
-              etiqueta={guardando ? 'Guardando...' : 'Guardar cambios'} 
-              onClick={manejarGuardarEquipo} 
+            <BotonPrimario
+              etiqueta={guardando ? 'Guardando...' : 'Guardar cambios'}
+              onClick={manejarGuardarEquipo}
               deshabilitado={guardando}
               icono={<FaSave />}
             />
@@ -514,37 +515,37 @@ export default function AdminEquipos() {
         }
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
-          <div style={{ 
-            gridColumn: 'span 2', 
-            background: 'rgba(245, 158, 11, 0.08)', 
-            border: '1px solid rgba(245, 158, 11, 0.2)', 
-            padding: '16px 20px', 
-            borderRadius: '16px', 
+          <div style={{
+            gridColumn: 'span 2',
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.2)',
+            padding: '16px 20px',
+            borderRadius: '16px',
             marginBottom: '10px',
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
             boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.05)'
           }}>
-             <div style={{ 
-               fontSize: '22px', 
-               background: '#f59e0b', 
-               color: 'white',
-               width: '42px', 
-               height: '42px', 
-               borderRadius: '12px', 
-               display: 'flex', 
-               alignItems: 'center', 
-               justifyContent: 'center',
-               boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
-               flexShrink: 0
-             }}>
-               <FaShieldAlt />
-             </div>
-             <div>
-                <h4 style={{ margin: 0, fontSize: '15px', color: '#92400e', fontWeight: '800' }}>Edición de Ficha Oficial</h4>
-                <p style={{ margin: 0, fontSize: '13px', color: '#b45309', fontWeight: '500', marginTop: '2px' }}>Cualquier cambio afectará la visibilidad en torneos y cédulas oficiales.</p>
-             </div>
+            <div style={{
+              fontSize: '22px',
+              background: '#f59e0b',
+              color: 'white',
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+              flexShrink: 0
+            }}>
+              <FaShieldAlt />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '15px', color: '#92400e', fontWeight: '800' }}>Edición de Ficha Oficial</h4>
+              <p style={{ margin: 0, fontSize: '13px', color: '#b45309', fontWeight: '500', marginTop: '2px' }}>Cualquier cambio afectará la visibilidad en torneos y cédulas oficiales.</p>
+            </div>
           </div>
 
           <EntradaFormulario
@@ -706,37 +707,6 @@ export default function AdminEquipos() {
 
             </div>
           )}
-
-           {/* SECCIÓN: CUERPO TÉCNICO REMOVIDA A PETICIÓN */}
-
-
-          {/* SECCIÓN: NÓMINA DE JUGADORES (ACCESO RÁPIDO) */}
-          <div style={{ gridColumn: 'span 2', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f1f5f9' }}>
-            <div style={{ 
-              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '18px',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ 
-                  width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(11,78,166,0.1)', 
-                  color: '#0b4ea6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' 
-                }}>
-                  <FaTable />
-                </div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Nómina de Jugadores</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>Consulta y copia los datos masivos de todos los miembros inscritos.</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => navigate(`/admin/layout-jugadores?equipo=${encodeURIComponent(equipoEdicion.NombreEquipo)}`)}
-                className="btn-premium" 
-                style={{ padding: '10px 18px', fontSize: '12px', background: 'white', color: '#0b4ea6', border: '1.5px solid #0b4ea6', boxShadow: 'none' }}
-              >
-                Ver Nómina Completa →
-              </button>
-            </div>
-          </div>
         </div>
       </Modal>
     </div>
