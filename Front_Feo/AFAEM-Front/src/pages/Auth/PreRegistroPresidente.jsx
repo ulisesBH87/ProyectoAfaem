@@ -1229,16 +1229,83 @@ function PreRegistroPresidente() {
       position: 'relative',
     }}>
       <style>{`
+        .cuotas-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.95fr);
+          gap: 28px;
+          align-items: start;
+        }
+        .insurance-layout-left,
+        .insurance-layout-right {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+          min-width: 0;
+        }
         .insurance-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 20px;
-          margin-top: 15px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 15px;
         }
-        .insurance-col {
+        .insurance-section {
           display: flex;
           flex-direction: column;
           gap: 15px;
+          min-width: 0;
+        }
+        .insurance-card-list {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 15px;
+          min-width: 0;
+        }
+        .insurance-player-card {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          flex-wrap: nowrap;
+          min-width: 0;
+        }
+        .insurance-player-content {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          flex: 1;
+          min-width: 0;
+        }
+        .insurance-player-name {
+          font-size: 16px;
+          font-weight: 800;
+          color: var(--text-main);
+          line-height: 1.2;
+          white-space: normal;
+          word-break: normal;
+          overflow-wrap: break-word;
+          margin: 0;
+        }
+        .insurance-player-price {
+          font-size: 14px;
+          color: #5d87e5;
+          font-weight: 700;
+          white-space: nowrap;
+          line-height: 1.2;
+        }
+        .insurance-player-description {
+          font-size: 13px;
+          color: var(--text-muted);
+          margin: 0;
+          white-space: normal;
+          word-break: normal;
+          overflow-wrap: break-word;
+          line-height: 1.3;
+        }
+        .insurance-player-card .insurance-input {
+          flex: 0 0 76px;
+          width: 76px;
+          min-width: 76px;
+          max-width: 100%;
         }
         .insurance-col-title {
           font-size: 13px;
@@ -1250,9 +1317,28 @@ function PreRegistroPresidente() {
           padding-bottom: 6px;
           margin-bottom: 5px;
         }
+        .summary-stack {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
         @media (max-width: 768px) {
+          .cuotas-layout {
+            grid-template-columns: 1fr;
+          }
           .insurance-grid {
             grid-template-columns: 1fr;
+          }
+          .insurance-card-list {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (min-width: 769px) and (max-width: 1100px) {
+          .cuotas-layout {
+            grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.95fr);
+          }
+          .insurance-card-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
         /* ====== DARK MODE SCOPE: Override global light vars for this page ====== */
@@ -1471,7 +1557,7 @@ function PreRegistroPresidente() {
       `}</style>
 
       {/* HEADER LOGOS */}
-      <div style={{ width: '100%', maxWidth: '1000px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+      <div style={{ width: '95%', maxWidth: '1400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
         <img
           src={AfaemLogo}
           alt="AFAEM"
@@ -1483,7 +1569,7 @@ function PreRegistroPresidente() {
         </div>
       </div>
 
-      <div className="card glass" style={{ width: '100%', maxWidth: '850px', padding: 0, overflow: 'hidden' }}>
+      <div className="card glass" style={{ width: '95%', maxWidth: '1400px', padding: 0, overflow: 'hidden' }}>
         {/* PASO 0: BIENVENIDA */}
         {pasoActual === 0 && (
           <div style={{ padding: '60px 40px', textAlign: 'center' }}>
@@ -1581,6 +1667,8 @@ function PreRegistroPresidente() {
             )}
             <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '30px' }}>Selecciona el tipo de seguro para tu plantilla inicial</h3>
 
+            <div className="cuotas-layout">
+              <div className="insurance-layout-left">
             {ordenPendienteId ? (
               <div style={{
                 background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(5,150,105,0.04) 100%)',
@@ -1662,45 +1750,68 @@ function PreRegistroPresidente() {
                   </div>
                 ) : (
                   <div className="insurance-grid">
-                    <div className="insurance-col">
+                    <div className="insurance-section">
                       <div className="insurance-col-title">Seguros Jugadores.</div>
-                      {segurosJugadores.map(seg => (
-                        <div key={seg.id} className="insurance-card" style={{ margin: 0 }}>
-                          <div className="insurance-info">
-                            <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
-                            <p>{seg.descripcion}</p>
+                      <div className="insurance-card-list">
+                        {segurosJugadores.map(seg => (
+                          <div key={seg.id} className="insurance-card insurance-player-card" style={{ margin: 0 }}>
+                            <div className="insurance-player-content">
+                              <p className="insurance-player-name">{seg.nombre}</p>
+                              <span className="insurance-player-price">${seg.precio} c/u</span>
+                              <p className="insurance-player-description">{seg.descripcion}</p>
+                            </div>
+                            <input
+                              type="number"
+                              className="insurance-input"
+                              value={asignacionSeguros[seg.id] ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
+                              }}
+                            />
                           </div>
-                          <input
-                            type="number"
-                            className="insurance-input"
-                            value={asignacionSeguros[seg.id] ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                              setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                            }}
-                          />
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                    <div className="insurance-col">
-                      <div className="insurance-col-title">Seguros Presidente.</div>
-                      {segurosPresidente.map(seg => (
-                        <div key={seg.id} className="insurance-card" style={{ margin: 0 }}>
-                          <div className="insurance-info">
-                            <h4>{seg.nombre} <span style={{ fontSize: '14px', color: '#5d87e5' }}>${seg.precio} c/u</span></h4>
-                            <p>{seg.descripcion}</p>
-                          </div>
-                          <input
-                            type="number"
-                            className="insurance-input"
-                            value={asignacionSeguros[seg.id] ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                              setAsignacionSeguros({ ...asignacionSeguros, [seg.id]: val });
-                            }}
-                          />
-                        </div>
-                      ))}
+                    <div className="insurance-section">
+                      <div className="insurance-col-title">
+                        Seguros Presidente.
+                      </div>
+                      <div className="insurance-card-list">
+                        {segurosPresidente.map(seg => {
+                          const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
+
+                          return (
+                            <div
+                              key={seg.id}
+                              className="insurance-card insurance-player-card"
+                              style={{ margin: 0 }}
+                            >
+                              <div className="insurance-player-content">
+                                <p className="insurance-player-name">{seg.nombre}</p>
+                                <span className="insurance-player-price">${seg.precio} c/u</span>
+                                <p className="insurance-player-description">{seg.descripcion}</p>
+                              </div>
+
+                              <input
+                                type="radio"
+                                name="seguro-presidente" // IMPORTANTE
+                                className="insurance-input"
+                                checked={checked}
+                                onChange={() => {
+                                  const next = { ...asignacionSeguros };
+
+                                  segurosPresidente.forEach(item => {
+                                    next[item.id] = item.id === seg.id ? 1 : 0;
+                                  });
+
+                                  setAsignacionSeguros(next);
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1718,7 +1829,10 @@ function PreRegistroPresidente() {
               </>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px' }}>
+              </div>
+
+              <div className="insurance-layout-right">
+            <div className="summary-stack">
               {/* Resumen de cuotas */}
               <div style={{
                 background: 'rgba(255,255,255,0.04)',
@@ -1799,6 +1913,8 @@ function PreRegistroPresidente() {
                     {bankInfo.referencia}
                   </div>
                 </div>
+              </div>
+            </div>
               </div>
             </div>
 
