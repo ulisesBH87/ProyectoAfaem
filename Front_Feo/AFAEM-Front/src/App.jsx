@@ -20,6 +20,8 @@ const ProximoPresidente = lazy(() => import('./pages/Auth/ProximoPresidente'));
 const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPresidente'));
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
+const PoliticaPrivacidad = lazy(() => import('./pages/Legales/PoliticaPrivacidad'));
+const TerminosCondiciones = lazy(() => import('./pages/Legales/TerminosCondiciones'));
 
 function App() {
   return (
@@ -45,6 +47,14 @@ function App() {
           <Route path="/presidente-equipo/admin-solicitudes" element={<AdminSolicitudes />} />
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
+          {/* Política de Privacidad */}
+          <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
+          <Route path="/admin/politica-privacidad" element={<PoliticaPrivacidad />} />
+          <Route path="/presidente-equipo/politica-privacidad" element={<PoliticaPrivacidad />} />
+          {/* Términos y Condiciones */}
+          <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
+          <Route path="/admin/terminos-condiciones" element={<TerminosCondiciones />} />
+          <Route path="/presidente-equipo/terminos-condiciones" element={<TerminosCondiciones />} />
         </Routes>
       </Suspense>
     </Router>
