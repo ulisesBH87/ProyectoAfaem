@@ -4,7 +4,9 @@ import {
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight,
-  FaGavel
+  FaGavel,
+  FaShieldAlt,
+  FaFileContract
 } from 'react-icons/fa';
 
 import { useRBAC } from '../hooks/useRBAC';
@@ -16,6 +18,9 @@ const DashboardSidebar = ({ collapsed}) => {
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
   
+  // DEFINICIÓN DE TEMAS (Glassmorphism)
+  const isAdmin = hasRole('Admin') || hasRole('Administrador');
+
   const handleLogoClick = () => {
     if (isAdmin) {
       navigate('/admin/dashboard');
@@ -30,9 +35,6 @@ const DashboardSidebar = ({ collapsed}) => {
   };
 
   if (isLoading) return null;
-
-  // DEFINICIÓN DE TEMAS (Glassmorphism)
-  const isAdmin = hasRole('Admin') || hasRole('Administrador');
 
   const theme = {
     bg: isAdmin
@@ -221,28 +223,55 @@ const DashboardSidebar = ({ collapsed}) => {
 
       {/* FOOTER ACTIONS */}
       <div style={{ padding: '8px 10px', borderTop: `1px solid ${theme.border}` }}>
-        <div
-          onClick={() => navigate('/reglamentos')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '10px 12px',
-            margin: '2px 0',
-            borderRadius: '10px',
-            cursor: 'pointer',
-            color: theme.text,
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.hover}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          <FaGavel style={{ fontSize: '18px' }} />
-          {!collapsed && (
-  <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
-    Reglamentos
-  </span>
-)}
-        </div>
+        {/* SECCIÓN LEGAL MAPEADA */}
+        {[{
+          label: 'Reglamentos',
+          icon: <FaGavel style={{ fontSize: '18px' }} />,
+          path: isAdmin ? '/admin/reglamentos' : '/presidente-equipo/reglamentos',
+        }, {
+          label: 'Política de Privacidad',
+          icon: <FaShieldAlt style={{ fontSize: '18px' }} />,
+          path: isAdmin ? '/admin/politica-privacidad' : '/presidente-equipo/politica-privacidad',
+        }, {
+          label: 'Términos y Condiciones',
+          icon: <FaFileContract style={{ fontSize: '18px' }} />,
+          path: isAdmin ? '/admin/terminos-condiciones' : '/presidente-equipo/terminos-condiciones',
+        }].map(({ label, icon, path }) => {
+          const isActive = location.pathname === path;
+          return (
+            <div
+              key={path}
+              onClick={() => navigate(path)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px 12px',
+                margin: '2px 0',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                color: isActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.text,
+                backgroundColor: isActive ? theme.hoverBg : 'transparent',
+                transition: 'all 0.2s',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = theme.hoverBg;
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              {icon}
+              {!collapsed && (
+                <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
+                  {label}
+                </span>
+              )}
+            </div>
+          );
+        })}
+
+        <div style={{ height: '1px', background: theme.border, margin: '6px 0' }} />
 
         <div
           onClick={handleLogout}
@@ -255,18 +284,18 @@ const DashboardSidebar = ({ collapsed}) => {
             cursor: 'pointer',
             color: 'var(--danger)',
             transition: 'all 0.2s',
+            justifyContent: collapsed ? 'center' : 'flex-start',
           }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <FaSignOutAlt style={{ fontSize: '18px' }} />
           {!collapsed && (
-  <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
-    Cerrar Sesión
-  </span>
-)}
+            <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
+              Cerrar Sesión
+            </span>
+          )}
         </div>
-
 
       </div>
     </aside>
