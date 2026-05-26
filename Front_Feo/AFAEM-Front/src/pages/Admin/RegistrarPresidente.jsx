@@ -47,8 +47,8 @@ const REQUISITOS = [
 ];
 
 const CATALOGO_ROLES = [
-  { valor: 'TIPO F', etiqueta: 'TIPO F' },
   { valor: 'TIPO G', etiqueta: 'TIPO G' },
+  { valor: 'SIN SEGURO', etiqueta: 'SIN SEGURO' },
 ];
 
 const CATALOGO_LIGAS_DEFAULT = [
@@ -198,17 +198,20 @@ export default function RegistrarPresidente() {
   const [voucher, setVoucher] = useState(null);
   const [cargandoSeguros, setCargandoSeguros] = useState(false);
 
-  const totalAsignados = useMemo(() => Object.values(asignacion).reduce((a, v) => a + Number(v || 0), 0), [asignacion]);
-  const totalPagar = useMemo(() => seguros.reduce((a, s) => a + Number(asignacion[s.id] || 0) * s.precio, 0), [seguros, asignacion]);
-  const segurosRequeridos = Number(numPersonas || 0);
+  const segurosPresidente = useMemo(() =>
+    seguros.filter(s => ['TIPO G', 'SIN SEGURO'].includes(s.nombre.toUpperCase().trim()))
+    , [seguros]);
 
   const segurosJugadores = useMemo(() =>
-    seguros.filter((s, i) => ['TIPO A', 'TIPO B', 'TIPO C', 'TIPO D', 'TIPO E'].includes(s.nombre.toUpperCase().trim()) || (seguros.length === 7 && i < 5))
+    seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes(s.nombre.toUpperCase().trim()))
     , [seguros]);
 
-  const segurosPresidente = useMemo(() =>
-    seguros.filter((s, i) => ['TIPO F', 'TIPO G'].includes(s.nombre.toUpperCase().trim()) || (seguros.length === 7 && i >= 5))
-    , [seguros]);
+  const totalAsignados = useMemo(() => {
+    return segurosJugadores.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
+  }, [asignacion, segurosJugadores]);
+
+  const totalPagar = useMemo(() => seguros.reduce((a, s) => a + Number(asignacion[s.id] || 0) * s.precio, 0), [seguros, asignacion]);
+  const segurosRequeridos = Number(numPersonas || 0);
 
   // ── PASO 3: Documentos ──────────────────────────────────────────────────────
   const [correoDoc, setCorreoDoc] = useState('');
@@ -244,7 +247,13 @@ export default function RegistrarPresidente() {
         }));
         setSeguros(mapped);
         const init = {};
-        mapped.forEach(s => { init[s.id] = ''; });
+        mapped.forEach(s => {
+          if (s.nombre.toUpperCase().trim() === 'SIN SEGURO') {
+            init[s.id] = 1;
+          } else {
+            init[s.id] = 0;
+          }
+        });
         setAsignacion(init);
       } catch { setSeguros([]); }
       finally { setCargandoSeguros(false); }
@@ -262,13 +271,40 @@ export default function RegistrarPresidente() {
     })();
   }, []);
 
-  // Pre-rellenar correo/teléfono del doc con los datos de cuenta si están vacíos
+  // Pre-rellenar correo/teléfono y datos de identidad manuales con los datos de cuenta si están vacíos
   useEffect(() => {
     if (paso === 3) {
       if (!correoDoc && cuenta.correo) setCorreoDoc(cuenta.correo);
       if (!telefonoDoc && cuenta.telefono) setTelefonoDoc(cuenta.telefono);
+
+      setOcrResults(prev => {
+        const next = { ...prev };
+        if (!next.nombre) {
+          const fullName = `${cuenta.primerApellido} ${cuenta.segundoApellido} ${cuenta.nombre}`.replace(/\s+/g, ' ').trim().toUpperCase();
+          if (fullName) next.nombre = fullName;
+        }
+        if (!next.curp && cuenta.curp) {
+          next.curp = cuenta.curp.toUpperCase();
+        }
+        if (!next.fecha_nac && cuenta.fechaNacimiento) {
+          next.fecha_nac = toDDMMYYYY(cuenta.fechaNacimiento);
+        }
+        return next;
+      });
     }
   }, [paso]);
+
+  // Sincronizar tipo de afiliación con el seguro de presidente asignado
+  useEffect(() => {
+    if (seguros.length > 0 && segurosPresidente.length > 0) {
+      const selectedPresSeguro = segurosPresidente.find(seg => Number(asignacion[seg.id] || 0) > 0);
+      if (selectedPresSeguro) {
+        setTipoAfiliacion(selectedPresSeguro.nombre.toUpperCase().trim());
+      } else {
+        setTipoAfiliacion('');
+      }
+    }
+  }, [asignacion, seguros, segurosPresidente]);
 
   // ── OCR ────────────────────────────────────────────────────────────────────
   const mejorarActa = (rawText, data) => {
@@ -404,11 +440,20 @@ export default function RegistrarPresidente() {
       safeField(form, 'Correo electrónico', correoDoc || cuenta.correo);
       safeField(form, 'Teléfono', ocrResults.telefono || telefonoDoc || cuenta.telefono);
       safeField(form, 'fill_20', tipoAfiliacion);
+      safeField(form, 'Tipo', tipoAfiliacion);
       safeField(form, 'Asociación', asociacion);
       safeField(form, 'Liga', liga?.toUpperCase());
       safeField(form, 'Equipo', equipo?.toUpperCase());
       if (nacionalidad) safeField(form, 'Lugar de Nacimiento', nacionalidad);
-      if (curp?.length >= 11) { const sx = curp.charAt(10).toUpperCase(); safeField(form, 'Sexo', sx === 'H' ? 'MASCULINO' : sx === 'M' ? 'FEMENINO' : ''); }
+      let sexoTexto = '';
+      if (cuenta.sexoId === '1' || cuenta.sexoId === 1) sexoTexto = 'MASCULINO';
+      else if (cuenta.sexoId === '2' || cuenta.sexoId === 2) sexoTexto = 'FEMENINO';
+      else if (cuenta.sexoId === '3' || cuenta.sexoId === 3) sexoTexto = 'NO BINARIO';
+      else if (curp?.length >= 11) {
+        const sx = curp.charAt(10).toUpperCase();
+        sexoTexto = sx === 'H' ? 'MASCULINO' : sx === 'M' ? 'FEMENINO' : '';
+      }
+      safeField(form, 'Sexo', sexoTexto);
       const hoy = new Date();
       const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       safeField(form, 'A', String(hoy.getDate()).padStart(2, '0'));
@@ -481,7 +526,15 @@ export default function RegistrarPresidente() {
       // Datos de cuotas
       fd.append('numPersonas', String(numPersonas));
       const segFiltrados = {};
-      Object.entries(asignacion).forEach(([k, v]) => { if (Number(v) > 0) segFiltrados[k] = Number(v); });
+      Object.entries(asignacion).forEach(([k, v]) => {
+        if (Number(v) > 0) {
+          const segObj = seguros.find(s => String(s.id) === String(k));
+          if (segObj && ['TIPO G', 'SIN SEGURO'].includes(segObj.nombre.toUpperCase().trim())) {
+            return;
+          }
+          segFiltrados[k] = Number(v);
+        }
+      });
       fd.append('segurosAsignados', JSON.stringify(segFiltrados));
       // Archivos
       if (voucher) fd.append('voucher', voucher);
@@ -717,20 +770,74 @@ export default function RegistrarPresidente() {
                           <div style={{ fontSize: 12, color: C.textDim, padding: 10 }}>Cargando…</div>
                         ) : lista.length === 0 ? (
                           <div style={{ fontSize: 12, color: C.textDim, padding: 10 }}>Sin seguros en esta categoría</div>
-                        ) : lista.map(seg => (
-                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.cardBorder}`, padding: '10px 12px', borderRadius: 10 }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12.5, fontWeight: 700 }}>{seg.nombre}</div>
-                              <div style={{ fontSize: 11, color: C.textDim }}>${seg.precio} c/u</div>
+                        ) : lista.map(seg => {
+                          const isPres = titulo === 'Seguros Presidente';
+                          const isChecked = Number(asignacion[seg.id] || 0) === 1;
+
+                          const handleSelectPres = () => {
+                            setAsignacion(prev => {
+                              const next = { ...prev };
+                              lista.forEach(item => {
+                                next[item.id] = item.id === seg.id ? 1 : 0;
+                              });
+                              return next;
+                            });
+                          };
+
+                          return (
+                            <div
+                              key={seg.id}
+                              onClick={isPres ? handleSelectPres : undefined}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: isPres && isChecked ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.02)',
+                                border: isPres && isChecked ? `1px solid ${C.amber}` : `1px solid ${C.cardBorder}`,
+                                padding: '10px 12px',
+                                borderRadius: 10,
+                                cursor: isPres ? 'pointer' : 'default',
+                                transition: 'all .2s',
+                              }}
+                              onMouseEnter={isPres ? e => {
+                                if (!isChecked) {
+                                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                                }
+                              } : undefined}
+                              onMouseLeave={isPres ? e => {
+                                if (!isChecked) {
+                                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                                  e.currentTarget.style.borderColor = C.cardBorder;
+                                }
+                              } : undefined}
+                            >
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 700 }}>{seg.nombre}</div>
+                                <div style={{ fontSize: 11, color: C.textDim }}>${seg.precio} c/u</div>
+                              </div>
+                              {isPres ? (
+                                <input
+                                  type="radio"
+                                  name="seguroPresidenteRadio"
+                                  style={{ width: 18, height: 18, cursor: 'pointer', accentColor: C.amber }}
+                                  checked={isChecked}
+                                  onChange={handleSelectPres}
+                                />
+                              ) : (
+                                <input
+                                  type="number" min="0"
+                                  style={{ width: 58, padding: '6px 8px', borderRadius: 8, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: 'white', textAlign: 'center', outline: 'none', fontSize: 14 }}
+                                  value={asignacion[seg.id] ?? ''}
+                                  onChange={e => {
+                                    const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                                    setAsignacion(prev => ({ ...prev, [seg.id]: val }));
+                                  }}
+                                />
+                              )}
                             </div>
-                            <input
-                              type="number" min="0"
-                              style={{ width: 58, padding: '6px 8px', borderRadius: 8, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: 'white', textAlign: 'center', outline: 'none', fontSize: 14 }}
-                              value={asignacion[seg.id] ?? ''}
-                              onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setAsignacion(prev => ({ ...prev, [seg.id]: v })); }}
-                            />
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -795,7 +902,11 @@ export default function RegistrarPresidente() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>Cargo / Tipo de Afiliación</label>
-                  <select style={selectStyle} value={tipoAfiliacion} onChange={e => setTipoAfiliacion(e.target.value)}>
+                  <select
+                    style={{ ...selectStyle, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}
+                    value={tipoAfiliacion}
+                    disabled
+                  >
                     <option value="">Selecciona…</option>
                     {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
                   </select>
