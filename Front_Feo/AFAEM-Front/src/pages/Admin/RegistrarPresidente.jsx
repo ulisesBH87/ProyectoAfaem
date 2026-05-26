@@ -2,13 +2,15 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft, FaUser, FaMoneyBillWave, FaFolderOpen,
-  FaEye, FaEyeSlash, FaUpload, FaFilePdf, FaCheck, FaExclamationTriangle
+  FaEye, FaEyeSlash, FaUpload, FaFilePdf, FaCheck, FaExclamationTriangle,
+  FaSearchPlus, FaSyncAlt
 } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
 import { registrarPresidenteAdmin } from '../../services/admin';
+import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 
 // ─── Paleta de colores (distinta a PreRegistro) ──────────────────────────────
 // PreRegistro usa: #090f2b, #0b4ea6, #34d399, #5d87e5 (azul-marino + verde)
@@ -226,7 +228,13 @@ export default function RegistrarPresidente() {
   const [fotoError, setFotoError] = useState(null);
   const [fotoFallida, setFotoFallida] = useState(false);
   const [fotoArchivo, setFotoArchivo] = useState(null);
-
+  const [previews, setPreviews] = useState({});
+  const [previewDoc, setPreviewDoc] = useState({
+    open: false,
+    url: '',
+    type: '',
+    title: ''
+  });
   // ── Carga inicial ───────────────────────────────────────────────────────────
   useEffect(() => {
     // Seguros
@@ -324,33 +332,186 @@ export default function RegistrarPresidente() {
   };
 
   const procesarFoto = async (archivo) => {
-    Swal.fire({ title: 'Validando fotografía…', html: 'Verificando calidad y rostros. <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
-    try {
+    Swal.fire({ title: 'Validando fotografía…', 
+      html: 'Verificando calidad y rostros. <b>Por favor espere.</b>', 
+      allowOutsideClick: false, allowEscapeKey: false, 
+      didOpen: () => Swal.showLoading() });
+    
+      try {
       const data = await validarFotografia(archivo);
       if (data.valido) {
-        setDocuments(prev => ({ ...prev, fotografia: archivo }));
-        setFotoFallida(false); setFotoError(null); setFotoArchivo(null);
-        Swal.fire({ title: '¡Fotografía aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
-      } else {
-        setFotoError(data.mensaje); setFotoFallida(true); setFotoArchivo(archivo);
-        Swal.fire({ title: 'Error en fotografía', text: data.mensaje, icon: 'error', confirmButtonColor: C.amberDark });
+
+      // BASE64 -> URL PREVIEW
+      const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
+
+      // BASE64 -> FILE
+      const byteCharacters = atob(data.imagen);
+      const byteNumbers = new Array(byteCharacters.length);
+
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
+
+      const byteArray = new Uint8Array(byteNumbers);
+
+       const archivoValidado = new File(
+        [byteArray],
+        "foto_validada.jpg",
+        { type: data.tipo_imagen }
+      );
+
+      // GUARDAR DOCUMENTO
+      setDocuments(prev => ({
+        ...prev,
+        fotografia: archivoValidado
+      }));
+
+      // GUARDAR PREVIEW
+      setPreviews(prev => ({
+        ...prev,
+        fotografia: imagenProcesada
+      }));
+
+      // LIMPIAR ERRORES
+      setFotoFallida(false);
+      setFotoError(null);
+      setFotoArchivo(null);
+
+      Swal.fire({
+        title: '¡Fotografía aceptada!',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      } else {
+        // GUARDAR FOTO FALLIDA
+      setFotoError(data.mensaje);
+      setFotoFallida(true);
+      setFotoArchivo(archivo);
+
+      Swal.fire({
+        title: 'Error en fotografía',
+        text: `${data.mensaje} ¿Deseas cargarla de todos modos?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cargar igualmente',
+        cancelButtonText: 'No, intentar de nuevo'
+      }).then((result) => {
+
+        if (result.isConfirmed) {
+
+          // PREVIEW ORIGINAL
+          const reader = new FileReader();
+
+          reader.onloadend = () => {
+            setPreviews(prev => ({
+              ...prev,
+              fotografia: reader.result
+            }));
+          };
+
+          reader.readAsDataURL(archivo);
+
+          // GUARDAR ORIGINAL
+          setDocuments(prev => ({
+            ...prev,
+            fotografia: archivo
+          }));
+
+          setFotoFallida(false);
+          setFotoError(null);
+          setFotoArchivo(null);
+
+          Swal.fire({
+            title: 'Fotografía cargada',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
+    }
+
     } catch (err) {
-      const msg = err.message || 'No se pudo procesar la foto.';
-      setFotoError(msg); setFotoFallida(true); setFotoArchivo(archivo);
-      Swal.fire({ title: 'Error', text: msg, icon: 'error', confirmButtonColor: C.amberDark });
+
+      const msg = err.message || 'No se pudo procesar la fotografía.';
+
+      setFotoError(msg);
+      setFotoFallida(true);
+      setFotoArchivo(archivo);
+
+      Swal.fire({
+        title: 'Error de validación',
+        text: `${msg} ¿Deseas cargarla igualmente?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cargar igualmente',
+        cancelButtonText: 'No, intentar de nuevo'
+      }).then((result) => {
+
+        if (result.isConfirmed) {
+
+          // PREVIEW ORIGINAL
+          const reader = new FileReader();
+
+          reader.onloadend = () => {
+            setPreviews(prev => ({
+              ...prev,
+              fotografia: reader.result
+            }));
+          };
+
+          reader.readAsDataURL(archivo);
+
+          // GUARDAR ORIGINAL
+          setDocuments(prev => ({
+            ...prev,
+            fotografia: archivo
+          }));
+
+          setFotoFallida(false);
+          setFotoError(null);
+          setFotoArchivo(null);
+
+          Swal.fire({
+            title: 'Fotografía cargada',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
     }
   };
 
   const handleFileUpload = (docKey, file) => {
-    if (!file) return;
-    if (docKey === 'fotografia') {
-      procesarFoto(file);
-    } else {
-      setDocuments(prev => ({ ...prev, [docKey]: file }));
-      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCR(docKey, file);
+  if (!file) return;
+
+  // Generar preview
+  const preview =
+    file.type === 'application/pdf'
+      ? 'pdf'
+      : URL.createObjectURL(file);
+
+  setPreviews(prev => ({
+    ...prev,
+    [docKey]: preview
+  }));
+
+  if (docKey === 'fotografia') {
+    procesarFoto(file);
+  } else {
+    setDocuments(prev => ({
+      ...prev,
+      [docKey]: file
+    }));
+
+    if (['actaNacimiento', 'identificacion'].includes(docKey)) {
+      procesarOCR(docKey, file);
     }
-  };
+  }
+};
 
   const forzarFoto = () => {
     if (!fotoArchivo) return;
@@ -879,21 +1040,193 @@ export default function RegistrarPresidente() {
                 if (ocrDone || uploaded) { statusLabel = ocrDone ? 'Procesado' : 'Listo'; statusColor = C.green; statusBg = 'rgba(74,222,128,0.1)'; }
 
                 return (
-                  <div key={doc.documento} style={{ position: 'relative', background: C.card, border: `1px solid ${uploaded ? 'rgba(74,222,128,0.2)' : C.cardBorder}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', transition: 'border-color .2s' }}>
+                  <div key={doc.documento} 
+                  style={{
+                  position: 'relative',
+                  background: C.card,
+                  border: `1px solid ${uploaded ? 'rgba(74,222,128,0.2)' : C.cardBorder}`,
+                  borderRadius: 16,
+                  padding: '18px 20px',
+                  paddingTop: '45px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'border-color .2s'
+                }}
+                >
                     {/* Pill de estado */}
-                    <div style={{ position: 'absolute', top: 14, right: 14, padding: '3px 10px', borderRadius: 20, fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', background: statusBg, color: statusColor, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div 
+                    style={{
+                      position: 'absolute',
+                      top: 14,
+                      right: 14,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      fontSize: 9,
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.8px',
+                      background: statusBg,
+                      color: statusColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      zIndex: 2
+                    }}
+
+                    >
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor }} />
                       {statusLabel}
                     </div>
 
-                    <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
-                      <div style={{ width: 46, height: 46, borderRadius: 12, background: uploaded ? 'rgba(74,222,128,0.1)' : 'rgba(245,158,11,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                        {doc.icon}
+                    <div style={{ display: 'block', gap: 14, marginBottom: 14 }}>
+                      <div className="preview-container"
+                        style={{
+                          height: '140px',
+                          width: '100%',
+                          background: '#111827',
+                          borderRadius: 12,
+                          marginBottom: 14,
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative'
+                        }}
+
+                         onMouseEnter={(e) => {
+                          const overlay =
+                            e.currentTarget.querySelector('.overlay-actions');
+
+                          if (overlay) overlay.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          const overlay =
+                            e.currentTarget.querySelector('.overlay-actions');
+
+                          if (overlay) overlay.style.opacity = '0';
+                        }}
+                        
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+
+                          const file = e.dataTransfer.files[0];
+
+                          if (file) {
+                            handleFileUpload(doc.documento, file);
+                          }
+                        }}
+                      >
+                        {previews[doc.documento] ? (
+                          <>
+                          {previews[doc.documento] === 'pdf' ? (
+                            <div style={{
+                              color: '#ef4444',
+                              fontSize: 42,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: 5
+                            }}>
+                              <FaFilePdf />
+                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                            </div>
+                            
+                          ) : (
+                            <img
+                              src={previews[doc.documento]}
+                              alt="preview"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain'
+                              }}
+                            />
+                          )}
+                          
+                          {/* Overlay */}
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)'
+                            }}>
+                              <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const isPdf = documents[doc.documento]?.type === 'application/pdf';
+                                setPreviewDoc({
+                                  open: true,
+                                  url: previews[doc.documento],
+                                  type: isPdf ? 'pdf' : 'image',
+                                  title: doc.title
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                              }}
+                              >
+                                <FaSearchPlus />
+                              </button>
+                              <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                document.getElementById(`file-${doc.documento}`).click();
+                              }}
+                              className="btn-change"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                              }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{
+                            textAlign: 'center',
+                            color: '#6b7280'
+                          }}
+                          onClick={() => document.getElementById(`file-${doc.documento}`).click()}>
+                            <FaUpload style={{ fontSize: 28, marginBottom: 6 }} />
+                            <p style={{ fontSize: 11 }}>Sin archivo</p>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h4 style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 800 }}>{doc.nombre}</h4>
-                        <p style={{ margin: 0, fontSize: 11, color: C.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {uploaded ? `📎 ${documents[doc.documento].name}` : 'No seleccionado'}
+
+                      <div style={{ marginBottom: 12 }}>
+                        <h4 style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 800 }}>
+                          {doc.nombre}
+                        </h4>
+
+                        <p style={{
+                          margin: 0,
+                          fontSize: 11,
+                          color: C.textDim,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {uploaded
+                            ? `📎 ${documents[doc.documento].name}`
+                            : 'No seleccionado'}
                         </p>
                       </div>
                     </div>
@@ -917,12 +1250,14 @@ export default function RegistrarPresidente() {
                           <FaFilePdf /> Descargar
                         </button>
                       )}
-                      <button
+
+                      {/* <button
                         onClick={() => document.getElementById(`file-${doc.documento}`).click()}
                         style={{ flex: 1, padding: '8px 10px', border: `1px solid ${uploaded ? 'rgba(74,222,128,0.3)' : 'rgba(245,158,11,0.25)'}`, background: uploaded ? 'rgba(74,222,128,0.06)' : 'rgba(245,158,11,0.05)', color: uploaded ? C.green : C.amber, borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                       >
                         <FaUpload /> {uploaded ? 'Cambiar' : 'Subir'}
-                      </button>
+                      </button> */}
+                      
                       <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={e => handleFileUpload(doc.documento, e.target.files[0])} />
                     </div>
 
@@ -954,8 +1289,42 @@ export default function RegistrarPresidente() {
                 );
               })}
             </div>
+
+            {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
+            <Modal
+            estaAbierto={previewDoc.open}
+            titulo={previewDoc.title}
+            alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+            tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+            pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+            >
+              <div style={{
+                width: '100%',
+                height: previewDoc.type === 'pdf' ? '100%' : 'auto',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#0f172a',
+                borderRadius: '12px',
+                overflow: 'hidden'
+                }}>
+                  {previewDoc.type === 'pdf' ? (
+                    <iframe
+                    src={previewDoc.url}
+                    style={{ width: '1800px', height: '70vh', border: 'none' }} title="Visor de PDF"
+                    />
+                  ) : (
+                  <img
+                  src={previewDoc.url}
+                  alt="Preview Grande"
+                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+                  />
+                  )}
+                </div>
+              </Modal>                      
           </div>
         )}
+
 
         {/* ─── Footer de navegación ─── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.cardBorder}` }}>

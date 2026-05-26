@@ -28,6 +28,18 @@ const ESTADO_EQUIPO = {
 };
 
 export default function ConfigurarEquipo() {
+
+  // ESTILO DINÁMICO PARA HOVER
+  const hoverStyles = `
+    .document-card:hover .overlay-actions {
+      opacity: 1 !important;
+    }
+    .document-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+  `;  
+  
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { hasRole } = useRBAC();
@@ -2244,6 +2256,7 @@ export default function ConfigurarEquipo() {
           }
           .dashboard-main { animation: slideUp 0.4s ease; }
         `}
+          {hoverStyles}
       </style>
       <div className="dashboard-content">
         {!tieneSlotDisponible && modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (
