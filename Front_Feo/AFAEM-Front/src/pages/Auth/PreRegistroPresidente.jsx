@@ -776,8 +776,9 @@ function PreRegistroPresidente() {
         }
 
         const ordenPayload = {
-          CantidadJugadores: numPersonas,
-          Seguros: segurosPayload
+          CantidadJugadores: parseInt(numPersonas, 10) || 0,
+          Seguros: segurosPayload,
+          TipoSolicitud: 1
         };
 
         const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
@@ -915,7 +916,7 @@ function PreRegistroPresidente() {
               'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-              CantidadJugadores: numPersonas,
+              CantidadJugadores: parseInt(numPersonas, 10) || 0,
               Seguros: segurosPayload,
               TipoSolicitud: 1
             })
