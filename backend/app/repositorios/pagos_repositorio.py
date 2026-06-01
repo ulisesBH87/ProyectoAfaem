@@ -144,12 +144,15 @@ def crear_presidente_equipo_repo(db, usuario_id):
         PresidenteEquipo.PersonaId == persona.PersonaId
     ).first()
 
+    # Si ya existe, no arrojamos error. Hacemos la función idempotente.
+    # Simplemente aseguramos el rol de Presidente de Equipo y retornamos el registro.
     if presidente_existente:
-        raise Exception("Ya existe un presidente registrado para esta persona")
+        usuario.RolId = Rol.PRESIDENTE_EQUIPO.value
+        return presidente_existente
     
     nuevo_presidente = PresidenteEquipo(
         PersonaId = persona.PersonaId,
-        EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_EN_REVISION.value
+        EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES.value
     )
 
     db.add(nuevo_presidente)

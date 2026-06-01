@@ -90,7 +90,7 @@ export default function Ingresar() {
       } else if (role.includes('PRESIDENTE') || role === 'INVITADO') {
         // Solo entra al dashboard si ya está aprobado/activo o en revisión (Estatus 4, 5, 6 o 7)
         // Pero si es INVITADO, siempre va a pre-registro
-        if (role !== 'INVITADO' && currentEstatusId && parseInt(currentEstatusId) >= 4) {
+        if (role !== 'INVITADO' && currentEstatusId && parseInt(currentEstatusId) >= 5) {
           navigate('/presidente-equipo/equipos');
         } else {
           navigate('/pre-registro-presidente');

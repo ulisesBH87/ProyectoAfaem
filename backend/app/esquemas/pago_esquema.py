@@ -20,7 +20,7 @@ class SubirComprobanteRespuesta(BaseModel):
     OrdenPagoId: int
 
 class VerComprobantes(BaseModel):
-    Correo: EmailStr
+    Correo: str
     FechaEnvio: datetime
     Estatus: str
     Ruta: str
