@@ -127,8 +127,22 @@ async def descargar_formato(
 
 #Hacer el envío de la solicitud al administrador
 @router.post("/solicitud-completa")
-def enviar_solicitud_completa(solicitud_id: int, db:Session=Depends(get_db), usuario=Depends(obtener_usuario_actual)):
-    resultado = solicitud_servicio.enviar_solicitud_completa_servicio(db, solicitud_id, usuario.UsuarioId)
+def enviar_solicitud_completa(
+    solicitud_id: int,
+    curp: str | None = Query(None),
+    sexo_id: int | None = Query(None),
+    fecha_nacimiento: str | None = Query(None),
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    resultado = solicitud_servicio.enviar_solicitud_completa_servicio(
+        db,
+        solicitud_id,
+        usuario.UsuarioId,
+        curp=curp,
+        sexo_id=sexo_id,
+        fecha_nacimiento=fecha_nacimiento
+    )
     return resultado
 
 #Administrador

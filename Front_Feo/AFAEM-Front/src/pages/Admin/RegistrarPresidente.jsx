@@ -2,13 +2,15 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft, FaUser, FaMoneyBillWave, FaFolderOpen,
-  FaEye, FaEyeSlash, FaUpload, FaFilePdf, FaCheck, FaExclamationTriangle
+  FaEye, FaEyeSlash, FaUpload, FaFilePdf, FaCheck, FaExclamationTriangle,
+  FaSearchPlus, FaSyncAlt
 } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
 import { registrarPresidenteAdmin } from '../../services/admin';
+import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 
 // ─── Paleta de colores (distinta a PreRegistro) ──────────────────────────────
 // PreRegistro usa: #090f2b, #0b4ea6, #34d399, #5d87e5 (azul-marino + verde)
@@ -47,8 +49,8 @@ const REQUISITOS = [
 ];
 
 const CATALOGO_ROLES = [
-  { valor: 'TIPO F', etiqueta: 'TIPO F' },
   { valor: 'TIPO G', etiqueta: 'TIPO G' },
+  { valor: 'SIN SEGURO', etiqueta: 'SIN SEGURO' },
 ];
 
 const CATALOGO_LIGAS_DEFAULT = [
@@ -198,17 +200,20 @@ export default function RegistrarPresidente() {
   const [voucher, setVoucher] = useState(null);
   const [cargandoSeguros, setCargandoSeguros] = useState(false);
 
-  const totalAsignados = useMemo(() => Object.values(asignacion).reduce((a, v) => a + Number(v || 0), 0), [asignacion]);
-  const totalPagar = useMemo(() => seguros.reduce((a, s) => a + Number(asignacion[s.id] || 0) * s.precio, 0), [seguros, asignacion]);
-  const segurosRequeridos = Number(numPersonas || 0);
+  const segurosPresidente = useMemo(() =>
+    seguros.filter(s => ['TIPO G', 'SIN SEGURO'].includes(s.nombre.toUpperCase().trim()))
+    , [seguros]);
 
   const segurosJugadores = useMemo(() =>
-    seguros.filter((s, i) => ['TIPO A', 'TIPO B', 'TIPO C', 'TIPO D', 'TIPO E'].includes(s.nombre.toUpperCase().trim()) || (seguros.length === 7 && i < 5))
+    seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes(s.nombre.toUpperCase().trim()))
     , [seguros]);
 
-  const segurosPresidente = useMemo(() =>
-    seguros.filter((s, i) => ['TIPO F', 'TIPO G'].includes(s.nombre.toUpperCase().trim()) || (seguros.length === 7 && i >= 5))
-    , [seguros]);
+  const totalAsignados = useMemo(() => {
+    return segurosJugadores.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
+  }, [asignacion, segurosJugadores]);
+
+  const totalPagar = useMemo(() => seguros.reduce((a, s) => a + Number(asignacion[s.id] || 0) * s.precio, 0), [seguros, asignacion]);
+  const segurosRequeridos = Number(numPersonas || 0);
 
   // ── PASO 3: Documentos ──────────────────────────────────────────────────────
   const [correoDoc, setCorreoDoc] = useState('');
@@ -226,7 +231,13 @@ export default function RegistrarPresidente() {
   const [fotoError, setFotoError] = useState(null);
   const [fotoFallida, setFotoFallida] = useState(false);
   const [fotoArchivo, setFotoArchivo] = useState(null);
-
+  const [previews, setPreviews] = useState({});
+  const [previewDoc, setPreviewDoc] = useState({
+    open: false,
+    url: '',
+    type: '',
+    title: ''
+  });
   // ── Carga inicial ───────────────────────────────────────────────────────────
   useEffect(() => {
     // Seguros
@@ -244,7 +255,13 @@ export default function RegistrarPresidente() {
         }));
         setSeguros(mapped);
         const init = {};
-        mapped.forEach(s => { init[s.id] = ''; });
+        mapped.forEach(s => {
+          if (s.nombre.toUpperCase().trim() === 'SIN SEGURO') {
+            init[s.id] = 1;
+          } else {
+            init[s.id] = 0;
+          }
+        });
         setAsignacion(init);
       } catch { setSeguros([]); }
       finally { setCargandoSeguros(false); }
@@ -262,13 +279,40 @@ export default function RegistrarPresidente() {
     })();
   }, []);
 
-  // Pre-rellenar correo/teléfono del doc con los datos de cuenta si están vacíos
+  // Pre-rellenar correo/teléfono y datos de identidad manuales con los datos de cuenta si están vacíos
   useEffect(() => {
     if (paso === 3) {
       if (!correoDoc && cuenta.correo) setCorreoDoc(cuenta.correo);
       if (!telefonoDoc && cuenta.telefono) setTelefonoDoc(cuenta.telefono);
+
+      setOcrResults(prev => {
+        const next = { ...prev };
+        if (!next.nombre) {
+          const fullName = `${cuenta.primerApellido} ${cuenta.segundoApellido} ${cuenta.nombre}`.replace(/\s+/g, ' ').trim().toUpperCase();
+          if (fullName) next.nombre = fullName;
+        }
+        if (!next.curp && cuenta.curp) {
+          next.curp = cuenta.curp.toUpperCase();
+        }
+        if (!next.fecha_nac && cuenta.fechaNacimiento) {
+          next.fecha_nac = toDDMMYYYY(cuenta.fechaNacimiento);
+        }
+        return next;
+      });
     }
   }, [paso]);
+
+  // Sincronizar tipo de afiliación con el seguro de presidente asignado
+  useEffect(() => {
+    if (seguros.length > 0 && segurosPresidente.length > 0) {
+      const selectedPresSeguro = segurosPresidente.find(seg => Number(asignacion[seg.id] || 0) > 0);
+      if (selectedPresSeguro) {
+        setTipoAfiliacion(selectedPresSeguro.nombre.toUpperCase().trim());
+      } else {
+        setTipoAfiliacion('');
+      }
+    }
+  }, [asignacion, seguros, segurosPresidente]);
 
   // ── OCR ────────────────────────────────────────────────────────────────────
   const mejorarActa = (rawText, data) => {
@@ -324,33 +368,186 @@ export default function RegistrarPresidente() {
   };
 
   const procesarFoto = async (archivo) => {
-    Swal.fire({ title: 'Validando fotografía…', html: 'Verificando calidad y rostros. <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
-    try {
+    Swal.fire({ title: 'Validando fotografía…', 
+      html: 'Verificando calidad y rostros. <b>Por favor espere.</b>', 
+      allowOutsideClick: false, allowEscapeKey: false, 
+      didOpen: () => Swal.showLoading() });
+    
+      try {
       const data = await validarFotografia(archivo);
       if (data.valido) {
-        setDocuments(prev => ({ ...prev, fotografia: archivo }));
-        setFotoFallida(false); setFotoError(null); setFotoArchivo(null);
-        Swal.fire({ title: '¡Fotografía aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
-      } else {
-        setFotoError(data.mensaje); setFotoFallida(true); setFotoArchivo(archivo);
-        Swal.fire({ title: 'Error en fotografía', text: data.mensaje, icon: 'error', confirmButtonColor: C.amberDark });
+
+      // BASE64 -> URL PREVIEW
+      const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
+
+      // BASE64 -> FILE
+      const byteCharacters = atob(data.imagen);
+      const byteNumbers = new Array(byteCharacters.length);
+
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
+
+      const byteArray = new Uint8Array(byteNumbers);
+
+       const archivoValidado = new File(
+        [byteArray],
+        "foto_validada.jpg",
+        { type: data.tipo_imagen }
+      );
+
+      // GUARDAR DOCUMENTO
+      setDocuments(prev => ({
+        ...prev,
+        fotografia: archivoValidado
+      }));
+
+      // GUARDAR PREVIEW
+      setPreviews(prev => ({
+        ...prev,
+        fotografia: imagenProcesada
+      }));
+
+      // LIMPIAR ERRORES
+      setFotoFallida(false);
+      setFotoError(null);
+      setFotoArchivo(null);
+
+      Swal.fire({
+        title: '¡Fotografía aceptada!',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      } else {
+        // GUARDAR FOTO FALLIDA
+      setFotoError(data.mensaje);
+      setFotoFallida(true);
+      setFotoArchivo(archivo);
+
+      Swal.fire({
+        title: 'Error en fotografía',
+        text: `${data.mensaje} ¿Deseas cargarla de todos modos?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cargar igualmente',
+        cancelButtonText: 'No, intentar de nuevo'
+      }).then((result) => {
+
+        if (result.isConfirmed) {
+
+          // PREVIEW ORIGINAL
+          const reader = new FileReader();
+
+          reader.onloadend = () => {
+            setPreviews(prev => ({
+              ...prev,
+              fotografia: reader.result
+            }));
+          };
+
+          reader.readAsDataURL(archivo);
+
+          // GUARDAR ORIGINAL
+          setDocuments(prev => ({
+            ...prev,
+            fotografia: archivo
+          }));
+
+          setFotoFallida(false);
+          setFotoError(null);
+          setFotoArchivo(null);
+
+          Swal.fire({
+            title: 'Fotografía cargada',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
+    }
+
     } catch (err) {
-      const msg = err.message || 'No se pudo procesar la foto.';
-      setFotoError(msg); setFotoFallida(true); setFotoArchivo(archivo);
-      Swal.fire({ title: 'Error', text: msg, icon: 'error', confirmButtonColor: C.amberDark });
+
+      const msg = err.message || 'No se pudo procesar la fotografía.';
+
+      setFotoError(msg);
+      setFotoFallida(true);
+      setFotoArchivo(archivo);
+
+      Swal.fire({
+        title: 'Error de validación',
+        text: `${msg} ¿Deseas cargarla igualmente?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cargar igualmente',
+        cancelButtonText: 'No, intentar de nuevo'
+      }).then((result) => {
+
+        if (result.isConfirmed) {
+
+          // PREVIEW ORIGINAL
+          const reader = new FileReader();
+
+          reader.onloadend = () => {
+            setPreviews(prev => ({
+              ...prev,
+              fotografia: reader.result
+            }));
+          };
+
+          reader.readAsDataURL(archivo);
+
+          // GUARDAR ORIGINAL
+          setDocuments(prev => ({
+            ...prev,
+            fotografia: archivo
+          }));
+
+          setFotoFallida(false);
+          setFotoError(null);
+          setFotoArchivo(null);
+
+          Swal.fire({
+            title: 'Fotografía cargada',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        }
+      });
     }
   };
 
   const handleFileUpload = (docKey, file) => {
-    if (!file) return;
-    if (docKey === 'fotografia') {
-      procesarFoto(file);
-    } else {
-      setDocuments(prev => ({ ...prev, [docKey]: file }));
-      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCR(docKey, file);
+  if (!file) return;
+
+  // Generar preview
+  const preview =
+    file.type === 'application/pdf'
+      ? 'pdf'
+      : URL.createObjectURL(file);
+
+  setPreviews(prev => ({
+    ...prev,
+    [docKey]: preview
+  }));
+
+  if (docKey === 'fotografia') {
+    procesarFoto(file);
+  } else {
+    setDocuments(prev => ({
+      ...prev,
+      [docKey]: file
+    }));
+
+    if (['actaNacimiento', 'identificacion'].includes(docKey)) {
+      procesarOCR(docKey, file);
     }
-  };
+  }
+};
 
   const forzarFoto = () => {
     if (!fotoArchivo) return;
@@ -404,11 +601,20 @@ export default function RegistrarPresidente() {
       safeField(form, 'Correo electrónico', correoDoc || cuenta.correo);
       safeField(form, 'Teléfono', ocrResults.telefono || telefonoDoc || cuenta.telefono);
       safeField(form, 'fill_20', tipoAfiliacion);
+      safeField(form, 'Tipo', tipoAfiliacion);
       safeField(form, 'Asociación', asociacion);
       safeField(form, 'Liga', liga?.toUpperCase());
       safeField(form, 'Equipo', equipo?.toUpperCase());
       if (nacionalidad) safeField(form, 'Lugar de Nacimiento', nacionalidad);
-      if (curp?.length >= 11) { const sx = curp.charAt(10).toUpperCase(); safeField(form, 'Sexo', sx === 'H' ? 'MASCULINO' : sx === 'M' ? 'FEMENINO' : ''); }
+      let sexoTexto = '';
+      if (cuenta.sexoId === '1' || cuenta.sexoId === 1) sexoTexto = 'MASCULINO';
+      else if (cuenta.sexoId === '2' || cuenta.sexoId === 2) sexoTexto = 'FEMENINO';
+      else if (cuenta.sexoId === '3' || cuenta.sexoId === 3) sexoTexto = 'NO BINARIO';
+      else if (curp?.length >= 11) {
+        const sx = curp.charAt(10).toUpperCase();
+        sexoTexto = sx === 'H' ? 'MASCULINO' : sx === 'M' ? 'FEMENINO' : '';
+      }
+      safeField(form, 'Sexo', sexoTexto);
       const hoy = new Date();
       const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       safeField(form, 'A', String(hoy.getDate()).padStart(2, '0'));
@@ -481,7 +687,15 @@ export default function RegistrarPresidente() {
       // Datos de cuotas
       fd.append('numPersonas', String(numPersonas));
       const segFiltrados = {};
-      Object.entries(asignacion).forEach(([k, v]) => { if (Number(v) > 0) segFiltrados[k] = Number(v); });
+      Object.entries(asignacion).forEach(([k, v]) => {
+        if (Number(v) > 0) {
+          const segObj = seguros.find(s => String(s.id) === String(k));
+          if (segObj && ['TIPO G', 'SIN SEGURO'].includes(segObj.nombre.toUpperCase().trim())) {
+            return;
+          }
+          segFiltrados[k] = Number(v);
+        }
+      });
       fd.append('segurosAsignados', JSON.stringify(segFiltrados));
       // Archivos
       if (voucher) fd.append('voucher', voucher);
@@ -717,20 +931,74 @@ export default function RegistrarPresidente() {
                           <div style={{ fontSize: 12, color: C.textDim, padding: 10 }}>Cargando…</div>
                         ) : lista.length === 0 ? (
                           <div style={{ fontSize: 12, color: C.textDim, padding: 10 }}>Sin seguros en esta categoría</div>
-                        ) : lista.map(seg => (
-                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.cardBorder}`, padding: '10px 12px', borderRadius: 10 }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12.5, fontWeight: 700 }}>{seg.nombre}</div>
-                              <div style={{ fontSize: 11, color: C.textDim }}>${seg.precio} c/u</div>
+                        ) : lista.map(seg => {
+                          const isPres = titulo === 'Seguros Presidente';
+                          const isChecked = Number(asignacion[seg.id] || 0) === 1;
+
+                          const handleSelectPres = () => {
+                            setAsignacion(prev => {
+                              const next = { ...prev };
+                              lista.forEach(item => {
+                                next[item.id] = item.id === seg.id ? 1 : 0;
+                              });
+                              return next;
+                            });
+                          };
+
+                          return (
+                            <div
+                              key={seg.id}
+                              onClick={isPres ? handleSelectPres : undefined}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: isPres && isChecked ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.02)',
+                                border: isPres && isChecked ? `1px solid ${C.amber}` : `1px solid ${C.cardBorder}`,
+                                padding: '10px 12px',
+                                borderRadius: 10,
+                                cursor: isPres ? 'pointer' : 'default',
+                                transition: 'all .2s',
+                              }}
+                              onMouseEnter={isPres ? e => {
+                                if (!isChecked) {
+                                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                                }
+                              } : undefined}
+                              onMouseLeave={isPres ? e => {
+                                if (!isChecked) {
+                                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                                  e.currentTarget.style.borderColor = C.cardBorder;
+                                }
+                              } : undefined}
+                            >
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 700 }}>{seg.nombre}</div>
+                                <div style={{ fontSize: 11, color: C.textDim }}>${seg.precio} c/u</div>
+                              </div>
+                              {isPres ? (
+                                <input
+                                  type="radio"
+                                  name="seguroPresidenteRadio"
+                                  style={{ width: 18, height: 18, cursor: 'pointer', accentColor: C.amber }}
+                                  checked={isChecked}
+                                  onChange={handleSelectPres}
+                                />
+                              ) : (
+                                <input
+                                  type="number" min="0"
+                                  style={{ width: 58, padding: '6px 8px', borderRadius: 8, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: 'white', textAlign: 'center', outline: 'none', fontSize: 14 }}
+                                  value={asignacion[seg.id] ?? ''}
+                                  onChange={e => {
+                                    const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                                    setAsignacion(prev => ({ ...prev, [seg.id]: val }));
+                                  }}
+                                />
+                              )}
                             </div>
-                            <input
-                              type="number" min="0"
-                              style={{ width: 58, padding: '6px 8px', borderRadius: 8, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: 'white', textAlign: 'center', outline: 'none', fontSize: 14 }}
-                              value={asignacion[seg.id] ?? ''}
-                              onChange={e => { const v = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0); setAsignacion(prev => ({ ...prev, [seg.id]: v })); }}
-                            />
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -795,7 +1063,11 @@ export default function RegistrarPresidente() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>Cargo / Tipo de Afiliación</label>
-                  <select style={selectStyle} value={tipoAfiliacion} onChange={e => setTipoAfiliacion(e.target.value)}>
+                  <select
+                    style={{ ...selectStyle, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}
+                    value={tipoAfiliacion}
+                    disabled
+                  >
                     <option value="">Selecciona…</option>
                     {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
                   </select>
@@ -879,21 +1151,193 @@ export default function RegistrarPresidente() {
                 if (ocrDone || uploaded) { statusLabel = ocrDone ? 'Procesado' : 'Listo'; statusColor = C.green; statusBg = 'rgba(74,222,128,0.1)'; }
 
                 return (
-                  <div key={doc.documento} style={{ position: 'relative', background: C.card, border: `1px solid ${uploaded ? 'rgba(74,222,128,0.2)' : C.cardBorder}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', transition: 'border-color .2s' }}>
+                  <div key={doc.documento} 
+                  style={{
+                  position: 'relative',
+                  background: C.card,
+                  border: `1px solid ${uploaded ? 'rgba(74,222,128,0.2)' : C.cardBorder}`,
+                  borderRadius: 16,
+                  padding: '18px 20px',
+                  paddingTop: '45px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'border-color .2s'
+                }}
+                >
                     {/* Pill de estado */}
-                    <div style={{ position: 'absolute', top: 14, right: 14, padding: '3px 10px', borderRadius: 20, fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', background: statusBg, color: statusColor, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div 
+                    style={{
+                      position: 'absolute',
+                      top: 14,
+                      right: 14,
+                      padding: '3px 10px',
+                      borderRadius: 20,
+                      fontSize: 9,
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.8px',
+                      background: statusBg,
+                      color: statusColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      zIndex: 2
+                    }}
+
+                    >
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor }} />
                       {statusLabel}
                     </div>
 
-                    <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
-                      <div style={{ width: 46, height: 46, borderRadius: 12, background: uploaded ? 'rgba(74,222,128,0.1)' : 'rgba(245,158,11,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                        {doc.icon}
+                    <div style={{ display: 'block', gap: 14, marginBottom: 14 }}>
+                      <div className="preview-container"
+                        style={{
+                          height: '140px',
+                          width: '100%',
+                          background: '#111827',
+                          borderRadius: 12,
+                          marginBottom: 14,
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative'
+                        }}
+
+                         onMouseEnter={(e) => {
+                          const overlay =
+                            e.currentTarget.querySelector('.overlay-actions');
+
+                          if (overlay) overlay.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          const overlay =
+                            e.currentTarget.querySelector('.overlay-actions');
+
+                          if (overlay) overlay.style.opacity = '0';
+                        }}
+                        
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+
+                          const file = e.dataTransfer.files[0];
+
+                          if (file) {
+                            handleFileUpload(doc.documento, file);
+                          }
+                        }}
+                      >
+                        {previews[doc.documento] ? (
+                          <>
+                          {previews[doc.documento] === 'pdf' ? (
+                            <div style={{
+                              color: '#ef4444',
+                              fontSize: 42,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: 5
+                            }}>
+                              <FaFilePdf />
+                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                            </div>
+                            
+                          ) : (
+                            <img
+                              src={previews[doc.documento]}
+                              alt="preview"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain'
+                              }}
+                            />
+                          )}
+                          
+                          {/* Overlay */}
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)'
+                            }}>
+                              <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const isPdf = documents[doc.documento]?.type === 'application/pdf';
+                                setPreviewDoc({
+                                  open: true,
+                                  url: previews[doc.documento],
+                                  type: isPdf ? 'pdf' : 'image',
+                                  title: doc.title
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                              }}
+                              >
+                                <FaSearchPlus />
+                              </button>
+                              <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                document.getElementById(`file-${doc.documento}`).click();
+                              }}
+                              className="btn-change"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                              }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{
+                            textAlign: 'center',
+                            color: '#6b7280'
+                          }}
+                          onClick={() => document.getElementById(`file-${doc.documento}`).click()}>
+                            <FaUpload style={{ fontSize: 28, marginBottom: 6 }} />
+                            <p style={{ fontSize: 11 }}>Sin archivo</p>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h4 style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 800 }}>{doc.nombre}</h4>
-                        <p style={{ margin: 0, fontSize: 11, color: C.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {uploaded ? `📎 ${documents[doc.documento].name}` : 'No seleccionado'}
+
+                      <div style={{ marginBottom: 12 }}>
+                        <h4 style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 800 }}>
+                          {doc.nombre}
+                        </h4>
+
+                        <p style={{
+                          margin: 0,
+                          fontSize: 11,
+                          color: C.textDim,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {uploaded
+                            ? `📎 ${documents[doc.documento].name}`
+                            : 'No seleccionado'}
                         </p>
                       </div>
                     </div>
@@ -917,12 +1361,14 @@ export default function RegistrarPresidente() {
                           <FaFilePdf /> Descargar
                         </button>
                       )}
-                      <button
+
+                      {/* <button
                         onClick={() => document.getElementById(`file-${doc.documento}`).click()}
                         style={{ flex: 1, padding: '8px 10px', border: `1px solid ${uploaded ? 'rgba(74,222,128,0.3)' : 'rgba(245,158,11,0.25)'}`, background: uploaded ? 'rgba(74,222,128,0.06)' : 'rgba(245,158,11,0.05)', color: uploaded ? C.green : C.amber, borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                       >
                         <FaUpload /> {uploaded ? 'Cambiar' : 'Subir'}
-                      </button>
+                      </button> */}
+                      
                       <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={e => handleFileUpload(doc.documento, e.target.files[0])} />
                     </div>
 
@@ -954,8 +1400,42 @@ export default function RegistrarPresidente() {
                 );
               })}
             </div>
+
+            {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
+            <Modal
+            estaAbierto={previewDoc.open}
+            titulo={previewDoc.title}
+            alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+            tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+            pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+            >
+              <div style={{
+                width: '100%',
+                height: previewDoc.type === 'pdf' ? '100%' : 'auto',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#0f172a',
+                borderRadius: '12px',
+                overflow: 'hidden'
+                }}>
+                  {previewDoc.type === 'pdf' ? (
+                    <iframe
+                    src={previewDoc.url}
+                    style={{ width: '1800px', height: '70vh', border: 'none' }} title="Visor de PDF"
+                    />
+                  ) : (
+                  <img
+                  src={previewDoc.url}
+                  alt="Preview Grande"
+                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+                  />
+                  )}
+                </div>
+              </Modal>                      
           </div>
         )}
+
 
         {/* ─── Footer de navegación ─── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.cardBorder}` }}>

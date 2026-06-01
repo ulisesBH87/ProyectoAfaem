@@ -60,8 +60,12 @@ def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_auten
             "id": usuarioIntentoSesion.UsuarioId,
             "correo": usuarioIntentoSesion.Correo,
             "rol": usuarioIntentoSesion.RolRelacion.Nombre,
-            "nombre": persona.Nombre if persona else None,
+            "nombre": f"{persona.Nombre or ''} {persona.PrimerApellido or ''} {persona.SegundoApellido or ''}".strip() if persona else None,
             "telefono": getattr(persona, "NumeroTelefono", None),
+            "curp": getattr(persona, "CURP", None),
+            "sexoId": getattr(persona, "SexoId", None),
+            "fechaNacimiento": str(persona.FechaNacimiento) if persona and persona.FechaNacimiento else None,
+            "lugarNacimiento": getattr(persona, "LugarNacimiento", None),
             "estatusId": estatus_id
         }
     }
@@ -103,8 +107,12 @@ def login_oauth(form_data: OAuth2PasswordRequestForm = Depends(), service: Auten
             "id": usuarioIntentoSesion.UsuarioId,
             "correo": usuarioIntentoSesion.Correo,
             "rol": usuarioIntentoSesion.RolRelacion.Nombre,
-            "nombre": persona.Nombre if persona else None,
+            "nombre": f"{persona.Nombre or ''} {persona.PrimerApellido or ''} {persona.SegundoApellido or ''}".strip() if persona else None,
             "telefono": getattr(persona, "NumeroTelefono", None),
+            "curp": getattr(persona, "CURP", None),
+            "sexoId": getattr(persona, "SexoId", None),
+            "fechaNacimiento": str(persona.FechaNacimiento) if persona and persona.FechaNacimiento else None,
+            "lugarNacimiento": getattr(persona, "LugarNacimiento", None),
             "estatusId": estatus_id
         }
     }

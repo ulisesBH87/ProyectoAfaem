@@ -28,6 +28,18 @@ const ESTADO_EQUIPO = {
 };
 
 export default function ConfigurarEquipo() {
+
+  // ESTILO DINÁMICO PARA HOVER
+  const hoverStyles = `
+    .document-card:hover .overlay-actions {
+      opacity: 1 !important;
+    }
+    .document-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+  `;  
+  
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { hasRole } = useRBAC();
@@ -206,8 +218,16 @@ export default function ConfigurarEquipo() {
   const numPersonasPagadas = Number(pagoEquipo.cantidadJugadores || numJugadoresPago || 0);
   const shouldShowPagoPrevioEquipo = !tieneSlotDisponible && !pagoEquipo.aprobado && (!isAdmin || Boolean(selectedPresidentId && pagoEquipo.estadoEquipo));
   const getSeguroTipoPersonaId = (seguro) => Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
-  const segurosPresidente = catalogs.seguros.filter(seguro => getSeguroTipoPersonaId(seguro) === 2);
-  const segurosJugador = catalogs.seguros.filter(seguro => getSeguroTipoPersonaId(seguro) === 4);
+  const segurosPresidente = catalogs.seguros.filter(seguro => {
+    const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+    const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+    return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+  });
+  const segurosJugador = catalogs.seguros.filter(seguro => {
+    const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+    const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+  });
   const seguroJugadorIds = new Set(segurosJugador.map(seguro => String(seguro.id)));
   const segurosPresidenteIds = new Set(segurosPresidente.map(seguro => String(seguro.id)));
 
@@ -2244,6 +2264,7 @@ export default function ConfigurarEquipo() {
           }
           .dashboard-main { animation: slideUp 0.4s ease; }
         `}
+          {hoverStyles}
       </style>
       <div className="dashboard-content">
         {!tieneSlotDisponible && modoAgregarJugador && pagoJugador.estado !== ESTATUS_PAGO.APROBADO ? (

@@ -45,6 +45,8 @@ const Suspended = lazy(() => import('./pages/Auth/Suspended'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const GeneralGuard = lazy(() => import('./routes/GeneralGuard'));
 const Reglamentos = lazy(() => import('./pages/Legales/Reglamentos'));
+const PoliticaPrivacidad = lazy(() => import('./pages/Legales/PoliticaPrivacidad'));
+const TerminosCondiciones = lazy(() => import('./pages/Legales/TerminosCondiciones'));
 import SplashScreen from './components/Common/SplashScreen';
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
@@ -164,6 +166,14 @@ function App() {
             <Route path="/reglamentos" element={<Reglamentos />} />
             <Route path="/admin/reglamentos" element={<Reglamentos />} />
             <Route path="/presidente-equipo/reglamentos" element={<Reglamentos />} />
+            {/* Política de Privacidad */}
+            <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
+            <Route path="/admin/politica-privacidad" element={<PoliticaPrivacidad />} />
+            <Route path="/presidente-equipo/politica-privacidad" element={<PoliticaPrivacidad />} />
+            {/* Términos y Condiciones */}
+            <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
+            <Route path="/admin/terminos-condiciones" element={<TerminosCondiciones />} />
+            <Route path="/presidente-equipo/terminos-condiciones" element={<TerminosCondiciones />} />
           </Route>
 
           <Route path="/registrar-admin" element={<RegistrarAdmin />} />
