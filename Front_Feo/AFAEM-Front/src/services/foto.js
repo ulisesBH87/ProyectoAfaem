@@ -16,7 +16,7 @@ export const validarFotografia = async (archivo) => {
   formData.append("file", archivo);
 
   try {
-    const response = await fetch(`${API_BASE}/fotografia`, {
+    const response = await fetch(`${API_BASE}/fotografia/`, {
       method: "POST",
       body: formData
     });
