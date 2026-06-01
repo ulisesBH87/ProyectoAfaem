@@ -152,7 +152,7 @@ def crear_presidente_equipo_repo(db, usuario_id):
     
     nuevo_presidente = PresidenteEquipo(
         PersonaId = persona.PersonaId,
-        EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_EN_REVISION.value
+        EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES.value
     )
 
     db.add(nuevo_presidente)

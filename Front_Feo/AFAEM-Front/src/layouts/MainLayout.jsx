@@ -12,8 +12,8 @@ const MainLayout = ({ userEmail }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    // Si ya cargaron los permisos y es un presidente con estatus no autorizado (<4)
-    if (!isLoading && hasRole('PRESIDENTE') && estatusId && parseInt(estatusId) < 4) {
+    // Si ya cargaron los permisos y es un presidente con estatus no autorizado (<5)
+    if (!isLoading && hasRole('PRESIDENTE') && estatusId && parseInt(estatusId) < 5) {
       console.warn('Acceso revocado en tiempo real. Redirigiendo...');
       navigate('/pre-registro-presidente');
     }

@@ -141,7 +141,7 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         
         presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona_id).first()
         if presidente:
-            presidente.EstatusId = PresidenteEquipoEstatus.PRE_APROBADO
+            presidente.EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_EN_REVISION
     except Exception as e:
         pass # Si falla actualización del estatus, que no rompa la subida.
 
