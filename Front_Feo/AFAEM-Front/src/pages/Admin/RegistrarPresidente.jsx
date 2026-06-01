@@ -706,11 +706,28 @@ export default function RegistrarPresidente() {
 
       await registrarPresidenteAdmin(fd);
 
-      await Swal.fire({
-        title: '¡Presidente registrado!',
-        html: `<p style="color:#94a3b8;font-size:14px;">La cuenta de <strong style="color:#141416">${cuenta.nombre} ${cuenta.primerApellido}</strong> fue creada y activada automáticamente.</p>`,
-        icon: 'success', confirmButtonColor: C.amberDark,
+      const nombrePresidente = cuenta.nombre || '';
+      const telefonoRegistrado = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
+      const telefonoLimpio = telefonoRegistrado.replace(/\D/g, '');
+
+      const result = await Swal.fire({
+        title: 'Cuenta creada correctamente, ¿Enviar mensaje al presidente?',
+        text: '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: 'Enviar WhatsApp',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: C.amberDark,
+        cancelButtonColor: '#64748b',
       });
+
+      if (result.isConfirmed) {
+        const mensaje = `Hola ${nombrePresidente}. Este es un mensaje de prueba enviado desde el sistema. Próximamente aquí se enviará el enlace para registrar jugadores.`;
+        const mensajeCodificado = encodeURIComponent(mensaje);
+        const url = `https://wa.me/${telefonoLimpio}?text=${mensajeCodificado}`;
+        window.open(url, '_blank');
+      }
+
       navigate('/admin/presidentes');
     } catch (err) {
       Swal.fire('Error', err.response?.data?.detail || err.message || 'No se pudo completar el registro.', 'error');
