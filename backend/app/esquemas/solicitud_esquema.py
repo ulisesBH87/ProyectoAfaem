@@ -71,7 +71,7 @@ class SolicitudesTodas(BaseModel):
     EstatusValidacion: int
     Nombre: str
     PrimerApellido: str
-    Correo: EmailStr
+    Correo: str
     Equipo: Optional[str] = None
     Monto: Optional[float] = None
 

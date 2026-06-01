@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 import os
 from datetime import date
+from fastapi import HTTPException
 
 from app.esquemas.pago_esquema import SeguroBase, AfiliacionesBase, ListaPagos
 from app.modelos.ordenes_pago_modelo import OrdenPago
@@ -161,9 +162,16 @@ class PagosServicio:
                 "total": total
             }
                     
-        except Exception:
+        except Exception as e:
             self.db.rollback()
-            raise pagos_excepciones.PagoInvalidoError()
+            import traceback
+            traceback.print_exc()
+            if isinstance(e, HTTPException):
+                raise e
+            from app.excepciones.base import AppError
+            if isinstance(e, AppError):
+                raise e
+            raise HTTPException(status_code=400, detail=f"Pago inválido o error de base de datos: {str(e)}")
 
     # ============================
     # == SUBIDA DE COMPROBANTE ==

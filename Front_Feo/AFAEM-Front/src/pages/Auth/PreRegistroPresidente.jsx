@@ -416,12 +416,12 @@ function PreRegistroPresidente() {
         setPasoActual(4); // Nuevo paso: Revisión de documentos
       } else if (estatusId === 3) {
         // Ya pagó, falta subir los documentos personales (INE, Acta, etc)
+        setEstadoPago(3); // Asegurar estado aprobado en UI local
         setPasoActual(3);
       } else if (estatusId === 2) {
-        // Pago APROBADO (Registry stage) pero aún no activado como Presidente ACTIVO (7)
-        // Lo mandamos al paso 3 (Subir Documentos) para que no se quede trabado
-        setEstadoPago(3); // 3 = Aprobado en la UI local
-        setPasoActual(3);
+        // Pago en revisión por el admin (PAGO_EN_REVISION)
+        setEstadoPago(2); // 2 = En espera
+        setPasoActual(2);
       } else if (estatusId === 1) {
         // Pago pendiente
         setPasoActual(1);
@@ -537,7 +537,7 @@ function PreRegistroPresidente() {
         return;
       }
 
-      if (estatusSolicitud === 2 || estatusSolicitud === 3) {
+      if (estatusSolicitud === 3) {
         setPasoActual(3);
         await Swal.fire({
           title: 'Tu solicitud fue rechazada',
@@ -776,8 +776,9 @@ function PreRegistroPresidente() {
         }
 
         const ordenPayload = {
-          CantidadJugadores: numPersonas,
-          Seguros: segurosPayload
+          CantidadJugadores: parseInt(numPersonas, 10) || 0,
+          Seguros: segurosPayload,
+          TipoSolicitud: 1
         };
 
         const resOrden = await fetch(`${API_BASE}/ordenes-pago/`, {
@@ -915,7 +916,7 @@ function PreRegistroPresidente() {
               'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-              CantidadJugadores: numPersonas,
+              CantidadJugadores: parseInt(numPersonas, 10) || 0,
               Seguros: segurosPayload,
               TipoSolicitud: 1
             })
@@ -2567,7 +2568,7 @@ function PreRegistroPresidente() {
         {/* PASO 3: DOCUMENTOS */}
         {pasoActual === 3 && (
           <div className="content-body" style={{ padding: '40px' }}>
-            {(estadoSolicitud === 2 || estadoSolicitud === 3) && (
+            {estadoSolicitud === 3 && (
               <div style={{
                 marginBottom: '24px',
                 background: 'rgba(239, 68, 68, 0.08)',
