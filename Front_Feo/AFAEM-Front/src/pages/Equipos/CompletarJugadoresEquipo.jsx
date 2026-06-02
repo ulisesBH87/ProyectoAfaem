@@ -403,11 +403,14 @@ export default function CompletarJugadoresEquipo() {
   };
 
   // AUXILIAR PARA ESCRITURA EN PDF
-  const safeSetField = (form, fieldName, value) => {
+  const safeSetField = (form, fieldName, value, fontSize) => {
     if (!value) return;
     try {
       const field = form.getTextField(fieldName);
-      if (field) field.setText(value.toString().toUpperCase());
+      if (field) {
+        field.setText(value.toString().toUpperCase());
+        if (fontSize) field.setFontSize(fontSize);
+      }
     } catch (e) {
       console.warn(`Campo PDF no encontrado: ${fieldName}`);
     }
@@ -456,7 +459,9 @@ export default function CompletarJugadoresEquipo() {
       safeSetField(form, 'Lugar de Nacimiento', extractedData.lugarNacimiento);
 
       // Datos de afiliado
-      safeSetField(form, 'Correo electrónico', extractedData.correo);
+      const correoCJE = extractedData.correo || '';
+      const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
+      safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
       safeSetField(form, 'Teléfono', extractedData.telefono);
       safeSetField(form, 'Asociación', 'AFAEM');
       safeSetField(form, 'fill_24', 'AFAEM');
@@ -468,7 +473,7 @@ export default function CompletarJugadoresEquipo() {
         try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch(_) {}
       }
       
-      safeSetField(form, 'Liga', equipo?.Liga || '');
+      safeSetField(form, 'Liga', (equipo?.Liga || '').split('(')[0].trim());
       safeSetField(form, 'Equipo', equipo?.NombreEquipo || '');
       safeSetField(form, 'Categoría', equipo?.Categoria || '');
 

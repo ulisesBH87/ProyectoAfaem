@@ -265,6 +265,9 @@ function PreRegistroPresidente() {
 
       return {
         nombre: (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase(),
+        nombreSolo: uInfo.nombreSolo || '',
+        primerApellido: uInfo.primerApellido || '',
+        segundoApellido: uInfo.segundoApellido || '',
         telefono: uInfo.telefono || u.telefono || u.NumeroTelefono || '',
         curp: uInfo.curp || '',
         sexo: sStr,
@@ -441,6 +444,9 @@ function PreRegistroPresidente() {
       setOcrResults(prev => ({
         ...prev,
         nombre: regNombre || prev.nombre || '',
+        nombreSolo: uInfo.nombreSolo || prev.nombreSolo || '',
+        primerApellido: uInfo.primerApellido || prev.primerApellido || '',
+        segundoApellido: uInfo.segundoApellido || prev.segundoApellido || '',
         telefono: regTelefono || prev.telefono || ''
       }));
     } catch (e) { }
@@ -1134,14 +1140,16 @@ function PreRegistroPresidente() {
     }
   };
 
-  // ── HELPER: Escritura segura en campos del PDF ──────────────────────
-  // pdf-lib lanza una excepción si el campo no existe (no retorna null),
-  // por lo que el operador ?. solo es ineficiente. Este helper lo captura.
-  const safeSetField = (form, fieldName, value) => {
+  const safeSetField = (form, fieldName, value, fontSize) => {
     if (value === null || value === undefined || value === '') return;
     try {
       const field = form.getTextField(fieldName);
-      if (field) field.setText(String(value));
+      if (field) {
+        field.setText(String(value));
+        if (fontSize) {
+          field.setFontSize(fontSize);
+        }
+      }
     } catch (e) {
       console.warn(`[PDF] Campo no encontrado: "${fieldName}" → omitido.`);
     }
@@ -1187,10 +1195,14 @@ function PreRegistroPresidente() {
         }
       }
 
-      const { nombre, curp, fecha_nac, nacionalidad } = ocrResults;
+      const { nombreSolo, primerApellido, segundoApellido, nombre, curp, fecha_nac, nacionalidad } = ocrResults;
 
       // Rellenar Nombre(s), Apellido Paterno, Apellido Materno
-      if (nombre && nombre !== "No detectado") {
+      if (nombreSolo || primerApellido || segundoApellido) {
+        if (primerApellido) safeSetField(form, 'Apellido Paterno', primerApellido.toUpperCase());
+        if (segundoApellido) safeSetField(form, 'Apellido Materno', segundoApellido.toUpperCase());
+        if (nombreSolo) safeSetField(form, 'Nombres', nombreSolo.toUpperCase());
+      } else if (nombre && nombre !== "No detectado") {
         const parts = nombre.split(' ');
         if (parts.length >= 3) {
           safeSetField(form, 'Apellido Paterno', parts[0]);
@@ -1215,8 +1227,10 @@ function PreRegistroPresidente() {
       }
 
       // Correo electrónico
-      const email = user.Correo || user.correo || user.email || localStorage.getItem('email') || '';
-      safeSetField(form, 'Correo electrónico', email);
+      const email = user.Correo || user.correo || user.email;
+      const emailVal = email || '';
+      const emailFontSize = emailVal.length > 35 ? 6 : emailVal.length > 25 ? 7 : emailVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Correo electrónico', emailVal, emailFontSize);
 
       // Sexo
       let sexoTexto = ocrResults.sexo || '';
@@ -1244,7 +1258,10 @@ function PreRegistroPresidente() {
       if (liga) {
         const selectedLigaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
         if (selectedLigaObj) {
-          safeSetField(form, 'Liga', selectedLigaObj.nombre.toUpperCase());
+          const nameStr = selectedLigaObj.nombre.split('(')[0].trim().toUpperCase();
+          // Hacemos la letra más pequeña si el nombre de la liga es largo para evitar desbordes
+          const fontSize = nameStr.length > 25 ? 6 : (nameStr.length > 15 ? 8 : 10);
+          safeSetField(form, 'Liga', nameStr, fontSize);
         }
       }
       safeSetField(form, 'Equipo', (ocrResults.equipo || '').toUpperCase());
