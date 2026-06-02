@@ -305,12 +305,13 @@ function PreRegistroPresidente() {
         if (!token) return;
 
         // Restaurar progreso guardado si existe
-        const saved = localStorage.getItem('afaem_pre_registro_guardado');
+        const saved = localStorage.getItem('afaem_pre_registro');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
             if (parsed.numPersonas) setNumPersonas(parsed.numPersonas);
             if (parsed.asignacionSeguros) setAsignacionSeguros(parsed.asignacionSeguros);
+            if (parsed.tipoAfiliacion) setTipoAfiliacion(parsed.tipoAfiliacion);
             if (parsed.pasoActual === 1) setPasoActual(1);
           } catch (e) {
             console.error("Error al restaurar progreso", e);
@@ -500,6 +501,10 @@ function PreRegistroPresidente() {
     setMensajeRechazoPago(observacionesPago);
     setMensajeRechazoSolicitud(observacionesSolicitud);
     setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
+
+    if (data.afiliacion) {
+      setTipoAfiliacion(data.afiliacion);
+    }
 
     if (ordenId) {
       await cargarDetalleOrdenDirecto(ordenId, token);
@@ -918,7 +923,8 @@ function PreRegistroPresidente() {
             body: JSON.stringify({
               CantidadJugadores: parseInt(numPersonas, 10) || 0,
               Seguros: segurosPayload,
-              TipoSolicitud: 1
+              TipoSolicitud: 1,
+              Afiliacion: tipoAfiliacion
             })
           });
 
@@ -1465,6 +1471,9 @@ function PreRegistroPresidente() {
         if (ocrResults.equipo) {
           queryParams.append('nombre_equipo', ocrResults.equipo.trim());
         }
+        if (tipoAfiliacion) {
+          queryParams.append('afiliacion', tipoAfiliacion);
+        }
 
         const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?${queryParams.toString()}`, {
           method: 'POST',
@@ -1481,6 +1490,7 @@ function PreRegistroPresidente() {
       const preRegistroData = {
         numPersonas,
         asignacionSeguros,
+        tipoAfiliacion,
         totalPagar,
         fechaRegistro: new Date().toISOString()
       };
@@ -2644,6 +2654,16 @@ function PreRegistroPresidente() {
                   </select>
                 </div>
                 <div className="premium-input-group">
+                  <label className="premium-label">Equipo *</label>
+                  <input
+                    type="text"
+                    placeholder="Nombre del Equipo"
+                    value={ocrResults.equipo || ''}
+                    onChange={(e) => handleManualOcrChange('equipo', e.target.value.toUpperCase())}
+                    className="premium-input"
+                  />
+                </div>
+                <div className="premium-input-group">
                   <label className="premium-label">Tipo de afiliación *</label>
                   <select
                     value={tipoAfiliacion}
@@ -2794,16 +2814,6 @@ function PreRegistroPresidente() {
                       className="premium-input"
                       disabled={true}
                       style={{ cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' }}
-                    />
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Equipo *</label>
-                    <input
-                      type="text"
-                      placeholder="Nombre del Equipo"
-                      value={ocrResults.equipo || ''}
-                      onChange={(e) => handleManualOcrChange('equipo', e.target.value.toUpperCase())}
-                      className="premium-input"
                     />
                   </div>
                 </div>

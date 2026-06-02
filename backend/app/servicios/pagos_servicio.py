@@ -297,6 +297,7 @@ class PagosServicio:
             "orden_pago_id": orden.OrdenPagoId,
             "estatus": orden.EstatusPagoId,
             "tiene_comprobante": bool(orden.RutaVoucher),
+            "afiliacion": solicitud.Afiliacion if solicitud else None,
             "solicitud": {
                 "solicitud_id": solicitud.SolicitudId,
                 "estatus": solicitud.EstatusValidacion,
