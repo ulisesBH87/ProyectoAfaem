@@ -635,75 +635,110 @@ export default function AdminEquipos() {
                 </div>
               </div>
 
-              {/* ── COLLAPSES: CATEGORÍAS ── */}
-              {[
-                { key: 'liga', label: 'Liga', icon: '🏆', items: catalogos.ligas, selKey: 'ligaId' },
-                { key: 'modalidad', label: 'Modalidad', icon: '⚽', items: catalogos.modalidades, selKey: 'modalidadId' },
-                { key: 'categoria', label: 'Categoría', icon: '🏅', items: catalogos.categorias, selKey: 'categoriaId' },
-                { key: 'rama', label: 'Rama', icon: '🌿', items: catalogos.ramas, selKey: 'ramaId' }
-              ].map(({ key, label, icon, items, selKey }) => {
-                const isOpen = collapseOpen[key];
-                const currentId = catSeleccionada[selKey];
-                const currentItem = items.find(i => i.id === currentId);
-                return (
-                  <div key={key} style={{ marginBottom: '10px', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
-                    <button
-                      type="button"
-                      onClick={() => setCollapseOpen(prev => ({ ...prev, [key]: !prev[key] }))}
-                      style={{
-                        width: '100%', padding: '13px 18px', background: isOpen ? '#f8fafc' : 'white',
-                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                        borderBottom: isOpen ? '1px solid #e2e8f0' : 'none', transition: 'background 0.2s'
-                      }}
-                    >
-                      <span style={{ fontSize: '16px' }}>{icon}</span>
-                      <span style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b', flex: 1, textAlign: 'left' }}>{label}</span>
-                      {currentItem && (
-                        <span style={{ fontSize: '11px', background: '#eff6ff', color: '#0b4ea6', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
-                          {currentItem.nombre}
-                        </span>
-                      )}
-                      <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '6px' }}>{isOpen ? '▲' : '▼'}</span>
-                    </button>
+              {/* ── SECCIÓN: ASIGNACIÓN DE LIGA ── */}
+              <div style={{ marginBottom: '10px', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
+                <button
+                  type="button"
+                  onClick={() => setCollapseOpen(prev => ({ ...prev, liga: !prev.liga }))}
+                  style={{
+                    width: '100%', padding: '13px 18px', background: collapseOpen.liga ? '#f8fafc' : 'white',
+                    border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                    borderBottom: collapseOpen.liga ? '1px solid #e2e8f0' : 'none', transition: 'background 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: '16px' }}>🏆</span>
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b', flex: 1, textAlign: 'left' }}>Liga del equipo</span>
+                  {(() => {
+                    const currentLiga = catalogos.ligas.find(l => l.id === catSeleccionada.ligaId);
+                    return currentLiga && (
+                      <span style={{ fontSize: '11px', background: '#eff6ff', color: '#0b4ea6', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
+                        {currentLiga.nombre}
+                      </span>
+                    );
+                  })()}
+                  <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '6px' }}>{collapseOpen.liga ? '▲' : '▼'}</span>
+                </button>
 
-                    {isOpen && (
-                      <div style={{ padding: '12px 16px', background: 'white', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {loadingExtras ? (
-                          <Loader inline text="Cargando opciones..." />
-                        ) : items.length === 0 ? (
-                          <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px' }}>Sin opciones disponibles</div>
-                        ) : items.map(item => (
-                          <label
-                            key={item.id}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
-                              borderRadius: '10px', cursor: 'pointer', transition: 'background 0.15s',
-                              border: '1.5px solid',
-                              borderColor: currentId === item.id ? '#0b4ea6' : '#f1f5f9',
-                              background: currentId === item.id ? '#eff6ff' : 'white'
-                            }}
-                          >
-                            <input
-                              type="radio"
-                              name={`cat_${key}`}
-                              value={item.id}
-                              checked={currentId === item.id}
-                              onChange={() => {
-                                setCatSeleccionada(prev => ({ ...prev, [selKey]: item.id }));
-                                setHaCambiado(true);
-                              }}
-                              style={{ accentColor: '#0b4ea6' }}
-                            />
-                            <span style={{ fontSize: '13px', fontWeight: currentId === item.id ? '700' : '500', color: '#1e293b' }}>
-                              {item.nombre}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                {collapseOpen.liga && (
+                  <div style={{ padding: '12px 16px', background: 'white', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {loadingExtras ? (
+                      <Loader inline text="Cargando ligas..." />
+                    ) : catalogos.ligas.length === 0 ? (
+                      <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px' }}>Sin ligas disponibles</div>
+                    ) : catalogos.ligas.map(item => (
+                      <label
+                        key={item.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
+                          borderRadius: '10px', cursor: 'pointer', transition: 'background 0.15s',
+                          border: '1.5px solid',
+                          borderColor: catSeleccionada.ligaId === item.id ? '#0b4ea6' : '#f1f5f9',
+                          background: catSeleccionada.ligaId === item.id ? '#eff6ff' : 'white'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="liga_selection"
+                          value={item.id}
+                          checked={catSeleccionada.ligaId === item.id}
+                          onChange={() => {
+                            setCatSeleccionada({
+                              ligaId: item.id,
+                              modalidadId: item.modalidadId,
+                              categoriaId: item.categoriaId,
+                              ramaId: item.ramaId
+                            });
+                            setHaCambiado(true);
+                          }}
+                          style={{ accentColor: '#0b4ea6' }}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: catSeleccionada.ligaId === item.id ? '700' : '500', color: '#1e293b' }}>
+                          {item.nombre}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── DETALLES DE LIGA SELECCIONADA (VISTA PREVIA DE CATEGORÍAS) ── */}
+              {(() => {
+                const currentLiga = catalogos.ligas.find(l => l.id === catSeleccionada.ligaId);
+                if (!currentLiga) return null;
+
+                const modalidadName = catalogos.modalidades.find(m => m.id === catSeleccionada.modalidadId)?.nombre || 'Desconocida';
+                const categoriaName = catalogos.categorias.find(c => c.id === catSeleccionada.categoriaId)?.nombre || 'Desconocida';
+                const ramaName = catalogos.ramas.find(r => r.id === catSeleccionada.ramaId)?.nombre || 'Desconocida';
+
+                return (
+                  <div style={{
+                    marginTop: '15px',
+                    padding: '16px 20px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '16px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '12px'
+                  }}>
+                    <div style={{ gridColumn: 'span 3', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      Información derivada de la Liga:
+                    </div>
+                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Modalidad</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{modalidadName}</div>
+                    </div>
+                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Categoría</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{categoriaName}</div>
+                    </div>
+                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Rama</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{ramaName}</div>
+                    </div>
                   </div>
                 );
-              })}
+              })()}
 
             </div>
           )}
