@@ -1235,7 +1235,12 @@ function PreRegistroPresidente() {
 
       // Asociación, Liga, Equipo
       if (asociacion) safeSetField(form, 'Asociación', asociacion.toUpperCase());
-      if (liga) safeSetField(form, 'Liga', liga.toUpperCase());
+      if (liga) {
+        const selectedLigaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
+        if (selectedLigaObj) {
+          safeSetField(form, 'Liga', selectedLigaObj.nombre.toUpperCase());
+        }
+      }
       safeSetField(form, 'Equipo', (ocrResults.equipo || '').toUpperCase());
 
       // Fecha automática (A __ de __ del 20__)
@@ -1453,6 +1458,12 @@ function PreRegistroPresidente() {
         if (sexoIdVal) queryParams.append('sexo_id', sexoIdVal);
         if (ocrResults.fecha_nac) {
           queryParams.append('fecha_nacimiento', convertToYYYYMMDD(ocrResults.fecha_nac));
+        }
+        if (liga) {
+          queryParams.append('liga_id', liga);
+        }
+        if (ocrResults.equipo) {
+          queryParams.append('nombre_equipo', ocrResults.equipo.trim());
         }
 
         const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?${queryParams.toString()}`, {
@@ -2629,7 +2640,7 @@ function PreRegistroPresidente() {
                     style={{ cursor: 'pointer' }}
                   >
                     <option value="">Selecciona...</option>
-                    {ligasCatalogo.map(l => <option key={l.id} value={l.nombre}>{l.nombre}</option>)}
+                    {ligasCatalogo.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
                 </div>
                 <div className="premium-input-group">
