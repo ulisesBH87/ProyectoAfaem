@@ -217,11 +217,14 @@ export default function RegistroJugadores() {
     }
   };
 
-  const safeSetField = (form, fieldName, value) => {
+  const safeSetField = (form, fieldName, value, fontSize) => {
     if (!value) return;
     try {
       const field = form.getTextField(fieldName);
-      if (field) field.setText(value.toString().toUpperCase());
+      if (field) {
+        field.setText(value.toString().toUpperCase());
+        if (fontSize) field.setFontSize(fontSize);
+      }
     } catch (e) { console.warn(`Campo PDF no encontrado: ${fieldName}`); }
   };
 
@@ -250,10 +253,12 @@ export default function RegistroJugadores() {
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
       safeSetField(form, 'Lugar de Nacimiento', extractedData.lugarNacimiento);
-      safeSetField(form, 'Correo electrónico', extractedData.correo);
+      const correoRJ = extractedData.correo || '';
+      const correoRJFs = correoRJ.length > 35 ? 6 : correoRJ.length > 25 ? 7 : correoRJ.length > 18 ? 8 : 10;
+      safeSetField(form, 'Correo electrónico', correoRJ, correoRJFs);
       safeSetField(form, 'Teléfono', extractedData.telefono);
       safeSetField(form, 'Asociación', extractedData.asociacion);
-      safeSetField(form, 'Liga', extractedData.liga);
+      safeSetField(form, 'Liga', (extractedData.liga || '').split('(')[0].trim());
       safeSetField(form, 'Equipo', extractedData.equipo);
       safeSetField(form, 'Categoría', extractedData.categoria);
       safeSetField(form, 'Posición', extractedData.posicion);
