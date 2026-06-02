@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { 
   FaUpload, 
   FaSyncAlt, 
@@ -8,7 +8,8 @@ import {
   FaCheckCircle, 
   FaArrowLeft,
   FaFileSignature,
-  FaUserEdit
+  FaUserEdit,
+  FaGlobeAmericas
 } from 'react-icons/fa';
 import { 
   BotonPrimario, 
@@ -22,7 +23,7 @@ import {
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
-import { registrarJugadorTemporal, getAvailableSlots } from '../../services/teams';
+import { registrarJugadorTemporal, getAvailableSlots, getInvitationInfo } from '../../services/teams';
 import '../../styles/dashboard.css';
 
 // Badge Estilizado para los pasos (Igual al de Admin)
@@ -48,12 +49,16 @@ const StepBadge = ({ number, isActive, isDone }) => (
 export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
-  const teamId = location.state?.teamId;
+  const { token } = useParams();
+  const isPublicFlow = !!token;
+  const [teamId, setTeamId] = useState(location.state?.teamId || null);
   
   // ESTADOS
   const [uploading, setUploading] = useState(false);
   const [slotsInfo, setSlotsInfo] = useState({ disponibles: 0, total: 0 });
   const [loadingSlots, setLoadingSlots] = useState(true);
+  const [slotsData, setSlotsData] = useState(null);
+  const [selectedSeguroId, setSelectedSeguroId] = useState('');
   const [fillManually, setFillManually] = useState(false);
 
   const [documents, setDocuments] = useState({
@@ -64,18 +69,6 @@ export default function RegistroJugadores() {
     documentoEstudiante: null
   });
 
-  // ── Detección de minoría de edad ──
-  const esMenorDeEdad = React.useMemo(() => {
-    if (!extractedData.fechaNacimiento) return false;
-    const hoy = new Date();
-    const nac = new Date(extractedData.fechaNacimiento);
-    if (isNaN(nac.getTime())) return false;
-    let edad = hoy.getFullYear() - nac.getFullYear();
-    const mDiff = hoy.getMonth() - nac.getMonth();
-    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
-    return edad < 18;
-  }, [extractedData.fechaNacimiento]);
-
   const [extractedData, setExtractedData] = useState({
     nombreJugador: '',
     apellidoPaterno: '',
@@ -85,7 +78,7 @@ export default function RegistroJugadores() {
     fechaNacimiento: '',
     lugarNacimiento: '',
     direccion: '',
-    
+
     // DATOS DE AFILIADO
     correo: '',
     telefono: '',
@@ -113,6 +106,18 @@ export default function RegistroJugadores() {
     juegoClubExtranjero: ''
   });
 
+  // ── Detección de minoría de edad ──
+  const esMenorDeEdad = React.useMemo(() => {
+    if (!extractedData.fechaNacimiento) return false;
+    const hoy = new Date();
+    const nac = new Date(extractedData.fechaNacimiento);
+    if (isNaN(nac.getTime())) return false;
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const mDiff = hoy.getMonth() - nac.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad < 18;
+  }, [extractedData.fechaNacimiento]);
+
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!teamId; // El equipo ya viene seleccionado desde el dashboard
   const isStep2Done = Object.values(documents).some(d => d !== null);
@@ -120,36 +125,56 @@ export default function RegistroJugadores() {
   const showStep3 = isStep2Done || fillManually;
 
   // CARGAR SLOTS Y DATOS DEL EQUIPO
-  useEffect(() => {
-    const fetchTeamInfo = async () => {
-      if (!teamId) {
-        Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
-        navigate('/presidente-equipo/dashboard');
-        return;
-      }
-      try {
-        setLoadingSlots(true);
-        const data = await getAvailableSlots(teamId);
-        setSlotsInfo({
-          disponibles: data.slots_disponibles || 0,
-          total: data.total_slots || 0
-        });
-        
-        // El servicio de slots también suele traer el nombre del equipo y liga
+  const fetchTeamInfo = async () => {
+    let effectiveTeamId = teamId;
+    let inviteData = null;
+
+    try {
+      setLoadingSlots(true);
+
+      if (isPublicFlow && !teamId) {
+        inviteData = await getInvitationInfo(token);
+        effectiveTeamId = inviteData.equipo_temporal_id;
+        setTeamId(effectiveTeamId);
         setExtractedData(prev => ({
           ...prev,
-          equipo: data.nombre_equipo || prev.equipo,
-          liga: data.nombre_liga || prev.liga,
-          categoria: data.nombre_categoria || 'LIBRE'
+          equipo: inviteData.nombre_equipo || prev.equipo,
+          liga: inviteData.nombre_liga || prev.liga,
+          categoria: inviteData.nombre_categoria || 'LIBRE'
         }));
-      } catch (err) {
-        console.error("Error al obtener info del equipo:", err);
-      } finally {
-        setLoadingSlots(false);
       }
-    };
+
+      if (!effectiveTeamId) {
+        if (!isPublicFlow) {
+          Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
+          navigate('/presidente-equipo/dashboard');
+        }
+        return;
+      }
+
+      const data = await getAvailableSlots(effectiveTeamId);
+      setSlotsData(data);
+      setSlotsInfo({
+        disponibles: data.jugadores_restantes ?? data.slots_disponibles ?? 0,
+        total: data.cantidad_jugadores_pagados ?? data.total_slots ?? 0
+      });
+
+      if (data?.seguros?.length > 0) {
+        setSelectedSeguroId(String(data.seguros[0].seguro_id));
+      }
+    } catch (err) {
+      console.error('Error al obtener info del equipo:', err);
+      if (isPublicFlow && !inviteData) {
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la invitación.', 'error');
+      }
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTeamInfo();
-  }, [teamId, navigate]);
+  }, [teamId, token, isPublicFlow, navigate]);
 
   // PROCESAR OCR (Sincronizado con Admin)
   const handleFileUpload = async (documentKey, file) => {
@@ -331,7 +356,7 @@ export default function RegistroJugadores() {
       formData.append('telefono', extractedData.telefono);
       formData.append('posicion', extractedData.posicion);
       formData.append('num_camiseta', extractedData.numCamiseta);
-      formData.append('seguro_id', 1);
+      formData.append('seguro_id', selectedSeguroId || String(slotsData?.seguros?.[0]?.seguro_id || 1));
 
       if (extractedData.esForaneo) {
         formData.append('es_foraneo', '1');
@@ -352,7 +377,53 @@ export default function RegistroJugadores() {
 
       await registrarJugadorTemporal(formData);
       Swal.fire({ title: 'Registro Exitoso!', text: 'El jugador ha sido enviado a revisión por el administrador.', icon: 'success' })
-        .then(() => navigate(`/presidente-equipo/admin-equipo/${teamId}`));
+        .then(() => {
+          if (isPublicFlow) {
+            setDocuments({
+              actaNacimiento: null,
+              identificacion: null,
+              fotografia: null,
+              formatoAfiliacion: null,
+              documentoEstudiante: null
+            });
+            setExtractedData({
+              nombreJugador: '',
+              apellidoPaterno: '',
+              apellidoMaterno: '',
+              curp: '',
+              genero: '1', 
+              fechaNacimiento: '',
+              lugarNacimiento: '',
+              direccion: '',
+              correo: '',
+              telefono: '',
+              tipoAfiliacion: 'JUGADOR',
+              posicion: '',
+              numCamiseta: '',
+              asociacion: 'AFAEM',
+              liga: extractedData.liga,
+              equipo: extractedData.equipo,
+              categoria: extractedData.categoria,
+              esForaneo: false,
+              nacionalidadJugador: 'MEXICANA',
+              paisResidencia: 'MÉXICO',
+              haVividoExtranjero: false,
+              dondeVividoExtranjero: '',
+              nacionalidadPadre: '',
+              nacionalidadMadre: '',
+              registroAsociacionExtranjera: '',
+              nacAbueloPaterno: '',
+              nacAbuelaPaterna: '',
+              nacAbueloMaterno: '',
+              nacAbuelaMaterna: '',
+              juegoClubExtranjero: ''
+            });
+            setFillManually(false);
+            fetchTeamInfo();
+          } else {
+            navigate(`/presidente-equipo/admin-equipo/${teamId}`);
+          }
+        });
     } catch (err) { 
       Swal.fire('Error', 'No se pudo completar el registro.'); 
       //DESCOMENTAR PARA DEBUG. Swal.fire('Error', 'No se pudo completar el registro.', 'error'); 
@@ -361,148 +432,309 @@ export default function RegistroJugadores() {
 
   return (
     <div className="dashboard-content">
-      {/* HEADER DINÁMICO */}
-      <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button onClick={() => navigate(-1)} className="btn btn-outline-secondary" style={{ padding: '8px', borderRadius: '10px' }}><FaArrowLeft /></button>
-          <div>
-            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugador</h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Siga los pasos para la afiliación oficial.</p>
-          </div>
-        </div>
-        {!loadingSlots && (
-          <div style={{ padding: '8px 15px', backgroundColor: '#f1f5f9', borderRadius: '12px', textAlign: 'right' }}>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Slots Disponibles</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0b4ea6' }}>{slotsInfo.disponibles} / {slotsInfo.total}</div>
-          </div>
+      <style>{`
+        .document-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+      `}</style>
+
+      <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+        {!isPublicFlow && (
+          <button
+            onClick={() => navigate(-1)}
+            className="btn btn-outline-secondary"
+            style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+          >
+            <FaArrowLeft />
+          </button>
         )}
+        <div>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugador</h2>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Siga los pasos para la afiliación oficial.</p>
+        </div>
       </div>
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <p className="required-legend" style={{ marginBottom: '20px' }}>
-          <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial.
-        </p>
-        
-        {/* PASO 1: CONFIRMACIÓN DE EQUIPO */}
-        <section style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' }}>
-            <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Confirmación de Equipo</h3>
+      <div className="premium-card fade-in" style={{
+        maxWidth: '1000px',
+        margin: '0 auto 30px auto',
+        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        color: 'white',
+        borderRadius: '20px',
+        padding: '25px 35px',
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '20px'
+      }}>
+        <div>
+          <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
+          <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>{extractedData.equipo || 'Equipo No Detectado'}</h1>
+          <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: '#94a3b8', flexWrap: 'wrap' }}>
+            <span><strong>Liga:</strong> {extractedData.liga || 'N/A'}</span>
+            <span>•</span>
+            <span><strong>Categoría:</strong> {extractedData.categoria || 'LIBRE'}</span>
           </div>
-          <Tarjeta estilo={{ border: loadingSlots ? '1px dashed #cbd5e1' : '1px solid #e2e8f0' }}>
-            {loadingSlots ? <Cargador texto="Validando equipo..." /> : (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0b4ea6', margin: '0 0 5px 0' }}>{extractedData.equipo || 'Equipo No Detectado'}</h4>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Liga: {extractedData.liga} | Categoría: {extractedData.categoria}</p>
-                </div>
-                <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', fontSize: '13px' }}>
-                  <FaCheckCircle /> Equipo Confirmado
-                </div>
+        </div>
+
+        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+          <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
+          <span style={{ fontSize: '24px', fontWeight: '950', color: slotsInfo.disponibles === 0 ? '#ef4444' : '#10b981' }}>
+            {slotsInfo.disponibles} / {slotsInfo.total}
+          </span>
+        </div>
+      </div>
+
+      <div className="premium-card fade-in" style={{
+        maxWidth: '1000px',
+        margin: '0 auto',
+        background: 'white',
+        borderRadius: '24px',
+        padding: '40px',
+        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+        border: '1px solid #e2e8f0'
+      }}>
+        <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p className="required-legend" style={{ margin: 0 }}>
+            <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial.
+          </p>
+        </div>
+
+        {/* PASO 1: SELECCIÓN DE SEGURO / SLOT A CONSUMIR */}
+        <section style={{ marginBottom: '45px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+            <StepBadge number="1" isActive={!!selectedSeguroId} isDone={!!selectedSeguroId} />
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro / Slot pagado a asignar</h3>
+          </div>
+          <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
+            <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
+                Seleccione el seguro comprado a consumir para esta inscripción: <span className="required-star">*</span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                {loadingSlots ? (
+                  <div style={{ padding: '18px', color: '#475569' }}>Cargando seguros...</div>
+                ) : (
+                  (slotsData?.seguros || []).length > 0 ? (
+                    slotsData.seguros.map((seg) => {
+                      const isSelected = String(selectedSeguroId) === String(seg.seguro_id);
+                      return (
+                        <button
+                          key={`seguro-card-${seg.seguro_id}`}
+                          type="button"
+                          onClick={() => setSelectedSeguroId(String(seg.seguro_id))}
+                          style={{
+                            padding: '16px',
+                            borderRadius: '12px',
+                            border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
+                            backgroundColor: isSelected ? '#eff6ff' : 'white',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px'
+                          }}
+                        >
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>🛡️ {seg.nombre}</span>
+                          <div style={{ marginTop: '6px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                            {seg.disponibles} disponibles
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div style={{ padding: '18px', borderRadius: '14px', background: '#f1f5f9', color: '#475569', fontSize: '13px' }}>
+                      No hay seguros disponibles para mostrar. Se usará el seguro predeterminado en caso de que el sistema lo permita.
+                    </div>
+                  )
+                )}
               </div>
-            )}
-          </Tarjeta>
+            </div>
+          </div>
         </section>
 
+        {/* PASO 1: CONFIRMACIÓN DE EQUIPO */}
+        {false && (
+        <section style={{ marginBottom: '45px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+            <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Confirmación de Equipo</h3>
+          </div>
+          <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
+            <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              {loadingSlots ? <Cargador texto="Validando equipo..." /> : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: '900', color: '#0b4ea6', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo seleccionado</span>
+                    <h4 style={{ fontSize: '18px', fontWeight: '900', margin: '8px 0 5px 0' }}>{extractedData.equipo || 'Equipo No Detectado'}</h4>
+                    <div style={{ color: '#64748b', fontSize: '13px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <span><strong>Liga:</strong> {extractedData.liga || 'N/A'}</span>
+                      <span><strong>Categoría:</strong> {extractedData.categoria || 'LIBRE'}</span>
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
+                    <span style={{ fontSize: '24px', fontWeight: '950', color: slotsInfo.disponibles === 0 ? '#ef4444' : '#10b981' }}>
+                      {slotsInfo.disponibles} / {slotsInfo.total}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+        )}
         {/* PASO 2: DOCUMENTACIÓN */}
         {showStep2 && (
-          <section className="fade-in" style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '15px' }}>
+          <section className="fade-in" style={{ marginBottom: '45px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
               <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Carga de Documentación (OCR)</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
             </div>
-            {/* Instrucción de flujo */}
-            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '12px 18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#0369a1', fontWeight: '600' }}>
-              <span style={{ fontSize: '18px' }}>📋</span>
-              Sube primero el <strong style={{ marginLeft: 4 }}>Acta de Nacimiento</strong>. El sistema detectará automáticamente si el jugador es mayor o menor de edad.
+            <div style={{ marginBottom: '24px', paddingLeft: '47px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '10px 16px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '10px', color: '#475569', fontSize: '13px', fontWeight: '600' }}>
+                <span style={{ fontSize: '18px' }}>✨</span>
+                Sube el acta de nacimiento para auto-llenar los datos del jugador.
+              </div>
             </div>
 
-            {/* 1. ACTA (siempre visible) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-              {[{ key: 'actaNacimiento', title: 'Acta de Nacimiento' }].map(doc => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+              {[{ key: 'actaNacimiento', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' }] .map(doc => (
                 <div
                   key={doc.key}
+                  className="document-card"
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '20px',
+                    border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                    padding: '18px',
+                    textAlign: 'center',
+                    transition: 'all 0.3s',
+                    cursor: 'pointer'
+                  }}
                   onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                  style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s' }}
                 >
-                  <div style={{ fontSize: '30px', marginBottom: '10px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
                     {documents[doc.key] ? <FaCheckCircle /> : <FaUpload />}
                   </div>
-                  <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '5px' }}>{doc.title}</h4>
-                  <div style={{ fontSize: '11px', color: documents[doc.key] ? '#166534' : '#64748b' }}>{documents[doc.key] ? 'Listo' : 'Hacer clic para subir'}</div>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{doc.title}</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>{doc.subtitle}</p>
+                  <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
+                    {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                  </div>
                   <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
                 </div>
               ))}
             </div>
 
-            {/* Hint OCR */}
             {documents.actaNacimiento && !extractedData.fechaNacimiento && (
-              <div className="fade-in" style={{ marginTop: '14px', padding: '12px 16px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                ⏳ Analizando el Acta... Los documentos adicionales aparecerán en breve.
+              <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                ⏳ Analizando el Acta de Nacimiento vía OCR... Los documentos adicionales aparecerán en breve.
               </div>
             )}
 
-            {/* 2a. INE para mayores */}
             {documents.actaNacimiento && extractedData.fechaNacimiento && !esMenorDeEdad && (
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
-                {[{ key: 'identificacion', title: 'Identificación (INE / Pasaporte)' }].map(doc => (
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                {[{ key: 'identificacion', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' }] .map(doc => (
                   <div
                     key={doc.key}
+                    className="document-card"
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '20px',
+                      border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                      padding: '18px',
+                      textAlign: 'center',
+                      transition: 'all 0.3s',
+                      cursor: 'pointer'
+                    }}
                     onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                    style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s' }}
                   >
-                    <div style={{ fontSize: '30px', marginBottom: '10px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '12px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
                       {documents[doc.key] ? <FaCheckCircle /> : <FaUpload />}
                     </div>
-                    <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '5px' }}>{doc.title}</h4>
-                    <div style={{ fontSize: '11px', color: documents[doc.key] ? '#166534' : '#64748b' }}>{documents[doc.key] ? 'Listo' : 'Hacer clic para subir'}</div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{doc.title}</h4>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>{doc.subtitle}</p>
+                    <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
+                      {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                    </div>
                     <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
                   </div>
                 ))}
               </div>
             )}
 
-            {/* 2b. Documento de Estudiante para menores */}
             {documents.actaNacimiento && extractedData.fechaNacimiento && esMenorDeEdad && (
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
                 <div
+                  className="document-card"
+                  style={{
+                    borderRadius: '20px',
+                    border: documents.documentoEstudiante ? '2px solid #10b981' : '2px dashed #fbbf24',
+                    background: documents.documentoEstudiante ? 'rgba(16,185,129,0.04)' : 'linear-gradient(135deg,#fffbeb,#fef3c7)',
+                    padding: '18px',
+                    textAlign: 'center',
+                    transition: 'all 0.3s',
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}
                   onClick={() => document.getElementById('file-documentoEstudiante').click()}
-                  style={{ borderRadius: '12px', border: documents.documentoEstudiante ? '2px solid #10b981' : '2px solid #fbbf24', background: documents.documentoEstudiante ? 'rgba(16,185,129,0.04)' : 'linear-gradient(135deg,#fffbeb,#fef3c7)', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', position: 'relative' }}
                 >
-                  <div style={{ position: 'absolute', top: 8, right: 8, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '10px', padding: '2px 8px', fontSize: '9px', fontWeight: '900', color: 'white' }}>🧒 MENOR</div>
-                  <div style={{ fontSize: '30px', marginBottom: '8px', color: documents.documentoEstudiante ? '#10b981' : '#f59e0b' }}>
+                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', fontWeight: '950', color: 'white' }}>🧒 MENOR</div>
+                  <div style={{ fontSize: '32px', marginBottom: '12px', color: documents.documentoEstudiante ? '#10b981' : '#f59e0b' }}>
                     {documents.documentoEstudiante ? <FaCheckCircle /> : <FaUpload />}
                   </div>
-                  <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px', color: '#78350f' }}>Documento de Estudiante</h4>
-                  <div style={{ fontSize: '11px', color: '#92400e' }}>Credencial escolar, certificado o carta de residencia</div>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>Documento de Estudiante</h4>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>Credencial escolar, certificado o carta de residencia</p>
+                  <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: documents.documentoEstudiante ? '#dcfce7' : '#f1f5f9', color: documents.documentoEstudiante ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
+                    {documents.documentoEstudiante ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                  </div>
                   <input type="file" id="file-documentoEstudiante" style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload('documentoEstudiante', e.target.files[0])} />
                 </div>
               </div>
             )}
 
-            {/* 3. FOTOGRAFÍA */}
             {documents.actaNacimiento && extractedData.fechaNacimiento && (
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
-                {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                {[{ key: 'fotografia', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }].map(doc => (
                   <div
                     key={doc.key}
+                    className="document-card"
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '20px',
+                      border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                      padding: '18px',
+                      textAlign: 'center',
+                      transition: 'all 0.3s',
+                      cursor: 'pointer'
+                    }}
                     onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                    style={{ backgroundColor: 'white', borderRadius: '12px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s' }}
                   >
-                    <div style={{ fontSize: '30px', marginBottom: '10px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '12px', color: documents[doc.key] ? '#10b981' : '#94a3b8' }}>
                       {documents[doc.key] ? <FaCheckCircle /> : <FaUpload />}
                     </div>
-                    <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '5px' }}>{doc.title}</h4>
-                    <div style={{ fontSize: '11px', color: documents[doc.key] ? '#166534' : '#64748b' }}>{documents[doc.key] ? 'Listo' : 'Hacer clic para subir'}</div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{doc.title}</h4>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>{doc.subtitle}</p>
+                    <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
+                      {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                    </div>
                     <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
                   </div>
                 ))}
               </div>
             )}
+
             {!isStep2Done && (
-              <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                <button onClick={() => setFillManually(true)} style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '600', background: 'none', border: 'none', textDecoration: 'underline' }}>
-                  O prefiero llenar los datos manualmente
+              <div style={{ textAlign: 'center', marginTop: '25px' }}>
+                <button
+                  type="button"
+                  onClick={() => setFillManually(true)}
+                  style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Omitir carga y llenar datos manualmente
                 </button>
               </div>
             )}
@@ -512,78 +744,151 @@ export default function RegistroJugadores() {
         {/* PASO 3: FORMULARIO */}
         {showStep3 && (
           <section className="fade-in" style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <StepBadge number="3" isActive={true} isDone={false} />
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de Afiliación</h3>
+                <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
               </div>
-              <BotonSecundario etiqueta="Descargar PDF Pre-llenado" icono={<FaFilePdf />} alHacerClick={handleDownloadFormato} estilo={{ fontSize: '12px', backgroundColor: '#f59e0b', color: 'white', border: 'none' }} />
             </div>
 
-            {/* SECCIÓN 1: DATOS DEL AFILIADO */}
-            <Tarjeta titulo="1. Datos del afiliado" estilo={{ marginBottom: '20px' }}>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                <EntradaFormulario etiqueta="Nombre(s) *" valor={extractedData.nombreJugador} alCambiar={(e) => setExtractedData({...extractedData, nombreJugador: e.target.value})} />
-                <EntradaFormulario etiqueta="Apellido paterno *" valor={extractedData.apellidoPaterno} alCambiar={(e) => setExtractedData({...extractedData, apellidoPaterno: e.target.value})} />
-                <EntradaFormulario etiqueta="Apellido materno *" valor={extractedData.apellidoMaterno} alCambiar={(e) => setExtractedData({...extractedData, apellidoMaterno: e.target.value})} />
-                <EntradaFormulario etiqueta="CURP *" valor={extractedData.curp} alCambiar={(e) => setExtractedData({...extractedData, curp: e.target.value.toUpperCase()})} maxLength={18} />
-                <EntradaFormulario etiqueta="Lugar de nacimiento *" valor={extractedData.lugarNacimiento} alCambiar={(e) => setExtractedData({...extractedData, lugarNacimiento: e.target.value})} marcador="Ciudad y Estado" />
-                <EntradaFormulario etiqueta="Fecha de nacimiento *" tipo="date" valor={extractedData.fechaNacimiento} alCambiar={(e) => setExtractedData({...extractedData, fechaNacimiento: e.target.value})} />
-                <EntradaSeleccion etiqueta="Sexo *" valor={extractedData.genero} alCambiar={(e) => setExtractedData({...extractedData, genero: e.target.value})} opciones={[{ valor: '1', etiqueta: 'Masculino' }, { valor: '2', etiqueta: 'Femenino' }]} />
-                <EntradaFormulario etiqueta="Correo electrónico *" tipo="email" valor={extractedData.correo} alCambiar={(e) => setExtractedData({...extractedData, correo: e.target.value})} />
-                <EntradaSeleccion etiqueta="Tipo de afiliación" valor={extractedData.tipoAfiliacion} alCambiar={(e) => setExtractedData({...extractedData, tipoAfiliacion: e.target.value})} opciones={[{ valor: 'JUGADOR', etiqueta: 'Jugador' }, { valor: 'CUERPO_TECNICO', etiqueta: 'Cuerpo Técnico' }]} />
-                <EntradaFormulario etiqueta="Teléfono" valor={extractedData.telefono} alCambiar={(e) => setExtractedData({...extractedData, telefono: e.target.value})} />
-                <EntradaFormulario etiqueta="Asociación" valor={extractedData.asociacion} deshabilitado />
-                <EntradaFormulario etiqueta="Liga" valor={extractedData.liga} deshabilitado />
-                <EntradaFormulario etiqueta="Equipo" valor={extractedData.equipo} deshabilitado />
-                <EntradaFormulario etiqueta="Categoría" valor={extractedData.categoria} deshabilitado />
-                <EntradaSeleccion etiqueta="Posición" valor={extractedData.posicion} alCambiar={(e) => setExtractedData({...extractedData, posicion: e.target.value})} opciones={[{ valor: 'PORTERO', etiqueta: 'Portero' }, { valor: 'DEFENSA', etiqueta: 'Defensa' }, { valor: 'MEDIO', etiqueta: 'Medio' }, { valor: 'DELANTERO', etiqueta: 'Delantero' }]} />
-                <EntradaFormulario etiqueta="Camiseta" tipo="number" valor={extractedData.numCamiseta} alCambiar={(e) => setExtractedData({...extractedData, numCamiseta: e.target.value})} />
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <AreaTexto etiqueta="Dirección completa" valor={extractedData.direccion} alCambiar={(e) => setExtractedData({...extractedData, direccion: e.target.value})} filas={2} />
+            <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({...extractedData, nombreJugador: e.target.value})} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
-              </div>
-            </Tarjeta>
-
-            {/* SECCIÓN 2: ANTECEDENTES INTERNACIONALES */}
-            <Tarjeta estilo={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', marginBottom: '30px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#9a3412' }}>2. Antecedentes internacionales</h4>
-                <div className="form-check form-switch">
-                  <input className="form-check-input" type="checkbox" id="switchForaneo" checked={extractedData.esForaneo} onChange={(e) => setExtractedData({...extractedData, esForaneo: e.target.checked})} />
-                  <label className="form-check-label" htmlFor="switchForaneo" style={{ fontSize: '13px', fontWeight: '700' }}>¿Jugador foráneo?</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({...extractedData, apellidoPaterno: e.target.value})} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
+                  <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({...extractedData, apellidoMaterno: e.target.value})} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
               </div>
 
-              {extractedData.esForaneo && (
-                <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                  <EntradaFormulario etiqueta="Nacionalidad del jugador" valor={extractedData.nacionalidadJugador} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})} />
-                  <EntradaFormulario etiqueta="País de residencia actual" valor={extractedData.paisResidencia} alCambiar={(e) => setExtractedData({...extractedData, paisResidencia: e.target.value})} />
-                  <EntradaSeleccion etiqueta="¿El jugador ha vivido en el extranjero?" valor={extractedData.haVividoExtranjero ? '1' : '0'} alCambiar={(e) => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})} opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]} />
-                  {extractedData.haVividoExtranjero && <EntradaFormulario etiqueta="¿En qué país?" valor={extractedData.dondeVividoExtranjero} alCambiar={(e) => setExtractedData({...extractedData, dondeVividoExtranjero: e.target.value})} />}
-                  <EntradaFormulario etiqueta="Nacionalidades del padre" valor={extractedData.nacionalidadPadre} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nacionalidades de la madre" valor={extractedData.nacionalidadMadre} alCambiar={(e) => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})} />
-                  
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <AreaTexto etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solicitud de registro en la FMF." valor={extractedData.registroAsociacionExtranjera} alCambiar={(e) => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})} filas={2} />
-                  </div>
-
-                  <EntradaFormulario etiqueta="Nacionalidades del abuelo paterno" valor={extractedData.nacAbueloPaterno} alCambiar={(e) => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nacionalidades de la abuela paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nacionalidades del abuelo materno" valor={extractedData.nacAbueloMaterno} alCambiar={(e) => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})} />
-                  <EntradaFormulario etiqueta="Nacionalidades de la abuela materna" valor={extractedData.nacAbuelaMaterna} alCambiar={(e) => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})} />
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <AreaTexto etiqueta="¿El jugador ha jugado en un club extranjero y participado en torneos y/o competencias internacionales escolares o de recreo como campeonatos estacionales, cursos, etc?" valor={extractedData.juegoClubExtranjero} alCambiar={(e) => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})} filas={3} />
-                  </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
+                  <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({...extractedData, numCamiseta: e.target.value})} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
-              )}
-              {!extractedData.esForaneo && (
-                <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>El jugador se considera nacional por defecto. Activa el interruptor si es foráneo para habilitar los campos de antecedentes internacionales.</p>
-              )}
-            </Tarjeta>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo</label>
+                  <select value={extractedData.posicion} onChange={e => setExtractedData({...extractedData, posicion: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                    <option value="">Posición...</option>
+                    <option value="PORTERO">Portero</option>
+                    <option value="DEFENSA">Defensa</option>
+                    <option value="MEDIO">Medio</option>
+                    <option value="DELANTERO">Delantero</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP o Identificador <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.curp || ''} onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    let sId = extractedData.genero;
+                    if (val.length >= 11) {
+                      const char = val.charAt(10);
+                      if (char === 'M') sId = '2';
+                      else if (char === 'H') sId = '1';
+                    }
+                    setExtractedData({...extractedData, curp: val, genero: sId});
+                  }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                  <input
+                    type="date"
+                    value={extractedData.fechaNacimiento || ''}
+                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split('T')[0]}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={e => setExtractedData({...extractedData, fechaNacimiento: e.target.value})}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({...extractedData, lugarNacimiento: e.target.value})} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
+                  <select value={extractedData.genero || ""} onChange={e => setExtractedData({...extractedData, genero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                    <option value="">Seleccione...</option>
+                    <option value="1">MASCULINO</option>
+                    <option value="2">FEMENINO</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
+                  <input type="email" value={extractedData.correo} onChange={e => setExtractedData({...extractedData, correo: e.target.value})} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono</label>
+                  <input type="tel" value={extractedData.telefono} onChange={e => setExtractedData({...extractedData, telefono: e.target.value})} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                    <FaGlobeAmericas />
+                  </div>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                </div>
+
+                {extractedData.esForaneo ? (
+                  <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                      <EntradaFormulario etiqueta="Nacionalidad del jugador" valor={extractedData.nacionalidadJugador} alCambiar={e => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})} />
+                      <EntradaFormulario etiqueta="País de residencia actual" valor={extractedData.paisResidencia} alCambiar={e => setExtractedData({...extractedData, paisResidencia: e.target.value})} />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
+                      <EntradaSeleccion etiqueta="¿El jugador ha vivido en el extranjero?" valor={extractedData.haVividoExtranjero ? '1' : '0'} alCambiar={e => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})} opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]} obligatorio={true} />
+                      {extractedData.haVividoExtranjero && (
+                        <EntradaFormulario etiqueta="¿En qué país?" valor={extractedData.dondeVividoExtranjero} alCambiar={e => setExtractedData({...extractedData, dondeVividoExtranjero: e.target.value})} obligatorio={true} />
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                      <EntradaFormulario etiqueta="Nacionalidad del padre" valor={extractedData.nacionalidadPadre} alCambiar={e => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})} />
+                      <EntradaFormulario etiqueta="Nacionalidad de la madre" valor={extractedData.nacionalidadMadre} alCambiar={e => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})} />
+                    </div>
+
+                    <AreaTexto etiqueta="Registro por Asociación Nacional Extranjera" valor={extractedData.registroAsociacionExtranjera} alCambiar={e => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})} filas={2} obligatorio={true} />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                      <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})} />
+                      <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})} />
+                      <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})} />
+                      <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})} />
+                    </div>
+
+                    <AreaTexto etiqueta="¿Ha jugado en un Club extranjero?" valor={extractedData.juegoClubExtranjero} alCambiar={e => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})} filas={3} obligatorio={true} />
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                      Si el jugador es foráneo, habilite el interruptor para completar los antecedentes internacionales obligatorios.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
-              <BotonSecundario etiqueta="Cancelar y volver" alHacerClick={() => navigate(-1)} estilo={{ minWidth: '200px' }} />
+              {!isPublicFlow && (
+                <BotonSecundario etiqueta="Cancelar y volver" alHacerClick={() => navigate(-1)} estilo={{ minWidth: '200px' }} />
+              )}
               <BotonPrimario etiqueta={uploading ? "Procesando..." : "Finalizar y Registrar Jugador"} icono={<FaSave />} alHacerClick={handleGuardar} deshabilitado={uploading} estilo={{ minWidth: '300px' }} />
             </div>
           </section>

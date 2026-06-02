@@ -1,3 +1,4 @@
+import secrets
 from sqlite3 import IntegrityError
 
 from sqlalchemy import func
@@ -72,7 +73,8 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
             OrdenPagoId=orden.OrdenPagoId,
             Activo=True,
             CantidadJugadoresPagados=cantidad_jugadores,
-            TipoProcesoId=tipo_proceso
+            TipoProcesoId=tipo_proceso,
+            TokenInvitacion=secrets.token_urlsafe(32)
         )
     
     elif tipo_proceso == ProcesosEquipoTemporalEnum.AMPLIACION.value:
@@ -83,7 +85,8 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
             Activo=True,
             CantidadJugadoresPagados=cantidad_jugadores,
             TipoProcesoId=tipo_proceso,
-            EquipoId=equipo_id
+            EquipoId=equipo_id,
+            TokenInvitacion=secrets.token_urlsafe(32)
         )
 
     db.add(equipo)
