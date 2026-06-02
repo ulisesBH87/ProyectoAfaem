@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { 
   FaUpload, 
@@ -199,6 +199,46 @@ export default function RegistroJugadores() {
       });
       return next;
     });
+  };
+
+  const touchStartRef = useRef({ x: 0, y: 0 });
+  const touchEndRef = useRef({ x: 0, y: 0 });
+  const SWIPE_THRESHOLD = 50;
+  const SWIPE_VERTICAL_MAX = 75;
+
+  const goToPreviousPlayer = () => {
+    setCurrentPlayerIndex(prev => Math.max(prev - 1, 0));
+  };
+
+  const goToNextPlayer = () => {
+    setCurrentPlayerIndex(prev => Math.min(prev + 1, jugadores.length - 1));
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchEndRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchEndRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = () => {
+    const deltaX = touchEndRef.current.x - touchStartRef.current.x;
+    const deltaY = touchEndRef.current.y - touchStartRef.current.y;
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaY) < SWIPE_VERTICAL_MAX) {
+      if (deltaX > 0) {
+        goToPreviousPlayer();
+      } else {
+        goToNextPlayer();
+      }
+    }
+    touchStartRef.current = { x: 0, y: 0 };
+    touchEndRef.current = { x: 0, y: 0 };
   };
 
   const currentPlayer = jugadores[currentPlayerIndex] || emptyPlayer(currentPlayerIndex, String(slotsData?.seguros?.[0]?.seguro_id || ''));
@@ -519,7 +559,12 @@ export default function RegistroJugadores() {
   };
 
   return (
-    <div className="dashboard-content">
+    <div
+      className="dashboard-content"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <style>{`
         .document-card:hover {
           transform: translateY(-5px);
