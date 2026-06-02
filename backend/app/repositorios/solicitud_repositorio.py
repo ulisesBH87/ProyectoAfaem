@@ -149,11 +149,13 @@ def obtener_solicitudes_usuarios_repo(db: Session):
             Personas.Nombre,
             Personas.PrimerApellido,
             Usuario.Correo,
-            func.coalesce(Equipos.NombreEquipo, "Por asignar").label("Equipo")
+            func.coalesce(Equipos.NombreEquipo, EquipoTemporal.NombreEquipo, "Por asignar").label("Equipo")
         )
         .join(Usuario, Solicitud.UsuarioId == Usuario.UsuarioId)
         .join(Personas, Usuario.PersonaId == Personas.PersonaId)
-        .outerjoin(Equipos, Solicitud.EquipoId == Equipos.EquipoId).filter(Solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO)
+        .outerjoin(Equipos, Solicitud.EquipoId == Equipos.EquipoId)
+        .outerjoin(EquipoTemporal, Solicitud.SolicitudId == EquipoTemporal.SolicitudId)
+        .filter(Solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO)
         .all()
     )
 
@@ -262,7 +264,8 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
     }
 
 
-    return solicitud
+def obtener_solicitud_individual_repo(db: Session, solicitud_id: int):
+    return obtener_solicitud_detalle_repo(db, solicitud_id)
 
 # --- NUEVOS MÉTODOS PARA VALIDACIÓN (ADMIN) ---
 
