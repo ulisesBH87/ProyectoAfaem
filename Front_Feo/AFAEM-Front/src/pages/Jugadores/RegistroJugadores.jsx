@@ -605,9 +605,11 @@ export default function RegistroJugadores() {
               >
                 <span style={{ fontSize: '14px' }}>{config.icon}</span>
                 <span style={{ fontWeight: '700' }}>Jugador {index + 1}</span>
-                <span style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
-                  {config.label}
-                </span>
+                {currentPlayerIndex === index && (
+                  <span style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
+                    {config.label}
+                  </span>
+                )}
               </button>
             );
           })}
