@@ -59,6 +59,32 @@ async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
 
     return slots
 
+@router.get("/invitacion/{token}")
+async def obtener_equipo_por_token(token: str, db: Session = Depends(get_db)):
+    equipo = db.query(EquipoTemporal).filter(EquipoTemporal.TokenInvitacion == token).first()
+    if not equipo:
+        raise HTTPException(status_code=404, detail="Enlace de invitación no válido o expirado.")
+    
+    # Calcular slots disponibles
+    from app.repositorios import equipo_repositorio
+    slots = equipo_repositorio.obtener_slots_con_persona(db, equipo.EquipoTemporalId)
+    slots_disponibles = sum(1 for s in slots if not s.Completo)
+    
+    nombre_equipo = equipo.NombreEquipo or "Equipo sin nombre"
+    nombre_liga = equipo.LigaRelacion.Nombreliga if equipo.LigaRelacion else "Liga no especificada"
+    nombre_categoria = "LIBRE"
+    if equipo.LigaRelacion and equipo.LigaRelacion.CategoriaRelacion:
+        nombre_categoria = equipo.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    return {
+        "equipo_temporal_id": equipo.EquipoTemporalId,
+        "nombre_equipo": nombre_equipo,
+        "nombre_liga": nombre_liga,
+        "nombre_categoria": nombre_categoria,
+        "slots_disponibles": slots_disponibles,
+        "total_slots": equipo.CantidadJugadoresPagados
+    }
+
 # == REGISTROS ==
 @router.get("/catalogos-registro", response_model=CatalogosRegistroResponse)
 def get_catalogos_registro(db: Session = Depends(get_db)):
@@ -1103,7 +1129,8 @@ async def registrar_presidente_admin(
             "presidente": {
                 "nombre": nueva_persona.Nombre,
                 "correo": nuevo_usuario.Correo,
-                "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados
+                "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados,
+                "token_invitacion": nuevo_equipo_temporal.TokenInvitacion
             }
         }
     except HTTPException as e:

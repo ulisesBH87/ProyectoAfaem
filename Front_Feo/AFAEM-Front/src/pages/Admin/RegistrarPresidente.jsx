@@ -724,7 +724,7 @@ export default function RegistrarPresidente() {
         fd.append('afiliacion', tipoAfiliacion);
       }
 
-      await registrarPresidenteAdmin(fd);
+      const response = await registrarPresidenteAdmin(fd);
 
       const nombrePresidente = cuenta.nombre || '';
       const telefonoRegistrado = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
@@ -742,7 +742,9 @@ export default function RegistrarPresidente() {
       });
 
       if (result.isConfirmed) {
-        const mensaje = `Hola ${nombrePresidente}. Este es un mensaje de prueba enviado desde el sistema. Próximamente aquí se enviará el enlace para registrar jugadores.`;
+        const token = response?.presidente?.token_invitacion || '';
+        const linkInvitacion = `${window.location.origin}/invitacion/${token}`;
+        const mensaje = `Hola ${nombrePresidente}. Utiliza el siguiente enlace para registrar a tus jugadores: ${linkInvitacion}`;
         const mensajeCodificado = encodeURIComponent(mensaje);
         const url = `https://wa.me/${telefonoLimpio}?text=${mensajeCodificado}`;
         window.open(url, '_blank');

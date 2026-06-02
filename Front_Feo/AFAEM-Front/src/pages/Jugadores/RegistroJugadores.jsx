@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { 
   FaUpload, 
   FaSyncAlt, 
@@ -22,7 +22,7 @@ import {
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
-import { registrarJugadorTemporal, getAvailableSlots } from '../../services/teams';
+import { registrarJugadorTemporal, getAvailableSlots, getInvitationInfo } from '../../services/teams';
 import '../../styles/dashboard.css';
 
 // Badge Estilizado para los pasos (Igual al de Admin)
@@ -48,7 +48,9 @@ const StepBadge = ({ number, isActive, isDone }) => (
 export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
-  const teamId = location.state?.teamId;
+  const { token } = useParams();
+  const isPublicFlow = !!token;
+  const [teamId, setTeamId] = useState(location.state?.teamId || null);
   
   // ESTADOS
   const [uploading, setUploading] = useState(false);
@@ -64,18 +66,6 @@ export default function RegistroJugadores() {
     documentoEstudiante: null
   });
 
-  // ── Detección de minoría de edad ──
-  const esMenorDeEdad = React.useMemo(() => {
-    if (!extractedData.fechaNacimiento) return false;
-    const hoy = new Date();
-    const nac = new Date(extractedData.fechaNacimiento);
-    if (isNaN(nac.getTime())) return false;
-    let edad = hoy.getFullYear() - nac.getFullYear();
-    const mDiff = hoy.getMonth() - nac.getMonth();
-    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
-    return edad < 18;
-  }, [extractedData.fechaNacimiento]);
-
   const [extractedData, setExtractedData] = useState({
     nombreJugador: '',
     apellidoPaterno: '',
@@ -85,7 +75,7 @@ export default function RegistroJugadores() {
     fechaNacimiento: '',
     lugarNacimiento: '',
     direccion: '',
-    
+
     // DATOS DE AFILIADO
     correo: '',
     telefono: '',
@@ -113,6 +103,18 @@ export default function RegistroJugadores() {
     juegoClubExtranjero: ''
   });
 
+  // ── Detección de minoría de edad ──
+  const esMenorDeEdad = React.useMemo(() => {
+    if (!extractedData.fechaNacimiento) return false;
+    const hoy = new Date();
+    const nac = new Date(extractedData.fechaNacimiento);
+    if (isNaN(nac.getTime())) return false;
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const mDiff = hoy.getMonth() - nac.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad < 18;
+  }, [extractedData.fechaNacimiento]);
+
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!teamId; // El equipo ya viene seleccionado desde el dashboard
   const isStep2Done = Object.values(documents).some(d => d !== null);
@@ -120,8 +122,29 @@ export default function RegistroJugadores() {
   const showStep3 = isStep2Done || fillManually;
 
   // CARGAR SLOTS Y DATOS DEL EQUIPO
-  useEffect(() => {
-    const fetchTeamInfo = async () => {
+  const fetchTeamInfo = async () => {
+    if (isPublicFlow) {
+      try {
+        setLoadingSlots(true);
+        const data = await getInvitationInfo(token);
+        setTeamId(data.equipo_temporal_id);
+        setSlotsInfo({
+          disponibles: data.slots_disponibles || 0,
+          total: data.total_slots || 0
+        });
+        setExtractedData(prev => ({
+          ...prev,
+          equipo: data.nombre_equipo || prev.equipo,
+          liga: data.nombre_liga || prev.liga,
+          categoria: data.nombre_categoria || 'LIBRE'
+        }));
+      } catch (err) {
+        console.error("Error al obtener info de la invitación:", err);
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la invitación.', 'error');
+      } finally {
+        setLoadingSlots(false);
+      }
+    } else {
       if (!teamId) {
         Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
         navigate('/presidente-equipo/dashboard');
@@ -134,8 +157,6 @@ export default function RegistroJugadores() {
           disponibles: data.slots_disponibles || 0,
           total: data.total_slots || 0
         });
-        
-        // El servicio de slots también suele traer el nombre del equipo y liga
         setExtractedData(prev => ({
           ...prev,
           equipo: data.nombre_equipo || prev.equipo,
@@ -147,9 +168,12 @@ export default function RegistroJugadores() {
       } finally {
         setLoadingSlots(false);
       }
-    };
+    }
+  };
+
+  useEffect(() => {
     fetchTeamInfo();
-  }, [teamId, navigate]);
+  }, [teamId, token, isPublicFlow, navigate]);
 
   // PROCESAR OCR (Sincronizado con Admin)
   const handleFileUpload = async (documentKey, file) => {
@@ -347,7 +371,53 @@ export default function RegistroJugadores() {
 
       await registrarJugadorTemporal(formData);
       Swal.fire({ title: 'Registro Exitoso!', text: 'El jugador ha sido enviado a revisión por el administrador.', icon: 'success' })
-        .then(() => navigate(`/presidente-equipo/admin-equipo/${teamId}`));
+        .then(() => {
+          if (isPublicFlow) {
+            setDocuments({
+              actaNacimiento: null,
+              identificacion: null,
+              fotografia: null,
+              formatoAfiliacion: null,
+              documentoEstudiante: null
+            });
+            setExtractedData({
+              nombreJugador: '',
+              apellidoPaterno: '',
+              apellidoMaterno: '',
+              curp: '',
+              genero: '1', 
+              fechaNacimiento: '',
+              lugarNacimiento: '',
+              direccion: '',
+              correo: '',
+              telefono: '',
+              tipoAfiliacion: 'JUGADOR',
+              posicion: '',
+              numCamiseta: '',
+              asociacion: 'AFAEM',
+              liga: extractedData.liga,
+              equipo: extractedData.equipo,
+              categoria: extractedData.categoria,
+              esForaneo: false,
+              nacionalidadJugador: 'MEXICANA',
+              paisResidencia: 'MÉXICO',
+              haVividoExtranjero: false,
+              dondeVividoExtranjero: '',
+              nacionalidadPadre: '',
+              nacionalidadMadre: '',
+              registroAsociacionExtranjera: '',
+              nacAbueloPaterno: '',
+              nacAbuelaPaterna: '',
+              nacAbueloMaterno: '',
+              nacAbuelaMaterna: '',
+              juegoClubExtranjero: ''
+            });
+            setFillManually(false);
+            fetchTeamInfo();
+          } else {
+            navigate(`/presidente-equipo/admin-equipo/${teamId}`);
+          }
+        });
     } catch (err) { 
       Swal.fire('Error', 'No se pudo completar el registro.'); 
       //DESCOMENTAR PARA DEBUG. Swal.fire('Error', 'No se pudo completar el registro.', 'error'); 
@@ -359,7 +429,9 @@ export default function RegistroJugadores() {
       {/* HEADER DINÁMICO */}
       <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button onClick={() => navigate(-1)} className="btn btn-outline-secondary" style={{ padding: '8px', borderRadius: '10px' }}><FaArrowLeft /></button>
+          {!isPublicFlow && (
+            <button onClick={() => navigate(-1)} className="btn btn-outline-secondary" style={{ padding: '8px', borderRadius: '10px' }}><FaArrowLeft /></button>
+          )}
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugador</h2>
             <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Siga los pasos para la afiliación oficial.</p>
@@ -578,7 +650,9 @@ export default function RegistroJugadores() {
             </Tarjeta>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
-              <BotonSecundario etiqueta="Cancelar y volver" alHacerClick={() => navigate(-1)} estilo={{ minWidth: '200px' }} />
+              {!isPublicFlow && (
+                <BotonSecundario etiqueta="Cancelar y volver" alHacerClick={() => navigate(-1)} estilo={{ minWidth: '200px' }} />
+              )}
               <BotonPrimario etiqueta={uploading ? "Procesando..." : "Finalizar y Registrar Jugador"} icono={<FaSave />} alHacerClick={handleGuardar} deshabilitado={uploading} estilo={{ minWidth: '300px' }} />
             </div>
           </section>
