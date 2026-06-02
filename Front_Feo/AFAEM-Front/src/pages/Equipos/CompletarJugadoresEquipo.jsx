@@ -129,7 +129,8 @@ export default function CompletarJugadoresEquipo() {
     nacAbuelaPaterna: '',
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
-    juegoClubExtranjero: ''
+    juegoClubExtranjero: '',
+    nui: ''
   });
 
   // Detección de minoría de edad
@@ -556,18 +557,34 @@ export default function CompletarJugadoresEquipo() {
       return;
     }
 
-    if (!extractedData.nombreJugador || !extractedData.apellidoPaterno || !extractedData.curp) {
-      Swal.fire('Atención', 'Los campos Nombres, Apellido Paterno y CURP son obligatorios.', 'warning');
+    const requiredFields = [
+      { name: 'nombreJugador', label: 'Nombres' },
+      { name: 'apellidoPaterno', label: 'Apellido Paterno' },
+      { name: 'apellidoMaterno', label: 'Apellido Materno' },
+      { name: 'curp', label: 'CURP' },
+      { name: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
+      { name: 'lugarNacimiento', label: 'Lugar de Nacimiento' },
+      { name: 'genero', label: 'Sexo' },
+      { name: 'correo', label: 'Correo electrónico' },
+      { name: 'telefono', label: 'Teléfono' },
+      { name: 'numCamiseta', label: '# Camiseta' },
+      { name: 'posicion', label: 'Posición en el campo' },
+      { name: 'nui', label: 'NUI' }
+    ];
+
+    const missingFields = requiredFields.filter(f => {
+      const val = extractedData[f.name];
+      return val === undefined || val === null || String(val).trim() === '';
+    });
+
+    if (missingFields.length > 0) {
+      const labels = missingFields.map(f => f.label).join(', ');
+      Swal.fire('Atención', `Los siguientes campos son obligatorios: ${labels}.`, 'warning');
       return;
     }
 
     if (extractedData.curp.length !== 18) {
       Swal.fire('Atención', 'El campo CURP debe tener exactamente 18 caracteres.', 'warning');
-      return;
-    }
-
-    if (!extractedData.fechaNacimiento || !extractedData.correo) {
-      Swal.fire('Atención', 'Los campos Fecha de Nacimiento y Correo electrónico son obligatorios.', 'warning');
       return;
     }
 
@@ -650,6 +667,7 @@ export default function CompletarJugadoresEquipo() {
       formData.append('rol_en_equipo', extractedData.posicion || '3');
       formData.append('numero_camiseta', extractedData.numCamiseta || '0');
       formData.append('seguro_id', parseInt(selectedSeguroId, 10));
+      formData.append('nui', (extractedData.nui || '').toString().trim());
 
       if (extractedData.esForaneo) {
         formData.append('extranjero', '1');
@@ -1104,7 +1122,7 @@ export default function CompletarJugadoresEquipo() {
                 </div>
               )}
 
-             
+
             </section>
           )}
 
@@ -1169,18 +1187,18 @@ export default function CompletarJugadoresEquipo() {
                     <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
                     <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                     <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({ ...extractedData, numCamiseta: e.target.value })} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo</label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
                     <select value={extractedData.posicion} onChange={e => setExtractedData({ ...extractedData, posicion: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
                       <option value="">Posición...</option>
                       {(catalogs?.roles_equipo || []).map(r => (
@@ -1188,11 +1206,15 @@ export default function CompletarJugadoresEquipo() {
                       ))}
                     </select>
                   </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
+                    <input type="text" value={extractedData.nui || ''} onChange={e => setExtractedData({ ...extractedData, nui: e.target.value })} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP o Identificador <span className="required-star">*</span></label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
                     <input type="text" value={extractedData.curp || ''} onChange={(e) => {
                       const val = e.target.value.toUpperCase();
                       let sId = extractedData.genero;
@@ -1238,7 +1260,7 @@ export default function CompletarJugadoresEquipo() {
                     <input type="email" value={extractedData.correo} onChange={e => setExtractedData({ ...extractedData, correo: e.target.value })} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono</label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
                     <input type="tel" value={extractedData.telefono} onChange={e => setExtractedData({ ...extractedData, telefono: e.target.value })} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
