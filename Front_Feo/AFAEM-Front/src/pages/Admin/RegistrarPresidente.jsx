@@ -605,7 +605,9 @@ export default function RegistrarPresidente() {
       safeField(form, 'fill_20', tipoAfiliacion);
       safeField(form, 'Tipo', tipoAfiliacion);
       safeField(form, 'Asociación', asociacion);
-      safeField(form, 'Liga', liga?.toUpperCase());
+      const ligaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
+      const nombreLiga = ligaObj ? ligaObj.nombre : liga;
+      safeField(form, 'Liga', nombreLiga?.toUpperCase());
       safeField(form, 'Equipo', equipo?.toUpperCase());
       if (nacionalidad) safeField(form, 'Lugar de Nacimiento', nacionalidad);
       let sexoTexto = '';
@@ -705,6 +707,22 @@ export default function RegistrarPresidente() {
       if (documents.identificacion) fd.append('identificacion', documents.identificacion);
       if (documents.fotografia) fd.append('fotografia', documents.fotografia);
       if (documents.formatoAfiliacion) fd.append('formatoAfiliacion', documents.formatoAfiliacion);
+
+      // Datos adicionales de liga, equipo y afiliación
+      if (liga) {
+        const ligaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
+        if (ligaObj) {
+          fd.append('ligaId', String(ligaObj.id));
+        } else {
+          fd.append('ligaNombre', liga);
+        }
+      }
+      if (equipo) {
+        fd.append('nombreEquipo', equipo.trim());
+      }
+      if (tipoAfiliacion) {
+        fd.append('afiliacion', tipoAfiliacion);
+      }
 
       await registrarPresidenteAdmin(fd);
 
@@ -1099,9 +1117,15 @@ export default function RegistrarPresidente() {
                   <label style={labelStyle}>Liga Destino</label>
                   <select style={selectStyle} value={liga} onChange={e => setLiga(e.target.value)}>
                     <option value="">Selecciona…</option>
-                    {(ligasCatalogo.length > 0 ? ligasCatalogo.map(l => ({ valor: l.nombre, etiqueta: l.nombre })) : CATALOGO_LIGAS_DEFAULT).map(l => (
-                      <option key={l.valor} value={l.valor}>{l.etiqueta}</option>
-                    ))}
+                    {ligasCatalogo.length > 0 ? (
+                      ligasCatalogo.map(l => (
+                        <option key={l.id} value={l.id}>{l.nombre}</option>
+                      ))
+                    ) : (
+                      CATALOGO_LIGAS_DEFAULT.map(l => (
+                        <option key={l.valor} value={l.valor}>{l.etiqueta}</option>
+                      ))
+                    )}
                   </select>
                 </div>
               </div>

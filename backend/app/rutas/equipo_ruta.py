@@ -852,6 +852,10 @@ async def registrar_presidente_admin(
     identificacion: Optional[UploadFile] = File(None),
     fotografia: Optional[UploadFile] = File(None),
     formatoAfiliacion: Optional[UploadFile] = File(None),
+    ligaId: Optional[int] = Form(None),
+    ligaNombre: Optional[str] = Form(None),
+    nombreEquipo: Optional[str] = Form(None),
+    afiliacion: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
@@ -899,7 +903,8 @@ async def registrar_presidente_admin(
         # Create PresidenteEquipo
         nuevo_presidente = PresidenteEquipo(
             PersonaId=nueva_persona.PersonaId,
-            EstatusId=7 # Activo
+            EstatusId=7, # Activo
+            Afiliacion=afiliacion
         )
         db.add(nuevo_presidente)
         db.flush()
@@ -911,7 +916,8 @@ async def registrar_presidente_admin(
             TipoSolicitudId=1, # PRESIDENTE_EQUIPO
             EstatusValidacion=2, # ACEPTADO
             FechaSolicitud=datetime.now(),
-            ObservacionesSolicitud="Registro directo por administrador"
+            ObservacionesSolicitud="Registro directo por administrador",
+            Afiliacion=afiliacion
         )
         db.add(nueva_solicitud)
         db.flush()
@@ -1005,6 +1011,43 @@ async def registrar_presidente_admin(
             solicitud_id=nueva_solicitud.SolicitudId,
             tipo_proceso=1 # REGISTRO_INICIAL
         )
+        
+        # Resolver LigaId y Nombre de Equipo
+        resolved_liga_id = ligaId
+        if not resolved_liga_id and ligaNombre:
+            liga_db = db.query(Ligas).filter(Ligas.Nombreliga == ligaNombre.strip()).first()
+            if liga_db:
+                resolved_liga_id = liga_db.LigaId
+
+        if nombreEquipo:
+            nuevo_equipo_temporal.NombreEquipo = nombreEquipo.strip().upper()
+        if resolved_liga_id:
+            nuevo_equipo_temporal.LigaId = resolved_liga_id
+
+        # Crear automáticamente el equipo real
+        if nuevo_equipo_temporal.NombreEquipo and nuevo_equipo_temporal.LigaId:
+            equipo_real = db.query(Equipos).filter(
+                func.lower(Equipos.NombreEquipo) == func.lower(nuevo_equipo_temporal.NombreEquipo)
+            ).first()
+            if not equipo_real:
+                equipo_real = Equipos(NombreEquipo=nuevo_equipo_temporal.NombreEquipo, Estatus=True)
+                db.add(equipo_real)
+                db.flush()
+            
+            eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_real.EquipoId).first()
+            if not eq_jugando:
+                eq_jugando = EquiposJugando(
+                    EquipoId=equipo_real.EquipoId,
+                    LigaId=nuevo_equipo_temporal.LigaId,
+                    PresidenteEquipoId=nuevo_presidente.PresidenteEquipoId,
+                    CantidadJugadores=0
+                )
+                db.add(eq_jugando)
+                db.flush()
+            
+            # Vincular el equipo temporal al real y cambiar el proceso a AMPLIACION (para el registro de jugadores)
+            nuevo_equipo_temporal.EquipoId = equipo_real.EquipoId
+            nuevo_equipo_temporal.TipoProcesoId = 2 # AMPLIACION
         
         # Upload voucher if present
         if voucher:
