@@ -1104,17 +1104,7 @@ export default function CompletarJugadoresEquipo() {
                 </div>
               )}
 
-              {!isStep2Done && (
-                <div style={{ textAlign: 'center', marginTop: '25px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setFillManually(true)}
-                    style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
-                  >
-                    Omitir carga y llenar datos manualmente
-                  </button>
-                </div>
-              )}
+             
             </section>
           )}
 
