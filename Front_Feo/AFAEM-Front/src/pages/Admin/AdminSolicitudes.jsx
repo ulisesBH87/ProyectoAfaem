@@ -330,7 +330,7 @@ export default function AdminSolicitudes() {
     {
       key: 'Equipo',
       label: 'Equipo / Usuario',
-      width: '25%',
+      width: '20%',
       render: (value, row) => (
         <div>
           <div style={{ fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
