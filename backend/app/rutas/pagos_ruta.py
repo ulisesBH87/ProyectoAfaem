@@ -54,10 +54,10 @@ def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get
     tipo_afiliacion = datos.TipoAfiliacionId
 
     if tipo_solicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO or tipo_solicitud == TiposSolicitudEnum.EQUIPO:
-        solicitud_nueva = solicitud_servicio.crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario_objetivo)
+        solicitud_nueva = solicitud_servicio.crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario_objetivo, afiliacion=datos.Afiliacion)
     
     elif tipo_solicitud == TiposSolicitudEnum.JUGADOR:
-        solicitud_nueva = solicitud_servicio.crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario_objetivo, datos.EquipoId)
+        solicitud_nueva = solicitud_servicio.crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario_objetivo, datos.EquipoId, afiliacion=datos.Afiliacion)
 
     solicitud_id = solicitud_nueva.SolicitudId
 

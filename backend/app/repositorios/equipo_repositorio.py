@@ -62,7 +62,7 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
 
     #SI ES PROCESO DE REGISTRO DE PRESIDENTE, SE CAMBIA EL ROL DEL USUARIO
     if solicitud.TipoSolicitudId == TiposSolicitudEnum.PRESIDENTE_EQUIPO:
-        pagos_repositorio.crear_presidente_equipo_repo(db, usuario.UsuarioId)
+        pagos_repositorio.crear_presidente_equipo_repo(db, usuario.UsuarioId, afiliacion=solicitud.Afiliacion)
 
     # crear equipo temporal        
     if tipo_proceso == ProcesosEquipoTemporalEnum.REGISTRO_INICIAL.value:

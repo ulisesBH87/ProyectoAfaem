@@ -14,6 +14,7 @@ class CrearOrdenPago(BaseModel):
     EquipoId: int | None = None
     TipoAfiliacionId: int | None = None
     PresidenteId: int | None = None
+    Afiliacion: str | None = None
 
 class SubirComprobanteRespuesta(BaseModel):
     Mensaje: str

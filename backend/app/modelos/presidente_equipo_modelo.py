@@ -15,4 +15,6 @@ class PresidenteEquipo(Base):
     EstatusPresidenteRelacion = relationship("EstatusPresidente", back_populates="PresidenteEquipoRelacion")
 
     FechaCreacion = Column(DateTime, server_default=func.now())
-    EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="PresidenteRelacion")
+    EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="PresidenteRelacion")
+    
+    Afiliacion = Column(String(100), nullable=True)

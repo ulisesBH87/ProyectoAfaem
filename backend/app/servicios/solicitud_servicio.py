@@ -108,14 +108,14 @@ def ver_requisitos_afiliacion_servicio(db, tipo_afiliacion_id: int):
 
     return requisitos
 
-def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, equipo_id=None):
+def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, equipo_id=None, afiliacion=None):
     usuario_id = usuario.UsuarioId
     
     if tipo_solicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO or tipo_solicitud == TiposSolicitudEnum.EQUIPO:
-        solicitud_nueva = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id)
+        solicitud_nueva = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id, afiliacion=afiliacion)
 
     elif tipo_solicitud == TiposSolicitudEnum.JUGADOR:
-        solicitud_nueva = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id, equipo_id)
+        solicitud_nueva = solicitud_repositorio.crear_solicitud_repo(db, tipo_afiliacion, tipo_solicitud, usuario_id, equipo_id, afiliacion=afiliacion)
 
 
     #NO SE CREAN DOCUMENTOS POR QUE LA SOLICITUD NO HA SIDO APROBADA.
@@ -137,7 +137,7 @@ def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, equip
     
     return solicitud_nueva
 
-def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, sexo_id=None, fecha_nacimiento=None, liga_id=None, nombre_equipo=None):
+def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, sexo_id=None, fecha_nacimiento=None, liga_id=None, nombre_equipo=None, afiliacion=None):
 
     solicitud = solicitud_repositorio.obtener_solicitud_por_id(db, solicitud_id)
 
@@ -180,6 +180,15 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
                 equipo_temp.NombreEquipo = nombre_equipo.strip().upper()
             if liga_id:
                 equipo_temp.LigaId = liga_id
+
+    # Guardar afiliación si se proporciona
+    if afiliacion:
+        solicitud.Afiliacion = afiliacion
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        if usuario and usuario.PersonaId:
+            presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+            if presidente:
+                presidente.Afiliacion = afiliacion
 
     #enviio
     solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)

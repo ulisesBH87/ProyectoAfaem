@@ -65,14 +65,15 @@ def ver_requisitos_afiliacion_repo(db: Session, tipo_afiliacion_id: int):
 
 #SOLICITUDES
 #CREAR SOLICITUD (NO ENVIAR)
-def crear_solicitud_repo(db, tipo_afiliacion_id, tipo_solicitud, usuario_id, equipo_id=None):
+def crear_solicitud_repo(db, tipo_afiliacion_id, tipo_solicitud, usuario_id, equipo_id=None, afiliacion=None):
 
     if tipo_solicitud == TiposSolicitudEnum.PRESIDENTE_EQUIPO or tipo_solicitud == TiposSolicitudEnum.EQUIPO:
         nueva = Solicitud(
             TipoAfiliacionId = tipo_afiliacion_id,
             TipoSolicitudId = tipo_solicitud,
             UsuarioId = usuario_id,
-            EstatusValidacion = 4 # BORRADOR
+            EstatusValidacion = 4, # BORRADOR
+            Afiliacion = afiliacion
         )
     
     elif tipo_solicitud == TiposSolicitudEnum.JUGADOR:
@@ -81,7 +82,8 @@ def crear_solicitud_repo(db, tipo_afiliacion_id, tipo_solicitud, usuario_id, equ
             TipoSolicitudId = tipo_solicitud,
             UsuarioId = usuario_id,
             EstatusValidacion = 4, # BORRADOR
-            EquipoId = equipo_id
+            EquipoId = equipo_id,
+            Afiliacion = afiliacion
         )
 
     db.add(nueva)
