@@ -43,16 +43,33 @@ def listar_catalogos(tipo: str, db: Session = Depends(get_db)):
     
     config = CATALOGO_MAP[tipo]
     model = config["model"]
-    items = db.query(model).all()
+    
+    if tipo == "ligas":
+        from sqlalchemy.orm import joinedload
+        items = db.query(model).options(
+            joinedload(model.ModalidadRelacion),
+            joinedload(model.CategoriaRelacion),
+            joinedload(model.RamaRelacion)
+        ).all()
+    else:
+        items = db.query(model).all()
     
     # Transformamos para que coincida con el esquema CatalogoResponse (id, nombre, descripcion)
     resultado = []
     for item in items:
-        resultado.append({
+        res = {
             "id": getattr(item, config["id_field"]),
             "nombre": getattr(item, config["name_field"]),
             "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None
-        })
+        }
+        if tipo == "ligas":
+            res["modalidadId"] = item.ModalidadId
+            res["categoriaId"] = item.CategoriaId
+            res["ramaId"] = item.RamaId
+            res["nombreModalidad"] = item.ModalidadRelacion.NombreModalidad if item.ModalidadRelacion else None
+            res["nombreCategoria"] = item.CategoriaRelacion.NombreCategoria if item.CategoriaRelacion else None
+            res["nombreRama"] = item.RamaRelacion.Nombre if item.RamaRelacion else None
+        resultado.append(res)
     return resultado
 
 @router.post("/{tipo}", response_model=CatalogoResponse)
@@ -75,15 +92,25 @@ def crear_catalogo(tipo: str, data: CatalogoCreate, db: Session = Depends(get_db
         if config["description_field"]:
             setattr(nuevo_item, config["description_field"], data.descripcion or data.nombre)
         
+        if tipo == "ligas":
+            nuevo_item.ModalidadId = data.modalidadId
+            nuevo_item.CategoriaId = data.categoriaId
+            nuevo_item.RamaId = data.ramaId
+        
         db.add(nuevo_item)
         db.commit()
         db.refresh(nuevo_item)
         
-        return {
+        res = {
             "id": getattr(nuevo_item, config["id_field"]), 
             "nombre": getattr(nuevo_item, config["name_field"]),
             "descripcion": getattr(nuevo_item, config["description_field"]) if config["description_field"] else None
         }
+        if tipo == "ligas":
+            res["modalidadId"] = nuevo_item.ModalidadId
+            res["categoriaId"] = nuevo_item.CategoriaId
+            res["ramaId"] = nuevo_item.RamaId
+        return res
     except Exception as e:
         db.rollback()
         #print(f"Error al crear catálogo {tipo}: {str(e)}")
@@ -110,14 +137,24 @@ def actualizar_catalogo(tipo: str, item_id: int, data: CatalogoUpdate, db: Sessi
         if config["description_field"]:
             setattr(item, config["description_field"], data.descripcion or data.nombre)
             
+        if tipo == "ligas":
+            item.ModalidadId = data.modalidadId
+            item.CategoriaId = data.categoriaId
+            item.RamaId = data.ramaId
+            
         db.commit()
         db.refresh(item)
         
-        return {
+        res = {
             "id": getattr(item, config["id_field"]), 
             "nombre": getattr(item, config["name_field"]),
             "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None
         }
+        if tipo == "ligas":
+            res["modalidadId"] = item.ModalidadId
+            res["categoriaId"] = item.CategoriaId
+            res["ramaId"] = item.RamaId
+        return res
     except Exception as e:
         db.rollback()
         #print(f"Error al actualizar catálogo {tipo}: {str(e)}")

@@ -25,3 +25,6 @@ class EquipoTemporal(Base):
     EquipoTemporalJugadorRelacion = relationship("EquipoTemporalJugador", back_populates="EquipoTemporalRelacion")
 
     EquipoId = Column(ForeignKey("Equipos.EquipoId"), nullable=True)
+    NombreEquipo = Column(String(150), nullable=True)
+    LigaId = Column(Integer, ForeignKey("Ligas.LigaId"), nullable=True)
+    LigaRelacion = relationship("Ligas")

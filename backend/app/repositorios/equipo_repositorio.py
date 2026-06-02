@@ -605,10 +605,7 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
 def crear_equipo_jugando(db, equipo, team_info, presidente_id, cantidad):
     nuevo = EquiposJugando(
         EquipoId=equipo.EquipoId,
-        RamaId=team_info["rama_id"],
-        CategoriaId=team_info["categoria_id"],
         LigaId=team_info["liga_id"],
-        ModalidadId=team_info["modalidad_id"],
         PresidenteEquipoId=presidente_id,
         CantidadJugadores=cantidad
     )
@@ -637,7 +634,7 @@ def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
 
     # Actualizar EquiposJugando si se enviaron campos de categoría o presidente
     hay_cambios_jugando = any(v is not None for v in [
-        presidente_equipo_id, liga_id, modalidad_id, categoria_id, rama_id
+        presidente_equipo_id, liga_id
     ])
     if hay_cambios_jugando:
         eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
@@ -646,12 +643,6 @@ def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
                 eq_jugando.PresidenteEquipoId = presidente_equipo_id
             if liga_id is not None:
                 eq_jugando.LigaId = liga_id
-            if modalidad_id is not None:
-                eq_jugando.ModalidadId = modalidad_id
-            if categoria_id is not None:
-                eq_jugando.CategoriaId = categoria_id
-            if rama_id is not None:
-                eq_jugando.RamaId = rama_id
 
     db.commit()
     db.refresh(equipo)
@@ -717,11 +708,11 @@ def obtener_directorio_equipos_repo(db):
     ).join(
         Ligas, EquiposJugando.LigaId == Ligas.LigaId
     ).join(
-        CatalogoCategorias, EquiposJugando.CategoriaId == CatalogoCategorias.CategoriaId
+        CatalogoCategorias, Ligas.CategoriaId == CatalogoCategorias.CategoriaId
     ).join(
-        CatalogoModalidad, EquiposJugando.ModalidadId == CatalogoModalidad.ModalidadId
+        CatalogoModalidad, Ligas.ModalidadId == CatalogoModalidad.ModalidadId
     ).join(
-        CatalogoRamas, EquiposJugando.RamaId == CatalogoRamas.RamaId
+        CatalogoRamas, Ligas.RamaId == CatalogoRamas.RamaId
     ).join(
         PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId
     ).join(
@@ -738,11 +729,11 @@ def obtener_directorio_equipos_repo(db):
             "Liga": liga,
             "LigaId": ej.LigaId,
             "Categoria": categoria,
-            "CategoriaId": ej.CategoriaId,
+            "CategoriaId": ej.LigaRelacion.CategoriaId if ej.LigaRelacion else None,
             "Modalidad": modalidad,
-            "ModalidadId": ej.ModalidadId,
+            "ModalidadId": ej.LigaRelacion.ModalidadId if ej.LigaRelacion else None,
             "Rama": rama,
-            "RamaId": ej.RamaId,
+            "RamaId": ej.LigaRelacion.RamaId if ej.LigaRelacion else None,
             "PresidenteEquipoId": ej.PresidenteEquipoId,
             "PresidenteNombreCompleto": f"{p_nombre} {p_apellido}",
             "PresidenteEmail": email or "Sin correo",
