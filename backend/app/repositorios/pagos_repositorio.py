@@ -129,7 +129,7 @@ def _presidente_esta_activo(presidente):
     return str(getattr(presidente, "EstatusId", "")) == str(PresidenteEquipoEstatus.ACTIVO.value)
 
 
-def crear_presidente_equipo_repo(db, usuario_id):
+def crear_presidente_equipo_repo(db, usuario_id, afiliacion=None):
     usuario = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
 
     if not usuario:
@@ -148,11 +148,14 @@ def crear_presidente_equipo_repo(db, usuario_id):
     # Simplemente aseguramos el rol de Presidente de Equipo y retornamos el registro.
     if presidente_existente:
         usuario.RolId = Rol.PRESIDENTE_EQUIPO.value
+        if afiliacion:
+            presidente_existente.Afiliacion = afiliacion
         return presidente_existente
     
     nuevo_presidente = PresidenteEquipo(
         PersonaId = persona.PersonaId,
-        EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES.value
+        EstatusId = PresidenteEquipoEstatus.DOCUMENTOS_PENDIENTES.value,
+        Afiliacion = afiliacion
     )
 
     db.add(nuevo_presidente)
