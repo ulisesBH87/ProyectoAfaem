@@ -1171,15 +1171,6 @@ export default function RegistrarPresidente() {
                     <label style={labelStyle}>Nacionalidad</label>
                     <input style={inputStyle} type="text" placeholder="Ej. MEXICANA" value={ocrResults.nacionalidad || ''} onChange={e => handleOcrManual('nacionalidad', e.target.value.toUpperCase())} />
                   </div>
-                  <div>
-                    <label style={labelStyle}>Sexo</label>
-                    <select style={selectStyle} value={ocrResults.sexo || ''} onChange={e => handleOcrManual('sexo', e.target.value)}>
-                      <option value="">Selecciona…</option>
-                      <option value="MASCULINO">Masculino</option>
-                      <option value="FEMENINO">Femenino</option>
-                      <option value="NO BINARIO">No binario</option>
-                    </select>
-                  </div>
                 </div>
               </div>
             )}
