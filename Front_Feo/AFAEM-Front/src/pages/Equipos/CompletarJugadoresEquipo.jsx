@@ -129,7 +129,8 @@ export default function CompletarJugadoresEquipo() {
     nacAbuelaPaterna: '',
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
-    juegoClubExtranjero: ''
+    juegoClubExtranjero: '',
+    nui: ''
   });
 
   // Detección de minoría de edad
@@ -650,6 +651,7 @@ export default function CompletarJugadoresEquipo() {
       formData.append('rol_en_equipo', extractedData.posicion || '3');
       formData.append('numero_camiseta', extractedData.numCamiseta || '0');
       formData.append('seguro_id', parseInt(selectedSeguroId, 10));
+      formData.append('nui', (extractedData.nui || '').toString().trim());
 
       if (extractedData.esForaneo) {
         formData.append('extranjero', '1');
@@ -1104,7 +1106,7 @@ export default function CompletarJugadoresEquipo() {
                 </div>
               )}
 
-             
+
             </section>
           )}
 
@@ -1174,7 +1176,7 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
                     <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({ ...extractedData, numCamiseta: e.target.value })} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -1188,11 +1190,15 @@ export default function CompletarJugadoresEquipo() {
                       ))}
                     </select>
                   </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
+                    <input type="text" value={extractedData.nui || ''} onChange={e => setExtractedData({ ...extractedData, nui: e.target.value })} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP o Identificador <span className="required-star">*</span></label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
                     <input type="text" value={extractedData.curp || ''} onChange={(e) => {
                       const val = e.target.value.toUpperCase();
                       let sId = extractedData.genero;
