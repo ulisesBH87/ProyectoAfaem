@@ -580,9 +580,10 @@ export default function RegistroJugadores() {
       </div>
 
       {jugadores.length > 1 && (
-        <div style={{ marginBottom: '30px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-          {jugadores.map((player, index) => {
-            const status = getPlayerStatus(player);
+        <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'flex-start' }}>
+          {(() => {
+            const index = currentPlayerIndex;
+            const status = getPlayerStatus(jugadores[index]);
             const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
             return (
               <button
@@ -595,24 +596,22 @@ export default function RegistroJugadores() {
                   gap: '10px',
                   padding: '10px 14px',
                   borderRadius: '16px',
-                  border: currentPlayerIndex === index ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
-                  background: currentPlayerIndex === index ? '#eff6ff' : '#f8fafc',
+                  border: '2px solid #0b4ea6',
+                  background: '#eff6ff',
                   color: '#1e293b',
-                  cursor: 'pointer',
-                  minWidth: '180px',
+                  cursor: 'default',
+                  minWidth: '220px',
                   textAlign: 'left'
                 }}
               >
                 <span style={{ fontSize: '14px' }}>{config.icon}</span>
                 <span style={{ fontWeight: '700' }}>Jugador {index + 1}</span>
-                {currentPlayerIndex === index && (
-                  <span style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
-                    {config.label}
-                  </span>
-                )}
+                <span style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
+                  {config.label}
+                </span>
               </button>
             );
-          })}
+          })()}
         </div>
       )}
 
