@@ -69,6 +69,12 @@ export default function RegistroJugadores() {
     documentoEstudiante: null
   });
 
+  const documentCards = [
+    { key: 'actaNacimiento', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' },
+    { key: 'identificacion', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' },
+    { key: 'fotografia', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }
+  ];
+
   const [extractedData, setExtractedData] = useState({
     nombreJugador: '',
     apellidoPaterno: '',
@@ -586,22 +592,54 @@ export default function RegistroJugadores() {
           </div>
         </section>
         )}
-        {/* PASO 2: DOCUMENTACIÓN */}
+        {/* PASO 2: CARGA DE DOCUMENTACIÓN */}
         {showStep2 && (
           <section className="fade-in" style={{ marginBottom: '45px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
               <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
               <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
             </div>
             <div style={{ marginBottom: '24px', paddingLeft: '47px' }}>
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '10px 16px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '10px', color: '#475569', fontSize: '13px', fontWeight: '600' }}>
+              <div style={{ 
+                background: '#f8fafc', 
+                border: '1px solid #e2e8f0', 
+                padding: '10px 16px', 
+                borderRadius: '10px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: '#475569',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
                 <span style={{ fontSize: '18px' }}>✨</span>
                 Sube el acta de nacimiento para auto-llenar los datos del jugador.
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-              {[{ key: 'actaNacimiento', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' }] .map(doc => (
+            <div style={{
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '12px',
+              padding: '12px 18px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '13px',
+              color: '#0369a1',
+              fontWeight: '600'
+            }}>
+              <span style={{ fontSize: '18px' }}>📋</span>
+              Sube primero el <strong style={{ marginLeft: 4 }}>Acta de Nacimiento</strong>. El sistema detectará la minoría de edad y ajustará los requisitos.
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '20px'
+            }}>
+              {documentCards.map((doc) => (
                 <div
                   key={doc.key}
                   className="document-card"
