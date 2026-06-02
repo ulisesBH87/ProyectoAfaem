@@ -118,8 +118,8 @@ export default function CompletarJugadoresEquipo() {
     posicion: '',
     numCamiseta: '',
     esForaneo: false,
-    nacionalidadJugador: 'MEXICANA',
-    paisResidencia: 'MÉXICO',
+    nacionalidadJugador: '',
+    paisResidencia: '',
     haVividoExtranjero: false,
     dondeVividoExtranjero: '',
     nacionalidadPadre: '',
@@ -163,7 +163,7 @@ export default function CompletarJugadoresEquipo() {
     const initData = async () => {
       try {
         setLoading(true);
-        
+
         // 1. Obtener catálogos
         const catalogsData = await teamsService.getCatalogs();
         setCatalogs(catalogsData);
@@ -469,10 +469,10 @@ export default function CompletarJugadoresEquipo() {
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(selectedSeguroId));
       if (seguroSel?.nombre) {
-        try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch(_) {}
-        try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch(_) {}
+        try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
+        try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
-      
+
       safeSetField(form, 'Liga', (equipo?.Liga || '').split('(')[0].trim());
       safeSetField(form, 'Equipo', equipo?.NombreEquipo || '');
       safeSetField(form, 'Categoría', equipo?.Categoria || '');
@@ -512,7 +512,7 @@ export default function CompletarJugadoresEquipo() {
 
       // Fecha de descarga
       const hoy = new Date();
-      const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+      const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
       const dia = String(hoy.getDate()).padStart(2, '0');
       const mes = meses[hoy.getMonth()];
       const anio = String(hoy.getFullYear()).slice(-2);
@@ -604,16 +604,16 @@ export default function CompletarJugadoresEquipo() {
         nacAbueloPaterno, nacAbuelaPaterna, nacAbueloMaterno, nacAbuelaMaterna,
         juegoClubExtranjero
       } = extractedData;
-      
+
       const basicosForaneo = [
         nacionalidadJugador, paisResidencia, nacionalidadPadre, nacionalidadMadre,
-        registroAsociacionExtranjera, nacAbueloPaterno, nacAbuelaPaterna, 
+        registroAsociacionExtranjera, nacAbueloPaterno, nacAbuelaPaterna,
         nacAbueloMaterno, nacAbuelaMaterna, juegoClubExtranjero
       ];
-      
+
       const completado = basicosForaneo.every(campo => String(campo || '').trim() !== '');
       const vivoValid = !haVividoExtranjero || (haVividoExtranjero && String(dondeVividoExtranjero || '').trim() !== '');
-      
+
       if (!completado || !vivoValid) {
         Swal.fire('Atención', 'Al seleccionar que el jugador es extranjero, TODOS los campos de antecedentes internacionales deben ser llenados.', 'warning');
         return;
@@ -705,12 +705,12 @@ export default function CompletarJugadoresEquipo() {
     { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' },
     ...(esMenorDeEdad
       ? [
-          { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor' },
-          { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado' }
-        ]
+        { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor' },
+        { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado' }
+      ]
       : [
-          { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' }
-        ]),
+        { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' }
+      ]),
     { key: 'foto', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }
   ];
 
@@ -814,7 +814,7 @@ export default function CompletarJugadoresEquipo() {
           <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
           <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin Slots / Seguros Disponibles</h2>
           <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
-            Este equipo ya ha completado todos los seguros y slots contratados por el presidente. 
+            Este equipo ya ha completado todos los seguros y slots contratados por el presidente.
             No es posible agregar más jugadores hasta que el presidente adquiera nuevos slots de registro.
           </p>
           <BotonSecundario
@@ -832,7 +832,7 @@ export default function CompletarJugadoresEquipo() {
           boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
           border: '1px solid #e2e8f0'
         }}>
-          
+
           <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p className="required-legend" style={{ margin: 0 }}>
               <span className="required-star">*</span> Indica que el campo es obligatorio.
@@ -843,13 +843,13 @@ export default function CompletarJugadoresEquipo() {
           <section style={{ marginBottom: '45px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
               <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro / Slot pagado a asignar</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar.</h3>
             </div>
 
             <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
               <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
                 <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
-                  Seleccione el seguro comprado a consumir para esta inscripción: <span className="required-star">*</span>
+                  Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                   {slotsData?.seguros_disponibles?.map((seg) => {
@@ -890,89 +890,12 @@ export default function CompletarJugadoresEquipo() {
             </div>
           </section>
 
-          {/* Selector de Nacionalidad */}
-          <section className="fade-in" style={{ marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-              <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
-              <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
-            </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              background: '#f1f5f9', 
-              padding: '4px', 
-              borderRadius: '12px', 
-              width: 'fit-content' 
-            }}>
-              <button
-                type="button"
-                onClick={() => setExtractedData(prev => ({ ...prev, esForaneo: false }))}
-                style={{
-                  padding: '10px 24px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: !extractedData.esForaneo ? 'white' : 'transparent',
-                  color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
-                  fontWeight: '800',
-                  fontSize: '13px',
-                  boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                🇲🇽 Mexicano
-              </button>
-              <button
-                type="button"
-                onClick={() => setExtractedData(prev => ({ ...prev, esForaneo: true }))}
-                style={{
-                  padding: '10px 24px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: extractedData.esForaneo ? 'white' : 'transparent',
-                  color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
-                  fontWeight: '800',
-                  fontSize: '13px',
-                  boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-              >
-                🌎 Extranjero
-              </button>
-            </div>
-          </section>
-
           {/* PASO 2: CARGA DE DOCUMENTOS */}
           {showStep2 && (
             <section className="fade-in" style={{ marginBottom: '45px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                 <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
                 <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
-              </div>
-              
-              <div style={{ marginBottom: '24px', paddingLeft: '47px' }}>
-                <div style={{ 
-                  background: '#f8fafc', 
-                  border: '1px solid #e2e8f0', 
-                  padding: '10px 16px', 
-                  borderRadius: '10px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: '600'
-                }}>
-                  <span style={{ fontSize: '18px' }}>✨</span>
-                  Sube el acta de nacimiento para auto-llenar los datos del jugador
-                </div>
               </div>
 
               <div style={{
@@ -989,7 +912,7 @@ export default function CompletarJugadoresEquipo() {
                 fontWeight: '600'
               }}>
                 <span style={{ fontSize: '18px' }}>📋</span>
-                Sube primero el <strong style={{ marginLeft: 4 }}>Acta de Nacimiento</strong>. El sistema detectará la minoría de edad y ajustará los requisitos.
+                Recomendamos subir primero el<strong style={{ marginLeft: 4 }}>Acta de Nacimiento / INE</strong>el sistema detectará la minoría de edad y ajustará los requisitos.
               </div>
 
               <div style={{
@@ -1030,11 +953,11 @@ export default function CompletarJugadoresEquipo() {
                       justifyContent: 'center',
                       border: '1px solid #f1f5f9'
                     }}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      handleFileUpload(doc.key, e.dataTransfer.files[0]);
-                    }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleFileUpload(doc.key, e.dataTransfer.files[0]);
+                      }}
                     >
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -1245,30 +1168,30 @@ export default function CompletarJugadoresEquipo() {
 
               {/* CAMPOS DEL FORMULARIO */}
               <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({...extractedData, nombreJugador: e.target.value})} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({...extractedData, apellidoPaterno: e.target.value})} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
-                    <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({...extractedData, apellidoMaterno: e.target.value})} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
-                    <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({...extractedData, numCamiseta: e.target.value})} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({ ...extractedData, numCamiseta: e.target.value })} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo</label>
-                    <select value={extractedData.posicion} onChange={e => setExtractedData({...extractedData, posicion: parseInt(e.target.value) || ''})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                    <select value={extractedData.posicion} onChange={e => setExtractedData({ ...extractedData, posicion: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
                       <option value="">Posición...</option>
                       {(catalogs?.roles_equipo || []).map(r => (
                         <option key={r.id} value={r.id}>{r.nombre}</option>
@@ -1288,7 +1211,7 @@ export default function CompletarJugadoresEquipo() {
                         if (char === 'M') sId = '2'; // Femenino
                         else if (char === 'H') sId = '1'; // Masculino
                       }
-                      setExtractedData({...extractedData, curp: val, genero: sId});
+                      setExtractedData({ ...extractedData, curp: val, genero: sId });
                     }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
@@ -1296,22 +1219,22 @@ export default function CompletarJugadoresEquipo() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
-                    <input 
-                      type="date" 
-                      value={extractedData.fechaNacimiento || ''} 
+                    <input
+                      type="date"
+                      value={extractedData.fechaNacimiento || ''}
                       min={minDateStr}
                       max={today}
-                      onChange={e => setExtractedData({...extractedData, fechaNacimiento: e.target.value})} 
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                      onChange={e => setExtractedData({ ...extractedData, fechaNacimiento: e.target.value })}
+                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({...extractedData, lugarNacimiento: e.target.value})} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                    <select value={extractedData.genero || ""} onChange={e => setExtractedData({...extractedData, genero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                    <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
                       <option value="">Seleccione...</option>
                       <option value="1">MASCULINO</option>
                       <option value="2">FEMENINO</option>
@@ -1322,13 +1245,72 @@ export default function CompletarJugadoresEquipo() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                    <input type="email" value={extractedData.correo} onChange={e => setExtractedData({...extractedData, correo: e.target.value})} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="email" value={extractedData.correo} onChange={e => setExtractedData({ ...extractedData, correo: e.target.value })} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono</label>
-                    <input type="tel" value={extractedData.telefono} onChange={e => setExtractedData({...extractedData, telefono: e.target.value})} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="tel" value={extractedData.telefono} onChange={e => setExtractedData({ ...extractedData, telefono: e.target.value })} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
+
+                {/* Selector de Nacionalidad */}
+                <section className="fade-in" style={{ marginBottom: '40px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                    <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
+                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    background: '#f1f5f9',
+                    padding: '4px',
+                    borderRadius: '12px',
+                    width: 'fit-content'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => setExtractedData(prev => ({ ...prev, esForaneo: false }))}
+                      style={{
+                        padding: '10px 24px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: !extractedData.esForaneo ? 'white' : 'transparent',
+                        color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                        fontWeight: '800',
+                        fontSize: '13px',
+                        boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🇲🇽 Mexicano
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExtractedData(prev => ({ ...prev, esForaneo: true }))}
+                      style={{
+                        padding: '10px 24px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: extractedData.esForaneo ? 'white' : 'transparent',
+                        color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                        fontWeight: '800',
+                        fontSize: '13px',
+                        boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🌎 Extranjero
+                    </button>
+                  </div>
+                </section>
 
                 {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
                 <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
@@ -1345,12 +1327,12 @@ export default function CompletarJugadoresEquipo() {
                         <EntradaFormulario
                           etiqueta="Nacionalidad del jugador"
                           valor={extractedData.nacionalidadJugador}
-                          alCambiar={e => setExtractedData({...extractedData, nacionalidadJugador: e.target.value})}
+                          alCambiar={e => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
                         />
                         <EntradaFormulario
                           etiqueta="País de residencia actual"
                           valor={extractedData.paisResidencia}
-                          alCambiar={e => setExtractedData({...extractedData, paisResidencia: e.target.value})}
+                          alCambiar={e => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
                         />
                       </div>
 
@@ -1358,15 +1340,15 @@ export default function CompletarJugadoresEquipo() {
                         <EntradaSeleccion
                           etiqueta="¿El jugador ha vivido en el extranjero?"
                           valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                          alCambiar={e => setExtractedData({...extractedData, haVividoExtranjero: e.target.value === '1'})}
-                          opciones={[{id: '0', nombre: 'No'}, {id: '1', nombre: 'Sí'}]}
+                          alCambiar={e => setExtractedData({ ...extractedData, haVividoExtranjero: e.target.value === '1' })}
+                          opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
                           obligatorio={true}
                         />
                         {extractedData.haVividoExtranjero && (
                           <EntradaFormulario
                             etiqueta="¿En qué país?"
                             valor={extractedData.dondeVividoExtranjero}
-                            alCambiar={e => setExtractedData({...extractedData, dondeVividoExtranjero: e.target.value})}
+                            alCambiar={e => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
                             obligatorio={true}
                           />
                         )}
@@ -1376,34 +1358,34 @@ export default function CompletarJugadoresEquipo() {
                         <EntradaFormulario
                           etiqueta="Nacionalidad del padre"
                           valor={extractedData.nacionalidadPadre}
-                          alCambiar={e => setExtractedData({...extractedData, nacionalidadPadre: e.target.value})}
+                          alCambiar={e => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
                         />
                         <EntradaFormulario
                           etiqueta="Nacionalidad de la madre"
                           valor={extractedData.nacionalidadMadre}
-                          alCambiar={e => setExtractedData({...extractedData, nacionalidadMadre: e.target.value})}
+                          alCambiar={e => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
                         />
                       </div>
 
-                      <AreaTexto
-                        etiqueta="Registro por Asociación Nacional Extranjera"
+                      <EntradaFormulario
+                        etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                         valor={extractedData.registroAsociacionExtranjera}
-                        alCambiar={e => setExtractedData({...extractedData, registroAsociacionExtranjera: e.target.value})}
+                        alCambiar={e => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
                         filas={2}
                         obligatorio={true}
                       />
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                        <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => setExtractedData({...extractedData, nacAbueloPaterno: e.target.value})} />
-                        <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => setExtractedData({...extractedData, nacAbuelaPaterna: e.target.value})} />
-                        <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => setExtractedData({...extractedData, nacAbueloMaterno: e.target.value})} />
-                        <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => setExtractedData({...extractedData, nacAbuelaMaterna: e.target.value})} />
+                        <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })} />
+                        <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })} />
+                        <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })} />
+                        <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })} />
                       </div>
 
-                      <AreaTexto
-                        etiqueta="¿Ha jugado en un Club extranjero?"
+                      <EntradaFormulario
+                        etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                         valor={extractedData.juegoClubExtranjero}
-                        alCambiar={e => setExtractedData({...extractedData, juegoClubExtranjero: e.target.value})}
+                        alCambiar={e => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
                         filas={3}
                         obligatorio={true}
                       />
@@ -1411,7 +1393,7 @@ export default function CompletarJugadoresEquipo() {
                   ) : (
                     <div style={{ textAlign: 'center', padding: '20px' }}>
                       <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                        Si el jugador es foráneo, habilite el interruptor para completar los antecedentes internacionales obligatorios.
+                        Si el jugador es extranjero, habilite está opción para completar los antecedentes internacionales.
                       </p>
                     </div>
                   )}
