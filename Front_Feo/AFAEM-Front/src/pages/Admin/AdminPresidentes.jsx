@@ -391,11 +391,19 @@ export default function AdminPresidentes() {
       }
       if (curp && curp !== 'No detectado') form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
       if (fecha_nac && fecha_nac !== 'No detectada') form.getTextField('Fecha de Nacimiento')?.setText(fecha_nac);
-      if (infoPersonal.correo) form.getTextField('Correo electrónico')?.setText(infoPersonal.correo);
+      if (infoPersonal.correo) {
+        const correoField = form.getTextField('Correo electrónico');
+        if (correoField) {
+          const correoLen = (infoPersonal.correo || '').length;
+          const correoFs = correoLen > 35 ? 6 : correoLen > 25 ? 7 : correoLen > 18 ? 8 : 10;
+          correoField.setText(infoPersonal.correo);
+          correoField.setFontSize(correoFs);
+        }
+      }
       if (infoPersonal.telefono) form.getTextField('Teléfono')?.setText(infoPersonal.telefono);
       if (infoPersonal.tipoAfiliacion) form.getTextField('fill_20')?.setText(infoPersonal.tipoAfiliacion);
       if (infoPersonal.asociacion) form.getTextField('Asociación')?.setText(infoPersonal.asociacion.toUpperCase());
-      if (infoPersonal.liga) form.getTextField('Liga')?.setText(infoPersonal.liga.toUpperCase());
+      if (infoPersonal.liga) form.getTextField('Liga')?.setText(infoPersonal.liga.split('(')[0].trim().toUpperCase());
       if (infoPersonal.equipo) form.getTextField('Equipo')?.setText(infoPersonal.equipo.toUpperCase());
       if (nacionalidad) form.getTextField('Lugar de Nacimiento')?.setText(nacionalidad);
       if (curp && curp.length >= 11) {

@@ -1682,7 +1682,14 @@ export default function ConfigurarEquipo() {
 
       // Contacto
       const formEmail = email || localStorage.getItem('email') || '';
-      if (formEmail) form.getTextField('Correo electrónico')?.setText(formEmail);
+      if (formEmail) {
+        const emailFieldCE = form.getTextField('Correo electrónico');
+        if (emailFieldCE) {
+          const emailFsCE = formEmail.length > 35 ? 6 : formEmail.length > 25 ? 7 : formEmail.length > 18 ? 8 : 10;
+          emailFieldCE.setText(formEmail);
+          emailFieldCE.setFontSize(emailFsCE);
+        }
+      }
       if (telefono) form.getTextField('Teléfono')?.setText(telefono);
 
       // Sexo
@@ -1693,7 +1700,7 @@ export default function ConfigurarEquipo() {
       form.getTextField('Equipo')?.setText(modalData.teamName || preRegistro.teamName || '');
       const currentLigaId = formData.season || preRegistro.liga_id || '';
       const ligaObj = catalogs.ligas?.find(l => l.id.toString() === currentLigaId.toString());
-      if (ligaObj) form.getTextField('Liga')?.setText(ligaObj.nombre);
+      if (ligaObj) form.getTextField('Liga')?.setText(ligaObj.nombre.split('(')[0].trim().toUpperCase());
       const currentCatId = formData.category || preRegistro.categoria_id || '';
       const catObj = catalogs.categorias?.find(c => c.id.toString() === currentCatId.toString());
       if (catObj) form.getTextField('Categoría')?.setText(catObj.nombre);

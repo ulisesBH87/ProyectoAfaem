@@ -383,11 +383,14 @@ export default function AdminCrearJugador() {
   };
 
   // FUNCIÓN AUXILIAR PARA ESCRITURA SEGURA EN PDF
-  const safeSetField = (form, fieldName, value) => {
+  const safeSetField = (form, fieldName, value, fontSize) => {
     if (!value) return;
     try {
       const field = form.getTextField(fieldName);
-      if (field) field.setText(value.toString().toUpperCase());
+      if (field) {
+        field.setText(value.toString().toUpperCase());
+        if (fontSize) field.setFontSize(fontSize);
+      }
     } catch (e) {
       console.warn(`Campo PDF no encontrado: ${fieldName}`);
     }
@@ -434,7 +437,9 @@ export default function AdminCrearJugador() {
       safeSetField(form, 'Lugar de Nacimiento', extractedData.lugarNacimiento);
 
       // DATOS DE AFILIADO
-      safeSetField(form, 'Correo electrónico', extractedData.correo);
+      const correoACJ = extractedData.correo || '';
+      const correoACJFs = correoACJ.length > 35 ? 6 : correoACJ.length > 25 ? 7 : correoACJ.length > 18 ? 8 : 10;
+      safeSetField(form, 'Correo electrónico', correoACJ, correoACJFs);
       safeSetField(form, 'Teléfono', extractedData.telefono);
       
       // La Asociación y campo fill_24 (empírico para Tipo Afiliación / Asociación) deben ser "AFAEM"

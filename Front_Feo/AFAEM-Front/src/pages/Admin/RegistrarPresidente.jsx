@@ -164,7 +164,7 @@ export default function RegistrarPresidente() {
   // ── PASO 1: Cuenta ──────────────────────────────────────────────────────────
   const [cuenta, setCuenta] = useState({
     nombre: '', primerApellido: '', segundoApellido: '',
-    correo: '', telefono: '', curp: '', rfc: '',
+    correo: '', telefono: '', curp: '',
     sexoId: '', fechaNacimiento: '',
     contrasena: '', confirmarContrasena: '',
   });
@@ -570,9 +570,17 @@ export default function RegistrarPresidente() {
   const toDDMMYYYY = s => { if (!s) return ''; const p = s.split('-'); return p.length !== 3 ? s : `${p[2]}/${p[1]}/${p[0]}`; };
 
   // ── PDF ────────────────────────────────────────────────────────────────────
-  const safeField = (form, name, val) => {
+  const safeField = (form, name, val, fontSize) => {
     if (!val) return;
-    try { form.getTextField(name)?.setText(String(val)); } catch { }
+    try {
+      const field = form.getTextField(name);
+      if (field) {
+        field.setText(String(val));
+        if (fontSize) {
+          field.setFontSize(fontSize);
+        }
+      }
+    } catch { }
   };
 
   const descargarFormato = async () => {
@@ -600,14 +608,18 @@ export default function RegistrarPresidente() {
       }
       safeField(form, 'CURP o Clave Única de Registro de Población', curp);
       safeField(form, 'Fecha de Nacimiento', fecha_nac);
-      safeField(form, 'Correo electrónico', correoDoc || cuenta.correo);
+      const correoVal = correoDoc || cuenta.correo || '';
+      const correoFontSize = correoVal.length > 35 ? 6 : correoVal.length > 25 ? 7 : correoVal.length > 18 ? 8 : 10;
+      safeField(form, 'Correo electrónico', correoVal, correoFontSize);
       safeField(form, 'Teléfono', ocrResults.telefono || telefonoDoc || cuenta.telefono);
       safeField(form, 'fill_20', tipoAfiliacion);
       safeField(form, 'Tipo', tipoAfiliacion);
       safeField(form, 'Asociación', asociacion);
       const ligaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
-      const nombreLiga = ligaObj ? ligaObj.nombre : liga;
-      safeField(form, 'Liga', nombreLiga?.toUpperCase());
+      const nombreLiga = (ligaObj ? ligaObj.nombre : liga)?.split('(')[0].trim().toUpperCase() || '';
+      // Reducir tamaño de letra si es un nombre largo para evitar desborde
+      const fontSizeLiga = nombreLiga.length > 25 ? 6 : (nombreLiga.length > 15 ? 8 : 10);
+      safeField(form, 'Liga', nombreLiga, fontSizeLiga);
       safeField(form, 'Equipo', equipo?.toUpperCase());
       if (nacionalidad) safeField(form, 'Lugar de Nacimiento', nacionalidad);
       let sexoTexto = '';
@@ -684,7 +696,6 @@ export default function RegistrarPresidente() {
       fd.append('correo', correoFinal);
       fd.append('telefono', ocrResults.telefono || telefonoDoc || cuenta.telefono || '');
       fd.append('curp', curpDetectada);
-      fd.append('rfc', cuenta.rfc || '');
       fd.append('sexoId', cuenta.sexoId || '');
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
       fd.append('contrasena', cuenta.contrasena);
@@ -845,17 +856,12 @@ export default function RegistrarPresidente() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
               {/* CURP */}
-              <div style={{ gridColumn: 'span 2' }}>
+              <div>
                 <label style={labelStyle}>CURP <span style={{ color: C.amber }}>*</span></label>
                 <input style={{ ...inputStyle, borderColor: cuentaErrors.curp ? C.rose : C.inputBorder }} type="text" placeholder="18 caracteres" maxLength={18} value={cuenta.curp} onChange={e => setCuentaField('curp', e.target.value.toUpperCase())} />
                 {cuentaErrors.curp && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.curp}</span>}
-              </div>
-              {/* RFC */}
-              <div>
-                <label style={labelStyle}>RFC</label>
-                <input style={inputStyle} type="text" placeholder="12-13 caracteres" maxLength={13} value={cuenta.rfc} onChange={e => setCuentaField('rfc', e.target.value.toUpperCase())} />
               </div>
               {/* Sexo */}
               <div>
