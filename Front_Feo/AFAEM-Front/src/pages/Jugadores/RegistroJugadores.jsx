@@ -8,7 +8,8 @@ import {
   FaCheckCircle, 
   FaArrowLeft,
   FaFileSignature,
-  FaUserEdit
+  FaUserEdit,
+  FaGlobeAmericas
 } from 'react-icons/fa';
 import { 
   BotonPrimario, 
@@ -56,6 +57,8 @@ export default function RegistroJugadores() {
   const [uploading, setUploading] = useState(false);
   const [slotsInfo, setSlotsInfo] = useState({ disponibles: 0, total: 0 });
   const [loadingSlots, setLoadingSlots] = useState(true);
+  const [slotsData, setSlotsData] = useState(null);
+  const [selectedSeguroId, setSelectedSeguroId] = useState('');
   const [fillManually, setFillManually] = useState(false);
 
   const [documents, setDocuments] = useState({
@@ -123,51 +126,49 @@ export default function RegistroJugadores() {
 
   // CARGAR SLOTS Y DATOS DEL EQUIPO
   const fetchTeamInfo = async () => {
-    if (isPublicFlow) {
-      try {
-        setLoadingSlots(true);
-        const data = await getInvitationInfo(token);
-        setTeamId(data.equipo_temporal_id);
-        setSlotsInfo({
-          disponibles: data.slots_disponibles || 0,
-          total: data.total_slots || 0
-        });
+    let effectiveTeamId = teamId;
+    let inviteData = null;
+
+    try {
+      setLoadingSlots(true);
+
+      if (isPublicFlow && !teamId) {
+        inviteData = await getInvitationInfo(token);
+        effectiveTeamId = inviteData.equipo_temporal_id;
+        setTeamId(effectiveTeamId);
         setExtractedData(prev => ({
           ...prev,
-          equipo: data.nombre_equipo || prev.equipo,
-          liga: data.nombre_liga || prev.liga,
-          categoria: data.nombre_categoria || 'LIBRE'
+          equipo: inviteData.nombre_equipo || prev.equipo,
+          liga: inviteData.nombre_liga || prev.liga,
+          categoria: inviteData.nombre_categoria || 'LIBRE'
         }));
-      } catch (err) {
-        console.error("Error al obtener info de la invitación:", err);
-        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la invitación.', 'error');
-      } finally {
-        setLoadingSlots(false);
       }
-    } else {
-      if (!teamId) {
-        Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
-        navigate('/presidente-equipo/dashboard');
+
+      if (!effectiveTeamId) {
+        if (!isPublicFlow) {
+          Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
+          navigate('/presidente-equipo/dashboard');
+        }
         return;
       }
-      try {
-        setLoadingSlots(true);
-        const data = await getAvailableSlots(teamId);
-        setSlotsInfo({
-          disponibles: data.slots_disponibles || 0,
-          total: data.total_slots || 0
-        });
-        setExtractedData(prev => ({
-          ...prev,
-          equipo: data.nombre_equipo || prev.equipo,
-          liga: data.nombre_liga || prev.liga,
-          categoria: data.nombre_categoria || 'LIBRE'
-        }));
-      } catch (err) {
-        console.error("Error al obtener info del equipo:", err);
-      } finally {
-        setLoadingSlots(false);
+
+      const data = await getAvailableSlots(effectiveTeamId);
+      setSlotsData(data);
+      setSlotsInfo({
+        disponibles: data.jugadores_restantes ?? data.slots_disponibles ?? 0,
+        total: data.cantidad_jugadores_pagados ?? data.total_slots ?? 0
+      });
+
+      if (data?.seguros?.length > 0) {
+        setSelectedSeguroId(String(data.seguros[0].seguro_id));
       }
+    } catch (err) {
+      console.error('Error al obtener info del equipo:', err);
+      if (isPublicFlow && !inviteData) {
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la invitación.', 'error');
+      }
+    } finally {
+      setLoadingSlots(false);
     }
   };
 
@@ -350,7 +351,7 @@ export default function RegistroJugadores() {
       formData.append('telefono', extractedData.telefono);
       formData.append('posicion', extractedData.posicion);
       formData.append('num_camiseta', extractedData.numCamiseta);
-      formData.append('seguro_id', 1);
+      formData.append('seguro_id', selectedSeguroId || String(slotsData?.seguros?.[0]?.seguro_id || 1));
 
       if (extractedData.esForaneo) {
         formData.append('es_foraneo', '1');
@@ -494,14 +495,61 @@ export default function RegistroJugadores() {
           <p className="required-legend" style={{ margin: 0 }}>
             <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial.
           </p>
-          {!loadingSlots && (
-            <div style={{ padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Slots Restantes</div>
-              <div style={{ fontSize: '18px', fontWeight: '900', color: slotsInfo.disponibles === 0 ? '#ef4444' : '#0b4ea6' }}>{slotsInfo.disponibles} / {slotsInfo.total}</div>
-            </div>
-          )}
         </div>
-        
+
+        {/* PASO 1: SELECCIÓN DE SEGURO / SLOT A CONSUMIR */}
+        <section style={{ marginBottom: '45px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+            <StepBadge number="1" isActive={!!selectedSeguroId} isDone={!!selectedSeguroId} />
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro / Slot pagado a asignar</h3>
+          </div>
+          <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
+            <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
+                Seleccione el seguro comprado a consumir para esta inscripción: <span className="required-star">*</span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                {loadingSlots ? (
+                  <div style={{ padding: '18px', color: '#475569' }}>Cargando seguros...</div>
+                ) : (
+                  (slotsData?.seguros || []).length > 0 ? (
+                    slotsData.seguros.map((seg) => {
+                      const isSelected = String(selectedSeguroId) === String(seg.seguro_id);
+                      return (
+                        <button
+                          key={`seguro-card-${seg.seguro_id}`}
+                          type="button"
+                          onClick={() => setSelectedSeguroId(String(seg.seguro_id))}
+                          style={{
+                            padding: '16px',
+                            borderRadius: '12px',
+                            border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
+                            backgroundColor: isSelected ? '#eff6ff' : 'white',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px'
+                          }}
+                        >
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>🛡️ {seg.nombre}</span>
+                          <div style={{ marginTop: '6px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                            {seg.disponibles} disponibles
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div style={{ padding: '18px', borderRadius: '14px', background: '#f1f5f9', color: '#475569', fontSize: '13px' }}>
+                      No hay seguros disponibles para mostrar. Se usará el seguro predeterminado en caso de que el sistema lo permita.
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* PASO 1: CONFIRMACIÓN DE EQUIPO */}
         {false && (
         <section style={{ marginBottom: '45px' }}>
