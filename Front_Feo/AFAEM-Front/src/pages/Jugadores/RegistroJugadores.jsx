@@ -527,93 +527,95 @@ export default function RegistroJugadores() {
         }
       `}</style>
 
-      <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        {!isPublicFlow && (
-          <button
-            onClick={() => navigate(-1)}
-            className="btn btn-outline-secondary"
-            style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
-          >
-            <FaArrowLeft />
-          </button>
-        )}
-        <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugador</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Siga los pasos para la afiliación oficial.</p>
-        </div>
-
-        {jugadores.length > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: 'white', padding: '18px 0 12px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', justifyContent: 'space-between', padding: '0 16px' }}>
+          {!isPublicFlow && (
             <button
-              type="button"
-              onClick={() => setCurrentPlayerIndex(prev => Math.max(prev - 1, 0))}
-              disabled={currentPlayerIndex === 0}
-              style={{
-                padding: '10px 14px',
-                borderRadius: '12px',
-                border: '1px solid #cbd5e1',
-                background: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
-                color: '#1e293b',
-                cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer'
-              }}
+              onClick={() => navigate(-1)}
+              className="btn btn-outline-secondary"
+              style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
             >
               <FaArrowLeft />
             </button>
-            <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Jugador {currentPlayerIndex + 1} de {jugadores.length}</div>
-            <button
-              type="button"
-              onClick={() => setCurrentPlayerIndex(prev => Math.min(prev + 1, jugadores.length - 1))}
-              disabled={currentPlayerIndex === jugadores.length - 1}
-              style={{
-                padding: '10px 14px',
-                borderRadius: '12px',
-                border: '1px solid #cbd5e1',
-                background: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
-                color: '#1e293b',
-                cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer'
-              }}
-            >
-              <FaArrowRight />
-            </button>
+          )}
+          <div>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugador</h2>
+          </div>
+
+          {jugadores.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setCurrentPlayerIndex(prev => Math.max(prev - 1, 0))}
+                disabled={currentPlayerIndex === 0}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #cbd5e1',
+                  background: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
+                  color: '#1e293b',
+                  cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <FaArrowLeft />
+              </button>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Jugador {currentPlayerIndex + 1} de {jugadores.length}</div>
+              <button
+                type="button"
+                onClick={() => setCurrentPlayerIndex(prev => Math.min(prev + 1, jugadores.length - 1))}
+                disabled={currentPlayerIndex === jugadores.length - 1}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #cbd5e1',
+                  background: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
+                  color: '#1e293b',
+                  cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <FaArrowRight />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {jugadores.length > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', padding: '0 16px' }}>
+            {(() => {
+              const index = currentPlayerIndex;
+              const status = getPlayerStatus(jugadores[index]);
+              const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
+              return (
+                <button
+                  key={`player-status-${index}`}
+                  type="button"
+                  onClick={() => setCurrentPlayerIndex(index)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    borderRadius: '16px',
+                    border: '2px solid #0b4ea6',
+                    background: '#eff6ff',
+                    color: '#1e293b',
+                    cursor: 'default',
+                    minWidth: '220px',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ fontSize: '14px' }}>{config.icon}</span>
+                  <span style={{ fontWeight: '700' }}>Jugador {index + 1}</span>
+                  <span style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
+                    {config.label}
+                  </span>
+                </button>
+              );
+            })()}
           </div>
         )}
       </div>
-
-      {jugadores.length > 1 && (
-        <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'flex-start' }}>
-          {(() => {
-            const index = currentPlayerIndex;
-            const status = getPlayerStatus(jugadores[index]);
-            const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
-            return (
-              <button
-                key={`player-status-${index}`}
-                type="button"
-                onClick={() => setCurrentPlayerIndex(index)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '10px 14px',
-                  borderRadius: '16px',
-                  border: '2px solid #0b4ea6',
-                  background: '#eff6ff',
-                  color: '#1e293b',
-                  cursor: 'default',
-                  minWidth: '220px',
-                  textAlign: 'left'
-                }}
-              >
-                <span style={{ fontSize: '14px' }}>{config.icon}</span>
-                <span style={{ fontWeight: '700' }}>Jugador {index + 1}</span>
-                <span style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
-                  {config.label}
-                </span>
-              </button>
-            );
-          })()}
-        </div>
-      )}
+      <div style={{ height: '132px' }} />
 
       <div className="premium-card fade-in" style={{
         maxWidth: '1000px',
