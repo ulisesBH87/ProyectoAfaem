@@ -135,6 +135,7 @@ def enviar_solicitud_completa(
     liga_id: int | None = Query(None),
     nombre_equipo: str | None = Query(None),
     afiliacion: str | None = Query(None),
+    telefono: str | None = Query(None),
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
@@ -147,7 +148,8 @@ def enviar_solicitud_completa(
         fecha_nacimiento=fecha_nacimiento,
         liga_id=liga_id,
         nombre_equipo=nombre_equipo,
-        afiliacion=afiliacion
+        afiliacion=afiliacion,
+        telefono=telefono
     )
     return resultado
 

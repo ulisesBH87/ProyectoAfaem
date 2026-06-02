@@ -1381,6 +1381,15 @@ function PreRegistroPresidente() {
       setLoading(true);
       setError(null);
 
+      // Validar teléfono obligatorio de 10 dígitos
+      const telLimpio = (ocrResults.telefono || '').replace(/\D/g, '');
+      if (!telLimpio) {
+        throw new Error('El teléfono es obligatorio.');
+      }
+      if (telLimpio.length !== 10) {
+        throw new Error('El teléfono debe tener exactamente 10 dígitos.');
+      }
+
       // Verify user/persona ID
       let personaId = localStorage.getItem('UsuarioId') || user.id || user.usuario_id || user.UsuarioId;
 
@@ -1473,6 +1482,10 @@ function PreRegistroPresidente() {
         }
         if (tipoAfiliacion) {
           queryParams.append('afiliacion', tipoAfiliacion);
+        }
+        const telLimpio = (ocrResults.telefono || '').replace(/\D/g, '');
+        if (telLimpio) {
+          queryParams.append('telefono', telLimpio);
         }
 
         const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?${queryParams.toString()}`, {
@@ -2812,8 +2825,7 @@ function PreRegistroPresidente() {
                       value={ocrResults.telefono || ''}
                       onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
                       className="premium-input"
-                      disabled={true}
-                      style={{ cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' }}
+                      style={{ cursor: 'text' }}
                     />
                   </div>
                 </div>
