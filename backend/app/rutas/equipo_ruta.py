@@ -63,15 +63,34 @@ async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
 @router.get("/catalogos-registro", response_model=CatalogosRegistroResponse)
 def get_catalogos_registro(db: Session = Depends(get_db)):
     try:
-        ligas = db.query(Ligas).all()
+        from sqlalchemy.orm import joinedload
+        ligas = db.query(Ligas).options(
+            joinedload(Ligas.CategoriaRelacion),
+            joinedload(Ligas.ModalidadRelacion),
+            joinedload(Ligas.RamaRelacion)
+        ).all()
         categorias = db.query(CatalogoCategorias).all()
         modalidades = db.query(CatalogoModalidad).all()
         ramas = db.query(CatalogoRamas).all()
         seguros = db.query(Seguro).all()
         roles_equipo = db.query(RolesDeEquipo).filter(RolesDeEquipo.Eliminado == False).all()
 
+        ligas_desc = []
+        for l in ligas:
+            cat = l.CategoriaRelacion.NombreCategoria if l.CategoriaRelacion else ""
+            mod = l.ModalidadRelacion.NombreModalidad if l.ModalidadRelacion else ""
+            ram = l.RamaRelacion.Nombre if l.RamaRelacion else ""
+            desc = f"{l.Nombreliga} ({cat} - {mod} - {ram})" if cat or mod or ram else l.Nombreliga
+            ligas_desc.append({
+                "id": l.LigaId,
+                "nombre": desc,
+                "modalidadId": l.ModalidadId,
+                "categoriaId": l.CategoriaId,
+                "ramaId": l.RamaId
+            })
+
         return {
-            "ligas": [{"id": l.LigaId, "nombre": l.Nombreliga} for l in ligas],
+            "ligas": ligas_desc,
             "categorias": [{"id": c.CategoriaId, "nombre": c.NombreCategoria} for c in categorias],
             "modalidades": [{"id": m.ModalidadId, "nombre": m.NombreModalidad} for m in modalidades],
             "ramas": [{"id": r.RamaId, "nombre": r.Nombre} for r in ramas],
@@ -401,10 +420,10 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             EquipoTemporal.SolicitudId,
             func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados")
         ).join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
-         .join(CatalogoCategorias, EquiposJugando.CategoriaId == CatalogoCategorias.CategoriaId)\
          .join(Ligas, EquiposJugando.LigaId == Ligas.LigaId)\
-         .join(CatalogoModalidad, EquiposJugando.ModalidadId == CatalogoModalidad.ModalidadId)\
-         .join(CatalogoRamas, EquiposJugando.RamaId == CatalogoRamas.RamaId)\
+         .join(CatalogoCategorias, Ligas.CategoriaId == CatalogoCategorias.CategoriaId)\
+         .join(CatalogoModalidad, Ligas.ModalidadId == CatalogoModalidad.ModalidadId)\
+         .join(CatalogoRamas, Ligas.RamaId == CatalogoRamas.RamaId)\
          .join(PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
          .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
          .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)\

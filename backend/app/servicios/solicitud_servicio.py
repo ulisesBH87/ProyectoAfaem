@@ -137,7 +137,7 @@ def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, equip
     
     return solicitud_nueva
 
-def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, sexo_id=None, fecha_nacimiento=None):
+def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, sexo_id=None, fecha_nacimiento=None, liga_id=None, nombre_equipo=None):
 
     solicitud = solicitud_repositorio.obtener_solicitud_por_id(db, solicitud_id)
 
@@ -171,6 +171,15 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
                         persona.FechaNacimiento = datetime.strptime(fecha_nacimiento.strip(), "%d/%m/%Y").date()
             except Exception as e:
                 print(f"Error parseando fecha_nacimiento {fecha_nacimiento}: {e}")
+
+    # Guardar NombreEquipo y LigaId en EquipoTemporal si es pre-registro de presidente
+    if nombre_equipo or liga_id:
+        equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
+        if equipo_temp:
+            if nombre_equipo:
+                equipo_temp.NombreEquipo = nombre_equipo.strip().upper()
+            if liga_id:
+                equipo_temp.LigaId = liga_id
 
     #enviio
     solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)
@@ -211,6 +220,44 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
                 if not activado:
                     # Si no pudimos activar al presidente, lanzamos error para hacer rollback
                     raise Exception("No se pudo activar el registro de Presidente de Equipo. Verifique que el usuario esté vinculado correctamente.")
+                
+                # 3. Crear automáticamente el equipo real si hay pre-registro
+                equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
+                if equipo_temp and equipo_temp.NombreEquipo and equipo_temp.LigaId:
+                    from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+                    from app.modelos.equipo_modelo import Equipos, EquiposJugando
+                    from app.enums.proceso_equipo_temporal_enum import EquipoTemporalProcesoEnum
+                    from sqlalchemy import func
+                    
+                    solicitud_db = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+                    usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == solicitud_db.UsuarioId).first()
+                    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario_db.PersonaId).first()
+                    
+                    if presidente:
+                        # Buscar si ya existe el equipo real
+                        equipo_real = db.query(Equipos).filter(
+                            func.lower(Equipos.NombreEquipo) == func.lower(equipo_temp.NombreEquipo)
+                        ).first()
+                        if not equipo_real:
+                            equipo_real = Equipos(NombreEquipo=equipo_temp.NombreEquipo, Estatus=True)
+                            db.add(equipo_real)
+                            db.flush()
+                        
+                        # Crear el registro en EquiposJugando si no existe
+                        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_real.EquipoId).first()
+                        if not eq_jugando:
+                            eq_jugando = EquiposJugando(
+                                EquipoId=equipo_real.EquipoId,
+                                LigaId=equipo_temp.LigaId,
+                                PresidenteEquipoId=presidente.PresidenteEquipoId,
+                                CantidadJugadores=0
+                            )
+                            db.add(eq_jugando)
+                            db.flush()
+                        
+                        # Vincular el equipo temporal
+                        equipo_temp.EquipoId = equipo_real.EquipoId
+                        equipo_temp.TipoProcesoId = EquipoTemporalProcesoEnum.AMPLIACION
             
         db.commit()
         mensaje = "Solicitud aprobada y presidente activado" if payload.Estatus == 2 else "Solicitud rechazada correctamente"

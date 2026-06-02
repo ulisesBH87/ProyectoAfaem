@@ -58,7 +58,15 @@ export default function AdminCatalogos() {
 
   const dataActual = catalogos[seccionActiva] || [];
 
-  const columns = [
+  const columns = seccionActiva === 'ligas' ? [
+    { key: "id", label: "ID" },
+    { key: "nombre", label: "Nombre de la Liga" },
+    { key: "categoria", label: "Categoría" },
+    { key: "modalidad", label: "Modalidad" },
+    { key: "rama", label: "Rama" },
+    { key: "descripcion", label: "Descripción" },
+    { key: "acciones", label: "Acciones", style: { width: '120px', textAlign: 'center' } }
+  ] : [
     { key: "id", label: "ID" },
     { key: "nombre", label: "Nombre del Registro" },
     { key: "descripcion", label: "Descripción" },
@@ -102,11 +110,26 @@ export default function AdminCatalogos() {
       title: 'Editar Registro',
       html: `
         <div style="text-align: left;">
-          <label class="swal2-label">Nombre</label>
-          <input id="swal-input1" class="swal2-input" value="${item.nombre}">
+          <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Nombre</label>
+          <input id="swal-input1" class="swal2-input" value="${item.nombre}" style="margin-top: 5px;">
           ${isLiga ? `
-            <label class="swal2-label">Descripción</label>
-            <input id="swal-input2" class="swal2-input" value="${item.descripcion || ''}">
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Descripción</label>
+            <input id="swal-input2" class="swal2-input" value="${item.descripcion || ''}" style="margin-top: 5px;">
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Categoría</label>
+            <select id="swal-select-categoria" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
+              <option value="">Selecciona Categoría...</option>
+              ${catalogos.categorias.map(c => `<option value="${c.id}" ${String(c.id) === String(item.categoriaId) ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+            </select>
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Modalidad</label>
+            <select id="swal-select-modalidad" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
+              <option value="">Selecciona Modalidad...</option>
+              ${catalogos.modalidades.map(m => `<option value="${m.id}" ${String(m.id) === String(item.modalidadId) ? 'selected' : ''}>${m.nombre}</option>`).join('')}
+            </select>
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Rama</label>
+            <select id="swal-select-rama" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
+              <option value="">Selecciona Rama...</option>
+              ${catalogos.ramas.map(r => `<option value="${r.id}" ${String(r.id) === String(item.ramaId) ? 'selected' : ''}>${r.nombre}</option>`).join('')}
+            </select>
           ` : ''}
         </div>
       `,
@@ -122,11 +145,23 @@ export default function AdminCatalogos() {
           return false;
         }
 
+        let payload = { nombre, descripcion };
+        if (isLiga) {
+          const categoriaId = document.getElementById('swal-select-categoria').value;
+          const modalidadId = document.getElementById('swal-select-modalidad').value;
+          const ramaId = document.getElementById('swal-select-rama').value;
+
+          if (!categoriaId || !modalidadId || !ramaId) {
+            Swal.showValidationMessage('Categoría, Modalidad y Rama son requeridas');
+            return false;
+          }
+          payload.categoriaId = parseInt(categoriaId);
+          payload.modalidadId = parseInt(modalidadId);
+          payload.ramaId = parseInt(ramaId);
+        }
+
         try {
-          const response = await api.put(`/catalogos/${seccionActiva}/${item.id}`, { 
-            nombre, 
-            descripcion 
-          });
+          const response = await api.put(`/catalogos/${seccionActiva}/${item.id}`, payload);
           return response.data;
         } catch (error) {
           Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo actualizar'}`);
@@ -153,11 +188,26 @@ export default function AdminCatalogos() {
       title: `Nuevo Registro en ${seccionActiva.toUpperCase()}`,
       html: `
         <div style="text-align: left;">
-          <label class="swal2-label">Nombre</label>
-          <input id="swal-input1" class="swal2-input" placeholder="Nombre...">
+          <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Nombre</label>
+          <input id="swal-input1" class="swal2-input" placeholder="Nombre..." style="margin-top: 5px;">
           ${isLiga ? `
-            <label class="swal2-label">Descripción</label>
-            <input id="swal-input2" class="swal2-input" placeholder="Descripción...">
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Descripción</label>
+            <input id="swal-input2" class="swal2-input" placeholder="Descripción..." style="margin-top: 5px;">
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Categoría</label>
+            <select id="swal-select-categoria" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
+              <option value="">Selecciona Categoría...</option>
+              ${catalogos.categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')}
+            </select>
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Modalidad</label>
+            <select id="swal-select-modalidad" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
+              <option value="">Selecciona Modalidad...</option>
+              ${catalogos.modalidades.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('')}
+            </select>
+            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Rama</label>
+            <select id="swal-select-rama" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
+              <option value="">Selecciona Rama...</option>
+              ${catalogos.ramas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('')}
+            </select>
           ` : ''}
         </div>
       `,
@@ -173,11 +223,23 @@ export default function AdminCatalogos() {
           return false;
         }
 
+        let payload = { nombre, descripcion };
+        if (isLiga) {
+          const categoriaId = document.getElementById('swal-select-categoria').value;
+          const modalidadId = document.getElementById('swal-select-modalidad').value;
+          const ramaId = document.getElementById('swal-select-rama').value;
+
+          if (!categoriaId || !modalidadId || !ramaId) {
+            Swal.showValidationMessage('Categoría, Modalidad y Rama son requeridas');
+            return false;
+          }
+          payload.categoriaId = parseInt(categoriaId);
+          payload.modalidadId = parseInt(modalidadId);
+          payload.ramaId = parseInt(ramaId);
+        }
+
         try {
-          const response = await api.post(`/catalogos/${seccionActiva}`, { 
-            nombre, 
-            descripcion 
-          });
+          const response = await api.post(`/catalogos/${seccionActiva}`, payload);
           return response.data;
         } catch (error) {
           Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo crear'}`);
@@ -197,27 +259,35 @@ export default function AdminCatalogos() {
     });
   };
 
-  const dataTransformada = dataActual.map(item => ({
-    id: <span style={{ fontWeight: '700', color: '#64748b' }}>#{item.id}</span>,
-    nombre: <span style={{ fontWeight: '600' }}>{item.nombre}</span>,
-    descripcion: <span style={{ color: '#64748b' }}>{item.descripcion || '-'}</span>,
-    acciones: (
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-        <button 
-          onClick={() => handleEditar(item)}
-          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
-        >
-          <FaEdit />
-        </button>
-        <button 
-          onClick={() => handleEliminar(item.id)}
-          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
-        >
-          <FaTrash />
-        </button>
-      </div>
-    )
-  }));
+  const dataTransformada = dataActual.map(item => {
+    const row = {
+      id: <span style={{ fontWeight: '700', color: '#64748b' }}>#{item.id}</span>,
+      nombre: <span style={{ fontWeight: '600' }}>{item.nombre}</span>,
+      descripcion: <span style={{ color: '#64748b' }}>{item.descripcion || '-'}</span>,
+      acciones: (
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <button 
+            onClick={() => handleEditar(item)}
+            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
+          >
+            <FaEdit />
+          </button>
+          <button 
+            onClick={() => handleEliminar(item.id)}
+            style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
+          >
+            <FaTrash />
+          </button>
+        </div>
+      )
+    };
+    if (seccionActiva === 'ligas') {
+      row.categoria = <span style={{ fontWeight: '500', color: '#0f172a' }}>{item.nombreCategoria || '-'}</span>;
+      row.modalidad = <span style={{ fontWeight: '500', color: '#0f172a' }}>{item.nombreModalidad || '-'}</span>;
+      row.rama = <span style={{ fontWeight: '500', color: '#0f172a' }}>{item.nombreRama || '-'}</span>;
+    }
+    return row;
+  });
 
 
   return (

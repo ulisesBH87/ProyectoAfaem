@@ -1213,16 +1213,57 @@ export default function ConfigurarEquipo() {
   };
 
   const handleOptionChange = (field, value) => {
-
-    setFormData(prev => ({
-      ...prev,
-      [field]: parseInt(value)
-    }));
-    setErrors(prev => ({
-      ...prev,
-      [field]: ''
-    }));
+    const intVal = parseInt(value);
+    setFormData(prev => {
+      let extra = {};
+      if (field === 'season') {
+        const selectedLiga = catalogs.ligas.find(l => Number(l.id) === intVal);
+        if (selectedLiga) {
+          extra = {
+            modality: selectedLiga.modalidadId || '',
+            category: selectedLiga.categoriaId || '',
+            rama: selectedLiga.ramaId || ''
+          };
+        }
+      }
+      return {
+        ...prev,
+        [field]: intVal,
+        ...extra
+      };
+    });
+    setErrors(prev => {
+      let extraErrors = {};
+      if (field === 'season') {
+        extraErrors = {
+          modality: '',
+          category: '',
+          rama: ''
+        };
+      }
+      return {
+        ...prev,
+        [field]: '',
+        ...extraErrors
+      };
+    });
   };
+
+  useEffect(() => {
+    if (formData.season && catalogs.ligas && catalogs.ligas.length > 0) {
+      const selectedLiga = catalogs.ligas.find(l => Number(l.id) === Number(formData.season));
+      if (selectedLiga) {
+        if (!formData.modality || !formData.category || !formData.rama) {
+          setFormData(prev => ({
+            ...prev,
+            modality: selectedLiga.modalidadId || '',
+            category: selectedLiga.categoriaId || '',
+            rama: selectedLiga.ramaId || ''
+          }));
+        }
+      }
+    }
+  }, [formData.season, catalogs.ligas]);
 
   const handleCheckboxChange = (e) => {
     setFormData(prev => ({
@@ -2415,86 +2456,29 @@ export default function ConfigurarEquipo() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-                    {/* MODALIDAD */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '30px' }}>
+                    {/* LIGA DESTINO */}
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                      <h5 style={{ marginBottom: '20px', color: '#0b4ea6', fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FaFutbol /> Modalidad
+                      <h5 style={{ marginBottom: '20px', color: '#0b4ea6', fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <FaFutbol /> Liga Destino
                       </h5>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {catalogs.modalidades.map((mod) => (
-                          <label key={mod.id} style={{
-                            display: 'flex', alignItems: 'center', gap: '15px', padding: '18px', borderRadius: '16px', cursor: 'pointer',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', border: '2px solid',
-                            borderColor: formData.modality === mod.id ? '#0b4ea6' : '#f1f5f9',
-                            backgroundColor: formData.modality === mod.id ? '#eff6ff' : 'white',
-                            position: 'relative', overflow: 'hidden'
-                          }}>
-                            {formData.modality === mod.id && <div style={{ position: 'absolute', top: 0, right: 0, width: '40px', height: '40px', background: '#0b4ea6', clipPath: 'polygon(100% 0, 0 0, 100% 100%)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', padding: '5px' }}><div style={{ color: 'white', fontSize: '10px' }}>✓</div></div>}
-                            <input type="radio" name="modality" value={mod.id} checked={formData.modality === mod.id} onChange={(e) => handleOptionChange('modality', e.target.value)} style={{ width: '20px', height: '20px', accentColor: '#0b4ea6' }} />
-                            <div style={{ flex: 1 }}>
-                              <span style={{ fontWeight: '800', display: 'block', color: '#1e293b', fontSize: '15px' }}>{mod.nombre}</span>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* CATEGORÍA */}
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                      <h5 style={{ marginBottom: '20px', color: '#0b4ea6', fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FaTags /> Categoría
-                      </h5>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {catalogs.categorias.map((cat) => (
-                          <label key={cat.id} style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer',
-                            transition: 'all 0.2s', border: '1px solid',
-                            borderColor: formData.category === cat.id ? '#0b4ea6' : '#f1f5f9',
-                            backgroundColor: formData.category === cat.id ? '#eff6ff' : 'white'
-                          }}>
-                            <input type="radio" name="category" value={cat.id} checked={formData.category === cat.id} onChange={(e) => handleOptionChange('category', e.target.value)} />
-                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{cat.nombre}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* TEMPORADA */}
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                      <h5 style={{ marginBottom: '20px', color: '#0b4ea6', fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FaCalendar /> Temporada
-                      </h5>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <p style={{ color: '#64748b', fontSize: '14px', marginTop: '-10px', marginBottom: '20px', fontWeight: '500' }}>
+                        Selecciona la liga en la que competirá el equipo. La modalidad, categoría y rama se asignarán automáticamente según la liga elegida.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '15px' }}>
                         {catalogs.ligas.map((s) => (
                           <label key={s.id} style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer',
-                            transition: 'all 0.2s', border: '1px solid',
+                            display: 'flex', alignItems: 'center', gap: '15px', padding: '18px', borderRadius: '16px', cursor: 'pointer',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', border: '2px solid',
                             borderColor: formData.season === s.id ? '#0b4ea6' : '#f1f5f9',
-                            backgroundColor: formData.season === s.id ? '#eff6ff' : 'white'
+                            backgroundColor: formData.season === s.id ? '#eff6ff' : 'white',
+                            position: 'relative', overflow: 'hidden'
                           }}>
-                            <input type="radio" name="season" value={s.id} checked={formData.season === s.id} onChange={(e) => handleOptionChange('season', e.target.value)} />
-                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{s.nombre}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* RAMA */}
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                      <h5 style={{ marginBottom: '20px', color: '#0b4ea6', fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FaTags /> Rama
-                      </h5>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {catalogs.ramas.map((r) => (
-                          <label key={r.id} style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px', cursor: 'pointer',
-                            transition: 'all 0.2s', border: '1px solid',
-                            borderColor: formData.rama === r.id ? '#0b4ea6' : '#f1f5f9',
-                            backgroundColor: formData.rama === r.id ? '#eff6ff' : 'white'
-                          }}>
-                            <input type="radio" name="rama" value={r.id} checked={formData.rama === r.id} onChange={(e) => handleOptionChange('rama', e.target.value)} />
-                            <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{r.nombre}</span>
+                            {formData.season === s.id && <div style={{ position: 'absolute', top: 0, right: 0, width: '40px', height: '40px', background: '#0b4ea6', clipPath: 'polygon(100% 0, 0 0, 100% 100%)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', padding: '5px' }}><div style={{ color: 'white', fontSize: '10px' }}>✓</div></div>}
+                            <input type="radio" name="season" value={s.id} checked={formData.season === s.id} onChange={(e) => handleOptionChange('season', e.target.value)} style={{ width: '20px', height: '20px', accentColor: '#0b4ea6' }} />
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontWeight: '800', display: 'block', color: '#1e293b', fontSize: '15px' }}>{s.nombre}</span>
+                            </div>
                           </label>
                         ))}
                       </div>

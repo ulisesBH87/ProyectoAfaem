@@ -46,14 +46,22 @@ class CatalogoItem(BaseModel):
     id: int
     nombre: str
 
+class LigaCatalogoItem(BaseModel):
+    id: int
+    nombre: str
+    modalidadId: Optional[int] = None
+    categoriaId: Optional[int] = None
+    ramaId: Optional[int] = None
+
 class CatalogosRegistroResponse(BaseModel):
-    ligas: List[CatalogoItem]
+    ligas: List[LigaCatalogoItem]
     categorias: List[CatalogoItem]
     modalidades: List[CatalogoItem]
     ramas: List[CatalogoItem]
     seguros: List[dict]
     roles_equipo: List[CatalogoItem]
     combinaciones: List[dict] # To hold valid [LigaId, ModalidadId, CategoriaId, RamaId]
+
 
 class JugadorCreate(BaseModel):
     nombre: str

@@ -132,6 +132,8 @@ def enviar_solicitud_completa(
     curp: str | None = Query(None),
     sexo_id: int | None = Query(None),
     fecha_nacimiento: str | None = Query(None),
+    liga_id: int | None = Query(None),
+    nombre_equipo: str | None = Query(None),
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
@@ -141,7 +143,9 @@ def enviar_solicitud_completa(
         usuario.UsuarioId,
         curp=curp,
         sexo_id=sexo_id,
-        fecha_nacimiento=fecha_nacimiento
+        fecha_nacimiento=fecha_nacimiento,
+        liga_id=liga_id,
+        nombre_equipo=nombre_equipo
     )
     return resultado
 
