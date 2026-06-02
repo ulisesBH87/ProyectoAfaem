@@ -192,12 +192,13 @@ export const certifyUser = async (email) => {
 export const registrarJugadorTemporal = async (data) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await api.post('/equipo-temporal/registrar-jugador', data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    const headers = {
+      'Content-Type': 'multipart/form-data'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await api.post('/equipo-temporal/registrar-jugador', data, { headers });
     return response.data;
   } catch (error) {
     //console.error('Error guardando jugador temporal:', error);
@@ -211,15 +212,30 @@ export const registrarJugadorTemporal = async (data) => {
 export const getAvailableSlots = async (equipoTemporalId) => {
   try {
     const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await api.get(`/equipo-temporal/slots`, {
       params: { equipo_temporal_id: equipoTemporalId },
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers
     });
     return response.data;
   } catch (error) {
     //console.error('Error obteniendo slots:', error);
+    throw error;
+  }
+};
+
+/**
+ * OBTIENE LA INFORMACIÓN DEL EQUIPO TEMPORAL POR TOKEN DE INVITACIÓN (PÚBLICO)
+ */
+export const getInvitationInfo = async (token) => {
+  try {
+    const response = await api.get(`/equipo-temporal/invitacion/${token}`);
+    return response.data;
+  } catch (error) {
+    //console.error('Error obteniendo slots por token:', error);
     throw error;
   }
 };
@@ -454,6 +470,7 @@ export default {
   certifyUser,
   registrarJugadorTemporal,
   getAvailableSlots,
+  getInvitationInfo,
   getEquipoTemporalInfo,
   getPresidentesActivos,
   finalizarSolicitudCompleta,

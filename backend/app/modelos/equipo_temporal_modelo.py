@@ -10,6 +10,11 @@ class EquipoTemporal(Base):
     Activo = Column(Boolean)
     CantidadJugadoresPagados = Column(Integer)
 
+    # Invitación para registro de jugadores
+    TokenInvitacion = Column(String(255), unique=True, nullable=True)
+    FechaExpiracion = Column(DateTime, nullable=True)
+    InvitacionActiva = Column(Boolean, nullable=False, default=True)
+
     UsuarioId = Column(ForeignKey("Usuarios.UsuarioId"), nullable=False)
     UsuarioRelacion = relationship("Usuario", back_populates="EquipoTemporalRelacion")
 
