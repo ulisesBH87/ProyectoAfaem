@@ -164,7 +164,7 @@ export default function RegistrarPresidente() {
   // ── PASO 1: Cuenta ──────────────────────────────────────────────────────────
   const [cuenta, setCuenta] = useState({
     nombre: '', primerApellido: '', segundoApellido: '',
-    correo: '', telefono: '', curp: '', rfc: '',
+    correo: '', telefono: '', curp: '',
     sexoId: '', fechaNacimiento: '',
     contrasena: '', confirmarContrasena: '',
   });
@@ -684,7 +684,6 @@ export default function RegistrarPresidente() {
       fd.append('correo', correoFinal);
       fd.append('telefono', ocrResults.telefono || telefonoDoc || cuenta.telefono || '');
       fd.append('curp', curpDetectada);
-      fd.append('rfc', cuenta.rfc || '');
       fd.append('sexoId', cuenta.sexoId || '');
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
       fd.append('contrasena', cuenta.contrasena);
@@ -843,17 +842,12 @@ export default function RegistrarPresidente() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
               {/* CURP */}
-              <div style={{ gridColumn: 'span 2' }}>
+              <div>
                 <label style={labelStyle}>CURP <span style={{ color: C.amber }}>*</span></label>
                 <input style={{ ...inputStyle, borderColor: cuentaErrors.curp ? C.rose : C.inputBorder }} type="text" placeholder="18 caracteres" maxLength={18} value={cuenta.curp} onChange={e => setCuentaField('curp', e.target.value.toUpperCase())} />
                 {cuentaErrors.curp && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.curp}</span>}
-              </div>
-              {/* RFC */}
-              <div>
-                <label style={labelStyle}>RFC</label>
-                <input style={inputStyle} type="text" placeholder="12-13 caracteres" maxLength={13} value={cuenta.rfc} onChange={e => setCuentaField('rfc', e.target.value.toUpperCase())} />
               </div>
               {/* Sexo */}
               <div>

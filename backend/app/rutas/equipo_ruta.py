@@ -875,7 +875,7 @@ async def registrar_presidente_admin(
             PrimerApellido=primerApellido or "",
             SegundoApellido=segundoApellido or "",
             CURP=curp,
-            RFC=rfc or "",
+            RFC=rfc.strip().upper() if rfc and rfc.strip() else None,
             NumeroTelefono=telefono,
             SexoId=sexoId if sexoId else None,
             FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
