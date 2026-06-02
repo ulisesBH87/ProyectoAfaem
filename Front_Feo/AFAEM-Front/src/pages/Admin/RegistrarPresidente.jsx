@@ -368,106 +368,108 @@ export default function RegistrarPresidente() {
   };
 
   const procesarFoto = async (archivo) => {
-    Swal.fire({ title: 'Validando fotografía…', 
-      html: 'Verificando calidad y rostros. <b>Por favor espere.</b>', 
-      allowOutsideClick: false, allowEscapeKey: false, 
-      didOpen: () => Swal.showLoading() });
-    
-      try {
+    Swal.fire({
+      title: 'Validando fotografía…',
+      html: 'Verificando calidad y rostros. <b>Por favor espere.</b>',
+      allowOutsideClick: false, allowEscapeKey: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
       const data = await validarFotografia(archivo);
       if (data.valido) {
 
-      // BASE64 -> URL PREVIEW
-      const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
+        // BASE64 -> URL PREVIEW
+        const imagenProcesada = `data:${data.tipo_imagen};base64,${data.imagen}`;
 
-      // BASE64 -> FILE
-      const byteCharacters = atob(data.imagen);
-      const byteNumbers = new Array(byteCharacters.length);
+        // BASE64 -> FILE
+        const byteCharacters = atob(data.imagen);
+        const byteNumbers = new Array(byteCharacters.length);
 
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
 
-      const byteArray = new Uint8Array(byteNumbers);
+        const byteArray = new Uint8Array(byteNumbers);
 
-       const archivoValidado = new File(
-        [byteArray],
-        "foto_validada.jpg",
-        { type: data.tipo_imagen }
-      );
+        const archivoValidado = new File(
+          [byteArray],
+          "foto_validada.jpg",
+          { type: data.tipo_imagen }
+        );
 
-      // GUARDAR DOCUMENTO
-      setDocuments(prev => ({
-        ...prev,
-        fotografia: archivoValidado
-      }));
+        // GUARDAR DOCUMENTO
+        setDocuments(prev => ({
+          ...prev,
+          fotografia: archivoValidado
+        }));
 
-      // GUARDAR PREVIEW
-      setPreviews(prev => ({
-        ...prev,
-        fotografia: imagenProcesada
-      }));
+        // GUARDAR PREVIEW
+        setPreviews(prev => ({
+          ...prev,
+          fotografia: imagenProcesada
+        }));
 
-      // LIMPIAR ERRORES
-      setFotoFallida(false);
-      setFotoError(null);
-      setFotoArchivo(null);
+        // LIMPIAR ERRORES
+        setFotoFallida(false);
+        setFotoError(null);
+        setFotoArchivo(null);
 
-      Swal.fire({
-        title: '¡Fotografía aceptada!',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
+        Swal.fire({
+          title: '¡Fotografía aceptada!',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        });
 
       } else {
         // GUARDAR FOTO FALLIDA
-      setFotoError(data.mensaje);
-      setFotoFallida(true);
-      setFotoArchivo(archivo);
+        setFotoError(data.mensaje);
+        setFotoFallida(true);
+        setFotoArchivo(archivo);
 
-      Swal.fire({
-        title: 'Error en fotografía',
-        text: `${data.mensaje} ¿Deseas cargarla de todos modos?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, cargar igualmente',
-        cancelButtonText: 'No, intentar de nuevo'
-      }).then((result) => {
+        Swal.fire({
+          title: 'Error en fotografía',
+          text: `${data.mensaje} ¿Deseas cargarla de todos modos?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, cargar igualmente',
+          cancelButtonText: 'No, intentar de nuevo'
+        }).then((result) => {
 
-        if (result.isConfirmed) {
+          if (result.isConfirmed) {
 
-          // PREVIEW ORIGINAL
-          const reader = new FileReader();
+            // PREVIEW ORIGINAL
+            const reader = new FileReader();
 
-          reader.onloadend = () => {
-            setPreviews(prev => ({
+            reader.onloadend = () => {
+              setPreviews(prev => ({
+                ...prev,
+                fotografia: reader.result
+              }));
+            };
+
+            reader.readAsDataURL(archivo);
+
+            // GUARDAR ORIGINAL
+            setDocuments(prev => ({
               ...prev,
-              fotografia: reader.result
+              fotografia: archivo
             }));
-          };
 
-          reader.readAsDataURL(archivo);
+            setFotoFallida(false);
+            setFotoError(null);
+            setFotoArchivo(null);
 
-          // GUARDAR ORIGINAL
-          setDocuments(prev => ({
-            ...prev,
-            fotografia: archivo
-          }));
-
-          setFotoFallida(false);
-          setFotoError(null);
-          setFotoArchivo(null);
-
-          Swal.fire({
-            title: 'Fotografía cargada',
-            icon: 'success',
-            timer: 1500,
-            showConfirmButton: false
-          });
-        }
-      });
-    }
+            Swal.fire({
+              title: 'Fotografía cargada',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          }
+        });
+      }
 
     } catch (err) {
 
@@ -522,32 +524,32 @@ export default function RegistrarPresidente() {
   };
 
   const handleFileUpload = (docKey, file) => {
-  if (!file) return;
+    if (!file) return;
 
-  // Generar preview
-  const preview =
-    file.type === 'application/pdf'
-      ? 'pdf'
-      : URL.createObjectURL(file);
+    // Generar preview
+    const preview =
+      file.type === 'application/pdf'
+        ? 'pdf'
+        : URL.createObjectURL(file);
 
-  setPreviews(prev => ({
-    ...prev,
-    [docKey]: preview
-  }));
-
-  if (docKey === 'fotografia') {
-    procesarFoto(file);
-  } else {
-    setDocuments(prev => ({
+    setPreviews(prev => ({
       ...prev,
-      [docKey]: file
+      [docKey]: preview
     }));
 
-    if (['actaNacimiento', 'identificacion'].includes(docKey)) {
-      procesarOCR(docKey, file);
+    if (docKey === 'fotografia') {
+      procesarFoto(file);
+    } else {
+      setDocuments(prev => ({
+        ...prev,
+        [docKey]: file
+      }));
+
+      if (['actaNacimiento', 'identificacion'].includes(docKey)) {
+        procesarOCR(docKey, file);
+      }
     }
-  }
-};
+  };
 
   const forzarFoto = () => {
     if (!fotoArchivo) return;
@@ -1168,38 +1170,38 @@ export default function RegistrarPresidente() {
                 if (ocrDone || uploaded) { statusLabel = ocrDone ? 'Procesado' : 'Listo'; statusColor = C.green; statusBg = 'rgba(74,222,128,0.1)'; }
 
                 return (
-                  <div key={doc.documento} 
-                  style={{
-                  position: 'relative',
-                  background: C.card,
-                  border: `1px solid ${uploaded ? 'rgba(74,222,128,0.2)' : C.cardBorder}`,
-                  borderRadius: 16,
-                  padding: '18px 20px',
-                  paddingTop: '45px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'border-color .2s'
-                }}
-                >
-                    {/* Pill de estado */}
-                    <div 
+                  <div key={doc.documento}
                     style={{
-                      position: 'absolute',
-                      top: 14,
-                      right: 14,
-                      padding: '3px 10px',
-                      borderRadius: 20,
-                      fontSize: 9,
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.8px',
-                      background: statusBg,
-                      color: statusColor,
+                      position: 'relative',
+                      background: C.card,
+                      border: `1px solid ${uploaded ? 'rgba(74,222,128,0.2)' : C.cardBorder}`,
+                      borderRadius: 16,
+                      padding: '18px 20px',
+                      paddingTop: '45px',
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      zIndex: 2
+                      flexDirection: 'column',
+                      transition: 'border-color .2s'
                     }}
+                  >
+                    {/* Pill de estado */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 14,
+                        right: 14,
+                        padding: '3px 10px',
+                        borderRadius: 20,
+                        fontSize: 9,
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.8px',
+                        background: statusBg,
+                        color: statusColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        zIndex: 2
+                      }}
 
                     >
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor }} />
@@ -1221,7 +1223,7 @@ export default function RegistrarPresidente() {
                           position: 'relative'
                         }}
 
-                         onMouseEnter={(e) => {
+                        onMouseEnter={(e) => {
                           const overlay =
                             e.currentTarget.querySelector('.overlay-actions');
 
@@ -1233,7 +1235,7 @@ export default function RegistrarPresidente() {
 
                           if (overlay) overlay.style.opacity = '0';
                         }}
-                        
+
                         onDragOver={(e) => {
                           e.preventDefault();
                         }}
@@ -1249,79 +1251,79 @@ export default function RegistrarPresidente() {
                       >
                         {previews[doc.documento] ? (
                           <>
-                          {previews[doc.documento] === 'pdf' ? (
-                            <div style={{
-                              color: '#ef4444',
-                              fontSize: 42,
+                            {previews[doc.documento] === 'pdf' ? (
+                              <div style={{
+                                color: '#ef4444',
+                                fontSize: 42,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 5
+                              }}>
+                                <FaFilePdf />
+                                <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                              </div>
+
+                            ) : (
+                              <img
+                                src={previews[doc.documento]}
+                                alt="preview"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'contain'
+                                }}
+                              />
+                            )}
+
+                            {/* Overlay */}
+                            <div className="overlay-actions" style={{
+                              position: 'absolute',
+                              top: 0, left: 0, right: 0, bottom: 0,
+                              backgroundColor: 'rgba(30, 41, 59, 0.7)',
                               display: 'flex',
-                              flexDirection: 'column',
                               alignItems: 'center',
-                              gap: 5
-                            }}>
-                              <FaFilePdf />
-                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
-                            </div>
-                            
-                          ) : (
-                            <img
-                              src={previews[doc.documento]}
-                              alt="preview"
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain'
-                              }}
-                            />
-                          )}
-                          
-                          {/* Overlay */}
-                          <div className="overlay-actions" style={{
-                            position: 'absolute',
-                            top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '12px',
-                            opacity: 0,
-                            transition: 'opacity 0.2s ease',
-                            backdropFilter: 'blur(2px)'
+                              justifyContent: 'center',
+                              gap: '12px',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease',
+                              backdropFilter: 'blur(2px)'
                             }}>
                               <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const isPdf = documents[doc.documento]?.type === 'application/pdf';
-                                setPreviewDoc({
-                                  open: true,
-                                  url: previews[doc.documento],
-                                  type: isPdf ? 'pdf' : 'image',
-                                  title: doc.title
-                                });
-                              }}
-                              className="btn-zoom"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: '#fff', color: '#1e293b', border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                              }}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const isPdf = documents[doc.documento]?.type === 'application/pdf';
+                                  setPreviewDoc({
+                                    open: true,
+                                    url: previews[doc.documento],
+                                    type: isPdf ? 'pdf' : 'image',
+                                    title: doc.title
+                                  });
+                                }}
+                                className="btn-zoom"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                }}
                               >
                                 <FaSearchPlus />
                               </button>
                               <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                document.getElementById(`file-${doc.documento}`).click();
-                              }}
-                              className="btn-change"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                              }}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  document.getElementById(`file-${doc.documento}`).click();
+                                }}
+                                className="btn-change"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                }}
                               >
                                 <FaSyncAlt />
                               </button>
@@ -1332,7 +1334,7 @@ export default function RegistrarPresidente() {
                             textAlign: 'center',
                             color: '#6b7280'
                           }}
-                          onClick={() => document.getElementById(`file-${doc.documento}`).click()}>
+                            onClick={() => document.getElementById(`file-${doc.documento}`).click()}>
                             <FaUpload style={{ fontSize: 28, marginBottom: 6 }} />
                             <p style={{ fontSize: 11 }}>Sin archivo</p>
                           </div>
@@ -1385,7 +1387,7 @@ export default function RegistrarPresidente() {
                       >
                         <FaUpload /> {uploaded ? 'Cambiar' : 'Subir'}
                       </button> */}
-                      
+
                       <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={e => handleFileUpload(doc.documento, e.target.files[0])} />
                     </div>
 
@@ -1420,11 +1422,11 @@ export default function RegistrarPresidente() {
 
             {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
             <Modal
-            estaAbierto={previewDoc.open}
-            titulo={previewDoc.title}
-            alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
-            tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
-            pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
+              estaAbierto={previewDoc.open}
+              titulo={previewDoc.title}
+              alCerrar={() => setPreviewDoc({ ...previewDoc, open: false })}
+              tamanio={previewDoc.type === 'pdf' ? 'grande' : 'medio'}
+              pie={<BotonSecundario etiqueta="Cerrar" alHacerClick={() => setPreviewDoc({ ...previewDoc, open: false })} />}
             >
               <div style={{
                 width: '100%',
@@ -1435,21 +1437,21 @@ export default function RegistrarPresidente() {
                 backgroundColor: '#0f172a',
                 borderRadius: '12px',
                 overflow: 'hidden'
-                }}>
-                  {previewDoc.type === 'pdf' ? (
-                    <iframe
+              }}>
+                {previewDoc.type === 'pdf' ? (
+                  <iframe
                     src={previewDoc.url}
                     style={{ width: '1800px', height: '70vh', border: 'none' }} title="Visor de PDF"
-                    />
-                  ) : (
-                  <img
-                  src={previewDoc.url}
-                  alt="Preview Grande"
-                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
                   />
-                  )}
-                </div>
-              </Modal>                      
+                ) : (
+                  <img
+                    src={previewDoc.url}
+                    alt="Preview Grande"
+                    style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+                  />
+                )}
+              </div>
+            </Modal>
           </div>
         )}
 
