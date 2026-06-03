@@ -1,44 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { 
-  FaUpload, 
-  FaSyncAlt, 
-  FaFilePdf, 
-  FaSave, 
-  FaCheckCircle, 
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import {
   FaArrowLeft,
   FaArrowRight,
-  FaFileSignature,
-  FaUserEdit,
-  FaGlobeAmericas
+  FaCheckCircle,
+  FaGlobeAmericas,
+  FaUpload
 } from 'react-icons/fa';
-import { 
-  BotonPrimario, 
-  BotonSecundario, 
-  EntradaFormulario, 
-  EntradaSeleccion, 
-  AreaTexto,
-  Tarjeta,
-  Cargador
-} from '../../components/partials';
 import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
+import {
+  BotonPrimario,
+  BotonSecundario,
+  EntradaFormulario,
+  EntradaSeleccion,
+  AreaTexto,
+  Cargador
+} from '../../components/partials';
 import { validarFotografia } from '../../services/foto';
-import { registrarJugadorTemporal, getAvailableSlots, getInvitationInfo } from '../../services/teams';
+import teamsService from '../../services/teams';
+import {
+  inferGeneroFromCurp,
+  isJugadorMenorDeEdad,
+  mapAvailableSlotsResponse,
+  useEquipoTemporalPlayerDraft
+} from '../../hooks/useEquipoTemporalPlayerDraft';
 import '../../styles/dashboard.css';
 
-// Badge Estilizado para los pasos (Igual al de Admin)
 const StepBadge = ({ number, isActive, isDone }) => (
-  <div style={{ 
-    width: '32px', 
-    height: '32px', 
-    borderRadius: '50%', 
+  <div style={{
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
     backgroundColor: isDone ? '#10b981' : (isActive ? '#0b4ea6' : '#e2e8f0'),
     color: (isActive || isDone) ? 'white' : '#64748b',
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    fontSize: '14px', 
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '14px',
     fontWeight: '800',
     flexShrink: 0,
     transition: 'all 0.3s'
@@ -47,497 +46,408 @@ const StepBadge = ({ number, isActive, isDone }) => (
   </div>
 );
 
+const EMPTY_DOCUMENTS = {
+  acta: null,
+  ine: null,
+  ineTutor: null,
+  identificacionMenor: null,
+  foto: null
+};
+
+const EMPTY_PREVIEWS = {
+  acta: null,
+  ine: null,
+  ineTutor: null,
+  identificacionMenor: null,
+  foto: null
+};
+
+const PLAYER_STATUS_CONFIG = {
+  VACIO: { icon: '○', label: 'VACIO', bg: '#f8fafc', color: '#475569' },
+  EN_CAPTURA: { icon: '◐', label: 'EN_CAPTURA', bg: '#fffbeb', color: '#92400e' },
+  COMPLETO: { icon: '●', label: 'COMPLETO', bg: '#dcfce7', color: '#166534' }
+};
+
+const BASE_DOCUMENT_CARDS = [
+  { key: 'acta', title: 'Acta de nacimiento', subtitle: 'Opcional para OCR y autollenado' },
+  { key: 'ine', title: 'Identificacion oficial', subtitle: 'INE, pasaporte o cedula' },
+  { key: 'foto', title: 'Fotografia del jugador', subtitle: 'Fotografia infantil formal' }
+];
+
+const MINOR_DOCUMENT_CARDS = [
+  { key: 'ineTutor', title: 'INE de padre o tutor', subtitle: 'Identificacion oficial del tutor' },
+  { key: 'identificacionMenor', title: 'Identificacion del menor', subtitle: 'Credencial escolar o certificado' }
+];
+
+const revokeBlobUrl = (url) => {
+  if (typeof url === 'string' && url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+};
+
 export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = useParams();
-  const isPublicFlow = !!token;
+  const isPublicFlow = Boolean(token);
+
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
-  
-  // ESTADOS
-  const [uploading, setUploading] = useState(false);
-  const [slotsInfo, setSlotsInfo] = useState({ disponibles: 0, total: 0 });
-  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [teamInfo, setTeamInfo] = useState({
+    equipo: location.state?.equipo || '',
+    liga: location.state?.liga || '',
+    categoria: location.state?.categoria || ''
+  });
   const [slotsData, setSlotsData] = useState(null);
-  const [maxPlayers, setMaxPlayers] = useState(1);
-  const [jugadores, setJugadores] = useState([]);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [failedPhoto, setFailedPhoto] = useState(null);
-  const [previews, setPreviews] = useState({
-    actaNacimiento: null,
-    identificacion: null,
-    fotografia: null,
-    formatoAfiliacion: null,
-    documentoEstudiante: null
+  const [catalogs, setCatalogs] = useState({
+    seguros: [],
+    roles_equipo: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
+  const [documentsBySlot, setDocumentsBySlot] = useState({});
+  const [previewsBySlot, setPreviewsBySlot] = useState({});
+  const [failedPhotoState, setFailedPhotoState] = useState(null);
+
+  const {
+    currentSlot,
+    currentStatus,
+    draftData: currentDatos,
+    setDraftData: setCurrentDatos,
+    saveDraft,
+    slotStatuses,
+    allSlotsComplete
+  } = useEquipoTemporalPlayerDraft({
+    rawSlots: slotsData?.rawSlots || [],
+    selectedSlotId
   });
 
-  const documentCards = [
-    { key: 'actaNacimiento', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' },
-    { key: 'identificacion', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' },
-    { key: 'fotografia', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }
-  ];
+  const slotIndex = useMemo(
+    () => slotStatuses.findIndex((slot) => String(slot.slot_id) === String(currentSlot?.slot_id)),
+    [slotStatuses, currentSlot?.slot_id]
+  );
 
-  const defaultPlayerDatos = {
-    nombreJugador: '',
-    apellidoPaterno: '',
-    apellidoMaterno: '',
-    curp: '',
-    genero: '1',
-    fechaNacimiento: '',
-    lugarNacimiento: '',
-    direccion: '',
-    correo: '',
-    telefono: '',
-    tipoAfiliacion: 'JUGADOR',
-    posicion: '',
-    numCamiseta: '',
-    asociacion: 'AFAEM',
-    liga: '',
-    equipo: '',
-    categoria: '',
-    esForaneo: false,
-    nacionalidadJugador: 'MEXICANA',
-    paisResidencia: 'MÉXICO',
-    haVividoExtranjero: false,
-    dondeVividoExtranjero: '',
-    nacionalidadPadre: '',
-    nacionalidadMadre: '',
-    registroAsociacionExtranjera: '',
-    nacAbueloPaterno: '',
-    nacAbuelaPaterna: '',
-    nacAbueloMaterno: '',
-    nacAbuelaMaterna: '',
-    juegoClubExtranjero: ''
-  };
+  const slotsDisponibles = useMemo(
+    () => slotStatuses.filter((slot) => !slot.completo).length,
+    [slotStatuses]
+  );
 
-  const emptyPlayer = (index = 0, seguroId = '') => ({
-    numero: index + 1,
-    estado: 'VACIO',
-    datos: { ...defaultPlayerDatos },
-    documentos: {
-      actaNacimiento: null,
-      identificacion: null,
-      fotografia: null,
-      formatoAfiliacion: null,
-      documentoEstudiante: null
-    },
-    seguroId,
-    fillManually: false
-  });
+  const currentDocuments = currentSlot?.slot_id
+    ? (documentsBySlot[currentSlot.slot_id] || EMPTY_DOCUMENTS)
+    : EMPTY_DOCUMENTS;
 
-  const isPlayerMinor = (fechaNacimiento) => {
-    if (!fechaNacimiento) return false;
-    const hoy = new Date();
-    const nac = new Date(fechaNacimiento);
-    if (isNaN(nac.getTime())) return false;
-    let edad = hoy.getFullYear() - nac.getFullYear();
-    const mDiff = hoy.getMonth() - nac.getMonth();
-    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
-    return edad < 18;
-  };
+  const currentPreviews = currentSlot?.slot_id
+    ? (previewsBySlot[currentSlot.slot_id] || EMPTY_PREVIEWS)
+    : EMPTY_PREVIEWS;
 
-  const getPlayerStatus = (player) => {
-    if (!player) return 'VACIO';
-    const datos = player.datos || {};
-    const docs = player.documentos || {};
-    const hasRequiredFields = Boolean(
-      datos.nombreJugador?.trim() &&
-      datos.apellidoPaterno?.trim() &&
-      datos.curp?.trim() &&
-      datos.fechaNacimiento &&
-      datos.lugarNacimiento?.trim() &&
-      datos.genero &&
-      datos.correo?.trim()
-    );
-    const requiredDocs = [docs.actaNacimiento, docs.identificacion, docs.fotografia];
-    const hasRequiredDocs = requiredDocs.every(Boolean) && (!isPlayerMinor(datos.fechaNacimiento) || Boolean(docs.documentoEstudiante));
-    const hasAnyData = Object.values(datos).some(value => typeof value === 'string' ? value.trim() !== '' : Boolean(value)) || Object.values(docs).some(Boolean) || Boolean(player.seguroId);
-    if (hasRequiredFields && hasRequiredDocs) return 'COMPLETO';
-    if (hasAnyData) return 'EN_CAPTURA';
-    return 'VACIO';
-  };
+  const esMenorDeEdad = useMemo(
+    () => isJugadorMenorDeEdad(currentDatos.fechaNacimiento),
+    [currentDatos.fechaNacimiento]
+  );
 
-  const normalizePlayer = (player) => ({
-    ...player,
-    estado: getPlayerStatus(player)
-  });
+  const currentSeguro = useMemo(
+    () => catalogs.seguros?.find((seguro) => String(seguro.id) === String(currentSlot?.seguro_id)) || null,
+    [catalogs.seguros, currentSlot?.seguro_id]
+  );
 
-  const updatePlayer = (index, partial) => {
-    setJugadores(prev => {
-      const next = [...prev];
-      next[index] = normalizePlayer({ ...next[index], ...partial });
-      return next;
-    });
-  };
+  const isStep1Done = Boolean(currentSlot);
+  const isStep2Done = Object.values(currentDocuments).some(Boolean);
+  const showStep2 = isStep1Done;
+  const showStep3 = isStep1Done;
 
-  const updatePlayerDatos = (index, datosPartial) => {
-    setJugadores(prev => {
-      const next = [...prev];
-      next[index] = normalizePlayer({
-        ...next[index],
-        datos: {
-          ...next[index].datos,
-          ...datosPartial
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        let effectiveTeamId = teamId;
+        let inviteTeamInfo = { ...teamInfo };
+
+        if (isPublicFlow && !effectiveTeamId) {
+          const inviteData = await teamsService.getInvitationInfo(token);
+          effectiveTeamId = inviteData.equipo_temporal_id;
+          inviteTeamInfo = {
+            equipo: inviteData.nombre_equipo || '',
+            liga: inviteData.nombre_liga || '',
+            categoria: inviteData.nombre_categoria || 'LIBRE'
+          };
+          setTeamId(effectiveTeamId);
+          setTeamInfo(inviteTeamInfo);
         }
-      });
-      return next;
-    });
-  };
 
-  const updatePlayerDocuments = (index, documentosPartial) => {
-    setJugadores(prev => {
-      const next = [...prev];
-      next[index] = normalizePlayer({
-        ...next[index],
-        documentos: {
-          ...next[index].documentos,
-          ...documentosPartial
+        if (!effectiveTeamId) {
+          Swal.fire('Error', 'No se encontro el equipo temporal para este flujo.', 'error');
+          if (!isPublicFlow) navigate('/presidente-equipo/dashboard');
+          return;
         }
-      });
-      return next;
+
+        const [catalogsResponse, slotsResponse] = await Promise.all([
+          teamsService.getCatalogs(),
+          teamsService.getAvailableSlots(effectiveTeamId)
+        ]);
+
+        const mappedSlotsData = mapAvailableSlotsResponse(slotsResponse);
+        setCatalogs(catalogsResponse);
+        setSlotsData(mappedSlotsData);
+
+        const firstAvailableSlot = mappedSlotsData.rawSlots.find((slot) => !slot.completo) || mappedSlotsData.rawSlots[0] || null;
+        setSelectedSlotId((previousSlotId) => {
+          if (previousSlotId && mappedSlotsData.rawSlots.some((slot) => String(slot.slot_id) === String(previousSlotId))) {
+            return previousSlotId;
+          }
+          return firstAvailableSlot?.slot_id || null;
+        });
+      } catch (error) {
+        console.error('Error al cargar la invitacion:', error);
+        Swal.fire('Error', error.response?.data?.detail || 'No se pudo cargar la invitacion.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [teamId, token, isPublicFlow, navigate]);
+
+  const updateSlotDocuments = (slotId, updater) => {
+    if (!slotId) return;
+    setDocumentsBySlot((previous) => {
+      const currentValue = previous[slotId] || EMPTY_DOCUMENTS;
+      const nextValue = typeof updater === 'function' ? updater(currentValue) : updater;
+      return { ...previous, [slotId]: nextValue };
     });
   };
 
-  const updatePlayerSeguro = (index, seguroId) => {
-    setJugadores(prev => {
-      const next = [...prev];
-      next[index] = normalizePlayer({
-        ...next[index],
-        seguroId
-      });
-      return next;
+  const updateSlotPreviews = (slotId, updater) => {
+    if (!slotId) return;
+    setPreviewsBySlot((previous) => {
+      const currentValue = previous[slotId] || EMPTY_PREVIEWS;
+      const nextValue = typeof updater === 'function' ? updater(currentValue) : updater;
+      return { ...previous, [slotId]: nextValue };
     });
   };
 
-  const revokeBlobUrl = (url) => {
-    if (typeof url === 'string' && url.startsWith('blob:')) {
-      URL.revokeObjectURL(url);
-    }
+  const setDocumentForCurrentSlot = (documentKey, file) => {
+    if (!currentSlot?.slot_id) return;
+    updateSlotDocuments(currentSlot.slot_id, (currentValue) => ({
+      ...EMPTY_DOCUMENTS,
+      ...currentValue,
+      [documentKey]: file
+    }));
   };
 
-  const revokeAllBlobPreviews = () => {
-    Object.values(previews).forEach(url => revokeBlobUrl(url));
+  const setPreviewForCurrentSlot = (documentKey, value) => {
+    if (!currentSlot?.slot_id) return;
+    updateSlotPreviews(currentSlot.slot_id, (currentValue) => {
+      revokeBlobUrl(currentValue?.[documentKey]);
+      return {
+        ...EMPTY_PREVIEWS,
+        ...currentValue,
+        [documentKey]: value
+      };
+    });
   };
 
   const createPreviewFromFile = (documentKey, file) => {
-    if (!file) return;
+    if (!file || !currentSlot?.slot_id) return;
 
-    const isImage = file.type?.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name);
     const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf');
-
-    if (previews[documentKey]?.startsWith('blob:')) {
-      revokeBlobUrl(previews[documentKey]);
+    if (isPdf) {
+      setPreviewForCurrentSlot(documentKey, URL.createObjectURL(file));
+      return;
     }
 
-    if (isImage) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviews(prev => ({ ...prev, [documentKey]: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    } else if (isPdf) {
-      const url = URL.createObjectURL(file);
-      setPreviews(prev => ({ ...prev, [documentKey]: url }));
-    } else {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviews(prev => ({ ...prev, [documentKey]: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewForCurrentSlot(documentKey, reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const clearPreview = (documentKey) => {
-    setPreviews(prev => {
-      if (prev[documentKey]?.startsWith('blob:')) {
-        revokeBlobUrl(prev[documentKey]);
-      }
-      return { ...prev, [documentKey]: null };
-    });
+  const handleFieldChange = (field, value) => {
+    setCurrentDatos((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const handleImmediateDraftChange = async (partial) => {
+    const merged = { ...currentDatos, ...partial };
+    setCurrentDatos(merged);
+    await saveDraft(merged);
+  };
+
+  const handleBlur = () => {
+    saveDraft(currentDatos);
   };
 
   const forceLoadFailedPhoto = () => {
-    if (!failedPhoto) return;
-    createPreviewFromFile('fotografia', failedPhoto);
-    updatePlayerDocuments(currentPlayerIndex, { fotografia: failedPhoto });
-    setFailedPhoto(null);
+    if (!failedPhotoState || String(failedPhotoState.slotId) !== String(currentSlot?.slot_id)) return;
+
+    const { file } = failedPhotoState;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewForCurrentSlot('foto', reader.result);
+    };
+    reader.readAsDataURL(file);
+    setDocumentForCurrentSlot('foto', file);
+    setFailedPhotoState(null);
 
     Swal.fire({
-      title: 'Fotografía Cargada',
-      text: 'La fotografía se cargó sin validación.',
+      title: 'Fotografia cargada',
+      text: 'La fotografia se cargo sin validacion.',
       icon: 'success',
       timer: 1500,
       showConfirmButton: false
     });
   };
 
-  const touchStartRef = useRef({ x: 0, y: 0 });
-  const touchEndRef = useRef({ x: 0, y: 0 });
-  const SWIPE_THRESHOLD = 50;
-  const SWIPE_VERTICAL_MAX = 75;
-
-  const goToPreviousPlayer = () => {
-    setCurrentPlayerIndex(prev => Math.max(prev - 1, 0));
-  };
-
-  const goToNextPlayer = () => {
-    setCurrentPlayerIndex(prev => Math.min(prev + 1, jugadores.length - 1));
-  };
-
-  const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-    touchEndRef.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchEndRef.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  const handleTouchEnd = () => {
-    const deltaX = touchEndRef.current.x - touchStartRef.current.x;
-    const deltaY = touchEndRef.current.y - touchStartRef.current.y;
-    if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(deltaY) < SWIPE_VERTICAL_MAX) {
-      if (deltaX > 0) {
-        goToPreviousPlayer();
-      } else {
-        goToNextPlayer();
-      }
-    }
-    touchStartRef.current = { x: 0, y: 0 };
-    touchEndRef.current = { x: 0, y: 0 };
-  };
-
-  const currentPlayer = jugadores[currentPlayerIndex] || emptyPlayer(currentPlayerIndex, String(slotsData?.seguros?.[0]?.seguro_id || ''));
-  const currentDatos = currentPlayer.datos;
-  const currentDocuments = currentPlayer.documentos;
-  const currentSeguroId = currentPlayer.seguroId;
-  const currentFillManually = currentPlayer.fillManually;
-
-  useEffect(() => {
-    revokeAllBlobPreviews();
-    setPreviews({
-      actaNacimiento: null,
-      identificacion: null,
-      fotografia: null,
-      formatoAfiliacion: null,
-      documentoEstudiante: null
-    });
-
-    if (currentDocuments) {
-      ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion', 'documentoEstudiante'].forEach((key) => {
-        if (currentDocuments[key]) {
-          createPreviewFromFile(key, currentDocuments[key]);
-        }
-      });
-    }
-  }, [currentPlayerIndex]);
-
-  const playerStatusConfig = {
-    VACIO: { icon: '⚪', label: 'VACIO', bg: '#f8fafc', color: '#475569' },
-    EN_CAPTURA: { icon: '🟡', label: 'EN_CAPTURA', bg: '#fffbeb', color: '#92400e' },
-    COMPLETO: { icon: '🟢', label: 'COMPLETO', bg: '#dcfce7', color: '#166534' }
-  };
-
-  const currentPlayerStatus = getPlayerStatus(currentPlayer);
-
-  // ── Detección de minoría de edad ──
-  const esMenorDeEdad = React.useMemo(() => isPlayerMinor(currentDatos.fechaNacimiento), [currentDatos.fechaNacimiento]);
-
-  // DETERMINACIÓN DE PASOS
-  const isStep1Done = !!teamId; // El equipo ya viene seleccionado desde el dashboard
-  const isStep2Done = Object.values(currentDocuments).some(d => d !== null);
-  const showStep2 = isStep1Done;
-  const showStep3 = true;
-
-  // CARGAR SLOTS Y DATOS DEL EQUIPO
-  const fetchTeamInfo = async () => {
-    let effectiveTeamId = teamId;
-    let inviteData = null;
-    let inviteTeamInfo = {};
-
-    try {
-      setLoadingSlots(true);
-
-      if (isPublicFlow && !teamId) {
-        inviteData = await getInvitationInfo(token);
-        effectiveTeamId = inviteData.equipo_temporal_id;
-        setTeamId(effectiveTeamId);
-        inviteTeamInfo = {
-          equipo: inviteData.nombre_equipo || '',
-          liga: inviteData.nombre_liga || '',
-          categoria: inviteData.nombre_categoria || 'LIBRE'
-        };
-      }
-
-      if (!effectiveTeamId) {
-        if (!isPublicFlow) {
-          Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
-          navigate('/presidente-equipo/dashboard');
-        }
-        return;
-      }
-
-      const data = await getAvailableSlots(effectiveTeamId);
-      setSlotsData(data);
-      const paidPlayers = parseInt(data.cantidad_jugadores_pagados ?? data.total_slots ?? 1, 10) || 1;
-      setSlotsInfo({
-        disponibles: data.jugadores_restantes ?? data.slots_disponibles ?? 0,
-        total: paidPlayers
-      });
-      setMaxPlayers(paidPlayers);
-
-      const firstSeguroId = String(data.seguros?.[0]?.seguro_id || '');
-      setJugadores(prev => {
-        const next = prev.length === paidPlayers
-          ? prev
-          : Array.from({ length: paidPlayers }, (_, i) => emptyPlayer(i, firstSeguroId));
-
-        return next.map(player => normalizePlayer({
-          ...player,
-          seguroId: player.seguroId || firstSeguroId,
-          datos: {
-            ...player.datos,
-            equipo: player.datos.equipo || inviteTeamInfo.equipo || '',
-            liga: player.datos.liga || inviteTeamInfo.liga || '',
-            categoria: player.datos.categoria || inviteTeamInfo.categoria || ''
-          }
-        }));
-      });
-    } catch (err) {
-      console.error('Error al obtener info del equipo:', err);
-      if (isPublicFlow && !inviteData) {
-        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la invitación.', 'error');
-      }
-    } finally {
-      setLoadingSlots(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeamInfo();
-  }, [teamId, token, isPublicFlow, navigate]);
-
-  useEffect(() => {
-    return () => {
-      revokeAllBlobPreviews();
-    };
-  }, []);
-
-  // PROCESAR OCR (Sincronizado con Admin)
   const handleFileUpload = async (documentKey, file) => {
-    if (!file) return;
-    updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
+    if (!file || !currentSlot?.slot_id) return;
+
+    setDocumentForCurrentSlot(documentKey, file);
     createPreviewFromFile(documentKey, file);
 
-    if (documentKey === 'fotografia') {
-      Swal.fire({ title: 'Validando Fotografía...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    if (documentKey === 'foto') {
+      Swal.fire({
+        title: 'Validando fotografia...',
+        html: 'Verificando formato y calidad.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
       try {
         const data = await validarFotografia(file);
         if (data.valido) {
-          setFailedPhoto(null);
-
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
           const byteCharacters = atob(data.imagen);
           const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
+          for (let i = 0; i < byteCharacters.length; i += 1) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
           }
-          const byteArray = new Uint8Array(byteNumbers);
-          const validatedFile = new File([byteArray], 'fotografia_validada.jpg', { type: data.tipo_imagen });
+          const validatedFile = new File([new Uint8Array(byteNumbers)], 'foto_validada.jpg', {
+            type: data.tipo_imagen
+          });
 
-          updatePlayerDocuments(currentPlayerIndex, { fotografia: validatedFile });
-          setPreviews(prev => ({ ...prev, fotografia: imageUrl }));
-
-          Swal.fire({ title: 'Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
-        } else {
-          const failedPhotoFile = file;
-          const failedPhotoIndex = currentPlayerIndex;
-          setFailedPhoto(failedPhotoFile);
-          updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
-          clearPreview(documentKey);
+          setDocumentForCurrentSlot('foto', validatedFile);
+          setPreviewForCurrentSlot('foto', imageUrl);
+          setFailedPhotoState(null);
 
           Swal.fire({
-            title: 'Error en la fotografía',
-            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
+            title: 'Fotografia aceptada',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        } else {
+          setFailedPhotoState({ slotId: currentSlot.slot_id, file });
+          setDocumentForCurrentSlot('foto', null);
+          setPreviewForCurrentSlot('foto', null);
+
+          Swal.fire({
+            title: 'Error en la fotografia',
+            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} Deseas cargarla de todos modos?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Sí, cargar igualmente',
+            confirmButtonText: 'Si, cargar igualmente',
             cancelButtonText: 'No, intentar de nuevo',
             confirmButtonColor: '#0b4ea6',
             cancelButtonColor: '#cbd5e1'
           }).then((result) => {
             if (result.isConfirmed) {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                setPreviews(prev => ({ ...prev, fotografia: reader.result }));
-              };
-              reader.readAsDataURL(failedPhotoFile);
-
-              updatePlayerDocuments(failedPhotoIndex, { fotografia: failedPhotoFile });
-              setFailedPhoto(null);
-              Swal.fire({
-                title: 'Fotografía Cargada',
-                text: 'Se ha cargado la fotografía original.',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-              });
+              forceLoadFailedPhoto();
             }
           });
         }
-      } catch (err) {
-        Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+      } catch (error) {
+        Swal.fire('Error de validacion', error.message || 'No se pudo procesar la foto.', 'error');
       }
     }
 
-    if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
-      Swal.fire({ title: 'Analizando Documento...', html: 'Extrayendo información vía OCR.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
+      Swal.fire({
+        title: 'Analizando documento...',
+        html: 'Extrayendo informacion via OCR.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading()
+      });
+
       try {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
+
         const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
+        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+
         const htmlText = await response.text();
         const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, "text/html");
-        
-        let nom = '', crp = '', fnac = '', lnac = '';
+        const doc = parser.parseFromString(htmlText, 'text/html');
+
+        let nombreEncontrado = '';
+        let curpEncontrada = '';
+        let fechaNacEncontrada = '';
+        let lugarNacEncontrado = '';
+
         const rows = doc.querySelectorAll('.dato-fila');
-        rows.forEach(row => {
-          const lbl = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-          const val = row.querySelector('.valor')?.textContent?.trim() || '';
-          if (lbl.includes('nombre')) nom = val;
-          if (lbl.includes('curp')) crp = val;
-          if (lbl.includes('lugar') || lbl.includes('entidad')) lnac = val;
-          if (lbl.includes('nacimiento') || lbl.includes('fecha nac')) {
-            if (val.includes('/')) {
-              const p = val.split('/');
-              if (p.length === 3) fnac = p[2].length === 4 ? `${p[2]}-${p[1]}-${p[0]}` : `${p[0]}-${p[1]}-${p[2]}`;
-            } else fnac = val;
+        rows.forEach((row) => {
+          const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
+          const value = row.querySelector('.valor')?.textContent?.trim() || '';
+
+          if (label.includes('nombre')) nombreEncontrado = value;
+          if (label.includes('curp')) curpEncontrada = value;
+          if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
+          if (label.includes('nacimiento') || label.includes('fecha nac')) {
+            let normalizedDate = value;
+            if (value.includes('/')) {
+              const parts = value.split('/');
+              if (parts.length === 3) {
+                if (parts[2].length === 4) normalizedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                else if (parts[0].length === 4) normalizedDate = `${parts[0]}-${parts[1]}-${parts[2]}`;
+              }
+            }
+            fechaNacEncontrada = normalizedDate;
           }
         });
 
-        if (nom || crp || fnac) {
-          const parts = nom ? nom.split(' ') : [];
-          let f = '', lp = '', lm = '';
-          if (parts.length >= 3) { lp = parts[0]; lm = parts[1]; f = parts.slice(2).join(' '); }
-          else if (parts.length === 2) { lp = parts[0]; f = parts[1]; }
-          else f = nom;
+        if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
+          const nameParts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+          let firstName = '';
+          let lastNamePaterno = '';
+          let lastNameMaterno = '';
 
-          updatePlayerDatos(currentPlayerIndex, {
-            nombreJugador: f || currentDatos.nombreJugador,
-            apellidoPaterno: lp || currentDatos.apellidoPaterno,
-            apellidoMaterno: lm || currentDatos.apellidoMaterno,
-            curp: crp || currentDatos.curp,
-            fechaNacimiento: fnac || currentDatos.fechaNacimiento,
-            lugarNacimiento: lnac || currentDatos.lugarNacimiento
+          if (nameParts.length >= 3) {
+            lastNamePaterno = nameParts[0];
+            lastNameMaterno = nameParts[1];
+            firstName = nameParts.slice(2).join(' ');
+          } else if (nameParts.length === 2) {
+            lastNamePaterno = nameParts[0];
+            firstName = nameParts[1];
+          } else {
+            firstName = nombreEncontrado;
+          }
+
+          const merged = {
+            ...currentDatos,
+            nombreJugador: firstName || currentDatos.nombreJugador,
+            apellidoPaterno: lastNamePaterno || currentDatos.apellidoPaterno,
+            apellidoMaterno: lastNameMaterno || currentDatos.apellidoMaterno,
+            curp: curpEncontrada || currentDatos.curp,
+            fechaNacimiento: fechaNacEncontrada || currentDatos.fechaNacimiento,
+            lugarNacimiento: lugarNacEncontrado || currentDatos.lugarNacimiento || 'MEXICO',
+            genero: inferGeneroFromCurp(curpEncontrada, currentDatos.genero)
+          };
+
+          setCurrentDatos(merged);
+          await saveDraft(merged);
+
+          Swal.fire({
+            title: 'Lectura exitosa',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
           });
-          Swal.fire({ title: 'Lectura Exitosa!', icon: 'success', timer: 1500, showConfirmButton: false });
+        } else {
+          throw new Error('No se detectaron datos legibles en el documento.');
         }
-      } catch (err) { Swal.fire('Aviso', 'OCR no disponible. Favor de completar manualmente.', 'info'); }
+      } catch (error) {
+        Swal.fire('Aviso', 'No se pudo extraer la informacion automaticamente. Puedes continuar manualmente.', 'info');
+      }
     }
   };
 
@@ -545,69 +455,93 @@ export default function RegistroJugadores() {
     if (!value) return;
     try {
       const field = form.getTextField(fieldName);
-      if (field) {
-        field.setText(value.toString().toUpperCase());
-        if (fontSize) field.setFontSize(fontSize);
-      }
-    } catch (e) { console.warn(`Campo PDF no encontrado: ${fieldName}`); }
+      field.setText(value.toString().toUpperCase());
+      if (fontSize) field.setFontSize(fontSize);
+    } catch (error) {
+      console.warn(`Campo PDF no encontrado: ${fieldName}`);
+    }
   };
 
   const handleDownloadFormato = async () => {
     try {
-      Swal.fire({ title: 'Generando PDF...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+      Swal.fire({
+        title: 'Generando PDF...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
       const templateUrl = '/formato_afiliacion_jugador.pdf';
-      const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
+      const existingPdfBytes = await fetch(templateUrl).then((res) => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
       const firstPage = pdfDoc.getPages()[0];
 
-      if (currentDocuments.fotografia) {
+      if (currentDocuments.foto) {
         try {
-          const photoBytes = await currentDocuments.fotografia.arrayBuffer();
-          const photoImage = currentDocuments.fotografia.name.toLowerCase().endsWith('.png') ? await pdfDoc.embedPng(photoBytes) : await pdfDoc.embedJpg(photoBytes);
-          firstPage.drawImage(photoImage, { x: 479, y: 676, width: 76, height: 90 });
-        } catch (e) {}
+          const photoBytes = await currentDocuments.foto.arrayBuffer();
+          const embeddedPhoto = currentDocuments.foto.name.toLowerCase().endsWith('.png')
+            ? await pdfDoc.embedPng(photoBytes)
+            : await pdfDoc.embedJpg(photoBytes);
+
+          firstPage.drawImage(embeddedPhoto, {
+            x: 479,
+            y: 676,
+            width: 76,
+            height: 90
+          });
+        } catch (error) {
+          console.warn('No se pudo incrustar la fotografia en el PDF:', error);
+        }
       }
 
-      // MAPEO DE CAMPOS (Sincronizado con Admin)
       safeSetField(form, 'Nombres', currentDatos.nombreJugador);
       safeSetField(form, 'Apellido Paterno', currentDatos.apellidoPaterno);
       safeSetField(form, 'Apellido Materno', currentDatos.apellidoMaterno);
-      safeSetField(form, 'CURP o Clave Única de Registro de Población', currentDatos.curp);
+      safeSetField(form, 'CURP o Clave Unica de Registro de Poblacion', currentDatos.curp);
       safeSetField(form, 'Fecha de Nacimiento', currentDatos.fechaNacimiento);
       safeSetField(form, 'Sexo', currentDatos.genero === '1' ? 'MASCULINO' : 'FEMENINO');
       safeSetField(form, 'Lugar de Nacimiento', currentDatos.lugarNacimiento);
-      const correoRJ = currentDatos.correo || '';
-      const correoRJFs = correoRJ.length > 35 ? 6 : correoRJ.length > 25 ? 7 : correoRJ.length > 18 ? 8 : 10;
-      safeSetField(form, 'Correo electrónico', correoRJ, correoRJFs);
-      safeSetField(form, 'Teléfono', currentDatos.telefono);
-      safeSetField(form, 'Asociación', currentDatos.asociacion);
-      safeSetField(form, 'Liga', (currentDatos.liga || '').split('(')[0].trim());
-      safeSetField(form, 'Equipo', currentDatos.equipo);
-      safeSetField(form, 'Categoría', currentDatos.categoria);
-      safeSetField(form, 'Posición', currentDatos.posicion);
+
+      const correo = currentDatos.correo || '';
+      const correoFontSize = correo.length > 35 ? 6 : correo.length > 25 ? 7 : correo.length > 18 ? 8 : 10;
+      safeSetField(form, 'Correo electronico', correo, correoFontSize);
+      safeSetField(form, 'Telefono', currentDatos.telefono);
+      safeSetField(form, 'Asociacion', 'AFAEM');
+
+      if (currentSeguro?.nombre) {
+        safeSetField(form, 'Tipo', currentSeguro.nombre);
+        safeSetField(form, 'fill_20', currentSeguro.nombre);
+      }
+
+      safeSetField(form, 'Liga', (teamInfo.liga || '').split('(')[0].trim());
+      safeSetField(form, 'Equipo', teamInfo.equipo || '');
+      safeSetField(form, 'Categoria', teamInfo.categoria || '');
+
+      const posicionSeleccionada = catalogs.roles_equipo?.find(
+        (rol) => String(rol.id) === String(currentDatos.posicion)
+      );
+      safeSetField(form, 'Posicion', posicionSeleccionada?.nombre || '');
       safeSetField(form, 'Camiseta', currentDatos.numCamiseta);
 
       if (currentDatos.esForaneo) {
         safeSetField(form, 'Nacionalidades del jugador', currentDatos.nacionalidadJugador);
-        safeSetField(form, 'País de residencia actual', currentDatos.paisResidencia);
-        safeSetField(form, '¿El jugador ha vivido en el extranjero? ¿En que país?', currentDatos.haVividoExtranjero ? currentDatos.dondeVividoExtranjero : 'NO');
+        safeSetField(form, 'Pais de residencia actual', currentDatos.paisResidencia);
+        safeSetField(form, 'El jugador ha vivido en el extranjero En que pais', currentDatos.haVividoExtranjero ? currentDatos.dondeVividoExtranjero : 'NO');
         safeSetField(form, 'Nacionalidades del padre', currentDatos.nacionalidadPadre);
         safeSetField(form, 'Nacionalidades de la madre', currentDatos.nacionalidadMadre);
         safeSetField(form, 'Nacionalidades del abuelo paterno', currentDatos.nacAbueloPaterno);
         safeSetField(form, 'Nacionalidades de la abuela paterna', currentDatos.nacAbuelaPaterna);
         safeSetField(form, 'Nacionalidades del abuelo materno', currentDatos.nacAbueloMaterno);
         safeSetField(form, 'Nacionalidades de la abuela materna', currentDatos.nacAbuelaMaterna);
-        safeSetField(form, 'El jugador ha sido registrado por la Asociación Nacional de Fútbol...', currentDatos.registroAsociacionExtranjera);
-        safeSetField(form, 'El jugador ha jugado en un Club extranjero...', currentDatos.juegoClubExtranjero);
+        safeSetField(form, 'El jugador ha sido registrado por la Asociacion Nacional de Futbol', currentDatos.registroAsociacionExtranjera);
+        safeSetField(form, 'El jugador ha jugado en un Club extranjero y participado en', currentDatos.juegoClubExtranjero);
       }
 
-      // 3. FECHA DE DESCARGA AUTOMÁTICA
       const now = new Date();
-      const fechaDescarga = now.toLocaleDateString('es-MX', { 
-        day: '2-digit', 
-        month: 'long', 
-        year: 'numeric' 
+      const fechaDescarga = now.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
       });
       safeSetField(form, 'Fecha de descarga', fechaDescarga);
       safeSetField(form, 'Fecha descarga', fechaDescarga);
@@ -624,98 +558,58 @@ export default function RegistroJugadores() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      Swal.fire('Listo!', 'El formato se ha descargado correctamente.', 'success');
-    } catch (err) { 
-      console.error(err);
-      Swal.fire('Error', 'No se pudo generar el PDF.', 'error'); 
+      Swal.fire('Listo', 'El formato se descargo correctamente.', 'success');
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'No se pudo generar el PDF.', 'error');
     }
   };
 
-  const handleGuardar = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!currentDatos.nombreJugador || !currentDatos.curp) {
-      Swal.fire('Atención', 'Nombre y CURP son obligatorios.', 'warning');
-      return;
-    }
-
-    setUploading(true);
-    Swal.fire({ title: 'Registrando Jugador', text: 'Enviando información...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    
-    try {
-      const formData = new FormData();
-      formData.append('equipo_temporal_id', teamId);
-      formData.append('nombre', currentDatos.nombreJugador);
-      formData.append('primer_apellido', currentDatos.apellidoPaterno);
-      formData.append('segundo_apellido', currentDatos.apellidoMaterna);
-      formData.append('CURP', currentDatos.curp);
-      formData.append('sexo_id', parseInt(currentDatos.genero, 10));
-      formData.append('fecha_nacimiento', currentDatos.fechaNacimiento);
-      formData.append('lugar_nacimiento', currentDatos.lugarNacimiento);
-      formData.append('correo', currentDatos.correo);
-      formData.append('telefono', currentDatos.telefono);
-      formData.append('posicion', currentDatos.posicion);
-      formData.append('num_camiseta', currentDatos.numCamiseta);
-      formData.append('seguro_id', currentSeguroId || String(slotsData?.seguros?.[0]?.seguro_id || 1));
-
-      if (currentDatos.esForaneo) {
-        formData.append('es_foraneo', '1');
-        formData.append('nacionalidad_jugador', currentDatos.nacionalidadJugador);
-        formData.append('pais_resid_actual', currentDatos.paisResidencia);
-        formData.append('ha_vivido_extranjero', currentDatos.haVividoExtranjero ? '1' : '0');
-        formData.append('donde_vivido', currentDatos.dondeVividoExtranjero);
-      }
-
-      ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'].forEach(key => {
-        if (currentDocuments[key]) { formData.append('documento_afiliacion_ids', 3); formData.append('archivos', currentDocuments[key]); }
-      });
-
-      if (esMenorDeEdad && currentDocuments.documentoEstudiante) {
-        formData.append('documento_estudiante', currentDocuments.documentoEstudiante);
-      }
-
-      await registrarJugadorTemporal(formData);
-      Swal.fire({ title: 'Registro Exitoso!', text: 'El jugador ha sido enviado a revisión por el administrador.', icon: 'success' })
-        .then(() => {
-          if (isPublicFlow) {
-            updatePlayerDocuments(currentPlayerIndex, {
-              actaNacimiento: null,
-              identificacion: null,
-              fotografia: null,
-              formatoAfiliacion: null,
-              documentoEstudiante: null
-            });
-            updatePlayerDatos(currentPlayerIndex, {
-              ...defaultPlayerDatos,
-              liga: currentDatos.liga,
-              equipo: currentDatos.equipo,
-              categoria: currentDatos.categoria
-            });
-            updatePlayer(currentPlayerIndex, { fillManually: false });
-            setPreviews({
-              actaNacimiento: null,
-              identificacion: null,
-              fotografia: null,
-              formatoAfiliacion: null,
-              documentoEstudiante: null
-            });
-            fetchTeamInfo();
-          } else {
-            navigate(`/presidente-equipo/admin-equipo/${teamId}`);
-          }
-        });
-    } catch (err) { 
-      Swal.fire('Error', 'No se pudo completar el registro.'); 
-      //DESCOMENTAR PARA DEBUG. Swal.fire('Error', 'No se pudo completar el registro.', 'error'); 
-    } finally { setUploading(false); }
+  const handleFinalizarRegistroCompleto = async () => {
+    await saveDraft(currentDatos);
+    Swal.fire(
+      'Todos los jugadores estan completos.',
+      'Registro listo para procesarse.',
+      'success'
+    );
   };
+
+  if (loading) {
+    return (
+      <div className="dashboard-content">
+        <div style={{ maxWidth: '900px', margin: '80px auto' }}>
+          <Cargador texto="Cargando informacion del equipo..." />
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentSlot) {
+    return (
+      <div className="dashboard-content">
+        <div style={{
+          maxWidth: '900px',
+          margin: '80px auto',
+          background: 'white',
+          borderRadius: '24px',
+          padding: '40px',
+          border: '1px solid #e2e8f0',
+          textAlign: 'center'
+        }}>
+          <h2 style={{ marginTop: 0, color: '#1e293b' }}>No hay slots disponibles</h2>
+          <p style={{ color: '#64748b', marginBottom: '24px' }}>
+            Este enlace ya no tiene espacios por capturar o el equipo temporal no fue encontrado.
+          </p>
+          {!isPublicFlow && (
+            <BotonSecundario etiqueta="Volver" alHacerClick={() => navigate(-1)} />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="dashboard-content"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="dashboard-content">
       <style>{`
         .document-card:hover {
           transform: translateY(-5px);
@@ -734,39 +628,45 @@ export default function RegistroJugadores() {
               <FaArrowLeft />
             </button>
           )}
+
           <div>
-            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugador</h2>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de jugadores</h2>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+              Guardado automatico desde el mismo borrador del panel del presidente.
+            </div>
           </div>
 
-          {jugadores.length > 1 && (
+          {slotStatuses.length > 1 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={() => setCurrentPlayerIndex(prev => Math.max(prev - 1, 0))}
-                disabled={currentPlayerIndex === 0}
+                onClick={() => setSelectedSlotId(slotStatuses[Math.max(slotIndex - 1, 0)]?.slot_id || currentSlot.slot_id)}
+                disabled={slotIndex <= 0}
                 style={{
                   padding: '10px 14px',
                   borderRadius: '12px',
                   border: '1px solid #cbd5e1',
-                  background: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
+                  background: slotIndex <= 0 ? '#f1f5f9' : 'white',
                   color: '#1e293b',
-                  cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer'
+                  cursor: slotIndex <= 0 ? 'not-allowed' : 'pointer'
                 }}
               >
                 <FaArrowLeft />
               </button>
-              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Jugador {currentPlayerIndex + 1} de {jugadores.length}</div>
+              <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                Jugador {slotIndex + 1} de {slotStatuses.length}
+              </div>
               <button
                 type="button"
-                onClick={() => setCurrentPlayerIndex(prev => Math.min(prev + 1, jugadores.length - 1))}
-                disabled={currentPlayerIndex === jugadores.length - 1}
+                onClick={() => setSelectedSlotId(slotStatuses[Math.min(slotIndex + 1, slotStatuses.length - 1)]?.slot_id || currentSlot.slot_id)}
+                disabled={slotIndex >= slotStatuses.length - 1}
                 style={{
                   padding: '10px 14px',
                   borderRadius: '12px',
                   border: '1px solid #cbd5e1',
-                  background: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
+                  background: slotIndex >= slotStatuses.length - 1 ? '#f1f5f9' : 'white',
                   color: '#1e293b',
-                  cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer'
+                  cursor: slotIndex >= slotStatuses.length - 1 ? 'not-allowed' : 'pointer'
                 }}
               >
                 <FaArrowRight />
@@ -775,43 +675,38 @@ export default function RegistroJugadores() {
           )}
         </div>
 
-        {jugadores.length > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', padding: '0 16px' }}>
-            {(() => {
-              const index = currentPlayerIndex;
-              const status = getPlayerStatus(jugadores[index]);
-              const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
-              return (
-                <button
-                  key={`player-status-${index}`}
-                  type="button"
-                  onClick={() => setCurrentPlayerIndex(index)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '10px 14px',
-                    borderRadius: '16px',
-                    border: '2px solid #0b4ea6',
-                    background: '#eff6ff',
-                    color: '#1e293b',
-                    cursor: 'default',
-                    minWidth: '220px',
-                    textAlign: 'left'
-                  }}
-                >
-                  <span style={{ fontSize: '14px' }}>{config.icon}</span>
-                  <span style={{ fontWeight: '700' }}>Jugador {index + 1}</span>
-                  <span style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
-                    {config.label}
-                  </span>
-                </button>
-              );
-            })()}
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', padding: '0 16px' }}>
+          {slotStatuses.map((slot, index) => {
+            const config = PLAYER_STATUS_CONFIG[slot.estado] || PLAYER_STATUS_CONFIG.VACIO;
+            return (
+              <button
+                key={slot.slot_id}
+                type="button"
+                onClick={() => setSelectedSlotId(slot.slot_id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 14px',
+                  borderRadius: '16px',
+                  border: String(slot.slot_id) === String(currentSlot.slot_id) ? '2px solid #0b4ea6' : '1px solid #cbd5e1',
+                  background: String(slot.slot_id) === String(currentSlot.slot_id) ? '#eff6ff' : 'white',
+                  color: '#1e293b',
+                  cursor: 'pointer'
+                }}
+              >
+                <span style={{ fontSize: '14px' }}>{config.icon}</span>
+                <span style={{ fontWeight: '700' }}>Jugador {index + 1}</span>
+                <span style={{ padding: '4px 10px', borderRadius: '999px', background: config.bg, color: config.color, fontSize: '11px', fontWeight: '700' }}>
+                  {config.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div style={{ height: '132px' }} />
+
+      <div style={{ height: '170px' }} />
 
       <div className="premium-card fade-in" style={{
         maxWidth: '1000px',
@@ -828,19 +723,19 @@ export default function RegistroJugadores() {
         gap: '20px'
       }}>
         <div>
-          <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
-          <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>{currentDatos.equipo || 'Equipo No Detectado'}</h1>
+          <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo seleccionado</span>
+          <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>{teamInfo.equipo || 'Equipo sin nombre'}</h1>
           <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: '#94a3b8', flexWrap: 'wrap' }}>
-            <span><strong>Liga:</strong> {currentDatos.liga || 'N/A'}</span>
-            <span>•</span>
-            <span><strong>Categoría:</strong> {currentDatos.categoria || 'LIBRE'}</span>
+            <span><strong>Liga:</strong> {teamInfo.liga || 'N/A'}</span>
+            <span><strong>Categoria:</strong> {teamInfo.categoria || 'LIBRE'}</span>
+            <span><strong>Seguro:</strong> {currentSeguro?.nombre || `ID ${currentSlot.seguro_id}`}</span>
           </div>
         </div>
 
         <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
-          <span style={{ fontSize: '24px', fontWeight: '950', color: slotsInfo.disponibles === 0 ? '#ef4444' : '#10b981' }}>
-            {slotsInfo.disponibles} / {slotsInfo.total}
+          <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots disponibles</span>
+          <span style={{ fontSize: '24px', fontWeight: '950', color: slotsDisponibles === 0 ? '#ef4444' : '#10b981' }}>
+            {slotsDisponibles} / {slotStatuses.length}
           </span>
         </div>
       </div>
@@ -854,144 +749,48 @@ export default function RegistroJugadores() {
         boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
         border: '1px solid #e2e8f0'
       }}>
-        <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p className="required-legend" style={{ margin: 0 }}>
-            <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial.
+        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <p style={{ margin: 0, color: '#475569', fontSize: '13px' }}>
+            El borrador se guarda automaticamente al salir de cada campo o al completar OCR.
           </p>
+          <div style={{ padding: '8px 12px', borderRadius: '999px', background: '#eff6ff', color: '#0b4ea6', fontSize: '12px', fontWeight: '700' }}>
+            Estado actual: {PLAYER_STATUS_CONFIG[currentStatus]?.label || 'VACIO'}
+          </div>
         </div>
 
-        {/* PASO 1: SELECCIÓN DE SEGURO / SLOT A CONSUMIR */}
-        <section style={{ marginBottom: '45px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
-            <StepBadge number="1" isActive={!!currentSeguroId} isDone={!!currentSeguroId} />
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro / Slot pagado a asignar</h3>
+        <section style={{ marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '18px' }}>
+            <StepBadge number="1" isActive={Boolean(currentSlot)} isDone={Boolean(currentSlot)} />
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Slot asignado</h3>
           </div>
-          <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
-            <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-              <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
-                Seleccione el seguro comprado a consumir para esta inscripción: <span className="required-star">*</span>
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                {loadingSlots ? (
-                  <div style={{ padding: '18px', color: '#475569' }}>Cargando seguros...</div>
-                ) : (
-                  (slotsData?.seguros || []).length > 0 ? (
-                    slotsData.seguros.map((seg) => {
-                      const isSelected = String(currentSeguroId) === String(seg.seguro_id);
-                      return (
-                        <button
-                          key={`seguro-card-${seg.seguro_id}`}
-                          type="button"
-                          onClick={() => updatePlayerSeguro(currentPlayerIndex, String(seg.seguro_id))}
-                          style={{
-                            padding: '16px',
-                            borderRadius: '12px',
-                            border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                            backgroundColor: isSelected ? '#eff6ff' : 'white',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px'
-                          }}
-                        >
-                          <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>🛡️ {seg.nombre}</span>
-                          <div style={{ marginTop: '6px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
-                            {seg.disponibles} disponibles
-                          </div>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div style={{ padding: '18px', borderRadius: '14px', background: '#f1f5f9', color: '#475569', fontSize: '13px' }}>
-                      No hay seguros disponibles para mostrar. Se usará el seguro predeterminado en caso de que el sistema lo permita.
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
 
-        {/* PASO 1: CONFIRMACIÓN DE EQUIPO */}
-        {false && (
-        <section style={{ marginBottom: '45px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
-            <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Confirmación de Equipo</h3>
-          </div>
-          <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
-            <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-              {loadingSlots ? <Cargador texto="Validando equipo..." /> : (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', fontWeight: '900', color: '#0b4ea6', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo seleccionado</span>
-                    <h4 style={{ fontSize: '18px', fontWeight: '900', margin: '8px 0 5px 0' }}>{currentDatos.equipo || 'Equipo No Detectado'}</h4>
-                    <div style={{ color: '#64748b', fontSize: '13px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                      <span><strong>Liga:</strong> {currentDatos.liga || 'N/A'}</span>
-                      <span><strong>Categoría:</strong> {currentDatos.categoria || 'LIBRE'}</span>
-                    </div>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
-                    <span style={{ fontSize: '24px', fontWeight: '950', color: slotsInfo.disponibles === 0 ? '#ef4444' : '#10b981' }}>
-                      {slotsInfo.disponibles} / {slotsInfo.total}
-                    </span>
-                  </div>
+          <div style={{ padding: '24px', borderRadius: '18px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Jugador {slotIndex + 1}
                 </div>
-              )}
+                <div style={{ marginTop: '8px', fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
+                  {currentSeguro?.nombre || `Seguro ${currentSlot.seguro_id}`}
+                </div>
+              </div>
+
+              <div style={{ padding: '8px 12px', borderRadius: '999px', background: PLAYER_STATUS_CONFIG[currentStatus]?.bg, color: PLAYER_STATUS_CONFIG[currentStatus]?.color, fontSize: '12px', fontWeight: '800' }}>
+                {PLAYER_STATUS_CONFIG[currentStatus]?.label || 'VACIO'}
+              </div>
             </div>
           </div>
         </section>
-        )}
-        {/* PASO 2: CARGA DE DOCUMENTACIÓN */}
+
         {showStep2 && (
-          <section className="fade-in" style={{ marginBottom: '45px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+          <section style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '18px' }}>
               <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
-            </div>
-            <div style={{ marginBottom: '24px', paddingLeft: '47px' }}>
-              <div style={{ 
-                background: '#f8fafc', 
-                border: '1px solid #e2e8f0', 
-                padding: '10px 16px', 
-                borderRadius: '10px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                color: '#475569',
-                fontSize: '13px',
-                fontWeight: '600'
-              }}>
-                <span style={{ fontSize: '18px' }}>✨</span>
-                Sube el acta de nacimiento para auto-llenar los datos del jugador.
-              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Documentacion</h3>
             </div>
 
-            <div style={{
-              background: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '12px',
-              padding: '12px 18px',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              fontSize: '13px',
-              color: '#0369a1',
-              fontWeight: '600'
-            }}>
-              <span style={{ fontSize: '18px' }}>📋</span>
-              Sube primero el <strong style={{ marginLeft: 4 }}>Acta de Nacimiento</strong>. El sistema detectará la minoría de edad y ajustará los requisitos.
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '20px'
-            }}>
-              {documentCards.map((doc) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+              {[...BASE_DOCUMENT_CARDS, ...(esMenorDeEdad ? MINOR_DOCUMENT_CARDS : [])].map((doc) => (
                 <div
                   key={doc.key}
                   className="document-card"
@@ -1008,14 +807,13 @@ export default function RegistroJugadores() {
                   }}
                   onClick={() => document.getElementById(`file-${doc.key}`).click()}
                 >
-                  {doc.key === 'fotografia' && previews.fotografia && (
+                  {doc.key === 'foto' && currentPreviews.foto && (
                     <div style={{
                       height: '140px',
                       width: '100%',
                       backgroundColor: '#f8fafc',
                       borderRadius: '12px',
                       marginBottom: '10px',
-                      position: 'relative',
                       overflow: 'hidden',
                       display: 'flex',
                       alignItems: 'center',
@@ -1023,26 +821,28 @@ export default function RegistroJugadores() {
                       border: '1px solid #f1f5f9'
                     }}>
                       <img
-                        src={previews.fotografia}
-                        alt="Previsualización de la fotografía"
+                        src={currentPreviews.foto}
+                        alt="Previsualizacion de la fotografia"
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
                     </div>
                   )}
+
                   <div style={{ fontSize: '32px', marginBottom: '12px', color: currentDocuments[doc.key] ? '#10b981' : '#94a3b8' }}>
                     {currentDocuments[doc.key] ? <FaCheckCircle /> : <FaUpload />}
                   </div>
                   <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{doc.title}</h4>
                   <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>{doc.subtitle}</p>
                   <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9', color: currentDocuments[doc.key] ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
-                    {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                    {currentDocuments[doc.key] ? 'Listo' : 'Pendiente'}
                   </div>
-                  {doc.key === 'fotografia' && !currentDocuments.fotografia && failedPhoto && (
-                    <div style={{ marginTop: '8px' }}>
+
+                  {doc.key === 'foto' && !currentDocuments.foto && failedPhotoState && String(failedPhotoState.slotId) === String(currentSlot.slot_id) && (
+                    <div style={{ marginTop: '10px' }}>
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={(event) => {
+                          event.stopPropagation();
                           forceLoadFailedPhoto();
                         }}
                         style={{
@@ -1054,260 +854,87 @@ export default function RegistroJugadores() {
                           borderRadius: '8px',
                           fontSize: '11px',
                           fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                          boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
-                          transition: 'background-color 0.2s'
+                          cursor: 'pointer'
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d97706'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f59e0b'; }}
                       >
-                        ⚠️ Cargar igualmente
+                        Cargar igualmente
                       </button>
                     </div>
                   )}
-                  <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+
+                  <input
+                    type="file"
+                    id={`file-${doc.key}`}
+                    style={{ display: 'none' }}
+                    accept="image/*,.pdf"
+                    onChange={(event) => handleFileUpload(doc.key, event.target.files[0])}
+                  />
                 </div>
               ))}
             </div>
-
-            {currentDocuments.actaNacimiento && !currentDatos.fechaNacimiento && (
-              <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                ⏳ Analizando el Acta de Nacimiento vía OCR... Los documentos adicionales aparecerán en breve.
-              </div>
-            )}
-
-            {currentDocuments.actaNacimiento && currentDatos.fechaNacimiento && !esMenorDeEdad && (
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                {[{ key: 'identificacion', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' }] .map(doc => (
-                  <div
-                    key={doc.key}
-                    className="document-card"
-                    style={{
-                      backgroundColor: 'white',
-                      borderRadius: '20px',
-                      border: currentDocuments[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                      padding: '18px',
-                      textAlign: 'center',
-                      transition: 'all 0.3s',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                  >
-                    <div style={{ fontSize: '32px', marginBottom: '12px', color: currentDocuments[doc.key] ? '#10b981' : '#94a3b8' }}>
-                      {currentDocuments[doc.key] ? <FaCheckCircle /> : <FaUpload />}
-                    </div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{doc.title}</h4>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>{doc.subtitle}</p>
-                    <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9', color: currentDocuments[doc.key] ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
-                      {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                    </div>
-                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {currentDocuments.actaNacimiento && currentDatos.fechaNacimiento && esMenorDeEdad && (
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                <div
-                  className="document-card"
-                  style={{
-                    borderRadius: '20px',
-                    border: currentDocuments.documentoEstudiante ? '2px solid #10b981' : '2px dashed #fbbf24',
-                    background: currentDocuments.documentoEstudiante ? 'rgba(16,185,129,0.04)' : 'linear-gradient(135deg,#fffbeb,#fef3c7)',
-                    padding: '18px',
-                    textAlign: 'center',
-                    transition: 'all 0.3s',
-                    cursor: 'pointer',
-                    position: 'relative'
-                  }}
-                  onClick={() => document.getElementById('file-documentoEstudiante').click()}
-                >
-                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '4px 10px', fontSize: '10px', fontWeight: '950', color: 'white' }}>🧒 MENOR</div>
-                  <div style={{ fontSize: '32px', marginBottom: '12px', color: currentDocuments.documentoEstudiante ? '#10b981' : '#f59e0b' }}>
-                    {currentDocuments.documentoEstudiante ? <FaCheckCircle /> : <FaUpload />}
-                  </div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>Documento de Estudiante</h4>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>Credencial escolar, certificado o carta de residencia</p>
-                  <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: currentDocuments.documentoEstudiante ? '#dcfce7' : '#f1f5f9', color: currentDocuments.documentoEstudiante ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
-                    {currentDocuments.documentoEstudiante ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                  </div>
-                  <input type="file" id="file-documentoEstudiante" style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload('documentoEstudiante', e.target.files[0])} />
-                </div>
-              </div>
-            )}
-
-            {currentDocuments.actaNacimiento && currentDatos.fechaNacimiento && (
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                {[{ key: 'fotografia', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }].map(doc => (
-                  <div
-                    key={doc.key}
-                    className="document-card"
-                    style={{
-                      backgroundColor: 'white',
-                      borderRadius: '20px',
-                      border: currentDocuments[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                      padding: '18px',
-                      textAlign: 'center',
-                      transition: 'all 0.3s',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                  >
-                    {doc.key === 'fotografia' && previews.fotografia && (
-                      <div style={{
-                        height: '140px',
-                        width: '100%',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '12px',
-                        marginBottom: '10px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px solid #f1f5f9'
-                      }}>
-                        <img
-                          src={previews.fotografia}
-                          alt="Previsualización de la fotografía"
-                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                        />
-                      </div>
-                    )}
-                    <div style={{ fontSize: '32px', marginBottom: '12px', color: currentDocuments[doc.key] ? '#10b981' : '#94a3b8' }}>
-                      {currentDocuments[doc.key] ? <FaCheckCircle /> : <FaUpload />}
-                    </div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{doc.title}</h4>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>{doc.subtitle}</p>
-                    <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9', color: currentDocuments[doc.key] ? '#166534' : '#64748b', fontSize: '11px', fontWeight: '800' }}>
-                      {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                    </div>
-                    {doc.key === 'fotografia' && !currentDocuments.fotografia && failedPhoto && (
-                      <div style={{ marginTop: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            forceLoadFailedPhoto();
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            backgroundColor: '#f59e0b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
-                            transition: 'background-color 0.2s'
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d97706'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f59e0b'; }}
-                        >
-                          ⚠️ Cargar igualmente
-                        </button>
-                      </div>
-                    )}
-                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
-                  </div>
-                ))}
-              </div>
-            )}
-
           </section>
         )}
 
-        {/* PASO 3: FORMULARIO */}
         {showStep3 && (
-          <section className="fade-in" style={{ marginBottom: '40px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <StepBadge number="3" isActive={true} isDone={false} />
-                <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
-              </div>
+          <section style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '18px' }}>
+              <StepBadge number="3" isActive isDone={currentStatus === 'COMPLETO'} />
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Formulario de afiliacion</h3>
             </div>
 
-            <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+            <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                  <input type="text" value={currentDatos.nombreJugador} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nombreJugador: e.target.value})} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) *</label>
+                  <input type="text" value={currentDatos.nombreJugador} onChange={(e) => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                  <input type="text" value={currentDatos.apellidoPaterno} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, apellidoPaterno: e.target.value})} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Apellido paterno *</label>
+                  <input type="text" value={currentDatos.apellidoPaterno} onChange={(e) => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno</label>
-                  <input type="text" value={currentDatos.apellidoMaterno} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, apellidoMaterno: e.target.value})} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Apellido materno *</label>
+                  <input type="text" value={currentDatos.apellidoMaterno} onChange={(e) => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
-                  <input type="number" value={currentDatos.numCamiseta} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, numCamiseta: e.target.value})} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo</label>
-                  <select value={currentDatos.posicion} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, posicion: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
-                    <option value="">Posición...</option>
-                    <option value="PORTERO">Portero</option>
-                    <option value="DEFENSA">Defensa</option>
-                    <option value="MEDIO">Medio</option>
-                    <option value="DELANTERO">Delantero</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP o Identificador <span className="required-star">*</span></label>
-                  <input type="text" value={currentDatos.curp || ''} onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    let sId = currentDatos.genero;
-                    if (val.length >= 11) {
-                      const char = val.charAt(10);
-                      if (char === 'M') sId = '2';
-                      else if (char === 'H') sId = '1';
-                    }
-                    updatePlayerDatos(currentPlayerIndex, {...currentDatos, curp: val, genero: sId});
-                  }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP *</label>
                   <input
-                    type="date"
-                    value={currentDatos.fechaNacimiento || ''}
-                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split('T')[0]}
-                    max={new Date().toISOString().split('T')[0]}
-                    onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, fechaNacimiento: e.target.value})}
+                    type="text"
+                    value={currentDatos.curp || ''}
+                    maxLength="18"
+                    onChange={(e) => {
+                      const curp = e.target.value.toUpperCase();
+                      setCurrentDatos((previous) => ({
+                        ...previous,
+                        curp,
+                        genero: inferGeneroFromCurp(curp, previous.genero)
+                      }));
+                    }}
+                    onBlur={handleBlur}
                     style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                  <input type="text" value={currentDatos.lugarNacimiento || ''} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, lugarNacimiento: e.target.value})} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI *</label>
+                  <input type="text" value={currentDatos.nui || ''} onChange={(e) => handleFieldChange('nui', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha de nacimiento *</label>
+                  <input type="date" value={currentDatos.fechaNacimiento || ''} min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split('T')[0]} max={new Date().toISOString().split('T')[0]} onChange={(e) => handleFieldChange('fechaNacimiento', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                  <select value={currentDatos.genero || ""} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, genero: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de nacimiento *</label>
+                  <input type="text" value={currentDatos.lugarNacimiento || ''} onChange={(e) => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo *</label>
+                  <select value={currentDatos.genero || ''} onChange={(e) => handleImmediateDraftChange({ genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
                     <option value="">Seleccione...</option>
                     <option value="1">MASCULINO</option>
                     <option value="2">FEMENINO</option>
@@ -1317,12 +944,28 @@ export default function RegistroJugadores() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                  <input type="email" value={currentDatos.correo} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, correo: e.target.value})} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electronico *</label>
+                  <input type="email" value={currentDatos.correo} onChange={(e) => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono</label>
-                  <input type="tel" value={currentDatos.telefono} onChange={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, telefono: e.target.value})} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Telefono *</label>
+                  <input type="tel" value={currentDatos.telefono} onChange={(e) => handleFieldChange('telefono', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Numero de camiseta *</label>
+                  <input type="number" value={currentDatos.numCamiseta} onChange={(e) => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posicion *</label>
+                  <select value={currentDatos.posicion || ''} onChange={(e) => handleImmediateDraftChange({ posicion: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                    <option value="">Seleccione...</option>
+                    {(catalogs.roles_equipo || []).map((rol) => (
+                      <option key={rol.id} value={rol.id}>{rol.nombre}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -1334,54 +977,81 @@ export default function RegistroJugadores() {
                   <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
                 </div>
 
+                <div style={{ marginBottom: '20px' }}>
+                  <EntradaSeleccion
+                    etiqueta="El jugador es foraneo"
+                    valor={currentDatos.esForaneo ? '1' : '0'}
+                    onChange={(event) => handleImmediateDraftChange({ esForaneo: event.target.value === '1' })}
+                    opciones={[
+                      { valor: '0', etiqueta: 'No' },
+                      { valor: '1', etiqueta: 'Si' }
+                    ]}
+                    requerido
+                  />
+                </div>
+
                 {currentDatos.esForaneo ? (
-                  <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
+                  <div style={{ display: 'grid', gap: '20px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                      <EntradaFormulario etiqueta="Nacionalidad del jugador" valor={currentDatos.nacionalidadJugador} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nacionalidadJugador: e.target.value})} />
-                      <EntradaFormulario etiqueta="País de residencia actual" valor={currentDatos.paisResidencia} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, paisResidencia: e.target.value})} />
+                      <EntradaFormulario etiqueta="Nacionalidad del jugador" valor={currentDatos.nacionalidadJugador} onChange={(event) => handleFieldChange('nacionalidadJugador', event.target.value)} onBlur={handleBlur} />
+                      <EntradaFormulario etiqueta="Pais de residencia actual" valor={currentDatos.paisResidencia} onChange={(event) => handleFieldChange('paisResidencia', event.target.value)} onBlur={handleBlur} />
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', alignItems: 'end' }}>
-                      <EntradaSeleccion etiqueta="¿El jugador ha vivido en el extranjero?" valor={currentDatos.haVividoExtranjero ? '1' : '0'} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, haVividoExtranjero: e.target.value === '1'})} opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]} obligatorio={true} />
+                      <EntradaSeleccion
+                        etiqueta="Ha vivido en el extranjero"
+                        valor={currentDatos.haVividoExtranjero ? '1' : '0'}
+                        onChange={(event) => handleImmediateDraftChange({ haVividoExtranjero: event.target.value === '1' })}
+                        opciones={[
+                          { valor: '0', etiqueta: 'No' },
+                          { valor: '1', etiqueta: 'Si' }
+                        ]}
+                        requerido
+                      />
                       {currentDatos.haVividoExtranjero && (
-                        <EntradaFormulario etiqueta="¿En qué país?" valor={currentDatos.dondeVividoExtranjero} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, dondeVividoExtranjero: e.target.value})} obligatorio={true} />
+                        <EntradaFormulario etiqueta="En que pais" valor={currentDatos.dondeVividoExtranjero} onChange={(event) => handleFieldChange('dondeVividoExtranjero', event.target.value)} onBlur={handleBlur} requerido />
                       )}
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                      <EntradaFormulario etiqueta="Nacionalidad del padre" valor={currentDatos.nacionalidadPadre} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nacionalidadPadre: e.target.value})} />
-                      <EntradaFormulario etiqueta="Nacionalidad de la madre" valor={currentDatos.nacionalidadMadre} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nacionalidadMadre: e.target.value})} />
+                      <EntradaFormulario etiqueta="Nacionalidad del padre" valor={currentDatos.nacionalidadPadre} onChange={(event) => handleFieldChange('nacionalidadPadre', event.target.value)} onBlur={handleBlur} />
+                      <EntradaFormulario etiqueta="Nacionalidad de la madre" valor={currentDatos.nacionalidadMadre} onChange={(event) => handleFieldChange('nacionalidadMadre', event.target.value)} onBlur={handleBlur} />
                     </div>
 
-                    <AreaTexto etiqueta="Registro por Asociación Nacional Extranjera" valor={currentDatos.registroAsociacionExtranjera} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, registroAsociacionExtranjera: e.target.value})} filas={2} obligatorio={true} />
+                    <AreaTexto etiqueta="Registro por asociacion nacional extranjera" valor={currentDatos.registroAsociacionExtranjera} onChange={(event) => handleImmediateDraftChange({ registroAsociacionExtranjera: event.target.value })} filas={2} requerido />
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                      <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nacAbueloPaterno: e.target.value})} />
-                      <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nacAbuelaPaterna: e.target.value})} />
-                      <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nacAbueloMaterno: e.target.value})} />
-                      <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, nacAbuelaMaterna: e.target.value})} />
+                      <EntradaFormulario etiqueta="Nac. abuelo paterno" valor={currentDatos.nacAbueloPaterno} onChange={(event) => handleFieldChange('nacAbueloPaterno', event.target.value)} onBlur={handleBlur} />
+                      <EntradaFormulario etiqueta="Nac. abuela paterna" valor={currentDatos.nacAbuelaPaterna} onChange={(event) => handleFieldChange('nacAbuelaPaterna', event.target.value)} onBlur={handleBlur} />
+                      <EntradaFormulario etiqueta="Nac. abuelo materno" valor={currentDatos.nacAbueloMaterno} onChange={(event) => handleFieldChange('nacAbueloMaterno', event.target.value)} onBlur={handleBlur} />
+                      <EntradaFormulario etiqueta="Nac. abuela materna" valor={currentDatos.nacAbuelaMaterna} onChange={(event) => handleFieldChange('nacAbuelaMaterna', event.target.value)} onBlur={handleBlur} />
                     </div>
 
-                    <AreaTexto etiqueta="¿Ha jugado en un Club extranjero?" valor={currentDatos.juegoClubExtranjero} alCambiar={e => updatePlayerDatos(currentPlayerIndex, {...currentDatos, juegoClubExtranjero: e.target.value})} filas={3} obligatorio={true} />
+                    <AreaTexto etiqueta="Ha jugado en un club extranjero" valor={currentDatos.juegoClubExtranjero} onChange={(event) => handleImmediateDraftChange({ juegoClubExtranjero: event.target.value })} filas={3} requerido />
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '20px' }}>
                     <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                      Si el jugador es foráneo, habilite el interruptor para completar los antecedentes internacionales obligatorios.
+                      Si el jugador es foraneo, activa esta seccion para completar los antecedentes obligatorios.
                     </p>
                   </div>
                 )}
               </div>
             </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
-              {!isPublicFlow && (
-                <BotonSecundario etiqueta="Cancelar y volver" alHacerClick={() => navigate(-1)} estilo={{ width: '100%', maxWidth: '320px' }} />
-              )}
-              <BotonPrimario etiqueta={uploading ? "Procesando..." : "Finalizar y Registrar Jugador"} icono={<FaSave />} alHacerClick={handleGuardar} deshabilitado={uploading} estilo={{ width: '100%', maxWidth: '320px' }} />
-            </div>
           </section>
         )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+          {!isPublicFlow && (
+            <BotonSecundario etiqueta="Cancelar y volver" alHacerClick={() => navigate(-1)} />
+          )}
+          <BotonSecundario etiqueta="Descargar formato" alHacerClick={handleDownloadFormato} />
+          <BotonPrimario
+            etiqueta="Finalizar registro completo"
+            alHacerClick={handleFinalizarRegistroCompleto}
+            deshabilitado={!allSlotsComplete}
+          />
+        </div>
       </div>
     </div>
   );

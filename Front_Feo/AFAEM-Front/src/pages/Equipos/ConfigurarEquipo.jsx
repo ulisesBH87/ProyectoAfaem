@@ -15,7 +15,10 @@ import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
-import { API_BASE } from '../../config/config';
+import {
+  mapAvailableSlotsResponse,
+  useEquipoTemporalPlayerDraft
+} from '../../hooks/useEquipoTemporalPlayerDraft';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -108,7 +111,7 @@ export default function ConfigurarEquipo() {
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
 
   // Datos extraídos o capturados del jugador
-  const [extractedData, setExtractedData] = useState({
+  /* const [_legacyExtractedData, _setLegacyExtractedData] = useState({
     nombreJugador: '',
     apellidoPaterno: '',
     apellidoMaterno: '',
@@ -134,6 +137,16 @@ export default function ConfigurarEquipo() {
     nacAbuelaMaterna: 'MEXICANA',
     juegoClubExtranjero: 'NO',
     nui: ''
+  }); */
+
+  const {
+    currentSlot,
+    draftData: extractedData,
+    setDraftData: setExtractedData,
+    saveDraft: guardarBorradorEnBD
+  } = useEquipoTemporalPlayerDraft({
+    rawSlots: slotsData?.rawSlots || [],
+    selectedSeguroId
   });
 
   // Detección de minoría de edad
@@ -163,7 +176,7 @@ export default function ConfigurarEquipo() {
   const showStep3 = isStep2Done || true; // El paso 3 siempre se muestra una vez seleccionado el seguro (los documentos son opcionales)
 
   // Obtener el slot actual según el seguro seleccionado
-  const currentSlot = React.useMemo(() => {
+  const _legacyCurrentSlot = React.useMemo(() => {
     if (!slotsData?.rawSlots || !selectedSeguroId) return null;
     return slotsData.rawSlots.find(
       s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
@@ -171,7 +184,7 @@ export default function ConfigurarEquipo() {
   }, [selectedSeguroId, slotsData]);
 
   // Guardar Borrador en la Base de Datos
-  const guardarBorradorEnBD = async (newData) => {
+  const _legacyGuardarBorradorEnBD = async (newData) => {
     if (!currentSlot?.slot_id) return;
     try {
       const token = localStorage.getItem('token');
@@ -192,10 +205,7 @@ export default function ConfigurarEquipo() {
   };
 
   const handleFieldChange = (field, value) => {
-    setExtractedData(prev => {
-      const updated = { ...prev, [field]: value };
-      return updated;
-    });
+    setExtractedData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleBlur = () => {
@@ -230,15 +240,7 @@ export default function ConfigurarEquipo() {
         const slotsResponse = await teamsService.getAvailableSlots(equipoTemporalId);
         
         // Mapear los slotsResponse al formato esperado por el frontend
-        const mappedSlotsData = {
-          hay_slots: slotsResponse.jugadores_restantes > 0,
-          slots_disponibles: slotsResponse.jugadores_restantes,
-          seguros_disponibles: slotsResponse.seguros.filter(s => s.disponibles > 0).map(s => ({
-            SeguroId: s.seguro_id,
-            Cantidad: s.disponibles
-          })),
-          rawSlots: slotsResponse.slots
-        };
+        const mappedSlotsData = mapAvailableSlotsResponse(slotsResponse);
 
         setSlotsData(mappedSlotsData);
 
@@ -259,7 +261,7 @@ export default function ConfigurarEquipo() {
   }, [equipoId, equipoTemporalId]);
 
   // Cargar borrador del slot seleccionado al cambiar de seguro
-  useEffect(() => {
+  /* useEffect(() => {
     if (!slotsData?.rawSlots || !selectedSeguroId) return;
 
     const slotConBorrador = slotsData.rawSlots.find(
@@ -298,7 +300,7 @@ export default function ConfigurarEquipo() {
         nui: ''
       });
     }
-  }, [selectedSeguroId, slotsData]);
+  }, [selectedSeguroId, slotsData]); */
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
   const handleFileUpload = async (documentKey, file) => {
