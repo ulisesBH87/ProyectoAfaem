@@ -63,6 +63,13 @@ export default function RegistroJugadores() {
   const [jugadores, setJugadores] = useState([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [failedPhoto, setFailedPhoto] = useState(null);
+  const [previews, setPreviews] = useState({
+    actaNacimiento: null,
+    identificacion: null,
+    fotografia: null,
+    formatoAfiliacion: null,
+    documentoEstudiante: null
+  });
 
   const documentCards = [
     { key: 'actaNacimiento', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' },
@@ -202,8 +209,56 @@ export default function RegistroJugadores() {
     });
   };
 
+  const revokeBlobUrl = (url) => {
+    if (typeof url === 'string' && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const revokeAllBlobPreviews = () => {
+    Object.values(previews).forEach(url => revokeBlobUrl(url));
+  };
+
+  const createPreviewFromFile = (documentKey, file) => {
+    if (!file) return;
+
+    const isImage = file.type?.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name);
+    const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf');
+
+    if (previews[documentKey]?.startsWith('blob:')) {
+      revokeBlobUrl(previews[documentKey]);
+    }
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => ({ ...prev, [documentKey]: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    } else if (isPdf) {
+      const url = URL.createObjectURL(file);
+      setPreviews(prev => ({ ...prev, [documentKey]: url }));
+    } else {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviews(prev => ({ ...prev, [documentKey]: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearPreview = (documentKey) => {
+    setPreviews(prev => {
+      if (prev[documentKey]?.startsWith('blob:')) {
+        revokeBlobUrl(prev[documentKey]);
+      }
+      return { ...prev, [documentKey]: null };
+    });
+  };
+
   const forceLoadFailedPhoto = () => {
     if (!failedPhoto) return;
+    createPreviewFromFile('fotografia', failedPhoto);
     updatePlayerDocuments(currentPlayerIndex, { fotografia: failedPhoto });
     setFailedPhoto(null);
 
@@ -261,6 +316,25 @@ export default function RegistroJugadores() {
   const currentDocuments = currentPlayer.documentos;
   const currentSeguroId = currentPlayer.seguroId;
   const currentFillManually = currentPlayer.fillManually;
+
+  useEffect(() => {
+    revokeAllBlobPreviews();
+    setPreviews({
+      actaNacimiento: null,
+      identificacion: null,
+      fotografia: null,
+      formatoAfiliacion: null,
+      documentoEstudiante: null
+    });
+
+    if (currentDocuments) {
+      ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion', 'documentoEstudiante'].forEach((key) => {
+        if (currentDocuments[key]) {
+          createPreviewFromFile(key, currentDocuments[key]);
+        }
+      });
+    }
+  }, [currentPlayerIndex]);
 
   const playerStatusConfig = {
     VACIO: { icon: '⚪', label: 'VACIO', bg: '#f8fafc', color: '#475569' },
@@ -347,10 +421,17 @@ export default function RegistroJugadores() {
     fetchTeamInfo();
   }, [teamId, token, isPublicFlow, navigate]);
 
+  useEffect(() => {
+    return () => {
+      revokeAllBlobPreviews();
+    };
+  }, []);
+
   // PROCESAR OCR (Sincronizado con Admin)
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
     updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
+    createPreviewFromFile(documentKey, file);
 
     if (documentKey === 'fotografia') {
       Swal.fire({ title: 'Validando Fotografía...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
@@ -358,12 +439,26 @@ export default function RegistroJugadores() {
         const data = await validarFotografia(file);
         if (data.valido) {
           setFailedPhoto(null);
+
+          const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
+          const byteCharacters = atob(data.imagen);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const validatedFile = new File([byteArray], 'fotografia_validada.jpg', { type: data.tipo_imagen });
+
+          updatePlayerDocuments(currentPlayerIndex, { fotografia: validatedFile });
+          setPreviews(prev => ({ ...prev, fotografia: imageUrl }));
+
           Swal.fire({ title: 'Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
         } else {
           const failedPhotoFile = file;
           const failedPhotoIndex = currentPlayerIndex;
           setFailedPhoto(failedPhotoFile);
           updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+          clearPreview(documentKey);
 
           Swal.fire({
             title: 'Error en la fotografía',
@@ -376,6 +471,12 @@ export default function RegistroJugadores() {
             cancelButtonColor: '#cbd5e1'
           }).then((result) => {
             if (result.isConfirmed) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                setPreviews(prev => ({ ...prev, fotografia: reader.result }));
+              };
+              reader.readAsDataURL(failedPhotoFile);
+
               updatePlayerDocuments(failedPhotoIndex, { fotografia: failedPhotoFile });
               setFailedPhoto(null);
               Swal.fire({
@@ -590,6 +691,13 @@ export default function RegistroJugadores() {
               categoria: currentDatos.categoria
             });
             updatePlayer(currentPlayerIndex, { fillManually: false });
+            setPreviews({
+              actaNacimiento: null,
+              identificacion: null,
+              fotografia: null,
+              formatoAfiliacion: null,
+              documentoEstudiante: null
+            });
             fetchTeamInfo();
           } else {
             navigate(`/presidente-equipo/admin-equipo/${teamId}`);
@@ -894,10 +1002,33 @@ export default function RegistroJugadores() {
                     padding: '18px',
                     textAlign: 'center',
                     transition: 'all 0.3s',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}
                   onClick={() => document.getElementById(`file-${doc.key}`).click()}
                 >
+                  {doc.key === 'fotografia' && previews.fotografia && (
+                    <div style={{
+                      height: '140px',
+                      width: '100%',
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '12px',
+                      marginBottom: '10px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #f1f5f9'
+                    }}>
+                      <img
+                        src={previews.fotografia}
+                        alt="Previsualización de la fotografía"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      />
+                    </div>
+                  )}
                   <div style={{ fontSize: '32px', marginBottom: '12px', color: currentDocuments[doc.key] ? '#10b981' : '#94a3b8' }}>
                     {currentDocuments[doc.key] ? <FaCheckCircle /> : <FaUpload />}
                   </div>
@@ -1023,10 +1154,33 @@ export default function RegistroJugadores() {
                       padding: '18px',
                       textAlign: 'center',
                       transition: 'all 0.3s',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                     onClick={() => document.getElementById(`file-${doc.key}`).click()}
                   >
+                    {doc.key === 'fotografia' && previews.fotografia && (
+                      <div style={{
+                        height: '140px',
+                        width: '100%',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '12px',
+                        marginBottom: '10px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid #f1f5f9'
+                      }}>
+                        <img
+                          src={previews.fotografia}
+                          alt="Previsualización de la fotografía"
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                      </div>
+                    )}
                     <div style={{ fontSize: '32px', marginBottom: '12px', color: currentDocuments[doc.key] ? '#10b981' : '#94a3b8' }}>
                       {currentDocuments[doc.key] ? <FaCheckCircle /> : <FaUpload />}
                     </div>
