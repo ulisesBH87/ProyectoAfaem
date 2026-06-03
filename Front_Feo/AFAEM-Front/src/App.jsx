@@ -126,7 +126,7 @@ function App() {
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
           <Route path="/suspendido" element={<Suspended />} />
-          <Route path="/invitacion/:token" element={<RegistroJugadores />} />
+          <Route path="/i/:token" element={<RegistroJugadores />} />
 
           {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT AND GENERALGUARD */}
           <Route element={<GeneralGuard><MainLayout userEmail={userEmail} /></GeneralGuard>}>
