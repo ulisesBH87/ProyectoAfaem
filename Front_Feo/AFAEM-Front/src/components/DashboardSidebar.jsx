@@ -13,7 +13,7 @@ import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
 import AfaemLogo from '../assets/afaem-logo@4x.png';
 
-const DashboardSidebar = ({ collapsed}) => {
+const DashboardSidebar = ({ collapsed, mobileOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
@@ -48,13 +48,21 @@ const DashboardSidebar = ({ collapsed}) => {
     hoverBg: isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.05)',
     shadow: isAdmin ? '0 8px 32px 0 rgba(0, 0, 0, 0.8)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
   };
-
+  const isMobile = window.innerWidth <= 768;
   return (
     <aside
-      className={`dashboard-sidebar`}
+      className={`dashboard-sidebar${mobileOpen ? ' mobile-open' : ''}`}
       style={{
-        width: collapsed ? '80px' : '260px',
+        transform: isMobile
+          ? (mobileOpen ? 'translateX(0)' : 'translateX(-100%)')
+          : 'translateX(0)',
+
+        width: isMobile
+          ? '260px'
+          : (collapsed ? '80px' : '260px'),
         height: '100vh',
+        maxHeight: '100vh',
+        overflowY: 'auto',
         position: 'fixed',
         left: 0,
         top: 0,
