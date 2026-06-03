@@ -252,7 +252,7 @@ export default function PresidenteEquipoEquipos() {
               const slots = await teamsService.checkTeamSlots(row.EquipoId);
 
               if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
-                navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&agregarJugador=true`);
+                navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&equipoId=${row.EquipoId}&agregarJugador=true`);
                 return;
               }
 
@@ -298,13 +298,6 @@ export default function PresidenteEquipoEquipos() {
           <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Mis equipos registrados</h1>
           <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Panel centralizado para la supervisión y gestión administrativa de tus clubes afiliados.</p>
         </div>
-        <button
-          className="btn-premium"
-          onClick={() => navigate('/presidente-equipo/configurar-equipo')}
-          style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
-        >
-          <FaPlus /> Nuevo equipo
-        </button>
       </div>
 
       {/* TARJETAS MÉTRICAS ESTILO PREMIUM */}

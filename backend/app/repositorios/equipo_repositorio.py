@@ -419,6 +419,7 @@ def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int):
     # Asignar persona al slot (NO tocar SeguroId)
     slot.PersonaId = persona_id
     slot.Completo = True
+    slot.DatosBorrador = None
 
     return slot
 
