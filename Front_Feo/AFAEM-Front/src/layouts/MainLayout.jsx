@@ -8,8 +8,21 @@ const MainLayout = ({ userEmail }) => {
   const { estatusId, hasRole, isLoading } = useRBAC();
   const navigate = useNavigate();
   const location = useLocation();
-  //const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     // Si ya cargaron los permisos y es un presidente con estatus no autorizado (<5)
@@ -20,10 +33,10 @@ const MainLayout = ({ userEmail }) => {
   }, [estatusId, isLoading, hasRole, navigate]);
 
   // Cerrar menú móvil al navegar
-  //useEffect(() => {
-    // eslint-disable-next-line
-    //setMobileMenuOpen(false);
-  //}, [location.pathname]);
+  useEffect(() => {
+    //eslint-disable-next-line
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   // Bloquear scroll del body cuando el menú móvil está abierto
   //useEffect(() => {
@@ -37,8 +50,7 @@ const MainLayout = ({ userEmail }) => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
-      {/* Backdrop oscuro en móvil */}
-       {/*
+      {/* Backdrop oscuro en móvil */}  
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
@@ -51,20 +63,21 @@ const MainLayout = ({ userEmail }) => {
           }}
         />
       )}
-        */}
 
       <DashboardSidebar
         userEmail={userEmail}
-        //mobileOpen={mobileMenuOpen}
-        //onMobileClose={() => setMobileMenuOpen(false)}
         collapsed={sidebarCollapsed}
+        mobileOpen={mobileMenuOpen}
+        //onMobileClose={() => setMobileMenuOpen(false)}
       />
       
       <div
         className="main-content-wrapper"
         style={{ 
           flex: 1, 
-          marginLeft: sidebarCollapsed ? '80px' : '260px', 
+          marginLeft: isMobile
+            ? '0'
+            : (sidebarCollapsed ? '80px' : '260px'), 
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           display: 'flex',
           flexDirection: 'column',
@@ -73,11 +86,16 @@ const MainLayout = ({ userEmail }) => {
           overflowX: 'auto'
         }}
       >
-        <DashboardHeader
-          userEmail={userEmail}
-          onMenuToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-        
+      <DashboardHeader
+        userEmail={userEmail}
+        onMenuToggle={() => {
+          if (isMobile) {
+            setMobileMenuOpen(prev => !prev);
+          } else {
+            setSidebarCollapsed(prev => !prev);
+          }
+        }}
+      />
         <main className="fade-in" style={{ 
           padding: '24px 30px', 
           flex: 1
