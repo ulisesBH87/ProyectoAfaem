@@ -754,7 +754,7 @@ export default function RegistrarPresidente() {
 
       if (result.isConfirmed) {
         const token = response?.presidente?.token_invitacion || '';
-        const linkInvitacion = `${window.location.origin}/invitacion/${token}`;
+        const linkInvitacion = `${window.location.origin}/i/${token}`;
         const mensaje = `Hola ${nombrePresidente}. Utiliza el siguiente enlace para registrar a tus jugadores: ${linkInvitacion}`;
         const mensajeCodificado = encodeURIComponent(mensaje);
         const url = `https://wa.me/${telefonoLimpio}?text=${mensajeCodificado}`;
