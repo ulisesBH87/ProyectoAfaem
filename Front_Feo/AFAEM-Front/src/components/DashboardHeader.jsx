@@ -29,16 +29,17 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {/* Botón hamburguesa - solo visible en móvil */}
         <button
-        onClick={onMenuToggle}
-        style={{
-          border: 'none',
-          background: 'transparent',
-          cursor: 'pointer',
-          fontSize: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          color: 'var(--primary)'
-        }}
+          className="mobile-menu-btn"
+          onClick={onMenuToggle}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            color: 'var(--primary)'
+          }}
         >
           <FaBars />
         </button>

@@ -377,6 +377,10 @@ h1, h2, h3, h4 {
   border-radius: 14px !important;
 }
 
+.mobile-menu-btn {
+  display: none;
+}
+
 /* ═══════════════════════════════════════
    7. RESPONSIVE: MÓVIL (<768px)
    ═══════════════════════════════════════ */
