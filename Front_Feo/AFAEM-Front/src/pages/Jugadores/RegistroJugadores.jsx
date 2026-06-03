@@ -344,10 +344,32 @@ export default function RegistroJugadores() {
         if (data.valido) {
           Swal.fire({ title: 'Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
         } else {
-          Swal.fire('Error en la fotografía', data.mensaje, 'error');
-          updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+          Swal.fire({
+            title: 'Error en la fotografía',
+            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cargar igualmente',
+            cancelButtonText: 'No, intentar de nuevo',
+            confirmButtonColor: '#0b4ea6',
+            cancelButtonColor: '#cbd5e1'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              Swal.fire({
+                title: 'Cargada',
+                text: 'Se ha cargado la fotografía original.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+              });
+            } else {
+              updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+            }
+          });
         }
-      } catch (err) { Swal.fire('Error', 'No se pudo procesar la foto.', 'error'); }
+      } catch (err) {
+        Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+      }
     }
 
     if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
