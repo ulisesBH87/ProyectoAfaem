@@ -360,7 +360,9 @@ export default function RegistroJugadores() {
           setFailedPhoto(null);
           Swal.fire({ title: 'Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
         } else {
-          setFailedPhoto(file);
+          const failedPhotoFile = file;
+          const failedPhotoIndex = currentPlayerIndex;
+          setFailedPhoto(failedPhotoFile);
           updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
 
           Swal.fire({
@@ -374,7 +376,15 @@ export default function RegistroJugadores() {
             cancelButtonColor: '#cbd5e1'
           }).then((result) => {
             if (result.isConfirmed) {
-              forceLoadFailedPhoto();
+              updatePlayerDocuments(failedPhotoIndex, { fotografia: failedPhotoFile });
+              setFailedPhoto(null);
+              Swal.fire({
+                title: 'Fotografía Cargada',
+                text: 'Se ha cargado la fotografía original.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+              });
             }
           });
         }
