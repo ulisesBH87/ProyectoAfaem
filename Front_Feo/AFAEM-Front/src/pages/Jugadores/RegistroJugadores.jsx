@@ -262,7 +262,7 @@ export default function RegistroJugadores() {
   const isStep1Done = !!teamId; // El equipo ya viene seleccionado desde el dashboard
   const isStep2Done = Object.values(currentDocuments).some(d => d !== null);
   const showStep2 = isStep1Done;
-  const showStep3 = isStep2Done || currentFillManually;
+  const showStep3 = true;
 
   // CARGAR SLOTS Y DATOS DEL EQUIPO
   const fetchTeamInfo = async () => {
@@ -966,17 +966,6 @@ export default function RegistroJugadores() {
               </div>
             )}
 
-            {!isStep2Done && (
-              <div style={{ textAlign: 'center', marginTop: '25px' }}>
-                <button
-                  type="button"
-                  onClick={() => updatePlayer(currentPlayerIndex, { fillManually: true })}
-                  style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}
-                >
-                  Omitir carga y llenar datos manualmente
-                </button>
-              </div>
-            )}
           </section>
         )}
 
