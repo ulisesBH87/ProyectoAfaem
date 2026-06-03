@@ -419,6 +419,23 @@ async def registrar_jugador(
     )
     return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id)
 
+class BorradorJugadorPayload(BaseModel):
+    slot_id: int
+    datos: dict
+
+@router.post("/borrador-jugador")
+def guardar_borrador_jugador(
+    payload: BorradorJugadorPayload,
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    slot = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalJugadorId == payload.slot_id).first()
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot de jugador temporal no encontrado")
+    
+    slot.DatosBorrador = json.dumps(payload.datos, ensure_ascii=False)
+    db.commit()
+    return {"mensaje": "Borrador guardado correctamente"}
 
 
 # --- NUEVOS ENDPOINTS PARA TABLAS REALES (PRESIDENTE Y ADMIN) ---
