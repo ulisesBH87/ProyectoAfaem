@@ -596,9 +596,9 @@ export default function RegistroJugadores() {
           border: '1px solid #e2e8f0',
           textAlign: 'center'
         }}>
-          <h2 style={{ marginTop: 0, color: '#1e293b' }}>No hay slots disponibles</h2>
+          <h2 style={{ marginTop: 0, color: '#1e293b' }}>No hay espacios disponibles</h2>
           <p style={{ color: '#64748b', marginBottom: '24px' }}>
-            Este enlace ya no tiene espacios por capturar o el equipo temporal no fue encontrado.
+            Este enlace ya no tiene espacios por capturar o el equipo no fue encontrado.
           </p>
           {!isPublicFlow && (
             <BotonSecundario etiqueta="Volver" alHacerClick={() => navigate(-1)} />
