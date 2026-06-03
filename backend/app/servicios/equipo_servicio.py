@@ -43,6 +43,7 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
     raise HTTPException(400, "Todos los espacios ocupados")
 
 def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
+    import json
 
     equipo = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
 
@@ -79,6 +80,7 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
                 "slot_id": s.EquipoTemporalJugadorId,
                 "completo": s.Completo,
                 "seguro_id": s.SeguroId,
+                "datos_borrador": json.loads(s.DatosBorrador) if s.DatosBorrador else None,
                 "persona": {
                     "persona_id": s.PersonaId
                 } if s.PersonaId else None
@@ -86,6 +88,7 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
             for s in slots
         ]
     }
+
 
 
 def hay_slots(db, equipo_id):
