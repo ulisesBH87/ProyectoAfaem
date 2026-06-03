@@ -15,7 +15,10 @@ import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
-import { API_BASE } from '../../config/config';
+import {
+  mapAvailableSlotsResponse,
+  useEquipoTemporalPlayerDraft
+} from '../../hooks/useEquipoTemporalPlayerDraft';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -78,6 +81,7 @@ export default function ConfigurarEquipo() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedSeguroId, setSelectedSeguroId] = useState('');
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
 
   const [documents, setDocuments] = useState({
     acta: null,
@@ -108,7 +112,7 @@ export default function ConfigurarEquipo() {
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
 
   // Datos extraídos o capturados del jugador
-  const [extractedData, setExtractedData] = useState({
+  /* const [_legacyExtractedData, _setLegacyExtractedData] = useState({
     nombreJugador: '',
     apellidoPaterno: '',
     apellidoMaterno: '',
@@ -134,6 +138,17 @@ export default function ConfigurarEquipo() {
     nacAbuelaMaterna: 'MEXICANA',
     juegoClubExtranjero: 'NO',
     nui: ''
+  }); */
+
+  const {
+    currentSlot,
+    draftData: extractedData,
+    setDraftData: setExtractedData,
+    saveDraft: guardarBorradorEnBD
+  } = useEquipoTemporalPlayerDraft({
+    rawSlots: slotsData?.rawSlots || [],
+    selectedSlotId,
+    selectedSeguroId
   });
 
   // Detección de minoría de edad
@@ -163,7 +178,7 @@ export default function ConfigurarEquipo() {
   const showStep3 = isStep2Done || true; // El paso 3 siempre se muestra una vez seleccionado el seguro (los documentos son opcionales)
 
   // Obtener el slot actual según el seguro seleccionado
-  const currentSlot = React.useMemo(() => {
+  const _legacyCurrentSlot = React.useMemo(() => {
     if (!slotsData?.rawSlots || !selectedSeguroId) return null;
     return slotsData.rawSlots.find(
       s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
@@ -171,7 +186,7 @@ export default function ConfigurarEquipo() {
   }, [selectedSeguroId, slotsData]);
 
   // Guardar Borrador en la Base de Datos
-  const guardarBorradorEnBD = async (newData) => {
+  const _legacyGuardarBorradorEnBD = async (newData) => {
     if (!currentSlot?.slot_id) return;
     try {
       const token = localStorage.getItem('token');
@@ -192,10 +207,7 @@ export default function ConfigurarEquipo() {
   };
 
   const handleFieldChange = (field, value) => {
-    setExtractedData(prev => {
-      const updated = { ...prev, [field]: value };
-      return updated;
-    });
+    setExtractedData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleBlur = () => {
@@ -230,20 +242,16 @@ export default function ConfigurarEquipo() {
         const slotsResponse = await teamsService.getAvailableSlots(equipoTemporalId);
         
         // Mapear los slotsResponse al formato esperado por el frontend
-        const mappedSlotsData = {
-          hay_slots: slotsResponse.jugadores_restantes > 0,
-          slots_disponibles: slotsResponse.jugadores_restantes,
-          seguros_disponibles: slotsResponse.seguros.filter(s => s.disponibles > 0).map(s => ({
-            SeguroId: s.seguro_id,
-            Cantidad: s.disponibles
-          })),
-          rawSlots: slotsResponse.slots
-        };
+        const mappedSlotsData = mapAvailableSlotsResponse(slotsResponse);
 
         setSlotsData(mappedSlotsData);
 
-        // Preseleccionar primer seguro disponible si existe
-        if (mappedSlotsData.seguros_disponibles?.length > 0) {
+        // Preseleccionar primer slot disponible si existe
+        const firstAvailableSlot = mappedSlotsData.rawSlots?.find((slot) => !slot.completo) || mappedSlotsData.rawSlots?.[0];
+        if (firstAvailableSlot) {
+          setSelectedSlotId(firstAvailableSlot.slot_id);
+          setSelectedSeguroId(String(firstAvailableSlot.seguro_id));
+        } else if (mappedSlotsData.seguros_disponibles?.length > 0) {
           setSelectedSeguroId(String(mappedSlotsData.seguros_disponibles[0].SeguroId));
         }
 
@@ -259,7 +267,7 @@ export default function ConfigurarEquipo() {
   }, [equipoId, equipoTemporalId]);
 
   // Cargar borrador del slot seleccionado al cambiar de seguro
-  useEffect(() => {
+  /* useEffect(() => {
     if (!slotsData?.rawSlots || !selectedSeguroId) return;
 
     const slotConBorrador = slotsData.rawSlots.find(
@@ -298,7 +306,7 @@ export default function ConfigurarEquipo() {
         nui: ''
       });
     }
-  }, [selectedSeguroId, slotsData]);
+  }, [selectedSeguroId, slotsData]); */
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
   const handleFileUpload = async (documentKey, file) => {
@@ -955,7 +963,15 @@ export default function ConfigurarEquipo() {
                     return (
                       <div
                         key={`seguro-card-${seg.SeguroId}`}
-                        onClick={() => setSelectedSeguroId(String(seg.SeguroId))}
+                        onClick={() => {
+                          setSelectedSeguroId(String(seg.SeguroId));
+                          const matchingSlot = slotsData?.rawSlots?.find(
+                            (slot) => String(slot.seguro_id) === String(seg.SeguroId) && !slot.completo
+                          );
+                          if (matchingSlot) {
+                            setSelectedSlotId(matchingSlot.slot_id);
+                          }
+                        }}
                         style={{
                           padding: '16px',
                           borderRadius: '12px',
@@ -983,6 +999,50 @@ export default function ConfigurarEquipo() {
                     );
                   })}
                 </div>
+
+                {slotsData?.rawSlots?.length > 0 && (
+                  <div style={{ marginTop: '24px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', marginBottom: '12px' }}>
+                      Seleccione el jugador / slot exacto para este borrador
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                      {slotsData.rawSlots.map((slot, index) => {
+                        const seguroInfo = catalogs?.seguros?.find((s) => String(s.id) === String(slot.seguro_id));
+                        const slotEstado = slot.completo ? 'COMPLETO' : (slot.datos_borrador ? 'EN CAPTURA' : 'VACIO');
+                        const isActiveSlot = String(slot.slot_id) === String(selectedSlotId);
+                        return (
+                          <button
+                            key={`slot-button-${slot.slot_id}`}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSlotId(slot.slot_id);
+                              setSelectedSeguroId(String(slot.seguro_id));
+                            }}
+                            style={{
+                              textAlign: 'left',
+                              padding: '14px',
+                              borderRadius: '14px',
+                              border: isActiveSlot ? '2px solid #0b4ea6' : '1px solid #cbd5e1',
+                              background: isActiveSlot ? '#eff6ff' : 'white',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '8px'
+                            }}
+                          >
+                            <span style={{ fontSize: '13px', color: '#64748b' }}>Jugador {index + 1}</span>
+                            <span style={{ fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
+                              {seguroInfo ? seguroInfo.nombre : `Seguro ${slot.seguro_id}`}
+                            </span>
+                            <span style={{ padding: '4px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: slot.completo ? '#dcfce7' : (slot.datos_borrador ? '#fffbeb' : '#f8fafc'), color: slot.completo ? '#166534' : (slot.datos_borrador ? '#92400e' : '#475569') }}>
+                              {slotEstado}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>
