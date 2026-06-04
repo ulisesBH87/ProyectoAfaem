@@ -27,6 +27,28 @@ import {
 } from '../../components/partials';
 import Loader from '../../components/Loader';
 
+const parsearTelefonoE164 = (telefonoCompleto) => {
+  if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
+  const telClean = telefonoCompleto.trim();
+  if (telClean.startsWith('+')) {
+    if (telClean.length > 10) {
+      const local = telClean.slice(-10);
+      const codigo = telClean.slice(0, -10);
+      return { codigoPais: codigo, telefono: local };
+    }
+    return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+  }
+  if (telClean.length === 10 && /^\d+$/.test(telClean)) {
+    return { codigoPais: '+52', telefono: telClean };
+  }
+  if (telClean.length > 10 && /^\d+$/.test(telClean)) {
+    const local = telClean.slice(-10);
+    const codigo = '+' + telClean.slice(0, -10);
+    return { codigoPais: codigo, telefono: local };
+  }
+  return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+};
+
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
   <div style={{
@@ -114,6 +136,7 @@ export default function CompletarJugadoresEquipo() {
     fechaNacimiento: '',
     lugarNacimiento: 'MÉXICO',
     correo: '',
+    codigoPais: '+52',
     telefono: '',
     posicion: '',
     numCamiseta: '',
@@ -463,7 +486,7 @@ export default function CompletarJugadoresEquipo() {
       const correoCJE = extractedData.correo || '';
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
-      safeSetField(form, 'Teléfono', extractedData.telefono);
+      safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
       safeSetField(form, 'Asociación', 'AFAEM');
       safeSetField(form, 'fill_24', 'AFAEM');
 
@@ -663,7 +686,7 @@ export default function CompletarJugadoresEquipo() {
       formData.append('fecha_nacimiento', extractedData.fechaNacimiento);
       formData.append('lugar_nacimiento', extractedData.lugarNacimiento || 'MÉXICO');
       formData.append('correo', extractedData.correo || '');
-      formData.append('telefono', extractedData.telefono || '');
+      formData.append('telefono', extractedData.telefono ? ((extractedData.codigoPais || '+52') + extractedData.telefono) : '');
       formData.append('rol_en_equipo', extractedData.posicion || '3');
       formData.append('numero_camiseta', extractedData.numCamiseta || '0');
       formData.append('seguro_id', parseInt(selectedSeguroId, 10));
@@ -1261,7 +1284,53 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                    <input type="tel" value={extractedData.telefono} onChange={e => setExtractedData({ ...extractedData, telefono: e.target.value })} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select
+                        value={extractedData.codigoPais || '+52'}
+                        onChange={e => setExtractedData({ ...extractedData, codigoPais: e.target.value })}
+                        style={{
+                          padding: '10px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '14px',
+                          backgroundColor: 'white',
+                          width: '110px',
+                          flexShrink: 0
+                        }}
+                      >
+                        <option value="+52">México +52</option>
+                        <option value="+1">EE.UU./Canadá +1</option>
+                        <option value="+34">España +34</option>
+                        <option value="+54">Argentina +54</option>
+                        <option value="+55">Brasil +55</option>
+                        <option value="+56">Chile +56</option>
+                        <option value="+57">Colombia +57</option>
+                        <option value="+506">Costa Rica +506</option>
+                        <option value="+593">Ecuador +593</option>
+                        <option value="+503">El Salvador +503</option>
+                        <option value="+502">Guatemala +502</option>
+                        <option value="+504">Honduras +504</option>
+                        <option value="+505">Nicaragua +505</option>
+                        <option value="+507">Panamá +507</option>
+                        <option value="+595">Paraguay +595</option>
+                        <option value="+51">Perú +51</option>
+                        <option value="+598">Uruguay +598</option>
+                        <option value="+58">Venezuela +58</option>
+                      </select>
+                      <input
+                        type="tel"
+                        value={extractedData.telefono}
+                        onChange={e => setExtractedData({ ...extractedData, telefono: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                        placeholder="10 dígitos numéricos"
+                        style={{
+                          padding: '10px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '14px',
+                          flexGrow: 1
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 

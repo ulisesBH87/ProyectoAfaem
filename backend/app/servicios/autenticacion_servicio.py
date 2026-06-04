@@ -43,6 +43,7 @@ class AutenticacionServicio:
             raise usuario_excepciones.ErrorRegistroUsuario()
 
     def registrar_usuario(self, data):
+        from app.core.telefono_utils import validar_y_normalizar_telefono
 
         usuario_existe = usuario_repositorio.obtener_por_correo(self.db, data.Correo)
         if usuario_existe:
@@ -51,11 +52,13 @@ class AutenticacionServicio:
         salt = seguridad.generar_salt()
         hashed_password = seguridad.generar_hash(salt, data.Contrasena)
 
+        telefono_normalizado = validar_y_normalizar_telefono(data.NumeroTelefono)
+
         datos_persona = Personas(
             Nombre=data.Nombre,
             PrimerApellido=data.PrimerApellido,
             SegundoApellido=data.SegundoApellido,
-            NumeroTelefono=data.NumeroTelefono
+            NumeroTelefono=telefono_normalizado
         )
 
         datos_usuario = Usuario(

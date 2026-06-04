@@ -108,11 +108,11 @@ export default function Ingresar() {
   };
 
   return (
-    <div className="auth-page fade-in-up">
+    <div className="auth-page">
       <div className="auth-overlay"></div>
       
-      <div className="auth-content">
-        <div className="glass-dark auth-card-refined" style={{ maxWidth: '440px', margin: '0 auto', padding: '48px 40px', borderRadius: '24px', position: 'relative' }}>
+      <div className="auth-content fade-in-up">
+        <div className="glass-dark auth-card-refined">
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <img src={AfaemLogo} alt="AFAEM" style={{ height: '84px', marginBottom: '24px', filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.3))' }} />
             <h1 className="heading-outfit" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px', color: 'white' }}>Inicia Sesión</h1>
