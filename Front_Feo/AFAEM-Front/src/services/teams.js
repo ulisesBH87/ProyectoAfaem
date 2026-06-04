@@ -8,11 +8,6 @@ const api = axios.create({
 
 applyErrorInterceptor(api);
 
-const buildOptionalAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 /**
  * OBTIENE EL PERFIL DEL USUARIO
  */
@@ -216,9 +211,14 @@ export const registrarJugadorTemporal = async (data) => {
  */
 export const getAvailableSlots = async (equipoTemporalId) => {
   try {
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     const response = await api.get(`/equipo-temporal/slots`, {
       params: { equipo_temporal_id: equipoTemporalId },
-      headers: buildOptionalAuthHeaders()
+      headers
     });
     return response.data;
   } catch (error) {
@@ -317,29 +317,13 @@ export const getUserPlayersReal = async () => {
  */
 export const getCatalogs = async () => {
   try {
+    const token = localStorage.getItem('token');
     const response = await api.get(`/equipo-temporal/catalogos-registro`, {
-      headers: buildOptionalAuthHeaders()
+      headers: { 'Authorization': `Bearer ${token}` }
     });
     return response.data;
   } catch (error) {
     console.error('Error obteniendo catálogos:', error);
-    throw error;
-  }
-};
-
-/**
- * GUARDA EL BORRADOR JSON DE UN SLOT DE JUGADOR TEMPORAL
- */
-export const saveJugadorDraft = async (slotId, datos) => {
-  try {
-    const response = await api.post('/equipo-temporal/borrador-jugador', {
-      slot_id: slotId,
-      datos
-    }, {
-      headers: buildOptionalAuthHeaders()
-    });
-    return response.data;
-  } catch (error) {
     throw error;
   }
 };
@@ -488,7 +472,6 @@ export default {
   getAvailableSlots,
   getInvitationInfo,
   getEquipoTemporalInfo,
-  saveJugadorDraft,
   getPresidentesActivos,
   finalizarSolicitudCompleta,
   checkTeamSlots
