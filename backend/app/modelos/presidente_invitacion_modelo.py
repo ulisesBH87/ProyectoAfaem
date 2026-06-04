@@ -9,16 +9,44 @@ class PresidenteInvitacion(Base):
 
     PresidenteInvitacionId = Column(Integer, primary_key=True)
 
-    UsuarioId = Column(ForeignKey("Usuarios.UsuarioId"),nullable=False)
+    UsuarioId = Column(
+        ForeignKey("Usuarios.UsuarioId"),
+        nullable=False
+    )
 
-    UsuarioRelacion = relationship("Usuario",back_populates="PresidenteInvitacionRelacion")
+    UsuarioRelacion = relationship(
+        "Usuario",
+        back_populates="PresidenteInvitacionRelacion"
+    )
 
-    Token = Column(String(255),unique=True,nullable=False)
+    TokenIdentificador = Column(
+        String(64),
+        unique=True,
+        nullable=False
+    )
 
-    FechaCreacion = Column(DateTime,nullable=False)
+    TokenHash = Column(
+        String(255),
+        nullable=False
+    )
 
-    FechaExpiracion = Column(DateTime,nullable=False)
+    FechaCreacion = Column(
+        DateTime,
+        nullable=False
+    )
 
-    FechaUltimoAcceso = Column(DateTime,nullable=True)
+    FechaExpiracion = Column(
+        DateTime,
+        nullable=False
+    )
 
-    Activo = Column(Boolean,nullable=False,default=True)
+    FechaUltimoAcceso = Column(
+        DateTime,
+        nullable=True
+    )
+
+    Activo = Column(
+        Boolean,
+        nullable=False,
+        default=True
+    )
