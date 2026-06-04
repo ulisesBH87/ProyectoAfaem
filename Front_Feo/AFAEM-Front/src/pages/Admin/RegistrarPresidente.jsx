@@ -168,6 +168,8 @@ export default function RegistrarPresidente() {
     sexoId: '', fechaNacimiento: '',
     contrasena: '', confirmarContrasena: '',
   });
+  const [codigoPaisCuenta, setCodigoPaisCuenta] = useState('+52');
+  const [codigoPaisDoc, setCodigoPaisDoc] = useState('+52');
   const [cuentaErrors, setCuentaErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -283,7 +285,10 @@ export default function RegistrarPresidente() {
   useEffect(() => {
     if (paso === 3) {
       if (!correoDoc && cuenta.correo) setCorreoDoc(cuenta.correo);
-      if (!telefonoDoc && cuenta.telefono) setTelefonoDoc(cuenta.telefono);
+      if (!telefonoDoc && cuenta.telefono) {
+        setTelefonoDoc(cuenta.telefono);
+        setCodigoPaisDoc(codigoPaisCuenta);
+      }
 
       setOcrResults(prev => {
         const next = { ...prev };
@@ -611,7 +616,10 @@ export default function RegistrarPresidente() {
       const correoVal = correoDoc || cuenta.correo || '';
       const correoFontSize = correoVal.length > 35 ? 6 : correoVal.length > 25 ? 7 : correoVal.length > 18 ? 8 : 10;
       safeField(form, 'Correo electrónico', correoVal, correoFontSize);
-      safeField(form, 'Teléfono', ocrResults.telefono || telefonoDoc || cuenta.telefono);
+
+      const telLocal = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
+      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : (telefonoDoc ? codigoPaisDoc : codigoPaisCuenta);
+      safeField(form, 'Teléfono', codPais + telLocal);
       safeField(form, 'fill_20', tipoAfiliacion);
       safeField(form, 'Tipo', tipoAfiliacion);
       safeField(form, 'Asociación', asociacion);
@@ -694,7 +702,10 @@ export default function RegistrarPresidente() {
       fd.append('primerApellido', cuenta.primerApellido);
       fd.append('segundoApellido', cuenta.segundoApellido || '');
       fd.append('correo', correoFinal);
-      fd.append('telefono', ocrResults.telefono || telefonoDoc || cuenta.telefono || '');
+      const telLocal = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
+      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : (telefonoDoc ? codigoPaisDoc : codigoPaisCuenta);
+
+      fd.append('telefono', codPais + telLocal);
       fd.append('curp', curpDetectada);
       fd.append('sexoId', cuenta.sexoId || '');
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
@@ -738,8 +749,9 @@ export default function RegistrarPresidente() {
       const response = await registrarPresidenteAdmin(fd);
 
       const nombrePresidente = cuenta.nombre || '';
-      const telefonoRegistrado = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
-      const telefonoLimpio = telefonoRegistrado.replace(/\D/g, '');
+      const telLocalWhatsApp = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
+      const codPaisWhatsApp = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : (telefonoDoc ? codigoPaisDoc : codigoPaisCuenta);
+      const telefonoLimpio = (codPaisWhatsApp + telLocalWhatsApp).replace(/\D/g, '');
 
       const result = await Swal.fire({
         title: 'Cuenta creada correctamente, ¿Enviar mensaje al presidente?',
@@ -851,7 +863,33 @@ export default function RegistrarPresidente() {
               {/* Teléfono */}
               <div>
                 <label style={labelStyle}>Teléfono (10 dígitos) <span style={{ color: C.amber }}>*</span></label>
-                <input style={{ ...inputStyle, borderColor: cuentaErrors.telefono ? C.rose : C.inputBorder }} type="tel" placeholder="5512345678" maxLength={10} value={cuenta.telefono} onChange={e => setCuentaField('telefono', e.target.value.replace(/\D/g, ''))} />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select
+                    value={codigoPaisCuenta}
+                    onChange={(e) => setCodigoPaisCuenta(e.target.value)}
+                    style={{ ...selectStyle, width: '110px', flexShrink: 0 }}
+                  >
+                    <option value="+52">México +52</option>
+                    <option value="+1">EE.UU./Canadá +1</option>
+                    <option value="+34">España +34</option>
+                    <option value="+54">Argentina +54</option>
+                    <option value="+55">Brasil +55</option>
+                    <option value="+56">Chile +56</option>
+                    <option value="+57">Colombia +57</option>
+                    <option value="+506">Costa Rica +506</option>
+                    <option value="+593">Ecuador +593</option>
+                    <option value="+503">El Salvador +503</option>
+                    <option value="+502">Guatemala +502</option>
+                    <option value="+504">Honduras +504</option>
+                    <option value="+505">Nicaragua +505</option>
+                    <option value="+507">Panamá +507</option>
+                    <option value="+595">Paraguay +595</option>
+                    <option value="+51">Perú +51</option>
+                    <option value="+598">Uruguay +598</option>
+                    <option value="+58">Venezuela +58</option>
+                  </select>
+                  <input style={{ ...inputStyle, borderColor: cuentaErrors.telefono ? C.rose : C.inputBorder }} type="tel" placeholder="5512345678" maxLength={10} value={cuenta.telefono} onChange={e => setCuentaField('telefono', e.target.value.replace(/\D/g, '').slice(0, 10))} />
+                </div>
                 {cuentaErrors.telefono && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.telefono}</span>}
               </div>
             </div>
@@ -1097,8 +1135,34 @@ export default function RegistrarPresidente() {
                   <input style={inputStyle} type="email" value={correoDoc} onChange={e => setCorreoDoc(e.target.value)} placeholder="correo@example.com" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Teléfono</label>
-                  <input style={inputStyle} type="tel" value={telefonoDoc} onChange={e => setTelefonoDoc(e.target.value)} placeholder="5512345678" maxLength={10} />
+                  <label style={labelStyle}>Teléfono (10 dígitos)</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                      value={codigoPaisDoc}
+                      onChange={(e) => setCodigoPaisDoc(e.target.value)}
+                      style={{ ...selectStyle, width: '110px', flexShrink: 0 }}
+                    >
+                      <option value="+52">🇲🇽 México (+52)</option>
+                      <option value="+1">🇺🇸 EE.UU./Canadá (+1)</option>
+                      <option value="+34">🇪🇸 España (+34)</option>
+                      <option value="+54">🇦🇷 Argentina (+54)</option>
+                      <option value="+55">🇧🇷 Brasil (+55)</option>
+                      <option value="+56">🇨🇱 Chile (+56)</option>
+                      <option value="+57">🇨🇴 Colombia (+57)</option>
+                      <option value="+506">🇨🇷 Costa Rica (+506)</option>
+                      <option value="+593">🇪🇨 Ecuador (+593)</option>
+                      <option value="+503">🇸🇻 El Salvador (+503)</option>
+                      <option value="+502">🇬🇹 Guatemala (+502)</option>
+                      <option value="+504">🇭🇳 Honduras (+504)</option>
+                      <option value="+505">🇳🇮 Nicaragua (+505)</option>
+                      <option value="+507">🇵🇦 Panamá (+507)</option>
+                      <option value="+595">🇵🇾 Paraguay (+595)</option>
+                      <option value="+51">🇵🇪 Perú (+51)</option>
+                      <option value="+598">🇺🇾 Uruguay (+598)</option>
+                      <option value="+58">🇻🇪 Venezuela (+58)</option>
+                    </select>
+                    <input style={inputStyle} type="tel" value={telefonoDoc} onChange={e => setTelefonoDoc(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="5512345678" maxLength={10} />
+                  </div>
                 </div>
                 <div>
                   <label style={labelStyle}>Nombre del Equipo</label>

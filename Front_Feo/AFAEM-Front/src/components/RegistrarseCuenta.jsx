@@ -7,7 +7,7 @@ import RegistrationSuccess from './Auth/RegistrationSuccess';
 
 function RegistrarseCuenta() {
 	const navigate = useNavigate();
-	
+
 	// ESTADO DEL FORMULARIO
 	const [formData, setFormData] = useState({
 		Nombre: '',
@@ -19,18 +19,19 @@ function RegistrarseCuenta() {
 		confirmarContrasena: '',
 		aceptaPoliticas: false,
 	});
-	
+
 	// ESTADO DE VISIBILIDAD DE CONTRASEÑA
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-	
+	const [codigoPais, setCodigoPais] = useState('+52');
+
 	// ESTADO DE ERRORES Y MENSAJES
 	const [errors, setErrors] = useState({});
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState(false);
 	const [err, setErr] = useState(null);
 	const [pwInfo, setPwInfo] = useState({ rules: { minLen: false, hasLower: false, hasUpper: false, hasDigit: false, hasSpecial: false }, score: 0 });
-	
+
 	// ACTUALIZAR VALIDACIÓN DE CONTRASEÑA EN TIEMPO REAL
 	useEffect(() => {
 		setPwInfo(computePasswordRequirements(formData.Contrasena));
@@ -39,14 +40,18 @@ function RegistrarseCuenta() {
 	// MANEJAR CAMBIOS EN INPUTS
 	const handleChange = (e) => {
 		const { name, value, type, checked } = e.target;
-		const finalValue = name === 'Correo' ? value.toLowerCase() : value;
-		
+		let finalValue = name === 'Correo' ? value.toLowerCase() : value;
+
+		if (name === 'NumeroTelefono') {
+			finalValue = value.replace(/\D/g, '').slice(0, 10);
+		}
+
 		setFormData((prev) => {
 			const next = {
 				...prev,
 				[name]: type === 'checkbox' ? checked : finalValue
 			};
-			
+
 			setErrors((prevErrors) => {
 				const updatedErrors = {
 					...prevErrors,
@@ -65,14 +70,14 @@ function RegistrarseCuenta() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setErr(null);
-		
+
 		const newErrors = {};
 		Object.keys(formData).forEach((field) => {
 			if (field !== 'SegundoApellido') {
 				newErrors[field] = validateField(field, formData[field], formData);
 			}
 		});
-		
+
 		setErrors(newErrors);
 		if (Object.values(newErrors).some(Boolean)) return;
 
@@ -84,7 +89,7 @@ function RegistrarseCuenta() {
 				SegundoApellido: formData.SegundoApellido,
 				Correo: formData.Correo.toLowerCase(),
 				Contrasena: formData.Contrasena,
-				NumeroTelefono: formData.NumeroTelefono,
+				NumeroTelefono: codigoPais + formData.NumeroTelefono,
 				Rol: 'responsable'
 			};
 			const res = await apiRegister(payload);
@@ -109,23 +114,23 @@ function RegistrarseCuenta() {
 	};
 
 	return (
-		<div className="auth-page fade-in-up">
+		<div className="auth-page">
 			<div className="auth-overlay"></div>
-			<div className="auth-content">
-				<div className="glass-dark" style={{ maxWidth: '800px', margin: '0 auto', padding: '40px', borderRadius: '24px', position: 'relative' }}>
-					
+			<div className="auth-content fade-in-up">
+				<div className="glass-dark auth-card">
+
 					{success ? (
 						<RegistrationSuccess />
 					) : (
 						<div>
-							<AuthHeader 
-                title="Registro de Usuario" 
-                subtitle="Completa el formulario para unirte a la plataforma AFAEM" 
-              />
+							<AuthHeader
+								title="Registro de Usuario"
+								subtitle="Completa el formulario para unirte a la plataforma AFAEM"
+							/>
 
 							<form onSubmit={handleSubmit}>
-								<div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-									
+								<div className="auth-grid">
+
 									<div style={{ gridColumn: 'span 1' }}>
 										<label className="auth-label">Nombre *</label>
 										<input name="Nombre" value={formData.Nombre} onChange={handleChange} className="auth-input" placeholder="Tu nombre" required />
@@ -151,7 +156,54 @@ function RegistrarseCuenta() {
 
 									<div style={{ gridColumn: 'span 1' }}>
 										<label className="auth-label">Teléfono *</label>
-										<input name="NumeroTelefono" value={formData.NumeroTelefono} onChange={handleChange} className="auth-input" placeholder="10 dígitos" required />
+										<div style={{ display: 'flex', gap: '8px' }}>
+											<select
+												value={codigoPais}
+												onChange={(e) => setCodigoPais(e.target.value)}
+												style={{
+													width: '120px',
+													flexShrink: 0,
+													padding: '14px 12px',
+													background: '#181c27',
+													border: '1px solid rgba(255, 255, 255, 0.2)',
+													borderRadius: '12px',
+													color: 'white',
+													fontSize: '15px',
+													outline: 'none',
+													cursor: 'pointer',
+													backdropFilter: 'blur(5px)'
+												}}
+											>
+												<option value="+52">México +52</option>
+												<option value="+1">EE.UU./Canadá +1</option>
+												<option value="+34">España +34</option>
+												<option value="+54">Argentina +54</option>
+												<option value="+55">Brasil +55</option>
+												<option value="+56">Chile +56</option>
+												<option value="+57">Colombia +57</option>
+												<option value="+506">Costa Rica +506</option>
+												<option value="+593">Ecuador +593</option>
+												<option value="+503">El Salvador +503</option>
+												<option value="+502">Guatemala +502</option>
+												<option value="+504">Honduras +504</option>
+												<option value="+505">Nicaragua +505</option>
+												<option value="+507">Panamá +507</option>
+												<option value="+595">Paraguay +595</option>
+												<option value="+51">Perú +51</option>
+												<option value="+598">Uruguay +598</option>
+												<option value="+58">Venezuela +58</option>
+											</select>
+											<input
+												name="NumeroTelefono"
+												value={formData.NumeroTelefono}
+												onChange={handleChange}
+												className="auth-input"
+												placeholder="10 dígitos"
+												maxLength={10}
+												required
+												style={{ flexGrow: 1 }}
+											/>
+										</div>
 										{errors.NumeroTelefono && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px' }}>{errors.NumeroTelefono}</div>}
 									</div>
 
@@ -160,7 +212,7 @@ function RegistrarseCuenta() {
 										<div style={{ position: 'relative' }}>
 											<input type={showPassword ? "text" : "password"} name="Contrasena" value={formData.Contrasena} onChange={handleChange} className="auth-input" placeholder="••••••••" required />
 											<button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', zIndex: 10 }}>
-												{showPassword ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
+												{showPassword ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>}
 											</button>
 										</div>
 										<div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '10px', overflow: 'hidden' }}>
@@ -173,7 +225,7 @@ function RegistrarseCuenta() {
 										<div style={{ position: 'relative' }}>
 											<input type={showConfirmPassword ? "text" : "password"} name="confirmarContrasena" value={formData.confirmarContrasena} onChange={handleChange} className="auth-input" placeholder="••••••••" required />
 											<button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', zIndex: 10 }}>
-												{showConfirmPassword ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
+												{showConfirmPassword ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>}
 											</button>
 										</div>
 										{formData.confirmarContrasena && formData.confirmarContrasena !== formData.Contrasena && <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px' }}>Las contraseñas no coinciden</div>}
