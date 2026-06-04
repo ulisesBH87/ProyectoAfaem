@@ -49,51 +49,11 @@ const StepBadge = ({ number, isActive, isDone }) => (
   </div>
 );
 
-const EMPTY_DOCUMENTS = {
-  acta: null,
-  ine: null,
-  ineTutor: null,
-  identificacionMenor: null,
-  foto: null
-};
-
-const EMPTY_PREVIEWS = {
-  acta: null,
-  ine: null,
-  ineTutor: null,
-  identificacionMenor: null,
-  foto: null
-};
-
-const PLAYER_STATUS_CONFIG = {
-  VACIO: { icon: '○', label: 'VACIO', bg: '#f8fafc', color: '#475569' },
-  EN_CAPTURA: { icon: '◐', label: 'EN_CAPTURA', bg: '#fffbeb', color: '#92400e' },
-  COMPLETO: { icon: '●', label: 'COMPLETO', bg: '#dcfce7', color: '#166534' }
-};
-
-const BASE_DOCUMENT_CARDS = [
-  { key: 'acta', title: 'Acta de nacimiento', subtitle: 'Opcional para OCR y autollenado' },
-  { key: 'ine', title: 'Identificacion oficial', subtitle: 'INE, pasaporte o cedula' },
-  { key: 'foto', title: 'Fotografia del jugador', subtitle: 'Fotografia infantil formal' }
-];
-
-const MINOR_DOCUMENT_CARDS = [
-  { key: 'ineTutor', title: 'INE de padre o tutor', subtitle: 'Identificacion oficial del tutor' },
-  { key: 'identificacionMenor', title: 'Identificacion del menor', subtitle: 'Credencial escolar o certificado' }
-];
-
-const revokeBlobUrl = (url) => {
-  if (typeof url === 'string' && url.startsWith('blob:')) {
-    URL.revokeObjectURL(url);
-  }
-};
-
 export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = useParams();
-  const isPublicFlow = Boolean(token);
-
+  const isPublicFlow = !!token;
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
 
   // Límites de fecha para el registro de jugadores
@@ -132,11 +92,6 @@ export default function RegistroJugadores() {
     identificacionMenor: null,
     foto: null
   });
-  const [loading, setLoading] = useState(true);
-  const [selectedSlotId, setSelectedSlotId] = useState(null);
-  const [documentsBySlot, setDocumentsBySlot] = useState({});
-  const [previewsBySlot, setPreviewsBySlot] = useState({});
-  const [failedPhotoState, setFailedPhotoState] = useState(null);
 
   const [catalogs, setCatalogs] = useState({
     ligas: [],
@@ -197,10 +152,16 @@ export default function RegistroJugadores() {
     completo: false
   });
 
-  const slotIndex = useMemo(
-    () => slotStatuses.findIndex((slot) => String(slot.slot_id) === String(currentSlot?.slot_id)),
-    [slotStatuses, currentSlot?.slot_id]
-  );
+  const isPlayerMinor = (fechaNacimiento) => {
+    if (!fechaNacimiento) return false;
+    const hoy = new Date();
+    const nac = new Date(fechaNacimiento);
+    if (isNaN(nac.getTime())) return false;
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const mDiff = hoy.getMonth() - nac.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad < 18;
+  };
 
   const getPlayerStatus = (player) => {
     if (!player) return 'VACIO';
@@ -222,28 +183,57 @@ export default function RegistroJugadores() {
     return 'VACIO';
   };
 
-  const currentDocuments = currentSlot?.slot_id
-    ? (documentsBySlot[currentSlot.slot_id] || EMPTY_DOCUMENTS)
-    : EMPTY_DOCUMENTS;
+  const normalizePlayer = (player) => ({
+    ...player,
+    estado: getPlayerStatus(player)
+  });
 
-  const currentPreviews = currentSlot?.slot_id
-    ? (previewsBySlot[currentSlot.slot_id] || EMPTY_PREVIEWS)
-    : EMPTY_PREVIEWS;
+  const updatePlayer = (index, partial) => {
+    setJugadores(prev => {
+      const next = [...prev];
+      next[index] = normalizePlayer({ ...next[index], ...partial });
+      return next;
+    });
+  };
 
-  const esMenorDeEdad = useMemo(
-    () => isJugadorMenorDeEdad(currentDatos.fechaNacimiento),
-    [currentDatos.fechaNacimiento]
-  );
+  const updatePlayerDatos = (index, datosPartial) => {
+    setJugadores(prev => {
+      const next = [...prev];
+      next[index] = normalizePlayer({
+        ...next[index],
+        datos: {
+          ...next[index].datos,
+          ...datosPartial
+        }
+      });
+      return next;
+    });
+  };
 
-  const currentSeguro = useMemo(
-    () => catalogs.seguros?.find((seguro) => String(seguro.id) === String(currentSlot?.seguro_id)) || null,
-    [catalogs.seguros, currentSlot?.seguro_id]
-  );
+  const updatePlayerDocuments = (index, documentosPartial) => {
+    setJugadores(prev => {
+      const next = [...prev];
+      next[index] = normalizePlayer({
+        ...next[index],
+        documentos: {
+          ...next[index].documentos,
+          ...documentosPartial
+        }
+      });
+      return next;
+    });
+  };
 
-  const isStep1Done = Boolean(currentSlot);
-  const isStep2Done = Object.values(currentDocuments).some(Boolean);
-  const showStep2 = isStep1Done;
-  const showStep3 = isStep1Done;
+  const updatePlayerSeguro = (index, seguroId) => {
+    setJugadores(prev => {
+      const next = [...prev];
+      next[index] = normalizePlayer({
+        ...next[index],
+        seguroId
+      });
+      return next;
+    });
+  };
 
   const currentPlayer = jugadores[currentPlayerIndex] || emptyPlayer(currentPlayerIndex);
   const currentDatos = currentPlayer.datos || { ...defaultPlayerDatos };
@@ -476,7 +466,7 @@ export default function RegistroJugadores() {
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
           const byteCharacters = atob(data.imagen);
           const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i += 1) {
+          for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
           }
           const byteArray = new Uint8Array(byteNumbers);
@@ -495,11 +485,11 @@ export default function RegistroJugadores() {
           updatePlayerDocuments(currentPlayerIndex, { foto: null });
 
           Swal.fire({
-            title: 'Error en la fotografia',
-            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} Deseas cargarla de todos modos?`,
+            title: 'Error en la fotografía',
+            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Si, cargar igualmente',
+            confirmButtonText: 'Sí, cargar igualmente',
             cancelButtonText: 'No, intentar de nuevo',
             confirmButtonColor: '#0b4ea6',
             cancelButtonColor: '#cbd5e1'
@@ -523,8 +513,8 @@ export default function RegistroJugadores() {
             }
           });
         }
-      } catch (error) {
-        Swal.fire('Error de validacion', error.message || 'No se pudo procesar la foto.', 'error');
+      } catch (err) {
+        Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
       }
     }
 
@@ -677,7 +667,7 @@ export default function RegistroJugadores() {
       });
 
       const templateUrl = '/formato_afiliacion_jugador.pdf';
-      const existingPdfBytes = await fetch(templateUrl).then((res) => res.arrayBuffer());
+      const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const form = pdfDoc.getForm();
       const firstPage = pdfDoc.getPages()[0];
@@ -703,7 +693,7 @@ export default function RegistroJugadores() {
       safeSetField(form, 'Nombres', currentDatos.nombreJugador);
       safeSetField(form, 'Apellido Paterno', currentDatos.apellidoPaterno);
       safeSetField(form, 'Apellido Materno', currentDatos.apellidoMaterno);
-      safeSetField(form, 'CURP o Clave Unica de Registro de Poblacion', currentDatos.curp);
+      safeSetField(form, 'CURP o Clave Única de Registro de Población', currentDatos.curp);
       safeSetField(form, 'Fecha de Nacimiento', currentDatos.fechaNacimiento);
       safeSetField(form, 'Sexo', currentDatos.genero === '1' ? 'MASCULINO' : 'FEMENINO');
       safeSetField(form, 'Lugar de Nacimiento', currentDatos.lugarNacimiento);
