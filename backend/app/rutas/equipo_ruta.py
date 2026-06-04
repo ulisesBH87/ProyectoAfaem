@@ -407,6 +407,7 @@ async def registrar_jugador(
     documento_afiliacion_ids: List[int] = Form(...),
     archivos: list[UploadFile] = File(...),
     seguro_id: int = Form(...),
+    slot_id: Optional[int] = Form(None),
     db: Session = Depends(get_db)
 ):
     persona = JugadorPersona(
@@ -417,7 +418,7 @@ async def registrar_jugador(
         sexo_id=sexo_id,
         fecha_nacimiento=fecha_nacimiento
     )
-    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id)
+    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id)
 
 class BorradorJugadorPayload(BaseModel):
     slot_id: int
@@ -426,8 +427,7 @@ class BorradorJugadorPayload(BaseModel):
 @router.post("/borrador-jugador")
 def guardar_borrador_jugador(
     payload: BorradorJugadorPayload,
-    db: Session = Depends(get_db),
-    usuario = Depends(obtener_usuario_actual)
+    db: Session = Depends(get_db)
 ):
     slot = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalJugadorId == payload.slot_id).first()
     if not slot:
