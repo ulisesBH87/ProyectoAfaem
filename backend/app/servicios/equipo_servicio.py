@@ -18,7 +18,7 @@ from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
     return equipo_repositorio.obtener_equipos_temporales_por_usuario_repo(db, usuario_id)
 
-async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos_afiliacion_ids, archivos, seguro_id):
+async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos_afiliacion_ids, archivos, seguro_id, slot_id=None):
 
     existe_persona = equipo_repositorio.existe_persona_repo(db, persona.curp)
     if existe_persona:
@@ -26,20 +26,42 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
     
     persona_id = personas_repositorio.crear_persona(db, persona)
     
+    solicitud_id = equipo_repositorio.obtener_solicitud_id(db, equipo_temporal_id)
+
+    if slot_id is not None:
+        slot = db.query(EquipoTemporalJugador).filter(
+            EquipoTemporalJugador.EquipoTemporalJugadorId == slot_id,
+            EquipoTemporalJugador.EquipoTemporalId == equipo_temporal_id
+        ).first()
+        if not slot:
+            raise HTTPException(404, "Slot de jugador temporal no encontrado")
+        if slot.Completo:
+            raise HTTPException(400, "El slot seleccionado ya está completo")
+        
+        await documentos_servicio.subir_documento_servicio2(db, persona_id, documentos_afiliacion_ids, archivos, solicitud_id)
+        
+        slot.PersonaId = persona_id
+        slot.Completo = True
+        slot.SeguroId = seguro_id
+        slot.DatosBorrador = None
+        
+        db.commit()
+        return {"mensaje": "Jugador registrado"}
+
     slots = equipo_repositorio.obtener_cantidad_slots(db, equipo_temporal_id)
     
-
     for slot in slots:
-       
         if not slot.Completo:
-            solicitud_id = equipo_repositorio.obtener_solicitud_id(db, equipo_temporal_id)
             await documentos_servicio.subir_documento_servicio2(db, persona_id, documentos_afiliacion_ids, archivos, solicitud_id)
-            equipo_repositorio.actualizar_slot_repo(db, slot, persona_id, seguro_id)
-    
+            
+            slot.PersonaId = persona_id
+            slot.Completo = True
+            slot.SeguroId = seguro_id
+            slot.DatosBorrador = None
+            
             db.commit()
             return {"mensaje": "Jugador registrado"}
     
-
     raise HTTPException(400, "Todos los espacios ocupados")
 
 def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
@@ -69,12 +91,21 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
             "disponibles": total - usados
         })
 
+    nombre_equipo = equipo.NombreEquipo or "Equipo sin nombre"
+    nombre_liga = equipo.LigaRelacion.Nombreliga if equipo.LigaRelacion else "Liga no especificada"
+    nombre_categoria = "LIBRE"
+    if equipo.LigaRelacion and equipo.LigaRelacion.CategoriaRelacion:
+        nombre_categoria = equipo.LigaRelacion.CategoriaRelacion.NombreCategoria
+
     return {
         "equipo_temporal_id": equipo.EquipoTemporalId,
         "cantidad_jugadores_pagados": equipo.CantidadJugadoresPagados,
         "jugadores_registrados": sum(1 for s in slots if s.Completo),
         "jugadores_restantes": equipo.CantidadJugadoresPagados - sum(1 for s in slots if s.Completo),
         "seguros": seguros_response,
+        "nombre_equipo": nombre_equipo,
+        "nombre_liga": nombre_liga,
+        "nombre_categoria": nombre_categoria,
         "slots": [
             {
                 "slot_id": s.EquipoTemporalJugadorId,
