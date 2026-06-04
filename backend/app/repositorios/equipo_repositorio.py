@@ -424,10 +424,15 @@ def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int):
     return slot
 
 def actualizar_orden(db, solicitud_id: int):
+    # Si no hay solicitud asociada (ej. equipo creado directamente por admin), no hay orden que marcar.
+    if not solicitud_id:
+        return
+
     orden = db.query(OrdenPago).filter(OrdenPago.SolicitudId == solicitud_id).first()
     
     if not orden:
-        raise ValueError("Orden de pago no encontrada")
+        # Si la orden no se encuentra, no es un error crítico: puede que el admin haya aprobado directamente.
+        return
 
     orden.EstatusPagoId = int(EstatusValidacionPago.CADUCADO)
 
