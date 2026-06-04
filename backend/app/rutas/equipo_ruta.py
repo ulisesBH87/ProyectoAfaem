@@ -76,13 +76,20 @@ async def obtener_equipo_por_token(token: str, db: Session = Depends(get_db)):
     if equipo.LigaRelacion and equipo.LigaRelacion.CategoriaRelacion:
         nombre_categoria = equipo.LigaRelacion.CategoriaRelacion.NombreCategoria
 
+    nombre_presidente = "No disponible"
+    if equipo.UsuarioRelacion:
+        persona = db.query(Personas).filter(Personas.PersonaId == equipo.UsuarioRelacion.PersonaId).first()
+        if persona:
+            nombre_presidente = f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip().upper()
+
     return {
         "equipo_temporal_id": equipo.EquipoTemporalId,
         "nombre_equipo": nombre_equipo,
         "nombre_liga": nombre_liga,
         "nombre_categoria": nombre_categoria,
         "slots_disponibles": slots_disponibles,
-        "total_slots": equipo.CantidadJugadoresPagados
+        "total_slots": equipo.CantidadJugadoresPagados,
+        "nombre_presidente": nombre_presidente
     }
 
 # == REGISTROS ==

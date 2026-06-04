@@ -10,8 +10,10 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaExclamationTriangle
 } from 'react-icons/fa';
+import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import teamsService from '../../services/teams';
@@ -197,6 +199,7 @@ export default function RegistroJugadores() {
   const [jugadores, setJugadores] = useState([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [failedPhoto, setFailedPhoto] = useState(null);
+  const [linkError, setLinkError] = useState(false);
 
   // Estados y refs para autoguardado toast
   const [toastVisible, setToastVisible] = useState(false);
@@ -457,20 +460,30 @@ export default function RegistroJugadores() {
       setCatalogs(catalogsData);
 
       if (isPublicFlow && !teamId) {
+        if (!token) {
+          setLinkError(true);
+          setLoadingSlots(false);
+          return;
+        }
         inviteData = await teamsService.getInvitationInfo(token);
         effectiveTeamId = inviteData.equipo_temporal_id;
         setTeamId(effectiveTeamId);
         inviteTeamInfo = {
           equipo: inviteData.nombre_equipo || '',
           liga: inviteData.nombre_liga || '',
-          categoria: inviteData.nombre_categoria || 'LIBRE'
+          categoria: inviteData.nombre_categoria || 'LIBRE',
+          presidente: inviteData.nombre_presidente || 'No disponible'
         };
       }
 
       if (!effectiveTeamId) {
-        if (!isPublicFlow) {
+        if (!isPublicFlow && !location.state?.teamId) {
+          setLinkError(true);
+        } else if (!isPublicFlow) {
           Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
           navigate('/presidente-equipo/dashboard');
+        } else {
+          setLinkError(true);
         }
         return;
       }
@@ -495,7 +508,8 @@ export default function RegistroJugadores() {
           ...datos,
           equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
           liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
-          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE'
+          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
+          presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
         };
 
         return {
@@ -520,7 +534,11 @@ export default function RegistroJugadores() {
 
     } catch (err) {
       console.error('Error al obtener info del equipo:', err);
-      Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+      if (isPublicFlow || !location.state?.teamId) {
+        setLinkError(true);
+      } else {
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+      }
     } finally {
       setLoadingSlots(false);
     }
@@ -1076,6 +1094,132 @@ export default function RegistroJugadores() {
     }
   };
 
+  if (linkError) {
+    return (
+      <div
+        className="fade-in-up"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#ffffff',
+          padding: '20px',
+        }}
+      >
+        <div
+          className="card shadow"
+          style={{
+            padding: '56px 48px',
+            borderRadius: '28px',
+            textAlign: 'center',
+            maxWidth: '520px',
+            width: '100%',
+            backgroundColor: '#ffffff',
+            border: '1px solid #f1f5f9'
+          }}
+        >
+          {/* Logo */}
+          <img
+            src={AfaemLogo}
+            alt="AFAEM"
+            style={{
+              width: '80px',
+              height: 'auto',
+              margin: '0 auto 24px',
+              display: 'block',
+              opacity: 0.85,
+            }}
+          />
+
+          {/* Ícono de Error */}
+          <div
+            style={{
+              width: '88px',
+              height: '88px',
+              borderRadius: '28px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '36px',
+              margin: '0 auto 28px',
+              border: '2px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <FaExclamationTriangle />
+          </div>
+
+          {/* Badge */}
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '6px 18px',
+              background: 'rgba(239, 68, 68, 0.08)',
+              color: '#ef4444',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '800',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              marginBottom: '20px',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            Error de Acceso
+          </span>
+
+          <h1
+            style={{
+              fontSize: '28px',
+              fontWeight: '800',
+              color: '#1e293b',
+              margin: '0 0 12px',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Enlace no válido o expirado
+          </h1>
+
+          <p
+            style={{
+              color: '#64748b',
+              fontSize: '15px',
+              lineHeight: '1.7',
+              marginBottom: '36px',
+              maxWidth: '380px',
+              margin: '0 auto 36px',
+            }}
+          >
+            El enlace que intentas utilizar ya no es válido, ha expirado o no existe.
+          </p>
+
+          <button
+            onClick={() => navigate('/ingresar')}
+            style={{
+              padding: '14px 36px',
+              fontSize: '15px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              borderRadius: '14px',
+              border: 'none',
+              backgroundColor: '#0b4ea6',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              width: '100%'
+            }}
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loadingSlots) {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -1199,6 +1343,8 @@ export default function RegistroJugadores() {
             <span><strong>Liga:</strong> {(currentDatos.liga || 'N/A').toUpperCase()}</span>
             <span>•</span>
             <span><strong>Categoría:</strong> {(currentDatos.categoria || 'LIBRE').toUpperCase()}</span>
+            <span>•</span>
+            <span><strong>Presidente:</strong> {(currentDatos.presidente || 'No disponible').toUpperCase()}</span>
           </div>
         </div>
 
