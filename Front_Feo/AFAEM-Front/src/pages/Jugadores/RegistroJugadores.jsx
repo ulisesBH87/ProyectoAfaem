@@ -62,7 +62,7 @@ export default function RegistroJugadores() {
   minDate.setFullYear(minDate.getFullYear() - 100);
   const minDateStr = minDate.toISOString().split('T')[0];
 
-  // ESTILO DINÁMICO PARA HOVER
+  // ESTILO DINÁMICO PARA HOVER Y DISEÑO RESPONSIVO
   const hoverStyles = `
     .document-card:hover .overlay-actions {
       opacity: 1 !important;
@@ -74,6 +74,119 @@ export default function RegistroJugadores() {
     label, .form-label {
       text-transform: uppercase !important;
     }
+    .toast-auto-save {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      z-index: 9999;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .toast-auto-save.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Clases responsivas */
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .form-grid-2-align-end {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      align-items: end;
+    }
+    .form-grid-2-foraneo {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .btn-container-responsive {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 40px;
+      --btn-min-width: 200px;
+      --btn-width: auto;
+    }
+    .main-card-responsive {
+      padding: 40px;
+    }
+    .form-wrapper-responsive {
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    
+    input, select {
+      min-height: 44px;
+    }
+
+    @media (max-width: 1024px) {
+      .form-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .form-grid-3, .form-grid-2, .form-grid-2-align-end, .form-grid-2-foraneo {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+      .btn-container-responsive {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        --btn-min-width: 100%;
+        --btn-width: 100%;
+      }
+      .main-card-responsive {
+        padding: 16px;
+        border-radius: 16px !important;
+      }
+      .form-wrapper-responsive {
+        padding: 16px;
+        border-radius: 12px !important;
+        margin-bottom: 20px;
+      }
+      .premium-card {
+        padding: 16px 20px !important;
+        border-radius: 16px !important;
+      }
+      .premium-card h1 {
+        font-size: 20px !important;
+      }
+      .premium-card div:last-child {
+        text-align: left !important;
+        width: 100%;
+      }
+    }
   `;
 
   // ESTADOS
@@ -84,6 +197,28 @@ export default function RegistroJugadores() {
   const [jugadores, setJugadores] = useState([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [failedPhoto, setFailedPhoto] = useState(null);
+
+  // Estados y refs para autoguardado toast
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimeoutRef = useRef(null);
+
+  const triggerToast = () => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastVisible(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastVisible(false);
+    }, 2500); // 2.5s visible, luego 0.5s fade out (total ~3s)
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const [previews, setPreviews] = useState({
     acta: null,
@@ -262,7 +397,7 @@ export default function RegistroJugadores() {
   const guardarBorradorEnBD = async (slotId, newData) => {
     if (!slotId) return;
     try {
-      await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
+      const response = await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -272,6 +407,9 @@ export default function RegistroJugadores() {
           datos: newData
         })
       });
+      if (response.ok) {
+        triggerToast();
+      }
     } catch (err) {
       console.warn('No se pudo guardar el borrador en la BD:', err);
     }
@@ -1097,12 +1235,11 @@ export default function RegistroJugadores() {
           )}
         </div>
       ) : (
-        <div className="premium-card fade-in" style={{
+        <div className="premium-card fade-in main-card-responsive" style={{
           maxWidth: '1000px',
           margin: '0 auto',
           background: 'white',
           borderRadius: '24px',
-          padding: '40px',
           boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
           border: '1px solid #e2e8f0'
         }}>
@@ -1406,9 +1543,9 @@ export default function RegistroJugadores() {
                 </div>
 
                 {/* CAMPOS DEL FORMULARIO */}
-                <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+                <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-3">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
                       <input type="text" value={currentDatos.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -1423,7 +1560,7 @@ export default function RegistroJugadores() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-3">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                       <input type="number" value={currentDatos.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -1477,7 +1614,7 @@ export default function RegistroJugadores() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-3">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
                       <input
@@ -1513,7 +1650,7 @@ export default function RegistroJugadores() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-2">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
                       <input type="email" value={currentDatos.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -1606,7 +1743,7 @@ export default function RegistroJugadores() {
 
                     {currentDatos.esForaneo ? (
                       <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        <div className="form-grid-2-foraneo">
                           <EntradaFormulario
                             etiqueta="Nacionalidad del jugador"
                             valor={currentDatos.nacionalidadJugador}
@@ -1621,7 +1758,7 @@ export default function RegistroJugadores() {
                           />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
+                        <div className="form-grid-2-align-end">
                           <EntradaSeleccion
                             etiqueta="¿El jugador ha vivido en el extranjero?"
                             valor={currentDatos.haVividoExtranjero ? '1' : '0'}
@@ -1646,7 +1783,7 @@ export default function RegistroJugadores() {
                           )}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        <div className="form-grid-2-foraneo">
                           <EntradaFormulario
                             etiqueta="Nacionalidad del padre"
                             valor={currentDatos.nacionalidadPadre}
@@ -1697,12 +1834,12 @@ export default function RegistroJugadores() {
                 </div>
 
                 {/* ACCIONES FINALES */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+                <div className="btn-container-responsive">
                   {!isPublicFlow && (
                     <BotonSecundario
                       etiqueta="Cancelar y volver"
                       alHacerClick={() => navigate(-1)}
-                      estilo={{ minWidth: '200px' }}
+                      estilo={{ minWidth: 'var(--btn-min-width, 200px)', width: 'var(--btn-width, auto)' }}
                     />
                   )}
                   <BotonPrimario
@@ -1710,7 +1847,7 @@ export default function RegistroJugadores() {
                     icono={<FaSave />}
                     alHacerClick={handleGuardar}
                     deshabilitado={uploading}
-                    estilo={{ minWidth: '300px' }}
+                    estilo={{ minWidth: 'var(--btn-min-width, 300px)', width: 'var(--btn-width, auto)' }}
                   />
                 </div>
               </section>
@@ -1821,6 +1958,12 @@ export default function RegistroJugadores() {
           </div>
         </div>
       </Modal>
+
+      {/* Notificación de autoguardado */}
+      <div className={`toast-auto-save ${toastVisible ? 'show' : ''}`}>
+        <FaCheckCircle style={{ color: '#10b981', fontSize: '16px' }} />
+        <span>Borrador guardado</span>
+      </div>
     </div>
   );
 }
