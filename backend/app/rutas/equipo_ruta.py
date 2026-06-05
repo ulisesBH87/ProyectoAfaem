@@ -24,6 +24,10 @@ from app.enums.documentos_estatus_enum import DocumentoEstatus
 from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
+from app.repositorios.presidente_invitacion_repositorio import (
+    crear_invitacion_presidente_repo,
+    validar_invitacion_presidente_repo,
+)
 
 UPLOAD_DIR = "uploads"
 DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
@@ -59,30 +63,22 @@ async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
 
     return slots
 
-@router.get("/invitacion/{token}")
-async def obtener_equipo_por_token(token: str, db: Session = Depends(get_db)):
-    equipo = db.query(EquipoTemporal).filter(EquipoTemporal.TokenInvitacion == token).first()
-    if not equipo:
-        raise HTTPException(status_code=404, detail="Enlace de invitación no válido o expirado.")
-    
-    # Calcular slots disponibles
+@router.get("/invitacion/{token_identificador}/{token_secreto}")
+async def validar_invitacion_presidente(token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
+    invitacion = validar_invitacion_presidente_repo(db, token_identificador, token_secreto)
+
     from app.repositorios import equipo_repositorio
-    slots = equipo_repositorio.obtener_slots_con_persona(db, equipo.EquipoTemporalId)
-    slots_disponibles = sum(1 for s in slots if not s.Completo)
-    
-    nombre_equipo = equipo.NombreEquipo or "Equipo sin nombre"
-    nombre_liga = equipo.LigaRelacion.Nombreliga if equipo.LigaRelacion else "Liga no especificada"
-    nombre_categoria = "LIBRE"
-    if equipo.LigaRelacion and equipo.LigaRelacion.CategoriaRelacion:
-        nombre_categoria = equipo.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    equipos_pendientes = equipo_repositorio.obtener_equipos_temporales_pendientes_por_usuario_repo(
+        db,
+        invitacion.UsuarioId
+    )
+
+    db.commit()
 
     return {
-        "equipo_temporal_id": equipo.EquipoTemporalId,
-        "nombre_equipo": nombre_equipo,
-        "nombre_liga": nombre_liga,
-        "nombre_categoria": nombre_categoria,
-        "slots_disponibles": slots_disponibles,
-        "total_slots": equipo.CantidadJugadoresPagados
+        "usuario_id": invitacion.UsuarioId,
+        "equipos_temporales": equipos_pendientes
     }
 
 # == REGISTROS ==
@@ -1185,6 +1181,11 @@ async def registrar_presidente_admin(
         presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == nueva_persona.PersonaId).first()
         if presidente:
             presidente.EstatusId = 7
+
+        invitacion_data = crear_invitacion_presidente_repo(db, nuevo_usuario.UsuarioId)
+        url_invitacion = (
+            f"/i/{invitacion_data['token_identificador']}/{invitacion_data['token_secreto']}"
+        )
             
         db.commit()
         
@@ -1195,7 +1196,9 @@ async def registrar_presidente_admin(
                 "nombre": nueva_persona.Nombre,
                 "correo": nuevo_usuario.Correo,
                 "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados,
-                "token_invitacion": nuevo_equipo_temporal.TokenInvitacion
+                "token_identificador": invitacion_data["token_identificador"],
+                "token_secreto": invitacion_data["token_secreto"],
+                "url_invitacion": url_invitacion
             }
         }
     except HTTPException as e:

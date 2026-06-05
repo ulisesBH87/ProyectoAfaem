@@ -22,19 +22,25 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/iniciar-sesion")
 def generar_salt():
     return secrets.token_hex(16)
 
-def generar_hash(salt: str, contrasena: str):
+def generar_hash_con_salt(salt: str, texto_plano: str):
     hash_generado = hashlib.sha256(
-        (salt+contrasena).encode()
+        (salt + texto_plano).encode()
     ).hexdigest()
 
     return hash_generado
 
-def verificar_contrasena(contrasena_plana: str, hash_guardado: str, salt) -> bool:
+def verificar_hash_con_salt(texto_plano: str, hash_guardado: str, salt: str) -> bool:
     hash_nuevo = hashlib.sha256(
-        (salt+contrasena_plana).encode()
+        (salt + texto_plano).encode()
         ).hexdigest()
 
     return hmac.compare_digest(hash_nuevo, hash_guardado)
+
+def generar_hash(salt: str, contrasena: str):
+    return generar_hash_con_salt(salt, contrasena)
+
+def verificar_contrasena(contrasena_plana: str, hash_guardado: str, salt) -> bool:
+    return verificar_hash_con_salt(contrasena_plana, hash_guardado, salt)
 
 
 #JWT

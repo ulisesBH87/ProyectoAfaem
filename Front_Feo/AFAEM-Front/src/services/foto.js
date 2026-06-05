@@ -36,9 +36,9 @@ export const validarFotografia = async (archivo) => {
     // Si ya es un error con mensaje amigable (ej. de getErrorMessage) lo relanzamos
     // verificando que no sea un error técnico de parseo JSON o similar
     if (err.message && !err.message.includes("Unexpected token") && !err.message.includes("json")) {
-        throw err;
+      throw err;
     }
-    
+
     // Si es un error de red o fetch falló (cors, dns, etc)
     throw new Error("No se pudo conectar con el servidor de validación.");
   }

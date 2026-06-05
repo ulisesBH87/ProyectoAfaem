@@ -28,3 +28,6 @@ class Usuario(Base):
     OrdenPagoRelacion = relationship("OrdenPago", back_populates="UsuarioPagoRelacion")
 
     EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="UsuarioRelacion")
+
+
+    PresidenteInvitacionRelacion = relationship("PresidenteInvitacion",back_populates="UsuarioRelacion")
