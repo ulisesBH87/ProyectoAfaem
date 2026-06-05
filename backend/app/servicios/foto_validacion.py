@@ -1,3 +1,4 @@
+#VALIDACION DE FOTOGRAFIA PARA DOCUMENTOS DE IDENTIDAD
 import cv2
 import numpy as np
 

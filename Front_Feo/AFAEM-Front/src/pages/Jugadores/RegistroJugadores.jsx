@@ -323,7 +323,7 @@ export default function RegistroJugadores() {
 
   const getPlayerStatus = (player) => {
     if (!player) return 'VACIO';
-    if (player.completo) return 'COMPLETO';
+    if (player.completo) return 'INSCRITO';
     const datos = player.datos || {};
     const docs = player.documentos || {};
     const hasRequiredFields = Boolean(
@@ -336,7 +336,7 @@ export default function RegistroJugadores() {
       datos.correo?.trim()
     );
     const hasAnyData = Object.values(datos).some(value => typeof value === 'string' ? value.trim() !== '' : Boolean(value)) || Object.values(docs).some(Boolean);
-    if (hasRequiredFields) return 'COMPLETO'; // Note: documents are optional for president flow
+    if (hasRequiredFields) return 'LISTO'; // Note: documents are optional for president flow
     if (hasAnyData) return 'EN_CAPTURA';
     return 'VACIO';
   };
@@ -527,7 +527,7 @@ export default function RegistroJugadores() {
         return {
           numero: i + 1,
           slotId: slot.slot_id,
-          estado: slot.completo ? 'COMPLETO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
+          estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
           datos: mergedDatos,
           documentos: {
             acta: null,
@@ -595,7 +595,8 @@ export default function RegistroJugadores() {
   const playerStatusConfig = {
     VACIO: { icon: '⚪', label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
     EN_CAPTURA: { icon: '🟡', label: 'EN CAPTURA', bg: '#fffbeb', color: '#92400e' },
-    COMPLETO: { icon: '🟢', label: 'COMPLETO', bg: '#dcfce7', color: '#166534' }
+    LISTO: { icon: '🔵', label: 'LISTO PARA REGISTRAR', bg: '#eff6ff', color: '#1e40af' },
+    INSCRITO: { icon: '🟢', label: 'INSCRITO', bg: '#dcfce7', color: '#166534' }
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
@@ -868,13 +869,12 @@ export default function RegistroJugadores() {
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
       safeSetField(form, 'Teléfono', (currentDatos.codigoPais || '+52') + (currentDatos.telefono || ''));
       safeSetField(form, 'Asociación', 'AFAEM');
-      safeSetField(form, 'fill_24', 'AFAEM');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(currentSeguroId));
       if (seguroSel?.nombre) {
         try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
-        try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
+        try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
       safeSetField(form, 'Liga', (currentDatos.liga || '').split('(')[0].trim());
@@ -1045,6 +1045,7 @@ export default function RegistroJugadores() {
       formData.append('posicion', player.datos.posicion || '3');
       formData.append('num_camiseta', player.datos.numCamiseta || '0');
       formData.append('seguro_id', parseInt(player.seguroId, 10));
+      formData.append('nui', player.datos.nui || '');
 
       if (player.slotId) {
         formData.append('slot_id', parseInt(player.slotId, 10));
@@ -1071,7 +1072,7 @@ export default function RegistroJugadores() {
       const files = [];
 
       if (player.documentos.acta) { docIds.push(22); files.push(player.documentos.acta); }
-      if (esPlayerMinor(player.datos.fechaNacimiento)) {
+      if (isPlayerMinor(player.datos.fechaNacimiento)) {
         if (player.documentos.ineTutor) { docIds.push(33); files.push(player.documentos.ineTutor); }
         if (player.documentos.identificacionMenor) { docIds.push(36); files.push(player.documentos.identificacionMenor); }
       } else {
@@ -1309,10 +1310,15 @@ export default function RegistroJugadores() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                       {slotsData?.seguros?.map((seg) => {
                         const isSelected = String(currentSeguroId) === String(seg.seguro_id);
+                        const noDisponible = seg.disponibles <= 0 && !isSelected;
                         return (
                           <div
                             key={`seguro-card-${seg.seguro_id}`}
                             onClick={() => {
+                              if (noDisponible) {
+                                Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
+                                return;
+                              }
                               updatePlayerSeguro(currentPlayerIndex, String(seg.seguro_id));
                               const updated = { ...currentDatos };
                               if (currentPlayer?.slotId) {
@@ -1322,19 +1328,38 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '16px',
                               borderRadius: '12px',
-                              border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                              backgroundColor: isSelected ? '#eff6ff' : 'white',
-                              cursor: 'pointer',
+                              border: isSelected 
+                                ? '2.5px solid #0b4ea6' 
+                                : noDisponible 
+                                  ? '1px solid #e2e8f0' 
+                                  : '1px solid #cbd5e1',
+                              backgroundColor: isSelected 
+                                ? '#eff6ff' 
+                                : noDisponible 
+                                  ? '#f1f5f9' 
+                                  : 'white',
+                              cursor: noDisponible ? 'not-allowed' : 'pointer',
+                              opacity: noDisponible ? 0.6 : 1,
                               transition: 'all 0.2s',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '6px'
                             }}
                           >
-                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : noDisponible ? '#94a3b8' : '#1e293b' }}>
                               🛡️ {seg.nombre}
                             </span>
-                            <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                            <div style={{ 
+                              marginTop: '5px', 
+                              display: 'inline-flex', 
+                              alignSelf: 'start', 
+                              padding: '2px 8px', 
+                              borderRadius: '20px', 
+                              background: noDisponible ? '#e2e8f0' : '#dcfce7', 
+                              color: noDisponible ? '#64748b' : '#15803d', 
+                              fontSize: '11px', 
+                              fontWeight: '800' 
+                            }}>
                               {seg.disponibles} disponibles
                             </div>
                           </div>

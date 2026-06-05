@@ -1,3 +1,4 @@
+#RUTA DE VALIDACIÓN DE FOTOGRAFÍA
 #|importar las clases
 from fastapi import APIRouter, UploadFile, File
 

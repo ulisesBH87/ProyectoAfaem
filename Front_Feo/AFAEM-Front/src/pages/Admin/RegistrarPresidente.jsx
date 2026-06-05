@@ -175,7 +175,12 @@ export default function RegistrarPresidente() {
   const [showConfirm, setShowConfirm] = useState(false);
   const pwInfo = useMemo(() => calcStrength(cuenta.contrasena), [cuenta.contrasena]);
 
-  const setCuentaField = (field, val) => setCuenta(prev => ({ ...prev, [field]: val }));
+  const setCuentaField = (field, val) => setCuenta(prev => ({
+    ...prev,
+    [field]: (field === 'contrasena' || field === 'confirmarContrasena')
+      ? val
+      : (typeof val === 'string' ? val.toUpperCase() : val)
+  }));
 
   const validarPaso1 = () => {
     const errs = {};
@@ -564,8 +569,9 @@ export default function RegistrarPresidente() {
   };
 
   const handleOcrManual = (field, val) => {
+    const uppercasedVal = typeof val === 'string' ? val.toUpperCase() : val;
     setOcrResults(prev => ({
-      ...prev, [field]: val,
+      ...prev, [field]: uppercasedVal,
       actaNacimiento: prev.actaNacimiento || 'Manual',
       identificacion: prev.identificacion || 'Manual',
     }));
@@ -837,19 +843,19 @@ export default function RegistrarPresidente() {
               {/* Nombre */}
               <div>
                 <label style={labelStyle}>Nombre(s) <span style={{ color: C.amber }}>*</span></label>
-                <input style={{ ...inputStyle, borderColor: cuentaErrors.nombre ? C.rose : C.inputBorder }} type="text" placeholder="Ej: Juan Carlos" value={cuenta.nombre} onChange={e => setCuentaField('nombre', e.target.value)} />
+                <input style={{ ...inputStyle, textTransform: 'uppercase', borderColor: cuentaErrors.nombre ? C.rose : C.inputBorder }} type="text" placeholder="Ej: JUAN CARLOS" value={cuenta.nombre} onChange={e => setCuentaField('nombre', e.target.value)} />
                 {cuentaErrors.nombre && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.nombre}</span>}
               </div>
               {/* Primer apellido */}
               <div>
                 <label style={labelStyle}>Primer Apellido <span style={{ color: C.amber }}>*</span></label>
-                <input style={{ ...inputStyle, borderColor: cuentaErrors.primerApellido ? C.rose : C.inputBorder }} type="text" placeholder="Ej: García" value={cuenta.primerApellido} onChange={e => setCuentaField('primerApellido', e.target.value)} />
+                <input style={{ ...inputStyle, textTransform: 'uppercase', borderColor: cuentaErrors.primerApellido ? C.rose : C.inputBorder }} type="text" placeholder="Ej: GARCÍA" value={cuenta.primerApellido} onChange={e => setCuentaField('primerApellido', e.target.value)} />
                 {cuentaErrors.primerApellido && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.primerApellido}</span>}
               </div>
               {/* Segundo apellido */}
               <div>
                 <label style={labelStyle}>Segundo Apellido</label>
-                <input style={inputStyle} type="text" placeholder="Ej: López" value={cuenta.segundoApellido} onChange={e => setCuentaField('segundoApellido', e.target.value)} />
+                <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="text" placeholder="Ej: LÓPEZ" value={cuenta.segundoApellido} onChange={e => setCuentaField('segundoApellido', e.target.value)} />
               </div>
             </div>
 
@@ -857,7 +863,7 @@ export default function RegistrarPresidente() {
               {/* Correo */}
               <div>
                 <label style={labelStyle}>Correo Electrónico <span style={{ color: C.amber }}>*</span></label>
-                <input style={{ ...inputStyle, borderColor: cuentaErrors.correo ? C.rose : C.inputBorder }} type="email" placeholder="presidente@correo.com" value={cuenta.correo} onChange={e => setCuentaField('correo', e.target.value)} />
+                <input style={{ ...inputStyle, textTransform: 'uppercase', borderColor: cuentaErrors.correo ? C.rose : C.inputBorder }} type="email" placeholder="PRESIDENTE@CORREO.COM" value={cuenta.correo} onChange={e => setCuentaField('correo', e.target.value)} />
                 {cuentaErrors.correo && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.correo}</span>}
               </div>
               {/* Teléfono */}
@@ -898,7 +904,7 @@ export default function RegistrarPresidente() {
               {/* CURP */}
               <div>
                 <label style={labelStyle}>CURP <span style={{ color: C.amber }}>*</span></label>
-                <input style={{ ...inputStyle, borderColor: cuentaErrors.curp ? C.rose : C.inputBorder }} type="text" placeholder="18 caracteres" maxLength={18} value={cuenta.curp} onChange={e => setCuentaField('curp', e.target.value.toUpperCase())} />
+                <input style={{ ...inputStyle, textTransform: 'uppercase', borderColor: cuentaErrors.curp ? C.rose : C.inputBorder }} type="text" placeholder="18 CARACTERES" maxLength={18} value={cuenta.curp} onChange={e => setCuentaField('curp', e.target.value.toUpperCase())} />
                 {cuentaErrors.curp && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.curp}</span>}
               </div>
               {/* Sexo */}
@@ -1132,7 +1138,7 @@ export default function RegistrarPresidente() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={labelStyle}>Correo <span style={{ color: C.amber }}>*</span></label>
-                  <input style={inputStyle} type="email" value={correoDoc} onChange={e => setCorreoDoc(e.target.value)} placeholder="correo@example.com" />
+                  <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="email" value={correoDoc} onChange={e => setCorreoDoc(e.target.value.toUpperCase())} placeholder="CORREO@EXAMPLE.COM" />
                 </div>
                 <div>
                   <label style={labelStyle}>Teléfono (10 dígitos)</label>
@@ -1166,7 +1172,7 @@ export default function RegistrarPresidente() {
                 </div>
                 <div>
                   <label style={labelStyle}>Nombre del Equipo</label>
-                  <input style={inputStyle} type="text" value={equipo} onChange={e => setEquipo(e.target.value)} placeholder="Ej: Rayados FC" />
+                  <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="text" value={equipo} onChange={e => setEquipo(e.target.value.toUpperCase())} placeholder="EJ: RAYADOS FC" />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
@@ -1227,11 +1233,11 @@ export default function RegistrarPresidente() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                   <div>
                     <label style={labelStyle}>Nombre Completo <span style={{ color: C.amber }}>*</span></label>
-                    <input style={inputStyle} type="text" placeholder="APELLIDOS NOMBRES (en mayúsculas)" value={ocrResults.nombre || ''} onChange={e => handleOcrManual('nombre', e.target.value.toUpperCase())} />
+                    <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="text" placeholder="APELLIDOS NOMBRES (EN MAYÚSCULAS)" value={ocrResults.nombre || ''} onChange={e => handleOcrManual('nombre', e.target.value.toUpperCase())} />
                   </div>
                   <div>
                     <label style={labelStyle}>CURP <span style={{ color: C.amber }}>*</span></label>
-                    <input style={inputStyle} type="text" placeholder="18 caracteres" maxLength={18} value={ocrResults.curp || ''} onChange={e => handleOcrManual('curp', e.target.value.toUpperCase())} />
+                    <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="text" placeholder="18 CARACTERES" maxLength={18} value={ocrResults.curp || ''} onChange={e => handleOcrManual('curp', e.target.value.toUpperCase())} />
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
@@ -1241,7 +1247,7 @@ export default function RegistrarPresidente() {
                   </div>
                   <div>
                     <label style={labelStyle}>Nacionalidad</label>
-                    <input style={inputStyle} type="text" placeholder="Ej. MEXICANA" value={ocrResults.nacionalidad || ''} onChange={e => handleOcrManual('nacionalidad', e.target.value.toUpperCase())} />
+                    <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="text" placeholder="EJ. MEXICANA" value={ocrResults.nacionalidad || ''} onChange={e => handleOcrManual('nacionalidad', e.target.value.toUpperCase())} />
                   </div>
                 </div>
               </div>

@@ -1,3 +1,4 @@
+// SERVICIO DE VALIDACIÓN DE FOTOGRAFÍA PARA DOCUMENTOS DE IDENTIDAD
 import { API_BASE } from '../config/config';
 import { getErrorMessage } from '../utils/errorHandler';
 

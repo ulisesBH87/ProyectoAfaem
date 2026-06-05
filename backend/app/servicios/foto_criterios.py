@@ -1,3 +1,4 @@
+# SERVICIO DE CRITERIOS DE FOTOGRAFÍA PARA DOCUMENTOS DE IDENTIDAD
 import cv2
 import io
 import numpy as np
