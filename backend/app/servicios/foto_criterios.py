@@ -368,7 +368,7 @@ def postura(imagen_bgr, pose_landmarks):
     return True, ""
 
 # FUNCION PARA LA SEGMENTACION DE CABELLO
-def cabello(category_mask, limite = 0.15):
+def cabello(category_mask, limite = 0.25):
     
     # Total de pixeles de la imagen
     total_pixeles = category_mask.size
