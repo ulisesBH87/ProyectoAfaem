@@ -76,9 +76,11 @@ const StepBadge = ({ number, isActive, isDone }) => (
 export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { token } = useParams();
-  const isPublicFlow = !!token;
+  const { tokenIdentificador, tokenSecreto } = useParams();
+  const isPublicFlow = !!(tokenIdentificador && tokenSecreto);
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
+  const [invitationTeams, setInvitationTeams] = useState([]);
+  const [noPendingTeams, setNoPendingTeams] = useState(false);
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
@@ -266,6 +268,9 @@ export default function RegistroJugadores() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const selectedInvitationTeam = invitationTeams.find(
+    (team) => String(team.equipo_temporal_id) === String(teamId)
+  ) || null;
 
   const defaultPlayerDatos = {
     nombreJugador: '',
@@ -472,30 +477,49 @@ export default function RegistroJugadores() {
   // CARGAR SLOTS Y DATOS DEL EQUIPO
   const fetchTeamInfo = async () => {
     let effectiveTeamId = teamId;
-    let inviteData = null;
     let inviteTeamInfo = {};
 
     try {
       setLoadingSlots(true);
+      setNoPendingTeams(false);
 
       // 1. Obtener catálogos
       const catalogsData = await teamsService.getCatalogs();
       setCatalogs(catalogsData);
 
       if (isPublicFlow && !teamId) {
-        if (!token) {
+        if (!tokenIdentificador || !tokenSecreto) {
           setLinkError(true);
           setLoadingSlots(false);
           return;
         }
-        inviteData = await teamsService.getInvitationInfo(token);
-        effectiveTeamId = inviteData.equipo_temporal_id;
+        const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
+        setInvitationTeams(equiposPendientes);
+
+        if (equiposPendientes.length === 0) {
+          setNoPendingTeams(true);
+          setJugadores([]);
+          setSlotsData(null);
+          return;
+        }
+
+        effectiveTeamId = equiposPendientes[0].equipo_temporal_id;
         setTeamId(effectiveTeamId);
+      }
+
+      if (isPublicFlow && teamId) {
+        const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
+        setInvitationTeams(equiposPendientes);
+      }
+
+      if (selectedInvitationTeam) {
         inviteTeamInfo = {
-          equipo: inviteData.nombre_equipo || '',
-          liga: inviteData.nombre_liga || '',
-          categoria: inviteData.nombre_categoria || 'LIBRE',
-          presidente: inviteData.nombre_presidente || 'No disponible'
+          equipo: selectedInvitationTeam.nombre_equipo || '',
+          liga: selectedInvitationTeam.nombre_liga || '',
+          categoria: selectedInvitationTeam.nombre_categoria || 'LIBRE',
+          presidente: selectedInvitationTeam.nombre_presidente || 'No disponible'
         };
       }
 
@@ -512,7 +536,12 @@ export default function RegistroJugadores() {
       }
 
       // 2. Obtener slots y borradores
-      const slotsResponse = await teamsService.getAvailableSlots(effectiveTeamId);
+      const slotsResponse = await teamsService.getAvailableSlots(
+        effectiveTeamId,
+        isPublicFlow
+          ? { tokenIdentificador, tokenSecreto }
+          : null
+      );
       setSlotsData(slotsResponse);
 
       const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
@@ -572,7 +601,7 @@ export default function RegistroJugadores() {
 
   useEffect(() => {
     fetchTeamInfo();
-  }, [teamId, token, isPublicFlow]);
+  }, [teamId, tokenIdentificador, tokenSecreto, isPublicFlow]);
 
   // Manejar cambio de previsualización al cambiar de jugador
   useEffect(() => {
@@ -1051,6 +1080,10 @@ export default function RegistroJugadores() {
       const player = jugadores[currentPlayerIndex];
       const formData = new FormData();
       formData.append('equipo_temporal_id', parseInt(teamId, 10));
+      if (isPublicFlow) {
+        formData.append('token_identificador', tokenIdentificador);
+        formData.append('token_secreto', tokenSecreto);
+      }
       formData.append('nombre', (player.datos.nombreJugador || '').toString().trim());
       formData.append('primer_apellido', (player.datos.apellidoPaterno || '').toString().trim());
       formData.append('segundo_apellido', (player.datos.apellidoMaterno || '').toString().trim());
@@ -1255,6 +1288,21 @@ export default function RegistroJugadores() {
     );
   }
 
+  if (noPendingTeams) {
+    return (
+      <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', padding: '24px' }}>
+        <div style={{ background: '#fff', padding: '40px 32px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08)', border: '1px solid #e2e8f0', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1e293b', marginBottom: '16px' }}>
+            No hay equipos pendientes
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.7', margin: 0 }}>
+            Esta invitación es válida, pero por ahora no existen equipos con slots disponibles para registrar jugadores.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const sinSlots = slotsInfo.disponibles === 0;
 
   return (
@@ -1295,6 +1343,33 @@ export default function RegistroJugadores() {
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar y guardar borradores de tus jugadores libremente.</p>
         </div>
       </div>
+
+      {isPublicFlow && invitationTeams.length > 1 && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '18px 20px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>Selecciona el equipo a capturar</h3>
+              <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                Este enlace tiene acceso a todos los equipos pendientes del presidente.
+              </p>
+            </div>
+            <select
+              value={teamId || ''}
+              onChange={(e) => {
+                setCurrentPlayerIndex(0);
+                setTeamId(e.target.value ? Number(e.target.value) : null);
+              }}
+              style={{ minWidth: '280px', padding: '10px 12px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#1e293b', fontSize: '14px', fontWeight: '600' }}
+            >
+              {invitationTeams.map((team) => (
+                <option key={team.equipo_temporal_id} value={team.equipo_temporal_id}>
+                  {team.nombre_equipo} · {team.nombre_liga} · {team.slots_disponibles}/{team.total_slots} slots
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* SLOT NAVIGATION BAR */}
       {jugadores.length > 0 && (
