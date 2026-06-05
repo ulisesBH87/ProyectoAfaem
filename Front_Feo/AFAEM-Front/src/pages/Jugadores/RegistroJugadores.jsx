@@ -31,6 +31,28 @@ import {
 import Loader from '../../components/Loader';
 import '../../styles/dashboard.css';
 
+const parsearTelefonoE164 = (telefonoCompleto) => {
+  if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
+  const telClean = telefonoCompleto.trim();
+  if (telClean.startsWith('+')) {
+    if (telClean.length > 10) {
+      const local = telClean.slice(-10);
+      const codigo = telClean.slice(0, -10);
+      return { codigoPais: codigo, telefono: local };
+    }
+    return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+  }
+  if (telClean.length === 10 && /^\d+$/.test(telClean)) {
+    return { codigoPais: '+52', telefono: telClean };
+  }
+  if (telClean.length > 10 && /^\d+$/.test(telClean)) {
+    const local = telClean.slice(-10);
+    const codigo = '+' + telClean.slice(0, -10);
+    return { codigoPais: codigo, telefono: local };
+  }
+  return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+};
+
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
   <div style={{
@@ -254,6 +276,7 @@ export default function RegistroJugadores() {
     fechaNacimiento: '',
     lugarNacimiento: 'MÉXICO',
     correo: '',
+    codigoPais: '+52',
     telefono: '',
     posicion: '',
     numCamiseta: '',
@@ -303,7 +326,7 @@ export default function RegistroJugadores() {
 
   const getPlayerStatus = (player) => {
     if (!player) return 'VACIO';
-    if (player.completo) return 'COMPLETO';
+    if (player.completo) return 'INSCRITO';
     const datos = player.datos || {};
     const docs = player.documentos || {};
     const hasRequiredFields = Boolean(
@@ -316,7 +339,7 @@ export default function RegistroJugadores() {
       datos.correo?.trim()
     );
     const hasAnyData = Object.values(datos).some(value => typeof value === 'string' ? value.trim() !== '' : Boolean(value)) || Object.values(docs).some(Boolean);
-    if (hasRequiredFields) return 'COMPLETO'; // Note: documents are optional for president flow
+    if (hasRequiredFields) return 'LISTO'; // Note: documents are optional for president flow
     if (hasAnyData) return 'EN_CAPTURA';
     return 'VACIO';
   };
@@ -503,9 +526,12 @@ export default function RegistroJugadores() {
       // Mapear los slots de la base de datos al estado jugadores
       const mappedJugadores = (slotsResponse.slots || []).map((slot, i) => {
         const datos = slot.datos_borrador || { ...defaultPlayerDatos };
+        const parsedTel = parsearTelefonoE164(datos.telefono || '');
         const mergedDatos = {
           ...defaultPlayerDatos,
           ...datos,
+          codigoPais: datos.codigoPais !== undefined ? datos.codigoPais : parsedTel.codigoPais,
+          telefono: datos.codigoPais !== undefined ? datos.telefono : parsedTel.telefono,
           equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
           liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
           categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
@@ -515,7 +541,7 @@ export default function RegistroJugadores() {
         return {
           numero: i + 1,
           slotId: slot.slot_id,
-          estado: slot.completo ? 'COMPLETO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
+          estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
           datos: mergedDatos,
           documentos: {
             acta: null,
@@ -587,7 +613,8 @@ export default function RegistroJugadores() {
   const playerStatusConfig = {
     VACIO: { icon: '⚪', label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
     EN_CAPTURA: { icon: '🟡', label: 'EN CAPTURA', bg: '#fffbeb', color: '#92400e' },
-    COMPLETO: { icon: '🟢', label: 'COMPLETO', bg: '#dcfce7', color: '#166534' }
+    LISTO: { icon: '🔵', label: 'LISTO PARA REGISTRAR', bg: '#eff6ff', color: '#1e40af' },
+    INSCRITO: { icon: '🟢', label: 'INSCRITO', bg: '#dcfce7', color: '#166534' }
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
@@ -858,15 +885,14 @@ export default function RegistroJugadores() {
       const correoCJE = currentDatos.correo || '';
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
-      safeSetField(form, 'Teléfono', currentDatos.telefono);
+      safeSetField(form, 'Teléfono', (currentDatos.codigoPais || '+52') + (currentDatos.telefono || ''));
       safeSetField(form, 'Asociación', 'AFAEM');
-      safeSetField(form, 'fill_24', 'AFAEM');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(currentSeguroId));
       if (seguroSel?.nombre) {
         try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
-        try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
+        try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
       safeSetField(form, 'Liga', (currentDatos.liga || '').split('(')[0].trim());
@@ -1033,10 +1059,11 @@ export default function RegistroJugadores() {
       formData.append('fecha_nacimiento', player.datos.fechaNacimiento);
       formData.append('lugar_nacimiento', player.datos.lugarNacimiento || 'MÉXICO');
       formData.append('correo', player.datos.correo || '');
-      formData.append('telefono', player.datos.telefono || '');
+      formData.append('telefono', player.datos.telefono ? ((player.datos.codigoPais || '+52') + player.datos.telefono) : '');
       formData.append('posicion', player.datos.posicion || '3');
       formData.append('num_camiseta', player.datos.numCamiseta || '0');
       formData.append('seguro_id', parseInt(player.seguroId, 10));
+      formData.append('nui', player.datos.nui || '');
 
       if (player.slotId) {
         formData.append('slot_id', parseInt(player.slotId, 10));
@@ -1063,7 +1090,7 @@ export default function RegistroJugadores() {
       const files = [];
 
       if (player.documentos.acta) { docIds.push(22); files.push(player.documentos.acta); }
-      if (esPlayerMinor(player.datos.fechaNacimiento)) {
+      if (isPlayerMinor(player.datos.fechaNacimiento)) {
         if (player.documentos.ineTutor) { docIds.push(33); files.push(player.documentos.ineTutor); }
         if (player.documentos.identificacionMenor) { docIds.push(36); files.push(player.documentos.identificacionMenor); }
       } else {
@@ -1429,10 +1456,15 @@ export default function RegistroJugadores() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                       {slotsData?.seguros?.map((seg) => {
                         const isSelected = String(currentSeguroId) === String(seg.seguro_id);
+                        const noDisponible = seg.disponibles <= 0 && !isSelected;
                         return (
                           <div
                             key={`seguro-card-${seg.seguro_id}`}
                             onClick={() => {
+                              if (noDisponible) {
+                                Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
+                                return;
+                              }
                               updatePlayerSeguro(currentPlayerIndex, String(seg.seguro_id));
                               const updated = { ...currentDatos };
                               if (currentPlayer?.slotId) {
@@ -1442,19 +1474,38 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '16px',
                               borderRadius: '12px',
-                              border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                              backgroundColor: isSelected ? '#eff6ff' : 'white',
-                              cursor: 'pointer',
+                              border: isSelected 
+                                ? '2.5px solid #0b4ea6' 
+                                : noDisponible 
+                                  ? '1px solid #e2e8f0' 
+                                  : '1px solid #cbd5e1',
+                              backgroundColor: isSelected 
+                                ? '#eff6ff' 
+                                : noDisponible 
+                                  ? '#f1f5f9' 
+                                  : 'white',
+                              cursor: noDisponible ? 'not-allowed' : 'pointer',
+                              opacity: noDisponible ? 0.6 : 1,
                               transition: 'all 0.2s',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '6px'
                             }}
                           >
-                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : noDisponible ? '#94a3b8' : '#1e293b' }}>
                               🛡️ {seg.nombre}
                             </span>
-                            <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                            <div style={{ 
+                              marginTop: '5px', 
+                              display: 'inline-flex', 
+                              alignSelf: 'start', 
+                              padding: '2px 8px', 
+                              borderRadius: '20px', 
+                              background: noDisponible ? '#e2e8f0' : '#dcfce7', 
+                              color: noDisponible ? '#64748b' : '#15803d', 
+                              fontSize: '11px', 
+                              fontWeight: '800' 
+                            }}>
                               {seg.disponibles} disponibles
                             </div>
                           </div>
@@ -1803,7 +1854,55 @@ export default function RegistroJugadores() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                      <input type="tel" value={currentDatos.telefono} onChange={e => handleFieldChange('telefono', e.target.value)} onBlur={handleBlur} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          value={currentDatos.codigoPais || '+52'}
+                          onChange={e => handleFieldChange('codigoPais', e.target.value)}
+                          onBlur={handleBlur}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '14px',
+                            backgroundColor: 'white',
+                            width: '110px',
+                            flexShrink: 0
+                          }}
+                        >
+                          <option value="+52">México +52</option>
+                          <option value="+1">EE.UU./Canadá +1</option>
+                          <option value="+34">España +34</option>
+                          <option value="+54">Argentina +54</option>
+                          <option value="+55">Brasil +55</option>
+                          <option value="+56">Chile +56</option>
+                          <option value="+57">Colombia +57</option>
+                          <option value="+506">Costa Rica +506</option>
+                          <option value="+593">Ecuador +593</option>
+                          <option value="+503">El Salvador +503</option>
+                          <option value="+502">Guatemala +502</option>
+                          <option value="+504">Honduras +504</option>
+                          <option value="+505">Nicaragua +505</option>
+                          <option value="+507">Panamá +507</option>
+                          <option value="+595">Paraguay +595</option>
+                          <option value="+51">Perú +51</option>
+                          <option value="+598">Uruguay +598</option>
+                          <option value="+58">Venezuela +58</option>
+                        </select>
+                        <input
+                          type="tel"
+                          value={currentDatos.telefono}
+                          onChange={e => handleFieldChange('telefono', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          onBlur={handleBlur}
+                          placeholder="10 dígitos numéricos"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '14px',
+                            flexGrow: 1
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 

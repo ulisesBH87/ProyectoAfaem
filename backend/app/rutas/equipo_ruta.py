@@ -271,6 +271,9 @@ async def agregar_jugador_equipo_existente(
 
             s_id = safe_int(p_data.get("sexo_id"), 1)
 
+            from app.core.telefono_utils import validar_y_normalizar_telefono
+            telefono_normalizado = validar_y_normalizar_telefono(p_data.get("telefono"))
+
             nueva_persona = Personas(
                 Nombre=str(p_data.get("nombre", "")).strip().upper() if p_data.get("nombre") else None,
                 PrimerApellido=str(p_data.get("primer_apellido", "")).strip().upper() if p_data.get("primer_apellido") else None,
@@ -281,7 +284,7 @@ async def agregar_jugador_equipo_existente(
                 FechaNacimiento=fn,
                 LugarNacimiento=p_data.get("lugar_nacimiento"),
                 CorreoElectronico=p_data.get("correo"),
-                NumeroTelefono=p_data.get("telefono")
+                NumeroTelefono=telefono_normalizado
             )
             db.add(nueva_persona)
             db.flush()
@@ -415,6 +418,10 @@ async def registrar_jugador(
     archivos: list[UploadFile] = File(...),
     seguro_id: int = Form(...),
     slot_id: Optional[int] = Form(None),
+    nui: Optional[str] = Form(None),
+    lugar_nacimiento: Optional[str] = Form(None),
+    correo: Optional[str] = Form(None),
+    telefono: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     persona = JugadorPersona(
@@ -423,7 +430,11 @@ async def registrar_jugador(
         segundo_apellido=segundo_apellido,
         curp=CURP,
         sexo_id=sexo_id,
-        fecha_nacimiento=fecha_nacimiento
+        fecha_nacimiento=fecha_nacimiento,
+        nui=nui,
+        lugar_nacimiento=lugar_nacimiento,
+        correo=correo,
+        telefono=telefono
     )
     return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id)
 
@@ -632,7 +643,8 @@ def update_presidente(presidente_id: int, data: dict, db: Session = Depends(get_
             persona.CURP = data['curp'].strip() or None
 
         if 'telefono' in data and data['telefono'] is not None:
-            persona.NumeroTelefono = data['telefono'].strip() or None
+            from app.core.telefono_utils import validar_y_normalizar_telefono
+            persona.NumeroTelefono = validar_y_normalizar_telefono(data['telefono'])
 
 
         # --- Actualizar Usuarios (correo de login) ---
@@ -920,13 +932,16 @@ async def registrar_presidente_admin(
             raise HTTPException(status_code=400, detail="El correo ya está registrado.")
 
         # Create Persona con datos completos
+        from app.core.telefono_utils import validar_y_normalizar_telefono
+        telefono_normalizado = validar_y_normalizar_telefono(telefono)
+
         nueva_persona = Personas(
             Nombre=nombre,
             PrimerApellido=primerApellido or "",
             SegundoApellido=segundoApellido or "",
             CURP=curp,
             RFC=rfc.strip().upper() if rfc and rfc.strip() else None,
-            NumeroTelefono=telefono,
+            NumeroTelefono=telefono_normalizado,
             SexoId=sexoId if sexoId else None,
             FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
         )

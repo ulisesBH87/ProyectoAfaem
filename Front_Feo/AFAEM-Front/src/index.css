@@ -69,24 +69,108 @@ h1, h2, h3, h4 {
 .auth-page {
   position: fixed;
   inset: 0;
+  overflow-y: auto;
   display: flex !important;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background-image: url('./assets/stadium.jpg');
   background-size: cover;
   background-position: center;
   z-index: 9999;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 769px) {
+  .auth-page {
+    overflow: hidden !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  .auth-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 920px) {
+  .auth-page {
+    zoom: 0.9;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 830px) {
+  .auth-page {
+    zoom: 0.8;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 740px) {
+  .auth-page {
+    zoom: 0.72;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 660px) {
+  .auth-page {
+    zoom: 0.65;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 580px) {
+  .auth-page {
+    zoom: 0.58;
+  }
 }
 
 .auth-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(0, 8, 20, 0.7) !important;
   backdrop-filter: blur(4px);
   z-index: 1;
 }
 
-.auth-content { position: relative; z-index: 10; width: 100%; padding: 20px; }
+.auth-content {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  padding: 40px 20px;
+  margin: auto 0;
+  box-sizing: border-box;
+}
+
+/* Card classes for auth forms */
+.auth-card {
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px;
+  border-radius: 24px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.auth-card-refined {
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 40px;
+  border-radius: 24px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+  .auth-card-refined {
+    padding: 32px 20px !important;
+    border-radius: 16px !important;
+  }
+}
 
 /* INPUTS DE AUTH QUE NO SEAN BLANCOS */
 .auth-input {
@@ -432,5 +516,22 @@ h1, h2, h3, h4 {
   /* Premium card responsive */
   .premium-card {
     padding: 24px !important;
+  }
+}
+
+/* Responsive Grid for Auth Forms */
+.auth-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .auth-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .auth-grid > div {
+    grid-column: span 1 !important;
   }
 }
