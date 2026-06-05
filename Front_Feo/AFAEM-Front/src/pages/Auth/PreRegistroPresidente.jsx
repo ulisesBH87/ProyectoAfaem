@@ -34,6 +34,29 @@ const normalizarNombreSeguro = (nombre) => {
   return nombre.toUpperCase().replace(/["']/g, '').trim();
 };
 
+const parsearTelefonoE164 = (telefonoCompleto) => {
+  if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
+  const telClean = telefonoCompleto.trim();
+  if (telClean.startsWith('+')) {
+    if (telClean.length > 10) {
+      const local = telClean.slice(-10);
+      const codigo = telClean.slice(0, -10);
+      return { codigoPais: codigo, telefono: local };
+    }
+    return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+  }
+  if (telClean.length === 10 && /^\d+$/.test(telClean)) {
+    return { codigoPais: '+52', telefono: telClean };
+  }
+  if (telClean.length > 10 && /^\d+$/.test(telClean)) {
+    const local = telClean.slice(-10);
+    const codigo = '+' + telClean.slice(0, -10);
+    return { codigoPais: codigo, telefono: local };
+  }
+  return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+};
+
+
 const DETALLES_SEGUROS = {
   'TIPO A': {
     nombre: 'TIPO "A"',
@@ -263,12 +286,15 @@ function PreRegistroPresidente() {
         }
       }
 
+      const regTelefono = uInfo.telefono || u.telefono || u.NumeroTelefono || '';
+      const { telefono: parsedLocal } = parsearTelefonoE164(regTelefono);
+
       return {
         nombre: (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase(),
         nombreSolo: uInfo.nombreSolo || '',
         primerApellido: uInfo.primerApellido || '',
         segundoApellido: uInfo.segundoApellido || '',
-        telefono: uInfo.telefono || u.telefono || u.NumeroTelefono || '',
+        telefono: parsedLocal,
         curp: uInfo.curp || '',
         sexo: sStr,
         fecha_nac: initialFechaNac,
@@ -277,6 +303,17 @@ function PreRegistroPresidente() {
     } catch (e) {
       console.error("Error initializing ocrResults:", e);
       return {};
+    }
+  });
+  const [codigoPais, setCodigoPais] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      const uInfo = u.usuario || {};
+      const regTelefono = uInfo.telefono || u.telefono || u.NumeroTelefono || '';
+      const { codigoPais: parsedCodigo } = parsearTelefonoE164(regTelefono);
+      return parsedCodigo || '+52';
+    } catch (e) {
+      return '+52';
     }
   });
   const [, setFotoPreview] = useState(null);
@@ -441,13 +478,16 @@ function PreRegistroPresidente() {
       const regNombre = (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase();
       const regTelefono = uInfo.telefono || u.telefono || u.NumeroTelefono || '';
 
+      const { codigoPais: parsedCodigo, telefono: parsedLocal } = parsearTelefonoE164(regTelefono);
+      setCodigoPais(parsedCodigo);
+
       setOcrResults(prev => ({
         ...prev,
         nombre: regNombre || prev.nombre || '',
         nombreSolo: uInfo.nombreSolo || prev.nombreSolo || '',
         primerApellido: uInfo.primerApellido || prev.primerApellido || '',
         segundoApellido: uInfo.segundoApellido || prev.segundoApellido || '',
-        telefono: regTelefono || prev.telefono || ''
+        telefono: parsedLocal || prev.telefono || ''
       }));
     } catch (e) { }
   }, []);
@@ -1102,12 +1142,17 @@ function PreRegistroPresidente() {
         const uInfo = u.usuario || {};
         const regNombre = (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase();
         const regTelefono = uInfo.telefono || u.telefono || u.NumeroTelefono || '';
+        const { codigoPais: parsedCodigo, telefono: parsedLocal } = parsearTelefonoE164(regTelefono || extractedData.telefono);
+
+        if (parsedCodigo && parsedCodigo !== '+52') {
+          setCodigoPais(parsedCodigo);
+        }
 
         return {
           ...prev,
           ...extractedData,
           nombre: regNombre || prev.nombre || (extractedData.nombre || '').toUpperCase(),
-          telefono: regTelefono || prev.telefono || extractedData.telefono || '',
+          telefono: parsedLocal || prev.telefono || '',
           [docKey]: `OCR Procesado: ${extractedData.nombre}`
         };
       });
@@ -1247,7 +1292,8 @@ function PreRegistroPresidente() {
 
       // Teléfono (fill_24 en la plantilla directivo — puede no existir)
       safeSetField(form, 'fill_24', asociacion.toUpperCase());
-      safeSetField(form, 'Teléfono', ocrResults.telefono || '');
+      const telLocalPdf = (ocrResults.telefono || '').replace(/\D/g, '');
+      safeSetField(form, 'Teléfono', telLocalPdf ? (codigoPais + telLocalPdf) : '');
 
       // Tipo de afiliación
       safeSetField(form, 'fill_20', tipoAfiliacion);
@@ -1372,7 +1418,7 @@ function PreRegistroPresidente() {
 
 
   const handleManualOcrChange = (field, value) => {
-    if (field === 'nombre' || field === 'telefono') {
+    if (field === 'nombre') {
       return;
     }
     setOcrResults(prev => ({
@@ -1398,13 +1444,13 @@ function PreRegistroPresidente() {
       setLoading(true);
       setError(null);
 
-      // Validar teléfono obligatorio de 10 dígitos
+      // Validar teléfono obligatorio de 10 dígitos locales
       const telLimpio = (ocrResults.telefono || '').replace(/\D/g, '');
       if (!telLimpio) {
         throw new Error('El teléfono es obligatorio.');
       }
       if (telLimpio.length !== 10) {
-        throw new Error('El teléfono debe tener exactamente 10 dígitos.');
+        throw new Error('El teléfono debe tener exactamente 10 dígitos locales.');
       }
 
       // Verify user/persona ID
@@ -1502,7 +1548,7 @@ function PreRegistroPresidente() {
         }
         const telLimpio = (ocrResults.telefono || '').replace(/\D/g, '');
         if (telLimpio) {
-          queryParams.append('telefono', telLimpio);
+          queryParams.append('telefono', codigoPais + telLimpio);
         }
 
         const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?${queryParams.toString()}`, {
@@ -2835,15 +2881,53 @@ function PreRegistroPresidente() {
                   </div>
                   <div className="premium-input-group">
                     <label className="premium-label">Teléfono *</label>
-                    <input
-                      type="tel"
-                      placeholder="10 dígitos"
-                      maxLength={10}
-                      value={ocrResults.telefono || ''}
-                      onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
-                      className="premium-input"
-                      style={{ cursor: 'text' }}
-                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select
+                        value={codigoPais}
+                        onChange={(e) => setCodigoPais(e.target.value)}
+                        style={{
+                          width: '120px',
+                          flexShrink: 0,
+                          padding: '13px 12px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '12px',
+                          color: 'white',
+                          fontSize: '14px',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          backdropFilter: 'blur(4px)'
+                        }}
+                      >
+                        <option value="+52" style={{ background: '#1e1b4b', color: 'white' }}>México +52</option>
+                        <option value="+1" style={{ background: '#1e1b4b', color: 'white' }}>EE.UU./Canadá +1</option>
+                        <option value="+34" style={{ background: '#1e1b4b', color: 'white' }}>España +34</option>
+                        <option value="+54" style={{ background: '#1e1b4b', color: 'white' }}>Argentina +54</option>
+                        <option value="+55" style={{ background: '#1e1b4b', color: 'white' }}>Brasil +55</option>
+                        <option value="+56" style={{ background: '#1e1b4b', color: 'white' }}>Chile +56</option>
+                        <option value="+57" style={{ background: '#1e1b4b', color: 'white' }}>Colombia +57</option>
+                        <option value="+506" style={{ background: '#1e1b4b', color: 'white' }}>Costa Rica +506</option>
+                        <option value="+593" style={{ background: '#1e1b4b', color: 'white' }}>Ecuador +593</option>
+                        <option value="+503" style={{ background: '#1e1b4b', color: 'white' }}>El Salvador +503</option>
+                        <option value="+502" style={{ background: '#1e1b4b', color: 'white' }}>Guatemala +502</option>
+                        <option value="+504" style={{ background: '#1e1b4b', color: 'white' }}>Honduras +504</option>
+                        <option value="+505" style={{ background: '#1e1b4b', color: 'white' }}>Nicaragua +505</option>
+                        <option value="+507" style={{ background: '#1e1b4b', color: 'white' }}>Panamá +507</option>
+                        <option value="+595" style={{ background: '#1e1b4b', color: 'white' }}>Paraguay +595</option>
+                        <option value="+51" style={{ background: '#1e1b4b', color: 'white' }}>Perú +51</option>
+                        <option value="+598" style={{ background: '#1e1b4b', color: 'white' }}>Uruguay +598</option>
+                        <option value="+58" style={{ background: '#1e1b4b', color: 'white' }}>Venezuela +58</option>
+                      </select>
+                      <input
+                        type="tel"
+                        placeholder="10 dígitos"
+                        maxLength={10}
+                        value={ocrResults.telefono || ''}
+                        onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
+                        className="premium-input"
+                        style={{ cursor: 'text', flexGrow: 1 }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

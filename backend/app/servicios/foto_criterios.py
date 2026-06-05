@@ -1,3 +1,4 @@
+# SERVICIO DE CRITERIOS DE FOTOGRAFÍA PARA DOCUMENTOS DE IDENTIDAD
 import cv2
 import io
 import numpy as np
@@ -367,7 +368,7 @@ def postura(imagen_bgr, pose_landmarks):
     return True, ""
 
 # FUNCION PARA LA SEGMENTACION DE CABELLO
-def cabello(category_mask, limite = 0.15):
+def cabello(category_mask, limite = 0.25):
     
     # Total de pixeles de la imagen
     total_pixeles = category_mask.size

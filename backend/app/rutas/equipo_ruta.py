@@ -24,6 +24,10 @@ from app.enums.documentos_estatus_enum import DocumentoEstatus
 from app.servicios import equipo_servicio
 from app.servicios import documentos_servicio
 from app.esquemas.equipo_esquema import DirectorioEquipoResponse, DirectorioJugadorResponse
+from app.repositorios.presidente_invitacion_repositorio import (
+    crear_invitacion_presidente_repo,
+    validar_invitacion_presidente_repo,
+)
 
 UPLOAD_DIR = "uploads"
 DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
@@ -59,30 +63,22 @@ async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
 
     return slots
 
-@router.get("/invitacion/{token}")
-async def obtener_equipo_por_token(token: str, db: Session = Depends(get_db)):
-    equipo = db.query(EquipoTemporal).filter(EquipoTemporal.TokenInvitacion == token).first()
-    if not equipo:
-        raise HTTPException(status_code=404, detail="Enlace de invitación no válido o expirado.")
-    
-    # Calcular slots disponibles
+@router.get("/invitacion/{token_identificador}/{token_secreto}")
+async def validar_invitacion_presidente(token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
+    invitacion = validar_invitacion_presidente_repo(db, token_identificador, token_secreto)
+
     from app.repositorios import equipo_repositorio
-    slots = equipo_repositorio.obtener_slots_con_persona(db, equipo.EquipoTemporalId)
-    slots_disponibles = sum(1 for s in slots if not s.Completo)
-    
-    nombre_equipo = equipo.NombreEquipo or "Equipo sin nombre"
-    nombre_liga = equipo.LigaRelacion.Nombreliga if equipo.LigaRelacion else "Liga no especificada"
-    nombre_categoria = "LIBRE"
-    if equipo.LigaRelacion and equipo.LigaRelacion.CategoriaRelacion:
-        nombre_categoria = equipo.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    equipos_pendientes = equipo_repositorio.obtener_equipos_temporales_pendientes_por_usuario_repo(
+        db,
+        invitacion.UsuarioId
+    )
+
+    db.commit()
 
     return {
-        "equipo_temporal_id": equipo.EquipoTemporalId,
-        "nombre_equipo": nombre_equipo,
-        "nombre_liga": nombre_liga,
-        "nombre_categoria": nombre_categoria,
-        "slots_disponibles": slots_disponibles,
-        "total_slots": equipo.CantidadJugadoresPagados
+        "usuario_id": invitacion.UsuarioId,
+        "equipos_temporales": equipos_pendientes
     }
 
 # == REGISTROS ==
@@ -264,6 +260,9 @@ async def agregar_jugador_equipo_existente(
 
             s_id = safe_int(p_data.get("sexo_id"), 1)
 
+            from app.core.telefono_utils import validar_y_normalizar_telefono
+            telefono_normalizado = validar_y_normalizar_telefono(p_data.get("telefono"))
+
             nueva_persona = Personas(
                 Nombre=str(p_data.get("nombre", "")).strip().upper() if p_data.get("nombre") else None,
                 PrimerApellido=str(p_data.get("primer_apellido", "")).strip().upper() if p_data.get("primer_apellido") else None,
@@ -274,7 +273,7 @@ async def agregar_jugador_equipo_existente(
                 FechaNacimiento=fn,
                 LugarNacimiento=p_data.get("lugar_nacimiento"),
                 CorreoElectronico=p_data.get("correo"),
-                NumeroTelefono=p_data.get("telefono")
+                NumeroTelefono=telefono_normalizado
             )
             db.add(nueva_persona)
             db.flush()
@@ -408,6 +407,26 @@ async def registrar_jugador(
     archivos: list[UploadFile] = File(...),
     seguro_id: int = Form(...),
     slot_id: Optional[int] = Form(None),
+    nui: Optional[str] = Form(None),
+    lugar_nacimiento: Optional[str] = Form(None),
+    correo: Optional[str] = Form(None),
+    telefono: Optional[str] = Form(None),
+    
+    # Campos adicionales de posición, camiseta y extranjería
+    posicion: Optional[str] = Form(None),
+    num_camiseta: Optional[str] = Form(None),
+    es_foraneo: Optional[str] = Form(None),
+    nacionalidad_jugador: Optional[str] = Form(None),
+    pais_resid_actual: Optional[str] = Form(None),
+    nacionalidad_padre: Optional[str] = Form(None),
+    nacionalidad_madre: Optional[str] = Form(None),
+    nac_abuelo_paterno: Optional[str] = Form(None),
+    nac_abuela_paterna: Optional[str] = Form(None),
+    nac_abuelo_materno: Optional[str] = Form(None),
+    nac_abuela_materna: Optional[str] = Form(None),
+    registro_asociacion_extranjera: Optional[str] = Form(None),
+    juego_club_extranjero: Optional[str] = Form(None),
+    
     db: Session = Depends(get_db)
 ):
     persona = JugadorPersona(
@@ -416,9 +435,30 @@ async def registrar_jugador(
         segundo_apellido=segundo_apellido,
         curp=CURP,
         sexo_id=sexo_id,
-        fecha_nacimiento=fecha_nacimiento
+        fecha_nacimiento=fecha_nacimiento,
+        nui=nui,
+        lugar_nacimiento=lugar_nacimiento,
+        correo=correo,
+        telefono=telefono
     )
-    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id)
+    
+    extra_data = {
+        "posicion": posicion,
+        "num_camiseta": num_camiseta,
+        "es_foraneo": es_foraneo,
+        "nacionalidad_jugador": nacionalidad_jugador,
+        "pais_resid_actual": pais_resid_actual,
+        "nacionalidad_padre": nacionalidad_padre,
+        "nacionalidad_madre": nacionalidad_madre,
+        "nac_abuelo_paterno": nac_abuelo_paterno,
+        "nac_abuela_paterna": nac_abuela_paterna,
+        "nac_abuelo_materno": nac_abuelo_materno,
+        "nac_abuela_materna": nac_abuela_materna,
+        "registro_asociacion_extranjera": registro_asociacion_extranjera,
+        "juego_club_extranjero": juego_club_extranjero
+    }
+    
+    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id, extra_data)
 
 class BorradorJugadorPayload(BaseModel):
     slot_id: int
@@ -625,7 +665,8 @@ def update_presidente(presidente_id: int, data: dict, db: Session = Depends(get_
             persona.CURP = data['curp'].strip() or None
 
         if 'telefono' in data and data['telefono'] is not None:
-            persona.NumeroTelefono = data['telefono'].strip() or None
+            from app.core.telefono_utils import validar_y_normalizar_telefono
+            persona.NumeroTelefono = validar_y_normalizar_telefono(data['telefono'])
 
 
         # --- Actualizar Usuarios (correo de login) ---
@@ -913,13 +954,16 @@ async def registrar_presidente_admin(
             raise HTTPException(status_code=400, detail="El correo ya está registrado.")
 
         # Create Persona con datos completos
+        from app.core.telefono_utils import validar_y_normalizar_telefono
+        telefono_normalizado = validar_y_normalizar_telefono(telefono)
+
         nueva_persona = Personas(
             Nombre=nombre,
             PrimerApellido=primerApellido or "",
             SegundoApellido=segundoApellido or "",
             CURP=curp,
             RFC=rfc.strip().upper() if rfc and rfc.strip() else None,
-            NumeroTelefono=telefono,
+            NumeroTelefono=telefono_normalizado,
             SexoId=sexoId if sexoId else None,
             FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
         )
@@ -1137,6 +1181,11 @@ async def registrar_presidente_admin(
         presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == nueva_persona.PersonaId).first()
         if presidente:
             presidente.EstatusId = 7
+
+        invitacion_data = crear_invitacion_presidente_repo(db, nuevo_usuario.UsuarioId)
+        url_invitacion = (
+            f"/i/{invitacion_data['token_identificador']}/{invitacion_data['token_secreto']}"
+        )
             
         db.commit()
         
@@ -1147,7 +1196,9 @@ async def registrar_presidente_admin(
                 "nombre": nueva_persona.Nombre,
                 "correo": nuevo_usuario.Correo,
                 "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados,
-                "token_invitacion": nuevo_equipo_temporal.TokenInvitacion
+                "token_identificador": invitacion_data["token_identificador"],
+                "token_secreto": invitacion_data["token_secreto"],
+                "url_invitacion": url_invitacion
             }
         }
     except HTTPException as e:

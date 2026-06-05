@@ -10,8 +10,10 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaExclamationTriangle
 } from 'react-icons/fa';
+import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import teamsService from '../../services/teams';
@@ -28,6 +30,28 @@ import {
 } from '../../components/partials';
 import Loader from '../../components/Loader';
 import '../../styles/dashboard.css';
+
+const parsearTelefonoE164 = (telefonoCompleto) => {
+  if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
+  const telClean = telefonoCompleto.trim();
+  if (telClean.startsWith('+')) {
+    if (telClean.length > 10) {
+      const local = telClean.slice(-10);
+      const codigo = telClean.slice(0, -10);
+      return { codigoPais: codigo, telefono: local };
+    }
+    return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+  }
+  if (telClean.length === 10 && /^\d+$/.test(telClean)) {
+    return { codigoPais: '+52', telefono: telClean };
+  }
+  if (telClean.length > 10 && /^\d+$/.test(telClean)) {
+    const local = telClean.slice(-10);
+    const codigo = '+' + telClean.slice(0, -10);
+    return { codigoPais: codigo, telefono: local };
+  }
+  return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+};
 
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
@@ -52,9 +76,11 @@ const StepBadge = ({ number, isActive, isDone }) => (
 export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { token } = useParams();
-  const isPublicFlow = !!token;
+  const { tokenIdentificador, tokenSecreto } = useParams();
+  const isPublicFlow = !!(tokenIdentificador && tokenSecreto);
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
+  const [invitationTeams, setInvitationTeams] = useState([]);
+  const [noPendingTeams, setNoPendingTeams] = useState(false);
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
@@ -62,7 +88,7 @@ export default function RegistroJugadores() {
   minDate.setFullYear(minDate.getFullYear() - 100);
   const minDateStr = minDate.toISOString().split('T')[0];
 
-  // ESTILO DINÁMICO PARA HOVER
+  // ESTILO DINÁMICO PARA HOVER Y DISEÑO RESPONSIVO
   const hoverStyles = `
     .document-card:hover .overlay-actions {
       opacity: 1 !important;
@@ -74,6 +100,119 @@ export default function RegistroJugadores() {
     label, .form-label {
       text-transform: uppercase !important;
     }
+    .toast-auto-save {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      z-index: 9999;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .toast-auto-save.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Clases responsivas */
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .form-grid-2-align-end {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      align-items: end;
+    }
+    .form-grid-2-foraneo {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .btn-container-responsive {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 40px;
+      --btn-min-width: 200px;
+      --btn-width: auto;
+    }
+    .main-card-responsive {
+      padding: 40px;
+    }
+    .form-wrapper-responsive {
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    
+    input, select {
+      min-height: 44px;
+    }
+
+    @media (max-width: 1024px) {
+      .form-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .form-grid-3, .form-grid-2, .form-grid-2-align-end, .form-grid-2-foraneo {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+      .btn-container-responsive {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        --btn-min-width: 100%;
+        --btn-width: 100%;
+      }
+      .main-card-responsive {
+        padding: 16px;
+        border-radius: 16px !important;
+      }
+      .form-wrapper-responsive {
+        padding: 16px;
+        border-radius: 12px !important;
+        margin-bottom: 20px;
+      }
+      .premium-card {
+        padding: 16px 20px !important;
+        border-radius: 16px !important;
+      }
+      .premium-card h1 {
+        font-size: 20px !important;
+      }
+      .premium-card div:last-child {
+        text-align: left !important;
+        width: 100%;
+      }
+    }
   `;
 
   // ESTADOS
@@ -84,6 +223,29 @@ export default function RegistroJugadores() {
   const [jugadores, setJugadores] = useState([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [failedPhoto, setFailedPhoto] = useState(null);
+  const [linkError, setLinkError] = useState(false);
+
+  // Estados y refs para autoguardado toast
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimeoutRef = useRef(null);
+
+  const triggerToast = () => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastVisible(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastVisible(false);
+    }, 2500); // 2.5s visible, luego 0.5s fade out (total ~3s)
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const [previews, setPreviews] = useState({
     acta: null,
@@ -106,6 +268,9 @@ export default function RegistroJugadores() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const selectedInvitationTeam = invitationTeams.find(
+    (team) => String(team.equipo_temporal_id) === String(teamId)
+  ) || null;
 
   const defaultPlayerDatos = {
     nombreJugador: '',
@@ -116,6 +281,7 @@ export default function RegistroJugadores() {
     fechaNacimiento: '',
     lugarNacimiento: 'MÉXICO',
     correo: '',
+    codigoPais: '+52',
     telefono: '',
     posicion: '',
     numCamiseta: '',
@@ -165,7 +331,7 @@ export default function RegistroJugadores() {
 
   const getPlayerStatus = (player) => {
     if (!player) return 'VACIO';
-    if (player.completo) return 'COMPLETO';
+    if (player.completo) return 'INSCRITO';
     const datos = player.datos || {};
     const docs = player.documentos || {};
     const hasRequiredFields = Boolean(
@@ -178,7 +344,7 @@ export default function RegistroJugadores() {
       datos.correo?.trim()
     );
     const hasAnyData = Object.values(datos).some(value => typeof value === 'string' ? value.trim() !== '' : Boolean(value)) || Object.values(docs).some(Boolean);
-    if (hasRequiredFields) return 'COMPLETO'; // Note: documents are optional for president flow
+    if (hasRequiredFields) return 'LISTO'; // Note: documents are optional for president flow
     if (hasAnyData) return 'EN_CAPTURA';
     return 'VACIO';
   };
@@ -262,7 +428,7 @@ export default function RegistroJugadores() {
   const guardarBorradorEnBD = async (slotId, newData) => {
     if (!slotId) return;
     try {
-      await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
+      const response = await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -272,6 +438,9 @@ export default function RegistroJugadores() {
           datos: newData
         })
       });
+      if (response.ok) {
+        triggerToast();
+      }
     } catch (err) {
       console.warn('No se pudo guardar el borrador en la BD:', err);
     }
@@ -308,37 +477,71 @@ export default function RegistroJugadores() {
   // CARGAR SLOTS Y DATOS DEL EQUIPO
   const fetchTeamInfo = async () => {
     let effectiveTeamId = teamId;
-    let inviteData = null;
     let inviteTeamInfo = {};
 
     try {
       setLoadingSlots(true);
+      setNoPendingTeams(false);
 
       // 1. Obtener catálogos
       const catalogsData = await teamsService.getCatalogs();
       setCatalogs(catalogsData);
 
       if (isPublicFlow && !teamId) {
-        inviteData = await teamsService.getInvitationInfo(token);
-        effectiveTeamId = inviteData.equipo_temporal_id;
+        if (!tokenIdentificador || !tokenSecreto) {
+          setLinkError(true);
+          setLoadingSlots(false);
+          return;
+        }
+        const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
+        setInvitationTeams(equiposPendientes);
+
+        if (equiposPendientes.length === 0) {
+          setNoPendingTeams(true);
+          setJugadores([]);
+          setSlotsData(null);
+          return;
+        }
+
+        effectiveTeamId = equiposPendientes[0].equipo_temporal_id;
         setTeamId(effectiveTeamId);
+      }
+
+      if (isPublicFlow && teamId) {
+        const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
+        setInvitationTeams(equiposPendientes);
+      }
+
+      if (selectedInvitationTeam) {
         inviteTeamInfo = {
-          equipo: inviteData.nombre_equipo || '',
-          liga: inviteData.nombre_liga || '',
-          categoria: inviteData.nombre_categoria || 'LIBRE'
+          equipo: selectedInvitationTeam.nombre_equipo || '',
+          liga: selectedInvitationTeam.nombre_liga || '',
+          categoria: selectedInvitationTeam.nombre_categoria || 'LIBRE',
+          presidente: selectedInvitationTeam.nombre_presidente || 'No disponible'
         };
       }
 
       if (!effectiveTeamId) {
-        if (!isPublicFlow) {
+        if (!isPublicFlow && !location.state?.teamId) {
+          setLinkError(true);
+        } else if (!isPublicFlow) {
           Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
           navigate('/presidente-equipo/dashboard');
+        } else {
+          setLinkError(true);
         }
         return;
       }
 
       // 2. Obtener slots y borradores
-      const slotsResponse = await teamsService.getAvailableSlots(effectiveTeamId);
+      const slotsResponse = await teamsService.getAvailableSlots(
+        effectiveTeamId,
+        isPublicFlow
+          ? { tokenIdentificador, tokenSecreto }
+          : null
+      );
       setSlotsData(slotsResponse);
 
       const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
@@ -352,18 +555,22 @@ export default function RegistroJugadores() {
       // Mapear los slots de la base de datos al estado jugadores
       const mappedJugadores = (slotsResponse.slots || []).map((slot, i) => {
         const datos = slot.datos_borrador || { ...defaultPlayerDatos };
+        const parsedTel = parsearTelefonoE164(datos.telefono || '');
         const mergedDatos = {
           ...defaultPlayerDatos,
           ...datos,
+          codigoPais: datos.codigoPais !== undefined ? datos.codigoPais : parsedTel.codigoPais,
+          telefono: datos.codigoPais !== undefined ? datos.telefono : parsedTel.telefono,
           equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
           liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
-          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE'
+          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
+          presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
         };
 
         return {
           numero: i + 1,
           slotId: slot.slot_id,
-          estado: slot.completo ? 'COMPLETO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
+          estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
           datos: mergedDatos,
           documentos: {
             acta: null,
@@ -382,7 +589,11 @@ export default function RegistroJugadores() {
 
     } catch (err) {
       console.error('Error al obtener info del equipo:', err);
-      Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+      if (isPublicFlow || !location.state?.teamId) {
+        setLinkError(true);
+      } else {
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+      }
     } finally {
       setLoadingSlots(false);
     }
@@ -390,7 +601,7 @@ export default function RegistroJugadores() {
 
   useEffect(() => {
     fetchTeamInfo();
-  }, [teamId, token, isPublicFlow]);
+  }, [teamId, tokenIdentificador, tokenSecreto, isPublicFlow]);
 
   // Manejar cambio de previsualización al cambiar de jugador
   useEffect(() => {
@@ -431,7 +642,8 @@ export default function RegistroJugadores() {
   const playerStatusConfig = {
     VACIO: { icon: '⚪', label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
     EN_CAPTURA: { icon: '🟡', label: 'EN CAPTURA', bg: '#fffbeb', color: '#92400e' },
-    COMPLETO: { icon: '🟢', label: 'COMPLETO', bg: '#dcfce7', color: '#166534' }
+    LISTO: { icon: '🔵', label: 'LISTO PARA REGISTRAR', bg: '#eff6ff', color: '#1e40af' },
+    INSCRITO: { icon: '🟢', label: 'INSCRITO', bg: '#dcfce7', color: '#166534' }
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
@@ -702,15 +914,14 @@ export default function RegistroJugadores() {
       const correoCJE = currentDatos.correo || '';
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
-      safeSetField(form, 'Teléfono', currentDatos.telefono);
+      safeSetField(form, 'Teléfono', (currentDatos.codigoPais || '+52') + (currentDatos.telefono || ''));
       safeSetField(form, 'Asociación', 'AFAEM');
-      safeSetField(form, 'fill_24', 'AFAEM');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(currentSeguroId));
       if (seguroSel?.nombre) {
         try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
-        try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
+        try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
       safeSetField(form, 'Liga', (currentDatos.liga || '').split('(')[0].trim());
@@ -869,6 +1080,10 @@ export default function RegistroJugadores() {
       const player = jugadores[currentPlayerIndex];
       const formData = new FormData();
       formData.append('equipo_temporal_id', parseInt(teamId, 10));
+      if (isPublicFlow) {
+        formData.append('token_identificador', tokenIdentificador);
+        formData.append('token_secreto', tokenSecreto);
+      }
       formData.append('nombre', (player.datos.nombreJugador || '').toString().trim());
       formData.append('primer_apellido', (player.datos.apellidoPaterno || '').toString().trim());
       formData.append('segundo_apellido', (player.datos.apellidoMaterno || '').toString().trim());
@@ -877,10 +1092,11 @@ export default function RegistroJugadores() {
       formData.append('fecha_nacimiento', player.datos.fechaNacimiento);
       formData.append('lugar_nacimiento', player.datos.lugarNacimiento || 'MÉXICO');
       formData.append('correo', player.datos.correo || '');
-      formData.append('telefono', player.datos.telefono || '');
+      formData.append('telefono', player.datos.telefono ? ((player.datos.codigoPais || '+52') + player.datos.telefono) : '');
       formData.append('posicion', player.datos.posicion || '3');
       formData.append('num_camiseta', player.datos.numCamiseta || '0');
       formData.append('seguro_id', parseInt(player.seguroId, 10));
+      formData.append('nui', player.datos.nui || '');
 
       if (player.slotId) {
         formData.append('slot_id', parseInt(player.slotId, 10));
@@ -907,7 +1123,7 @@ export default function RegistroJugadores() {
       const files = [];
 
       if (player.documentos.acta) { docIds.push(22); files.push(player.documentos.acta); }
-      if (esPlayerMinor(player.datos.fechaNacimiento)) {
+      if (isPlayerMinor(player.datos.fechaNacimiento)) {
         if (player.documentos.ineTutor) { docIds.push(33); files.push(player.documentos.ineTutor); }
         if (player.documentos.identificacionMenor) { docIds.push(36); files.push(player.documentos.identificacionMenor); }
       } else {
@@ -938,10 +1154,151 @@ export default function RegistroJugadores() {
     }
   };
 
+  if (linkError) {
+    return (
+      <div
+        className="fade-in-up"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#ffffff',
+          padding: '20px',
+        }}
+      >
+        <div
+          className="card shadow"
+          style={{
+            padding: '56px 48px',
+            borderRadius: '28px',
+            textAlign: 'center',
+            maxWidth: '520px',
+            width: '100%',
+            backgroundColor: '#ffffff',
+            border: '1px solid #f1f5f9'
+          }}
+        >
+          {/* Logo */}
+          <img
+            src={AfaemLogo}
+            alt="AFAEM"
+            style={{
+              width: '80px',
+              height: 'auto',
+              margin: '0 auto 24px',
+              display: 'block',
+              opacity: 0.85,
+            }}
+          />
+
+          {/* Ícono de Error */}
+          <div
+            style={{
+              width: '88px',
+              height: '88px',
+              borderRadius: '28px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '36px',
+              margin: '0 auto 28px',
+              border: '2px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <FaExclamationTriangle />
+          </div>
+
+          {/* Badge */}
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '6px 18px',
+              background: 'rgba(239, 68, 68, 0.08)',
+              color: '#ef4444',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '800',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              marginBottom: '20px',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            Error de Acceso
+          </span>
+
+          <h1
+            style={{
+              fontSize: '28px',
+              fontWeight: '800',
+              color: '#1e293b',
+              margin: '0 0 12px',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Enlace no válido o expirado
+          </h1>
+
+          <p
+            style={{
+              color: '#64748b',
+              fontSize: '15px',
+              lineHeight: '1.7',
+              marginBottom: '36px',
+              maxWidth: '380px',
+              margin: '0 auto 36px',
+            }}
+          >
+            El enlace que intentas utilizar ya no es válido, ha expirado o no existe.
+          </p>
+
+          <button
+            onClick={() => navigate('/ingresar')}
+            style={{
+              padding: '14px 36px',
+              fontSize: '15px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              borderRadius: '14px',
+              border: 'none',
+              backgroundColor: '#0b4ea6',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              width: '100%'
+            }}
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loadingSlots) {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <Loader text="Cargando información del equipo y slots disponibles..." />
+      </div>
+    );
+  }
+
+  if (noPendingTeams) {
+    return (
+      <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', padding: '24px' }}>
+        <div style={{ background: '#fff', padding: '40px 32px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08)', border: '1px solid #e2e8f0', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1e293b', marginBottom: '16px' }}>
+            No hay equipos pendientes
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.7', margin: 0 }}>
+            Esta invitación es válida, pero por ahora no existen equipos con slots disponibles para registrar jugadores.
+          </p>
+        </div>
       </div>
     );
   }
@@ -986,6 +1343,33 @@ export default function RegistroJugadores() {
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar y guardar borradores de tus jugadores libremente.</p>
         </div>
       </div>
+
+      {isPublicFlow && invitationTeams.length > 1 && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '18px 20px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>Selecciona el equipo a capturar</h3>
+              <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                Este enlace tiene acceso a todos los equipos pendientes del presidente.
+              </p>
+            </div>
+            <select
+              value={teamId || ''}
+              onChange={(e) => {
+                setCurrentPlayerIndex(0);
+                setTeamId(e.target.value ? Number(e.target.value) : null);
+              }}
+              style={{ minWidth: '280px', padding: '10px 12px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#1e293b', fontSize: '14px', fontWeight: '600' }}
+            >
+              {invitationTeams.map((team) => (
+                <option key={team.equipo_temporal_id} value={team.equipo_temporal_id}>
+                  {team.nombre_equipo} · {team.nombre_liga} · {team.slots_disponibles}/{team.total_slots} slots
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* SLOT NAVIGATION BAR */}
       {jugadores.length > 0 && (
@@ -1061,6 +1445,8 @@ export default function RegistroJugadores() {
             <span><strong>Liga:</strong> {(currentDatos.liga || 'N/A').toUpperCase()}</span>
             <span>•</span>
             <span><strong>Categoría:</strong> {(currentDatos.categoria || 'LIBRE').toUpperCase()}</span>
+            <span>•</span>
+            <span><strong>Presidente:</strong> {(currentDatos.presidente || 'No disponible').toUpperCase()}</span>
           </div>
         </div>
 
@@ -1097,12 +1483,11 @@ export default function RegistroJugadores() {
           )}
         </div>
       ) : (
-        <div className="premium-card fade-in" style={{
+        <div className="premium-card fade-in main-card-responsive" style={{
           maxWidth: '1000px',
           margin: '0 auto',
           background: 'white',
           borderRadius: '24px',
-          padding: '40px',
           boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
           border: '1px solid #e2e8f0'
         }}>
@@ -1146,10 +1531,15 @@ export default function RegistroJugadores() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                       {slotsData?.seguros?.map((seg) => {
                         const isSelected = String(currentSeguroId) === String(seg.seguro_id);
+                        const noDisponible = seg.disponibles <= 0 && !isSelected;
                         return (
                           <div
                             key={`seguro-card-${seg.seguro_id}`}
                             onClick={() => {
+                              if (noDisponible) {
+                                Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
+                                return;
+                              }
                               updatePlayerSeguro(currentPlayerIndex, String(seg.seguro_id));
                               const updated = { ...currentDatos };
                               if (currentPlayer?.slotId) {
@@ -1159,19 +1549,38 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '16px',
                               borderRadius: '12px',
-                              border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                              backgroundColor: isSelected ? '#eff6ff' : 'white',
-                              cursor: 'pointer',
+                              border: isSelected 
+                                ? '2.5px solid #0b4ea6' 
+                                : noDisponible 
+                                  ? '1px solid #e2e8f0' 
+                                  : '1px solid #cbd5e1',
+                              backgroundColor: isSelected 
+                                ? '#eff6ff' 
+                                : noDisponible 
+                                  ? '#f1f5f9' 
+                                  : 'white',
+                              cursor: noDisponible ? 'not-allowed' : 'pointer',
+                              opacity: noDisponible ? 0.6 : 1,
                               transition: 'all 0.2s',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '6px'
                             }}
                           >
-                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : noDisponible ? '#94a3b8' : '#1e293b' }}>
                               🛡️ {seg.nombre}
                             </span>
-                            <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                            <div style={{ 
+                              marginTop: '5px', 
+                              display: 'inline-flex', 
+                              alignSelf: 'start', 
+                              padding: '2px 8px', 
+                              borderRadius: '20px', 
+                              background: noDisponible ? '#e2e8f0' : '#dcfce7', 
+                              color: noDisponible ? '#64748b' : '#15803d', 
+                              fontSize: '11px', 
+                              fontWeight: '800' 
+                            }}>
                               {seg.disponibles} disponibles
                             </div>
                           </div>
@@ -1406,9 +1815,9 @@ export default function RegistroJugadores() {
                 </div>
 
                 {/* CAMPOS DEL FORMULARIO */}
-                <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+                <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-3">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
                       <input type="text" value={currentDatos.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -1423,7 +1832,7 @@ export default function RegistroJugadores() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-3">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                       <input type="number" value={currentDatos.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -1477,7 +1886,7 @@ export default function RegistroJugadores() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-3">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
                       <input
@@ -1513,14 +1922,62 @@ export default function RegistroJugadores() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                  <div className="form-grid-2">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
                       <input type="email" value={currentDatos.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                      <input type="tel" value={currentDatos.telefono} onChange={e => handleFieldChange('telefono', e.target.value)} onBlur={handleBlur} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <select
+                          value={currentDatos.codigoPais || '+52'}
+                          onChange={e => handleFieldChange('codigoPais', e.target.value)}
+                          onBlur={handleBlur}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '14px',
+                            backgroundColor: 'white',
+                            width: '110px',
+                            flexShrink: 0
+                          }}
+                        >
+                          <option value="+52">México +52</option>
+                          <option value="+1">EE.UU./Canadá +1</option>
+                          <option value="+34">España +34</option>
+                          <option value="+54">Argentina +54</option>
+                          <option value="+55">Brasil +55</option>
+                          <option value="+56">Chile +56</option>
+                          <option value="+57">Colombia +57</option>
+                          <option value="+506">Costa Rica +506</option>
+                          <option value="+593">Ecuador +593</option>
+                          <option value="+503">El Salvador +503</option>
+                          <option value="+502">Guatemala +502</option>
+                          <option value="+504">Honduras +504</option>
+                          <option value="+505">Nicaragua +505</option>
+                          <option value="+507">Panamá +507</option>
+                          <option value="+595">Paraguay +595</option>
+                          <option value="+51">Perú +51</option>
+                          <option value="+598">Uruguay +598</option>
+                          <option value="+58">Venezuela +58</option>
+                        </select>
+                        <input
+                          type="tel"
+                          value={currentDatos.telefono}
+                          onChange={e => handleFieldChange('telefono', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          onBlur={handleBlur}
+                          placeholder="10 dígitos numéricos"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '14px',
+                            flexGrow: 1
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1606,7 +2063,7 @@ export default function RegistroJugadores() {
 
                     {currentDatos.esForaneo ? (
                       <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        <div className="form-grid-2-foraneo">
                           <EntradaFormulario
                             etiqueta="Nacionalidad del jugador"
                             valor={currentDatos.nacionalidadJugador}
@@ -1621,7 +2078,7 @@ export default function RegistroJugadores() {
                           />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
+                        <div className="form-grid-2-align-end">
                           <EntradaSeleccion
                             etiqueta="¿El jugador ha vivido en el extranjero?"
                             valor={currentDatos.haVividoExtranjero ? '1' : '0'}
@@ -1646,7 +2103,7 @@ export default function RegistroJugadores() {
                           )}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        <div className="form-grid-2-foraneo">
                           <EntradaFormulario
                             etiqueta="Nacionalidad del padre"
                             valor={currentDatos.nacionalidadPadre}
@@ -1697,12 +2154,12 @@ export default function RegistroJugadores() {
                 </div>
 
                 {/* ACCIONES FINALES */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+                <div className="btn-container-responsive">
                   {!isPublicFlow && (
                     <BotonSecundario
                       etiqueta="Cancelar y volver"
                       alHacerClick={() => navigate(-1)}
-                      estilo={{ minWidth: '200px' }}
+                      estilo={{ minWidth: 'var(--btn-min-width, 200px)', width: 'var(--btn-width, auto)' }}
                     />
                   )}
                   <BotonPrimario
@@ -1710,7 +2167,7 @@ export default function RegistroJugadores() {
                     icono={<FaSave />}
                     alHacerClick={handleGuardar}
                     deshabilitado={uploading}
-                    estilo={{ minWidth: '300px' }}
+                    estilo={{ minWidth: 'var(--btn-min-width, 300px)', width: 'var(--btn-width, auto)' }}
                   />
                 </div>
               </section>
@@ -1821,6 +2278,12 @@ export default function RegistroJugadores() {
           </div>
         </div>
       </Modal>
+
+      {/* Notificación de autoguardado */}
+      <div className={`toast-auto-save ${toastVisible ? 'show' : ''}`}>
+        <FaCheckCircle style={{ color: '#10b981', fontSize: '16px' }} />
+        <span>Borrador guardado</span>
+      </div>
     </div>
   );
 }

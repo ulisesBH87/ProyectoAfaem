@@ -11,13 +11,20 @@ def crear_persona(db, persona: JugadorPersona):
     if existe:
         return existe.PersonaId
 
+    from app.core.telefono_utils import validar_y_normalizar_telefono
+    telefono_normalizado = validar_y_normalizar_telefono(persona.telefono) if persona.telefono else None
+
     nueva_persona = Personas(
         Nombre=persona.nombre,
         PrimerApellido=persona.primer_apellido,
         SegundoApellido=persona.segundo_apellido,
         CURP=persona.curp,
         SexoId=persona.sexo_id,
-        FechaNacimiento=persona.fecha_nacimiento
+        FechaNacimiento=persona.fecha_nacimiento,
+        NUI=persona.nui,
+        LugarNacimiento=persona.lugar_nacimiento,
+        CorreoElectronico=persona.correo,
+        NumeroTelefono=telefono_normalizado
     )
     
     try:

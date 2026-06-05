@@ -20,7 +20,6 @@ const AdminSolicitudes = lazy(() => import('./pages/Admin/AdminSolicitudes'));
 const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 const AdminPagos = lazy(() => import('./pages/Admin/AdminPagos'));
 const AdminEquipos = lazy(() => import('./pages/Admin/AdminEquipos'));
-const AdminCrearEquipo = lazy(() => import('./pages/Admin/AdminCrearEquipo'));
 const AdminJugadores = lazy(() => import('./pages/Admin/AdminJugadores'));
 const AdminCrearJugador = lazy(() => import('./pages/Admin/AdminCrearJugador'));
 const AdminCatalogos = lazy(() => import('./pages/Admin/AdminCatalogos'));
@@ -126,7 +125,7 @@ function App() {
           <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
           <Route path="/suspendido" element={<Suspended />} />
-          <Route path="/i/:token" element={<RegistroJugadores />} />
+          <Route path="/i/:tokenIdentificador/:tokenSecreto" element={<RegistroJugadores />} />
 
           {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT AND GENERALGUARD */}
           <Route element={<GeneralGuard><MainLayout userEmail={userEmail} /></GeneralGuard>}>

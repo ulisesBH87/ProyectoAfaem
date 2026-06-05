@@ -1,4 +1,3 @@
-import secrets
 from sqlite3 import IntegrityError
 
 from sqlalchemy import func
@@ -73,8 +72,7 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
             OrdenPagoId=orden.OrdenPagoId,
             Activo=True,
             CantidadJugadoresPagados=cantidad_jugadores,
-            TipoProcesoId=tipo_proceso,
-            TokenInvitacion=secrets.token_urlsafe(32)
+            TipoProcesoId=tipo_proceso
         )
     
     elif tipo_proceso == ProcesosEquipoTemporalEnum.AMPLIACION.value:
@@ -85,8 +83,7 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
             Activo=True,
             CantidadJugadoresPagados=cantidad_jugadores,
             TipoProcesoId=tipo_proceso,
-            EquipoId=equipo_id,
-            TokenInvitacion=secrets.token_urlsafe(32)
+            EquipoId=equipo_id
         )
 
     db.add(equipo)
@@ -238,6 +235,53 @@ def obtener_equipo_temporal_pagado_activo(db, usuario_id):
         .order_by(EquipoTemporal.EquipoTemporalId.desc())
         .first()
     )
+
+
+def construir_resumen_equipo_temporal(db, equipo_temporal):
+    slots = obtener_slots_con_persona(db, equipo_temporal.EquipoTemporalId)
+    slots_disponibles = sum(1 for s in slots if not s.Completo)
+
+    nombre_equipo = equipo_temporal.NombreEquipo or "Equipo sin nombre"
+    nombre_liga = equipo_temporal.LigaRelacion.Nombreliga if equipo_temporal.LigaRelacion else "Liga no especificada"
+    nombre_categoria = "LIBRE"
+    if equipo_temporal.LigaRelacion and equipo_temporal.LigaRelacion.CategoriaRelacion:
+        nombre_categoria = equipo_temporal.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    nombre_presidente = "No disponible"
+    if equipo_temporal.UsuarioRelacion:
+        persona = db.query(Personas).filter(Personas.PersonaId == equipo_temporal.UsuarioRelacion.PersonaId).first()
+        if persona:
+            nombre_presidente = f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip().upper()
+
+    return {
+        "equipo_temporal_id": equipo_temporal.EquipoTemporalId,
+        "nombre_equipo": nombre_equipo,
+        "nombre_liga": nombre_liga,
+        "nombre_categoria": nombre_categoria,
+        "slots_disponibles": slots_disponibles,
+        "total_slots": equipo_temporal.CantidadJugadoresPagados,
+        "nombre_presidente": nombre_presidente
+    }
+
+
+def obtener_equipos_temporales_pendientes_por_usuario_repo(db, usuario_id):
+    equipos = (
+        db.query(EquipoTemporal)
+        .join(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
+        .filter(EquipoTemporal.UsuarioId == usuario_id)
+        .filter(EquipoTemporal.Activo == True)
+        .filter(OrdenPago.EstatusPagoId == int(EstatusValidacionPago.ACTIVO.value))
+        .order_by(EquipoTemporal.EquipoTemporalId.desc())
+        .all()
+    )
+
+    equipos_pendientes = []
+    for equipo in equipos:
+        resumen = construir_resumen_equipo_temporal(db, equipo)
+        if resumen["slots_disponibles"] > 0:
+            equipos_pendientes.append(resumen)
+
+    return equipos_pendientes
 
 
 #DOCUMENTOS
@@ -424,10 +468,15 @@ def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int):
     return slot
 
 def actualizar_orden(db, solicitud_id: int):
+    # Si no hay solicitud asociada (ej. equipo creado directamente por admin), no hay orden que marcar.
+    if not solicitud_id:
+        return
+
     orden = db.query(OrdenPago).filter(OrdenPago.SolicitudId == solicitud_id).first()
     
     if not orden:
-        raise ValueError("Orden de pago no encontrada")
+        # Si la orden no se encuentra, no es un error crítico: puede que el admin haya aprobado directamente.
+        return
 
     orden.EstatusPagoId = int(EstatusValidacionPago.CADUCADO)
 

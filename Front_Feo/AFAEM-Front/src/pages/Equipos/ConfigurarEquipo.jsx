@@ -9,7 +9,11 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaFutbol,
+  FaMoneyBillWave,
+  FaClock,
+  FaTimesCircle
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -27,6 +31,30 @@ import {
   Modal
 } from '../../components/partials';
 import Loader from '../../components/Loader';
+import { useRBAC } from '../../hooks/useRBAC';
+import { DEFAULT_BANK_INFO, generarPDFCuota } from '../../utils/paymentPdf';
+
+const parsearTelefonoE164 = (telefonoCompleto) => {
+  if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
+  const telClean = telefonoCompleto.trim();
+  if (telClean.startsWith('+')) {
+    if (telClean.length > 10) {
+      const local = telClean.slice(-10);
+      const codigo = telClean.slice(0, -10);
+      return { codigoPais: codigo, telefono: local };
+    }
+    return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+  }
+  if (telClean.length === 10 && /^\d+$/.test(telClean)) {
+    return { codigoPais: '+52', telefono: telClean };
+  }
+  if (telClean.length > 10 && /^\d+$/.test(telClean)) {
+    const local = telClean.slice(-10);
+    const codigo = '+' + telClean.slice(0, -10);
+    return { codigoPais: codigo, telefono: local };
+  }
+  return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+};
 
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
@@ -48,12 +76,124 @@ const StepBadge = ({ number, isActive, isDone }) => (
   </div>
 );
 
+const ESTATUS_PAGO = {
+  NO_ENVIADO: 1,
+  EN_ESPERA: 2,
+  APROBADO: 3,
+  RECHAZADO: 4
+};
+
+const ESTADO_EQUIPO = {
+  SIN_ORDEN: 'SIN_ORDEN',
+  ORDEN_SIN_COMPROBANTE: 'ORDEN_SIN_COMPROBANTE',
+  COMPROBANTE_EN_REVISION: 'COMPROBANTE_EN_REVISION',
+  LISTO_PARA_CREAR_EQUIPO: 'LISTO_PARA_CREAR_EQUIPO'
+};
+
+const TIPO_SOLICITUD = {
+  PRESIDENTE_EQUIPO: 1,
+  EQUIPO: 2,
+  JUGADOR: 3
+};
+
 export default function ConfigurarEquipo() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { hasRole } = useRBAC();
+  const isAdmin = hasRole && (hasRole('ADMINISTRADOR') || hasRole('ADMIN'));
+
+  const [catalogs, setCatalogs] = useState({
+    ligas: [],
+    categorias: [],
+    modalidades: [],
+    ramas: [],
+    seguros: [],
+    roles_equipo: [],
+    combinaciones: []
+  });
+  const [loadingCatalogs, setLoadingCatalogs] = useState(true);
 
   const equipoId = searchParams.get('equipoId');
   const equipoTemporalId = searchParams.get('equipoTemporalId');
+  const modoAgregarJugadorUrl = searchParams.get('agregarJugador') === 'true';
+
+  const [activeStep, setActiveStep] = useState(() => {
+    if (equipoId && equipoTemporalId) {
+      return 2; // Paso 2: Registro de jugadores
+    }
+    return 0; // Paso 0: Selección de Presidente
+  });
+
+  const [selectedPresidentId, setSelectedPresidentId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activePresidents, setActivePresidents] = useState([]);
+
+  const [teamFormData, setTeamFormData] = useState({
+    teamName: '',
+    teamLogo: null,
+    season: '',
+    modality: '',
+    category: '',
+    rama: '',
+    agreedToTerms: false
+  });
+
+  const [pagoEquipo, setPagoEquipo] = useState({
+    loading: false,
+    aprobado: false,
+    estadoEquipo: null,
+    equipoTemporalId: null,
+    estado: null,
+    ordenId: null,
+    total: 0,
+    cantidadJugadores: 0,
+    tieneComprobante: false
+  });
+  const [pagoError, setPagoError] = useState(null);
+  const [numJugadoresPago, setNumJugadoresPago] = useState(25);
+  const [asignacionSeguros, setAsignacionSeguros] = useState({});
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [comprobantePagoEquipo, setComprobantePagoEquipo] = useState(null);
+  const [catalogoAfiliacionesPago, setCatalogoAfiliacionesPago] = useState([]);
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const bankInfo = DEFAULT_BANK_INFO;
+  const preRegistro = JSON.parse(localStorage.getItem('afaem_pre_registro') || '{}');
+
+  const getSeguroTipoPersonaId = (seguro) => Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
+  const segurosPresidente = (catalogs.seguros || []).filter(seguro => {
+    const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+    const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+    return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+  });
+  const segurosJugador = (catalogs.seguros || []).filter(seguro => {
+    const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+    const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+  });
+  const seguroJugadorIds = new Set(segurosJugador.map(seguro => String(seguro.id)));
+  const segurosPresidenteIds = new Set(segurosPresidente.map(seguro => String(seguro.id)));
+
+  const segurosRequeridosPago = Number(numJugadoresPago || 0);
+  const segurosRequeridosPagoJugador = Number(numJugadoresPago || 0) > 0 ? Number(numJugadoresPago || 0) : 0;
+  const totalAsignadosPagoJugador = segurosJugador.reduce((sum, seguro) => {
+    const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+    return sum + cantidad;
+  }, 0);
+  const totalAsignadosPago = totalAsignadosPagoJugador;
+  const segurosPendientesPago = segurosRequeridosPago - totalAsignadosPago;
+  const tieneSegurosJugadorValidos = totalAsignadosPagoJugador === segurosRequeridosPagoJugador;
+  const canGeneratePagoEquipo = Number(numJugadoresPago) >= 1 && tieneSegurosJugadorValidos;
+  const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
+  const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
+  const totalPagoEstimado = (
+    (costoAfiliacionJugador * Number(numJugadoresPago || 0)) +
+    ((catalogs.seguros || []).reduce((sum, seguro) => {
+      const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+      return sum + (Number(seguro.precio || 0) * cantidad);
+    }, 0))
+  );
+  const totalPagoMostrado = pagoEquipo.total || totalPagoEstimado;
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
@@ -96,17 +236,6 @@ export default function ConfigurarEquipo() {
     foto: null
   });
 
-  const [catalogs, setCatalogs] = useState({
-    ligas: [],
-    categorias: [],
-    modalidades: [],
-    ramas: [],
-    seguros: [],
-    roles_equipo: [],
-    combinaciones: []
-  });
-  const [loadingCatalogs, setLoadingCatalogs] = useState(true);
-
   // Datos extraídos o capturados del jugador
   const [extractedData, setExtractedData] = useState({
     nombreJugador: '',
@@ -117,6 +246,7 @@ export default function ConfigurarEquipo() {
     fechaNacimiento: '',
     lugarNacimiento: 'MÉXICO',
     correo: '',
+    codigoPais: '+52',
     telefono: '',
     posicion: '',
     numCamiseta: '',
@@ -206,6 +336,32 @@ export default function ConfigurarEquipo() {
   useEffect(() => {
     const initData = async () => {
       if (!equipoId || !equipoTemporalId) {
+        if (isAdmin) {
+          try {
+            setLoading(true);
+            const catalogsData = await teamsService.getCatalogs();
+            setCatalogs(catalogsData);
+
+            const resAfiliaciones = await fetch(`${API_BASE}/ordenes-pago/afiliaciones`);
+            if (resAfiliaciones.ok) {
+              const afiliaciones = await resAfiliaciones.json();
+              setCatalogoAfiliacionesPago(Array.isArray(afiliaciones) ? afiliaciones : []);
+            }
+
+            const presidents = await teamsService.getPresidentesActivos();
+            const soloActivos = Array.isArray(presidents)
+              ? presidents.filter(p => p.estatus === 7 || p.estatusNombre === 'ACTIVO')
+              : [];
+            setActivePresidents(soloActivos);
+          } catch (error) {
+            console.error("Error al iniciar catálogos de administrador:", error);
+          } finally {
+            setLoading(false);
+            setLoadingCatalogs(false);
+          }
+          return;
+        }
+
         Swal.fire('Error', 'Parámetros del equipo no provistos.', 'error');
         navigate('/presidente-equipo/equipos');
         return;
@@ -228,7 +384,7 @@ export default function ConfigurarEquipo() {
 
         // 3. Verificar slots disponibles y borradores
         const slotsResponse = await teamsService.getAvailableSlots(equipoTemporalId);
-        
+
         // Mapear los slotsResponse al formato esperado por el frontend
         const mappedSlotsData = {
           hay_slots: slotsResponse.jugadores_restantes > 0,
@@ -258,6 +414,653 @@ export default function ConfigurarEquipo() {
     initData();
   }, [equipoId, equipoTemporalId]);
 
+  const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
+    if (!ordenId) return;
+
+    try {
+      const resOrden = await fetch(`${API_BASE}/ordenes-pago/${ordenId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      });
+
+      if (!resOrden.ok) return;
+
+      const orden = await resOrden.json();
+      const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
+      const estatusOrden = Number(orden.EstatusPagoId || orden.estatus || 0);
+      if (estatusOrden) {
+        setPagoEquipo(prev => ({ ...prev, estado: estatusOrden }));
+      }
+
+      let cantidadJugadores = null;
+      const seguros = {};
+
+      detalles.forEach(detalle => {
+        if (Number(detalle.TipoAfiliacionId) === 4) {
+          cantidadJugadores = Number(detalle.Cantidad || 0);
+        }
+        if (detalle.SeguroId) {
+          const id = String(detalle.SeguroId);
+          seguros[id] = Number(detalle.Cantidad || 0);
+        }
+      });
+
+      if (cantidadJugadores !== null && !Number.isNaN(cantidadJugadores)) {
+        setNumJugadoresPago(cantidadJugadores);
+        setPagoEquipo(prev => ({ ...prev, cantidadJugadores }));
+      }
+
+      if (Object.keys(seguros).length > 0) {
+        setAsignacionSeguros(prev => ({ ...prev, ...seguros }));
+      }
+
+      const totalOrden = Number(orden.TotalPagar || orden.total || 0);
+      if (!Number.isNaN(totalOrden) && totalOrden > 0) {
+        setPagoEquipo(prev => ({ ...prev, total: totalOrden }));
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar el detalle de la orden de pago:');
+    }
+  };
+
+  const aprobarOrdenPagoEquipoAdmin = async (ordenId) => {
+    if (!ordenId) throw new Error('No se encontro la orden de pago a aprobar');
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE}/ordenes-pago/estatus-pago?orden_pago_id=${ordenId}&estatus=3`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'No se pudo aprobar la orden de pago');
+    }
+
+    return res.json();
+  };
+
+  const cargarEstadoPagoEquipo = async ({ presidenteId = null } = {}) => {
+    const esConsultaAdmin = Boolean(isAdmin && presidenteId);
+    if (isAdmin && !esConsultaAdmin) return false;
+
+    try {
+      setPagoEquipo(prev => ({ ...prev, loading: true }));
+      setPagoError(null);
+
+      const token = localStorage.getItem('token');
+      const query = esConsultaAdmin ? `?presidente_id=${presidenteId}` : '';
+      const res = await fetch(`${API_BASE}/ordenes-pago/mi-estado-equipo${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error('No se pudo consultar el estado del pago');
+
+      const data = await res.json();
+
+      const estadoEquipo = data.estado;
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || null;
+      const total = Number(data.total || 0);
+
+      if (estadoEquipo === ESTADO_EQUIPO.SIN_ORDEN || !estadoEquipo) {
+        try {
+          const nextPreRegistro = { ...(preRegistro || {}) };
+          delete nextPreRegistro.equipo_temporal_id;
+          localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+        } catch { }
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+          equipoTemporalId: null,
+          estado: null,
+          ordenId: null,
+          total: 0,
+          cantidadJugadores: 0,
+          tieneComprobante: false
+        });
+
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago pendiente',
+            text: 'El presidente seleccionado no tiene una orden aprobada disponible para crear el equipo.',
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
+        const equipoTemporalId = data.equipo_temporal_id || data.equipoTemporalId || null;
+        if (equipoTemporalId) {
+          try {
+            const nextPreRegistro = { ...(preRegistro || {}), equipo_temporal_id: equipoTemporalId };
+            localStorage.setItem('afaem_pre_registro', JSON.stringify(nextPreRegistro));
+          } catch { }
+        }
+
+        const seguros = {};
+        (data.seguros || []).forEach(seguro => {
+          const id = String(seguro.SeguroId || seguro.seguro_id);
+          seguros[id] = Number(seguro.Cantidad || seguro.cantidad || 0);
+        });
+
+        if (Object.keys(seguros).length > 0) {
+          setAsignacionSeguros(seguros);
+        }
+
+        if (data.cantidad_jugadores) {
+          setNumJugadoresPago(data.cantidad_jugadores);
+        }
+
+        setPagoEquipo({
+          loading: false,
+          aprobado: true,
+          estadoEquipo: ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO,
+          equipoTemporalId,
+          estado: ESTATUS_PAGO.APROBADO,
+          ordenId,
+          total: Number(data.total || 0),
+          cantidadJugadores: Number(data.cantidad_jugadores || 0),
+          tieneComprobante: true
+        });
+
+        if (esConsultaAdmin) {
+          setActiveStep(1);
+        }
+        return true;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.NO_ENVIADO,
+          ordenId,
+          total,
+          tieneComprobante: false
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        // Para el admin: en lugar de un Swal de decisión que puede perder la orden si elige "No",
+        // dejamos el estado activo con la orden visible y el admin decide desde la UI.
+        // No reseteamos el estado aquí — la orden se mostrará con un botón "Aprobar" inline.
+        return false;
+      }
+
+      if (estadoEquipo === ESTADO_EQUIPO.COMPROBANTE_EN_REVISION) {
+        setPagoEquipo(prev => ({
+          ...prev,
+          loading: false,
+          aprobado: false,
+          estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
+          equipoTemporalId: prev.equipoTemporalId || null,
+          estado: ESTATUS_PAGO.EN_ESPERA,
+          ordenId,
+          total,
+          tieneComprobante: true
+        }));
+        if (ordenId) await cargarDetalleOrdenPagoEquipo(ordenId, token);
+        if (esConsultaAdmin) {
+          await Swal.fire({
+            title: 'Pago en revisión',
+            text: `El comprobante${ordenId ? ` de la orden #${ordenId}` : ''} del presidente seleccionado sigue en revisión.`,
+            icon: 'info',
+            confirmButtonColor: '#0b4ea6'
+          });
+        }
+        return false;
+      }
+
+      setPagoEquipo({
+        loading: false,
+        aprobado: false,
+        estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
+        equipoTemporalId: null,
+        estado: null,
+        ordenId: null,
+        total: 0,
+        cantidadJugadores: 0,
+        tieneComprobante: false
+      });
+      return false;
+    } catch (error) {
+      console.error('Error al cargar pago de equipo:', error);
+      setPagoEquipo(prev => ({ ...prev, loading: false }));
+      setPagoError(error.message);
+
+      if (esConsultaAdmin) {
+        await Swal.fire('Error', error.message, 'error');
+      }
+      return false;
+    }
+  };
+
+  const handleCrearOrdenPagoEquipo = async () => {
+    setPagoError(null);
+
+    if (Number(numJugadoresPago) < 1) {
+      setPagoError('Debes ingresar el número de jugadores.');
+      return;
+    }
+
+    if (totalAsignadosPagoJugador !== segurosRequeridosPagoJugador) {
+      setPagoError(`Debes asignar un seguro por jugador. Faltan ${segurosRequeridosPagoJugador - totalAsignadosPagoJugador}.`);
+      return;
+    }
+
+    try {
+      setProcesandoPago(true);
+      const token = localStorage.getItem('token');
+      const segurosPayload = Object.entries(asignacionSeguros)
+        .filter(([seguroId, cantidad]) => seguroJugadorIds.has(seguroId) && Number(cantidad) > 0)
+        .map(([seguroId, cantidad]) => ({
+          SeguroId: Number(seguroId),
+          Cantidad: Number(cantidad)
+        }));
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          CantidadJugadores: Number(numJugadoresPago),
+          Seguros: segurosPayload,
+          TipoSolicitud: TIPO_SOLICITUD.EQUIPO,
+          PresidenteId: isAdmin ? Number(selectedPresidentId) : null
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const backendMsg = errData.detail || errData.message || 'No se pudo crear la orden de pago';
+        setPagoError(backendMsg);
+        Swal.fire('Error', backendMsg, 'error');
+        return;
+      }
+
+      const data = await res.json();
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || data.id;
+      const totalOrden = Number(data.total || totalPagoEstimado || 0);
+      setPagoEquipo({
+        loading: false,
+        aprobado: false,
+        estadoEquipo: ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE,
+        estado: ESTATUS_PAGO.NO_ENVIADO,
+        ordenId,
+        total: totalOrden,
+        cantidadJugadores: Number(numJugadoresPago),
+        tieneComprobante: false
+      });
+
+      generarPDFCuota({
+        ordenId,
+        user,
+        bankInfo,
+        catalogoAfiliaciones: catalogoAfiliacionesPago,
+        catalogoSeguros: catalogs.seguros,
+        asignacionSeguros,
+        total: totalOrden,
+        cantidadJugadores: Number(numJugadoresPago || 0),
+        incluirPresidente: false
+      });
+
+      Swal.fire({
+        title: 'Orden generada',
+        text: isAdmin
+          ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediatamente o esperar a que el presidente realice el pago.'
+          : 'Se descargó tu ficha de pago en PDF. Realiza el pago y sube el comprobante.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      setPagoError(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
+
+  const handleSubirComprobanteEquipo = async () => {
+    setPagoError(null);
+
+    if (!comprobantePagoEquipo) {
+      setPagoError('Debes subir tu comprobante de pago.');
+      return;
+    }
+
+    try {
+      setProcesandoPago(true);
+      const token = localStorage.getItem('token');
+      const formDataPago = new FormData();
+      formDataPago.append('archivo', comprobantePagoEquipo);
+
+      const res = await fetch(`${API_BASE}/ordenes-pago/${pagoEquipo.ordenId}/comprobante`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataPago
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo subir el comprobante');
+      }
+
+      setPagoEquipo(prev => ({
+        ...prev,
+        estadoEquipo: ESTADO_EQUIPO.COMPROBANTE_EN_REVISION,
+        estado: ESTATUS_PAGO.EN_ESPERA,
+        tieneComprobante: true
+      }));
+      setComprobantePagoEquipo(null);
+
+      Swal.fire({
+        title: 'Comprobante recibido',
+        text: 'Un administrador debe aprobar el pago antes de configurar el equipo.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      });
+    } catch (error) {
+      setPagoError(error.message);
+      Swal.fire('Error', error.message, 'error');
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
+
+  const handleOptionChange = (field, value) => {
+    const intVal = parseInt(value, 10);
+    setTeamFormData(prev => {
+      let extra = {};
+      if (field === 'season') {
+        const selectedLiga = catalogs.ligas.find(l => Number(l.id) === intVal);
+        if (selectedLiga) {
+          extra = {
+            modality: selectedLiga.modalidad_id || selectedLiga.modalidadId || '',
+            category: selectedLiga.categoria_id || selectedLiga.categoriaId || '',
+            rama: selectedLiga.rama_id || selectedLiga.ramaId || ''
+          };
+        }
+      }
+      return {
+        ...prev,
+        [field]: intVal,
+        ...extra
+      };
+    });
+  };
+
+  const handleSaveTeamAdmin = async () => {
+    if (!teamFormData.teamName.trim()) {
+      Swal.fire('Atención', 'Debe escribir el nombre del equipo.', 'warning');
+      return;
+    }
+    if (!teamFormData.season) {
+      Swal.fire('Atención', 'Debe seleccionar una liga.', 'warning');
+      return;
+    }
+    if (!pagoEquipo.equipoTemporalId) {
+      Swal.fire({
+        title: 'Orden de pago sin aprobar',
+        html: 'La orden de pago del presidente aún no ha sido aprobada.<br/><br/>Regresa al paso anterior y aprueba la orden directamente antes de crear el equipo.',
+        icon: 'warning',
+        confirmButtonText: 'Volver al paso anterior',
+        confirmButtonColor: '#0b4ea6'
+      }).then(() => setActiveStep(0));
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Creando Equipo...',
+        text: 'Por favor espere mientras registramos el club en el servidor.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      await teamsService.createTeamCompleto({
+        teamName: teamFormData.teamName,
+        presidente_id: selectedPresidentId ? Number(selectedPresidentId) : null,
+        equipo_temporal_id: pagoEquipo.equipoTemporalId || null,
+        liga_id: teamFormData.season,
+        modalidad_id: teamFormData.modality,
+        categoria_id: teamFormData.category,
+        rama_id: teamFormData.rama,
+        players: [],
+        teamLogo: teamFormData.teamLogo
+      });
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Equipo Creado',
+        text: `El equipo "${teamFormData.teamName}" ha sido registrado exitosamente.`
+      }).then(() => {
+        navigate('/admin/equipos');
+      });
+    } catch (err) {
+      console.error("Error al guardar equipo:", err);
+      Swal.fire('Error', 'No se pudo completar el registro: ' + (err.response?.data?.detail || err.message), 'error');
+    }
+  };
+
+  const renderPagoPrevioEquipo = () => {
+    const ordenCreada = Boolean(pagoEquipo.ordenId);
+    const pagoEnRevision = pagoEquipo.estadoEquipo === ESTADO_EQUIPO.COMPROBANTE_EN_REVISION;
+    const pagoRechazado = pagoEquipo.estado === ESTATUS_PAGO.RECHAZADO;
+
+    if (pagoEquipo.loading || loadingCatalogs) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <FaClock style={{ fontSize: '42px', color: '#0b4ea6', marginBottom: '18px' }} />
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Revisando estado de pago</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>Un momento mientras validamos si tienes una orden aprobada disponible.</p>
+        </div>
+      );
+    }
+
+    if (pagoEnRevision) {
+      return (
+        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ width: '82px', height: '82px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: '36px' }}>
+            <FaClock />
+          </div>
+          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Pago en revisión</h2>
+          <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
+            Favor de aprobar la orden #{pagoEquipo.ordenId}. directamente desde el panel de Validación de Pagos.
+          </p>
+          <button onClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
+            Volver al panel
+          </button>
+        </div>
+      );
+    }
+
+    if (pagoEquipo.estadoEquipo === ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO) {
+      return null;
+    }
+
+    return (
+      <div style={{ maxWidth: '980px', margin: '0 auto', animation: 'slideUp 0.4s ease' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: '0 12px 24px rgba(11,78,166,0.22)' }}>
+            <FaMoneyBillWave />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
+          <p style={{ color: '#64748b', margin: 0 }}>
+            {isAdmin
+              ? 'Genera la orden de pago con el número de jugadores y tipos de seguros'
+              : 'Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.'
+            }
+          </p>
+          <p style={{ color: '#ff0000', margin: 0 }}>
+            {isAdmin
+              ? '*Registro de equipo como administrador*'
+              : '*Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*'}
+          </p>
+        </div>
+
+        {pagoRechazado && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '16px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <FaTimesCircle />
+            <span style={{ fontWeight: '700' }}>El comprobante fue rechazado. Sube un nuevo archivo para enviarlo otra vez a revision.</span>
+          </div>
+        )}
+
+        {pagoError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', fontWeight: '700' }}>
+            {pagoError}
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            {!ordenCreada ? (
+              <>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={numJugadoresPago}
+                  onChange={(e) => setNumJugadoresPago(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '100%', padding: '14px 16px', border: '2px solid #dbeafe', borderRadius: '12px', fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '18px' }}
+                />
+
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', background: 'white' }}>
+                  <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase' }}>Seguros para jugador</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                    {segurosJugador.map(seguro => {
+                      const id = String(seguro.id);
+                      return (
+                        <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px', background: '#f8fafc' }}>
+                          <div>
+                            <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                            <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            value={asignacionSeguros[id] ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                              setAsignacionSeguros(prev => ({ ...prev, [id]: value }));
+                            }}
+                            style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center', backgroundColor: 'white' }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? '#ecfdf5' : '#fff7ed', color: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                  Seguros asignados: jugadores {totalAsignadosPagoJugador}/{segurosRequeridosPagoJugador || 0}
+                </div>
+                {!tieneSegurosJugadorValidos && Number(numJugadoresPago || 0) > 0 && (
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#b45309', fontWeight: '700' }}>
+                    La suma de seguros para jugador debe ser igual al numero de jugadores seleccionado.
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: '#ecfdf5', color: '#047857', fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
+                  <FaCheckCircle /> Orden activa #{pagoEquipo.ordenId}
+                </div>
+
+                {/* Botón de aprobación directa para admin cuando la orden no tiene comprobante */}
+                {isAdmin && pagoEquipo.estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE && (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '18px', marginBottom: '18px' }}>
+                    <p style={{ color: '#92400e', fontWeight: '800', fontSize: '14px', margin: '0 0 12px' }}>
+                      ⚠️ El presidente aún no ha subido el comprobante. Puedes aprobar la orden directamente o esperar.
+                    </p>
+                    <button
+                      disabled={procesandoPago}
+                      onClick={async () => {
+                        try {
+                          setPagoEquipo(prev => ({ ...prev, loading: true }));
+                          await aprobarOrdenPagoEquipoAdmin(pagoEquipo.ordenId);
+                          await Swal.fire({
+                            title: 'Orden aprobada',
+                            text: `La orden #${pagoEquipo.ordenId} se aprobó correctamente.`,
+                            icon: 'success',
+                            confirmButtonColor: '#0b4ea6'
+                          });
+                          await cargarEstadoPagoEquipo({ presidenteId: selectedPresidente?.id });
+                        } catch (error) {
+                          setPagoEquipo(prev => ({ ...prev, loading: false }));
+                          setPagoError(error.message);
+                          Swal.fire('Error', error.message, 'error');
+                        }
+                      }}
+                      style={{ padding: '11px 22px', borderRadius: '10px', border: 'none', background: '#10b981', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: procesandoPago ? 0.6 : 1 }}
+                    >
+                      {procesandoPago ? 'Aprobando...' : '✓ Aprobar orden directamente'}
+                    </button>
+                  </div>
+                )}
+
+                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
+                  Adjunta un PDF o imagen del comprobante. La configuracion se habilitara cuando el administrador apruebe esta orden.
+                </p>
+                <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
+                  <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
+                  <input
+                    id="comprobante-equipo"
+                    type="file"
+                    accept=".pdf,image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setComprobantePagoEquipo(e.target.files?.[0] || null)}
+                  />
+                  <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
+                    {comprobantePagoEquipo ? comprobantePagoEquipo.name : 'No se ha seleccionado archivo'}
+                  </div>
+                  <button onClick={() => document.getElementById('comprobante-equipo').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}>
+                    {comprobantePagoEquipo ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+              <span>Afiliacion jugadores x{Number(numJugadoresPago || 0)}</span>
+              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresPago || 0)).toFixed(2)}</strong>
+            </div>
+            {catalogs.seguros ? catalogs.seguros.filter(seguro => Number(asignacionSeguros[String(seguro.id)] || 0) > 0).map(seguro => {
+              const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
+              return (
+                <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+                  <span>{seguro.nombre} x{cantidad}</span>
+                  <strong style={{ color: '#1e293b' }}>${(Number(seguro.precio || 0) * cantidad).toFixed(2)}</strong>
+                </div>
+              );
+            }) : null}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
+              <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${Number(totalPagoMostrado || 0).toFixed(2)}</span>
+            </div>
+
+            <button
+              disabled={procesandoPago || (!ordenCreada && !canGeneratePagoEquipo) || (ordenCreada && !comprobantePagoEquipo)}
+              onClick={ordenCreada ? handleSubirComprobanteEquipo : handleCrearOrdenPagoEquipo}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPago ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: (!ordenCreada && !canGeneratePagoEquipo) || (ordenCreada && !comprobantePagoEquipo) ? 0.55 : 1 }}
+            >
+              {procesandoPago ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Cargar borrador del slot seleccionado al cambiar de seguro
   useEffect(() => {
     if (!slotsData?.rawSlots || !selectedSeguroId) return;
@@ -267,7 +1070,18 @@ export default function ConfigurarEquipo() {
     );
 
     if (slotConBorrador?.datos_borrador) {
-      setExtractedData(slotConBorrador.datos_borrador);
+      const dbTel = slotConBorrador.datos_borrador.telefono || '';
+      const codPais = slotConBorrador.datos_borrador.codigoPais;
+      if (codPais === undefined) {
+        const parsed = parsearTelefonoE164(dbTel);
+        setExtractedData({
+          ...slotConBorrador.datos_borrador,
+          codigoPais: parsed.codigoPais,
+          telefono: parsed.telefono
+        });
+      } else {
+        setExtractedData(slotConBorrador.datos_borrador);
+      }
     } else {
       // Limpiar a valores por defecto
       setExtractedData({
@@ -279,6 +1093,7 @@ export default function ConfigurarEquipo() {
         fechaNacimiento: '',
         lugarNacimiento: 'MÉXICO',
         correo: '',
+        codigoPais: '+52',
         telefono: '',
         posicion: '',
         numCamiseta: '',
@@ -568,7 +1383,7 @@ export default function ConfigurarEquipo() {
       const correoCJE = extractedData.correo || '';
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
-      safeSetField(form, 'Teléfono', extractedData.telefono);
+      safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
       safeSetField(form, 'Asociación', 'AFAEM');
       safeSetField(form, 'fill_24', 'AFAEM');
 
@@ -745,7 +1560,7 @@ export default function ConfigurarEquipo() {
       formData.append('fecha_nacimiento', extractedData.fechaNacimiento);
       formData.append('lugar_nacimiento', extractedData.lugarNacimiento || 'MÉXICO');
       formData.append('correo', extractedData.correo || '');
-      formData.append('telefono', extractedData.telefono || '');
+      formData.append('telefono', extractedData.telefono ? ((extractedData.codigoPais || '+52') + extractedData.telefono) : '');
       formData.append('rol_en_equipo', extractedData.posicion || '3');
       formData.append('numero_camiseta', extractedData.numCamiseta || '0');
       formData.append('seguro_id', parseInt(selectedSeguroId, 10));
@@ -822,7 +1637,13 @@ export default function ConfigurarEquipo() {
   }
 
   // Si no hay slots en absoluto
-  const sinSlots = slotsData?.slots_disponibles === 0 || slotsData?.hay_slots === false;
+  const sinSlots = (slotsData?.slots_disponibles === 0 || slotsData?.hay_slots === false) && equipoId;
+
+  const steps = [
+    { label: 'Seleccionar Presidente', step: 0 },
+    { label: 'Configurar Equipo', step: 1 },
+    { label: 'Registrar Jugadores', step: 2 }
+  ];
 
   return (
     <div className="dashboard-content">
@@ -844,10 +1665,10 @@ export default function ConfigurarEquipo() {
                 confirmButtonText: 'Sí, salir',
                 cancelButtonText: 'Continuar registro'
               }).then((result) => {
-                if (result.isConfirmed) navigate('/presidente-equipo/equipos');
+                if (result.isConfirmed) navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos');
               });
             } else {
-              navigate('/presidente-equipo/equipos');
+              navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos');
             }
           }}
           className="btn btn-outline-secondary"
@@ -856,701 +1677,1233 @@ export default function ConfigurarEquipo() {
           <FaArrowLeft />
         </button>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registrar Jugadores de Equipo</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar jugadores en slots pagados restantes.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+            {(!equipoId || !equipoTemporalId) && isAdmin ? 'Crear Nuevo Equipo' : 'Registrar Jugadores de Equipo'}
+          </h2>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+            {(!equipoId || !equipoTemporalId) && isAdmin ? 'Asistente de configuración de equipo para presidente' : 'Registrar jugadores en slots pagados restantes.'}
+          </p>
         </div>
       </div>
 
-      {/* DETALLES DEL EQUIPO */}
-      {equipo && (
-        <div className="premium-card fade-in" style={{
-          maxWidth: '1000px',
-          margin: '0 auto 30px auto',
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-          color: 'white',
-          borderRadius: '20px',
-          padding: '25px 35px',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+      {/* WIZARD STEPS */}
+      {(!equipoId || !equipoTemporalId) && isAdmin && (
+        <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '20px'
+          gap: '30px',
+          marginBottom: '35px',
+          background: '#f8fafc',
+          padding: '15px 25px',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          maxWidth: '1000px',
+          margin: '0 auto 30px auto'
         }}>
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
-            <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>🛡️ {equipo.NombreEquipo}</h1>
-            <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: '#94a3b8', flexWrap: 'wrap' }}>
-              <span><strong>Liga:</strong> {equipo.Liga || 'N/A'}</span>
-              <span>•</span>
-              <span><strong>Categoría:</strong> {equipo.Categoria || 'LIBRE'} ({equipo.Rama || 'N/A'})</span>
-            </div>
-          </div>
+          {steps.map((s, idx) => {
+            const isActive = activeStep === s.step;
+            const isDone = activeStep > s.step;
+            return (
+              <React.Fragment key={s.step}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: isActive || isDone ? 1 : 0.5 }}>
+                  <StepBadge number={idx + 1} isActive={isActive} isDone={isDone} />
+                  <span style={{
+                    fontWeight: isActive ? '800' : '600',
+                    color: isActive ? '#0b4ea6' : '#64748b',
+                    fontSize: '14px'
+                  }}>
+                    {s.label}
+                  </span>
+                </div>
+                {idx < steps.length - 1 && (
+                  <div style={{
+                    height: '2px',
+                    width: '40px',
+                    backgroundColor: isDone ? '#10b981' : '#e2e8f0',
+                    transition: 'all 0.3s'
+                  }} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      )}
 
-          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
-            <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
-              {slotsData?.slots_disponibles || 0} slots
-            </span>
+      {/* PASO 0: SELECTOR DE PRESIDENTE */}
+      {(!equipoId || !equipoTemporalId) && isAdmin && activeStep === 0 && (
+        <div style={{ maxWidth: '1000px', margin: '0 auto', animation: 'fadeIn 0.3s ease' }}>
+          <div className="premium-card" style={{
+            background: 'white',
+            borderRadius: '24px',
+            padding: '35px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+            border: '1px solid #e2e8f0'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '8px' }}>
+              Seleccionar Presidente del Club
+            </h3>
+            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '25px' }}>
+              Busca y selecciona al presidente al que se le asignará el nuevo equipo. Si el presidente no cuenta con un pago de slots aprobado, podrás generarlo y aprobarlo aquí mismo.
+            </p>
+
+            {/* Buscador */}
+            <div style={{ position: 'relative', marginBottom: '25px' }}>
+              <input
+                type="text"
+                placeholder="Buscar por nombre o correo electrónico del presidente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px 14px 44px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '14px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#0b4ea6'}
+                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+              />
+              <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                🔍
+              </span>
+            </div>
+
+            {/* Listado de Presidentes */}
+            {selectedPresidentId ? (
+              <div>
+                {(() => {
+                  const pres = activePresidents.find(p => String(p.id || p.PresidenteId) === String(selectedPresidentId));
+                  const nombreCompleto = pres ? pres.nombre || pres.NombrePresidente || pres.correo : 'Presidente seleccionado';
+                  return (
+                    <div style={{
+                      background: '#eff6ff',
+                      border: '1.5px solid #0b4ea6',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '25px'
+                    }}>
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#0b4ea6', textTransform: 'uppercase' }}>Presidente Seleccionado</span>
+                        <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: '4px 0 2px 0' }}>👤 {nombreCompleto}</h4>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{pres?.correo || 'Sin correo registrado'}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedPresidentId('');
+                          setPagoEquipo(prev => ({
+                            ...prev,
+                            estadoEquipo: null,
+                            equipoTemporalId: null,
+                            estado: null,
+                            ordenId: null,
+                            total: 0,
+                            cantidadJugadores: 0
+                          }));
+                        }}
+                        style={{
+                          background: 'none',
+                          border: '1px solid #cbd5e1',
+                          padding: '8px 14px',
+                          borderRadius: '10px',
+                          color: '#64748b',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cambiar presidente
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                {/* Si no está aprobado, renderiza el pago previo */}
+                {pagoEquipo.estadoEquipo !== ESTADO_EQUIPO.LISTO_PARA_CREAR_EQUIPO ? (
+                  renderPagoPrevioEquipo()
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '30px' }}>
+                    <div style={{ color: '#10b981', fontSize: '48px', marginBottom: '15px' }}>
+                      <FaCheckCircle />
+                    </div>
+                    <h4 style={{ fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>Pago verificado y aprobado</h4>
+                    <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
+                      Este presidente tiene slots disponibles. Haz clic en continuar para configurar el equipo.
+                    </p>
+                    <button
+                      onClick={() => setActiveStep(1)}
+                      style={{
+                        padding: '12px 30px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: '#0b4ea6',
+                        color: 'white',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(11,78,166,0.2)'
+                      }}
+                    >
+                      Configurar Equipo →
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '15px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                paddingRight: '5px'
+              }}>
+                {activePresidents.filter(pres => {
+                  const term = searchTerm.toLowerCase();
+                  const nombreCompleto = (pres.nombre || '').toLowerCase();
+                  const email = (pres.correo || '').toLowerCase();
+                  return nombreCompleto.includes(term) || email.includes(term);
+                }).length > 0 ? (
+                  activePresidents.filter(pres => {
+                    const term = searchTerm.toLowerCase();
+                    const nombreCompleto = (pres.nombre || '').toLowerCase();
+                    const email = (pres.correo || '').toLowerCase();
+                    return nombreCompleto.includes(term) || email.includes(term);
+                  }).map(pres => {
+                    const id = String(pres.id || pres.PresidenteId);
+                    const nombreCompleto = pres.nombre || pres.NombrePresidente || pres.correo;
+                    return (
+                      <div
+                        key={`pres-${id}`}
+                        onClick={async () => {
+                          setSelectedPresidentId(id);
+                          await cargarEstadoPagoEquipo({ presidenteId: id });
+                        }}
+                        style={{
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '16px',
+                          padding: '16px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          backgroundColor: 'white'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = '#0b4ea6';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.05)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '4px' }}>👤 {nombreCompleto}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>{pres.correo || 'Sin correo'}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                          <span style={{ fontSize: '11px', color: '#0b4ea6', fontWeight: '800' }}>SELECCIONAR →</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                    No se encontraron presidentes activos.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* BLOQUEO SI NO HAY SLOTS */}
-      {sinSlots ? (
-        <div className="premium-card fade-in" style={{
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: 'white',
-          borderRadius: '24px',
-          padding: '40px',
-          textAlign: 'center',
-          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-          border: '1px solid #fee2e2'
-        }}>
-          <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin Slots / Seguros Disponibles</h2>
-          <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
-            Este equipo ya ha completado todos los seguros y slots contratados.
-            No es posible agregar más jugadores hasta adquirir nuevos slots de registro.
-          </p>
-          <BotonSecundario
-            etiqueta="Volver a mis equipos"
-            alHacerClick={() => navigate('/presidente-equipo/equipos')}
-          />
-        </div>
-      ) : (
-        <div className="premium-card fade-in" style={{
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: 'white',
-          borderRadius: '24px',
-          padding: '40px',
-          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-          border: '1px solid #e2e8f0'
-        }}>
-
-          <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p className="required-legend" style={{ margin: 0 }}>
-              <span className="required-star">*</span> Indica que el campo es obligatorio.
+      {/* PASO 1: CONFIGURAR EQUIPO */}
+      {(!equipoId || !equipoTemporalId) && isAdmin && activeStep === 1 && (
+        <div style={{ maxWidth: '800px', margin: '0 auto', animation: 'fadeIn 0.3s ease' }}>
+          <div className="premium-card" style={{
+            background: 'white',
+            borderRadius: '24px',
+            padding: '35px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+            border: '1px solid #e2e8f0'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '8px' }}>
+              Configuración del Nuevo Equipo
+            </h3>
+            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '25px' }}>
+              Ingresa los detalles básicos para registrar el equipo en el sistema. Los campos de categoría, modalidad y rama se auto-completarán según la liga seleccionada.
             </p>
-          </div>
-
-          {/* PASO 1: SELECCION DE SEGURO / SLOT A CONSUMIR */}
-          <section style={{ marginBottom: '45px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
-              <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar</h3>
-            </div>
-
-            <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
-              <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
-                  Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                  {slotsData?.seguros_disponibles?.map((seg) => {
-                    const matchedSeguro = catalogs?.seguros?.find(s => s.id === seg.SeguroId);
-                    const isSelected = String(selectedSeguroId) === String(seg.SeguroId);
-                    return (
-                      <div
-                        key={`seguro-card-${seg.SeguroId}`}
-                        onClick={() => setSelectedSeguroId(String(seg.SeguroId))}
-                        style={{
-                          padding: '16px',
-                          borderRadius: '12px',
-                          border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                          backgroundColor: isSelected ? '#eff6ff' : 'white',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px'
-                        }}
-                      >
-                        <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
-                          🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
-                        </span>
-                        {matchedSeguro?.precio !== undefined && (
-                          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
-                            Precio: ${matchedSeguro.precio} MXN
-                          </span>
-                        )}
-                        <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
-                          {seg.Cantidad} disponibles
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* PASO 2: CARGA DE DOCUMENTOS */}
-          {showStep2 && (
-            <section className="fade-in" style={{ marginBottom: '45px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación (Opcional)</h3>
-              </div>
-
-              <div style={{
-                background: '#f0f9ff',
-                border: '1px solid #bae6fd',
-                borderRadius: '12px',
-                padding: '12px 18px',
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                fontSize: '13px',
-                color: '#0369a1',
-                fontWeight: '600'
-              }}>
-                <span style={{ fontSize: '18px' }}>📋</span>
-                Opcional: puedes subir los documentos ahora para auto-llenar los campos vía OCR, o continuar sin archivos y cargarlos después.
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '20px'
-              }}>
-                {documentCards.map((doc) => (
-                  <div
-                    key={doc.key}
-                    className="document-card"
-                    style={{
-                      backgroundColor: 'white',
-                      borderRadius: '20px',
-                      border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                      padding: '15px',
-                      textAlign: 'center',
-                      transition: 'all 0.3s',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {/* Indicador de Menor para tutor/credencial */}
-                    {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                      <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
-                    )}
-
-                    <div style={{
-                      height: '140px',
-                      width: '100%',
-                      backgroundColor: '#f8fafc',
-                      borderRadius: '12px',
-                      marginBottom: '10px',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #f1f5f9'
-                    }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        handleFileUpload(doc.key, e.dataTransfer.files[0]);
-                      }}
-                    >
-                      {previews[doc.key] ? (
-                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {documents[doc.key]?.type === 'application/pdf' ? (
-                            <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                              <FaFilePdf />
-                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
-                            </div>
-                          ) : (
-                            <img
-                              src={previews[doc.key]}
-                              alt="Preview"
-                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                            />
-                          )}
-
-                          {/* OVERLAY ACTIONS */}
-                          <div className="overlay-actions" style={{
-                            position: 'absolute',
-                            top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '12px',
-                            opacity: 0,
-                            transition: 'opacity 0.2s ease',
-                            backdropFilter: 'blur(2px)'
-                          }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const isPdf = documents[doc.key]?.type === 'application/pdf';
-                                setPreviewDoc({
-                                  open: true,
-                                  url: previews[doc.key],
-                                  type: isPdf ? 'pdf' : 'image',
-                                  title: doc.title
-                                });
-                              }}
-                              className="btn-zoom"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: '#fff', color: '#1e293b', border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                              }}
-                            >
-                              <FaSearchPlus />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                document.getElementById(`file-${doc.key}`).click();
-                              }}
-                              className="btn-change"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                              }}
-                            >
-                              <FaSyncAlt />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* ESTADO VACÍO */
-                        <div
-                          onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                          style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
-                        >
-                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                    <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9',
-                      color: documents[doc.key] ? '#166534' : '#64748b',
-                      fontSize: '10px',
-                      fontWeight: '800'
-                    }}>
-                      {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                    </div>
-
-                    {/* Botón de validación fallida y bypass para fotografía */}
-                    {doc.key === 'foto' && !documents.foto && failedPhoto && (
-                      <div style={{ marginTop: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={forceLoadFailedPhoto}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            backgroundColor: '#f59e0b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
-                            transition: 'background-color 0.2s'
-                          }}
-                          onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
-                          onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
-                        >
-                          ⚠️ Cargar igualmente
-                        </button>
-                      </div>
-                    )}
-
-                    <input
-                      type="file"
-                      id={`file-${doc.key}`}
-                      style={{ display: 'none' }}
-                      accept="image/*,.pdf"
-                      onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
-                    />
+            {/* Advertencia si la orden aún no fue aprobada */}
+            {!pagoEquipo.equipoTemporalId && (
+              <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '14px', padding: '16px 20px', marginBottom: '22px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ fontSize: '22px' }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight: '900', color: '#92400e', marginBottom: '4px' }}>Orden de pago pendiente de aprobación</div>
+                  <div style={{ color: '#78350f', fontSize: '13px', lineHeight: 1.5 }}>
+                    Para crear el equipo primero debes aprobar la orden de pago del presidente. Regresa al paso anterior y usa el botón <strong>"Aprobar orden directamente"</strong>.
                   </div>
-                ))}
-              </div>
-
-              {/* Loader temporal OCR */}
-              {documents.acta && !extractedData.fechaNacimiento && (
-                <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                  ⏳ Analizando el Acta de Nacimiento vía OCR... Los campos del formulario se auto-completarán en breve.
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* PASO 3: FORMULARIO DE INFORMACIÓN DEL JUGADOR */}
-          {showStep3 && (
-            <section className="fade-in" style={{ marginBottom: '40px' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <StepBadge number="3" isActive={true} isDone={false} />
-                  <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
+                  <button onClick={() => setActiveStep(0)} style={{ marginTop: '10px', padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#d97706', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>
+                    ← Aprobar orden
+                  </button>
                 </div>
               </div>
+            )}
 
-              {/* AVISO DE DISCREPANCIA OCR */}
-              {ocrDataOriginal && (
-                <div className="fade-in" style={{
-                  marginBottom: '20px',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  background: (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? '#fff7ed' : '#f0fdf4',
-                  border: (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? '1px solid #ffedd5' : '1px solid #dcfce7',
+            {/* Nombre del Equipo */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#475569', marginBottom: '8px' }}>
+                Nombre del Equipo <span className="required-star">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ej. REAL MADRID FC"
+                value={teamFormData.teamName}
+                onChange={(e) => {
+                  // 1. Convertimos todo a mayúsculas
+                  let cleanValue = e.target.value.toUpperCase();
+
+                  // 2. Removemos caracteres especiales, permitiendo: Letras (incluyendo Ñ y tildes), Números y Espacios
+                  cleanValue = cleanValue.replace(/[^A-ZÁÉÍÓÚÑ0-9\s]/g, '');
+
+                  setTeamFormData(prev => ({ ...prev, teamName: cleanValue }));
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              />
+            </div>
+
+            {/* Logotipo del Equipo (Opcional) */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#475569', marginBottom: '8px' }}>
+                Logotipo del Equipo (Opcional)
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '16px',
+                  border: '2px dashed #cbd5e1',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px'
+                  justifyContent: 'center',
+                  backgroundColor: '#f8fafc',
+                  overflow: 'hidden'
                 }}>
-                  <div style={{ fontSize: '20px' }}>
-                    {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
-                  </div>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
-                      {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                        'Discrepancia detectada' : 'Datos validados con OCR'}
-                    </h4>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
-                      {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                        'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
-                        'La información coincide correctamente con la extracción inteligente de tus documentos.'}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* CAMPOS DEL FORMULARIO */}
-              <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
-                    <input type="number" value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
-                    <select
-                      value={extractedData.posicion}
-                      onChange={e => {
-                        const val = parseInt(e.target.value) || '';
-                        handleFieldChange('posicion', val);
-                        guardarBorradorEnBD({ ...extractedData, posicion: val });
-                      }}
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
-                    >
-                      <option value="">Posición...</option>
-                      {(catalogs?.roles_equipo || []).map(r => (
-                        <option key={r.id} value={r.id}>{r.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.nui || ''} onChange={e => handleFieldChange('nui', e.target.value)} onBlur={handleBlur} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
-                    <input
-                      type="text"
-                      value={extractedData.curp || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        let sId = extractedData.genero;
-                        if (val.length >= 11) {
-                          const char = val.charAt(10);
-                          if (char === 'M') sId = '2'; // Femenino
-                          else if (char === 'H') sId = '1'; // Masculino
-                        }
-                        const updated = { ...extractedData, curp: val, genero: sId };
-                        setExtractedData(updated);
-                      }}
-                      onBlur={handleBlur}
-                      placeholder="ABCD..."
-                      maxLength="18"
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                  {teamFormData.teamLogo ? (
+                    <img
+                      src={URL.createObjectURL(teamFormData.teamLogo)}
+                      alt="Preview logo"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
-                    <input
-                      type="date"
-                      value={extractedData.fechaNacimiento || ''}
-                      min={minDateStr}
-                      max={today}
-                      onChange={e => handleFieldChange('fechaNacimiento', e.target.value)}
-                      onBlur={handleBlur}
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                    <select
-                      value={extractedData.genero || ""}
-                      onChange={e => {
-                        handleFieldChange('genero', e.target.value);
-                        guardarBorradorEnBD({ ...extractedData, genero: e.target.value });
-                      }}
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
-                    >
-                      <option value="">Seleccione...</option>
-                      <option value="1">MASCULINO</option>
-                      <option value="2">FEMENINO</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                    <input type="email" value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                    <input type="tel" value={extractedData.telefono} onChange={e => handleFieldChange('telefono', e.target.value)} onBlur={handleBlur} placeholder="10 dígitos numéricos" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
-                  </div>
-                </div>
-
-                {/* Selector de Nacionalidad */}
-                <section className="fade-in" style={{ marginBottom: '40px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
-                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
-                  </div>
-
-                  <div style={{
-                    display: 'flex',
-                    background: '#f1f5f9',
-                    padding: '4px',
-                    borderRadius: '12px',
-                    width: 'fit-content'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = { ...extractedData, esForaneo: false };
-                        setExtractedData(updated);
-                        guardarBorradorEnBD(updated);
-                      }}
-                      style={{
-                        padding: '10px 24px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: !extractedData.esForaneo ? 'white' : 'transparent',
-                        color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
-                        fontWeight: '800',
-                        fontSize: '13px',
-                        boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🇲🇽 Mexicano
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = { ...extractedData, esForaneo: true };
-                        setExtractedData(updated);
-                        guardarBorradorEnBD(updated);
-                      }}
-                      style={{
-                        padding: '10px 24px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: extractedData.esForaneo ? 'white' : 'transparent',
-                        color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
-                        fontWeight: '800',
-                        fontSize: '13px',
-                        boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🌎 Extranjero
-                    </button>
-                  </div>
-                </section>
-
-                {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
-                      <FaGlobeAmericas />
-                    </div>
-                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
-                  </div>
-
-                  {extractedData.esForaneo ? (
-                    <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                        <EntradaFormulario
-                          etiqueta="Nacionalidad del jugador"
-                          valor={extractedData.nacionalidadJugador}
-                          alCambiar={val => handleFieldChange('nacionalidadJugador', val)}
-                          alPerderEnfoque={handleBlur}
-                        />
-                        <EntradaFormulario
-                          etiqueta="País de residencia actual"
-                          valor={extractedData.paisResidencia}
-                          alCambiar={val => handleFieldChange('paisResidencia', val)}
-                          alPerderEnfoque={handleBlur}
-                        />
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
-                        <EntradaSeleccion
-                          etiqueta="¿El jugador ha vivido en el extranjero?"
-                          valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                          alCambiar={val => {
-                            const boolVal = val === '1';
-                            handleFieldChange('haVividoExtranjero', boolVal);
-                            guardarBorradorEnBD({ ...extractedData, haVividoExtranjero: boolVal });
-                          }}
-                          opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
-                          obligatorio={true}
-                        />
-                        {extractedData.haVividoExtranjero && (
-                          <EntradaFormulario
-                            etiqueta="¿En qué país?"
-                            valor={extractedData.dondeVividoExtranjero}
-                            alCambiar={val => handleFieldChange('dondeVividoExtranjero', val)}
-                            alPerderEnfoque={handleBlur}
-                            obligatorio={true}
-                          />
-                        )}
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                        <EntradaFormulario
-                          etiqueta="Nacionalidad del padre"
-                          valor={extractedData.nacionalidadPadre}
-                          alCambiar={val => handleFieldChange('nacionalidadPadre', val)}
-                          alPerderEnfoque={handleBlur}
-                        />
-                        <EntradaFormulario
-                          etiqueta="Nacionalidad de la madre"
-                          valor={extractedData.nacionalidadMadre}
-                          alCambiar={val => handleFieldChange('nacionalidadMadre', val)}
-                          alPerderEnfoque={handleBlur}
-                        />
-                      </div>
-
-                      <EntradaFormulario
-                        etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
-                        valor={extractedData.registroAsociacionExtranjera}
-                        alCambiar={val => handleFieldChange('registroAsociacionExtranjera', val)}
-                        alPerderEnfoque={handleBlur}
-                        filas={2}
-                        obligatorio={true}
-                      />
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                        <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
-                        <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
-                        <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />
-                        <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={val => handleFieldChange('nacAbuelaMaterna', val)} alPerderEnfoque={handleBlur} />
-                      </div>
-
-                      <EntradaFormulario
-                        etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
-                        valor={extractedData.juegoClubExtranjero}
-                        alCambiar={val => handleFieldChange('juegoClubExtranjero', val)}
-                        alPerderEnfoque={handleBlur}
-                        filas={3}
-                        obligatorio={true}
-                      />
-                    </div>
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '20px' }}>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                        Si el jugador es extranjero, habilite esta opción para completar los antecedentes internacionales.
-                      </p>
-                    </div>
+                    <span style={{ fontSize: '24px', color: '#94a3b8' }}>🛡️</span>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    id="team-logo-upload"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setTeamFormData(prev => ({ ...prev, teamLogo: file }));
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('team-logo-upload').click()}
+                    style={{
+                      padding: '10px 18px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: 'white',
+                      color: '#475569',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      fontSize: '13px'
+                    }}
+                  >
+                    Seleccionar Imagen
+                  </button>
+                  {teamFormData.teamLogo && (
+                    <button
+                      type="button"
+                      onClick={() => setTeamFormData(prev => ({ ...prev, teamLogo: null }))}
+                      style={{
+                        padding: '10px 18px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: '#fee2e2',
+                        color: '#ef4444',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        marginLeft: '10px'
+                      }}
+                    >
+                      Eliminar
+                    </button>
                   )}
                 </div>
               </div>
+            </div>
 
-              {/* ACCIONES FINALES */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
-                <BotonSecundario
-                  etiqueta="Cancelar y volver"
-                  alHacerClick={() => navigate('/presidente-equipo/equipos')}
-                  estilo={{ minWidth: '200px' }}
-                />
-                <BotonPrimario
-                  etiqueta={submitting ? "Procesando..." : "Descargar formato y continuar"}
-                  icono={<FaSave />}
-                  alHacerClick={handleGuardar}
-                  deshabilitado={submitting}
-                  estilo={{ minWidth: '300px' }}
-                />
+            {/* Seleccionar Liga */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#475569', marginBottom: '8px' }}>
+                Seleccionar Liga <span className="required-star">*</span>
+              </label>
+              <select
+                value={teamFormData.season}
+                onChange={(e) => handleOptionChange('season', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  backgroundColor: 'white'
+                }}
+              >
+                <option value="">Selecciona una liga...</option>
+                {catalogs.ligas.map(liga => (
+                  <option key={liga.id} value={liga.id}>
+                    {liga.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Parámetros de Liga Enlazados */}
+            {teamFormData.season && (
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '14px',
+                padding: '20px',
+                marginBottom: '30px'
+              }}>
+                <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#334155', marginBottom: '12px', textTransform: 'uppercase' }}>
+                  Parámetros de Liga Enlazados
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '600' }}>Modalidad</span>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                      {catalogs.modalidades.find(m => Number(m.id) === Number(teamFormData.modality))?.nombre || 'Cargando...'}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '600' }}>Categoría</span>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                      {catalogs.categorias.find(c => Number(c.id) === Number(teamFormData.category))?.nombre || 'Cargando...'}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '600' }}>Rama</span>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                      {catalogs.ramas.find(r => Number(r.id) === Number(teamFormData.rama))?.nombre || 'Cargando...'}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </section>
-          )}
+            )}
+
+            {/* Acciones */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveStep(0)}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  border: '1px solid #cbd5e1',
+                  background: 'white',
+                  color: '#64748b',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                ← Volver
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveTeamAdmin}
+                style={{
+                  padding: '12px 28px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#10b981',
+                  color: 'white',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
+                }}
+              >
+                🛡️ Autorizar y crear equipo
+              </button>
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* STEP 2: REGISTRO DE JUGADORES (LAYOUT ORIGINAL) */}
+      {activeStep === 2 && (
+        <>
+          {/* DETALLES DEL EQUIPO */}
+          {equipo && (
+            <div className="premium-card fade-in" style={{
+              maxWidth: '1000px',
+              margin: '0 auto 30px auto',
+              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+              color: 'white',
+              borderRadius: '20px',
+              padding: '25px 35px',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '20px'
+            }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
+                <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>🛡️ {equipo.NombreEquipo}</h1>
+                <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: '#94a3b8', flexWrap: 'wrap' }}>
+                  <span><strong>Liga:</strong> {equipo.Liga || 'N/A'}</span>
+                  <span>•</span>
+                  <span><strong>Categoría:</strong> {equipo.Categoria || 'LIBRE'} ({equipo.Rama || 'N/A'})</span>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+                <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
+                <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
+                  {slotsData?.slots_disponibles || 0} slots
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* BLOQUEO SI NO HAY SLOTS */}
+          {sinSlots ? (
+            <div className="premium-card fade-in" style={{
+              maxWidth: '1000px',
+              margin: '0 auto',
+              background: 'white',
+              borderRadius: '24px',
+              padding: '40px',
+              textAlign: 'center',
+              boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+              border: '1px solid #fee2e2'
+            }}>
+              <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin Slots / Seguros Disponibles</h2>
+              <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                Este equipo ya ha completado todos los seguros y slots contratados.
+                No es posible agregar más jugadores hasta adquirir nuevos slots de registro.
+              </p>
+              <BotonSecundario
+                etiqueta="Volver a mis equipos"
+                alHacerClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos')}
+              />
+            </div>
+          ) : (
+            <div className="premium-card fade-in" style={{
+              maxWidth: '1000px',
+              margin: '0 auto',
+              background: 'white',
+              borderRadius: '24px',
+              padding: '40px',
+              boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+
+              <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p className="required-legend" style={{ margin: 0 }}>
+                  <span className="required-star">*</span> Indica que el campo es obligatorio.
+                </p>
+              </div>
+
+              {/* PASO 1: SELECCION DE SEGURO / SLOT A CONSUMIR */}
+              <section style={{ marginBottom: '45px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+                  <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar</h3>
+                </div>
+
+                <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
+                  <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                    <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
+                      Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                      {slotsData?.seguros_disponibles?.map((seg) => {
+                        const matchedSeguro = catalogs?.seguros?.find(s => s.id === seg.SeguroId);
+                        const isSelected = String(selectedSeguroId) === String(seg.SeguroId);
+                        return (
+                          <div
+                            key={`seguro-card-${seg.SeguroId}`}
+                            onClick={() => setSelectedSeguroId(String(seg.SeguroId))}
+                            style={{
+                              padding: '16px',
+                              borderRadius: '12px',
+                              border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
+                              backgroundColor: isSelected ? '#eff6ff' : 'white',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px'
+                            }}
+                          >
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                              🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
+                            </span>
+                            {matchedSeguro?.precio !== undefined && (
+                              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                                Precio: ${matchedSeguro.precio} MXN
+                              </span>
+                            )}
+                            <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                              {seg.Cantidad} disponibles
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* PASO 2: CARGA DE DOCUMENTOS */}
+              {showStep2 && (
+                <section className="fade-in" style={{ marginBottom: '45px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                    <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación (Opcional)</h3>
+                  </div>
+
+                  <div style={{
+                    background: '#f0f9ff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '12px',
+                    padding: '12px 18px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    fontSize: '13px',
+                    color: '#0369a1',
+                    fontWeight: '600'
+                  }}>
+                    <span style={{ fontSize: '18px' }}>📋</span>
+                    Opcional: puedes subir los documentos ahora para auto-llenar los campos vía OCR, o continuar sin archivos y cargarlos después.
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '20px'
+                  }}>
+                    {documentCards.map((doc) => (
+                      <div
+                        key={doc.key}
+                        className="document-card"
+                        style={{
+                          backgroundColor: 'white',
+                          borderRadius: '20px',
+                          border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                          padding: '15px',
+                          textAlign: 'center',
+                          transition: 'all 0.3s',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {/* Indicador de Menor para tutor/credencial */}
+                        {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
+                          <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
+                        )}
+
+                        <div style={{
+                          height: '140px',
+                          width: '100%',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: '12px',
+                          marginBottom: '10px',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '1px solid #f1f5f9'
+                        }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            handleFileUpload(doc.key, e.dataTransfer.files[0]);
+                          }}
+                        >
+                          {previews[doc.key] ? (
+                            <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                              {documents[doc.key]?.type === 'application/pdf' ? (
+                                <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                  <FaFilePdf />
+                                  <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                                </div>
+                              ) : (
+                                <img
+                                  src={previews[doc.key]}
+                                  alt="Preview"
+                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                              )}
+
+                              {/* OVERLAY ACTIONS */}
+                              <div className="overlay-actions" style={{
+                                position: 'absolute',
+                                top: 0, left: 0, right: 0, bottom: 0,
+                                backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                opacity: 0,
+                                transition: 'opacity 0.2s ease',
+                                backdropFilter: 'blur(2px)'
+                              }}>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const isPdf = documents[doc.key]?.type === 'application/pdf';
+                                    setPreviewDoc({
+                                      open: true,
+                                      url: previews[doc.key],
+                                      type: isPdf ? 'pdf' : 'image',
+                                      title: doc.title
+                                    });
+                                  }}
+                                  className="btn-zoom"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaSearchPlus />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    document.getElementById(`file-${doc.key}`).click();
+                                  }}
+                                  className="btn-change"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaSyncAlt />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* ESTADO VACÍO */
+                            <div
+                              onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                              style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                            >
+                              <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                              <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                        <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9',
+                          color: documents[doc.key] ? '#166534' : '#64748b',
+                          fontSize: '10px',
+                          fontWeight: '800'
+                        }}>
+                          {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                        </div>
+
+                        {/* Botón de validación fallida y bypass para fotografía */}
+                        {doc.key === 'foto' && !documents.foto && failedPhoto && (
+                          <div style={{ marginTop: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={forceLoadFailedPhoto}
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                backgroundColor: '#f59e0b',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
+                              onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
+                            >
+                              ⚠️ Cargar igualmente
+                            </button>
+                          </div>
+                        )}
+
+                        <input
+                          type="file"
+                          id={`file-${doc.key}`}
+                          style={{ display: 'none' }}
+                          accept="image/*,.pdf"
+                          onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Loader temporal OCR */}
+                  {documents.acta && !extractedData.fechaNacimiento && (
+                    <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                      ⏳ Analizando el Acta de Nacimiento vía OCR... Los campos del formulario se auto-completarán en breve.
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* PASO 3: FORMULARIO DE INFORMACIÓN DEL JUGADOR */}
+              {showStep3 && (
+                <section className="fade-in" style={{ marginBottom: '40px' }}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <StepBadge number="3" isActive={true} isDone={false} />
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
+                    </div>
+                  </div>
+
+                  {/* AVISO DE DISCREPANCIA OCR */}
+                  {ocrDataOriginal && (
+                    <div className="fade-in" style={{
+                      marginBottom: '20px',
+                      padding: '16px',
+                      borderRadius: '12px',
+                      background: (
+                        extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+                      ) ? '#fff7ed' : '#f0fdf4',
+                      border: (
+                        extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+                      ) ? '1px solid #ffedd5' : '1px solid #dcfce7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <div style={{ fontSize: '20px' }}>
+                        {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                          extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
+                      </div>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
+                          {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                            extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
+                            'Discrepancia detectada' : 'Datos validados con OCR'}
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
+                          {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                            extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
+                            'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
+                            'La información coincide correctamente con la extracción inteligente de tus documentos.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CAMPOS DEL FORMULARIO */}
+                  <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
+                        <input type="text" value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
+                        <input type="text" value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
+                        <input type="text" value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
+                        <input type="number" value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
+                        <select
+                          value={extractedData.posicion}
+                          onChange={e => {
+                            const val = parseInt(e.target.value) || '';
+                            handleFieldChange('posicion', val);
+                            guardarBorradorEnBD({ ...extractedData, posicion: val });
+                          }}
+                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
+                        >
+                          <option value="">Posición...</option>
+                          {(catalogs?.roles_equipo || []).map(r => (
+                            <option key={r.id} value={r.id}>{r.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
+                        <input type="text" value={extractedData.nui || ''} onChange={e => handleFieldChange('nui', e.target.value)} onBlur={handleBlur} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
+                        <input
+                          type="text"
+                          value={extractedData.curp || ''}
+                          onChange={(e) => {
+                            const val = e.target.value.toUpperCase();
+                            let sId = extractedData.genero;
+                            if (val.length >= 11) {
+                              const char = val.charAt(10);
+                              if (char === 'M') sId = '2'; // Femenino
+                              else if (char === 'H') sId = '1'; // Masculino
+                            }
+                            const updated = { ...extractedData, curp: val, genero: sId };
+                            setExtractedData(updated);
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="ABCD..."
+                          maxLength="18"
+                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                        <input
+                          type="date"
+                          value={extractedData.fechaNacimiento || ''}
+                          min={minDateStr}
+                          max={today}
+                          onChange={e => handleFieldChange('fechaNacimiento', e.target.value)}
+                          onBlur={handleBlur}
+                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
+                        <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
+                        <select
+                          value={extractedData.genero || ""}
+                          onChange={e => {
+                            handleFieldChange('genero', e.target.value);
+                            guardarBorradorEnBD({ ...extractedData, genero: e.target.value });
+                          }}
+                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
+                        >
+                          <option value="">Seleccione...</option>
+                          <option value="1">MASCULINO</option>
+                          <option value="2">FEMENINO</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
+                        <input type="email" value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <select
+                            value={extractedData.codigoPais || '+52'}
+                            onChange={e => handleFieldChange('codigoPais', e.target.value)}
+                            onBlur={handleBlur}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '14px',
+                              backgroundColor: 'white',
+                              width: '110px',
+                              flexShrink: 0
+                            }}
+                          >
+                            <option value="+52">México +52</option>
+                            <option value="+1">EE.UU./Canadá +1</option>
+                            <option value="+34">España +34</option>
+                            <option value="+54">Argentina +54</option>
+                            <option value="+55">Brasil +55</option>
+                            <option value="+56">Chile +56</option>
+                            <option value="+57">Colombia +57</option>
+                            <option value="+506">Costa Rica +506</option>
+                            <option value="+593">Ecuador +593</option>
+                            <option value="+503">El Salvador +503</option>
+                            <option value="+502">Guatemala +502</option>
+                            <option value="+504">Honduras +504</option>
+                            <option value="+505">Nicaragua +505</option>
+                            <option value="+507">Panamá +507</option>
+                            <option value="+595">Paraguay +595</option>
+                            <option value="+51">Perú +51</option>
+                            <option value="+598">Uruguay +598</option>
+                            <option value="+58">Venezuela +58</option>
+                          </select>
+                          <input
+                            type="tel"
+                            value={extractedData.telefono}
+                            onChange={e => handleFieldChange('telefono', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                            onBlur={handleBlur}
+                            placeholder="10 dígitos numéricos"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '14px',
+                              flexGrow: 1
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Selector de Nacionalidad */}
+                    <div style={{ marginBottom: '25px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                        <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        background: '#f1f5f9',
+                        padding: '4px',
+                        borderRadius: '12px',
+                        width: 'fit-content'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...extractedData, esForaneo: false };
+                            setExtractedData(updated);
+                            guardarBorradorEnBD(updated);
+                          }}
+                          style={{
+                            padding: '10px 24px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: !extractedData.esForaneo ? 'white' : 'transparent',
+                            color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                            fontWeight: '800',
+                            fontSize: '13px',
+                            boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🇲🇽 Mexicano
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...extractedData, esForaneo: true };
+                            setExtractedData(updated);
+                            guardarBorradorEnBD(updated);
+                          }}
+                          style={{
+                            padding: '10px 24px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: extractedData.esForaneo ? 'white' : 'transparent',
+                            color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                            fontWeight: '800',
+                            fontSize: '13px',
+                            boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🌎 Extranjero
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
+                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                          <FaGlobeAmericas />
+                        </div>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                      </div>
+
+                      {extractedData.esForaneo ? (
+                        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                            <EntradaFormulario
+                              etiqueta="Nacionalidad del jugador"
+                              valor={extractedData.nacionalidadJugador}
+                              alCambiar={val => handleFieldChange('nacionalidadJugador', val)}
+                              alPerderEnfoque={handleBlur}
+                            />
+                            <EntradaFormulario
+                              etiqueta="País de residencia actual"
+                              valor={extractedData.paisResidencia}
+                              alCambiar={val => handleFieldChange('paisResidencia', val)}
+                              alPerderEnfoque={handleBlur}
+                            />
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
+                            <EntradaSeleccion
+                              etiqueta="¿El jugador ha vivido en el extranjero?"
+                              valor={extractedData.haVividoExtranjero ? '1' : '0'}
+                              alCambiar={val => {
+                                const boolVal = val === '1';
+                                handleFieldChange('haVividoExtranjero', boolVal);
+                                guardarBorradorEnBD({ ...extractedData, haVividoExtranjero: boolVal });
+                              }}
+                              opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
+                              obligatorio={true}
+                            />
+                            {extractedData.haVividoExtranjero && (
+                              <EntradaFormulario
+                                etiqueta="¿En qué país?"
+                                valor={extractedData.dondeVividoExtranjero}
+                                alCambiar={val => handleFieldChange('dondeVividoExtranjero', val)}
+                                alPerderEnfoque={handleBlur}
+                                obligatorio={true}
+                              />
+                            )}
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                            <EntradaFormulario
+                              etiqueta="Nacionalidad del padre"
+                              valor={extractedData.nacionalidadPadre}
+                              alCambiar={val => handleFieldChange('nacionalidadPadre', val)}
+                              alPerderEnfoque={handleBlur}
+                            />
+                            <EntradaFormulario
+                              etiqueta="Nacionalidad de la madre"
+                              valor={extractedData.nacionalidadMadre}
+                              alCambiar={val => handleFieldChange('nacionalidadMadre', val)}
+                              alPerderEnfoque={handleBlur}
+                            />
+                          </div>
+
+                          <EntradaFormulario
+                            etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
+                            valor={extractedData.registroAsociacionExtranjera}
+                            alCambiar={val => handleFieldChange('registroAsociacionExtranjera', val)}
+                            alPerderEnfoque={handleBlur}
+                            filas={2}
+                            obligatorio={true}
+                          />
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={val => handleFieldChange('nacAbuelaMaterna', val)} alPerderEnfoque={handleBlur} />
+                          </div>
+
+                          <EntradaFormulario
+                            etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
+                            valor={extractedData.juegoClubExtranjero}
+                            alCambiar={val => handleFieldChange('juegoClubExtranjero', val)}
+                            alPerderEnfoque={handleBlur}
+                            filas={3}
+                            obligatorio={true}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                            Si el jugador es extranjero, habilite esta option para completar los antecedentes internacionales.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ACCIONES FINALES */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+                    <BotonSecundario
+                      etiqueta="Cancelar y volver"
+                      alHacerClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos')}
+                      estilo={{ minWidth: '200px' }}
+                    />
+                    <BotonPrimario
+                      etiqueta={submitting ? "Procesando..." : "Descargar formato y continuar"}
+                      icono={<FaSave />}
+                      alHacerClick={handleGuardar}
+                      deshabilitado={submitting}
+                      estilo={{ minWidth: '300px' }}
+                    />
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
@@ -1672,4 +3025,5 @@ export default function ConfigurarEquipo() {
       </Modal>
     </div>
   );
+
 }
