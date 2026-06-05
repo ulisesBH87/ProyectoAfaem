@@ -415,6 +415,22 @@ async def registrar_jugador(
     lugar_nacimiento: Optional[str] = Form(None),
     correo: Optional[str] = Form(None),
     telefono: Optional[str] = Form(None),
+    
+    # Campos adicionales de posición, camiseta y extranjería
+    posicion: Optional[str] = Form(None),
+    num_camiseta: Optional[str] = Form(None),
+    es_foraneo: Optional[str] = Form(None),
+    nacionalidad_jugador: Optional[str] = Form(None),
+    pais_resid_actual: Optional[str] = Form(None),
+    nacionalidad_padre: Optional[str] = Form(None),
+    nacionalidad_madre: Optional[str] = Form(None),
+    nac_abuelo_paterno: Optional[str] = Form(None),
+    nac_abuela_paterna: Optional[str] = Form(None),
+    nac_abuelo_materno: Optional[str] = Form(None),
+    nac_abuela_materna: Optional[str] = Form(None),
+    registro_asociacion_extranjera: Optional[str] = Form(None),
+    juego_club_extranjero: Optional[str] = Form(None),
+    
     db: Session = Depends(get_db)
 ):
     persona = JugadorPersona(
@@ -429,7 +445,24 @@ async def registrar_jugador(
         correo=correo,
         telefono=telefono
     )
-    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id)
+    
+    extra_data = {
+        "posicion": posicion,
+        "num_camiseta": num_camiseta,
+        "es_foraneo": es_foraneo,
+        "nacionalidad_jugador": nacionalidad_jugador,
+        "pais_resid_actual": pais_resid_actual,
+        "nacionalidad_padre": nacionalidad_padre,
+        "nacionalidad_madre": nacionalidad_madre,
+        "nac_abuelo_paterno": nac_abuelo_paterno,
+        "nac_abuela_paterna": nac_abuela_paterna,
+        "nac_abuelo_materno": nac_abuelo_materno,
+        "nac_abuela_materna": nac_abuela_materna,
+        "registro_asociacion_extranjera": registro_asociacion_extranjera,
+        "juego_club_extranjero": juego_club_extranjero
+    }
+    
+    return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id, extra_data)
 
 class BorradorJugadorPayload(BaseModel):
     slot_id: int
