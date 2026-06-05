@@ -20,9 +20,30 @@ def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
 
 async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos_afiliacion_ids, archivos, seguro_id, slot_id=None):
 
+    # Validar disponibilidad de seguro
+    equipo = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
+    if not equipo:
+        raise HTTPException(404, "Equipo temporal no encontrado")
+        
+    seguros_pagados = equipo_repositorio.obtener_seguros_pagados(db, equipo.OrdenPagoId)
+    slots = equipo_repositorio.obtener_slots_con_persona(db, equipo_temporal_id)
+    seguros_usados = {}
+    for s in slots:
+        if s.SeguroId and s.Completo and s.PersonaId and (slot_id is None or s.EquipoTemporalJugadorId != slot_id):
+            seguros_usados[s.SeguroId] = seguros_usados.get(s.SeguroId, 0) + 1
+            
+    pagados = seguros_pagados.get(seguro_id, 0)
+    usados = seguros_usados.get(seguro_id, 0)
+    
+    if usados >= pagados:
+        raise HTTPException(
+            400, 
+            f"No hay suficientes seguros disponibles de este tipo. Adquiridos: {pagados}, ya asignados: {usados}."
+        )
+
     existe_persona = equipo_repositorio.existe_persona_repo(db, persona.curp)
     if existe_persona:
-        raise HTTPException(400, "La persona ya existe")
+        raise HTTPException(400, f"La persona con la curp {persona.curp} ya se encuentra registrada")
     
     persona_id = personas_repositorio.crear_persona(db, persona)
     

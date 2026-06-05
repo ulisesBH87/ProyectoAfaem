@@ -9,6 +9,10 @@ class JugadorPersona(BaseModel):
     curp: str
     sexo_id: int
     fecha_nacimiento: date
+    nui: Optional[str] = None
+    lugar_nacimiento: Optional[str] = None
+    correo: Optional[str] = None
+    telefono: Optional[str] = None
 
 # --- SCHEMAS FOR PERSISTENT TABLES ---
 

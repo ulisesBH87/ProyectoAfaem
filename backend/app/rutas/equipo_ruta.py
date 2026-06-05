@@ -411,6 +411,10 @@ async def registrar_jugador(
     archivos: list[UploadFile] = File(...),
     seguro_id: int = Form(...),
     slot_id: Optional[int] = Form(None),
+    nui: Optional[str] = Form(None),
+    lugar_nacimiento: Optional[str] = Form(None),
+    correo: Optional[str] = Form(None),
+    telefono: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     persona = JugadorPersona(
@@ -419,7 +423,11 @@ async def registrar_jugador(
         segundo_apellido=segundo_apellido,
         curp=CURP,
         sexo_id=sexo_id,
-        fecha_nacimiento=fecha_nacimiento
+        fecha_nacimiento=fecha_nacimiento,
+        nui=nui,
+        lugar_nacimiento=lugar_nacimiento,
+        correo=correo,
+        telefono=telefono
     )
     return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id)
 
