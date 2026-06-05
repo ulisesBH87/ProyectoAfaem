@@ -686,6 +686,16 @@ export default function RegistrarPresidente() {
     const correoFinal = correoDoc || cuenta.correo;
     if (!correoFinal) { Swal.fire('Atención', 'El correo es obligatorio.', 'warning'); return; }
 
+    if (!equipo || !equipo.trim()) {
+      Swal.fire('Atención', 'El Nombre del Equipo es obligatorio.', 'warning');
+      return;
+    }
+
+    if (!liga || !liga.trim()) {
+      Swal.fire('Atención', 'La Liga Destino es obligatoria.', 'warning');
+      return;
+    }
+
     const missing = REQUISITOS.find(r => !documents[r.documento]);
     if (missing) { Swal.fire('Atención', `Falta subir: ${missing.nombre}`, 'warning'); return; }
 
