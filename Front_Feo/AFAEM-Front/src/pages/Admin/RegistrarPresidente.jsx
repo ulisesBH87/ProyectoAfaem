@@ -771,8 +771,8 @@ export default function RegistrarPresidente() {
       });
 
       if (result.isConfirmed) {
-        const token = response?.presidente?.token_invitacion || '';
-        const linkInvitacion = `${window.location.origin}/i/${token}`;
+        const rutaInvitacion = response?.presidente?.url_invitacion || '';
+        const linkInvitacion = rutaInvitacion ? `${window.location.origin}${rutaInvitacion}` : '';
         const mensaje = `Hola ${nombrePresidente}. Utiliza el siguiente enlace para registrar a tus jugadores: ${linkInvitacion}`;
         const mensajeCodificado = encodeURIComponent(mensaje);
         const url = `https://wa.me/${telefonoLimpio}?text=${mensajeCodificado}`;
@@ -1171,8 +1171,8 @@ export default function RegistrarPresidente() {
                   </div>
                 </div>
                 <div>
-                  <label style={labelStyle}>Nombre del Equipo</label>
-                  <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="text" value={equipo} onChange={e => setEquipo(e.target.value.toUpperCase())} placeholder="EJ: RAYADOS FC" />
+                  <label style={labelStyle}>Nombre del Equipo <span style={{ color: C.amber }}>*</span></label>
+                  <input style={{ ...inputStyle, textTransform: 'uppercase' }} type="text" value={equipo} onChange={e => setEquipo(e.target.value.toUpperCase())} placeholder="EJ: RAYADOS FC" required />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
@@ -1192,8 +1192,8 @@ export default function RegistrarPresidente() {
                   <input style={{ ...inputStyle, cursor: 'not-allowed', background: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.2)', color: C.amberLight }} value={asociacion} disabled />
                 </div>
                 <div>
-                  <label style={labelStyle}>Liga Destino</label>
-                  <select style={selectStyle} value={liga} onChange={e => setLiga(e.target.value)}>
+                  <label style={labelStyle}>Liga Destino <span style={{ color: C.amber }}>*</span></label>
+                  <select style={selectStyle} value={liga} onChange={e => setLiga(e.target.value)} required>
                     <option value="">Selecciona…</option>
                     {ligasCatalogo.length > 0 ? (
                       ligasCatalogo.map(l => (

@@ -209,15 +209,20 @@ export const registrarJugadorTemporal = async (data) => {
 /**
  * OBTIENE LOS SLOTS DISPONIBLES PARA UN EQUIPO TEMPORAL
  */
-export const getAvailableSlots = async (equipoTemporalId) => {
+export const getAvailableSlots = async (equipoTemporalId, invitation = null) => {
   try {
     const token = localStorage.getItem('token');
     const headers = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    const params = { equipo_temporal_id: equipoTemporalId };
+    if (invitation?.tokenIdentificador && invitation?.tokenSecreto) {
+      params.token_identificador = invitation.tokenIdentificador;
+      params.token_secreto = invitation.tokenSecreto;
+    }
     const response = await api.get(`/equipo-temporal/slots`, {
-      params: { equipo_temporal_id: equipoTemporalId },
+      params,
       headers
     });
     return response.data;
@@ -230,9 +235,9 @@ export const getAvailableSlots = async (equipoTemporalId) => {
 /**
  * OBTIENE LA INFORMACIÓN DEL EQUIPO TEMPORAL POR TOKEN DE INVITACIÓN (PÚBLICO)
  */
-export const getInvitationInfo = async (token) => {
+export const getInvitationInfo = async (tokenIdentificador, tokenSecreto) => {
   try {
-    const response = await api.get(`/equipo-temporal/invitacion/${token}`);
+    const response = await api.get(`/equipo-temporal/invitacion/${tokenIdentificador}/${tokenSecreto}`);
     return response.data;
   } catch (error) {
     //console.error('Error obteniendo slots por token:', error);

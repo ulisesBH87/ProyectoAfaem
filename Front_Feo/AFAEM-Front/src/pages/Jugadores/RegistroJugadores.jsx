@@ -10,8 +10,10 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaExclamationTriangle
 } from 'react-icons/fa';
+import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import teamsService from '../../services/teams';
@@ -74,9 +76,11 @@ const StepBadge = ({ number, isActive, isDone }) => (
 export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { token } = useParams();
-  const isPublicFlow = !!token;
+  const { tokenIdentificador, tokenSecreto } = useParams();
+  const isPublicFlow = !!(tokenIdentificador && tokenSecreto);
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
+  const [invitationTeams, setInvitationTeams] = useState([]);
+  const [noPendingTeams, setNoPendingTeams] = useState(false);
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
@@ -219,6 +223,7 @@ export default function RegistroJugadores() {
   const [jugadores, setJugadores] = useState([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [failedPhoto, setFailedPhoto] = useState(null);
+  const [linkError, setLinkError] = useState(false);
 
   // Estados y refs para autoguardado toast
   const [toastVisible, setToastVisible] = useState(false);
@@ -263,6 +268,9 @@ export default function RegistroJugadores() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const selectedInvitationTeam = invitationTeams.find(
+    (team) => String(team.equipo_temporal_id) === String(teamId)
+  ) || null;
 
   const defaultPlayerDatos = {
     nombreJugador: '',
@@ -469,37 +477,71 @@ export default function RegistroJugadores() {
   // CARGAR SLOTS Y DATOS DEL EQUIPO
   const fetchTeamInfo = async () => {
     let effectiveTeamId = teamId;
-    let inviteData = null;
     let inviteTeamInfo = {};
 
     try {
       setLoadingSlots(true);
+      setNoPendingTeams(false);
 
       // 1. Obtener catálogos
       const catalogsData = await teamsService.getCatalogs();
       setCatalogs(catalogsData);
 
       if (isPublicFlow && !teamId) {
-        inviteData = await teamsService.getInvitationInfo(token);
-        effectiveTeamId = inviteData.equipo_temporal_id;
+        if (!tokenIdentificador || !tokenSecreto) {
+          setLinkError(true);
+          setLoadingSlots(false);
+          return;
+        }
+        const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
+        setInvitationTeams(equiposPendientes);
+
+        if (equiposPendientes.length === 0) {
+          setNoPendingTeams(true);
+          setJugadores([]);
+          setSlotsData(null);
+          return;
+        }
+
+        effectiveTeamId = equiposPendientes[0].equipo_temporal_id;
         setTeamId(effectiveTeamId);
+      }
+
+      if (isPublicFlow && teamId) {
+        const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
+        setInvitationTeams(equiposPendientes);
+      }
+
+      if (selectedInvitationTeam) {
         inviteTeamInfo = {
-          equipo: inviteData.nombre_equipo || '',
-          liga: inviteData.nombre_liga || '',
-          categoria: inviteData.nombre_categoria || 'LIBRE'
+          equipo: selectedInvitationTeam.nombre_equipo || '',
+          liga: selectedInvitationTeam.nombre_liga || '',
+          categoria: selectedInvitationTeam.nombre_categoria || 'LIBRE',
+          presidente: selectedInvitationTeam.nombre_presidente || 'No disponible'
         };
       }
 
       if (!effectiveTeamId) {
-        if (!isPublicFlow) {
+        if (!isPublicFlow && !location.state?.teamId) {
+          setLinkError(true);
+        } else if (!isPublicFlow) {
           Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
           navigate('/presidente-equipo/dashboard');
+        } else {
+          setLinkError(true);
         }
         return;
       }
 
       // 2. Obtener slots y borradores
-      const slotsResponse = await teamsService.getAvailableSlots(effectiveTeamId);
+      const slotsResponse = await teamsService.getAvailableSlots(
+        effectiveTeamId,
+        isPublicFlow
+          ? { tokenIdentificador, tokenSecreto }
+          : null
+      );
       setSlotsData(slotsResponse);
 
       const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
@@ -521,7 +563,8 @@ export default function RegistroJugadores() {
           telefono: datos.codigoPais !== undefined ? datos.telefono : parsedTel.telefono,
           equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
           liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
-          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE'
+          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
+          presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
         };
 
         return {
@@ -546,7 +589,11 @@ export default function RegistroJugadores() {
 
     } catch (err) {
       console.error('Error al obtener info del equipo:', err);
-      Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+      if (isPublicFlow || !location.state?.teamId) {
+        setLinkError(true);
+      } else {
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+      }
     } finally {
       setLoadingSlots(false);
     }
@@ -554,7 +601,7 @@ export default function RegistroJugadores() {
 
   useEffect(() => {
     fetchTeamInfo();
-  }, [teamId, token, isPublicFlow]);
+  }, [teamId, tokenIdentificador, tokenSecreto, isPublicFlow]);
 
   // Manejar cambio de previsualización al cambiar de jugador
   useEffect(() => {
@@ -1033,6 +1080,10 @@ export default function RegistroJugadores() {
       const player = jugadores[currentPlayerIndex];
       const formData = new FormData();
       formData.append('equipo_temporal_id', parseInt(teamId, 10));
+      if (isPublicFlow) {
+        formData.append('token_identificador', tokenIdentificador);
+        formData.append('token_secreto', tokenSecreto);
+      }
       formData.append('nombre', (player.datos.nombreJugador || '').toString().trim());
       formData.append('primer_apellido', (player.datos.apellidoPaterno || '').toString().trim());
       formData.append('segundo_apellido', (player.datos.apellidoMaterno || '').toString().trim());
@@ -1103,10 +1154,151 @@ export default function RegistroJugadores() {
     }
   };
 
+  if (linkError) {
+    return (
+      <div
+        className="fade-in-up"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#ffffff',
+          padding: '20px',
+        }}
+      >
+        <div
+          className="card shadow"
+          style={{
+            padding: '56px 48px',
+            borderRadius: '28px',
+            textAlign: 'center',
+            maxWidth: '520px',
+            width: '100%',
+            backgroundColor: '#ffffff',
+            border: '1px solid #f1f5f9'
+          }}
+        >
+          {/* Logo */}
+          <img
+            src={AfaemLogo}
+            alt="AFAEM"
+            style={{
+              width: '80px',
+              height: 'auto',
+              margin: '0 auto 24px',
+              display: 'block',
+              opacity: 0.85,
+            }}
+          />
+
+          {/* Ícono de Error */}
+          <div
+            style={{
+              width: '88px',
+              height: '88px',
+              borderRadius: '28px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '36px',
+              margin: '0 auto 28px',
+              border: '2px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            <FaExclamationTriangle />
+          </div>
+
+          {/* Badge */}
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '6px 18px',
+              background: 'rgba(239, 68, 68, 0.08)',
+              color: '#ef4444',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '800',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              marginBottom: '20px',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+            }}
+          >
+            Error de Acceso
+          </span>
+
+          <h1
+            style={{
+              fontSize: '28px',
+              fontWeight: '800',
+              color: '#1e293b',
+              margin: '0 0 12px',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Enlace no válido o expirado
+          </h1>
+
+          <p
+            style={{
+              color: '#64748b',
+              fontSize: '15px',
+              lineHeight: '1.7',
+              marginBottom: '36px',
+              maxWidth: '380px',
+              margin: '0 auto 36px',
+            }}
+          >
+            El enlace que intentas utilizar ya no es válido, ha expirado o no existe.
+          </p>
+
+          <button
+            onClick={() => navigate('/ingresar')}
+            style={{
+              padding: '14px 36px',
+              fontSize: '15px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              borderRadius: '14px',
+              border: 'none',
+              backgroundColor: '#0b4ea6',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              width: '100%'
+            }}
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loadingSlots) {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <Loader text="Cargando información del equipo y slots disponibles..." />
+      </div>
+    );
+  }
+
+  if (noPendingTeams) {
+    return (
+      <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', padding: '24px' }}>
+        <div style={{ background: '#fff', padding: '40px 32px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08)', border: '1px solid #e2e8f0', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1e293b', marginBottom: '16px' }}>
+            No hay equipos pendientes
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.7', margin: 0 }}>
+            Esta invitación es válida, pero por ahora no existen equipos con slots disponibles para registrar jugadores.
+          </p>
+        </div>
       </div>
     );
   }
@@ -1151,6 +1343,33 @@ export default function RegistroJugadores() {
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar y guardar borradores de tus jugadores libremente.</p>
         </div>
       </div>
+
+      {isPublicFlow && invitationTeams.length > 1 && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '18px 20px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>Selecciona el equipo a capturar</h3>
+              <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                Este enlace tiene acceso a todos los equipos pendientes del presidente.
+              </p>
+            </div>
+            <select
+              value={teamId || ''}
+              onChange={(e) => {
+                setCurrentPlayerIndex(0);
+                setTeamId(e.target.value ? Number(e.target.value) : null);
+              }}
+              style={{ minWidth: '280px', padding: '10px 12px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#1e293b', fontSize: '14px', fontWeight: '600' }}
+            >
+              {invitationTeams.map((team) => (
+                <option key={team.equipo_temporal_id} value={team.equipo_temporal_id}>
+                  {team.nombre_equipo} · {team.nombre_liga} · {team.slots_disponibles}/{team.total_slots} slots
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* SLOT NAVIGATION BAR */}
       {jugadores.length > 0 && (
@@ -1226,6 +1445,8 @@ export default function RegistroJugadores() {
             <span><strong>Liga:</strong> {(currentDatos.liga || 'N/A').toUpperCase()}</span>
             <span>•</span>
             <span><strong>Categoría:</strong> {(currentDatos.categoria || 'LIBRE').toUpperCase()}</span>
+            <span>•</span>
+            <span><strong>Presidente:</strong> {(currentDatos.presidente || 'No disponible').toUpperCase()}</span>
           </div>
         </div>
 
