@@ -153,6 +153,15 @@ export default function RegistroJugadores() {
       grid-template-columns: repeat(2, 1fr);
       gap: 20px;
     }
+    .phone-input-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      min-width: 0;
+    }
+    .phone-input-row > * {
+      min-width: 0;
+    }
     .btn-container-responsive {
       display: flex;
       justify-content: center;
@@ -184,6 +193,9 @@ export default function RegistroJugadores() {
         grid-template-columns: 1fr;
         gap: 12px;
         margin-bottom: 15px;
+      }
+      .phone-input-row {
+        flex-direction: column;
       }
       .btn-container-responsive {
         flex-direction: column;
@@ -1731,7 +1743,17 @@ export default function RegistroJugadores() {
                           /* ESTADO VACÍO */
                           <div
                             onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                            style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              textAlign: 'center',
+                              color: '#94a3b8',
+                              cursor: 'pointer'
+                            }}
                           >
                             <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                             <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
@@ -1925,11 +1947,11 @@ export default function RegistroJugadores() {
                   <div className="form-grid-2">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                      <input type="email" value={currentDatos.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                      <input type="email" value={currentDatos.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div className="phone-input-row">
                         <select
                           value={currentDatos.codigoPais || '+52'}
                           onChange={e => handleFieldChange('codigoPais', e.target.value)}
@@ -1941,7 +1963,9 @@ export default function RegistroJugadores() {
                             fontSize: '14px',
                             backgroundColor: 'white',
                             width: '110px',
-                            flexShrink: 0
+                            maxWidth: '100%',
+                            flexShrink: 0,
+                            boxSizing: 'border-box'
                           }}
                         >
                           <option value="+52">México +52</option>
@@ -1974,7 +1998,10 @@ export default function RegistroJugadores() {
                             borderRadius: '8px',
                             border: '1px solid #cbd5e1',
                             fontSize: '14px',
-                            flexGrow: 1
+                            flexGrow: 1,
+                            width: '100%',
+                            minWidth: 0,
+                            boxSizing: 'border-box'
                           }}
                         />
                       </div>
