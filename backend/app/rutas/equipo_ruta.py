@@ -10,6 +10,7 @@ import sys
 import json
 import os
 from datetime import datetime
+from urllib.parse import urlsplit
 from app.core.seguridad import obtener_usuario_actual, generar_salt, generar_hash
 
 from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
@@ -28,11 +29,19 @@ from app.repositorios.presidente_invitacion_repositorio import (
     crear_invitacion_presidente_repo,
     validar_invitacion_presidente_repo,
 )
+from app.servicios.whatsapp_servicio import WhatsAppService
 
 UPLOAD_DIR = "uploads"
 DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
 
 router = APIRouter(prefix="/equipo-temporal", tags=["Equipo Temporal"])
+
+
+class EnvioWhatsAppResponse(BaseModel):
+    success: bool
+    mensaje: str
+    whatsapp_status_code: int
+    meta_response: dict
 
 def safe_int(val, default=None):
     if val is None: return default
@@ -1182,23 +1191,19 @@ async def registrar_presidente_admin(
         if presidente:
             presidente.EstatusId = 7
 
-        invitacion_data = crear_invitacion_presidente_repo(db, nuevo_usuario.UsuarioId)
-        url_invitacion = (
-            f"/i/{invitacion_data['token_identificador']}/{invitacion_data['token_secreto']}"
-        )
-            
         db.commit()
         
         return {
             "success": True,
             "mensaje": "Presidente creado correctamente",
             "presidente": {
+                "usuario_id": nuevo_usuario.UsuarioId,
+                "persona_id": nueva_persona.PersonaId,
+                "presidente_equipo_id": nuevo_presidente.PresidenteEquipoId,
                 "nombre": nueva_persona.Nombre,
                 "correo": nuevo_usuario.Correo,
-                "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados,
-                "token_identificador": invitacion_data["token_identificador"],
-                "token_secreto": invitacion_data["token_secreto"],
-                "url_invitacion": url_invitacion
+                "telefono": nueva_persona.NumeroTelefono,
+                "jugadores_pagados": nuevo_equipo_temporal.CantidadJugadoresPagados
             }
         }
     except HTTPException as e:
@@ -1207,3 +1212,77 @@ async def registrar_presidente_admin(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+
+@router.post("/presidentes/{usuario_id}/enviar-link-registro-whatsapp", response_model=EnvioWhatsAppResponse)
+async def enviar_link_registro_whatsapp(
+    usuario_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual),
+):
+    rol_id = getattr(usuario, "RolId", None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+
+    usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+    if not usuario_db:
+        raise HTTPException(status_code=404, detail="No se encontró el usuario del presidente.")
+
+    persona = db.query(Personas).filter(Personas.PersonaId == usuario_db.PersonaId).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="No se encontró la persona del presidente.")
+
+    from app.core.telefono_utils import validar_y_normalizar_telefono
+
+    telefono = validar_y_normalizar_telefono(persona.NumeroTelefono)
+    nombre_presidente = " ".join(
+        part.strip()
+        for part in [
+            persona.Nombre or "",
+            persona.PrimerApellido or "",
+            persona.SegundoApellido or "",
+        ]
+        if part and part.strip()
+    )
+
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+
+    frontend_base_url = None
+    if origin:
+        frontend_base_url = origin.rstrip("/")
+    elif referer:
+        referer_parts = urlsplit(referer)
+        if referer_parts.scheme and referer_parts.netloc:
+            frontend_base_url = f"{referer_parts.scheme}://{referer_parts.netloc}"
+
+    if not frontend_base_url:
+        raise HTTPException(
+            status_code=500,
+            detail="Ocurrió un error al generar el enlace", #detail="No se pudo determinar la URL base del frontend para construir la invitación.",
+        )
+
+    invitacion_data = crear_invitacion_presidente_repo(db, usuario_db.UsuarioId)
+    link_invitacion = (
+        f"{frontend_base_url}/i/"
+        f"{invitacion_data['token_identificador']}/"
+        f"{invitacion_data['token_secreto']}"
+    )
+
+    whatsapp_service = WhatsAppService()
+    resultado = whatsapp_service.enviar_link_registro(
+        telefono=telefono,
+        nombre_presidente=nombre_presidente,
+        link_invitacion=link_invitacion,
+        usuario_id=usuario_db.UsuarioId,
+    )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "mensaje": "Mensaje de WhatsApp enviado correctamente.",
+        "whatsapp_status_code": resultado["status_code"],
+        "meta_response": resultado["meta_response"],
+    }

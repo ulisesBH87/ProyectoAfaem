@@ -365,6 +365,11 @@ export const registrarPresidenteAdmin = async (formData) => {
   }
 };
 
+export const enviarLinkRegistroPresidenteWhatsApp = async (usuarioId) => {
+  const response = await api.post(`/equipo-temporal/presidentes/${usuarioId}/enviar-link-registro-whatsapp`);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -389,5 +394,6 @@ export default {
   getAuditorias,
   agregarJugadorEquipoExistente,
   registrarPresidenteAdmin,
+  enviarLinkRegistroPresidenteWhatsApp,
   getCatalogosRegistro
 };
