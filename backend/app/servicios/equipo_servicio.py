@@ -18,7 +18,7 @@ from app.enums.tipos_solicitud_enum import TiposSolicitudEnum
 def obtener_equipos_temporales_por_usuario_servicio(db, usuario_id):
     return equipo_repositorio.obtener_equipos_temporales_por_usuario_repo(db, usuario_id)
 
-async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos_afiliacion_ids, archivos, seguro_id, slot_id=None):
+async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos_afiliacion_ids, archivos, seguro_id, slot_id=None, extra_data=None):
 
     # Validar disponibilidad de seguro
     equipo = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
@@ -49,6 +49,8 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
     
     solicitud_id = equipo_repositorio.obtener_solicitud_id(db, equipo_temporal_id)
 
+    # Buscar el slot correspondiente
+    slot = None
     if slot_id is not None:
         slot = db.query(EquipoTemporalJugador).filter(
             EquipoTemporalJugador.EquipoTemporalJugadorId == slot_id,
@@ -58,32 +60,95 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
             raise HTTPException(404, "Slot de jugador temporal no encontrado")
         if slot.Completo:
             raise HTTPException(400, "El slot seleccionado ya está completo")
-        
-        await documentos_servicio.subir_documento_servicio2(db, persona_id, documentos_afiliacion_ids, archivos, solicitud_id)
-        
-        slot.PersonaId = persona_id
-        slot.Completo = True
-        slot.SeguroId = seguro_id
-        slot.DatosBorrador = None
-        
-        db.commit()
-        return {"mensaje": "Jugador registrado"}
+    else:
+        slots_list = equipo_repositorio.obtener_cantidad_slots(db, equipo_temporal_id)
+        for s in slots_list:
+            if not s.Completo:
+                slot = s
+                break
+        if not slot:
+            raise HTTPException(400, "Todos los espacios ocupados")
 
-    slots = equipo_repositorio.obtener_cantidad_slots(db, equipo_temporal_id)
-    
-    for slot in slots:
-        if not slot.Completo:
-            await documentos_servicio.subir_documento_servicio2(db, persona_id, documentos_afiliacion_ids, archivos, solicitud_id)
+    # Subir documentos
+    await documentos_servicio.subir_documento_servicio2(db, persona_id, documentos_afiliacion_ids, archivos, solicitud_id)
+
+    # Asignar los datos del slot
+    slot.PersonaId = persona_id
+    slot.Completo = True
+    slot.SeguroId = seguro_id
+
+    # Si el equipo real ya está creado
+    if equipo.EquipoId is not None:
+        import json
+        # 1. Crear Antecedentes si es extranjero
+        antecedentes_id = None
+        es_extranjero = False
+        if extra_data and (extra_data.get("es_foraneo") in ["1", 1, True, "true"]):
+            es_extranjero = True
+            from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
+            antecedentes = AntecedentesInternacionales(
+                Extranjero=True,
+                Nacionalidades=extra_data.get("nacionalidad_jugador"),
+                PaisResidenciaActual=extra_data.get("pais_resid_actual"),
+                NacionalidadPadre=extra_data.get("nacionalidad_padre"),
+                NacionalidadMadre=extra_data.get("nacionalidad_madre"),
+                NacionalidadAbueloP=extra_data.get("nac_abuelo_paterno"),
+                NacionalidadAbuelaP=extra_data.get("nac_abuela_paterna"),
+                NacionalidadAbueloM=extra_data.get("nac_abuelo_materno"),
+                NacionalidadAbuelaM=extra_data.get("nac_abuela_materna"),
+                RegistroAsociacionExtranjera=extra_data.get("registro_asociacion_extranjera"),
+                ParticipacionExtranjera=extra_data.get("juego_club_extranjero")
+            )
+            db.add(antecedentes)
+            db.flush()
+            antecedentes_id = antecedentes.AntecedentesId
             
-            slot.PersonaId = persona_id
-            slot.Completo = True
-            slot.SeguroId = seguro_id
-            slot.DatosBorrador = None
+        # 2. Crear MiembrosEquipo
+        from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+        
+        try:
+            rol_en_equipo = int(extra_data.get("posicion") or 3) if extra_data else 3
+        except (ValueError, TypeError):
+            rol_en_equipo = 3
             
-            db.commit()
-            return {"mensaje": "Jugador registrado"}
-    
-    raise HTTPException(400, "Todos los espacios ocupados")
+        try:
+            numero_camiseta = int(extra_data.get("num_camiseta") or 0) if extra_data else 0
+        except (ValueError, TypeError):
+            numero_camiseta = 0
+            
+        existe_miembro = db.query(MiembrosEquipo).filter(
+            MiembrosEquipo.PersonaId == persona_id,
+            MiembrosEquipo.EquipoID == equipo.EquipoId
+        ).first()
+        
+        if not existe_miembro:
+            nuevo_miembro = MiembrosEquipo(
+                PersonaId=persona_id,
+                RolEnEquipo=rol_en_equipo,
+                EquipoID=equipo.EquipoId,
+                Estatus=True,
+                Eliminado=False,
+                NumeroCamiseta=numero_camiseta,
+                Extranjero=es_extranjero,
+                AntecedentesId=antecedentes_id
+            )
+            db.add(nuevo_miembro)
+            
+        # 3. Sumar +1 a la CantidadJugadores en la tabla EquiposJugando
+        from app.modelos.equipo_modelo import EquiposJugando
+        equipo_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo.EquipoId).first()
+        if equipo_jugando:
+            equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + 1
+            
+        slot.DatosBorrador = None
+    else:
+        # Si el equipo real no existe, persistimos los metadatos en DatosBorrador
+        if extra_data:
+            import json
+            slot.DatosBorrador = json.dumps(extra_data, ensure_ascii=False)
+
+    db.commit()
+    return {"mensaje": "Jugador registrado"}
 
 def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
     import json
@@ -246,44 +311,121 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                     )
 
         
-        #AQÚI LLEGA ADMIN
+        # Guardar el tipo de proceso original para saber si es AMPLIACION al final
+        tipo_proceso_original = equipo_tem.TipoProcesoId
+
+        # AQÚI LLEGA ADMIN
         # == CREACIÓN DE PRESIDENTE O EQUIPO = INSCRIPCIÓN INICIAL
         # == NO EXISTE EL EQUIPO ==
-        if equipo_tem.TipoProcesoId == EquipoTemporalProcesoEnum.INSCRIPCION_INICIAL:
-            #print("el tipo de proceso es: ")
-            #print(equipo_tem.TipoProcesoId)
-            #print("el equipo temporal es:  🍦🍦🍦 ")
-            #print(equipo_tem.EquipoTemporalId)
-            #print("🍦🍦🍦🍦🍦🍦")
+        if tipo_proceso_original == EquipoTemporalProcesoEnum.INSCRIPCION_INICIAL:
             equipo = equipo_repositorio.obtener_o_crear_equipo(
                 db, team_info["nombre_equipo"]
             )
-            #print("EL EQUIPO ES: ")
-            #print(equipo.EquipoId)
-            #print("ANTES DE VINCULAR")
-            #vincular el equipo creado al equipo temporal
+            # vincular el equipo creado al equipo temporal
             equipo_tem.EquipoId = equipo.EquipoId
-            #print("DESPUÉS DE VINCULAR")
             db.flush()
         
+            # Buscar todos los slots completados (jugadores que se registraron por el link público antes)
+            slots_completados = db.query(EquipoTemporalJugador).filter(
+                EquipoTemporalJugador.EquipoTemporalId == equipo_tem.EquipoTemporalId,
+                EquipoTemporalJugador.Completo == True,
+                EquipoTemporalJugador.PersonaId != None
+            ).all()
+
+            # Procesar cada slot completado para meterlos a la base real (MiembrosEquipo y Antecedentes)
+            from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+            from app.modelos.antecedentes_internacionales_modelo import AntecedentesInternacionales
+            import json
+            
+            for s_comp in slots_completados:
+                p_data_comp = {}
+                if s_comp.DatosBorrador:
+                    try:
+                        p_data_comp = json.loads(s_comp.DatosBorrador)
+                    except Exception:
+                        pass
+                
+                antecedentes_id = None
+                es_extranjero_comp = False
+                
+                for_val = p_data_comp.get("es_foraneo") if p_data_comp.get("es_foraneo") is not None else p_data_comp.get("extranjero")
+                if for_val in ["1", 1, True, "true"]:
+                    es_extranjero_comp = True
+                    antecedentes = AntecedentesInternacionales(
+                        Extranjero=True,
+                        Nacionalidades=p_data_comp.get("nacionalidad_jugador") or p_data_comp.get("nacionalidad"),
+                        PaisResidenciaActual=p_data_comp.get("pais_resid_actual") or p_data_comp.get("pais_residencia"),
+                        NacionalidadPadre=p_data_comp.get("nacionalidad_padre"),
+                        NacionalidadMadre=p_data_comp.get("nacionalidad_madre"),
+                        NacionalidadAbueloP=p_data_comp.get("nac_abuelo_paterno"),
+                        NacionalidadAbuelaP=p_data_comp.get("nac_abuela_paterna"),
+                        NacionalidadAbueloM=p_data_comp.get("nac_abuelo_materno"),
+                        NacionalidadAbuelaM=p_data_comp.get("nac_abuela_materna"),
+                        RegistroAsociacionExtranjera=p_data_comp.get("registro_asociacion_extranjera"),
+                        ParticipacionExtranjera=p_data_comp.get("juego_club_extranjero")
+                    )
+                    db.add(antecedentes)
+                    db.flush()
+                    antecedentes_id = antecedentes.AntecedentesId
+                
+                try:
+                    rol_en_equipo = int(p_data_comp.get("posicion") or p_data_comp.get("rol_en_equipo") or 3)
+                except (ValueError, TypeError):
+                    rol_en_equipo = 3
+                    
+                try:
+                    numero_camiseta = int(p_data_comp.get("num_camiseta") or p_data_comp.get("numero_camiseta") or 0)
+                except (ValueError, TypeError):
+                    numero_camiseta = 0
+                
+                existe_miembro = db.query(MiembrosEquipo).filter(
+                    MiembrosEquipo.PersonaId == s_comp.PersonaId,
+                    MiembrosEquipo.EquipoID == equipo.EquipoId
+                ).first()
+                
+                if not existe_miembro:
+                    nuevo_miembro = MiembrosEquipo(
+                        PersonaId=s_comp.PersonaId,
+                        RolEnEquipo=rol_en_equipo,
+                        EquipoID=equipo.EquipoId,
+                        Estatus=True,
+                        Eliminado=False,
+                        NumeroCamiseta=numero_camiseta,
+                        Extranjero=es_extranjero_comp,
+                        AntecedentesId=antecedentes_id
+                    )
+                    db.add(nuevo_miembro)
+                
+                # Limpiar DatosBorrador ya que se vinculó al equipo real
+                s_comp.DatosBorrador = None
+            
+            # Crear el registro en EquiposJugando con la suma de los del formulario + completados previamente
+            cantidad_total = len(players_info) + len(slots_completados)
             equipo_repositorio.crear_equipo_jugando(
-                db, equipo, team_info, presidente_id, len(players_info)
+                db, equipo, team_info, presidente_id, cantidad_total
             )
             
-            equipo_repositorio.actualizar_orden(db, solicitud_id) #mejorar
+            equipo_repositorio.actualizar_orden(db, solicitud_id)
             equipo_tem.TipoProcesoId = EquipoTemporalProcesoEnum.AMPLIACION
             await guardar_logo(form_data, equipo, db)
         
-        #MODO AGREGAR JUGADORES
+        # MODO AGREGAR JUGADORES
         if equipo_tem.TipoProcesoId == EquipoTemporalProcesoEnum.AMPLIACION:
             equipo = equipo_repositorio.obtener_equipo_por_id(db, equipo_tem.EquipoId)
         
         try:
-            #if rol_id != 1: # Si no es administrador, se asume que es presidente y se registran los jugadores en el equipo temporal
+            # if rol_id != 1: # Si no es administrador, se asume que es presidente y se registran los jugadores en el equipo temporal
             solicitud_id = equipo_tem.SolicitudId if equipo_tem else None
 
             for index, player in enumerate(players_info):
                 await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
+
+            # Si el tipo de proceso original ya era AMPLIACION, sumamos los nuevos registrados en esta petición a EquiposJugando
+            if tipo_proceso_original == EquipoTemporalProcesoEnum.AMPLIACION:
+                from app.modelos.equipo_modelo import EquiposJugando
+                equipo_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo.EquipoId).first()
+                if equipo_jugando:
+                    equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + len(players_info)
 
             slots_restantes = db.query(EquipoTemporalJugador).filter(
                 EquipoTemporalJugador.EquipoTemporalId == equipo_tem.EquipoTemporalId,

@@ -1,3 +1,4 @@
+# SERVICIO DE DETECCIÓN DE FOTOGRAFÍAS PARA DOCUMENTOS DE IDENTIDAD
 import os
 import torch
 import mediapipe as mp
