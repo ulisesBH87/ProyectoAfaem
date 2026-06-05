@@ -1637,7 +1637,7 @@ export default function ConfigurarEquipo() {
   }
 
   // Si no hay slots en absoluto
-  const sinSlots = slotsData?.slots_disponibles === 0 || slotsData?.hay_slots === false;
+  const sinSlots = (slotsData?.slots_disponibles === 0 || slotsData?.hay_slots === false) && equipoId;
 
   const steps = [
     { label: 'Seleccionar Presidente', step: 0 },
