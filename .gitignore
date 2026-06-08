@@ -9,6 +9,7 @@ venv/
 .venv/
 env/
 ENV/
+uploads
 
 # =========================
 # 🔹 Backend - Variables de entorno
