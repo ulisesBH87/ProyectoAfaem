@@ -173,7 +173,6 @@ export default function PagoPrevioJugador() {
   const totalAsignadosPagoJugador = Object.values(asignacionSegurosAgregar).reduce((sum, value) => sum + Number(value || 0), 0);
   const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
   const totalPagoEstimadoJugador = (
-    (costoAfiliacionJugador * Number(numJugadoresAgregar || 0)) +
     catalogs.seguros.reduce((sum, seguro) => {
       const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
       return sum + (Number(seguro.precio || 0) * cantidad);
@@ -349,10 +348,6 @@ export default function PagoPrevioJugador() {
         <span>Orden de pago</span>
         <strong style={{ color: '#1e293b' }}>#{resolvedOrdenId || '-'}</strong>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
-        <span>Afiliacion jugadores x{cantidadJugadoresOrden}</span>
-        <strong style={{ color: '#1e293b' }}>${subtotalAfiliacionJugadores.toFixed(2)}</strong>
-      </div>
       {detallesSeguros.map((detalle, index) => {
         const seguro = segurosCatalogo.find(item => Number(item.id) === Number(detalle.SeguroId));
         return (
@@ -522,10 +517,6 @@ export default function PagoPrevioJugador() {
 
           <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
-              <span>Afiliacion jugadores x{Number(numJugadoresAgregar || 0)}</span>
-              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresAgregar || 0)).toFixed(2)}</strong>
-            </div>
             {catalogs.seguros.map(seguro => {
               const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
               if (!cantidad) return null;
