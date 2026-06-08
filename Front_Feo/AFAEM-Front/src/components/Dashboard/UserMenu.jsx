@@ -47,7 +47,7 @@ const UserMenu = ({ userEmail }) => {
       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(11, 78, 166, 0.05)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
     >
-      <div style={{ textAlign: 'right', flexShrink: 1, minWidth: 0 }}>
+      <div className="user-role-text" style={{ textAlign: 'right', flexShrink: 1, minWidth: 0 }}>
         <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {roleName}
         </div>

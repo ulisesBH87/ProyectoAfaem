@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   FaRegFileAlt, FaShieldAlt, FaHistory, FaChartLine,
   FaTrophy, FaBolt, FaCheckCircle, FaUsers, FaSyncAlt,
   FaClipboardList, FaMoneyBillWave
 } from 'react-icons/fa';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LabelList, PieChart, Pie
 } from 'recharts';
@@ -74,7 +74,7 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoading(false); 
+        setLoading(false);
       }
     };
     fetchData();
@@ -117,7 +117,7 @@ const AdminDashboard = () => {
             Panel de Control AFAEM
           </h2>
           <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '15px', margin: '6px 0 0' }}>
-            Bienvenido, Administrador. Visualiza el pulso de la liga en tiempo real.
+            Bienvenido, Administrador. Visualiza estadísticas en tiempo real.
           </p>
         </div>
         <button
@@ -157,7 +157,7 @@ const AdminDashboard = () => {
         {/* CHART: RECAUDACIÓN (2x2) */}
         <div className="card glass" style={{ gridColumn: 'span 2', gridRow: 'span 2', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', background: 'radial-gradient(circle, var(--primary) 0%, transparent 60%)', opacity: 0.05, borderRadius: '50%', pointerEvents: 'none' }}></div>
-          
+
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
             <div>
               <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Ingresos del Mes</h3>
@@ -182,7 +182,7 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
-          
+
           <div style={{ flex: 1, minHeight: '220px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -206,7 +206,7 @@ const AdminDashboard = () => {
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            
+
             <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px' }}>
                 {mesFiltro}
