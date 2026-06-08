@@ -13,6 +13,7 @@ class RequestTracker:
         self.violation_timestamps = []
         self.blocked_until = 0.0
         self.last_active = time.time()
+        self.last_blocked_audit = 0.0
         self.lock = Lock()
 
     def clean_old(self, current_time: float, window_seconds: int):
@@ -20,9 +21,9 @@ class RequestTracker:
         while self.requests and self.requests[0] < cutoff:
             self.requests.pop(0)
 
-    def clean_violations(self, current_time: float):
-        # Mantener solo violaciones de las últimas 24 horas (86400 segundos)
-        cutoff = current_time - 86400
+    def clean_violations(self, current_time: float, window_seconds: int):
+        # Mantener solo violaciones dentro de la ventana de observación
+        cutoff = current_time - window_seconds
         while self.violation_timestamps and self.violation_timestamps[0] < cutoff:
             self.violation_timestamps.pop(0)
 
@@ -68,10 +69,43 @@ def rate_limit_invitacion(request: Request, db: Session = Depends(get_db)):
     tracker = invitacion_limiter.get_tracker(ip)
     now = time.time()
 
+    # Determinar si estamos en modo prueba para ajustar ventanas y duraciones
+    is_test = request.headers.get("X-Test-Mode") == "True"
+
+    # Ventanas de observación de violaciones (cuánto tiempo hacia atrás contamos violaciones)
+    violation_window_15m = 2 if is_test else 900
+    violation_window_24h = 4 if is_test else 86400
+
+    # Duraciones de los bloqueos (cuánto dura el castigo)
+    block_duration_15m = 2 if is_test else 900
+    block_duration_24h = 4 if is_test else 86400
+
+    # Cooldown para auditorías de IPs bloqueadas (para evitar inundaciones en DB)
+    audit_cooldown = 1.0 if is_test else 60.0
+
     with tracker.lock:
         # Nivel 2 y 3: Verificar si ya hay un bloqueo activo
         if now < tracker.blocked_until:
-            # Mientras esté bloqueada: HTTP 429 sin procesar la solicitud
+            # Requerimiento 2: Auditar intentos provenientes de IPs ya bloqueadas antes de lanzar la excepción
+            # Requerimiento 3: Evitar duplicación excesiva usando cooldown
+            if now - tracker.last_blocked_audit >= audit_cooldown:
+                tracker.last_blocked_audit = now
+                auditoria = Auditoria(
+                    EntidadAfectada="PresidenteInvitacion",
+                    RegistroId="N/A",
+                    AccionId=4,
+                    UsuarioId=0,
+                    FechaAccion=datetime.now(),
+                    Ip=ip,
+                    ObservacionesAuditoria="Intento de acceso desde IP bloqueada",
+                    UsuarioNombre="Sistema/Invitado"
+                )
+                db.add(auditoria)
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
+
             remaining = int(tracker.blocked_until - now)
             raise HTTPException(
                 status_code=429,
@@ -84,28 +118,23 @@ def rate_limit_invitacion(request: Request, db: Session = Depends(get_db)):
         if len(tracker.requests) >= invitacion_limiter.limit:
             # Registrar nueva violación
             tracker.violation_timestamps.append(now)
-            tracker.clean_violations(now)
+            tracker.clean_violations(now, violation_window_24h)
 
-            # Contar violaciones en los últimos 15 minutos (900s) y 24 horas (86400s)
-            is_test = request.headers.get("X-Test-Mode") == "True"
-            limit_15m = 2 if is_test else 900
-            limit_24h = 4 if is_test else 86400
-
-            violations_15m = sum(1 for t in tracker.violation_timestamps if now - t <= limit_15m)
+            violations_15m = sum(1 for t in tracker.violation_timestamps if now - t <= violation_window_15m)
             violations_24h = len(tracker.violation_timestamps)
 
-            print(f"DEBUG RATE LIMIT: IP={ip}, now={now}, violation_timestamps={tracker.violation_timestamps}, limit_15m={limit_15m}, violations_15m={violations_15m}, violations_24h={violations_24h}")
+            print(f"DEBUG RATE LIMIT: IP={ip}, now={now}, violation_timestamps={tracker.violation_timestamps}, violation_window_15m={violation_window_15m}, violations_15m={violations_15m}, violations_24h={violations_24h}")
 
             obs = "Límite de peticiones excedido"
             block_msg = "Límite de peticiones excedido. Por favor, intente de nuevo más tarde."
 
             # Evaluar niveles de bloqueo progresivo
             if violations_24h >= 5:
-                tracker.blocked_until = now + limit_24h  # Bloqueo extendido (24 horas o 4s en test)
+                tracker.blocked_until = now + block_duration_24h  # Bloqueo extendido
                 obs = "IP bloqueada por reincidencia"
                 block_msg = "IP bloqueada por 24 horas debido a reincidencia."
             elif violations_15m >= 3:
-                tracker.blocked_until = now + limit_15m  # Bloqueo temporal (15 minutos o 2s en test)
+                tracker.blocked_until = now + block_duration_15m  # Bloqueo temporal
                 obs = "IP bloqueada temporalmente por múltiples violaciones"
                 block_msg = "IP bloqueada por 15 minutos debido a múltiples violaciones."
 
@@ -121,7 +150,10 @@ def rate_limit_invitacion(request: Request, db: Session = Depends(get_db)):
                 UsuarioNombre="Sistema/Invitado"
             )
             db.add(auditoria)
-            db.commit()
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
 
             raise HTTPException(
                 status_code=429,
