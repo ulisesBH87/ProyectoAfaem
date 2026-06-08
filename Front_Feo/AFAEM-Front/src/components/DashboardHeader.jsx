@@ -70,6 +70,12 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
           max-width: 400px;
         }
 
+        .header-user {
+          flex: 0 0 auto;
+          width: auto;
+          min-width: 160px; /* Ancho por defecto en desktop */
+        }
+
         /* Mobile (< 768px) */
         @media (max-width: 767px) {
           .dashboard-header-container {
@@ -85,6 +91,12 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
           .header-search-wrapper {
             max-width: none; /* Ocupa todo el espacio en móvil */
           }
+          .header-user {
+            min-width: 0;
+            width: fit-content;
+            gap: 0 !important;
+            padding: 4px !important;
+          }
           .user-role-text {
             display: none !important; /* Ocultar rol en móvil */
           }
@@ -97,6 +109,10 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
           }
           .header-search-wrapper {
             max-width: 300px;
+          }
+          .header-user {
+            min-width: 0;
+            width: fit-content;
           }
           .user-role-text {
             display: none !important; /* Ocultar rol en tablet para dar espacio al buscador y título */
