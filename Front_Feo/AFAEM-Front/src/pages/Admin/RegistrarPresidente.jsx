@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
-import { registrarPresidenteAdmin } from '../../services/admin';
+import { registrarPresidenteAdmin, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
 import { Modal, BotonPrimario, BotonSecundario } from '../../components/partials';
 
 // ─── Paleta de colores (distinta a PreRegistro) ──────────────────────────────
@@ -764,11 +764,6 @@ export default function RegistrarPresidente() {
 
       const response = await registrarPresidenteAdmin(fd);
 
-      const nombrePresidente = cuenta.nombre || '';
-      const telLocalWhatsApp = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
-      const codPaisWhatsApp = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : (telefonoDoc ? codigoPaisDoc : codigoPaisCuenta);
-      const telefonoLimpio = (codPaisWhatsApp + telLocalWhatsApp).replace(/\D/g, '');
-
       const result = await Swal.fire({
         title: 'Cuenta creada correctamente, ¿Enviar mensaje al presidente?',
         text: '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
@@ -781,17 +776,37 @@ export default function RegistrarPresidente() {
       });
 
       if (result.isConfirmed) {
-        const rutaInvitacion = response?.presidente?.url_invitacion || '';
-        const linkInvitacion = rutaInvitacion ? `${window.location.origin}${rutaInvitacion}` : '';
-        const mensaje = `Hola ${nombrePresidente}. Utiliza el siguiente enlace para registrar a tus jugadores: ${linkInvitacion}`;
-        const mensajeCodificado = encodeURIComponent(mensaje);
-        const url = `https://wa.me/${telefonoLimpio}?text=${mensajeCodificado}`;
-        window.open(url, '_blank');
+        const usuarioId = response?.presidente?.usuario_id;
+        if (!usuarioId) {
+          throw new Error('No se recibió el identificador del presidente para enviar el mensaje.');
+        }
+
+        Swal.fire({
+          title: 'Enviando WhatsApp…',
+          text: 'Enviando mensaje al presidente de equipo.', //text: 'Contactando el servicio de WhatsApp Business Cloud API.',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        const envio = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
+
+        await Swal.fire({
+          title: 'WhatsApp enviado',
+          text: envio?.mensaje || 'El mensaje fue enviado correctamente al presidente.',
+          icon: 'success',
+          confirmButtonColor: C.amberDark,
+        });
       }
 
       navigate('/admin/presidentes');
     } catch (err) {
-      Swal.fire('Error', err.response?.data?.detail || err.message || 'No se pudo completar el registro.', 'error');
+      const detail = err.response?.data?.detail;
+      const errorMessage = typeof detail === 'string'
+        ? detail
+        : detail?.mensaje
+          ? `${detail.mensaje} (HTTP ${detail.status_code || 'N/D'})`
+          : (err.message || 'No se pudo completar el registro.');
+      Swal.fire('Error', errorMessage, 'error');
     } finally {
       setLoading(false);
     }

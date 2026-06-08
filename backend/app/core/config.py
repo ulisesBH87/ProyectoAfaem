@@ -8,6 +8,10 @@ class Configuracion(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     DEBUG: bool = False
+    WHATSAPP_API_VERSION: str = "v25.0"
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_ACCESS_TOKEN: str = ""
+    WHATSAPP_ENABLED: bool = True
     model_config = SettingsConfigDict(
         env_file=".env"
     )
