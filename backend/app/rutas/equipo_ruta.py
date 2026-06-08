@@ -30,6 +30,7 @@ from app.repositorios.presidente_invitacion_repositorio import (
     validar_invitacion_presidente_repo,
 )
 from app.servicios.whatsapp_servicio import WhatsAppService
+from app.core.rate_limiter import rate_limit_invitacion
 
 UPLOAD_DIR = "uploads"
 DOCS_DIR = os.path.join(UPLOAD_DIR, "documentos")
@@ -72,7 +73,7 @@ async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
 
     return slots
 
-@router.get("/invitacion/{token_identificador}/{token_secreto}")
+@router.get("/invitacion/{token_identificador}/{token_secreto}", dependencies=[Depends(rate_limit_invitacion)])
 async def validar_invitacion_presidente(request: Request, token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
     ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip() if request.client else None
     invitacion = validar_invitacion_presidente_repo(db, token_identificador, token_secreto, ip)
