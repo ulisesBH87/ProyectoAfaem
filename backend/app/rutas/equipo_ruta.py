@@ -73,8 +73,9 @@ async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
     return slots
 
 @router.get("/invitacion/{token_identificador}/{token_secreto}")
-async def validar_invitacion_presidente(token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
-    invitacion = validar_invitacion_presidente_repo(db, token_identificador, token_secreto)
+async def validar_invitacion_presidente(request: Request, token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
+    ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip() if request.client else None
+    invitacion = validar_invitacion_presidente_repo(db, token_identificador, token_secreto, ip)
 
     from app.repositorios import equipo_repositorio
 
