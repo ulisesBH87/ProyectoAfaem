@@ -37,7 +37,7 @@ export default function StepBar({ paso }) {
             </div>
 
             {i < PASOS.length - 1 && (
-              <div style={{ position: 'relative', flex: 1, height: 2, maxWidth: 100, margin: '0 4px', marginBottom: 20 }}>
+              <div className="rp-step-bar-line" style={{ height: 2 }}>
                 <div style={{ position: 'absolute', inset: 0, background: C.cardBorder, borderRadius: 2 }} />
                 <div style={{
                   position: 'absolute', inset: 0,

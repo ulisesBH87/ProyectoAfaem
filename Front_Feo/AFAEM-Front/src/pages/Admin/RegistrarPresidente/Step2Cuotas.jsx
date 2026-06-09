@@ -35,7 +35,7 @@ export default function Step2Cuotas({
         descripcion="Configura la plantilla inicial del equipo y asigna sus seguros."
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, alignItems: 'start' }}>
+      <div className="rp-grid-2to1-cuotas">
         {/* Panel de seguros */}
         <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: '22px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
@@ -71,7 +71,7 @@ export default function Step2Cuotas({
           </div>
 
           {/* Grid de seguros por categoría */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div className="rp-grid-1to1">
             {[['Seguros Jugadores', segurosJugadores, false], ['Seguros Presidente', segurosPresidente, true]].map(([titulo, lista, isPres]) => (
               <div key={titulo}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: C.amber, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
