@@ -116,7 +116,8 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
     # validación
     if total_slots_creados != cantidad_jugadores:
         raise ValueError(
-            f"Inconsistencia: personas={cantidad_jugadores}, slots={total_slots_creados}"
+            #f"Inconsistencia: personas={cantidad_jugadores}, slots={total_slots_creados}"
+            "Ocurrió un error. Inténtalo de nuevo más tarde"
         )
 
     return equipo
