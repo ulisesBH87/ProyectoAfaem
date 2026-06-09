@@ -46,16 +46,16 @@ const HeaderSearch = () => {
     }
 
     const query = searchQuery.toLowerCase();
-    const matchedActions = quickActions.filter(a => 
+    const matchedActions = quickActions.filter(a =>
       a.label.toLowerCase().includes(query) || a.keywords.includes(query)
     ).slice(0, 5);
 
-    const matchedTeams = allTeams.filter(t => 
+    const matchedTeams = allTeams.filter(t =>
       t.NombreEquipo?.toLowerCase().includes(query)
     ).slice(0, 5);
 
-    const matchedPlayers = allPlayers.filter(p => 
-      p.NombreCompleto?.toLowerCase().includes(query) || 
+    const matchedPlayers = allPlayers.filter(p =>
+      p.NombreCompleto?.toLowerCase().includes(query) ||
       p.CURP?.toLowerCase().includes(query) ||
       p.Email?.toLowerCase().includes(query)
     ).slice(0, 5);
@@ -77,12 +77,12 @@ const HeaderSearch = () => {
   };
 
   return (
-    <div style={{ position: 'relative' }}>
-      <SearchBar 
+    <div style={{ position: 'relative', width: '100%' }}>
+      <SearchBar
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="Buscar equipos, jugadores o secciones..."
-        width="320px"
+        width="100%"
       />
 
       {showResults && (
@@ -143,8 +143,8 @@ const HeaderSearch = () => {
 
           {filteredResults.actions.length === 0 && filteredResults.teams.length === 0 && filteredResults.players.length === 0 && (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-               <FaSearch style={{ fontSize: '24px', marginBottom: '10px', opacity: 0.3 }} />
-               <div style={{ fontSize: '13px', fontWeight: '600' }}>No encontramos coincidencias para "{searchQuery}"</div>
+              <FaSearch style={{ fontSize: '24px', marginBottom: '10px', opacity: 0.3 }} />
+              <div style={{ fontSize: '13px', fontWeight: '600' }}>No encontramos coincidencias para "{searchQuery}"</div>
             </div>
           )}
         </div>

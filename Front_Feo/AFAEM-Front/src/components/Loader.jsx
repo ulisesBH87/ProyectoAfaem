@@ -13,14 +13,6 @@ const Loader = ({ text = "AFAEM DIGITAL", inline = false }) => {
           <div className="afaem-loader-text">{text}</div>
         </div>
       </div>
-      {!inline && (
-        <div className="afaem-loader-footer">
-          <div className="afaem-loader-bar-bg">
-            <div className="afaem-loader-bar-fill"></div>
-          </div>
-          <span>AFAEM © 2026</span>
-        </div>
-      )}
     </div>
   );
 };

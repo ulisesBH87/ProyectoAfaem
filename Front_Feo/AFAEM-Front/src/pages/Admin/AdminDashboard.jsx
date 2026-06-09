@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   FaRegFileAlt, FaShieldAlt, FaHistory, FaChartLine,
   FaTrophy, FaBolt, FaCheckCircle, FaUsers, FaSyncAlt,
   FaClipboardList, FaMoneyBillWave
 } from 'react-icons/fa';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LabelList, PieChart, Pie
 } from 'recharts';
@@ -16,7 +16,9 @@ import Loader from '../../components/Loader';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [mesFiltro, setMesFiltro] = useState('Abr');
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const [mesFiltro, setMesFiltro] = useState(meses[new Date().getMonth()]);
+  const [chartData, setChartData] = useState(meses.map(m => ({ name: m, ingresos: 0 })));
   const [statsData, setStatsData] = useState({
     solicitudesPendientes: 0,
     pagosPendientes: 0,
@@ -25,26 +27,8 @@ const AdminDashboard = () => {
     jugadoresActivos: 0
   });
 
-  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-  // Datos históricos para todos los meses
-  const chartDataTodos = [
-    { name: 'Ene', ingresos: 4200 },
-    { name: 'Feb', ingresos: 3800 },
-    { name: 'Mar', ingresos: 5100 },
-    { name: 'Abr', ingresos: statsData.totalIngreso || 6400 },
-    { name: 'May', ingresos: 0 },
-    { name: 'Jun', ingresos: 0 },
-    { name: 'Jul', ingresos: 0 },
-    { name: 'Ago', ingresos: 0 },
-    { name: 'Sep', ingresos: 0 },
-    { name: 'Oct', ingresos: 0 },
-    { name: 'Nov', ingresos: 0 },
-    { name: 'Dic', ingresos: 0 },
-  ];
-
   // Dato específico del mes seleccionado para el indicador numérico grande
-  const mesSeleccionadoData = chartDataTodos.find(d => d.name === mesFiltro) || chartDataTodos[3];
+  const mesSeleccionadoData = chartData.find(d => d.name === mesFiltro) || chartData[new Date().getMonth()];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,9 +44,20 @@ const AdminDashboard = () => {
         const pagosList = Array.isArray(pagos) ? pagos : [];
         const jugadoresList = Array.isArray(jugadores) ? jugadores : [];
 
-        const totalIngreso = pagosList
-          .filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 3)
-          .reduce((acc, curr) => acc + parseFloat(curr.MontoTotal || curr.TotalPagar || 0), 0);
+        const pagosValidos = pagosList.filter(p => (p.EstatusPagoId || p.EstatusValidacion) === 3);
+        const totalIngreso = pagosValidos.reduce((acc, curr) => acc + parseFloat(curr.MontoTotal || curr.TotalPagar || 0), 0);
+
+        const nuevosIngresosPorMes = meses.map(m => ({ name: m, ingresos: 0 }));
+        pagosValidos.forEach(p => {
+          const dateStr = p.FechaEnvio || p.CreatedAt || p.FechaPago || p.FechaCreacion || p.FechaRegistro;
+          if (dateStr) {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+              nuevosIngresosPorMes[date.getMonth()].ingresos += parseFloat(p.MontoTotal || p.TotalPagar || 0);
+            }
+          }
+        });
+        setChartData(nuevosIngresosPorMes);
 
         setStatsData({
           solicitudesPendientes: solicitudesList.filter(s => s.EstatusValidacion === 1).length,
@@ -74,7 +69,7 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoading(false); 
+        setLoading(false);
       }
     };
     fetchData();
@@ -117,7 +112,7 @@ const AdminDashboard = () => {
             Panel de Control AFAEM
           </h2>
           <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '15px', margin: '6px 0 0' }}>
-            Bienvenido, Administrador. Visualiza el pulso de la liga en tiempo real.
+            Bienvenido, Administrador. Visualiza estadísticas en tiempo real.
           </p>
         </div>
         <button
@@ -157,7 +152,7 @@ const AdminDashboard = () => {
         {/* CHART: RECAUDACIÓN (2x2) */}
         <div className="card glass" style={{ gridColumn: 'span 2', gridRow: 'span 2', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', background: 'radial-gradient(circle, var(--primary) 0%, transparent 60%)', opacity: 0.05, borderRadius: '50%', pointerEvents: 'none' }}></div>
-          
+
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
             <div>
               <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Ingresos del Mes</h3>
@@ -182,14 +177,14 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
-          
+
           <div style={{ flex: 1, minHeight: '220px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={[
                     { name: 'Ingresos', value: mesSeleccionadoData?.ingresos || 0 },
-                    { name: 'Restante', value: Math.max(0, 10000 - (mesSeleccionadoData?.ingresos || 0)) }
+                    { name: 'Vacio', value: (mesSeleccionadoData?.ingresos || 0) > 0 ? 0 : 1 }
                   ]}
                   cx="50%"
                   cy="50%"
@@ -206,16 +201,13 @@ const AdminDashboard = () => {
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            
+
             <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px' }}>
                 {mesFiltro}
               </div>
               <div className="data-fira" style={{ fontSize: '40px', fontWeight: '800', color: 'var(--primary)', lineHeight: '1', textShadow: '0 4px 12px rgba(11, 78, 166, 0.15)' }}>
                 ${(mesSeleccionadoData?.ingresos || 0).toLocaleString()}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', fontWeight: '500' }}>
-                de <strong style={{ color: 'var(--text-main)' }}>$10,000</strong> meta
               </div>
             </div>
           </div>

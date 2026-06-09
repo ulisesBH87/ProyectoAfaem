@@ -6,11 +6,11 @@ import { LoaderProvider } from './contexts/LoaderContext';
 import { RBACProvider } from './contexts/RBACContext';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <LoaderProvider>
-      <RBACProvider>
-        <App />
-      </RBACProvider>
-    </LoaderProvider>
-  </React.StrictMode>
+
+  <LoaderProvider>
+    <RBACProvider>
+      <App />
+    </RBACProvider>
+  </LoaderProvider>
+
 )

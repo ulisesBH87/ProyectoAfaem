@@ -26,15 +26,21 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --border-light: #e2e8f0;
   --glass-border: rgba(255, 255, 255, 0.4);
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   min-height: 100vh;
@@ -43,21 +49,34 @@ html, body, #root {
   background: var(--bg-main);
 }
 
-h1, h2, h3, h4, .heading-outfit { 
+h1,
+h2,
+h3,
+h4,
+.heading-outfit {
   font-family: 'Outfit', sans-serif;
-  text-transform: capitalize; /* Asegura que la primera sea mayúscula */
+  text-transform: capitalize;
+  /* Asegura que la primera sea mayúscula */
 }
 
-h1::first-letter, h2::first-letter, h3::first-letter, h4::first-letter {
+h1::first-letter,
+h2::first-letter,
+h3::first-letter,
+h4::first-letter {
   text-transform: uppercase;
 }
 
-h1, h2, h3, h4 {
-  text-transform: none; /* Dejar que el contenido decida, pero forzaremos sentencia en los componentes */
+h1,
+h2,
+h3,
+h4 {
+  text-transform: none;
+  /* Dejar que el contenido decida, pero forzaremos sentencia en los componentes */
 }
 
 /* REFUERZO DE GLASSMORPHISM OSCURO PARA LOGIN */
-.glass-dark, .auth-card-refined {
+.glass-dark,
+.auth-card-refined {
   background: rgba(15, 23, 42, 0.7) !important;
   backdrop-filter: blur(28px) !important;
   -webkit-backdrop-filter: blur(28px) !important;
@@ -87,6 +106,7 @@ h1, h2, h3, h4 {
     justify-content: center !important;
     align-items: center !important;
   }
+
   .auth-content {
     margin: 0 !important;
     padding: 0 !important;
@@ -166,6 +186,7 @@ h1, h2, h3, h4 {
     padding: 24px 16px !important;
     border-radius: 16px !important;
   }
+
   .auth-card-refined {
     padding: 32px 20px !important;
     border-radius: 16px !important;
@@ -250,33 +271,77 @@ h1, h2, h3, h4 {
 }
 
 @keyframes fadeInSlide {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Utility classes for Dashboard */
-.card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.card-hover:hover { transform: translateY(-4px); box-shadow: 0 16px 32px -8px rgba(0,0,0,0.12); }
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.12);
+}
+
 .glass {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
-.data-fira { font-family: 'Fira Sans', monospace; }
-.fade-in { animation: fadeInSlide 0.5s var(--ease-out-expo) forwards; }
-.slide-up { animation: slideUp 0.4s ease forwards; }
+
+.data-fira {
+  font-family: 'Fira Sans', monospace;
+}
+
+.fade-in {
+  animation: fadeInSlide 0.5s var(--ease-out-expo) forwards;
+}
+
+.slide-up {
+  animation: slideUp 0.4s ease forwards;
+}
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Badge */
-.badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
 
 /* Generic Card backup */
-.card { background: white; border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-md); border: 1px solid rgba(0,0,0,0.05); }
+.card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
 
 
 /* Bento Grid */
@@ -285,8 +350,18 @@ h1, h2, h3, h4 {
   gap: 24px;
   grid-template-columns: repeat(4, 1fr);
 }
-@media (max-width: 1200px) { .bento-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .bento-grid { grid-template-columns: 1fr; } }
+
+@media (max-width: 1200px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* 0. Contenedor Maestro de Carga */
 .afaem-loader-container {
@@ -373,7 +448,7 @@ h1, h2, h3, h4 {
 .afaem-loader-bar-bg {
   width: 100%;
   height: 4px;
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -394,24 +469,54 @@ h1, h2, h3, h4 {
 }
 
 @keyframes afaem-fade-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes afaem-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes afaem-pulse {
-  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0)); }
-  50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(37, 99, 235, 0.2)); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0)); }
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0));
+  }
+
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 15px rgba(37, 99, 235, 0.2));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0));
+  }
 }
 
 @keyframes afaem-slide {
-  0% { transform: translateX(-100%); width: 20%; }
-  50% { width: 50%; }
-  100% { transform: translateX(250%); width: 20%; }
+  0% {
+    transform: translateX(-100%);
+    width: 20%;
+  }
+
+  50% {
+    width: 50%;
+  }
+
+  100% {
+    transform: translateX(250%);
+    width: 20%;
+  }
 }
 
 /* 2. Asteriscos de Obligatoriedad */
@@ -531,7 +636,8 @@ h1, h2, h3, h4 {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
-  .auth-grid > div {
+
+  .auth-grid>div {
     grid-column: span 1 !important;
   }
 }

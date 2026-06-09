@@ -156,6 +156,15 @@ export default function RegistroJugadores() {
       grid-template-columns: repeat(2, 1fr);
       gap: 20px;
     }
+    .phone-input-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      min-width: 0;
+    }
+    .phone-input-row > * {
+      min-width: 0;
+    }
     .btn-container-responsive {
       display: flex;
       justify-content: center;
@@ -187,6 +196,9 @@ export default function RegistroJugadores() {
         grid-template-columns: 1fr;
         gap: 12px;
         margin-bottom: 15px;
+      }
+      .phone-input-row {
+        flex-direction: column;
       }
       .btn-container-responsive {
         flex-direction: column;
@@ -348,23 +360,23 @@ export default function RegistroJugadores() {
       if (!datos.nombreJugador?.trim()) errors.nombreJugador = 'El nombre es obligatorio.';
       if (!datos.apellidoPaterno?.trim()) errors.apellidoPaterno = 'El apellido paterno es obligatorio.';
       if (!datos.apellidoMaterno?.trim()) errors.apellidoMaterno = 'El apellido materno es obligatorio.';
-      
+
       if (!datos.curp?.trim()) {
         errors.curp = 'El CURP es obligatorio.';
       } else if (datos.curp.trim().length !== 18) {
         errors.curp = 'El CURP debe tener exactamente 18 caracteres.';
       }
-      
+
       if (!datos.fechaNacimiento) errors.fechaNacimiento = 'La fecha de nacimiento es obligatoria.';
       if (!datos.lugarNacimiento?.trim()) errors.lugarNacimiento = 'El lugar de nacimiento es obligatorio.';
       if (!datos.genero) errors.genero = 'El sexo es obligatorio.';
-      
+
       if (!datos.correo?.trim()) {
         errors.correo = 'El correo electrónico es obligatorio.';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datos.correo.trim())) {
         errors.correo = 'Ingrese un correo electrónico válido.';
       }
-      
+
       if (!datos.telefono?.trim()) {
         errors.telefono = 'El teléfono es obligatorio.';
       } else if (datos.telefono.trim().length !== 10) {
@@ -393,7 +405,7 @@ export default function RegistroJugadores() {
     }
 
     setValidationErrors(errors);
-    
+
     if (Object.keys(errors).length > 0) {
       const firstError = Object.values(errors)[0];
       Swal.fire({
@@ -404,7 +416,7 @@ export default function RegistroJugadores() {
       });
       return false;
     }
-    
+
     return true;
   };
 
@@ -661,25 +673,18 @@ export default function RegistroJugadores() {
     }
   };
 
-  // CARGAR SLOTS Y DATOS DEL EQUIPO
-  const fetchTeamInfo = async () => {
-    let effectiveTeamId = teamId;
-    let inviteTeamInfo = {};
+  // EFECTO 1: CARGAR INVITACIÓN (Solo corre al inicio si es flujo público)
+  useEffect(() => {
+    const fetchInvitation = async () => {
+      if (!isPublicFlow) return;
 
-    try {
-      setLoadingSlots(true);
-      setNoPendingTeams(false);
+      if (!tokenIdentificador || !tokenSecreto) {
+        setLinkError(true);
+        return;
+      }
 
-      // 1. Obtener catálogos
-      const catalogsData = await teamsService.getCatalogs();
-      setCatalogs(catalogsData);
-
-      if (isPublicFlow && !teamId) {
-        if (!tokenIdentificador || !tokenSecreto) {
-          setLinkError(true);
-          setLoadingSlots(false);
-          return;
-        }
+      try {
+        setLoadingSlots(true);
         const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
         const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
         setInvitationTeams(equiposPendientes);
@@ -688,32 +693,32 @@ export default function RegistroJugadores() {
           setNoPendingTeams(true);
           setJugadores([]);
           setSlotsData(null);
-          return;
+        } else if (!teamId) {
+          setTeamId(equiposPendientes[0].equipo_temporal_id);
         }
-
-        effectiveTeamId = equiposPendientes[0].equipo_temporal_id;
-        setTeamId(effectiveTeamId);
+      } catch (err) {
+        console.error('Error al obtener info de la invitación:', err);
+        setLinkError(true);
+      } finally {
+        // En caso de que no haya equipos o falle, quitamos loading (si hay, loadingSlots se maneja en el efecto 2)
+        if (!teamId) setLoadingSlots(false);
       }
+    };
 
-      if (isPublicFlow && teamId) {
-        const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
-        const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
-        setInvitationTeams(equiposPendientes);
-      }
+    fetchInvitation();
+  }, [isPublicFlow, tokenIdentificador, tokenSecreto]);
 
-      if (selectedInvitationTeam) {
-        inviteTeamInfo = {
-          equipo: selectedInvitationTeam.nombre_equipo || '',
-          liga: selectedInvitationTeam.nombre_liga || '',
-          categoria: selectedInvitationTeam.nombre_categoria || 'LIBRE',
-          presidente: selectedInvitationTeam.nombre_presidente || 'No disponible'
-        };
-      }
+  // EFECTO 2: CARGAR SLOTS Y DATOS DEL EQUIPO (Corre cuando cambia teamId)
+  useEffect(() => {
+    const fetchTeamSlots = async () => {
+      const effectiveTeamId = teamId || location.state?.teamId;
 
+      // Esperar a tener un teamId si estamos en flujo público y no ha habido error ni está vacío
       if (!effectiveTeamId) {
-        if (!isPublicFlow && !location.state?.teamId) {
-          setLinkError(true);
-        } else if (!isPublicFlow) {
+        if (isPublicFlow && !linkError && !noPendingTeams) {
+          return; // Esperando a que el EFECTO 1 resuelva el teamId
+        }
+        if (!isPublicFlow) {
           Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
           navigate('/presidente-equipo/dashboard');
         } else {
@@ -722,73 +727,87 @@ export default function RegistroJugadores() {
         return;
       }
 
-      // 2. Obtener slots y borradores
-      const slotsResponse = await teamsService.getAvailableSlots(
-        effectiveTeamId,
-        isPublicFlow
-          ? { tokenIdentificador, tokenSecreto }
-          : null
-      );
-      setSlotsData(slotsResponse);
+      try {
+        setLoadingSlots(true);
+        
+        // 1. Obtener catálogos
+        const catalogsData = await teamsService.getCatalogs();
+        setCatalogs(catalogsData);
 
-      const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
-      setSlotsInfo({
-        disponibles: slotsResponse.jugadores_restantes ?? slotsResponse.slots_disponibles ?? 0,
-        total: paidPlayers
-      });
+        let inviteTeamInfo = {};
+        if (selectedInvitationTeam) {
+          inviteTeamInfo = {
+            equipo: selectedInvitationTeam.nombre_equipo || '',
+            liga: selectedInvitationTeam.nombre_liga || '',
+            categoria: selectedInvitationTeam.nombre_categoria || 'LIBRE',
+            presidente: selectedInvitationTeam.nombre_presidente || 'No disponible'
+          };
+        }
 
-      const firstSeguroId = String(slotsResponse.seguros?.[0]?.seguro_id || '');
+        // 2. Obtener slots y borradores
+        const slotsResponse = await teamsService.getAvailableSlots(
+          effectiveTeamId,
+          isPublicFlow ? { tokenIdentificador, tokenSecreto } : null
+        );
+        setSlotsData(slotsResponse);
 
-      // Mapear los slots de la base de datos al estado jugadores
-      const mappedJugadores = (slotsResponse.slots || []).map((slot, i) => {
-        const datos = slot.datos_borrador || { ...defaultPlayerDatos };
-        const parsedTel = parsearTelefonoE164(datos.telefono || '');
-        const mergedDatos = {
-          ...defaultPlayerDatos,
-          ...datos,
-          codigoPais: datos.codigoPais !== undefined ? datos.codigoPais : parsedTel.codigoPais,
-          telefono: datos.codigoPais !== undefined ? datos.telefono : parsedTel.telefono,
-          equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
-          liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
-          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
-          presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
-        };
+        const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
+        setSlotsInfo({
+          disponibles: slotsResponse.jugadores_restantes ?? slotsResponse.slots_disponibles ?? 0,
+          total: paidPlayers
+        });
 
-        return {
-          numero: i + 1,
-          slotId: slot.slot_id,
-          estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
-          datos: mergedDatos,
-          documentos: {
-            acta: null,
-            ine: null,
-            ineTutor: null,
-            identificacionMenor: null,
-            foto: null
-          },
-          seguroId: String(slot.seguro_id || firstSeguroId),
-          fillManually: !!slot.datos_borrador,
-          completo: slot.completo
-        };
-      });
+        const firstSeguroId = String(slotsResponse.seguros?.[0]?.seguro_id || '');
 
-      setJugadores(mappedJugadores);
+        // Mapear los slots de la base de datos al estado jugadores
+        const mappedJugadores = (slotsResponse.slots || []).map((slot, i) => {
+          const datos = slot.datos_borrador || { ...defaultPlayerDatos };
+          const parsedTel = parsearTelefonoE164(datos.telefono || '');
+          const mergedDatos = {
+            ...defaultPlayerDatos,
+            ...datos,
+            codigoPais: datos.codigoPais !== undefined ? datos.codigoPais : parsedTel.codigoPais,
+            telefono: datos.codigoPais !== undefined ? datos.telefono : parsedTel.telefono,
+            equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
+            liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
+            categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
+            presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
+          };
 
-    } catch (err) {
-      console.error('Error al obtener info del equipo:', err);
-      if (isPublicFlow || !location.state?.teamId) {
-        setLinkError(true);
-      } else {
-        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+          return {
+            numero: i + 1,
+            slotId: slot.slot_id,
+            estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
+            datos: mergedDatos,
+            documentos: {
+              acta: null,
+              ine: null,
+              ineTutor: null,
+              identificacionMenor: null,
+              foto: null
+            },
+            seguroId: String(slot.seguro_id || firstSeguroId),
+            fillManually: !!slot.datos_borrador,
+            completo: slot.completo
+          };
+        });
+
+        setJugadores(mappedJugadores);
+
+      } catch (err) {
+        console.error('Error al obtener info del equipo:', err);
+        if (isPublicFlow || !location.state?.teamId) {
+          setLinkError(true);
+        } else {
+          Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
+        }
+      } finally {
+        setLoadingSlots(false);
       }
-    } finally {
-      setLoadingSlots(false);
-    }
-  };
+    };
 
-  useEffect(() => {
-    fetchTeamInfo();
-  }, [teamId, tokenIdentificador, tokenSecreto, isPublicFlow]);
+    fetchTeamSlots();
+  }, [teamId, isPublicFlow, location.state?.teamId, tokenIdentificador, tokenSecreto, selectedInvitationTeam, linkError, noPendingTeams]);
 
   // Manejar cambio de previsualización al cambiar de jugador
   useEffect(() => {
@@ -1649,8 +1668,8 @@ export default function RegistroJugadores() {
               {/* INDICADOR DE PROGRESO (STEPPER WIZARD) */}
               <div className="stepper-container">
                 <div className="stepper-line">
-                  <div 
-                    className="stepper-line-progress" 
+                  <div
+                    className="stepper-line-progress"
                     style={{ width: `${((currentStep - 1) / 5) * 100}%` }}
                   />
                 </div>
@@ -1665,8 +1684,8 @@ export default function RegistroJugadores() {
                   const isActive = currentStep === s.step;
                   const isCompleted = currentStep > s.step;
                   return (
-                    <div 
-                      key={`step-indicator-${s.step}`} 
+                    <div
+                      key={`step-indicator-${s.step}`}
                       className={`stepper-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                       onClick={() => {
                         if (s.step < currentStep) {
@@ -1730,15 +1749,15 @@ export default function RegistroJugadores() {
                               style={{
                                 padding: '16px',
                                 borderRadius: '12px',
-                                border: isSelected 
-                                  ? '2.5px solid #0b4ea6' 
-                                  : noDisponible 
-                                    ? '1px solid #e2e8f0' 
+                                border: isSelected
+                                  ? '2.5px solid #0b4ea6'
+                                  : noDisponible
+                                    ? '1px solid #e2e8f0'
                                     : '1px solid #cbd5e1',
-                                backgroundColor: isSelected 
-                                  ? '#eff6ff' 
-                                  : noDisponible 
-                                    ? '#f1f5f9' 
+                                backgroundColor: isSelected
+                                  ? '#eff6ff'
+                                  : noDisponible
+                                    ? '#f1f5f9'
                                     : 'white',
                                 cursor: noDisponible ? 'not-allowed' : 'pointer',
                                 opacity: noDisponible ? 0.6 : 1,
@@ -1751,16 +1770,16 @@ export default function RegistroJugadores() {
                               <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : noDisponible ? '#94a3b8' : '#1e293b' }}>
                                 🛡️ {seg.nombre}
                               </span>
-                              <div style={{ 
-                                marginTop: '5px', 
-                                display: 'inline-flex', 
-                                alignSelf: 'start', 
-                                padding: '2px 8px', 
-                                borderRadius: '20px', 
-                                background: noDisponible ? '#e2e8f0' : '#dcfce7', 
-                                color: noDisponible ? '#64748b' : '#15803d', 
-                                fontSize: '11px', 
-                                fontWeight: '800' 
+                              <div style={{
+                                marginTop: '5px',
+                                display: 'inline-flex',
+                                alignSelf: 'start',
+                                padding: '2px 8px',
+                                borderRadius: '20px',
+                                background: noDisponible ? '#e2e8f0' : '#dcfce7',
+                                color: noDisponible ? '#64748b' : '#15803d',
+                                fontSize: '11px',
+                                fontWeight: '800'
                               }}>
                                 {seg.disponibles} disponibles
                               </div>
@@ -2006,67 +2025,67 @@ export default function RegistroJugadores() {
                     <div className="form-grid-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                        <input 
-                          type="text" 
-                          value={currentDatos.nombreJugador} 
+                        <input
+                          type="text"
+                          value={currentDatos.nombreJugador}
                           onChange={e => {
                             handleFieldChange('nombreJugador', e.target.value);
                             setValidationErrors(prev => ({ ...prev, nombreJugador: null }));
-                          }} 
-                          onBlur={handleBlur} 
-                          placeholder="Ej. Juan" 
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.nombreJugador ? '#ef4444' : '#cbd5e1'}`, 
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Juan"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.nombreJugador ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none',
                             boxShadow: validationErrors.nombreJugador ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
-                          }} 
+                          }}
                         />
                         {validationErrors.nombreJugador && <span className="field-error-msg">❌ {validationErrors.nombreJugador}</span>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                        <input 
-                          type="text" 
-                          value={currentDatos.apellidoPaterno} 
+                        <input
+                          type="text"
+                          value={currentDatos.apellidoPaterno}
                           onChange={e => {
                             handleFieldChange('apellidoPaterno', e.target.value);
                             setValidationErrors(prev => ({ ...prev, apellidoPaterno: null }));
-                          }} 
-                          onBlur={handleBlur} 
-                          placeholder="Ej. Pérez" 
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.apellidoPaterno ? '#ef4444' : '#cbd5e1'}`, 
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Pérez"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.apellidoPaterno ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none',
                             boxShadow: validationErrors.apellidoPaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
-                          }} 
+                          }}
                         />
                         {validationErrors.apellidoPaterno && <span className="field-error-msg">❌ {validationErrors.apellidoPaterno}</span>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                        <input 
-                          type="text" 
-                          value={currentDatos.apellidoMaterno} 
+                        <input
+                          type="text"
+                          value={currentDatos.apellidoMaterno}
                           onChange={e => {
                             handleFieldChange('apellidoMaterno', e.target.value);
                             setValidationErrors(prev => ({ ...prev, apellidoMaterno: null }));
-                          }} 
-                          onBlur={handleBlur} 
-                          placeholder="Ej. Gómez" 
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.apellidoMaterno ? '#ef4444' : '#cbd5e1'}`, 
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Gómez"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.apellidoMaterno ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none',
                             boxShadow: validationErrors.apellidoMaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
-                          }} 
+                          }}
                         />
                         {validationErrors.apellidoMaterno && <span className="field-error-msg">❌ {validationErrors.apellidoMaterno}</span>}
                       </div>
@@ -2092,10 +2111,10 @@ export default function RegistroJugadores() {
                           onBlur={handleBlur}
                           placeholder="ABCD..."
                           maxLength="18"
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.curp ? '#ef4444' : '#cbd5e1'}`, 
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.curp ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none',
                             boxShadow: validationErrors.curp ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
@@ -2118,10 +2137,10 @@ export default function RegistroJugadores() {
                             setValidationErrors(prev => ({ ...prev, fechaNacimiento: null }));
                           }}
                           onBlur={handleBlur}
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.fechaNacimiento ? '#ef4444' : '#cbd5e1'}`, 
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.fechaNacimiento ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none'
                           }}
@@ -2130,22 +2149,22 @@ export default function RegistroJugadores() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                        <input 
-                          type="text" 
-                          value={currentDatos.lugarNacimiento || ''} 
+                        <input
+                          type="text"
+                          value={currentDatos.lugarNacimiento || ''}
                           onChange={e => {
                             handleFieldChange('lugarNacimiento', e.target.value);
                             setValidationErrors(prev => ({ ...prev, lugarNacimiento: null }));
-                          }} 
-                          onBlur={handleBlur} 
-                          placeholder="Ej. Monterrey, NL" 
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.lugarNacimiento ? '#ef4444' : '#cbd5e1'}`, 
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Monterrey, NL"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.lugarNacimiento ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none'
-                          }} 
+                          }}
                         />
                         {validationErrors.lugarNacimiento && <span className="field-error-msg">❌ {validationErrors.lugarNacimiento}</span>}
                       </div>
@@ -2160,11 +2179,11 @@ export default function RegistroJugadores() {
                               guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, genero: e.target.value });
                             }
                           }}
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.genero ? '#ef4444' : '#cbd5e1'}`, 
-                            fontSize: '14px', 
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.genero ? '#ef4444' : '#cbd5e1'}`,
+                            fontSize: '14px',
                             backgroundColor: 'white',
                             outline: 'none'
                           }}
@@ -2180,22 +2199,22 @@ export default function RegistroJugadores() {
                     <div className="form-grid-2" style={{ marginTop: '15px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input 
-                          type="email" 
-                          value={currentDatos.correo} 
+                        <input
+                          type="email"
+                          value={currentDatos.correo}
                           onChange={e => {
                             handleFieldChange('correo', e.target.value);
                             setValidationErrors(prev => ({ ...prev, correo: null }));
-                          }} 
-                          onBlur={handleBlur} 
-                          placeholder="correo@ejemplo.com" 
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.correo ? '#ef4444' : '#cbd5e1'}`, 
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="correo@ejemplo.com"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.correo ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none'
-                          }} 
+                          }}
                         />
                         {validationErrors.correo && <span className="field-error-msg">❌ {validationErrors.correo}</span>}
                       </div>
@@ -2273,22 +2292,22 @@ export default function RegistroJugadores() {
                     <div className="form-grid-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
-                        <input 
-                          type="number" 
-                          value={currentDatos.numCamiseta} 
+                        <input
+                          type="number"
+                          value={currentDatos.numCamiseta}
                           onChange={e => {
                             handleFieldChange('numCamiseta', e.target.value);
                             setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
-                          }} 
-                          onBlur={handleBlur} 
-                          placeholder="Ej. 10" 
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`, 
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. 10"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none'
-                          }} 
+                          }}
                         />
                         {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
                       </div>
@@ -2304,11 +2323,11 @@ export default function RegistroJugadores() {
                               guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, posicion: val });
                             }
                           }}
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`, 
-                            fontSize: '14px', 
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`,
+                            fontSize: '14px',
                             backgroundColor: 'white',
                             outline: 'none'
                           }}
@@ -2322,22 +2341,22 @@ export default function RegistroJugadores() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
-                        <input 
-                          type="text" 
-                          value={currentDatos.nui || ''} 
+                        <input
+                          type="text"
+                          value={currentDatos.nui || ''}
                           onChange={e => {
                             handleFieldChange('nui', e.target.value);
                             setValidationErrors(prev => ({ ...prev, nui: null }));
-                          }} 
-                          onBlur={handleBlur} 
-                          placeholder="Ej. 123" 
-                          style={{ 
-                            padding: '10px', 
-                            borderRadius: '8px', 
-                            border: `1.5px solid ${validationErrors.nui ? '#ef4444' : '#cbd5e1'}`, 
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. 123"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.nui ? '#ef4444' : '#cbd5e1'}`,
                             fontSize: '14px',
                             outline: 'none'
-                          }} 
+                          }}
                         />
                         {validationErrors.nui && <span className="field-error-msg">❌ {validationErrors.nui}</span>}
                       </div>
@@ -2561,12 +2580,12 @@ export default function RegistroJugadores() {
               {currentStep === 6 && (
                 <section className="wizard-step-container">
                   <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '20px' }}>Resumen del Registro</h3>
-                  
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-                    gap: '20px', 
-                    marginBottom: '30px' 
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gap: '20px',
+                    marginBottom: '30px'
                   }}>
                     {/* Tarjeta de Datos Personales */}
                     <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
@@ -2608,8 +2627,8 @@ export default function RegistroJugadores() {
                         {documentCards.map(doc => (
                           <div key={`summary-doc-${doc.key}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>{doc.title}:</span>
-                            <span style={{ 
-                              fontWeight: '800', 
+                            <span style={{
+                              fontWeight: '800',
                               color: currentDocuments[doc.key] ? '#166534' : '#64748b',
                               background: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9',
                               padding: '2px 8px',
@@ -2628,7 +2647,7 @@ export default function RegistroJugadores() {
                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '25px', marginBottom: '20px' }}>
                     <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
                     <p style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
-                      Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado. 
+                      Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
                       <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
                     </p>
 
@@ -2636,17 +2655,17 @@ export default function RegistroJugadores() {
                       <button
                         type="button"
                         onClick={handleDownloadFormato}
-                        style={{ 
-                          padding: '12px 28px', 
-                          borderRadius: '12px', 
-                          border: 'none', 
-                          background: 'linear-gradient(135deg, #0b4ea6, #063f82)', 
-                          color: 'white', 
-                          fontWeight: '800', 
-                          fontSize: '14px', 
-                          cursor: 'pointer', 
-                          display: 'flex', 
-                          alignItems: 'center', 
+                        style={{
+                          padding: '12px 28px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #0b4ea6, #063f82)',
+                          color: 'white',
+                          fontWeight: '800',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
                           gap: '8px',
                           boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)'
                         }}
