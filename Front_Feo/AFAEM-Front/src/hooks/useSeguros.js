@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { API_BASE } from '../../../config/config';
-import { C } from '../RegistrarPresidente/constants';
+import { API_BASE } from '../config/config';
+import { C } from '../pages/Admin/RegistrarPresidente/constants';
 
 /**
  * useSeguros
