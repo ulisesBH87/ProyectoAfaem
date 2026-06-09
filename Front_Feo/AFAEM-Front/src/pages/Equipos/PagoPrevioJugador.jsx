@@ -107,19 +107,37 @@ export default function PagoPrevioJugador() {
     if (resolvedOrdenId || !numJugadoresAgregar || catalogs.seguros.length === 0) return;
 
     const totalNecesario = Number(numJugadoresAgregar) || 0;
-    const nuevaAsignacion = {};
-    catalogs.seguros.forEach((seguro) => {
-      nuevaAsignacion[String(seguro.id)] = 0;
+    setAsignacionSegurosAgregar(prev => {
+      const nuevaAsignacion = { ...prev };
+      
+      // Reiniciar solo los seguros de jugadores
+      catalogs.seguros.forEach(s => {
+        if (!['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim())) {
+          nuevaAsignacion[String(s.id)] = 0;
+        }
+      });
+
+      const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
+      if (primerSeguroJugador) {
+        nuevaAsignacion[String(primerSeguroJugador.id)] = totalNecesario;
+      } else if (catalogs.seguros.length > 0) {
+        nuevaAsignacion[String(catalogs.seguros[0].id)] = totalNecesario;
+      }
+
+      // Verificar y asignar seguro de presidente por defecto
+      const presidenteSeleccionado = catalogs.seguros.some(s => 
+        ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()) && prev[String(s.id)] === 1
+      );
+      
+      if (!presidenteSeleccionado) {
+        const primerSeguroPresidente = catalogs.seguros.find(s => ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
+        if (primerSeguroPresidente) {
+          nuevaAsignacion[String(primerSeguroPresidente.id)] = 1;
+        }
+      }
+
+      return nuevaAsignacion;
     });
-    
-    const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
-    if (primerSeguroJugador) {
-      nuevaAsignacion[String(primerSeguroJugador.id)] = totalNecesario;
-    } else if (catalogs.seguros.length > 0) {
-      nuevaAsignacion[String(catalogs.seguros[0].id)] = totalNecesario;
-    }
-    
-    setAsignacionSegurosAgregar(nuevaAsignacion);
   }, [catalogs.seguros, numJugadoresAgregar, resolvedOrdenId]);
 
   useEffect(() => {
@@ -353,7 +371,7 @@ export default function PagoPrevioJugador() {
   );
 
   const renderResumenOrden = () => (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+    <div className="pago-card">
       <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
         <span>Orden de pago</span>
@@ -394,7 +412,7 @@ export default function PagoPrevioJugador() {
             Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
           </p>
           <p style={{ color: '#ff0000', margin: 0 }}>
-            *Si ya tienes una orden de pago y subiste el comprobante, contÃ¡ctate con un administrador*
+            *Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*
           </p>
         </div>
 
@@ -411,8 +429,8 @@ export default function PagoPrevioJugador() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+        <div className="responsive-pago-grid">
+          <div className="pago-card">
             {!ordenCreada ? (
               <>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
@@ -425,7 +443,7 @@ export default function PagoPrevioJugador() {
                 />
 
                 <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                <div className="responsive-seguros-grid">
                   {[
                     ['Seguros Jugadores', catalogs.seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()))],
                     ['Seguros Presidente', catalogs.seguros.filter(s => ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()))]
@@ -526,7 +544,7 @@ export default function PagoPrevioJugador() {
             )}
           </div>
 
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+          <div className="pago-card">
             <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
             {catalogs.seguros.map(seguro => {
               const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
@@ -667,7 +685,7 @@ export default function PagoPrevioJugador() {
           <FaArrowLeft /> Volver
         </button>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+        <div className="responsive-pago-grid">
           <div className="card" style={{ padding: '40px', borderRadius: '24px', border: 'none' }}>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <div style={{
