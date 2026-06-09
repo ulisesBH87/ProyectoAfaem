@@ -18,7 +18,8 @@ from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroR
 from app.modelos import (
     Equipos, EquiposJugando, MiembrosEquipo, Personas, RolesDeEquipo, 
     CatalogoCategorias, Ligas, CatalogoModalidad, CatalogoRamas, PresidenteEquipo, Seguro,
-    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales, OrdenPago
+    EquipoTemporal, EquipoTemporalJugador, Usuario, AntecedentesInternacionales, OrdenPago,
+    OrdenPagoDetalle
 )
 from app.modelos.documentos_entregados_modelo import DocumentosEntregados
 from app.enums.documentos_estatus_enum import DocumentoEstatus
@@ -1047,6 +1048,24 @@ async def registrar_presidente_admin(
                             total += subtotal_seg
             except Exception:
                 pass
+                
+        # Agregar los detalles de inscripción con costo 0 para cumplir con la validación de slots
+        detalles.append({
+            "tipo_concepto": 2,          # INSCRIPCION
+            "tipo_afiliacion_id": 2,     # TIPO_AFILIACION_PRESIDENTE
+            "seguro_id": None,
+            "cantidad": 1,
+            "precio": 0.0,
+            "subtotal": 0.0
+        })
+        detalles.append({
+            "tipo_concepto": 2,          # INSCRIPCION
+            "tipo_afiliacion_id": 4,     # TIPO_AFILIACION_JUGADOR
+            "seguro_id": None,
+            "cantidad": numPersonas,
+            "precio": 0.0,
+            "subtotal": 0.0
+        })
                 
         # Create OrdenPago
         nueva_orden = OrdenPago(
