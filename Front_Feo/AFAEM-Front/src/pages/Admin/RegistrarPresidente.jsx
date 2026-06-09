@@ -40,18 +40,118 @@ export default function RegistrarPresidente() {
   } = useRegistrarPresidente();
 
   return (
-    <div style={{
-      padding: '28px 36px', color: C.text,
+    <div className="rp-page-wrapper" style={{
+      color: C.text,
       minHeight: '100vh', background: C.bg,
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
     }}>
+      <style>{`
+        .rp-page-wrapper {
+          padding: 28px 36px;
+        }
+        .rp-container {
+          padding: 32px 36px;
+        }
+        .rp-grid-3cols {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .rp-grid-3cols-equal {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .rp-grid-2cols {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .rp-grid-2to1 {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .rp-grid-2to1-cuotas {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 24px;
+          align-items: start;
+        }
+        .rp-grid-1to1 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+        .rp-grid-docs {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 18px;
+        }
+        .rp-step-bar-line {
+          position: relative;
+          flex: 1;
+          height: 2px;
+          max-width: 100px;
+          margin: 0 4px;
+          margin-bottom: 20px;
+        }
+        .rp-wizard-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 32px;
+          padding-top: 24px;
+          border-top: 1px solid ${C.cardBorder};
+        }
+
+        @media (max-width: 768px) {
+          .rp-page-wrapper {
+            padding: 16px 10px !important;
+          }
+          .rp-container {
+            padding: 24px 16px !important;
+          }
+          .rp-grid-3cols,
+          .rp-grid-3cols-equal,
+          .rp-grid-2cols,
+          .rp-grid-2to1,
+          .rp-grid-2to1-cuotas,
+          .rp-grid-1to1,
+          .rp-grid-docs {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .rp-step-bar-line {
+            max-width: 40px !important;
+          }
+          .rp-wizard-footer {
+            flex-direction: column-reverse;
+            gap: 18px;
+            align-items: stretch !important;
+          }
+          .rp-wizard-footer button {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+          }
+          .rp-wizard-footer div {
+            justify-content: space-between;
+            width: 100%;
+          }
+        }
+      `}</style>
       {/* Header de página */}
       <PageHeader onBack={() => navigate('/admin/presidentes')} />
 
       {/* Contenedor principal con decoración */}
-      <div style={{
+      <div className="rp-container" style={{
         background: C.surface, borderRadius: 20,
-        padding: '32px 36px', border: `1px solid ${C.cardBorder}`,
+        border: `1px solid ${C.cardBorder}`,
         boxShadow: '0 24px 60px rgba(0,0,0,.5)',
         position: 'relative', overflow: 'hidden',
       }}>
@@ -129,10 +229,7 @@ export default function RegistrarPresidente() {
         )}
 
         {/* ── Footer de navegación ── */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.cardBorder}`,
-        }}>
+        <div className="rp-wizard-footer">
           <button
             onClick={() => paso > 1 ? setPaso(p => p - 1) : navigate('/admin/presidentes')}
             style={{

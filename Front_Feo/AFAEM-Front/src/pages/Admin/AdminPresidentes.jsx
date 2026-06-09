@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
-import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin } from '../../services/admin';
+import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin, obtenerLinkInvitacion, regenerarInvitacion, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
 
 /* ─── Catálogos ─── */
 const CATALOGO_SEGUROS_INICIAL = [
@@ -610,11 +610,103 @@ export default function AdminPresidentes() {
     }
   };
 
+  const handleCopiarEnlace = async (pres) => {
+    const usuarioId = pres.usuarioId;
+    if (!usuarioId) {
+      Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
+      return;
+    }
+    try {
+      Swal.fire({ title: 'Obteniendo enlace...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const res = await obtenerLinkInvitacion(usuarioId);
+      if (res.success && res.link_invitacion) {
+        await navigator.clipboard.writeText(res.link_invitacion);
+        Swal.fire({
+          title: '¡Copiado!',
+          text: 'El enlace de invitación se ha copiado al portapapeles.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error();
+      }
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo obtener el enlace de invitación.', 'error');
+    }
+  };
+
+  const handleReenviarWhatsApp = async (pres) => {
+    const usuarioId = pres.usuarioId;
+    if (!usuarioId) {
+      Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
+      return;
+    }
+    try {
+      Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
+      if (res.success) {
+        Swal.fire({
+          title: '¡Enviado!',
+          text: 'La invitación ha sido reenviada por WhatsApp exitosamente.',
+          icon: 'success',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error();
+      }
+    } catch (err) {
+      Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
+    }
+  };
+
+  const handleRegenerarInvitacion = async (pres) => {
+    const usuarioId = pres.usuarioId;
+    const nombre = pres.nombre || pres.Nombre;
+    if (!usuarioId) {
+      Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
+      return;
+    }
+
+    Swal.fire({
+      title: '¿Regenerar Invitación?',
+      text: `Se invalidará cualquier enlace anterior y se generará un nuevo token de invitación para ${nombre}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, regenerar',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          Swal.fire({ title: 'Generando nuevo enlace...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          const res = await regenerarInvitacion(usuarioId);
+          if (res.success && res.link_invitacion) {
+            await navigator.clipboard.writeText(res.link_invitacion);
+            Swal.fire({
+              title: '¡Regenerada y Copiada!',
+              html: `<p>Se ha generado una nueva invitación. El nuevo enlace se copió al portapapeles:</p><code style="font-size:12px;word-break:break-all;">${res.link_invitacion}</code>`,
+              icon: 'success',
+              confirmButtonColor: '#0b4ea6'
+            });
+          } else {
+            throw new Error();
+          }
+        } catch (err) {
+          Swal.fire('Error', 'No se pudo regenerar la invitación.', 'error');
+        }
+      }
+    });
+  };
 
   const columns = [
     { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Presidente' },
     { key: 'contacto', label: 'Contacto' }, { key: 'curp', label: 'CURP' },
-    { key: 'estatus', label: 'Estatus' }, { key: 'acciones', label: 'Acciones', style: { textAlign: 'center' } },
+    { key: 'estatus', label: 'Estatus' },
+    { key: 'invitacion', label: 'Invitación', style: { textAlign: 'center' } },
+    { key: 'acciones', label: 'Acciones', style: { textAlign: 'center' } },
   ];
 
   const dataTransformada = paginatedPresidentes.map(p => ({
@@ -630,18 +722,44 @@ export default function AdminPresidentes() {
       return <span style={{ background: bg, color, padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>{label}</span>;
     })(),
 
+    invitacion: (
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+        <button
+          onClick={() => handleCopiarEnlace(p)}
+          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+          title="Copiar Enlace de Invitación"
+        >
+          <FaCopy />
+        </button>
+        <button
+          onClick={() => handleReenviarWhatsApp(p)}
+          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#25d366', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+          title="Reenviar Invitación por WhatsApp"
+        >
+          <FaWhatsapp />
+        </button>
+        <button
+          onClick={() => handleRegenerarInvitacion(p)}
+          style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#d97706', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+          title="Regenerar Invitación"
+        >
+          <FaLink />
+        </button>
+      </div>
+    ),
+
     acciones: (
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
         <button
           onClick={() => handleEditarPresidente(p)}
-          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
           title="Ver / Editar"
         >
           <FaEdit />
         </button>
         <button
           onClick={() => handleEliminar(p)}
-          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
           title="Eliminar Permanente"
         >
           <FaTrash />
