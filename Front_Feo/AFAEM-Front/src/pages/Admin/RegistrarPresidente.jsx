@@ -778,24 +778,38 @@ export default function RegistrarPresidente() {
       if (result.isConfirmed) {
         const usuarioId = response?.presidente?.usuario_id;
         if (!usuarioId) {
-          throw new Error('No se recibió el identificador del presidente para enviar el mensaje.');
+          await Swal.fire({
+            title: 'Atención',
+            text: 'No se pudo enviar el link al presidente. Inténtalo de nuevo más tarde.',
+            icon: 'warning',
+            confirmButtonColor: C.amberDark,
+          });
+        } else {
+          Swal.fire({
+            title: 'Enviando WhatsApp…',
+            text: 'Enviando mensaje al presidente de equipo.', //text: 'Contactando el servicio de WhatsApp Business Cloud API.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+          });
+
+          try {
+            const envio = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
+
+            await Swal.fire({
+              title: 'WhatsApp enviado',
+              text: envio?.mensaje || 'El mensaje fue enviado correctamente al presidente.',
+              icon: 'success',
+              confirmButtonColor: C.amberDark,
+            });
+          } catch (waErr) {
+            await Swal.fire({
+              title: 'Atención',
+              text: 'No se pudo enviar el link al presidente. Inténtalo de nuevo más tarde.',
+              icon: 'warning',
+              confirmButtonColor: C.amberDark,
+            });
+          }
         }
-
-        Swal.fire({
-          title: 'Enviando WhatsApp…',
-          text: 'Enviando mensaje al presidente de equipo.', //text: 'Contactando el servicio de WhatsApp Business Cloud API.',
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading()
-        });
-
-        const envio = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
-
-        await Swal.fire({
-          title: 'WhatsApp enviado',
-          text: envio?.mensaje || 'El mensaje fue enviado correctamente al presidente.',
-          icon: 'success',
-          confirmButtonColor: C.amberDark,
-        });
       }
 
       navigate('/admin/presidentes');
@@ -816,6 +830,8 @@ export default function RegistrarPresidente() {
   const labelStyle = { fontSize: 11, fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'block', marginBottom: 6 };
   const inputStyle = { width: '100%', boxSizing: 'border-box', padding: '11px 14px', borderRadius: 10, background: C.inputBg, border: `1px solid ${C.inputBorder}`, color: C.text, outline: 'none', fontSize: 14 };
   const selectStyle = { ...inputStyle, background: 'rgba(15,17,23,0.95)', cursor: 'pointer' };
+
+  const isBotonContinuarDeshabilitado = loading || (paso === 2 && (numPersonas === '' || Number(numPersonas) <= 0 || totalAsignados !== segurosRequeridos));
 
   return (
     <div style={{ padding: '28px 36px', color: C.text, minHeight: '100vh', background: C.bg, fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
@@ -1587,8 +1603,8 @@ export default function RegistrarPresidente() {
             <span style={{ fontSize: 12, color: C.textDim }}>Paso {paso} de {PASOS.length}</span>
             <button
               onClick={paso === 3 ? procesarRegistro : avanzar}
-              disabled={loading}
-              style={{ padding: '11px 28px', borderRadius: 10, background: loading ? 'rgba(255,255,255,0.1)' : `linear-gradient(135deg, ${C.amberDark}, ${C.orange})`, border: 'none', color: loading ? C.textDim : 'white', fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 9, boxShadow: loading ? 'none' : `0 6px 20px rgba(217,119,6,.35)`, transition: 'all .2s' }}
+              disabled={isBotonContinuarDeshabilitado}
+              style={{ padding: '11px 28px', borderRadius: 10, background: isBotonContinuarDeshabilitado ? 'rgba(255,255,255,0.1)' : `linear-gradient(135deg, ${C.amberDark}, ${C.orange})`, border: 'none', color: isBotonContinuarDeshabilitado ? C.textDim : 'white', fontWeight: 800, cursor: isBotonContinuarDeshabilitado ? 'not-allowed' : 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 9, boxShadow: isBotonContinuarDeshabilitado ? 'none' : `0 6px 20px rgba(217,119,6,.35)`, transition: 'all .2s' }}
             >
               {loading ? '⏳ Procesando…' : paso === 3 ? '✓ Finalizar Registro' : 'Continuar →'}
             </button>

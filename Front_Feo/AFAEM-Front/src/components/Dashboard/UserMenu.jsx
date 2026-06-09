@@ -38,16 +38,17 @@ const UserMenu = ({ userEmail }) => {
 
   return (
     <div 
+      className="header-user"
       onClick={(e) => { e.stopPropagation(); setShowUserMenu(!showUserMenu); }}
       style={{ 
         display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer',
         padding: '6px 12px', borderRadius: '12px', transition: 'background 0.2s',
-        minWidth: '160px', justifyContent: 'flex-end', position: 'relative'
+        justifyContent: 'flex-end', position: 'relative'
       }}
       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(11, 78, 166, 0.05)'}
       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
     >
-      <div style={{ textAlign: 'right', flexShrink: 1, minWidth: 0 }}>
+      <div className="user-role-text" style={{ textAlign: 'right', flexShrink: 1, minWidth: 0 }}>
         <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {roleName}
         </div>
