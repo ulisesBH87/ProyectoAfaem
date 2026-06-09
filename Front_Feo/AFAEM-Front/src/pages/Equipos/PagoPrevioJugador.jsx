@@ -107,11 +107,37 @@ export default function PagoPrevioJugador() {
     if (resolvedOrdenId || !numJugadoresAgregar || catalogs.seguros.length === 0) return;
 
     const totalNecesario = Number(numJugadoresAgregar) || 0;
-    const nuevaAsignacion = {};
-    catalogs.seguros.forEach((seguro, index) => {
-      nuevaAsignacion[String(seguro.id)] = index === 0 ? totalNecesario : 0;
+    setAsignacionSegurosAgregar(prev => {
+      const nuevaAsignacion = { ...prev };
+      
+      // Reiniciar solo los seguros de jugadores
+      catalogs.seguros.forEach(s => {
+        if (!['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim())) {
+          nuevaAsignacion[String(s.id)] = 0;
+        }
+      });
+
+      const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
+      if (primerSeguroJugador) {
+        nuevaAsignacion[String(primerSeguroJugador.id)] = totalNecesario;
+      } else if (catalogs.seguros.length > 0) {
+        nuevaAsignacion[String(catalogs.seguros[0].id)] = totalNecesario;
+      }
+
+      // Verificar y asignar seguro de presidente por defecto
+      const presidenteSeleccionado = catalogs.seguros.some(s => 
+        ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()) && prev[String(s.id)] === 1
+      );
+      
+      if (!presidenteSeleccionado) {
+        const primerSeguroPresidente = catalogs.seguros.find(s => ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
+        if (primerSeguroPresidente) {
+          nuevaAsignacion[String(primerSeguroPresidente.id)] = 1;
+        }
+      }
+
+      return nuevaAsignacion;
     });
-    setAsignacionSegurosAgregar(nuevaAsignacion);
   }, [catalogs.seguros, numJugadoresAgregar, resolvedOrdenId]);
 
   useEffect(() => {
@@ -170,10 +196,12 @@ export default function PagoPrevioJugador() {
   const detallesSeguros = orderDetails.filter(detalle => Number(detalle.SeguroId) > 0);
   const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
   const segurosRequeridosPagoJugador = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
-  const totalAsignadosPagoJugador = Object.values(asignacionSegurosAgregar).reduce((sum, value) => sum + Number(value || 0), 0);
+  const totalAsignadosPagoJugador = catalogs.seguros.reduce((sum, seguro) => {
+    const isPresidente = ['TIPO G', 'SIN SEGURO'].includes((seguro.nombre || '').toUpperCase().trim());
+    return sum + (isPresidente ? 0 : Number(asignacionSegurosAgregar[String(seguro.id)] || 0));
+  }, 0);
   const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
   const totalPagoEstimadoJugador = (
-    (costoAfiliacionJugador * Number(numJugadoresAgregar || 0)) +
     catalogs.seguros.reduce((sum, seguro) => {
       const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
       return sum + (Number(seguro.precio || 0) * cantidad);
@@ -343,15 +371,11 @@ export default function PagoPrevioJugador() {
   );
 
   const renderResumenOrden = () => (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+    <div className="pago-card">
       <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
         <span>Orden de pago</span>
         <strong style={{ color: '#1e293b' }}>#{resolvedOrdenId || '-'}</strong>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
-        <span>Afiliacion jugadores x{cantidadJugadoresOrden}</span>
-        <strong style={{ color: '#1e293b' }}>${subtotalAfiliacionJugadores.toFixed(2)}</strong>
       </div>
       {detallesSeguros.map((detalle, index) => {
         const seguro = segurosCatalogo.find(item => Number(item.id) === Number(detalle.SeguroId));
@@ -388,7 +412,7 @@ export default function PagoPrevioJugador() {
             Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.
           </p>
           <p style={{ color: '#ff0000', margin: 0 }}>
-            *Si ya tienes una orden de pago y subiste el comprobante, contÃ¡ctate con un administrador*
+            *Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*
           </p>
         </div>
 
@@ -405,8 +429,8 @@ export default function PagoPrevioJugador() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+        <div className="responsive-pago-grid">
+          <div className="pago-card">
             {!ordenCreada ? (
               <>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
@@ -419,28 +443,69 @@ export default function PagoPrevioJugador() {
                 />
 
                 <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {catalogs.seguros.map(seguro => {
-                    const id = String(seguro.id);
-                    return (
-                      <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px' }}>
-                        <div>
-                          <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
-                          <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          value={asignacionSegurosAgregar[id] ?? ''}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                            setAsignacionSegurosAgregar(prev => ({ ...prev, [id]: value }));
-                          }}
-                          style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
-                        />
+                <div className="responsive-seguros-grid">
+                  {[
+                    ['Seguros Jugadores', catalogs.seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()))],
+                    ['Seguros Presidente', catalogs.seguros.filter(s => ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()))]
+                  ].map(([titulo, lista]) => (
+                    <div key={titulo}>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0b4ea6', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{titulo}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {lista.length === 0 ? (
+                          <div style={{ fontSize: '12px', color: '#64748b', padding: '10px' }}>Sin seguros en esta categoría</div>
+                        ) : lista.map(seguro => {
+                          const id = String(seguro.id);
+                          const isPres = titulo === 'Seguros Presidente';
+                          const isChecked = Number(asignacionSegurosAgregar[id] || 0) === 1;
+                          return (
+                            <div
+                              key={id}
+                              onClick={isPres ? () => {
+                                setAsignacionSegurosAgregar(prev => {
+                                  const next = { ...prev };
+                                  lista.forEach(item => { next[item.id] = item.id === seguro.id ? 1 : 0; });
+                                  return next;
+                                });
+                              } : undefined}
+                              style={{
+                                display: 'grid', gridTemplateColumns: isPres ? '1fr auto' : '1fr 92px', gap: '12px', alignItems: 'center',
+                                border: isPres && isChecked ? '1px solid #0b4ea6' : '1px solid #e2e8f0',
+                                borderRadius: '14px', padding: '14px',
+                                background: isPres && isChecked ? '#eff6ff' : 'transparent',
+                                cursor: isPres ? 'pointer' : 'default',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                                <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                              </div>
+                              {isPres ? (
+                                <input
+                                  type="radio"
+                                  name="seguroPresidenteRadio"
+                                  checked={isChecked}
+                                  readOnly
+                                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0b4ea6', justifySelf: 'center' }}
+                                />
+                              ) : (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={asignacionSegurosAgregar[id] ?? ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                    setAsignacionSegurosAgregar(prev => ({ ...prev, [id]: value }));
+                                  }}
+                                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
 
                 <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
@@ -479,12 +544,8 @@ export default function PagoPrevioJugador() {
             )}
           </div>
 
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+          <div className="pago-card">
             <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
-              <span>Afiliacion jugadores x{Number(numJugadoresAgregar || 0)}</span>
-              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresAgregar || 0)).toFixed(2)}</strong>
-            </div>
             {catalogs.seguros.map(seguro => {
               const cantidad = Number(asignacionSegurosAgregar[String(seguro.id)] || 0);
               if (!cantidad) return null;
@@ -624,7 +685,7 @@ export default function PagoPrevioJugador() {
           <FaArrowLeft /> Volver
         </button>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
+        <div className="responsive-pago-grid">
           <div className="card" style={{ padding: '40px', borderRadius: '24px', border: 'none' }}>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <div style={{

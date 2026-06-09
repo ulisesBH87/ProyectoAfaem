@@ -678,6 +678,38 @@
     flex: 1;
     justify-content: center;
   }
+
+  .responsive-pago-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .responsive-seguros-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pago-card {
+    padding: 16px !important;
+  }
+}
+
+.responsive-pago-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 22px;
+}
+
+.responsive-seguros-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.pago-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 26px;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.05);
 }
 
 /* ==========================================
