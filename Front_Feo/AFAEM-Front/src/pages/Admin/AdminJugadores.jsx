@@ -976,6 +976,10 @@ export default function AdminJugadores() {
             min-height: auto !important;
             padding: 12px !important;
           }
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
         }
       `}</style>
       {error && (
@@ -1017,7 +1021,7 @@ export default function AdminJugadores() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         {/* TARJETA TOTAL */}
         <div
           onClick={() => setFiltroEstatus('todos')}
