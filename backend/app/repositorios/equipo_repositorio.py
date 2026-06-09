@@ -242,17 +242,54 @@ def construir_resumen_equipo_temporal(db, equipo_temporal):
     slots = obtener_slots_con_persona(db, equipo_temporal.EquipoTemporalId)
     slots_disponibles = sum(1 for s in slots if not s.Completo)
 
-    nombre_equipo = equipo_temporal.NombreEquipo or "Equipo sin nombre"
-    nombre_liga = equipo_temporal.LigaRelacion.Nombreliga if equipo_temporal.LigaRelacion else "Liga no especificada"
+    nombre_equipo = equipo_temporal.NombreEquipo
+    nombre_liga = None
     nombre_categoria = "LIBRE"
-    if equipo_temporal.LigaRelacion and equipo_temporal.LigaRelacion.CategoriaRelacion:
-        nombre_categoria = equipo_temporal.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    # Fallback si tiene un EquipoId real
+    if equipo_temporal.EquipoId:
+        real_equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo_temporal.EquipoId).first()
+        if real_equipo and not nombre_equipo:
+            nombre_equipo = real_equipo.NombreEquipo
+
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_temporal.EquipoId).first()
+        if eq_jugando:
+            liga_id = equipo_temporal.LigaId or eq_jugando.LigaId
+            if liga_id:
+                from app.modelos.catalogos_liga_modelo import Ligas
+                liga_obj = db.query(Ligas).filter(Ligas.LigaId == liga_id).first()
+                if liga_obj:
+                    nombre_liga = liga_obj.Nombreliga
+                    if liga_obj.CategoriaRelacion:
+                        nombre_categoria = liga_obj.CategoriaRelacion.NombreCategoria
+
+    # Si aún no tenemos liga y el equipo temporal tiene liga directa
+    if not nombre_liga and equipo_temporal.LigaRelacion:
+        nombre_liga = equipo_temporal.LigaRelacion.Nombreliga
+        if equipo_temporal.LigaRelacion.CategoriaRelacion:
+            nombre_categoria = equipo_temporal.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    # Valores por defecto finales
+    if not nombre_equipo:
+        nombre_equipo = "Equipo sin nombre"
+    if not nombre_liga:
+        nombre_liga = "Liga no especificada"
 
     nombre_presidente = "No disponible"
     if equipo_temporal.UsuarioRelacion:
         persona = db.query(Personas).filter(Personas.PersonaId == equipo_temporal.UsuarioRelacion.PersonaId).first()
         if persona:
             nombre_presidente = f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip().upper()
+    
+    if nombre_presidente == "No disponible" and equipo_temporal.EquipoId:
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_temporal.EquipoId).first()
+        if eq_jugando and eq_jugando.PresidenteEquipoId:
+            from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+            pres = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == eq_jugando.PresidenteEquipoId).first()
+            if pres:
+                pers = db.query(Personas).filter(Personas.PersonaId == pres.PersonaId).first()
+                if pers:
+                    nombre_presidente = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
 
     return {
         "equipo_temporal_id": equipo_temporal.EquipoTemporalId,

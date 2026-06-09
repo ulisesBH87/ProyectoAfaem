@@ -694,13 +694,17 @@ export default function RegistroJugadores() {
           setJugadores([]);
           setSlotsData(null);
         } else if (!teamId) {
-          setTeamId(equiposPendientes[0].equipo_temporal_id);
+          if (equiposPendientes.length === 1) {
+            setTeamId(equiposPendientes[0].equipo_temporal_id);
+          } else {
+            setTeamId(null);
+            setLoadingSlots(false);
+          }
         }
       } catch (err) {
         console.error('Error al obtener info de la invitación:', err);
         setLinkError(true);
       } finally {
-        // En caso de que no haya equipos o falle, quitamos loading (si hay, loadingSlots se maneja en el efecto 2)
         if (!teamId) setLoadingSlots(false);
       }
     };
@@ -708,106 +712,108 @@ export default function RegistroJugadores() {
     fetchInvitation();
   }, [isPublicFlow, tokenIdentificador, tokenSecreto]);
 
-  // EFECTO 2: CARGAR SLOTS Y DATOS DEL EQUIPO (Corre cuando cambia teamId)
-  useEffect(() => {
-    const fetchTeamSlots = async () => {
-      const effectiveTeamId = teamId || location.state?.teamId;
+  // CARGAR SLOTS Y DATOS DEL EQUIPO (Callback reutilizable)
+  const fetchTeamInfo = React.useCallback(async () => {
+    const effectiveTeamId = teamId || location.state?.teamId;
 
-      // Esperar a tener un teamId si estamos en flujo público y no ha habido error ni está vacío
-      if (!effectiveTeamId) {
-        if (isPublicFlow && !linkError && !noPendingTeams) {
-          return; // Esperando a que el EFECTO 1 resuelva el teamId
-        }
-        if (!isPublicFlow) {
-          Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
-          navigate('/presidente-equipo/dashboard');
-        } else {
-          setLinkError(true);
-        }
+    // Esperar a tener un teamId si estamos en flujo público y no ha habido error ni está vacío
+    if (!effectiveTeamId) {
+      if (isPublicFlow && !linkError && !noPendingTeams) {
+        setLoadingSlots(false);
         return;
       }
-
-      try {
-        setLoadingSlots(true);
-        
-        // 1. Obtener catálogos
-        const catalogsData = await teamsService.getCatalogs();
-        setCatalogs(catalogsData);
-
-        let inviteTeamInfo = {};
-        if (selectedInvitationTeam) {
-          inviteTeamInfo = {
-            equipo: selectedInvitationTeam.nombre_equipo || '',
-            liga: selectedInvitationTeam.nombre_liga || '',
-            categoria: selectedInvitationTeam.nombre_categoria || 'LIBRE',
-            presidente: selectedInvitationTeam.nombre_presidente || 'No disponible'
-          };
-        }
-
-        // 2. Obtener slots y borradores
-        const slotsResponse = await teamsService.getAvailableSlots(
-          effectiveTeamId,
-          isPublicFlow ? { tokenIdentificador, tokenSecreto } : null
-        );
-        setSlotsData(slotsResponse);
-
-        const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
-        setSlotsInfo({
-          disponibles: slotsResponse.jugadores_restantes ?? slotsResponse.slots_disponibles ?? 0,
-          total: paidPlayers
-        });
-
-        const firstSeguroId = String(slotsResponse.seguros?.[0]?.seguro_id || '');
-
-        // Mapear los slots de la base de datos al estado jugadores
-        const mappedJugadores = (slotsResponse.slots || []).map((slot, i) => {
-          const datos = slot.datos_borrador || { ...defaultPlayerDatos };
-          const parsedTel = parsearTelefonoE164(datos.telefono || '');
-          const mergedDatos = {
-            ...defaultPlayerDatos,
-            ...datos,
-            codigoPais: datos.codigoPais !== undefined ? datos.codigoPais : parsedTel.codigoPais,
-            telefono: datos.codigoPais !== undefined ? datos.telefono : parsedTel.telefono,
-            equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
-            liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
-            categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
-            presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
-          };
-
-          return {
-            numero: i + 1,
-            slotId: slot.slot_id,
-            estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
-            datos: mergedDatos,
-            documentos: {
-              acta: null,
-              ine: null,
-              ineTutor: null,
-              identificacionMenor: null,
-              foto: null
-            },
-            seguroId: String(slot.seguro_id || firstSeguroId),
-            fillManually: !!slot.datos_borrador,
-            completo: slot.completo
-          };
-        });
-
-        setJugadores(mappedJugadores);
-
-      } catch (err) {
-        console.error('Error al obtener info del equipo:', err);
-        if (isPublicFlow || !location.state?.teamId) {
-          setLinkError(true);
-        } else {
-          Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y slots.', 'error');
-        }
-      } finally {
-        setLoadingSlots(false);
+      if (!isPublicFlow) {
+        Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
+        navigate('/presidente-equipo/dashboard');
+      } else {
+        setLinkError(true);
       }
-    };
+      return;
+    }
 
-    fetchTeamSlots();
-  }, [teamId, isPublicFlow, location.state?.teamId, tokenIdentificador, tokenSecreto, selectedInvitationTeam, linkError, noPendingTeams]);
+    try {
+      setLoadingSlots(true);
+
+      // 1. Obtener catálogos
+      const catalogsData = await teamsService.getCatalogs();
+      setCatalogs(catalogsData);
+
+      let inviteTeamInfo = {};
+      if (selectedInvitationTeam) {
+        inviteTeamInfo = {
+          equipo: selectedInvitationTeam.nombre_equipo || '',
+          liga: selectedInvitationTeam.nombre_liga || '',
+          categoria: selectedInvitationTeam.nombre_categoria || 'LIBRE',
+          presidente: selectedInvitationTeam.nombre_presidente || 'No disponible'
+        };
+      }
+
+      // 2. Obtener slots y borradores
+      const slotsResponse = await teamsService.getAvailableSlots(
+        effectiveTeamId,
+        isPublicFlow ? { tokenIdentificador, tokenSecreto } : null
+      );
+      setSlotsData(slotsResponse);
+
+      const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
+      setSlotsInfo({
+        disponibles: slotsResponse.jugadores_restantes ?? slotsResponse.slots_disponibles ?? 0,
+        total: paidPlayers
+      });
+
+      const firstSeguroId = String(slotsResponse.seguros?.[0]?.seguro_id || '');
+
+      // Mapear los slots de la base de datos al estado jugadores
+      const mappedJugadores = (slotsResponse.slots || []).map((slot, i) => {
+        const datos = slot.datos_borrador || { ...defaultPlayerDatos };
+        const parsedTel = parsearTelefonoE164(datos.telefono || '');
+        const mergedDatos = {
+          ...defaultPlayerDatos,
+          ...datos,
+          codigoPais: datos.codigoPais !== undefined ? datos.codigoPais : parsedTel.codigoPais,
+          telefono: datos.codigoPais !== undefined ? datos.telefono : parsedTel.telefono,
+          equipo: datos.equipo || inviteTeamInfo.equipo || slotsResponse.nombre_equipo || '',
+          liga: datos.liga || inviteTeamInfo.liga || slotsResponse.nombre_liga || '',
+          categoria: datos.categoria || inviteTeamInfo.categoria || slotsResponse.nombre_categoria || 'LIBRE',
+          presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
+        };
+
+        return {
+          numero: i + 1,
+          slotId: slot.slot_id,
+          estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
+          datos: mergedDatos,
+          documentos: {
+            acta: null,
+            ine: null,
+            ineTutor: null,
+            identificacionMenor: null,
+            foto: null
+          },
+          seguroId: String(slot.seguro_id || firstSeguroId),
+          fillManually: !!slot.datos_borrador,
+          completo: slot.completo
+        };
+      });
+
+      setJugadores(mappedJugadores);
+
+    } catch (err) {
+      console.error('Error al obtener info del equipo:', err);
+      if (isPublicFlow || !location.state?.teamId) {
+        setLinkError(true);
+      } else {
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar la información del equipo y espacios disponibles.', 'error');
+      }
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, [teamId, isPublicFlow, location.state?.teamId, tokenIdentificador, tokenSecreto, selectedInvitationTeam, linkError, noPendingTeams, navigate]);
+
+  // EFECTO 2: CARGAR SLOTS Y DATOS DEL EQUIPO (Corre cuando cambia teamId o la info de invitación)
+  useEffect(() => {
+    fetchTeamInfo();
+  }, [fetchTeamInfo]);
 
   // Manejar cambio de previsualización al cambiar de jugador
   useEffect(() => {
@@ -1226,7 +1232,7 @@ export default function RegistroJugadores() {
     setUploading(true);
     Swal.fire({
       title: 'Registrando Jugador',
-      text: 'Consumiendo slot y subiendo documentos al servidor...',
+      text: 'Consumiendo espacio y subiendo documentos al servidor...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -1296,7 +1302,7 @@ export default function RegistroJugadores() {
       Swal.fire({
         icon: 'success',
         title: 'Jugador Inscrito Correctamente',
-        text: 'El slot se ha completado y los documentos se guardaron en el servidor.'
+        text: 'El espacio se ha completado y los documentos se guardaron en el servidor.'
       }).then(() => {
         setSignedForm(null);
         fetchTeamInfo();
@@ -1335,19 +1341,30 @@ export default function RegistroJugadores() {
           }}
         >
           {/* Logo */}
-          <img
-            src={AfaemLogo}
-            alt="AFAEM"
-            style={{
-              width: '80px',
-              height: 'auto',
-              margin: '0 auto 24px',
-              display: 'block',
-              opacity: 0.85,
-            }}
-          />
+          <div style={{
+            width: '96px',
+            height: '96px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px',
+            boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15), 0 4px 6px -2px rgba(15, 23, 42, 0.1)',
+            border: '2px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <img
+              src={AfaemLogo}
+              alt="AFAEM"
+              style={{
+                width: '60px',
+                height: 'auto',
+                opacity: 0.95,
+              }}
+            />
+          </div>
 
-          {/* Ícono de Error */}
+          {/* Ícono de Error 
           <div
             style={{
               width: '88px',
@@ -1365,6 +1382,7 @@ export default function RegistroJugadores() {
           >
             <FaExclamationTriangle />
           </div>
+          */}
 
           {/* Badge */}
           <span
@@ -1438,7 +1456,7 @@ export default function RegistroJugadores() {
   if (loadingSlots) {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <Loader text="Cargando información del equipo y slots disponibles..." />
+        <Loader text="Cargando información del equipo y espacios disponibles..." />
       </div>
     );
   }
@@ -1451,7 +1469,7 @@ export default function RegistroJugadores() {
             No hay equipos pendientes
           </h1>
           <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.7', margin: 0 }}>
-            Esta invitación es válida, pero por ahora no existen equipos con slots disponibles para registrar jugadores.
+            Esta invitación es válida, pero por ahora no existen equipos con espacios disponibles para registrar jugadores.
           </p>
         </div>
       </div>
@@ -1460,31 +1478,264 @@ export default function RegistroJugadores() {
 
   const sinSlots = slotsInfo.disponibles === 0;
 
+  // Si estamos en flujo público, no hay equipo seleccionado y hay múltiples equipos en la invitación,
+  // mostrar la pantalla de selección de equipos.
+  if (isPublicFlow && !teamId && invitationTeams.length > 1) {
+    return (
+      <div className="dashboard-content" style={{ padding: '30px 20px', minHeight: '80vh' }}>
+        <style>{hoverStyles}</style>
+
+        {/* HEADER SELECTOR */}
+        <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+          <div style={{
+            width: '96px',
+            height: '96px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px',
+            boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15), 0 4px 6px -2px rgba(15, 23, 42, 0.1)',
+            border: '2px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <img
+              src={AfaemLogo}
+              alt="AFAEM"
+              style={{
+                width: '60px',
+                height: 'auto',
+                opacity: 0.95,
+              }}
+            />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', margin: 0, letterSpacing: '-0.5px' }}>
+            Selección de Equipo
+          </h2>
+          <p style={{ margin: '10px 0 0 0', fontSize: '15px', color: '#64748b', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: '1.6' }}>
+            Bienvenido {invitationTeams[0]?.nombre_presidente ? <strong>{invitationTeams[0].nombre_presidente} </strong> : ''}al portal de registro de jugadores de la AFAEM. A continuación, selecciona el equipo del cual deseas capturar los registros. Puedes regresar a esta pantalla en cualquier momento.
+          </p>
+          {invitationTeams[0]?.nombre_presidente && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 22px',
+              background: '#f8fafc',
+              borderRadius: '24px',
+              border: '1px solid #e2e8f0',
+              marginTop: '20px',
+              fontSize: '14px',
+              fontWeight: '700',
+              color: '#334155',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+            }}>
+              <span>👤 PRESIDENTE:</span>
+              <span style={{ color: '#0b4ea6', textTransform: 'uppercase' }}>{invitationTeams[0].nombre_presidente}</span>
+            </div>
+          )}
+        </div>
+
+        {/* CONTENEDOR DE TARJETAS DE EQUIPOS */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '28px',
+          maxWidth: '1040px',
+          margin: '0 auto 40px auto',
+        }}>
+          {invitationTeams.map((team) => {
+            const total = team.total_slots || 0;
+            const libres = team.slots_disponibles || 0;
+            const registrados = Math.max(0, total - libres);
+            const porcentaje = total > 0 ? (registrados / total) * 100 : 0;
+            const estaCompletado = libres === 0;
+
+            return (
+              <div
+                key={team.equipo_temporal_id}
+                onClick={() => {
+                  setCurrentPlayerIndex(0);
+                  setTeamId(team.equipo_temporal_id);
+                }}
+                style={{
+                  background: 'white',
+                  borderRadius: '24px',
+                  border: estaCompletado ? '2px solid #10b981' : '1px solid #e2e8f0',
+                  padding: '32px 28px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-6px)';
+                  e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0,0,0,0.06), 0 10px 10px -5px rgba(0,0,0,0.04)';
+                  e.currentTarget.style.borderColor = estaCompletado ? '#10b981' : '#0b4ea6';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)';
+                  e.currentTarget.style.borderColor = estaCompletado ? '#10b981' : '#e2e8f0';
+                }}
+              >
+                {estaCompletado && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '0',
+                    right: '0',
+                    background: '#10b981',
+                    color: 'white',
+                    padding: '6px 16px',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    borderBottomLeftRadius: '16px',
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase'
+                  }}>
+                    Completado
+                  </div>
+                )}
+
+                <div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    color: estaCompletado ? '#10b981' : '#0b4ea6',
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase'
+                  }}>
+                    🛡️ {team.nombre_liga || 'Liga Sin Nombre'}
+                  </span>
+
+                  <h3 style={{
+                    fontSize: '22px',
+                    fontWeight: '900',
+                    color: '#1e293b',
+                    margin: '10px 0 4px 0',
+                    lineHeight: '1.2'
+                  }}>
+                    {team.nombre_equipo}
+                  </h3>
+
+                  <p style={{
+                    fontSize: '13px',
+                    color: '#64748b',
+                    margin: '0 0 24px 0',
+                    fontWeight: '600'
+                  }}>
+                    Categoría: {team.nombre_categoria || 'Libre'}
+                  </p>
+                </div>
+
+                <div style={{ marginTop: '20px' }}>
+                  {/* Info de Slots */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    marginBottom: '8px'
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>Progreso de Registro</span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: estaCompletado ? '#10b981' : '#1e293b' }}>
+                      {registrados} / {total} slots
+                    </span>
+                  </div>
+
+                  {/* Barra de progreso */}
+                  <div style={{
+                    width: '100%',
+                    height: '8px',
+                    backgroundColor: '#f1f5f9',
+                    borderRadius: '9999px',
+                    overflow: 'hidden',
+                    marginBottom: '24px'
+                  }}>
+                    <div style={{
+                      width: `${porcentaje}%`,
+                      height: '100%',
+                      background: estaCompletado ? '#10b981' : 'linear-gradient(90deg, #0b4ea6, #3b82f6)',
+                      borderRadius: '9999px',
+                      transition: 'width 0.4s ease'
+                    }} />
+                  </div>
+
+                  {/* Botón de acción */}
+                  <button
+                    type="button"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      background: estaCompletado ? '#f0fdf4' : '#eff6ff',
+                      color: estaCompletado ? '#166534' : '#0b4ea6',
+                      fontWeight: '800',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                      letterSpacing: '0.3px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = estaCompletado ? '#dcfce7' : '#dbeafe';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = estaCompletado ? '#f0fdf4' : '#eff6ff';
+                    }}
+                  >
+                    {estaCompletado ? 'Ver Registro' : (registrados > 0 ? 'Continuar Captura' : 'Comenzar Registro')}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-content">
       <style>{hoverStyles}</style>
 
       {/* HEADER */}
       <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-        {!isPublicFlow && (
+        {(!isPublicFlow || (isPublicFlow && invitationTeams.length > 1 && teamId !== null)) && (
           <button
             onClick={() => {
               const tieneDatos = Object.values(currentDocuments).some(d => d !== null) || currentDatos.nombreJugador;
               if (tieneDatos) {
                 Swal.fire({
-                  title: '¿Abandonar registro?',
-                  text: "Se perderán los documentos subidos y el progreso actual (excepto los campos guardados en la BD).",
+                  title: isPublicFlow && invitationTeams.length > 1 ? '¿Regresar a selección de equipos?' : '¿Abandonar registro?',
+                  text: isPublicFlow && invitationTeams.length > 1
+                    ? 'Se perderán los documentos subidos no guardados y el progreso actual (excepto campos autoguardados en la BD).'
+                    : 'Se perderán los documentos subidos y el progreso actual (excepto los campos guardados en la BD).',
                   icon: 'warning',
                   showCancelButton: true,
                   confirmButtonColor: '#ef4444',
                   cancelButtonColor: '#64748b',
-                  confirmButtonText: 'Sí, salir',
+                  confirmButtonText: isPublicFlow && invitationTeams.length > 1 ? 'Sí, regresar' : 'Sí, salir',
                   cancelButtonText: 'Continuar registro'
                 }).then((result) => {
-                  if (result.isConfirmed) navigate(-1);
+                  if (result.isConfirmed) {
+                    if (isPublicFlow && invitationTeams.length > 1) {
+                      setTeamId(null);
+                    } else {
+                      navigate(-1);
+                    }
+                  }
                 });
               } else {
-                navigate(-1);
+                if (isPublicFlow && invitationTeams.length > 1) {
+                  setTeamId(null);
+                } else {
+                  navigate(-1);
+                }
               }
             }}
             className="btn btn-outline-secondary"
@@ -1495,36 +1746,9 @@ export default function RegistroJugadores() {
         )}
         <div>
           <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Panel de Registro de Jugadores</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar y guardar borradores de tus jugadores libremente.</p>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registra y guarda los borradores de tus jugadores libremente.</p>
         </div>
       </div>
-
-      {isPublicFlow && invitationTeams.length > 1 && (
-        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '18px 20px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>Selecciona el equipo a capturar</h3>
-              <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-                Este enlace tiene acceso a todos los equipos pendientes del presidente.
-              </p>
-            </div>
-            <select
-              value={teamId || ''}
-              onChange={(e) => {
-                setCurrentPlayerIndex(0);
-                setTeamId(e.target.value ? Number(e.target.value) : null);
-              }}
-              style={{ minWidth: '280px', padding: '10px 12px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', color: '#1e293b', fontSize: '14px', fontWeight: '600' }}
-            >
-              {invitationTeams.map((team) => (
-                <option key={team.equipo_temporal_id} value={team.equipo_temporal_id}>
-                  {team.nombre_equipo} · {team.nombre_liga} · {team.slots_disponibles}/{team.total_slots} slots
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
 
       {/* SLOT NAVIGATION BAR */}
       {jugadores.length > 0 && (
@@ -1567,7 +1791,7 @@ export default function RegistroJugadores() {
               >
                 <span style={{ fontSize: '15px' }}>{config.icon}</span>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: '800', fontSize: '13px' }}>Slot {idx + 1} de {jugadores.length}</span>
+                  <span style={{ fontWeight: '800', fontSize: '13px' }}>Jugador {idx + 1} de {jugadores.length}</span>
                   <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>
                     {config.label}
                   </span>
@@ -1606,9 +1830,9 @@ export default function RegistroJugadores() {
         </div>
 
         <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
+          <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Espacios Disponibles</span>
           <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
-            {slotsInfo.disponibles} / {slotsInfo.total} slots
+            {slotsInfo.disponibles} / {slotsInfo.total} Cupos
           </span>
         </div>
       </div>
@@ -1628,7 +1852,7 @@ export default function RegistroJugadores() {
           <div style={{ fontSize: '60px', marginBottom: '20px' }}>🎉</div>
           <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#10b981', marginBottom: '10px' }}>Inscripción Completada</h2>
           <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
-            Todos los slots contratados se han registrado de manera correcta.
+            Todos los espacios contratados se han registrado de manera correcta.
           </p>
           {!isPublicFlow && (
             <BotonSecundario
@@ -1658,9 +1882,9 @@ export default function RegistroJugadores() {
               marginBottom: '30px'
             }}>
               <FaCheckCircle style={{ fontSize: '42px', marginBottom: '10px' }} />
-              <h3 style={{ fontWeight: '800', fontSize: '18px', margin: 0 }}>Este slot ya está completamente registrado</h3>
+              <h3 style={{ fontWeight: '800', fontSize: '18px', margin: 0 }}>Este espacio ya está completamente registrado</h3>
               <p style={{ fontSize: '13px', margin: '6px 0 0 0', color: '#047857' }}>
-                Los datos de este jugador ya fueron enviados y guardados en el sistema oficial. Selecciona otro slot de arriba para editar.
+                Los datos de este jugador ya fueron enviados y guardados en el sistema oficial. Selecciona otro espacio de arriba para registrar otro jugador.
               </p>
             </div>
           ) : (
