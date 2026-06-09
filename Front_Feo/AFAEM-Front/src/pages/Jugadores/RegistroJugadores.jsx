@@ -384,7 +384,7 @@ export default function RegistroJugadores() {
       }
     } else if (step === 4) {
       if (!datos.numCamiseta || String(datos.numCamiseta).trim() === '') errors.numCamiseta = 'El número de camiseta es obligatorio.';
-      if (!datos.posicion) errors.posicion = 'La posición en el campo es obligatoria.';
+      if (!datos.posicion) errors.posicion = 'La posición es obligatoria.';
       if (!datos.nui || String(datos.nui).trim() === '') errors.nui = 'El NUI es obligatorio.';
     } else if (step === 5) {
       if (datos.esForaneo) {
@@ -2536,7 +2536,7 @@ export default function RegistroJugadores() {
                         {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición  <span className="required-star">*</span></label>
                         <select
                           value={currentDatos.posicion}
                           onChange={e => {
@@ -2562,27 +2562,6 @@ export default function RegistroJugadores() {
                           ))}
                         </select>
                         {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          value={currentDatos.nui || ''}
-                          onChange={e => {
-                            handleFieldChange('nui', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, nui: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. 123"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.nui ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
-                        />
-                        {validationErrors.nui && <span className="field-error-msg">❌ {validationErrors.nui}</span>}
                       </div>
                     </div>
                   </div>
