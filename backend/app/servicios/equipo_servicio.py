@@ -177,11 +177,39 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
             "disponibles": total - usados
         })
 
-    nombre_equipo = equipo.NombreEquipo or "Equipo sin nombre"
-    nombre_liga = equipo.LigaRelacion.Nombreliga if equipo.LigaRelacion else "Liga no especificada"
+    nombre_equipo = equipo.NombreEquipo
+    nombre_liga = None
     nombre_categoria = "LIBRE"
-    if equipo.LigaRelacion and equipo.LigaRelacion.CategoriaRelacion:
-        nombre_categoria = equipo.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    # Fallback si tiene un EquipoId real
+    if equipo.EquipoId:
+        from app.modelos.equipo_modelo import Equipos, EquiposJugando
+        real_equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo.EquipoId).first()
+        if real_equipo and not nombre_equipo:
+            nombre_equipo = real_equipo.NombreEquipo
+
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo.EquipoId).first()
+        if eq_jugando:
+            liga_id = equipo.LigaId or eq_jugando.LigaId
+            if liga_id:
+                from app.modelos.catalogos_liga_modelo import Ligas
+                liga_obj = db.query(Ligas).filter(Ligas.LigaId == liga_id).first()
+                if liga_obj:
+                    nombre_liga = liga_obj.Nombreliga
+                    if liga_obj.CategoriaRelacion:
+                        nombre_categoria = liga_obj.CategoriaRelacion.NombreCategoria
+
+    # Si aún no tenemos liga y el equipo temporal tiene liga directa
+    if not nombre_liga and equipo.LigaRelacion:
+        nombre_liga = equipo.LigaRelacion.Nombreliga
+        if equipo.LigaRelacion.CategoriaRelacion:
+            nombre_categoria = equipo.LigaRelacion.CategoriaRelacion.NombreCategoria
+
+    # Valores por defecto finales
+    if not nombre_equipo:
+        nombre_equipo = "Equipo sin nombre"
+    if not nombre_liga:
+        nombre_liga = "Liga no especificada"
 
     nombre_presidente = "No disponible"
     if equipo.UsuarioRelacion:
@@ -189,6 +217,18 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
         persona = db.query(Personas).filter(Personas.PersonaId == equipo.UsuarioRelacion.PersonaId).first()
         if persona:
             nombre_presidente = f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip().upper()
+
+    if nombre_presidente == "No disponible" and equipo.EquipoId:
+        from app.modelos.equipo_modelo import EquiposJugando
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo.EquipoId).first()
+        if eq_jugando and eq_jugando.PresidenteEquipoId:
+            from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+            from app.modelos.persona_modelo import Personas
+            pres = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == eq_jugando.PresidenteEquipoId).first()
+            if pres:
+                pers = db.query(Personas).filter(Personas.PersonaId == pres.PersonaId).first()
+                if pers:
+                    nombre_presidente = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
 
     return {
         "equipo_temporal_id": equipo.EquipoTemporalId,
