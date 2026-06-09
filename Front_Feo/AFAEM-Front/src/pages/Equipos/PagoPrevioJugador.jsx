@@ -108,9 +108,17 @@ export default function PagoPrevioJugador() {
 
     const totalNecesario = Number(numJugadoresAgregar) || 0;
     const nuevaAsignacion = {};
-    catalogs.seguros.forEach((seguro, index) => {
-      nuevaAsignacion[String(seguro.id)] = index === 0 ? totalNecesario : 0;
+    catalogs.seguros.forEach((seguro) => {
+      nuevaAsignacion[String(seguro.id)] = 0;
     });
+    
+    const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
+    if (primerSeguroJugador) {
+      nuevaAsignacion[String(primerSeguroJugador.id)] = totalNecesario;
+    } else if (catalogs.seguros.length > 0) {
+      nuevaAsignacion[String(catalogs.seguros[0].id)] = totalNecesario;
+    }
+    
     setAsignacionSegurosAgregar(nuevaAsignacion);
   }, [catalogs.seguros, numJugadoresAgregar, resolvedOrdenId]);
 
@@ -170,7 +178,10 @@ export default function PagoPrevioJugador() {
   const detallesSeguros = orderDetails.filter(detalle => Number(detalle.SeguroId) > 0);
   const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
   const segurosRequeridosPagoJugador = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
-  const totalAsignadosPagoJugador = Object.values(asignacionSegurosAgregar).reduce((sum, value) => sum + Number(value || 0), 0);
+  const totalAsignadosPagoJugador = catalogs.seguros.reduce((sum, seguro) => {
+    const isPresidente = ['TIPO G', 'SIN SEGURO'].includes((seguro.nombre || '').toUpperCase().trim());
+    return sum + (isPresidente ? 0 : Number(asignacionSegurosAgregar[String(seguro.id)] || 0));
+  }, 0);
   const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
   const totalPagoEstimadoJugador = (
     catalogs.seguros.reduce((sum, seguro) => {
