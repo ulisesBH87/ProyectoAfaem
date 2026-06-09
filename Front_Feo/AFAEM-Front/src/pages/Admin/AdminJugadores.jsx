@@ -948,6 +948,36 @@ export default function AdminJugadores() {
 
   return (
     <div className="dashboard-content">
+      <style>{`
+        .aj-ocr-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        @media (max-width: 768px) {
+          .aj-ocr-grid {
+            grid-template-columns: 1fr !important;
+          }
+          /* Grid inside sweetalert document modal */
+          .swal2-html-container div[style*="display: grid"] {
+            grid-template-columns: 1fr !important;
+          }
+          /* Custom styles for Swal cards to be readable in portrait */
+          .swal2-html-container a {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            text-align: left !important;
+            gap: 12px !important;
+            width: 100% !important;
+          }
+          .swal2-html-container div[data-doc-card-id] {
+            aspect-ratio: auto !important;
+            min-height: auto !important;
+            padding: 12px !important;
+          }
+        }
+      `}</style>
       {error && (
         <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
           <span className="alert-icon">⚠️</span>
@@ -1197,7 +1227,7 @@ export default function AdminJugadores() {
               <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Sube el Acta de Nacimiento o la INE para rellenar automáticamente los campos protegidos.</p>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="aj-ocr-grid">
             {/* ACTA */}
             <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '20px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: 'white', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
               <span style={{ fontSize: '28px' }}>📋</span>
