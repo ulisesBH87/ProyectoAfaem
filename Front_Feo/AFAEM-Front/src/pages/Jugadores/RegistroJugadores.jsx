@@ -1364,7 +1364,7 @@ export default function RegistroJugadores() {
             />
           </div>
 
-          {/* Ícono de Error */}
+          {/* Ícono de Error 
           <div
             style={{
               width: '88px',
@@ -1382,6 +1382,7 @@ export default function RegistroJugadores() {
           >
             <FaExclamationTriangle />
           </div>
+          */}
 
           {/* Badge */}
           <span
