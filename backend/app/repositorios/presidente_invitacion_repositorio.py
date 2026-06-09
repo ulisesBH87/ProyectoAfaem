@@ -29,6 +29,7 @@ def crear_invitacion_presidente_repo(db, usuario_id: int):
         UsuarioId=usuario_id,
         TokenIdentificador=token_identificador,
         TokenHash=generar_hash_con_salt(token_identificador, token_secreto),
+        TokenSecreto=token_secreto,
         FechaCreacion=ahora,
         FechaExpiracion=ahora + timedelta(days=INVITACION_VIGENCIA_DIAS),
         FechaUltimoAcceso=None,

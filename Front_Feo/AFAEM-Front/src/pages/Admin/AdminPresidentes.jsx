@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
-import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin } from '../../services/admin';
+import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin, obtenerLinkInvitacion, regenerarInvitacion, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
 
 /* ─── Catálogos ─── */
 const CATALOGO_SEGUROS_INICIAL = [
@@ -228,15 +228,21 @@ export default function AdminPresidentes() {
     setCurrentPage(1);
   }, [filtroEstatus, searchTerm, sortOrder]);
 
+  const esPresidenteActivo = (p) => {
+    const est = p.estatus !== undefined ? p.estatus : p.Estatus;
+    const estNom = p.estatusNombre || '';
+    return est === 7 || estNom.toUpperCase().trim() === 'ACTIVO';
+  };
+
   const filteredPresidentes = useMemo(() => {
     let result = [...presidentes];
 
     // Filtrado por estatus
     if (filtroEstatus !== 'todos') {
       if (filtroEstatus === 'activos') {
-        result = result.filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1");
+        result = result.filter(esPresidenteActivo);
       } else if (filtroEstatus === 'inactivos') {
-        result = result.filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1"));
+        result = result.filter(p => !esPresidenteActivo(p));
       }
     }
 
@@ -270,10 +276,11 @@ export default function AdminPresidentes() {
   }, [filteredPresidentes, currentPage]);
 
   const stats = useMemo(() => {
+    const activosCount = presidentes.filter(esPresidenteActivo).length;
     return {
       total: presidentes.length,
-      activos: presidentes.filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1").length,
-      inactivos: presidentes.filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")).length
+      activos: activosCount,
+      inactivos: presidentes.length - activosCount
     };
   }, [presidentes]);
   const cerrarModal = () => { setModalAbierto(false); resetModal(); };
@@ -610,11 +617,103 @@ export default function AdminPresidentes() {
     }
   };
 
+  const handleCopiarEnlace = async (pres) => {
+    const usuarioId = pres.usuarioId;
+    if (!usuarioId) {
+      Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
+      return;
+    }
+    try {
+      Swal.fire({ title: 'Obteniendo enlace...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const res = await obtenerLinkInvitacion(usuarioId);
+      if (res.success && res.link_invitacion) {
+        await navigator.clipboard.writeText(res.link_invitacion);
+        Swal.fire({
+          title: '¡Copiado!',
+          text: 'El enlace de invitación se ha copiado al portapapeles.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error();
+      }
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo obtener el enlace de invitación.', 'error');
+    }
+  };
+
+  const handleReenviarWhatsApp = async (pres) => {
+    const usuarioId = pres.usuarioId;
+    if (!usuarioId) {
+      Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
+      return;
+    }
+    try {
+      Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
+      if (res.success) {
+        Swal.fire({
+          title: '¡Enviado!',
+          text: 'La invitación ha sido reenviada por WhatsApp exitosamente.',
+          icon: 'success',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error();
+      }
+    } catch (err) {
+      Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
+    }
+  };
+
+  const handleRegenerarInvitacion = async (pres) => {
+    const usuarioId = pres.usuarioId;
+    const nombre = pres.nombre || pres.Nombre;
+    if (!usuarioId) {
+      Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
+      return;
+    }
+
+    Swal.fire({
+      title: '¿Regenerar Invitación?',
+      text: `Se invalidará cualquier enlace anterior y se generará un nuevo token de invitación para ${nombre}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, regenerar',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          Swal.fire({ title: 'Generando nuevo enlace...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          const res = await regenerarInvitacion(usuarioId);
+          if (res.success && res.link_invitacion) {
+            await navigator.clipboard.writeText(res.link_invitacion);
+            Swal.fire({
+              title: '¡Regenerada y Copiada!',
+              html: `<p>Se ha generado una nueva invitación. El nuevo enlace se copió al portapapeles:</p><code style="font-size:12px;word-break:break-all;">${res.link_invitacion}</code>`,
+              icon: 'success',
+              confirmButtonColor: '#0b4ea6'
+            });
+          } else {
+            throw new Error();
+          }
+        } catch (err) {
+          Swal.fire('Error', 'No se pudo regenerar la invitación.', 'error');
+        }
+      }
+    });
+  };
 
   const columns = [
     { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Presidente' },
     { key: 'contacto', label: 'Contacto' }, { key: 'curp', label: 'CURP' },
-    { key: 'estatus', label: 'Estatus' }, { key: 'acciones', label: 'Acciones', style: { textAlign: 'center' } },
+    { key: 'estatus', label: 'Estatus' },
+    { key: 'invitacion', label: 'Invitación', style: { textAlign: 'center' } },
+    { key: 'acciones', label: 'Acciones', style: { textAlign: 'center' } },
   ];
 
   const dataTransformada = paginatedPresidentes.map(p => ({
@@ -630,18 +729,44 @@ export default function AdminPresidentes() {
       return <span style={{ background: bg, color, padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>{label}</span>;
     })(),
 
+    invitacion: (
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+        <button
+          onClick={() => handleCopiarEnlace(p)}
+          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+          title="Copiar Enlace de Invitación"
+        >
+          <FaCopy />
+        </button>
+        <button
+          onClick={() => handleReenviarWhatsApp(p)}
+          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#25d366', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+          title="Reenviar Invitación por WhatsApp"
+        >
+          <FaWhatsapp />
+        </button>
+        <button
+          onClick={() => handleRegenerarInvitacion(p)}
+          style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#d97706', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+          title="Regenerar Invitación"
+        >
+          <FaLink />
+        </button>
+      </div>
+    ),
+
     acciones: (
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
         <button
           onClick={() => handleEditarPresidente(p)}
-          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
           title="Ver / Editar"
         >
           <FaEdit />
         </button>
         <button
           onClick={() => handleEliminar(p)}
-          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '10px', borderRadius: 10, fontSize: 16, transition: 'all 0.2s' }}
+          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
           title="Eliminar Permanente"
         >
           <FaTrash />
@@ -764,6 +889,66 @@ export default function AdminPresidentes() {
           .insurance-grid-admin {
             grid-template-columns: 1fr;
           }
+          .pres-page-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .pres-page-header > div {
+            width: 100% !important;
+          }
+          .pres-page-header > div:last-child {
+            display: flex !important;
+            gap: 12px !important;
+          }
+          .pres-page-header button {
+            flex: 1 !important;
+            justify-content: center !important;
+          }
+          .pres-stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .pres-card-table {
+            padding: 16px !important;
+          }
+          .pres-table-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .pres-filters-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            width: 100% !important;
+            gap: 10px !important;
+          }
+          .pres-filters-row > div,
+          .pres-filters-row > button,
+          .pres-filters-row > div > button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .table-wrapper {
+            overflow-x: auto !important;
+            width: 100% !important;
+            display: block !important;
+          }
+          .table-pagination {
+            flex-direction: column !important;
+            gap: 14px !important;
+            align-items: center !important;
+            padding: 16px 10px !important;
+          }
+          .pagination-controls {
+            width: 100% !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+          }
+          .pagination-pages {
+            justify-content: center !important;
+            flex: 1 !important;
+          }
         }
         .pres-modal-dark-bg {
           --text-main: rgba(255,255,255,0.92);
@@ -772,7 +957,7 @@ export default function AdminPresidentes() {
         }
       `}</style>
 
-      <div style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="pres-page-header" style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Directorio de Presidentes</h2>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
@@ -792,7 +977,7 @@ export default function AdminPresidentes() {
       </div>
 
       {/* ─── Stats ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
+      <div className="pres-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
           { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
           { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
@@ -825,14 +1010,14 @@ export default function AdminPresidentes() {
       </div>
 
       {/* ─── Tabla ─── */}
-      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
-        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
+      <div className="card pres-card-table" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
+        <div className="pres-table-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
             <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
+          <div className="pres-filters-row" style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
             <SearchBar
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

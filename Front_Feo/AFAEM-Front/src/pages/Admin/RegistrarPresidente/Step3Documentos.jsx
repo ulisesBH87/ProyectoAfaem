@@ -51,7 +51,7 @@ export default function Step3Documentos({
       {/* Datos del expediente */}
       <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: '20px 22px', marginBottom: 22 }}>
         {/* Fila 1: Correo, Teléfono, Equipo */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div className="rp-grid-3cols-equal">
           <div>
             <label style={fieldStyles.label}>Correo <span style={{ color: C.amber }}>*</span></label>
             <input
@@ -86,7 +86,7 @@ export default function Step3Documentos({
         </div>
 
         {/* Fila 2: Afiliación, Asociación, Liga */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        <div className="rp-grid-3cols-equal">
           <div>
             <label style={fieldStyles.label}>Cargo / Tipo de Afiliación</label>
             <select
@@ -148,7 +148,7 @@ export default function Step3Documentos({
       )}
 
       {/* Cuadrícula de documentos */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
+      <div className="rp-grid-docs">
         {REQUISITOS.map(doc => (
           <DocumentCard
             key={doc.documento}

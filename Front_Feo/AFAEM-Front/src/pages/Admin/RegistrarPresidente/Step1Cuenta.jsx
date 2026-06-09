@@ -29,7 +29,7 @@ export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codi
       </div>
 
       {/* Nombre y apellidos */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="rp-grid-3cols">
         <div>
           <label style={fieldStyles.label}>Nombre(s) <span style={{ color: C.amber }}>*</span></label>
           <input
@@ -59,7 +59,7 @@ export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codi
       </div>
 
       {/* Correo y teléfono */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="rp-grid-2cols">
         <div>
           <label style={fieldStyles.label}>Correo Electrónico <span style={{ color: C.amber }}>*</span></label>
           <input
@@ -85,7 +85,7 @@ export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codi
       </div>
 
       {/* CURP y sexo */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="rp-grid-2to1">
         <div>
           <label style={fieldStyles.label}>CURP <span style={{ color: C.amber }}>*</span></label>
           <input
@@ -107,7 +107,7 @@ export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codi
       </div>
 
       {/* Fecha de nacimiento + contraseñas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="rp-grid-3cols-equal">
         <div>
           <label style={fieldStyles.label}>Fecha de Nacimiento</label>
           <input

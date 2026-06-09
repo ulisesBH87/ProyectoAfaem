@@ -370,6 +370,16 @@ export const enviarLinkRegistroPresidenteWhatsApp = async (usuarioId) => {
   return response.data;
 };
 
+export const obtenerLinkInvitacion = async (usuarioId) => {
+  const response = await api.post(`/equipo-temporal/presidentes/${usuarioId}/invitacion/link`);
+  return response.data;
+};
+
+export const regenerarInvitacion = async (usuarioId) => {
+  const response = await api.post(`/equipo-temporal/presidentes/${usuarioId}/invitacion/regenerar`);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -395,5 +405,7 @@ export default {
   agregarJugadorEquipoExistente,
   registrarPresidenteAdmin,
   enviarLinkRegistroPresidenteWhatsApp,
+  obtenerLinkInvitacion,
+  regenerarInvitacion,
   getCatalogosRegistro
 };
