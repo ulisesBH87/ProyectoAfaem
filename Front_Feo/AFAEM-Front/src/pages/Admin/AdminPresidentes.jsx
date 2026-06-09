@@ -228,15 +228,21 @@ export default function AdminPresidentes() {
     setCurrentPage(1);
   }, [filtroEstatus, searchTerm, sortOrder]);
 
+  const esPresidenteActivo = (p) => {
+    const est = p.estatus !== undefined ? p.estatus : p.Estatus;
+    const estNom = p.estatusNombre || '';
+    return est === 7 || estNom.toUpperCase().trim() === 'ACTIVO';
+  };
+
   const filteredPresidentes = useMemo(() => {
     let result = [...presidentes];
 
     // Filtrado por estatus
     if (filtroEstatus !== 'todos') {
       if (filtroEstatus === 'activos') {
-        result = result.filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1");
+        result = result.filter(esPresidenteActivo);
       } else if (filtroEstatus === 'inactivos') {
-        result = result.filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1"));
+        result = result.filter(p => !esPresidenteActivo(p));
       }
     }
 
@@ -270,10 +276,11 @@ export default function AdminPresidentes() {
   }, [filteredPresidentes, currentPage]);
 
   const stats = useMemo(() => {
+    const activosCount = presidentes.filter(esPresidenteActivo).length;
     return {
       total: presidentes.length,
-      activos: presidentes.filter(p => p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1").length,
-      inactivos: presidentes.filter(p => !(p.estatus === true || p.Estatus === true || p.estatus === 1 || p.estatus === "1")).length
+      activos: activosCount,
+      inactivos: presidentes.length - activosCount
     };
   }, [presidentes]);
   const cerrarModal = () => { setModalAbierto(false); resetModal(); };
@@ -882,6 +889,66 @@ export default function AdminPresidentes() {
           .insurance-grid-admin {
             grid-template-columns: 1fr;
           }
+          .pres-page-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .pres-page-header > div {
+            width: 100% !important;
+          }
+          .pres-page-header > div:last-child {
+            display: flex !important;
+            gap: 12px !important;
+          }
+          .pres-page-header button {
+            flex: 1 !important;
+            justify-content: center !important;
+          }
+          .pres-stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .pres-card-table {
+            padding: 16px !important;
+          }
+          .pres-table-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .pres-filters-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            width: 100% !important;
+            gap: 10px !important;
+          }
+          .pres-filters-row > div,
+          .pres-filters-row > button,
+          .pres-filters-row > div > button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .table-wrapper {
+            overflow-x: auto !important;
+            width: 100% !important;
+            display: block !important;
+          }
+          .table-pagination {
+            flex-direction: column !important;
+            gap: 14px !important;
+            align-items: center !important;
+            padding: 16px 10px !important;
+          }
+          .pagination-controls {
+            width: 100% !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+          }
+          .pagination-pages {
+            justify-content: center !important;
+            flex: 1 !important;
+          }
         }
         .pres-modal-dark-bg {
           --text-main: rgba(255,255,255,0.92);
@@ -890,7 +957,7 @@ export default function AdminPresidentes() {
         }
       `}</style>
 
-      <div style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="pres-page-header" style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Directorio de Presidentes</h2>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
@@ -910,7 +977,7 @@ export default function AdminPresidentes() {
       </div>
 
       {/* ─── Stats ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
+      <div className="pres-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
           { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
           { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
@@ -943,14 +1010,14 @@ export default function AdminPresidentes() {
       </div>
 
       {/* ─── Tabla ─── */}
-      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
-        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
+      <div className="card pres-card-table" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
+        <div className="pres-table-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
             <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
+          <div className="pres-filters-row" style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
             <SearchBar
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
