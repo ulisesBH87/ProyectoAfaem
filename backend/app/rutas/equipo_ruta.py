@@ -617,7 +617,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             Personas.CURP,
             PresidenteEquipo.EstatusId,
             EstatusPresidente.Nombre.label('EstatusNombre'),
-            Usuario.Correo.label('CorreoLogin')
+            Usuario.Correo.label('CorreoLogin'),
+            Usuario.UsuarioId.label('UsuarioId')
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
          .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
@@ -634,7 +635,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "curp":           r.CURP,
                 "estatus":        r.EstatusId,
                 "estatusNombre":  r.EstatusNombre    or '',
-                "correo":         r.CorreoLogin      or ''
+                "correo":         r.CorreoLogin      or '',
+                "usuarioId":      r.UsuarioId
             } for r in resultados
         ]
     except Exception as e:
@@ -1021,37 +1023,8 @@ async def registrar_presidente_admin(
         db.flush()
         
         # Calculate Order Detalle and Total
-        from app.modelos.catalogo_tipo_afiliacion import CatalogoTiposAfiliacion
-        from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
-        
-        afiliacion_presidente = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 2).first()
-        subtotal_pres = afiliacion_presidente.CostoActual if afiliacion_presidente else 0
-        
-        afiliacion_jugador = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 4).first()
-        subtotal_jug = (afiliacion_jugador.CostoActual * numPersonas) if (afiliacion_jugador and numPersonas > 0) else 0
-        
-        total = subtotal_pres + subtotal_jug
-        
+        total = 0
         detalles = []
-        if subtotal_pres > 0:
-            detalles.append({
-                "tipo_concepto": 2, # AFILIACION
-                "tipo_afiliacion_id": 2,
-                "seguro_id": None,
-                "cantidad": 1,
-                "precio": afiliacion_presidente.CostoActual,
-                "subtotal": subtotal_pres
-            })
-            
-        if subtotal_jug > 0:
-            detalles.append({
-                "tipo_concepto": 2, # AFILIACION
-                "tipo_afiliacion_id": 4,
-                "seguro_id": None,
-                "cantidad": numPersonas,
-                "precio": afiliacion_jugador.CostoActual,
-                "subtotal": subtotal_jug
-            })
             
         if segurosAsignados:
             try:
@@ -1265,12 +1238,28 @@ async def enviar_link_registro_whatsapp(
             detail="Ocurrió un error al generar el enlace", #detail="No se pudo determinar la URL base del frontend para construir la invitación.",
         )
 
-    invitacion_data = crear_invitacion_presidente_repo(db, usuario_db.UsuarioId)
-    link_invitacion = (
-        f"{frontend_base_url}/i/"
-        f"{invitacion_data['token_identificador']}/"
-        f"{invitacion_data['token_secreto']}"
-    )
+    from app.modelos.presidente_invitacion_modelo import PresidenteInvitacion
+    ahora = datetime.now()
+    invitacion_activa = db.query(PresidenteInvitacion).filter(
+        PresidenteInvitacion.UsuarioId == usuario_db.UsuarioId,
+        PresidenteInvitacion.Activo == True,
+        PresidenteInvitacion.FechaExpiracion > ahora,
+        PresidenteInvitacion.TokenSecreto != None
+    ).first()
+
+    if invitacion_activa:
+        token_identificador = invitacion_activa.TokenIdentificador
+        token_secreto = invitacion_activa.TokenSecreto
+        inv_id = str(invitacion_activa.PresidenteInvitacionId)
+        accion_id = 4 # READ
+    else:
+        invitacion_data = crear_invitacion_presidente_repo(db, usuario_db.UsuarioId)
+        token_identificador = invitacion_data['token_identificador']
+        token_secreto = invitacion_data['token_secreto']
+        inv_id = str(invitacion_data['invitacion'].PresidenteInvitacionId)
+        accion_id = 1 # CREATE
+
+    link_invitacion = f"{frontend_base_url}/i/{token_identificador}/{token_secreto}"
 
     whatsapp_service = WhatsAppService()
     resultado = whatsapp_service.enviar_link_registro(
@@ -1280,6 +1269,24 @@ async def enviar_link_registro_whatsapp(
         usuario_id=usuario_db.UsuarioId,
     )
 
+    # Registrar auditoría
+    from app.modelos.auditoria import Auditoria
+    from app.core.auditoria.auditoria_servicio import obtener_nombre_usuario
+    admin_id = getattr(usuario, "UsuarioId", 0)
+    admin_nombre = obtener_nombre_usuario(db, admin_id)
+    ip = request.client.host if request.client else None
+
+    auditoria = Auditoria(
+        EntidadAfectada="PresidenteInvitacion",
+        RegistroId=inv_id,
+        AccionId=accion_id,
+        UsuarioId=admin_id,
+        FechaAccion=datetime.now(),
+        Ip=ip,
+        ObservacionesAuditoria=f"Invitación reenviada por WhatsApp para usuario {usuario_db.UsuarioId}",
+        UsuarioNombre=admin_nombre
+    )
+    db.add(auditoria)
     db.commit()
 
     return {
@@ -1287,4 +1294,153 @@ async def enviar_link_registro_whatsapp(
         "mensaje": "Mensaje de WhatsApp enviado correctamente.",
         "whatsapp_status_code": resultado["status_code"],
         "meta_response": resultado["meta_response"],
+    }
+
+
+@router.post("/presidentes/{usuario_id}/invitacion/link")
+async def obtener_link_invitacion(
+    usuario_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual),
+):
+    rol_id = getattr(usuario, "RolId", None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+
+    usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+    if not usuario_db:
+        raise HTTPException(status_code=404, detail="No se encontró el usuario del presidente.")
+
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+
+    frontend_base_url = None
+    if origin:
+        frontend_base_url = origin.rstrip("/")
+    elif referer:
+        referer_parts = urlsplit(referer)
+        if referer_parts.scheme and referer_parts.netloc:
+            frontend_base_url = f"{referer_parts.scheme}://{referer_parts.netloc}"
+
+    if not frontend_base_url:
+        raise HTTPException(
+            status_code=500,
+            detail="Ocurrió un error al generar el enlace",
+        )
+
+    from app.modelos.presidente_invitacion_modelo import PresidenteInvitacion
+    ahora = datetime.now()
+    invitacion_activa = db.query(PresidenteInvitacion).filter(
+        PresidenteInvitacion.UsuarioId == usuario_db.UsuarioId,
+        PresidenteInvitacion.Activo == True,
+        PresidenteInvitacion.FechaExpiracion > ahora,
+        PresidenteInvitacion.TokenSecreto != None
+    ).first()
+
+    if invitacion_activa:
+        token_identificador = invitacion_activa.TokenIdentificador
+        token_secreto = invitacion_activa.TokenSecreto
+        inv_id = str(invitacion_activa.PresidenteInvitacionId)
+        obs = f"Enlace de invitación copiado para usuario {usuario_db.UsuarioId}"
+        accion_id = 4 # READ
+    else:
+        invitacion_data = crear_invitacion_presidente_repo(db, usuario_db.UsuarioId)
+        token_identificador = invitacion_data['token_identificador']
+        token_secreto = invitacion_data['token_secreto']
+        inv_id = str(invitacion_data['invitacion'].PresidenteInvitacionId)
+        obs = f"Invitación creada automáticamente para copiar enlace de usuario {usuario_db.UsuarioId}"
+        accion_id = 1 # CREATE
+
+    link_invitacion = f"{frontend_base_url}/i/{token_identificador}/{token_secreto}"
+
+    # Registrar auditoría
+    from app.modelos.auditoria import Auditoria
+    from app.core.auditoria.auditoria_servicio import obtener_nombre_usuario
+    admin_id = getattr(usuario, "UsuarioId", 0)
+    admin_nombre = obtener_nombre_usuario(db, admin_id)
+    ip = request.client.host if request.client else None
+
+    auditoria = Auditoria(
+        EntidadAfectada="PresidenteInvitacion",
+        RegistroId=inv_id,
+        AccionId=accion_id,
+        UsuarioId=admin_id,
+        FechaAccion=datetime.now(),
+        Ip=ip,
+        ObservacionesAuditoria=obs,
+        UsuarioNombre=admin_nombre
+    )
+    db.add(auditoria)
+    db.commit()
+
+    return {
+        "success": True,
+        "link_invitacion": link_invitacion
+    }
+
+
+@router.post("/presidentes/{usuario_id}/invitacion/regenerar")
+async def regenerar_invitacion(
+    usuario_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual),
+):
+    rol_id = getattr(usuario, "RolId", None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+
+    usuario_db = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+    if not usuario_db:
+        raise HTTPException(status_code=404, detail="No se encontró el usuario del presidente.")
+
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+
+    frontend_base_url = None
+    if origin:
+        frontend_base_url = origin.rstrip("/")
+    elif referer:
+        referer_parts = urlsplit(referer)
+        if referer_parts.scheme and referer_parts.netloc:
+            frontend_base_url = f"{referer_parts.scheme}://{referer_parts.netloc}"
+
+    if not frontend_base_url:
+        raise HTTPException(
+            status_code=500,
+            detail="Ocurrió un error al generar el enlace",
+        )
+
+    # Desactivar invitaciones anteriores y crear una nueva
+    invitacion_data = crear_invitacion_presidente_repo(db, usuario_db.UsuarioId)
+    token_identificador = invitacion_data['token_identificador']
+    token_secreto = invitacion_data['token_secreto']
+    inv_id = str(invitacion_data['invitacion'].PresidenteInvitacionId)
+
+    link_invitacion = f"{frontend_base_url}/i/{token_identificador}/{token_secreto}"
+
+    # Registrar auditoría
+    from app.modelos.auditoria import Auditoria
+    from app.core.auditoria.auditoria_servicio import obtener_nombre_usuario
+    admin_id = getattr(usuario, "UsuarioId", 0)
+    admin_nombre = obtener_nombre_usuario(db, admin_id)
+    ip = request.client.host if request.client else None
+
+    auditoria = Auditoria(
+        EntidadAfectada="PresidenteInvitacion",
+        RegistroId=inv_id,
+        AccionId=1, # CREATE
+        UsuarioId=admin_id,
+        FechaAccion=datetime.now(),
+        Ip=ip,
+        ObservacionesAuditoria=f"Invitación regenerada para usuario {usuario_db.UsuarioId}",
+        UsuarioNombre=admin_nombre
+    )
+    db.add(auditoria)
+    db.commit()
+
+    return {
+        "success": True,
+        "link_invitacion": link_invitacion
     }

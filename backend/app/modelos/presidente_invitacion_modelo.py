@@ -50,3 +50,8 @@ class PresidenteInvitacion(Base):
         nullable=False,
         default=True
     )
+
+    TokenSecreto = Column(
+        String(255),
+        nullable=True
+    )
