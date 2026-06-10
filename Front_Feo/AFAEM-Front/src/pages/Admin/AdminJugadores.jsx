@@ -10,6 +10,7 @@ import {
   subirDocumentoJugador,
 } from '../../services/admin';
 import Swal from 'sweetalert2';
+import { validarFotografia } from '../../services/foto';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable, FaUsers, FaCheckCircle, FaTimesCircle, FaMale, FaFemale, FaIdCard, FaExclamationTriangle, FaUser } from 'react-icons/fa';
@@ -605,28 +606,105 @@ export default function AdminJugadores() {
       return;
     }
 
-    try {
+    const ejecutarSubida = async (fileParaSubir) => {
+      try {
+        Swal.fire({
+          title: 'Subiendo documento...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+
+        const solicitudIdFinal =
+          solicitudId ?? (await resolverSolicitudIdJugador(jugador));
+
+        await subirDocumentoJugador(
+          jugador.PersonaId,
+          tipoDocumentoId,
+          fileParaSubir,
+          Number(solicitudIdFinal)
+        );
+        Swal.close();
+        await handleDescargarDocs(jugador);
+      } catch (err) {
+        console.error(err);
+        const msg = err?.response?.data?.detail || 'No se pudo subir el documento.';
+        Swal.fire('Error', msg, 'error');
+      }
+    };
+
+    // Si el tipo de documento es Fotografía (ID: 25), aplicamos validación
+    if (Number(tipoDocumentoId) === 25) {
       Swal.fire({
-        title: 'Subiendo documento...',
+        title: 'Validando Fotografía...',
+        html: 'Verificando formato y calidad.',
         allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
+        didOpen: () => { Swal.showLoading(); }
       });
 
-      const solicitudIdFinal =
-        solicitudId ?? (await resolverSolicitudIdJugador(jugador));
+      try {
+        const data = await validarFotografia(archivo);
+        if (data.valido) {
+          // Convertir base64 a File
+          const byteCharacters = atob(data.imagen);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const archivoValidado = new File([byteArray], "foto_validada.jpg", {
+            type: data.tipo_imagen
+          });
 
-      await subirDocumentoJugador(
-        jugador.PersonaId,
-        tipoDocumentoId,
-        archivo,
-        Number(solicitudIdFinal)
-      );
-      Swal.close();
-      await handleDescargarDocs(jugador);
-    } catch (err) {
-      console.error(err);
-      const msg = err?.response?.data?.detail || 'No se pudo subir el documento.';
-      Swal.fire('Error', msg, 'error');
+          await Swal.fire({
+            title: 'Fotografía válida',
+            text: 'La fotografía cumple con los criterios establecidos.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
+
+          await ejecutarSubida(archivoValidado);
+        } else {
+          const result = await Swal.fire({
+            title: 'Error en fotografía',
+            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Quieres subir la foto de todas formas?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cargar igualmente',
+            cancelButtonText: 'No, intentar de nuevo',
+            confirmButtonColor: '#0b4ea6',
+            cancelButtonColor: '#cbd5e1'
+          });
+
+          if (result.isConfirmed) {
+            await ejecutarSubida(archivo);
+          } else {
+            // Reabrir panel de documentos
+            await handleDescargarDocs(jugador);
+          }
+        }
+      } catch (err) {
+        const result = await Swal.fire({
+          title: 'Error en fotografía',
+          text: `${err.message || 'No se pudo procesar la fotografía.'} ¿Quieres subir la foto de todas formas?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, cargar igualmente',
+          cancelButtonText: 'No, intentar de nuevo',
+          confirmButtonColor: '#0b4ea6',
+          cancelButtonColor: '#cbd5e1'
+        });
+
+        if (result.isConfirmed) {
+          await ejecutarSubida(archivo);
+        } else {
+          // Reabrir panel de documentos
+          await handleDescargarDocs(jugador);
+        }
+      }
+    } else {
+      // Cualquier otro tipo de documento se sube directamente
+      await ejecutarSubida(archivo);
     }
   };
 
