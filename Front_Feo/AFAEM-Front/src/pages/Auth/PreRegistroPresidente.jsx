@@ -1611,31 +1611,31 @@ function PreRegistroPresidente() {
         .cuotas-layout {
           display: grid;
           grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.95fr);
-          gap: 28px;
+          gap: 20px;
           align-items: start;
         }
         .insurance-layout-left,
         .insurance-layout-right {
           display: flex;
           flex-direction: column;
-          gap: 18px;
+          gap: 12px;
           min-width: 0;
         }
         .insurance-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 15px;
+          gap: 12px;
         }
         .insurance-section {
           display: flex;
           flex-direction: column;
-          gap: 15px;
+          gap: 8px;
           min-width: 0;
         }
         .insurance-card-list {
           display: flex;
           flex-direction: column;
-          gap: 15px;
+          gap: 10px;
           min-width: 0;
         }
         .insurance-player-card {
@@ -1650,12 +1650,12 @@ function PreRegistroPresidente() {
         .insurance-player-content {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 2px;
           flex: 1;
           min-width: 0;
         }
         .insurance-player-name {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 800;
           color: var(--text-main);
           line-height: 1.2;
@@ -1665,14 +1665,14 @@ function PreRegistroPresidente() {
           margin: 0;
         }
         .insurance-player-price {
-          font-size: 14px;
+          font-size: 12.5px;
           color: #5d87e5;
           font-weight: 700;
           white-space: nowrap;
           line-height: 1.2;
         }
         .insurance-player-description {
-          font-size: 13px;
+          font-size: 11px;
           color: var(--text-muted);
           margin: 0;
           white-space: normal;
@@ -1699,7 +1699,7 @@ function PreRegistroPresidente() {
         .summary-stack {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 16px;
+          gap: 12px;
         }
         @media (max-width: 768px) {
           .cuotas-layout {
@@ -1747,7 +1747,29 @@ function PreRegistroPresidente() {
         .prereg-dark-page .bank-info-label { color: rgba(255,255,255,0.45); }
         .prereg-dark-page .bank-info-value { color: rgba(255,255,255,0.88); }
         .prereg-dark-page .referencia-badge { background: rgba(93,135,229,0.15); color: #5d87e5; border: 1px solid rgba(93,135,229,0.25); }
-        .prereg-dark-page .assigned-bar { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+        .prereg-dark-page .assigned-bar {
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: rgba(255,255,255,0.6);
+          padding: 8px 14px;
+          margin-top: 8px;
+          font-size: 13px;
+          border-radius: 10px;
+        }
+        .prereg-dark-page .pago-card {
+          background: rgba(255, 255, 255, 0.04) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          border-radius: 18px !important;
+          padding: 26px !important;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+          backdrop-filter: blur(10px) !important;
+          -webkit-backdrop-filter: blur(10px) !important;
+        }
+        @media (max-width: 768px) {
+          .prereg-dark-page .pago-card {
+            padding: 16px !important;
+          }
+        }
         .prereg-dark-page .input-label { color: rgba(255,255,255,0.6); }
         .prereg-dark-page .section-title-small { color: rgba(255,255,255,0.88); }
         .prereg-dark-page .input-number {
@@ -1755,13 +1777,38 @@ function PreRegistroPresidente() {
           border: 1px solid rgba(255,255,255,0.12);
           color: white;
           border-radius: 12px;
-          padding: 12px 16px;
+          padding: 10px 14px;
+          transition: all 0.2s ease;
+        }
+        .prereg-dark-page .input-number:focus {
+          background: rgba(93,135,229,0.1);
+          border-color: #5d87e5;
+          box-shadow: 0 0 0 3px rgba(93,135,229,0.15);
+          outline: none;
         }
         .prereg-dark-page .insurance-input {
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.12);
-          color: white; border-radius: 10px;
-          padding: 10px 14px; width: 80px; text-align: center;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1.5px solid rgba(255, 255, 255, 0.15);
+          color: white;
+          border-radius: 10px;
+          width: 76px;
+          height: 34px;
+          text-align: center;
+          font-weight: 800;
+          font-size: 14px;
+          outline: none;
+          box-sizing: border-box;
+          transition: all 0.2s ease;
+        }
+        .prereg-dark-page .insurance-input:focus {
+          background: rgba(93, 135, 229, 0.1) !important;
+          border-color: #5d87e5 !important;
+          box-shadow: 0 0 0 3px rgba(93, 135, 229, 0.15);
+        }
+        .prereg-dark-page .insurance-input.error-state {
+          border-color: #ef4444 !important;
+          background: rgba(239, 68, 68, 0.08) !important;
+          color: #f87171 !important;
         }
         .prereg-dark-page .btn-nav-gray {
           background: rgba(255,255,255,0.06);
@@ -1994,26 +2041,26 @@ function PreRegistroPresidente() {
         {/* ===== GLASS STEPPER HEADER (PASO 1 Y 3) ===== */}
         {(pasoActual === 1 || pasoActual === 3) && (
           <div style={{
-            padding: '28px 40px 24px',
+            padding: '18px 30px 14px',
             borderBottom: '1px solid rgba(255,255,255,0.07)',
             background: 'rgba(255,255,255,0.03)',
             backdropFilter: 'blur(10px)',
           }}>
-            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 20px' }}>
+            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px' }}>
               PROCESO DE ACTIVACIÓN
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* STEP 1 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '48px', height: '48px', borderRadius: '16px',
+                  width: '40px', height: '40px', borderRadius: '12px',
                   background: pasoActual === 1 ? 'linear-gradient(135deg, #0b4ea6, #1e40af)' : 'rgba(16,185,129,0.12)',
                   border: pasoActual === 1 ? '1px solid rgba(93,135,229,0.5)' : '1px solid rgba(16,185,129,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 1 ? '0 8px 20px rgba(11,78,166,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
                 }}>
-                  {pasoActual === 3 ? <span style={{ color: '#34d399', fontSize: '18px' }}>✓</span> : <FaMoneyBillWave style={{ color: 'white' }} />}
+                  {pasoActual === 3 ? <span style={{ color: '#34d399', fontSize: '16px' }}>✓</span> : <FaMoneyBillWave style={{ color: 'white' }} />}
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 1 ? '#5d87e5' : 'rgba(52,211,153,0.8)' }}>
                   Paso 1: Cuotas
@@ -2021,7 +2068,7 @@ function PreRegistroPresidente() {
               </div>
 
               {/* Connector */}
-              <div style={{ position: 'relative', width: '130px', height: '2px', margin: '0 10px', marginBottom: '28px' }}>
+              <div style={{ position: 'relative', width: '100px', height: '2px', margin: '0 10px', marginBottom: '20px' }}>
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }} />
                 <div style={{
                   position: 'absolute', top: 0, left: 0, height: '100%',
@@ -2033,12 +2080,12 @@ function PreRegistroPresidente() {
               </div>
 
               {/* STEP 2 */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '48px', height: '48px', borderRadius: '16px',
+                  width: '40px', height: '40px', borderRadius: '12px',
                   background: pasoActual === 3 ? 'linear-gradient(135deg, #0b4ea6, #1e40af)' : 'rgba(255,255,255,0.04)',
                   border: pasoActual === 3 ? '1px solid rgba(93,135,229,0.5)' : '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 3 ? '0 8px 20px rgba(11,78,166,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
                 }}>
@@ -2054,35 +2101,52 @@ function PreRegistroPresidente() {
 
         {/* PASO 1: CUOTAS */}
         {pasoActual === 1 && (
-          <div className="content-body" style={{ padding: '40px' }}>
-            {estadoPago === 4 && (
+          <div className="content-body" style={{ padding: '24px 30px' }}>
+            {error && (
               <div style={{
-                marginBottom: '24px',
+                marginBottom: '20px',
                 background: 'rgba(239, 68, 68, 0.08)',
                 border: '1px solid rgba(239, 68, 68, 0.28)',
-                borderRadius: '18px',
-                padding: '18px 20px',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                color: 'var(--text-main)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <span style={{ fontSize: '16px' }}>⚠️</span>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5', fontWeight: '700' }}>{error}</p>
+              </div>
+            )}
+
+            {estadoPago === 4 && (
+              <div style={{
+                marginBottom: '20px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.28)',
+                borderRadius: '12px',
+                padding: '12px 16px',
                 color: 'var(--text-main)'
               }}>
-                <h4 style={{ margin: '0 0 8px', color: 'var(--danger)', fontSize: '15px', fontWeight: '800' }}>
+                <h4 style={{ margin: '0 0 4px', color: 'var(--danger)', fontSize: '14px', fontWeight: '800' }}>
                   Tu orden fue rechazada
                 </h4>
-                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5' }}>
                   {mensajeRechazoPago || 'Vuelve a subir tu comprobante de pago para continuar con tu registro.'}
                 </p>
               </div>
             )}
-            <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '30px' }}>Selecciona el tipo de seguro para tu plantilla inicial</h3>
+            <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px' }}>Selecciona los seguros para tus jugadores</h3>
 
             <div className="cuotas-layout">
               <div className="insurance-layout-left">
                 {ordenPendienteId ? (
                   <div style={{
                     background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(5,150,105,0.04) 100%)',
-                    padding: '26px',
-                    borderRadius: '20px',
+                    padding: '20px',
+                    borderRadius: '16px',
                     border: '1px solid rgba(16,185,129,0.25)',
-                    marginBottom: '30px',
+                    marginBottom: '20px',
                     textAlign: 'center',
                     backdropFilter: 'blur(8px)',
                     position: 'relative',
@@ -2090,23 +2154,23 @@ function PreRegistroPresidente() {
                   }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(52,211,153,0.4), transparent)' }} />
                     <div style={{
-                      display: 'inline-flex', padding: '5px 16px',
+                      display: 'inline-flex', padding: '4px 12px',
                       background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.3))',
-                      color: '#34d399', borderRadius: '30px', fontSize: '10px', fontWeight: '800', marginBottom: '12px',
-                      border: '1px solid rgba(16,185,129,0.3)', letterSpacing: '1.5px', textTransform: 'uppercase',
+                      color: '#34d399', borderRadius: '20px', fontSize: '9px', fontWeight: '800', marginBottom: '10px',
+                      border: '1px solid rgba(16,185,129,0.3)', letterSpacing: '1px', textTransform: 'uppercase',
                       boxShadow: '0 4px 12px rgba(16,185,129,0.15)',
                     }}>
                       ● ORDEN ACTIVA #{ordenPendienteId}
                     </div>
-                    <h4 style={{ color: 'var(--text-main)', fontWeight: '800', margin: '0 0 8px 0', fontSize: '18px' }}>Validación en curso</h4>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
+                    <h4 style={{ color: 'var(--text-main)', fontWeight: '800', margin: '0 0 6px 0', fontSize: '16px' }}>Validación en curso</h4>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0, lineHeight: '1.4' }}>
                       Ya tienes una orden activa en el sistema. Para continuar, adjunta tu comprobante de pago.
                     </p>
                   </div>
                 ) : (
-                  <>
-                    <div className="input-group" style={{ flexDirection: 'column', gap: '10px' }}>
-                      <label className="input-label" style={{ textAlign: 'center' }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
+                  <div className="pago-card">
+                    <div className="input-group" style={{ flexDirection: 'column', gap: '6px' }}>
+                      <label className="input-label" style={{ textAlign: 'center', fontSize: '13px' }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
                       <input
                         type="number"
                         className="input-number"
@@ -2114,36 +2178,15 @@ function PreRegistroPresidente() {
                         onChange={(e) => {
                           const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
                           setNumPersonas(val);
+                          setError(null);
                         }}
-                        style={{ marginTop: '5px' }}
+                        style={{ marginTop: '3px' }}
                       />
                     </div>
-
-                    {numPersonas >= 0 && (
-                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px', marginTop: '20px', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                          <div style={{ width: '3px', height: '14px', background: 'linear-gradient(180deg, #10b981, #059669)', borderRadius: '2px' }} />
-                          <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,0.75)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costos de Afiliación</p>
-                        </div>
-                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
-                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
-                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
-                          </div>
-                        ))}
-                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
-                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '12px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{af.NombreAfiliacion}</span>
-                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>${af.CostoActual}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '24px 0 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 12px' }}>
                       <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg, #5d87e5, #0b4ea6)', borderRadius: '4px' }} />
                       <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        Distribución de Seguros
+                        DISTRIBUCIÓN DE SEGUROS
                       </p>
                       <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
                     </div>
@@ -2166,20 +2209,20 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${cantAsignada > 0 ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px', padding: '20px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '165px', padding: '15px' }}
                                 >
                                   {cantAsignada > 0 && (
                                     <div style={{
                                       position: 'absolute',
-                                      top: '-10px',
-                                      right: '-10px',
+                                      top: '-8px',
+                                      right: '-8px',
                                       background: 'linear-gradient(135deg, #10b981, #059669)',
                                       color: 'white',
-                                      fontSize: '12px',
+                                      fontSize: '11px',
                                       fontWeight: '900',
                                       borderRadius: '50%',
-                                      width: '28px',
-                                      height: '28px',
+                                      width: '24px',
+                                      height: '24px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -2191,23 +2234,37 @@ function PreRegistroPresidente() {
                                     </div>
                                   )}
                                   <div className="insurance-player-content" style={{ flex: 1 }}>
-                                    <p className="insurance-player-name" style={{ fontSize: '15px', fontWeight: '800', margin: '0 0 4px' }}>{seg.nombre}</p>
-                                    <span className="insurance-player-price" style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>${seg.precio} c/u</span>
-                                    <p className="insurance-player-description" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', margin: '8px 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{seg.descripcion || 'Ver cobertura y beneficios completos.'}</p>
+                                    <p className="insurance-player-name">{seg.nombre}</p>
+                                    <span className="insurance-player-price">${seg.precio} c/u</span>
                                   </div>
+
+                                  {/* Input directo en la tarjeta */}
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0 8px', gap: '10px', width: '100%' }}>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      className={`insurance-input ${totalAsignados > segurosRequeridos && cantAsignada > 0 ? 'error-state' : ''}`}
+                                      value={asignacionSeguros[seg.id] ?? ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                        setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val }));
+                                        setError(null);
+                                      }}
+                                    />
+                                  </div>
+
                                   <button
                                     type="button"
                                     onClick={() => abrirModalDetalle(seg)}
                                     style={{
-                                      marginTop: '15px',
                                       width: '100%',
-                                      padding: '8px 12px',
+                                      padding: '6px 12px',
                                       borderRadius: '10px',
                                       border: cantAsignada > 0 ? '1px solid #60a5fa' : '1px solid rgba(255, 255, 255, 0.1)',
                                       backgroundColor: cantAsignada > 0 ? 'rgba(96, 165, 250, 0.1)' : 'rgba(255, 255, 255, 0.04)',
                                       color: cantAsignada > 0 ? '#60a5fa' : 'rgba(255,255,255,0.7)',
                                       fontWeight: '700',
-                                      fontSize: '12px',
+                                      fontSize: '11px',
                                       cursor: 'pointer',
                                       transition: 'all 0.2s',
                                       textTransform: 'uppercase',
@@ -2239,20 +2296,20 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${checked ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px', padding: '20px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '165px', padding: '15px' }}
                                 >
                                   {checked && (
                                     <div style={{
                                       position: 'absolute',
-                                      top: '-10px',
-                                      right: '-10px',
+                                      top: '-8px',
+                                      right: '-8px',
                                       background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                                       color: 'white',
-                                      fontSize: '12px',
+                                      fontSize: '11px',
                                       fontWeight: '900',
                                       borderRadius: '50%',
-                                      width: '28px',
-                                      height: '28px',
+                                      width: '24px',
+                                      height: '24px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -2264,23 +2321,44 @@ function PreRegistroPresidente() {
                                     </div>
                                   )}
                                   <div className="insurance-player-content" style={{ flex: 1 }}>
-                                    <p className="insurance-player-name" style={{ fontSize: '15px', fontWeight: '800', margin: '0 0 4px' }}>{seg.nombre}</p>
-                                    <span className="insurance-player-price" style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>${seg.precio} c/u</span>
-                                    <p className="insurance-player-description" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', margin: '8px 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{seg.descripcion || 'Ver cobertura y beneficios completos.'}</p>
+                                    <p className="insurance-player-name">{seg.nombre}</p>
+                                    <span className="insurance-player-price">${seg.precio} c/u</span>
                                   </div>
+
+                                  {/* Radio de selección en la tarjeta */}
+                                  <div
+                                    onClick={() => {
+                                      const next = { ...asignacionSeguros };
+                                      segurosPresidente.forEach(item => {
+                                        next[item.id] = item.id === seg.id ? 1 : 0;
+                                      });
+                                      setAsignacionSeguros(next);
+                                      setError(null);
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0 8px', gap: '10px', width: '100%', cursor: 'pointer' }}
+                                  >
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>Seleccionado:</span>
+                                    <input
+                                      type="radio"
+                                      name="seguroPresidenteRadioCard"
+                                      checked={checked}
+                                      onChange={() => { }} // click en fila maneja el cambio
+                                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3d79ff' }}
+                                    />
+                                  </div>
+
                                   <button
                                     type="button"
                                     onClick={() => abrirModalDetalle(seg)}
                                     style={{
-                                      marginTop: '15px',
                                       width: '100%',
-                                      padding: '8px 12px',
+                                      padding: '6px 12px',
                                       borderRadius: '10px',
                                       border: checked ? '1px solid #60a5fa' : '1px solid rgba(255, 255, 255, 0.1)',
                                       backgroundColor: checked ? 'rgba(96, 165, 250, 0.1)' : 'rgba(255, 255, 255, 0.04)',
                                       color: checked ? '#60a5fa' : 'rgba(255,255,255,0.7)',
                                       fontWeight: '700',
-                                      fontSize: '12px',
+                                      fontSize: '11px',
                                       cursor: 'pointer',
                                       transition: 'all 0.2s',
                                       textTransform: 'uppercase',
@@ -2313,7 +2391,7 @@ function PreRegistroPresidente() {
                         </span>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
 
               </div>
@@ -2324,25 +2402,25 @@ function PreRegistroPresidente() {
                   <div style={{
                     background: 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '20px', padding: '22px',
+                    borderRadius: '16px', padding: '16px',
                     position: 'relative', overflow: 'hidden',
                   }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(93,135,229,0.4),transparent)' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#5d87e5,#0b4ea6)', borderRadius: '4px' }} />
                       <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>
-                        {ordenPendienteId ? 'Detalles de la Orden' : 'Cuotas correspondientes'}
+                        {ordenPendienteId ? 'Detalles de la Orden' : 'Resumen de pago'}
                       </h5>
                     </div>
                     {ordenPendienteId && detalleInscripciones.map(detalle => (
-                      <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                      <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
                         <span style={{ color: 'rgba(255,255,255,0.55)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
                         <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
                       </div>
                     ))}
                     {catalogoSeguros.map(seg =>
                       asignacionSeguros[seg.id] > 0 && (
-                        <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                        <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
                           <span style={{ color: 'rgba(255,255,255,0.55)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
                           <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
                         </div>
@@ -2351,54 +2429,22 @@ function PreRegistroPresidente() {
                     {!ordenPendienteId && numPersonas > 0 && (
                       <>
                         {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
-                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
                             <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x1)</span>
                             <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual}</span>
                           </div>
                         ))}
                         {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
-                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
+                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
                             <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x{numPersonas})</span>
                             <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual * numPersonas}</span>
                           </div>
                         ))}
                       </>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 0', fontSize: '15px', fontWeight: '800' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: '14px', fontWeight: '800' }}>
                       <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
                       <span style={{ color: '#5d87e5' }}>${totalMostrado}</span>
-                    </div>
-                  </div>
-
-                  {/* Datos bancarios */}
-                  <div style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '20px', padding: '22px',
-                    position: 'relative', overflow: 'hidden',
-                  }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '4px', height: '18px', background: 'linear-gradient(180deg,#10b981,#059669)', borderRadius: '4px' }} />
-                        <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>Depósito o transferencia</h5>
-                      </div>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(`${bankInfo.banco} | ${bankInfo.cuenta} | ${bankInfo.clabe}`)}
-                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}
-                      >📋 Copiar</button>
-                    </div>
-                    {[['Banco', bankInfo.banco], ['Cuenta', bankInfo.cuenta], ['CLABE', bankInfo.clabe]].map(([label, val]) => (
-                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '13px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{label}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700', fontFamily: 'monospace' }}>{val}</span>
-                      </div>
-                    ))}
-                    <div style={{ marginTop: '12px' }}>
-                      <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>Referencia obligatoria</span>
-                      <div style={{ marginTop: '6px', background: 'rgba(93,135,229,0.12)', border: '1px solid rgba(93,135,229,0.25)', borderRadius: '10px', padding: '8px 14px', fontFamily: 'monospace', fontWeight: '800', fontSize: '14px', color: '#5d87e5', letterSpacing: '1px' }}>
-                        {bankInfo.referencia}
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -2407,17 +2453,17 @@ function PreRegistroPresidente() {
 
             {ordenPendienteId && (
               <div style={{
-                marginTop: '30px',
+                marginTop: '20px',
                 background: 'rgba(11,78,166,0.06)',
                 border: '1.5px dashed rgba(93,135,229,0.35)',
-                borderRadius: '20px',
-                padding: '28px',
+                borderRadius: '16px',
+                padding: '18px 20px',
                 backdropFilter: 'blur(8px)',
               }}>
-                <p style={{ fontSize: '14px', fontWeight: '800', color: '#5d87e5', marginBottom: '5px' }}>
+                <p style={{ fontSize: '13px', fontWeight: '800', color: '#5d87e5', marginBottom: '4px' }}>
                   Paso 2: Sube tu comprobante de pago
                 </p>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '18px' }}>
+                <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                   Adjunta el comprobante (PDF o imagen) para procesar tu registro.
                 </p>
                 <div className="file-input-custom">
@@ -2430,6 +2476,7 @@ function PreRegistroPresidente() {
                   <button
                     className="btn-outline"
                     onClick={() => document.getElementById('comprobante').click()}
+                    style={{ padding: '8px 16px' }}
                   >
                     {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
                   </button>
@@ -2442,12 +2489,13 @@ function PreRegistroPresidente() {
 
 
             <div className="footer-nav">
-              <button className="btn-nav-gray" onClick={irPasoAnterior}>Anterior</button>
+              <button className="btn-nav-gray" onClick={irPasoAnterior} style={{ padding: '10px 24px' }}>Anterior</button>
               <button
                 className="btn-nav-blue"
                 onClick={irSiguientePaso}
-                disabled={!ordenPendienteId ? (numPersonas <= 0 || totalAsignados !== segurosRequeridos) : !comprobantePago}
-                title={!ordenPendienteId && (numPersonas <= 0 || totalAsignados !== segurosRequeridos) ? 'Asigna un seguro a cada jugador para continuar' : ''}
+                disabled={!ordenPendienteId ? (numPersonas <= 0) : !comprobantePago}
+                title={!ordenPendienteId && (numPersonas <= 0) ? 'Ingresa la cantidad de jugadores para continuar' : ''}
+                style={{ padding: '10px 24px' }}
               >
                 {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
               </button>

@@ -91,26 +91,26 @@ const getDocumentoEstatusInfo = (estadoId) => {
     case 1:
       return {
         texto: 'Espera',
-        color: '#92400e',
-        bg: '#fef3c7',
-        cardBg: 'linear-gradient(180deg, #fef3c7 0%, #fef08a 100%)',
-        border: '#f59e0b',
+        color: '#d97706', // Amber-600
+        bg: '#fffbeb', // Amber-50
+        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
+        border: '#f59e0b', // Amber-500
       };
     case 2:
       return {
         texto: 'Aceptado',
-        color: '#14532d',
-        bg: '#dcfce7',
-        cardBg: 'linear-gradient(180deg, #dcfce7 0%, #bbf7d0 100%)',
-        border: '#4ade80',
+        color: '#16a34a', // Green-600
+        bg: '#f0fdf4', // Green-50
+        cardBg: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
+        border: '#10b981', // Green-500
       };
     case 3:
       return {
         texto: 'Rechazado',
-        color: '#7f1d1d',
-        bg: '#fee2e2',
-        cardBg: 'linear-gradient(180deg, #fee2e2 0%, #fecaca 100%)',
-        border: '#f87171',
+        color: '#dc2626', // Red-600
+        bg: '#fef2f2', // Red-50
+        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fef2f2 100%)',
+        border: '#ef4444', // Red-500
       };
     default:
       return null;
@@ -139,17 +139,17 @@ const getDocumentActionButtons = (documento, tipoId) => {
     acciones.push({ key: 'aceptar', label: 'Aceptar' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
   } else if (estado === 2) {
-    acciones.push({ key: 'espera', label: 'Poner en espera' });
+    acciones.push({ key: 'espera', label: 'Espera' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
   } else if (estado === 3) {
-    acciones.push({ key: 'espera', label: 'Poner en espera' });
+    acciones.push({ key: 'espera', label: 'Espera' });
     acciones.push({ key: 'aceptar', label: 'Aceptar' });
   }
 
   const actionStyles = {
-    aceptar: 'background: #15803d; color: white;',
-    rechazar: 'background: #dc2626; color: white;',
-    espera: 'background: #ea580c; color: white;',
+    aceptar: 'background: #10b981; color: white; border: none; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);',
+    rechazar: 'background: #ef4444; color: white; border: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);',
+    espera: 'background: #f59e0b; color: white; border: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);',
   };
 
   return acciones
@@ -159,18 +159,23 @@ const getDocumentActionButtons = (documento, tipoId) => {
           type="button"
           data-action-button
           data-action="${accion.key}"
-          data-action-text="${accion.label.toLowerCase()}"
+          data-action-text="${accion.label === 'Espera' ? 'poner en espera' : accion.label.toLowerCase()}"
           data-doc-id="${escaparHtml(documento.DocumentosSolicitudId ?? documento.DocumentoId ?? documento.documentoId ?? documento.Id ?? '')}"
           data-tipo-id="${escaparHtml(tipoId)}"
           style="
-            padding: 8px 12px;
-            border-radius: 999px;
-            border: none;
+            flex: 1;
+            padding: 7px 10px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
+            text-align: center;
+            transition: all 0.2s;
+            box-sizing: border-box;
             ${actionStyles[accion.key] || 'background: #0b4ea6; color: white;'}
           "
+          onmouseover="this.style.filter='brightness(0.95)'"
+          onmouseout="this.style.filter='none'"
         >
           ${accion.label}
         </button>
@@ -238,22 +243,23 @@ const attachActionButtonListeners = (root = document) => {
         align-items: center;
         justify-content: center;
         z-index: 10000;
+        border-radius: 16px;
       `;
       popup.style.position = 'relative';
 
       overlay.innerHTML = `
-        <div style="background: white; border-radius: 20px; padding: 24px; width: min(480px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center;">
+        <div style="background: white; border-radius: 20px; padding: 24px; width: min(480px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center; font-family: 'Inter', sans-serif;">
           <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">¿Deseas ${actionText} este documento?</div>
           ${isRejectAction ? `
             <div style="text-align:left; margin-bottom: 14px;">
               <label for="rechazo-motivo" style="display:block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Motivo de rechazo</label>
-              <textarea id="rechazo-motivo" data-reject-reason rows="4" style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 12px; resize: vertical; font-size: 14px; color: #0f172a;" placeholder="Describe brevemente por qué se rechaza este documento."></textarea>
-              <div data-rejection-error style="font-size: 13px; color: #b91c1c; margin-top: 6px; min-height: 18px;"></div>
+              <textarea id="rechazo-motivo" data-reject-reason rows="4" style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; resize: vertical; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box;" placeholder="Describe brevemente por qué se rechaza este documento."></textarea>
+              <div data-rejection-error style="font-size: 13px; color: #b91c1c; margin-top: 6px; min-height: 18px; font-weight: 600;"></div>
             </div>
           ` : ''}
           <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-            <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: #0b4ea6; color: white; font-weight: 700; cursor: pointer;">Aceptar</button>
-            <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 700; cursor: pointer;">Cancelar</button>
+            <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: #0b4ea6; color: white; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#083b7e'" onmouseout="this.style.background='#0b4ea6'">Aceptar</button>
+            <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Cancelar</button>
           </div>
         </div>
       `;
@@ -280,7 +286,7 @@ const attachActionButtonListeners = (root = document) => {
         try {
           const waitingText = document.createElement('div');
           waitingText.textContent = 'Actualizando estado...';
-          waitingText.style = 'margin-top: 14px; color: #334155; font-size: 14px;';
+          waitingText.style = 'margin-top: 14px; color: #334155; font-size: 14px; font-weight: 600;';
           overlay.querySelector('div').appendChild(waitingText);
           boton.disabled = true;
           if (confirmButton) confirmButton.disabled = true;
@@ -300,20 +306,20 @@ const attachActionButtonListeners = (root = document) => {
 };
 
 const estilosCardDocumento = `
-  aspect-ratio: 1 / 1;
-  min-height: 170px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 18px;
+  padding: 20px 16px 16px 16px;
   text-align: center;
-  border-radius: 18px;
-  border: 1px solid #dbe4f0;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   color: #1e293b;
+  box-sizing: border-box;
 `;
 
 const construirCardDocumentoHtml = (tipo, documento) => {
@@ -325,7 +331,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
     const fechaSubida = formatearFechaSubida(documento.FechaEntrega);
     const estadoInfo = getDocumentoEstatusInfo(documento.EstadoValidacionId);
     const estadoBadge = estadoInfo
-      ? `<div data-doc-status-badge style="position: absolute; top: 14px; right: 14px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg};">${estadoInfo.texto}</div>`
+      ? `<div data-doc-status-badge style="position: absolute; top: 12px; right: 12px; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg}; letter-spacing: 0.05em; text-transform: uppercase;">${estadoInfo.texto}</div>`
       : '';
     const estadoCardStyle = estadoInfo
       ? `background: ${estadoInfo.cardBg}; border-color: ${estadoInfo.border};`
@@ -343,44 +349,61 @@ const construirCardDocumentoHtml = (tipo, documento) => {
           text-decoration: none;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         "
-        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 16px 30px rgba(15, 23, 42, 0.12)'"
-        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(15, 23, 42, 0.08)'"
+        onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px rgba(0, 0, 0, 0.15)'; this.querySelector('.doc-icon-wrapper').style.background='#e0f2fe';"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.05)'; this.querySelector('.doc-icon-wrapper').style.background='#f0f9ff';"
       >
         ${estadoBadge}
         <a
           href="${escaparHtml(urlDocumento)}"
           target="_blank"
           rel="noopener noreferrer"
-          style="display: contents;"
+          style="display: flex; flex-direction: column; align-items: center; width: 100%; gap: 10px; text-decoration: none;"
+          title="Ver documento en pestaña nueva"
         >
-          <div style="width: 60px; height: 60px; border-radius: 16px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 30px;">📄</div>
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">${tituloTipo}</span>
-            <span style="font-size: 12px; color: #64748b; line-height: 1.45;">Subido el ${fechaSubida}</span>
+          <div class="doc-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: #f0f9ff; color: #0284c7; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
+            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
+            <span style="font-size: 12px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+            <span style="font-size: 11px; color: #64748b; line-height: 1.4; text-align: center;">Subido el ${fechaSubida}</span>
           </div>
         </a>
-        <div data-doc-action-buttons style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: auto; width: 100%;">
-          ${botonesEstado}
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: auto; width: 100%;">
+          <div data-doc-action-buttons style="display: flex; gap: 6px; width: 100%;">
+            ${botonesEstado}
+          </div>
           <button
             type="button"
             data-replace-doc="${tipo.id}"
             title="Subir nueva versión de este documento"
             style="
-              margin-top: 2px;
               padding: 6px 12px;
-              border-radius: 10px;
-              border: 1.5px solid #0ea5e9;
+              border-radius: 8px;
+              border: 1.5px solid #0284c7;
               background: white;
-              color: #0ea5e9;
+              color: #0284c7;
               font-size: 11px;
               font-weight: 700;
               cursor: pointer;
               display: inline-flex;
               align-items: center;
-              gap: 4px;
+              justify-content: center;
+              gap: 6px;
+              transition: all 0.2s;
+              width: 100%;
+              box-sizing: border-box;
             "
+            onmouseover="this.style.background='#f0f9ff'"
+            onmouseout="this.style.background='white'"
           >
-            📤 Reemplazar
+            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="12" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Reemplazar
           </button>
         </div>
       </div>
@@ -388,26 +411,42 @@ const construirCardDocumentoHtml = (tipo, documento) => {
   }
 
   return `
-    <div style="${estilosCardDocumento} border-style: dashed; border-color: #cbd5e1; background: #f8fafc; box-shadow: none;">
-      <div style="width: 60px; height: 60px; border-radius: 16px; background: #fef2f2; display: flex; align-items: center; justify-content: center; font-size: 28px;">📋</div>
-      <div style="display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 15px; font-weight: 700; line-height: 1.35;">${tituloTipo}</span>
-        <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">Documento faltante</span>
+    <div
+      style="${estilosCardDocumento}"
+      onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px rgba(0, 0, 0, 0.1)'; this.querySelector('.missing-icon-wrapper').style.background='#ffe4e6';"
+      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'; this.querySelector('.missing-icon-wrapper').style.background='#fef2f2';"
+    >
+      <div class="missing-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: #fef2f2; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
+        <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg" style="color: #ef4444;">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="18" x2="12" y2="12"></line>
+          <line x1="9" y1="15" x2="15" y2="15"></line>
+        </svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
+        <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+        <span style="font-size: 11px; color: #f43f5e; font-weight: 700; background: #fff1f2; padding: 2px 8px; border-radius: 20px;">Faltante</span>
       </div>
       <button
         type="button"
         data-add-doc="${tipo.id}"
         style="
-          margin-top: 4px;
+          margin-top: auto;
           padding: 8px 14px;
-          border-radius: 10px;
+          border-radius: 8px;
           border: none;
           background: #0b4ea6;
           color: white;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           cursor: pointer;
+          width: 100%;
+          box-sizing: border-box;
+          transition: all 0.2s;
         "
+        onmouseover="this.style.background='#083b7e'"
+        onmouseout="this.style.background='#0b4ea6'"
       >
         Añadir documento
       </button>
@@ -608,16 +647,39 @@ export default function AdminJugadores() {
 
     Swal.fire({
       title: `Documentos de ${jugador.NombreCompleto}`,
+      width: 'min(860px, 95vw)',
       html: `
-        <div style="max-height: 420px; overflow-y: auto; padding: 4px;">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+        <style>
+          .doc-card-container {
+            max-height: 480px;
+            overflow-y: auto;
+            padding: 8px 6px;
+            margin-top: 10px;
+          }
+          .doc-card-container::-webkit-scrollbar {
+            width: 6px;
+          }
+          .doc-card-container::-webkit-scrollbar-track {
+            background: #f8fafc;
+            border-radius: 10px;
+          }
+          .doc-card-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+          }
+          .doc-card-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+          }
+        </style>
+        <div class="doc-card-container">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;">
             ${htmlCards}
           </div>
         </div>
       `,
       showConfirmButton: true,
       confirmButtonText: 'Cerrar',
-      confirmButtonColor: '#ff0000',
+      confirmButtonColor: '#0b4ea6',
       didOpen: () => {
         // Botón: Añadir documento faltante
         document.querySelectorAll('[data-add-doc]').forEach((boton) => {

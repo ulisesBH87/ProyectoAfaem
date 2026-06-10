@@ -109,12 +109,10 @@ export default function PagoPrevioJugador() {
     const totalNecesario = Number(numJugadoresAgregar) || 0;
     setAsignacionSegurosAgregar(prev => {
       const nuevaAsignacion = { ...prev };
-      
-      // Reiniciar solo los seguros de jugadores
+
+      // Reiniciar todos los seguros
       catalogs.seguros.forEach(s => {
-        if (!['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim())) {
-          nuevaAsignacion[String(s.id)] = 0;
-        }
+        nuevaAsignacion[String(s.id)] = 0;
       });
 
       const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
@@ -122,18 +120,6 @@ export default function PagoPrevioJugador() {
         nuevaAsignacion[String(primerSeguroJugador.id)] = totalNecesario;
       } else if (catalogs.seguros.length > 0) {
         nuevaAsignacion[String(catalogs.seguros[0].id)] = totalNecesario;
-      }
-
-      // Verificar y asignar seguro de presidente por defecto
-      const presidenteSeleccionado = catalogs.seguros.some(s => 
-        ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()) && prev[String(s.id)] === 1
-      );
-      
-      if (!presidenteSeleccionado) {
-        const primerSeguroPresidente = catalogs.seguros.find(s => ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
-        if (primerSeguroPresidente) {
-          nuevaAsignacion[String(primerSeguroPresidente.id)] = 1;
-        }
       }
 
       return nuevaAsignacion;
@@ -444,68 +430,36 @@ export default function PagoPrevioJugador() {
 
                 <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#0b4ea6', textTransform: 'uppercase' }}>Distribucion de seguros</div>
                 <div className="responsive-seguros-grid">
-                  {[
-                    ['Seguros Jugadores', catalogs.seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()))],
-                    ['Seguros Presidente', catalogs.seguros.filter(s => ['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()))]
-                  ].map(([titulo, lista]) => (
-                    <div key={titulo}>
-                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0b4ea6', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{titulo}</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {lista.length === 0 ? (
-                          <div style={{ fontSize: '12px', color: '#64748b', padding: '10px' }}>Sin seguros en esta categoría</div>
-                        ) : lista.map(seguro => {
-                          const id = String(seguro.id);
-                          const isPres = titulo === 'Seguros Presidente';
-                          const isChecked = Number(asignacionSegurosAgregar[id] || 0) === 1;
-                          return (
-                            <div
-                              key={id}
-                              onClick={isPres ? () => {
-                                setAsignacionSegurosAgregar(prev => {
-                                  const next = { ...prev };
-                                  lista.forEach(item => { next[item.id] = item.id === seguro.id ? 1 : 0; });
-                                  return next;
-                                });
-                              } : undefined}
-                              style={{
-                                display: 'grid', gridTemplateColumns: isPres ? '1fr auto' : '1fr 92px', gap: '12px', alignItems: 'center',
-                                border: isPres && isChecked ? '1px solid #0b4ea6' : '1px solid #e2e8f0',
-                                borderRadius: '14px', padding: '14px',
-                                background: isPres && isChecked ? '#eff6ff' : 'transparent',
-                                cursor: isPres ? 'pointer' : 'default',
-                                transition: 'all 0.2s'
-                              }}
-                            >
-                              <div>
-                                <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
-                                <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
-                              </div>
-                              {isPres ? (
-                                <input
-                                  type="radio"
-                                  name="seguroPresidenteRadio"
-                                  checked={isChecked}
-                                  readOnly
-                                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#0b4ea6', justifySelf: 'center' }}
-                                />
-                              ) : (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={asignacionSegurosAgregar[id] ?? ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                                    setAsignacionSegurosAgregar(prev => ({ ...prev, [id]: value }));
-                                  }}
-                                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
+                  {catalogs.seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim())).map(seguro => {
+                    const id = String(seguro.id);
+                    return (
+                      <div
+                        key={id}
+                        style={{
+                          display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '14px', padding: '14px',
+                          background: 'transparent',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
+                          <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={asignacionSegurosAgregar[id] ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                            setAsignacionSegurosAgregar(prev => ({ ...prev, [id]: value }));
+                          }}
+                          style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center' }}
+                        />
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#ecfdf5' : '#fff7ed', color: totalAsignadosPagoJugador === segurosRequeridosPagoJugador && segurosRequeridosPagoJugador > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
@@ -790,12 +744,9 @@ export default function PagoPrevioJugador() {
             padding: '20px',
             marginBottom: '24px'
           }}>
-            <p style={{ color: '#831843', fontWeight: '600', marginBottom: '12px' }}>
-              ⏳ Estado: En Revisión
-            </p>
             <p style={{ color: '#831843', lineHeight: '1.6', marginBottom: 0 }}>
               Tu comprobante de pago fue recibido correctamente y está siendo revisado por el equipo de administración de AFAEM.
-              Este proceso generalmente toma 24-48 horas. Recibirás una notificación cuando sea aprobado.
+              Podrás continuar cuando el pago sea aprobado.
             </p>
           </div>
 
@@ -810,8 +761,7 @@ export default function PagoPrevioJugador() {
             </h3>
             <ol style={{ marginLeft: '20px', color: 'var(--text-muted)', lineHeight: '1.8', marginBottom: 0 }}>
               <li>El equipo administrativo verifica tu comprobante</li>
-              <li>Se confirma que el pago fue recibido correctamente</li>
-              <li>Tu orden de pago se aprueba automáticamente</li>
+              <li>Tu orden de pago se aprueba</li>
               <li>Podrás agregar los nuevos jugadores a tu equipo</li>
             </ol>
           </div>
