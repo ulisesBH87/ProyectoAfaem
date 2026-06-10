@@ -70,15 +70,18 @@ export default function EntradaFormulario({
           className={clasesPersonalizadas}
           style={{
             width: '100%',
-            padding: icono ? '10px 12px 10px 36px' : '10px 12px',
+            padding: icono ? '10px 16px 10px 40px' : '10px 16px',
             fontSize: '14px',
-            border: `1.5px solid ${error ? '#dc3545' : estaEnfocado ? '#0b4ea6' : '#ddd'}`,
-            borderRadius: '6px',
+            border: `1.5px solid ${error ? '#dc3545' : estaEnfocado ? '#0b4ea6' : (deshabilitado ? '#e2e8f0' : '#cbd5e1')}`,
+            borderRadius: '8px',
             outline: 'none',
-            backgroundColor: deshabilitado ? '#f0f0f0' : 'white',
-            color: '#1e293b',
+            backgroundColor: deshabilitado ? '#f8fafc' : 'white',
+            color: deshabilitado ? '#64748b' : '#1e293b',
+            fontWeight: deshabilitado ? '600' : '500',
+            cursor: deshabilitado ? 'not-allowed' : 'text',
             transition: 'all 0.2s',
             boxShadow: estaEnfocado ? '0 0 0 3px rgba(11, 78, 166, 0.1)' : 'none',
+            opacity: deshabilitado ? 0.9 : 1,
           }}
           onFocus={() => setEstaEnfocado(true)}
           onBlur={() => setEstaEnfocado(false)}
