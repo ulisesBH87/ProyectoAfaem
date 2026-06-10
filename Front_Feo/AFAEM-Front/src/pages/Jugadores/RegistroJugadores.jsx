@@ -1759,129 +1759,125 @@ export default function RegistroJugadores() {
         return (
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
             margin: '0 auto 25px auto',
-            maxWidth: '320px',
-            padding: '16px',
+            maxWidth: '1000px',
+            width: '100%',
+            padding: '16px 35px',
             background: 'white',
-            borderRadius: '20px',
+            borderRadius: '24px',
             border: '1px solid #e2e8f0',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             transition: 'all 0.3s ease'
           }}>
-            {/* Navigation Row */}
+            {/* Left Arrow Button */}
+            <button
+              type="button"
+              disabled={currentPlayerIndex === 0}
+              onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                border: '1px solid #cbd5e1',
+                backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
+                color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
+                cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
+                opacity: currentPlayerIndex === 0 ? 0.4 : 1,
+                transition: 'all 0.2s',
+                boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (currentPlayerIndex !== 0) {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPlayerIndex !== 0) {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }
+              }}
+            >
+              <FaChevronLeft style={{ fontSize: '14px' }} />
+            </button>
+
+            {/* Center Area: Number & Status */}
             <div style={{
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              padding: '0 10px'
+              justifyContent: 'center'
             }}>
-              {/* Left Arrow Button */}
-              <button
-                type="button"
-                disabled={currentPlayerIndex === 0}
-                onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
-                  color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
-                  cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
-                  opacity: currentPlayerIndex === 0 ? 0.4 : 1,
-                  transition: 'all 0.2s',
-                  boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPlayerIndex !== 0) {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentPlayerIndex !== 0) {
-                    e.currentTarget.style.backgroundColor = 'white';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                  }
-                }}
-              >
-                <FaChevronLeft style={{ fontSize: '14px' }} />
-              </button>
-
-              {/* Center Player Number */}
               <span style={{
                 fontSize: '28px',
                 fontWeight: '900',
                 color: '#1e293b',
-                userSelect: 'none'
+                userSelect: 'none',
+                lineHeight: '1.2'
               }}>
                 {currentPlayerIndex + 1}
               </span>
-
-              {/* Right Arrow Button */}
-              <button
-                type="button"
-                disabled={currentPlayerIndex === jugadores.length - 1}
-                onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
-                  color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
-                  cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
-                  opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
-                  transition: 'all 0.2s',
-                  boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPlayerIndex !== jugadores.length - 1) {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentPlayerIndex !== jugadores.length - 1) {
-                    e.currentTarget.style.backgroundColor = 'white';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                  }
-                }}
-              >
-                <FaChevronRight style={{ fontSize: '14px' }} />
-              </button>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                backgroundColor: config.bg,
+                color: config.color,
+                fontSize: '11px',
+                fontWeight: '800',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                border: `1px solid ${config.color}30`,
+                marginTop: '8px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              }}>
+                <span>{config.label}</span>
+              </div>
             </div>
 
-            {/* Player Status Badge / Label */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              backgroundColor: config.bg,
-              color: config.color,
-              fontSize: '11px',
-              fontWeight: '800',
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase',
-              border: `1px solid ${config.color}30`,
-              marginTop: '10px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-            }}>
-              <span style={{ fontSize: '12px' }}>{config.icon}</span>
-              <span>{config.label}</span>
-            </div>
+            {/* Right Arrow Button */}
+            <button
+              type="button"
+              disabled={currentPlayerIndex === jugadores.length - 1}
+              onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                border: '1px solid #cbd5e1',
+                backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
+                color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
+                cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
+                opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
+                transition: 'all 0.2s',
+                boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (currentPlayerIndex !== jugadores.length - 1) {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPlayerIndex !== jugadores.length - 1) {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }
+              }}
+            >
+              <FaChevronRight style={{ fontSize: '14px' }} />
+            </button>
           </div>
         );
       })()}
@@ -1946,7 +1942,8 @@ export default function RegistroJugadores() {
           )}
         </div>
       ) : (
-        <div className="premium-card fade-in main-card-responsive" style={{
+        <>
+          <div className="premium-card fade-in main-card-responsive" style={{
           maxWidth: '1000px',
           margin: '0 auto',
           background: 'white',
@@ -3091,9 +3088,142 @@ export default function RegistroJugadores() {
                   </button>
                 )}
               </div>
-            </>
+
+          </>
           )}
         </div>
+
+        {/* DUP SLOT NAVIGATION CONTROL AT BOTTOM */}
+        {jugadores.length > 0 && (() => {
+          const activePlayer = jugadores[currentPlayerIndex];
+          const status = activePlayer ? getPlayerStatus(activePlayer) : 'VACIO';
+          const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
+          return (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              margin: '25px auto 0 auto',
+              maxWidth: '1000px',
+              width: '100%',
+              padding: '16px 35px',
+              background: 'white',
+              borderRadius: '24px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              transition: 'all 0.3s ease'
+            }}>
+              {/* Left Arrow Button */}
+              <button
+                type="button"
+                disabled={currentPlayerIndex === 0}
+                onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
+                  color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
+                  cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
+                  opacity: currentPlayerIndex === 0 ? 0.4 : 1,
+                  transition: 'all 0.2s',
+                  boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPlayerIndex !== 0) {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPlayerIndex !== 0) {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }
+                }}
+              >
+                <FaChevronLeft style={{ fontSize: '14px' }} />
+              </button>
+
+              {/* Center Area: Number & Status */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <span style={{
+                  fontSize: '28px',
+                  fontWeight: '900',
+                  color: '#1e293b',
+                  userSelect: 'none',
+                  lineHeight: '1.2'
+                }}>
+                  {currentPlayerIndex + 1}
+                </span>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  backgroundColor: config.bg,
+                  color: config.color,
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase',
+                  border: `1px solid ${config.color}30`,
+                  marginTop: '8px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                }}>
+                  <span>{config.label}</span>
+                </div>
+              </div>
+
+              {/* Right Arrow Button */}
+              <button
+                type="button"
+                disabled={currentPlayerIndex === jugadores.length - 1}
+                onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
+                  color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
+                  cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
+                  transition: 'all 0.2s',
+                  boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPlayerIndex !== jugadores.length - 1) {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPlayerIndex !== jugadores.length - 1) {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }
+                }}
+              >
+                <FaChevronRight style={{ fontSize: '14px' }} />
+              </button>
+            </div>
+          );
+        })()}
+      </>
       )}
 
       {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
