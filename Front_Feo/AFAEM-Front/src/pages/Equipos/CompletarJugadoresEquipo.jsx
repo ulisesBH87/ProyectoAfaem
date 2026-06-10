@@ -175,6 +175,9 @@ export default function CompletarJugadoresEquipo() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  
+  const [ordenAmpliacion, setOrdenAmpliacion] = useState(null);
+  const [cargandoOrdenAmpliacion, setCargandoOrdenAmpliacion] = useState(false);
 
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!selectedSeguroId;
@@ -207,6 +210,19 @@ export default function CompletarJugadoresEquipo() {
         // Preseleccionar primer seguro disponible si existe
         if (slotsResponse?.seguros_disponibles?.length > 0) {
           setSelectedSeguroId(String(slotsResponse.seguros_disponibles[0].SeguroId));
+        }
+        
+        // 4. Si no hay slots, verificamos si existe orden de ampliación
+        if (slotsResponse?.slots_disponibles === 0 || slotsResponse?.hay_slots === false) {
+          setCargandoOrdenAmpliacion(true);
+          try {
+            const ampliacionData = await adminService.checkOrdenAmpliacionAdmin(equipoId);
+            setOrdenAmpliacion(ampliacionData);
+          } catch (error) {
+            console.error("Error al cargar orden de ampliación:", error);
+          } finally {
+            setCargandoOrdenAmpliacion(false);
+          }
         }
 
       } catch (error) {
@@ -740,6 +756,45 @@ export default function CompletarJugadoresEquipo() {
     }
   };
 
+  // MANEJO DE APROBACIÓN DE AMPLIACIÓN POR EL ADMIN
+  const handleAprobarOrdenAmpliacion = async (ordenId, label) => {
+    const result = await Swal.fire({
+      title: `¿${label}?`,
+      text: `Estás a punto de aprobar la orden de pago #${ordenId}. Se generarán y habilitarán los espacios contratados en el equipo.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Sí, aprobar`,
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: 'var(--secondary)',
+      cancelButtonColor: 'var(--text-muted)'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+      Swal.fire({
+        title: 'Aprobando ampliación...',
+        text: 'Generando slots...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+      await adminService.updateEstatusPago(ordenId, 3);
+      
+      Swal.fire({
+        title: '¡Ampliación aprobada!',
+        text: `Los espacios han sido habilitados correctamente.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      
+      // Recargamos la vista para que tome los nuevos slots
+      window.location.reload();
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo aprobar la orden de ampliación.', 'error');
+    }
+  };
+
   // Documentos requeridos para renderizar dinámicamente
   const documentCards = [
     { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' },
@@ -851,15 +906,94 @@ export default function CompletarJugadoresEquipo() {
           boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
           border: '1px solid #fee2e2'
         }}>
-          <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin espacios disponibles</h2>
-          <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
-            Este equipo ya ha completado todos los espacios contratados por el presidente. Da clic en el botón para agregar más jugadores.
-          </p>
-          <BotonSecundario
-            etiqueta="Volver al Directorio de Equipos"
-            alHacerClick={() => navigate('/admin/equipos')}
-          />
+          {cargandoOrdenAmpliacion ? (
+            <div style={{ padding: '40px' }}>
+              <Loader text="Verificando si existen ampliaciones solicitadas por el presidente..." />
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin espacios disponibles</h2>
+              
+              {!ordenAmpliacion?.tiene_orden ? (
+                // CASO 1: No existe ninguna orden de ampliación
+                <>
+                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                    El presidente aún no ha solicitado espacios adicionales para este equipo.
+                  </p>
+                  <BotonSecundario
+                    etiqueta="Volver al Directorio de Equipos"
+                    alHacerClick={() => navigate('/admin/equipos')}
+                  />
+                </>
+              ) : ordenAmpliacion.accion === 'SUBIR_COMPROBANTE' ? (
+                // CASO 2: Existe orden con estatus NO_ENVIADA
+                <>
+                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                    El presidente generó una orden de ampliación (Orden #{ordenAmpliacion.orden_id}) pero aún no ha subido comprobante de pago.
+                  </p>
+                  <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                    <BotonSecundario
+                      etiqueta="Volver al Directorio"
+                      alHacerClick={() => navigate('/admin/equipos')}
+                    />
+                    <button 
+                      className="btn-premium"
+                      onClick={() => handleAprobarOrdenAmpliacion(ordenAmpliacion.orden_id, 'Autorizar pago sin comprobante')}
+                      style={{ padding: '12px 24px', borderRadius: '12px', fontSize: '15px' }}
+                    >
+                      Autorizar pago sin comprobante
+                    </button>
+                  </div>
+                </>
+              ) : ordenAmpliacion.accion === 'EN_REVISION' ? (
+                // CASO 3: Existe orden con estatus ESPERA
+                <>
+                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                    El presidente ya subió el comprobante de pago de la Orden #{ordenAmpliacion.orden_id}. ¿Deseas aprobar la ampliación?
+                  </p>
+                  <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                    <BotonSecundario
+                      etiqueta="Volver al Directorio"
+                      alHacerClick={() => navigate('/admin/equipos')}
+                    />
+                    <button 
+                      onClick={() => window.open(`/${ordenAmpliacion.ruta_voucher}`, '_blank')}
+                      style={{
+                        padding: '12px 24px',
+                        background: 'white',
+                        border: '2px solid var(--primary)',
+                        color: 'var(--primary)',
+                        borderRadius: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Ver comprobante
+                    </button>
+                    <button 
+                      className="btn-premium"
+                      onClick={() => handleAprobarOrdenAmpliacion(ordenAmpliacion.orden_id, 'Aprobar pago')}
+                      style={{ padding: '12px 24px', borderRadius: '12px', fontSize: '15px' }}
+                    >
+                      Aprobar pago
+                    </button>
+                  </div>
+                </>
+              ) : ordenAmpliacion.accion === 'REENVIAR_COMPROBANTE' ? (
+                // CASO 4: Existe orden con estatus RECHAZADA
+                <>
+                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                    La orden de ampliación fue rechazada. Se requiere un nuevo comprobante del presidente.
+                  </p>
+                  <BotonSecundario
+                    etiqueta="Volver al Directorio de Equipos"
+                    alHacerClick={() => navigate('/admin/equipos')}
+                  />
+                </>
+              ) : null}
+            </>
+          )}
         </div>
       ) : (
         <div className="premium-card fade-in" style={{

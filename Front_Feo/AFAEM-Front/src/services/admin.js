@@ -392,6 +392,11 @@ export const obtenerBorradorPresidente = async (borradorId) => {
   return response.data;
 };
 
+export const checkOrdenAmpliacionAdmin = async (equipoId) => {
+  const response = await api.get(`/ordenes-pago/admin/equipo/${equipoId}/orden-ampliacion`);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -421,5 +426,6 @@ export default {
   regenerarInvitacion,
   guardarBorradorPresidente,
   obtenerBorradorPresidente,
-  getCatalogosRegistro
+  getCatalogosRegistro,
+  checkOrdenAmpliacionAdmin
 };

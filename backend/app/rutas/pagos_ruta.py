@@ -28,6 +28,13 @@ def hay_orden_pago(tipo_solicitud: int, equipo_id: int | None = None, service: P
 
     return orden_pago
 
+@router.get("/admin/equipo/{equipo_id}/orden-ampliacion")
+def admin_hay_orden_ampliacion(equipo_id: int, service: PagosServicio = Depends(get_pagos_servicio), db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    # Solo permite verificar ordenes de ampliación (JUGADOR) para el admin
+    orden_pago = service.buscar_orden_ampliacion_admin(equipo_id)
+    return orden_pago
+
+
 # NUEVO. Requiere el tipo de Solicitud (presidente/equipo/jugador)
 @router.post("/")
 def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get_pagos_servicio), db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
