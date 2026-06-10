@@ -85,7 +85,7 @@ export default function AdminPresidentes() {
   const [cargando, setCargando] = useState(true);
 
   // Estados para filtros, búsqueda y paginación
-  const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [filtroEstatus, setFiltroEstatus] = useState('pendientes');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -242,7 +242,9 @@ export default function AdminPresidentes() {
       if (filtroEstatus === 'activos') {
         result = result.filter(esPresidenteActivo);
       } else if (filtroEstatus === 'inactivos') {
-        result = result.filter(p => !esPresidenteActivo(p));
+        result = result.filter(p => !esPresidenteActivo(p) && p.estatus !== 8 && (p.estatusNombre || '').toUpperCase().trim() !== 'BORRADOR');
+      } else if (filtroEstatus === 'pendientes') {
+        result = result.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR');
       }
     }
 
@@ -286,10 +288,12 @@ export default function AdminPresidentes() {
 
   const stats = useMemo(() => {
     const activosCount = presidentes.filter(esPresidenteActivo).length;
+    const pendientesCount = presidentes.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR').length;
     return {
       total: presidentes.length,
       activos: activosCount,
-      inactivos: presidentes.length - activosCount
+      inactivos: presidentes.length - activosCount - pendientesCount,
+      pendientes: pendientesCount
     };
   }, [presidentes]);
   const cerrarModal = () => { setModalAbierto(false); resetModal(); };
@@ -975,7 +979,26 @@ export default function AdminPresidentes() {
             justify-content: center !important;
           }
           .pres-stats-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+          .pres-stats-grid > div {
+            padding: 12px !important;
+            gap: 10px !important;
+            flex-direction: column !important;
+            text-align: center !important;
+            justify-content: center !important;
+          }
+          .pres-stats-grid > div > div:first-child {
+            width: 48px !important;
+            height: 48px !important;
+            font-size: 20px !important;
+          }
+          .pres-stats-grid > div > div:last-child p {
+            font-size: 11px !important;
+          }
+          .pres-stats-grid > div > div:last-child h3 {
+            font-size: 22px !important;
           }
           .pres-card-table {
             padding: 16px !important;
@@ -1048,6 +1071,7 @@ export default function AdminPresidentes() {
       {/* ─── Stats ─── */}
       <div className="pres-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
+          { icon: <FaFileAlt />, bg: 'rgba(217, 119, 6, 0.1)', color: '#d97706', label: 'PENDIENTES', val: stats.pendientes, key: 'pendientes' },
           { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
           { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
           { icon: <FaTimes />, bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
@@ -1102,7 +1126,7 @@ export default function AdminPresidentes() {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '5px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
-              {['todos', 'activos', 'inactivos'].map((val) => (
+              {['pendientes', 'todos', 'activos', 'inactivos'].map((val) => (
                 <button
                   key={val}
                   onClick={() => setFiltroEstatus(val)}
@@ -1111,7 +1135,7 @@ export default function AdminPresidentes() {
                     borderRadius: '10px',
                     border: 'none',
                     background: filtroEstatus === val ? 'white' : 'transparent',
-                    color: filtroEstatus === val ? '#0b4ea6' : '#64748b',
+                    color: filtroEstatus === val ? (val === 'pendientes' ? '#d97706' : '#0b4ea6') : '#64748b',
                     boxShadow: filtroEstatus === val ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                     fontSize: '11px',
                     fontWeight: '800',
@@ -1119,7 +1143,7 @@ export default function AdminPresidentes() {
                     cursor: 'pointer'
                   }}
                 >
-                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : 'Inactivos')}
+                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : (val === 'inactivos' ? 'Inactivos' : 'Pendientes'))}
                 </button>
               ))}
             </div>
