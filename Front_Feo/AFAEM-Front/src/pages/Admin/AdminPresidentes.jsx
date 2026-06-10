@@ -254,12 +254,12 @@ export default function AdminPresidentes() {
       result = result.filter(p => {
         const emailVal = p.correo || p.Email || '';
         const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
-        
+
         // Si buscan "en espera de registro", que coincidan los correos temporales
         if (query === 'en espera de registro' && esEmailTemporal) {
           return true;
         }
-        
+
         return (
           (p.nombre && p.nombre.toLowerCase().includes(query)) ||
           (p.Nombre && p.Nombre.toLowerCase().includes(query)) ||
@@ -734,7 +734,7 @@ export default function AdminPresidentes() {
 
   const dataTransformada = paginatedPresidentes.map(p => {
     const esBorrador = p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR';
-    
+
     return {
       id: <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
       presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
@@ -766,15 +766,15 @@ export default function AdminPresidentes() {
           <button
             disabled={esBorrador}
             onClick={() => handleCopiarEnlace(p)}
-            style={{ 
-              background: esBorrador ? '#f1f5f9' : '#f0fdf4', 
-              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0', 
-              color: esBorrador ? '#94a3b8' : '#16a34a', 
-              cursor: esBorrador ? 'not-allowed' : 'pointer', 
-              padding: '8px', 
-              borderRadius: 8, 
-              fontSize: 14, 
-              transition: 'all 0.2s' 
+            style={{
+              background: esBorrador ? '#f1f5f9' : '#f0fdf4',
+              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
+              color: esBorrador ? '#94a3b8' : '#16a34a',
+              cursor: esBorrador ? 'not-allowed' : 'pointer',
+              padding: '8px',
+              borderRadius: 8,
+              fontSize: 14,
+              transition: 'all 0.2s'
             }}
             title={esBorrador ? "No disponible para borradores (Incompleto)" : "Copiar Enlace de Invitación"}
           >
@@ -783,15 +783,15 @@ export default function AdminPresidentes() {
           <button
             disabled={esBorrador}
             onClick={() => handleReenviarWhatsApp(p)}
-            style={{ 
-              background: esBorrador ? '#f1f5f9' : '#f0fdf4', 
-              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0', 
-              color: esBorrador ? '#94a3b8' : '#25d366', 
-              cursor: esBorrador ? 'not-allowed' : 'pointer', 
-              padding: '8px', 
-              borderRadius: 8, 
-              fontSize: 14, 
-              transition: 'all 0.2s' 
+            style={{
+              background: esBorrador ? '#f1f5f9' : '#f0fdf4',
+              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
+              color: esBorrador ? '#94a3b8' : '#25d366',
+              cursor: esBorrador ? 'not-allowed' : 'pointer',
+              padding: '8px',
+              borderRadius: 8,
+              fontSize: 14,
+              transition: 'all 0.2s'
             }}
             title={esBorrador ? "No disponible para borradores (Incompleto)" : "Reenviar Invitación por WhatsApp"}
           >
@@ -800,15 +800,15 @@ export default function AdminPresidentes() {
           <button
             disabled={esBorrador}
             onClick={() => handleRegenerarInvitacion(p)}
-            style={{ 
-              background: esBorrador ? '#f1f5f9' : '#fef3c7', 
-              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #fde68a', 
-              color: esBorrador ? '#94a3b8' : '#d97706', 
-              cursor: esBorrador ? 'not-allowed' : 'pointer', 
-              padding: '8px', 
-              borderRadius: 8, 
-              fontSize: 14, 
-              transition: 'all 0.2s' 
+            style={{
+              background: esBorrador ? '#f1f5f9' : '#fef3c7',
+              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #fde68a',
+              color: esBorrador ? '#94a3b8' : '#d97706',
+              cursor: esBorrador ? 'not-allowed' : 'pointer',
+              padding: '8px',
+              borderRadius: 8,
+              fontSize: 14,
+              transition: 'all 0.2s'
             }}
             title={esBorrador ? "No disponible para borradores (Incompleto)" : "Regenerar Invitación"}
           >
@@ -1182,26 +1182,26 @@ export default function AdminPresidentes() {
           </>
         }
       >
-        <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
           {/* FOTO DEL PRESIDENTE Y CABECERA */}
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: 'white', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {presidenteEnEdicion?.RutaFoto ? (
-                <img 
-                  src={presidenteEnEdicion.RutaFoto.startsWith('http') ? presidenteEnEdicion.RutaFoto : `${API_BASE}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/').startsWith('/') ? '' : '/'}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/')}`} 
-                  alt="Foto del presidente" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                  onError={(e) => { 
-                    e.target.style.display = 'none'; 
+                <img
+                  src={presidenteEnEdicion.RutaFoto.startsWith('http') ? presidenteEnEdicion.RutaFoto : `${API_BASE}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/').startsWith('/') ? '' : '/'}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/')}`}
+                  alt="Foto del presidente"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
                     const sib = e.target.parentNode.querySelector('.fallback-icon');
                     if (sib) sib.style.display = 'block';
                   }}
                 />
               ) : null}
-              <FaUser className="fallback-icon" style={{ display: presidenteEnEdicion?.RutaFoto ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }} />
+              <FaUser className="fallback-icon" style={{ display: presidenteEnEdicion?.RutaFoto ? 'none' : 'block', fontSize: '32px', color: '#cbd5e1' }} />
             </div>
             <div>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
                 {datosEditables.primerNombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
               </h3>
               <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
@@ -1212,7 +1212,7 @@ export default function AdminPresidentes() {
                 return (
                   <span style={{
                     display: 'inline-block',
-                    marginTop: '10px',
+                    marginTop: '6px',
                     padding: '4px 10px',
                     background: statusCfg?.bg || '#f1f5f9',
                     color: statusCfg?.color || '#475569',
@@ -1229,9 +1229,9 @@ export default function AdminPresidentes() {
           </div>
 
           {/* SECCIÓN: DATOS DEL PRESIDENTE */}
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <h4 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>Datos del Presidente</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Datos del Presidente</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: '16px', rowGap: '0', alignItems: 'start' }}>
               <EntradaFormulario
                 etiqueta="Nombre(s)"
                 nombre="primerNombre"
