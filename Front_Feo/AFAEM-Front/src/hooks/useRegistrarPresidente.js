@@ -266,30 +266,30 @@ export function useRegistrarPresidente() {
 
   // ── Navegación entre pasos ───────────────────────────────────────────────
   const avanzar = () => {
-    if (paso === 1) {
-      if (!validarPaso1()) {
-        Swal.fire({ title: 'Completa los campos requeridos', icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-    }
-    if (paso === 2) {
-      if (Number(numPersonas) <= 0) {
-        Swal.fire({ title: 'Atención', text: 'Ingresa el número de jugadores.', icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-      if (totalAsignados !== segurosRequeridos) {
-        const msg = totalAsignados > segurosRequeridos
-          ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
-          : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar.`;
-        Swal.fire({ title: 'Atención', text: msg, icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-    }
     setPaso(p => p + 1);
   };
 
   // ── Envío final ──────────────────────────────────────────────────────────
   const procesarRegistro = async () => {
+    if (!validarPaso1()) {
+      Swal.fire('Atención', 'Revisa y completa los campos obligatorios del Paso 1 (Cuenta).', 'warning');
+      setPaso(1);
+      return;
+    }
+    if (Number(numPersonas) <= 0) {
+      Swal.fire('Atención', 'Ingresa el número de jugadores en el Paso 2 (Cuotas).', 'warning');
+      setPaso(2);
+      return;
+    }
+    if (totalAsignados !== segurosRequeridos) {
+      const msg = totalAsignados > segurosRequeridos
+        ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
+        : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar en el Paso 2.`;
+      Swal.fire('Atención', msg, 'warning');
+      setPaso(2);
+      return;
+    }
+
     const correoFinal = correoDoc || cuenta.correo;
     if (!correoFinal) { Swal.fire('Atención', 'El correo es obligatorio.', 'warning'); return; }
     if (!equipo?.trim()) { Swal.fire('Atención', 'El Nombre del Equipo es obligatorio.', 'warning'); return; }
