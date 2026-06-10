@@ -704,20 +704,31 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
 @router.get("/mis-jugadores-reales", response_model=List[MiembroResponse])
 def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
-        # 1. Base query with joins
+        # 1. Subconsulta escalar para obtener la fotografía más reciente del jugador (DocumentoId 4 en el catálogo)
+        from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+        foto_subquery = db.query(DocumentosEntregados.RutaArchivo)\
+            .join(DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId)\
+            .filter(DocumentosEntregados.PersonaId == Personas.PersonaId)\
+            .filter(DocumentoAfiliacion.DocumentoId == 4)\
+            .order_by(DocumentosEntregados.FechaEntrega.desc())\
+            .limit(1)\
+            .scalar_subquery()
+
+        # 2. Base query with joins
         query = db.query(
             MiembrosEquipo.MiembroEquipoId,
             (Personas.Nombre + " " + Personas.PrimerApellido).label("NombreCompleto"),
             RolesDeEquipo.NombreRol.label("Rol"),
             Equipos.NombreEquipo.label("Equipo"),
             MiembrosEquipo.FechaIngreso,
-            MiembrosEquipo.Estatus
+            MiembrosEquipo.Estatus,
+            foto_subquery.label("RutaFoto")
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
          .join(Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId)\
          .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)
 
-        # 2. Add filter if not ADMINISTRADOR (RolId == 1)
+        # 3. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
         
         if rol_id != 1:
@@ -735,7 +746,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "Rol": r.Rol,
                 "Equipo": r.Equipo,
                 "FechaIngreso": r.FechaIngreso,
-                "Estatus": bool(r.Estatus)
+                "Estatus": bool(r.Estatus),
+                "RutaFoto": r.RutaFoto
             } for r in resultados
         ]
     except Exception as e:
@@ -754,6 +766,28 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
     try:
         from app.modelos.usuario_modelo import Usuario
         from app.modelos.catalogo_estatus_presidente import EstatusPresidente
+        from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+
+        foto_subquery = db.query(DocumentosEntregados.RutaArchivo)\
+            .join(DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId)\
+            .filter(DocumentosEntregados.PersonaId == Personas.PersonaId)\
+            .filter(DocumentoAfiliacion.DocumentoId == 4)\
+            .order_by(DocumentosEntregados.FechaEntrega.desc())\
+            .limit(1)\
+            .scalar_subquery()
+
+        # Subconsultas para obtener el equipo del presidente
+        equipo_name_subquery = db.query(Equipos.NombreEquipo)\
+            .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
+            .filter(EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+            .limit(1)\
+            .scalar_subquery()
+
+        equipo_id_subquery = db.query(Equipos.EquipoId)\
+            .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
+            .filter(EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+            .limit(1)\
+            .scalar_subquery()
 
         query = db.query(
             PresidenteEquipo.PresidenteEquipoId,
@@ -761,10 +795,14 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             Personas.PrimerApellido,
             Personas.SegundoApellido,
             Personas.CURP,
+            Personas.NumeroTelefono,
             PresidenteEquipo.EstatusId,
             EstatusPresidente.Nombre.label('EstatusNombre'),
             Usuario.Correo.label('CorreoLogin'),
-            Usuario.UsuarioId.label('UsuarioId')
+            Usuario.UsuarioId.label('UsuarioId'),
+            foto_subquery.label("RutaFoto"),
+            equipo_name_subquery.label("NombreEquipo"),
+            equipo_id_subquery.label("EquipoId")
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
          .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
@@ -779,10 +817,14 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "primerApellido": r.PrimerApellido   or '',
                 "segundoApellido":r.SegundoApellido  or '',
                 "curp":           r.CURP,
+                "telefono":       r.NumeroTelefono   or '',
                 "estatus":        r.EstatusId,
                 "estatusNombre":  r.EstatusNombre    or '',
                 "correo":         r.CorreoLogin      or '',
-                "usuarioId":      r.UsuarioId
+                "usuarioId":      r.UsuarioId,
+                "RutaFoto":       r.RutaFoto,
+                "equipo":         r.NombreEquipo,
+                "equipoId":       r.EquipoId
             } for r in resultados
         ]
     except Exception as e:
