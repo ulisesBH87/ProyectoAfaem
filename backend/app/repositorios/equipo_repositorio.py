@@ -871,6 +871,7 @@ def obtener_directorio_jugadores_repo(db):
             "CURP": persona.CURP or "N/A",
             "Sexo": sexo_nombre or "N/A",
             "EquipoNombre": equipo_nombre,
+            "EquipoId": miembro.EquipoID,
             "Liga": liga,
             "FechaIngreso": miembro.FechaIngreso,
             "Estatus": miembro.Estatus,

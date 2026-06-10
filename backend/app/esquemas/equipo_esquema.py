@@ -115,6 +115,7 @@ class DirectorioJugadorResponse(BaseModel):
     CURP: str
     Sexo: str
     EquipoNombre: str
+    EquipoId: Optional[int] = None
     Liga: str
     FechaIngreso: datetime
     Estatus: bool

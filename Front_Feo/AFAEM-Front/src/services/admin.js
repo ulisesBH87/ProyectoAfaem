@@ -116,8 +116,8 @@ export const getSolicitudDocumentos = async (solicitudId) => {
     const response = await api.get(`/solicitud/${solicitudId}/documentos`);
     return response.data;
   } catch (error) {
-    console.warn(`Backend no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
-    // FALLBACK MOCK (Para que el front siga funcionando mientras el back implementa)
+    console.warn(`Servidor no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
+    // FALLBACK MOCK
     return {
       Equipo: "Galgos de Tijuana (Mock)",
       SolicitudId: solicitudId,
@@ -360,7 +360,6 @@ export const registrarPresidenteAdmin = async (formData) => {
     serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
     return response.data;
   } catch (error) {
-    //console.error('Error registrando presidente (admin):', error);
     throw error;
   }
 };
@@ -381,8 +380,8 @@ export const regenerarInvitacion = async (usuarioId) => {
 };
 
 export const guardarBorradorPresidente = async (datos, borradorId = null) => {
-  const url = borradorId 
-    ? `/equipo-temporal/borrador-presidente?borrador_id=${borradorId}` 
+  const url = borradorId
+    ? `/equipo-temporal/borrador-presidente?borrador_id=${borradorId}`
     : `/equipo-temporal/borrador-presidente`;
   const response = await api.post(url, { datos });
   return response.data;

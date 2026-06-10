@@ -21,6 +21,21 @@ export default function Modal({
   bloquearCierreFondo = false,
   ...accesorios
 }) {
+  React.useEffect(() => {
+    if (!estaAbierto) return;
+
+    const manejarTecla = (e) => {
+      if (e.key === 'Escape') {
+        if (!bloquearCierreFondo && alCerrar) {
+          alCerrar();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', manejarTecla);
+    return () => window.removeEventListener('keydown', manejarTecla);
+  }, [estaAbierto, bloquearCierreFondo, alCerrar]);
+
   if (!estaAbierto) return null;
 
   const content = children || hijos;

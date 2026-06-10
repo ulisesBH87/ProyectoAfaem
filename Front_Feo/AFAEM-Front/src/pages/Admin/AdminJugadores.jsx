@@ -458,6 +458,18 @@ export default function AdminJugadores() {
     loadJugadores();
   }, [navigate]);
 
+  // EFECTO PARA LEER FILTRO DE EQUIPO DESDE NAVEGACIÓN
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const equipoQuery = queryParams.get('equipo');
+    const equipoState = location.state?.filtroEquipo;
+    const equipoFiltro = equipoQuery || equipoState;
+
+    if (equipoFiltro) {
+      setSearchTerm(equipoFiltro);
+    }
+  }, [location]);
+
   // EFECTO PARA ABRIR EDICIÓN AUTOMÁTICA DESDE BÚSQUEDA
   useEffect(() => {
     if (!loading && jugadores.length > 0 && location.state?.editPlayerId) {
@@ -920,7 +932,26 @@ export default function AdminJugadores() {
     Sexo: <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>{j.Sexo || 'N/A'}</span>,
     EquipoLiga: (
       <div style={{ maxWidth: '340px' }}>
-        <div style={{ fontWeight: '700', fontSize: '14px', color: '#0b4ea6' }}>{j.EquipoNombre}</div>
+        {j.EquipoId ? (
+          <div
+            style={{
+              fontWeight: '700',
+              fontSize: '14px',
+              color: '#0b4ea6',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/equipos?abrirDetalle=${j.EquipoId}`);
+            }}
+            title="Ver detalle del equipo"
+          >
+            {j.EquipoNombre}
+          </div>
+        ) : (
+          <div style={{ fontWeight: '700', fontSize: '14px', color: '#64748b' }}>{j.EquipoNombre || 'Sin equipo'}</div>
+        )}
         <div style={{ fontSize: '12px', color: '#64748b' }}>{j.Liga}</div>
       </div>
     ),

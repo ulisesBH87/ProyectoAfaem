@@ -32,7 +32,6 @@ const HeaderSearch = () => {
         setAllTeams(teams || []);
         setAllPlayers(players || []);
       } catch (err) {
-        console.warn("No se pudo cargar el índice de búsqueda completo.");
       }
     };
     fetchData();

@@ -4,7 +4,7 @@ import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
 import { API_BASE } from '../../config/config';
-import { hashPassword } from '../../utils/hash'; 
+import { hashPassword } from '../../utils/hash';
 
 function computePasswordRequirements(pw) {
 	const rules = {
@@ -398,7 +398,6 @@ function Registrarse() {
 				await fetchWithTimeout(`${API_BASE}/docs`, {}, 3000);
 				if (mounted) setApiReachable(true);
 			} catch (err) {
-				console.warn('Backend no alcanzable en API_BASE:', API_BASE, err);
 				if (mounted) setApiReachable(false);
 			}
 		})();
@@ -421,7 +420,7 @@ function Registrarse() {
 
 	// AJUSTAR LOGOS
 	useEffect(() => {
-		return () => {};
+		return () => { };
 	}, []);
 
 	// ACTUALIZAR INDICADOR DE FUERZA CADA VEZ QUE CAMBIE LA CONTRASEÑA
@@ -450,432 +449,432 @@ function Registrarse() {
 					<p className="register-subtitle">Registro de Presidente de Equipo</p>
 				</div>
 
-					<form onSubmit={handleSubmit}>
-						<div className="form-grid">
-							{/* TIPO DE AFILIACIÓN */}
-							<div className="form-field col-span-4">
-								<label className="form-label" htmlFor="tipoSolicitud">
-									Tipo de afiliación <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<select
-									id="tipoSolicitud"
-									name="tipoSolicitud"
-									value={formData.tipoSolicitud || ''}
-									onChange={handleChange}
-									className="form-input"
-									style={{ border: errors.tipoSolicitud ? '2px solid #d32f2f' : undefined }}
-								>
-									<option value="" disabled>Selecciona una opción...</option>
-									<option value="certificacion_entrenador">Certificación de Presidente de Equipo</option>
-									<option value="jugador_adulto">Registro jugador adulto</option>
-									<option value="jugador_menor">Registro jugador menor</option>
-								</select>
-								{errors.tipoSolicitud && <span className="form-error">{errors.tipoSolicitud}</span>}
-							</div>
+				<form onSubmit={handleSubmit}>
+					<div className="form-grid">
+						{/* TIPO DE AFILIACIÓN */}
+						<div className="form-field col-span-4">
+							<label className="form-label" htmlFor="tipoSolicitud">
+								Tipo de afiliación <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<select
+								id="tipoSolicitud"
+								name="tipoSolicitud"
+								value={formData.tipoSolicitud || ''}
+								onChange={handleChange}
+								className="form-input"
+								style={{ border: errors.tipoSolicitud ? '2px solid #d32f2f' : undefined }}
+							>
+								<option value="" disabled>Selecciona una opción...</option>
+								<option value="certificacion_entrenador">Certificación de Presidente de Equipo</option>
+								<option value="jugador_adulto">Registro jugador adulto</option>
+								<option value="jugador_menor">Registro jugador menor</option>
+							</select>
+							{errors.tipoSolicitud && <span className="form-error">{errors.tipoSolicitud}</span>}
+						</div>
 
-							{/* DEPENDENCIA */}
-							<div className="form-field col-span-4">
-								<label className="form-label" htmlFor="dependencia">
-									Dependencia <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<select
-									id="dependencia"
-									name="dependencia"
-									value={formData.dependencia || ''}
-									onChange={handleChange}
-									className="form-input"
-									style={{ border: errors.dependencia ? '2px solid #d32f2f' : undefined }}
-								>
-									<option value="" disabled>Selecciona una opción...</option>
-									<option value="equipo">Equipo</option>
-									<option value="liga">Liga</option>
-									<option value="club">Club</option>
-									<option value="institucion">Institución</option>
-									<option value="otro">Otro</option>
-								</select>
-								{errors.dependencia && <span className="form-error">{errors.dependencia}</span>}
-								{formData.dependencia === 'otro' && (
-									<>
-										<input
-											type="text"
-											name="otraDependencia"
-											value={formData.otraDependencia}
-											onChange={handleChange}
-											className="form-input"
-											placeholder="Especifica la dependencia"
-											style={{ marginTop: 10, border: errors.otraDependencia ? '2px solid #d32f2f' : undefined }}
-										/>
-										{errors.otraDependencia && <span className="form-error">{errors.otraDependencia}</span>}
-									</>
-								)}
-							</div>
-
-							{/* NOMBRE Y APELLIDOS */}
-							<div className="form-field col-span-2">
-								<label className="form-label" htmlFor="Nombre">Nombre <span style={{color:'#d32f2f'}}>*</span></label>
-								<input 
-									id="Nombre"
-									type="text" 
-									name="Nombre" 
-									value={formData.Nombre} 
-									onChange={handleChange} 
-									className="form-input" 
-									style={{ border: errors.Nombre ? '2px solid #d32f2f' : undefined }} 
-										placeholder="Tu nombre"
-								/>
-								{errors.Nombre && <span className="form-error">{errors.Nombre}</span>}
-							</div>
-
-							<div className="form-field col-span-1">
-								<label className="form-label" htmlFor="PrimerApellido">Primer apellido <span style={{color:'#d32f2f'}}>*</span></label>
-								<input 
-									id="PrimerApellido"
-									type="text" 
-									name="PrimerApellido" 
-									value={formData.PrimerApellido} 
-									onChange={handleChange} 
-									className="form-input" 
-									style={{ border: errors.PrimerApellido ? '2px solid #d32f2f' : undefined }}
-									placeholder="Apellido 1"
-								/>
-								{errors.PrimerApellido && <span className="form-error">{errors.PrimerApellido}</span>}
-							</div>
-
-							<div className="form-field col-span-1">
-								<label className="form-label" htmlFor="SegundoApellido">Segundo apellido <span style={{color:'#d32f2f'}}>*</span></label>
-								<input 
-									id="SegundoApellido"
-									type="text" 
-									name="SegundoApellido" 
-									value={formData.SegundoApellido} 
-									onChange={handleChange} 
-									className="form-input" 
-									style={{ border: errors.SegundoApellido ? '2px solid #d32f2f' : undefined }}
-									placeholder="Apellido 2"
-								/>
-								{errors.SegundoApellido && <span className="form-error">{errors.SegundoApellido}</span>}
-							</div>
-
-							{/* DATOS DE CONTACTO */}
-							<div className="form-field col-span-3">
-								<label className="form-label" htmlFor="Correo">Correo electrónico <span style={{color:'#d32f2f'}}>*</span></label>
-								<input 
-									id="Correo"
-									type="email" 
-									name="Correo" 
-									value={formData.Correo} 
-									onChange={handleChange} 
-									onBlur={() => handleBlurUnique('Correo')} 
-									className="form-input" 
-									style={{ border: errors.Correo ? '2px solid #d32f2f' : undefined }}
-									placeholder="ejemplo@correo.com"
-								/>
-								{errors.Correo && <span className="form-error">{errors.Correo}</span>}
-							</div>
-
-							<div className="form-field col-span-1">
-								<label className="form-label" htmlFor="Telefono">Teléfono (10 dígitos) <span style={{color:'#d32f2f'}}>*</span></label>
-								<input 
-									id="Telefono"
-									type="tel" 
-									name="Telefono" 
-									value={formData.Telefono} 
-									onChange={handleChange} 
-									onBlur={() => handleBlurUnique('Telefono')} 
-									className="form-input" 
-									maxLength={10} 
-									placeholder="5512345678"
-									style={{ border: errors.Telefono ? '2px solid #d32f2f' : undefined }} 
-								/>
-								{errors.Telefono && <span className="form-error">{errors.Telefono}</span>}
-							</div>
-
-							{/* CONTRASEÑA */}
-							<div className="form-field col-span-2">
-								<label className="form-label" htmlFor="Contrasena">
-									Contraseña <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-									<input 
-										id="Contrasena"
-										type={showPassword ? "text" : "password"} 
-										name="Contrasena" 
-										value={formData.Contrasena} 
-										onChange={handleChange} 
-										className="form-input" 
-										style={{ 
-											width: '100%', 
-											paddingRight: 40, 
-											border: errors.Contrasena ? '2px solid #d32f2f' : undefined, 
-											boxSizing: 'border-box' 
-										}}
-										placeholder="••••••••"
-									/>
-									<button
-										type="button"
-										onClick={() => setShowPassword(!showPassword)}
-										aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-										style={{
-											position: 'absolute',
-											right: 12,
-											background: 'none',
-											border: 'none',
-											cursor: 'pointer',
-											color: '#718096',
-											fontSize: 18,
-											padding: '8px',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											transition: 'color 0.3s ease'
-										}}
-										onMouseEnter={(e) => e.target.style.color = '#0b4ea6'}
-										onMouseLeave={(e) => e.target.style.color = '#718096'}
-									>
-										{showPassword ? '👁️' : '👁️‍🗨️'}
-									</button>
-								</div>
-								{errors.Contrasena && <span className="form-error">{errors.Contrasena}</span>}
-								
-								<div style={{ marginTop: 12 }}>
-									<div className="pw-bar">
-										<div className="pw-bar-inner" style={{ width: `${(pwInfo.score/5)*100}%` }} />
-									</div>
-									<div className="validation-list">
-										<div className="validation-item">
-											<span>{pwInfo.rules.minLen ? '✅' : '❌'}</span>
-											<span>6+ caracteres</span>
-										</div>
-										<div className="validation-item">
-											<span>{pwInfo.rules.hasLower ? '✅' : '❌'}</span>
-											<span>minúscula</span>
-										</div>
-										<div className="validation-item">
-											<span>{pwInfo.rules.hasUpper ? '✅' : '❌'}</span>
-											<span>mayúscula</span>
-										</div>
-										<div className="validation-item">
-											<span>{pwInfo.rules.hasDigit ? '✅' : '❌'}</span>
-											<span>número</span>
-										</div>
-										<div className="validation-item">
-											<span>{pwInfo.rules.hasSpecial ? '✅' : '❌'}</span>
-											<span>especial</span>
-										</div>
-									</div>
-								</div>
-							</div>
-
-							{/* CONFIRMAR CONTRASEÑA */}
-							<div className="form-field col-span-2">
-								<label className="form-label" htmlFor="ConfirmarContrasena">
-									Confirmar contraseña <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-									<input 
-										id="ConfirmarContrasena"
-										type={showConfirmPassword ? "text" : "password"} 
-										name="ConfirmarContrasena" 
-										value={formData.ConfirmarContrasena} 
-										onChange={handleChange} 
-										className="form-input" 
-										style={{ 
-											width: '100%', 
-											paddingRight: 40, 
-											border: errors.ConfirmarContrasena ? '2px solid #d32f2f' : undefined, 
-											boxSizing: 'border-box' 
-										}}
-										placeholder="••••••••"
-									/>
-									<button
-										type="button"
-										onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-										aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-										style={{
-											position: 'absolute',
-											right: 12,
-											background: 'none',
-											border: 'none',
-											cursor: 'pointer',
-											color: '#718096',
-											fontSize: 18,
-											padding: '8px',
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
-											transition: 'color 0.3s ease'
-										}}
-										onMouseEnter={(e) => e.target.style.color = '#0b4ea6'}
-										onMouseLeave={(e) => e.target.style.color = '#718096'}
-									>
-										{showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-									</button>
-								</div>
-								{errors.ConfirmarContrasena && <span className="form-error">{errors.ConfirmarContrasena}</span>}
-							</div>
-
-							{/* DATOS ADICIONALES: CURP, RFC, SEXO, FECHA DE NACIMIENTO */}
-							<div className="form-field col-span-2">
-								<label className="form-label" htmlFor="CURP">
-									CURP (18 caracteres) <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<input 
-									id="CURP"
-									type="text" 
-									name="CURP" 
-									value={formData.CURP} 
-									onChange={handleChange} 
-									className="form-input" 
-									maxLength={18}
-									placeholder="ABCD123456HDFRTI09"
-									style={{ border: errors.CURP ? '2px solid #d32f2f' : undefined }} 
-								/>
-								{errors.CURP && <span className="form-error">{errors.CURP}</span>}
-							</div>
-
-							<div className="form-field col-span-2">
-								<label className="form-label" htmlFor="RFC">
-									RFC (12-13 caracteres) <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<input 
-									id="RFC"
-									type="text" 
-									name="RFC" 
-									value={formData.RFC} 
-									onChange={handleChange} 
-									className="form-input" 
-									maxLength={13}
-									placeholder="ABCD123456DF9"
-									style={{ border: errors.RFC ? '2px solid #d32f2f' : undefined }} 
-								/>
-								{errors.RFC && <span className="form-error">{errors.RFC}</span>}
-							</div>
-
-							<div className="form-field col-span-2">
-								<label className="form-label" htmlFor="SexoId">
-									Sexo <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<select 
-									id="SexoId"
-									name="SexoId" 
-									value={formData.SexoId} 
-									onChange={handleChange} 
-									className="form-input" 
-									style={{ border: errors.SexoId ? '2px solid #d32f2f' : undefined }}
-								>
-									<option value="">Selecciona tu sexo...</option>
-									<option value="1">Masculino</option>
-									<option value="2">Femenino</option>
-									<option value="3">No binario</option>
-								</select>
-								{errors.SexoId && <span className="form-error">{errors.SexoId}</span>}
-							</div>
-
-							<div className="form-field col-span-2">
-								<label className="form-label" htmlFor="FechaNacimiento">
-									Fecha de nacimiento <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								<input 
-									id="FechaNacimiento"
-									type="date" 
-									name="FechaNacimiento" 
-									value={formData.FechaNacimiento} 
-									onChange={handleChange} 
-									className="form-input" 
-									style={{ border: errors.FechaNacimiento ? '2px solid #d32f2f' : undefined }} 
-								/>
-								{errors.FechaNacimiento && <span className="form-error">{errors.FechaNacimiento}</span>}
-							</div>
-
-							{/* POLÍTICAS Y BOTÓN */}
-							<div className="form-field col-span-4">
-								<label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px' }}>
+						{/* DEPENDENCIA */}
+						<div className="form-field col-span-4">
+							<label className="form-label" htmlFor="dependencia">
+								Dependencia <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<select
+								id="dependencia"
+								name="dependencia"
+								value={formData.dependencia || ''}
+								onChange={handleChange}
+								className="form-input"
+								style={{ border: errors.dependencia ? '2px solid #d32f2f' : undefined }}
+							>
+								<option value="" disabled>Selecciona una opción...</option>
+								<option value="equipo">Equipo</option>
+								<option value="liga">Liga</option>
+								<option value="club">Club</option>
+								<option value="institucion">Institución</option>
+								<option value="otro">Otro</option>
+							</select>
+							{errors.dependencia && <span className="form-error">{errors.dependencia}</span>}
+							{formData.dependencia === 'otro' && (
+								<>
 									<input
-										type="checkbox"
-										name="aceptaPoliticas"
-										checked={formData.aceptaPoliticas}
+										type="text"
+										name="otraDependencia"
+										value={formData.otraDependencia}
 										onChange={handleChange}
-										style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+										className="form-input"
+										placeholder="Especifica la dependencia"
+										style={{ marginTop: 10, border: errors.otraDependencia ? '2px solid #d32f2f' : undefined }}
 									/>
-									Acepto los términos y condiciones <span style={{color:'#d32f2f'}}>*</span>
-								</label>
-								{errors.aceptaPoliticas && <span className="form-error">{errors.aceptaPoliticas}</span>}
-							</div>
-
-							<div className="form-field col-span-4" style={{ marginTop: 8 }}>
-								<button 
-									type="submit" 
-									className="btn-primary" 
-									disabled={sending || Object.values(errors).some(Boolean)}
-								>
-									{sending ? '⏳ Procesando...' : '✨ GENERAR JSON Y ENVIAR'}
-								</button>
-							</div>
-
-							<div className="form-field col-span-4" style={{ textAlign: 'center', marginTop: 8 }}>
-								<p style={{ margin: 0, fontSize: '14px' }}>
-									¿Ya tienes cuenta? <Link to="/ingresar" style={{ color: '#0b4ea6', fontWeight: 700, textDecoration: 'none' }}>Inicia sesión</Link>
-								</p>
-							</div>
-
-							{/* SECCIÓN DE VERIFICACIÓN */}
-							{verificationSent && !verified && (
-								<div className="form-field col-span-4">
-									<div className="verification-section">
-										<h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0b4ea6' }}>
-											Verificación de correo
-										</h3>
-										<label className="form-label" htmlFor="codigoUsuario">
-											Código de verificación
-										</label>
-										<input 
-											id="codigoUsuario"
-											type="text" 
-											value={codigoUsuario} 
-											onChange={(e) => setCodigoUsuario(e.target.value)} 
-											className="form-input" 
-											placeholder="Ingresa el código de 6 dígitos"
-											maxLength={6}
-										/>
-										<div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-											<button 
-												onClick={handleConfirmCode} 
-												className="btn-primary" 
-												type="button" 
-												disabled={sending}
-												style={{ flex: 1 }}
-											>
-												Verificar
-											</button>
-											<button 
-												onClick={handleResend} 
-												className="btn-primary" 
-												type="button" 
-												disabled={sending || resendCooldown > 0}
-												style={{ 
-													flex: 1, 
-													background: resendCooldown > 0 ? '#ccc' : 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)',
-													opacity: resendCooldown > 0 ? 0.65 : 1
-												}}
-											>
-												{resendCooldown > 0 ? `${resendCooldown}s` : `Reenviar (${resendCount}/${MAX_RESEND})`}
-											</button>
-										</div>
-									</div>
-								</div>
+									{errors.otraDependencia && <span className="form-error">{errors.otraDependencia}</span>}
+								</>
 							)}
 						</div>
-					</form>
-					
-					{jsonResult && (
-						<div className="json-result fade-in" style={{ marginTop: '30px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '25px', borderRadius: '12px' }}>
-							<h3 style={{ color: '#10b981', margin: '0 0 10px' }}>✓ ¡Registro Generado!</h3>
-							<p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>Tu solicitud ha sido procesada. Puedes proceder a iniciar sesión.</p>
-							<button className="btn-premium" style={{ marginTop: '15px', background: 'var(--secondary)' }} onClick={() => _navigate('/ingresar')}>Ir al Login</button>
+
+						{/* NOMBRE Y APELLIDOS */}
+						<div className="form-field col-span-2">
+							<label className="form-label" htmlFor="Nombre">Nombre <span style={{ color: '#d32f2f' }}>*</span></label>
+							<input
+								id="Nombre"
+								type="text"
+								name="Nombre"
+								value={formData.Nombre}
+								onChange={handleChange}
+								className="form-input"
+								style={{ border: errors.Nombre ? '2px solid #d32f2f' : undefined }}
+								placeholder="Tu nombre"
+							/>
+							{errors.Nombre && <span className="form-error">{errors.Nombre}</span>}
 						</div>
-					)}
-				</div>
+
+						<div className="form-field col-span-1">
+							<label className="form-label" htmlFor="PrimerApellido">Primer apellido <span style={{ color: '#d32f2f' }}>*</span></label>
+							<input
+								id="PrimerApellido"
+								type="text"
+								name="PrimerApellido"
+								value={formData.PrimerApellido}
+								onChange={handleChange}
+								className="form-input"
+								style={{ border: errors.PrimerApellido ? '2px solid #d32f2f' : undefined }}
+								placeholder="Apellido 1"
+							/>
+							{errors.PrimerApellido && <span className="form-error">{errors.PrimerApellido}</span>}
+						</div>
+
+						<div className="form-field col-span-1">
+							<label className="form-label" htmlFor="SegundoApellido">Segundo apellido <span style={{ color: '#d32f2f' }}>*</span></label>
+							<input
+								id="SegundoApellido"
+								type="text"
+								name="SegundoApellido"
+								value={formData.SegundoApellido}
+								onChange={handleChange}
+								className="form-input"
+								style={{ border: errors.SegundoApellido ? '2px solid #d32f2f' : undefined }}
+								placeholder="Apellido 2"
+							/>
+							{errors.SegundoApellido && <span className="form-error">{errors.SegundoApellido}</span>}
+						</div>
+
+						{/* DATOS DE CONTACTO */}
+						<div className="form-field col-span-3">
+							<label className="form-label" htmlFor="Correo">Correo electrónico <span style={{ color: '#d32f2f' }}>*</span></label>
+							<input
+								id="Correo"
+								type="email"
+								name="Correo"
+								value={formData.Correo}
+								onChange={handleChange}
+								onBlur={() => handleBlurUnique('Correo')}
+								className="form-input"
+								style={{ border: errors.Correo ? '2px solid #d32f2f' : undefined }}
+								placeholder="ejemplo@correo.com"
+							/>
+							{errors.Correo && <span className="form-error">{errors.Correo}</span>}
+						</div>
+
+						<div className="form-field col-span-1">
+							<label className="form-label" htmlFor="Telefono">Teléfono (10 dígitos) <span style={{ color: '#d32f2f' }}>*</span></label>
+							<input
+								id="Telefono"
+								type="tel"
+								name="Telefono"
+								value={formData.Telefono}
+								onChange={handleChange}
+								onBlur={() => handleBlurUnique('Telefono')}
+								className="form-input"
+								maxLength={10}
+								placeholder="5512345678"
+								style={{ border: errors.Telefono ? '2px solid #d32f2f' : undefined }}
+							/>
+							{errors.Telefono && <span className="form-error">{errors.Telefono}</span>}
+						</div>
+
+						{/* CONTRASEÑA */}
+						<div className="form-field col-span-2">
+							<label className="form-label" htmlFor="Contrasena">
+								Contraseña <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+								<input
+									id="Contrasena"
+									type={showPassword ? "text" : "password"}
+									name="Contrasena"
+									value={formData.Contrasena}
+									onChange={handleChange}
+									className="form-input"
+									style={{
+										width: '100%',
+										paddingRight: 40,
+										border: errors.Contrasena ? '2px solid #d32f2f' : undefined,
+										boxSizing: 'border-box'
+									}}
+									placeholder="••••••••"
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword(!showPassword)}
+									aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+									style={{
+										position: 'absolute',
+										right: 12,
+										background: 'none',
+										border: 'none',
+										cursor: 'pointer',
+										color: '#718096',
+										fontSize: 18,
+										padding: '8px',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										transition: 'color 0.3s ease'
+									}}
+									onMouseEnter={(e) => e.target.style.color = '#0b4ea6'}
+									onMouseLeave={(e) => e.target.style.color = '#718096'}
+								>
+									{showPassword ? '👁️' : '👁️‍🗨️'}
+								</button>
+							</div>
+							{errors.Contrasena && <span className="form-error">{errors.Contrasena}</span>}
+
+							<div style={{ marginTop: 12 }}>
+								<div className="pw-bar">
+									<div className="pw-bar-inner" style={{ width: `${(pwInfo.score / 5) * 100}%` }} />
+								</div>
+								<div className="validation-list">
+									<div className="validation-item">
+										<span>{pwInfo.rules.minLen ? '✅' : '❌'}</span>
+										<span>6+ caracteres</span>
+									</div>
+									<div className="validation-item">
+										<span>{pwInfo.rules.hasLower ? '✅' : '❌'}</span>
+										<span>minúscula</span>
+									</div>
+									<div className="validation-item">
+										<span>{pwInfo.rules.hasUpper ? '✅' : '❌'}</span>
+										<span>mayúscula</span>
+									</div>
+									<div className="validation-item">
+										<span>{pwInfo.rules.hasDigit ? '✅' : '❌'}</span>
+										<span>número</span>
+									</div>
+									<div className="validation-item">
+										<span>{pwInfo.rules.hasSpecial ? '✅' : '❌'}</span>
+										<span>especial</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* CONFIRMAR CONTRASEÑA */}
+						<div className="form-field col-span-2">
+							<label className="form-label" htmlFor="ConfirmarContrasena">
+								Confirmar contraseña <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+								<input
+									id="ConfirmarContrasena"
+									type={showConfirmPassword ? "text" : "password"}
+									name="ConfirmarContrasena"
+									value={formData.ConfirmarContrasena}
+									onChange={handleChange}
+									className="form-input"
+									style={{
+										width: '100%',
+										paddingRight: 40,
+										border: errors.ConfirmarContrasena ? '2px solid #d32f2f' : undefined,
+										boxSizing: 'border-box'
+									}}
+									placeholder="••••••••"
+								/>
+								<button
+									type="button"
+									onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+									aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+									style={{
+										position: 'absolute',
+										right: 12,
+										background: 'none',
+										border: 'none',
+										cursor: 'pointer',
+										color: '#718096',
+										fontSize: 18,
+										padding: '8px',
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										transition: 'color 0.3s ease'
+									}}
+									onMouseEnter={(e) => e.target.style.color = '#0b4ea6'}
+									onMouseLeave={(e) => e.target.style.color = '#718096'}
+								>
+									{showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+								</button>
+							</div>
+							{errors.ConfirmarContrasena && <span className="form-error">{errors.ConfirmarContrasena}</span>}
+						</div>
+
+						{/* DATOS ADICIONALES: CURP, RFC, SEXO, FECHA DE NACIMIENTO */}
+						<div className="form-field col-span-2">
+							<label className="form-label" htmlFor="CURP">
+								CURP (18 caracteres) <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<input
+								id="CURP"
+								type="text"
+								name="CURP"
+								value={formData.CURP}
+								onChange={handleChange}
+								className="form-input"
+								maxLength={18}
+								placeholder="ABCD123456HDFRTI09"
+								style={{ border: errors.CURP ? '2px solid #d32f2f' : undefined }}
+							/>
+							{errors.CURP && <span className="form-error">{errors.CURP}</span>}
+						</div>
+
+						<div className="form-field col-span-2">
+							<label className="form-label" htmlFor="RFC">
+								RFC (12-13 caracteres) <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<input
+								id="RFC"
+								type="text"
+								name="RFC"
+								value={formData.RFC}
+								onChange={handleChange}
+								className="form-input"
+								maxLength={13}
+								placeholder="ABCD123456DF9"
+								style={{ border: errors.RFC ? '2px solid #d32f2f' : undefined }}
+							/>
+							{errors.RFC && <span className="form-error">{errors.RFC}</span>}
+						</div>
+
+						<div className="form-field col-span-2">
+							<label className="form-label" htmlFor="SexoId">
+								Sexo <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<select
+								id="SexoId"
+								name="SexoId"
+								value={formData.SexoId}
+								onChange={handleChange}
+								className="form-input"
+								style={{ border: errors.SexoId ? '2px solid #d32f2f' : undefined }}
+							>
+								<option value="">Selecciona tu sexo...</option>
+								<option value="1">Masculino</option>
+								<option value="2">Femenino</option>
+								<option value="3">No binario</option>
+							</select>
+							{errors.SexoId && <span className="form-error">{errors.SexoId}</span>}
+						</div>
+
+						<div className="form-field col-span-2">
+							<label className="form-label" htmlFor="FechaNacimiento">
+								Fecha de nacimiento <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							<input
+								id="FechaNacimiento"
+								type="date"
+								name="FechaNacimiento"
+								value={formData.FechaNacimiento}
+								onChange={handleChange}
+								className="form-input"
+								style={{ border: errors.FechaNacimiento ? '2px solid #d32f2f' : undefined }}
+							/>
+							{errors.FechaNacimiento && <span className="form-error">{errors.FechaNacimiento}</span>}
+						</div>
+
+						{/* POLÍTICAS Y BOTÓN */}
+						<div className="form-field col-span-4">
+							<label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px' }}>
+								<input
+									type="checkbox"
+									name="aceptaPoliticas"
+									checked={formData.aceptaPoliticas}
+									onChange={handleChange}
+									style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+								/>
+								Acepto los términos y condiciones <span style={{ color: '#d32f2f' }}>*</span>
+							</label>
+							{errors.aceptaPoliticas && <span className="form-error">{errors.aceptaPoliticas}</span>}
+						</div>
+
+						<div className="form-field col-span-4" style={{ marginTop: 8 }}>
+							<button
+								type="submit"
+								className="btn-primary"
+								disabled={sending || Object.values(errors).some(Boolean)}
+							>
+								{sending ? '⏳ Procesando...' : '✨ GENERAR JSON Y ENVIAR'}
+							</button>
+						</div>
+
+						<div className="form-field col-span-4" style={{ textAlign: 'center', marginTop: 8 }}>
+							<p style={{ margin: 0, fontSize: '14px' }}>
+								¿Ya tienes cuenta? <Link to="/ingresar" style={{ color: '#0b4ea6', fontWeight: 700, textDecoration: 'none' }}>Inicia sesión</Link>
+							</p>
+						</div>
+
+						{/* SECCIÓN DE VERIFICACIÓN */}
+						{verificationSent && !verified && (
+							<div className="form-field col-span-4">
+								<div className="verification-section">
+									<h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0b4ea6' }}>
+										Verificación de correo
+									</h3>
+									<label className="form-label" htmlFor="codigoUsuario">
+										Código de verificación
+									</label>
+									<input
+										id="codigoUsuario"
+										type="text"
+										value={codigoUsuario}
+										onChange={(e) => setCodigoUsuario(e.target.value)}
+										className="form-input"
+										placeholder="Ingresa el código de 6 dígitos"
+										maxLength={6}
+									/>
+									<div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+										<button
+											onClick={handleConfirmCode}
+											className="btn-primary"
+											type="button"
+											disabled={sending}
+											style={{ flex: 1 }}
+										>
+											Verificar
+										</button>
+										<button
+											onClick={handleResend}
+											className="btn-primary"
+											type="button"
+											disabled={sending || resendCooldown > 0}
+											style={{
+												flex: 1,
+												background: resendCooldown > 0 ? '#ccc' : 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)',
+												opacity: resendCooldown > 0 ? 0.65 : 1
+											}}
+										>
+											{resendCooldown > 0 ? `${resendCooldown}s` : `Reenviar (${resendCount}/${MAX_RESEND})`}
+										</button>
+									</div>
+								</div>
+							</div>
+						)}
+					</div>
+				</form>
+
+				{jsonResult && (
+					<div className="json-result fade-in" style={{ marginTop: '30px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '25px', borderRadius: '12px' }}>
+						<h3 style={{ color: '#10b981', margin: '0 0 10px' }}>✓ ¡Registro Generado!</h3>
+						<p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>Tu solicitud ha sido procesada. Puedes proceder a iniciar sesión.</p>
+						<button className="btn-premium" style={{ marginTop: '15px', background: 'var(--secondary)' }} onClick={() => _navigate('/ingresar')}>Ir al Login</button>
+					</div>
+				)}
 			</div>
+		</div>
 	);
 }
 
