@@ -1661,10 +1661,13 @@ export default function CompletarJugadoresEquipo() {
 
                   <div style={{
                     display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '10px',
                     background: '#f1f5f9',
                     padding: '4px',
                     borderRadius: '12px',
-                    width: 'fit-content'
+                    width: '100%',
+                    boxSizing: 'border-box'
                   }}>
                     <button
                       type="button"
@@ -1712,7 +1715,7 @@ export default function CompletarJugadoresEquipo() {
                 </section>
 
                 {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
+                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
                       <FaGlobeAmericas />
@@ -1721,8 +1724,8 @@ export default function CompletarJugadoresEquipo() {
                   </div>
 
                   {extractedData.esForaneo ? (
-                    <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                    <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                         <EntradaFormulario
                           etiqueta="Nacionalidad del jugador"
                           valor={extractedData.nacionalidadJugador}
@@ -1735,7 +1738,7 @@ export default function CompletarJugadoresEquipo() {
                         />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
                         <EntradaSeleccion
                           etiqueta="¿El jugador ha vivido en el extranjero?"
                           valor={extractedData.haVividoExtranjero ? '1' : '0'}
@@ -1753,7 +1756,7 @@ export default function CompletarJugadoresEquipo() {
                         )}
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                         <EntradaFormulario
                           etiqueta="Nacionalidad del padre"
                           valor={extractedData.nacionalidadPadre}
@@ -1774,7 +1777,7 @@ export default function CompletarJugadoresEquipo() {
                         obligatorio={true}
                       />
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                         <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })} />
                         <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })} />
                         <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })} />
