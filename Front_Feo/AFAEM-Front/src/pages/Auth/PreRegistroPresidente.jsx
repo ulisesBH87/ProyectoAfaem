@@ -2166,7 +2166,7 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${cantAsignada > 0 ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px', padding: '20px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '190px', padding: '20px' }}
                                 >
                                   {cantAsignada > 0 && (
                                     <div style={{
@@ -2195,11 +2195,47 @@ function PreRegistroPresidente() {
                                     <span className="insurance-player-price" style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>${seg.precio} c/u</span>
                                     <p className="insurance-player-description" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', margin: '8px 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{seg.descripcion || 'Ver cobertura y beneficios completos.'}</p>
                                   </div>
+
+                                  {/* Input directo en la tarjeta */}
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '14px 0 10px', gap: '10px', width: '100%' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>Cantidad:</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={asignacionSeguros[seg.id] ?? ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
+                                        setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val }));
+                                      }}
+                                      style={{
+                                        width: '76px',
+                                        height: '34px',
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.15)',
+                                        color: 'white',
+                                        borderRadius: '10px',
+                                        textAlign: 'center',
+                                        fontWeight: '800',
+                                        fontSize: '14px',
+                                        outline: 'none',
+                                        boxSizing: 'border-box',
+                                        transition: 'all 0.2s'
+                                      }}
+                                      onFocus={(e) => {
+                                        e.target.style.borderColor = '#5d87e5';
+                                        e.target.style.backgroundColor = 'rgba(93, 135, 229, 0.1)';
+                                      }}
+                                      onBlur={(e) => {
+                                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                                        e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                                      }}
+                                    />
+                                  </div>
+
                                   <button
                                     type="button"
                                     onClick={() => abrirModalDetalle(seg)}
                                     style={{
-                                      marginTop: '15px',
                                       width: '100%',
                                       padding: '8px 12px',
                                       borderRadius: '10px',
@@ -2239,7 +2275,7 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${checked ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px', padding: '20px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '190px', padding: '20px' }}
                                 >
                                   {checked && (
                                     <div style={{
@@ -2268,11 +2304,32 @@ function PreRegistroPresidente() {
                                     <span className="insurance-player-price" style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>${seg.precio} c/u</span>
                                     <p className="insurance-player-description" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', margin: '8px 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{seg.descripcion || 'Ver cobertura y beneficios completos.'}</p>
                                   </div>
+
+                                  {/* Radio de selección en la tarjeta */}
+                                  <div
+                                    onClick={() => {
+                                      const next = { ...asignacionSeguros };
+                                      segurosPresidente.forEach(item => {
+                                        next[item.id] = item.id === seg.id ? 1 : 0;
+                                      });
+                                      setAsignacionSeguros(next);
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '14px 0 10px', gap: '10px', width: '100%', cursor: 'pointer' }}
+                                  >
+                                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>Seleccionado:</span>
+                                    <input
+                                      type="radio"
+                                      name="seguroPresidenteRadioCard"
+                                      checked={checked}
+                                      onChange={() => {}} // click en fila maneja el cambio
+                                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3d79ff' }}
+                                    />
+                                  </div>
+
                                   <button
                                     type="button"
                                     onClick={() => abrirModalDetalle(seg)}
                                     style={{
-                                      marginTop: '15px',
                                       width: '100%',
                                       padding: '8px 12px',
                                       borderRadius: '10px',
