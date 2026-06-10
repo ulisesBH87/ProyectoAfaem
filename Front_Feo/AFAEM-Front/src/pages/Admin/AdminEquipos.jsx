@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos, getPresidentesDirectorio, getCatalogosRegistro } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
@@ -10,6 +10,8 @@ import Loader from '../../components/Loader';
 
 export default function AdminEquipos() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [esNavegacionCruzada, setEsNavegacionCruzada] = useState(false);
 
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,17 @@ export default function AdminEquipos() {
   useEffect(() => {
     loadEquipos();
   }, [navigate]);
+
+  useEffect(() => {
+    const idParaAbrir = searchParams.get('abrirDetalle');
+    if (idParaAbrir && equipos.length > 0) {
+      const eq = equipos.find(x => String(x.EquipoId) === idParaAbrir);
+      if (eq) {
+        setEsNavegacionCruzada(true);
+        handleEditarEquipo(eq);
+      }
+    }
+  }, [searchParams, equipos]);
 
   const loadEquipos = async (forceRefresh = false) => {
     try {
@@ -181,6 +194,14 @@ export default function AdminEquipos() {
   };
 
   const handleCerrarModal = () => {
+    const limpiarParams = () => {
+      if (esNavegacionCruzada) {
+        setEsNavegacionCruzada(false);
+        searchParams.delete('abrirDetalle');
+        setSearchParams(searchParams, { replace: true });
+      }
+    };
+
     if (haCambiado) {
       Swal.fire({
         title: '¿Estás seguro de salir?',
@@ -195,11 +216,13 @@ export default function AdminEquipos() {
         if (result.isConfirmed) {
           setModalEdicion(false);
           setSearchPresidente('');
+          limpiarParams();
         }
       });
     } else {
       setModalEdicion(false);
       setSearchPresidente('');
+      limpiarParams();
     }
   };
 
@@ -312,7 +335,16 @@ export default function AdminEquipos() {
       const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
       return (
         <div>
-          <div style={{ fontWeight: '600', fontSize: '13px' }}>{eq.PresidenteNombreCompleto}</div>
+          <div
+            style={{ fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/presidentes?abrirDetalle=${eq.PresidenteEquipoId}`);
+            }}
+            title="Ver detalle del presidente"
+          >
+            {eq.PresidenteNombreCompleto}
+          </div>
           {esEmailTemporal ? (
             <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', fontWeight: 600 }}>En espera de registro</div>
           ) : (
@@ -347,14 +379,14 @@ export default function AdminEquipos() {
           style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
           onClick={(e) => { e.stopPropagation(); handleEditarEquipo(eq); }}
         >
-          <FaEdit /> Detalles y gestión
+          <FaEdit />
         </button>
         <button
           className="btn btn-sm btn-primary"
           style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
           onClick={(e) => { e.stopPropagation(); navigate(`/admin/layout-jugadores?equipo=${encodeURIComponent(eq.NombreEquipo)}`); }}
         >
-          <FaTable /> Tabla de Jugadores.
+          <FaTable /> Jugadores
         </button>
         <button
           className="btn btn-sm"
@@ -362,7 +394,7 @@ export default function AdminEquipos() {
           onClick={(e) => { e.stopPropagation(); handleExportarEquipo(eq); }}
           title="Descargar documentos de todos los jugadores del equipo"
         >
-          <FaFileArchive /> Descargar documentos
+          <FaFileArchive /> Descargar docs
         </button>
         <button
           onClick={(e) => {
@@ -535,6 +567,7 @@ export default function AdminEquipos() {
         alCerrar={handleCerrarModal}
         titulo="Detalles y gestión del equipo"
         tamanio="grande"
+        bloquearCierreFondo={esNavegacionCruzada}
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
@@ -576,8 +609,8 @@ export default function AdminEquipos() {
               <FaShieldAlt />
             </div>
             <div>
-              <h4 style={{ margin: 0, fontSize: '15px', color: '#92400e', fontWeight: '800' }}>Edición de Ficha Oficial</h4>
-              <p style={{ margin: 0, fontSize: '13px', color: '#b45309', fontWeight: '500', marginTop: '2px' }}>Cualquier cambio afectará la visibilidad en torneos y cédulas oficiales.</p>
+              <h4 style={{ margin: 0, fontSize: '15px', color: '#92400e', fontWeight: '800' }}>Edición de Ficha de equipo</h4>
+              <p style={{ margin: 0, fontSize: '13px', color: '#b45309', fontWeight: '500', marginTop: '2px' }}>Edita la información oficial del equipo.</p>
             </div>
           </div>
 
@@ -611,9 +644,56 @@ export default function AdminEquipos() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e3a8a' }}>Presidente responsable</div>
                     <div style={{ fontSize: '12px', color: '#3b82f6', marginTop: '1px' }}>
-                      {presidenteSeleccionado
-                        ? (() => { const p = presidentes.find(x => x.id === presidenteSeleccionado); return p ? p.nombre : equipoEdicion.PresidenteNombreCompleto; })()
-                        : equipoEdicion.PresidenteNombreCompleto}
+                      {(() => {
+                        const pid = presidenteSeleccionado || equipoEdicion.PresidenteEquipoId;
+                        const pName = presidenteSeleccionado
+                          ? (() => { const p = presidentes.find(x => x.id === presidenteSeleccionado); return p ? p.nombre : equipoEdicion.PresidenteNombreCompleto; })()
+                          : equipoEdicion.PresidenteNombreCompleto;
+
+                        return pid && pName ? (
+                          <span
+                            style={{ cursor: 'pointer', color: '#1e3a8a', textDecoration: 'underline' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const irAlPresidente = () => {
+                                setModalEdicion(false);
+                                if (esNavegacionCruzada) {
+                                  setEsNavegacionCruzada(false);
+                                  searchParams.delete('abrirDetalle');
+                                  setSearchParams(searchParams, { replace: true });
+                                }
+                                navigate(`/admin/presidentes?abrirDetalle=${pid}`);
+                              };
+
+                              if (haCambiado) {
+                                Swal.fire({
+                                  title: '¿Estás seguro de salir?',
+                                  text: "Tienes cambios sin guardar que se perderán.",
+                                  icon: 'warning',
+                                  showCancelButton: true,
+                                  confirmButtonColor: '#ef4444',
+                                  cancelButtonColor: '#64748b',
+                                  confirmButtonText: 'Sí, salir sin guardar',
+                                  cancelButtonText: 'Cancelar navegación'
+                                }).then((result) => {
+                                  if (result.isConfirmed) {
+                                    setSearchPresidente('');
+                                    irAlPresidente();
+                                  }
+                                });
+                              } else {
+                                setSearchPresidente('');
+                                irAlPresidente();
+                              }
+                            }}
+                            title="Ver detalle del presidente"
+                          >
+                            {pName}
+                          </span>
+                        ) : (
+                          pName || 'Sin Presidente Asignado'
+                        );
+                      })()}
                     </div>
                   </div>
                   {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Sincronizando...</span>}

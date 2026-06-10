@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaPlus, FaCheck, FaTimes, FaUserTie, FaUser, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -80,6 +80,8 @@ const StepCircle = ({ num, label, active, done }) => (
 ══════════════════════════════════════════════════════════════════════ */
 export default function AdminPresidentes() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [esNavegacionCruzada, setEsNavegacionCruzada] = useState(false);
 
   const [presidentes, setPresidentes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -165,6 +167,18 @@ export default function AdminPresidentes() {
     cargarPresidentes();
     cargarSeguros();
   }, []);
+
+  /* ─── Apertura por navegación cruzada ─── */
+  useEffect(() => {
+    const idParaAbrir = searchParams.get('abrirDetalle');
+    if (idParaAbrir && presidentes.length > 0) {
+      const p = presidentes.find(x => String(x.id) === idParaAbrir || String(x.equipoId) === idParaAbrir || String(x.PresidenteEquipoId) === idParaAbrir);
+      if (p) {
+        setEsNavegacionCruzada(true);
+        handleEditarPresidente(p);
+      }
+    }
+  }, [searchParams, presidentes]);
 
   /* ─── Cargar Seguros del Endpoint ─── */
   const cargarSeguros = async () => {
@@ -851,12 +865,21 @@ export default function AdminPresidentes() {
   /* ══════════════════════════════════════════════════════════════
      RENDER
   ══════════════════════════════════════════════════════════════ */
+  const handleCerrarModalEdicion = () => {
+    setModalEdicion(false);
+    if (esNavegacionCruzada) {
+      setEsNavegacionCruzada(false);
+      searchParams.delete('abrirDetalle');
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
+
   if (cargando) {
     return <Loader text="Cargando directorio de presidentes..." />;
   }
 
   return (
-    <div style={{ padding: 30 }}>
+    <div className="dashboard-content" style={{ padding: 30 }}>
       <style>{`
         .insurance-row-admin {
           display: flex;
@@ -1107,7 +1130,6 @@ export default function AdminPresidentes() {
         <div className="pres-table-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
 
           <div className="pres-filters-row" style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
@@ -1125,7 +1147,7 @@ export default function AdminPresidentes() {
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
             </button>
 
-            <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '5px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
               {['pendientes', 'todos', 'activos', 'inactivos'].map((val) => (
                 <button
                   key={val}
@@ -1135,8 +1157,8 @@ export default function AdminPresidentes() {
                     borderRadius: '10px',
                     border: 'none',
                     background: filtroEstatus === val ? 'white' : 'transparent',
-                    color: filtroEstatus === val ? (val === 'pendientes' ? '#d97706' : '#0b4ea6') : '#64748b',
-                    boxShadow: filtroEstatus === val ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)',
+                    boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none',
                     fontSize: '11px',
                     fontWeight: '800',
                     textTransform: 'uppercase',
@@ -1167,12 +1189,13 @@ export default function AdminPresidentes() {
       {/* ══ MODAL DE EDICIÓN ══ */}
       <Modal
         estaAbierto={modalEdicion}
-        alCerrar={() => setModalEdicion(false)}
+        alCerrar={handleCerrarModalEdicion}
         titulo="Detalle del Presidente"
         tamanio="grande"
+        bloquearCierreFondo={true}
         pie={
           <>
-            <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setModalEdicion(false)} />
+            <BotonSecundario etiqueta="Cancelar" alHacerClick={handleCerrarModalEdicion} />
             <BotonPrimario
               etiqueta={loading ? 'Guardando...' : 'Guardar Cambios'}
               alHacerClick={guardarEdicion}
@@ -1205,7 +1228,26 @@ export default function AdminPresidentes() {
                 {datosEditables.primerNombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
               </h3>
               <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                {datosEditables.curp || 'CURP NO REGISTRADA'} • {presidenteEnEdicion?.equipo || 'Sin Equipo'}
+                {datosEditables.curp || 'CURP NO REGISTRADA'} •{' '}
+                {presidenteEnEdicion?.equipoId || presidenteEnEdicion?.EquipoId ? (
+                  <span
+                    style={{ cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
+                    onClick={() => {
+                      setModalEdicion(false);
+                      if (esNavegacionCruzada) {
+                        setEsNavegacionCruzada(false);
+                        searchParams.delete('abrirDetalle');
+                        setSearchParams(searchParams, { replace: true });
+                      }
+                      navigate(`/admin/equipos?abrirDetalle=${presidenteEnEdicion.equipoId || presidenteEnEdicion.EquipoId}`);
+                    }}
+                    title="Ver detalle del equipo"
+                  >
+                    {presidenteEnEdicion.equipo || presidenteEnEdicion.NombreEquipo}
+                  </span>
+                ) : (
+                  presidenteEnEdicion?.equipo || presidenteEnEdicion?.NombreEquipo || 'Sin Equipo'
+                )}
               </p>
               {(() => {
                 const statusCfg = ESTATUS_CATALOGO.find(e => e.id === Number(datosEditables.estatusId));

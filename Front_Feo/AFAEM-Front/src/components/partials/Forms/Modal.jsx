@@ -18,6 +18,7 @@ export default function Modal({
   pie,
   tamanio = 'medio',
   clasesPersonalizadas = '',
+  bloquearCierreFondo = false,
   ...accesorios
 }) {
   if (!estaAbierto) return null;
@@ -35,7 +36,7 @@ export default function Modal({
     <>
       {/* CAPA DE FONDO */}
       <div
-        onClick={alCerrar}
+        onClick={bloquearCierreFondo ? undefined : alCerrar}
         style={{
           position: 'fixed',
           top: 0,

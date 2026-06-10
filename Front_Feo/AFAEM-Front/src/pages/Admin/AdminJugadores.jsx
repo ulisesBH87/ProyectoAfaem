@@ -951,7 +951,7 @@ export default function AdminJugadores() {
           style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
           onClick={() => handleEditarJugador(j)}
         >
-          <FaEdit /> Ver / Editar
+          <FaEdit />
         </button>
       </div>
     )
@@ -1174,7 +1174,6 @@ export default function AdminJugadores() {
         <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de jugadores</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
 
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
@@ -1217,6 +1216,7 @@ export default function AdminJugadores() {
         alCerrar={handleCerrarModal}
         titulo="Detalle y edición del jugador"
         tamanio="grande"
+        bloquearCierreFondo={true}
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
