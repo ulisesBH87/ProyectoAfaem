@@ -364,6 +364,27 @@ export default function AdminEquipos() {
         >
           <FaFileArchive /> Descargar documentos
         </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/admin/equipos/completar-jugadores/${eq.EquipoId}`);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '18px',
+            color: 'var(--primary, #0b4ea6)',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: '8px'
+          }}
+          title="Agregar Jugador"
+        >
+          <FaUserPlus />
+        </button>
       </div>
     )
   }));

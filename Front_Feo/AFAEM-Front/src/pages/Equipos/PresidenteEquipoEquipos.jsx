@@ -296,7 +296,7 @@ export default function PresidenteEquipoEquipos() {
       <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Mis equipos registrados</h1>
-          <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Panel centralizado para la supervisión y gestión administrativa de tus clubes afiliados.</p>
+          <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Gestiona tus equipos registrados en AFAEM</p>
         </div>
       </div>
 
