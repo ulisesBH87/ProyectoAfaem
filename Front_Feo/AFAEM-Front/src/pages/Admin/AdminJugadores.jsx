@@ -1253,7 +1253,7 @@ export default function AdminJugadores() {
               )}
             </div>
           </div>
-          
+
           {/* PRIMERA FILA: AVISO Y OCR */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
             {/* AVISO CAMPOS PROTEGIDOS */}
@@ -1269,7 +1269,7 @@ export default function AdminJugadores() {
 
             {/* CARGA DE DOCUMENTO OFICIAL (OCR) */}
             <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Carga de Documento Oficial (OCR)</h4>
+              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Carga de Documento Oficial</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
                   <span style={{ fontSize: '24px' }}>📋</span>
@@ -1295,14 +1295,14 @@ export default function AdminJugadores() {
           </div>
 
           {/* SEGUNDA FILA: FORMULARIO */}
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <h4 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>Datos del Jugador</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-              <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
-              <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
-              <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
-              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
-              
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Datos del Jugador</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: '16px', rowGap: '0', alignItems: 'start' }}>
+              <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
+              <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
+              <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza con OCR" deshabilitado={true} />
+              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
+
               <EntradaFormulario etiqueta="Fecha de nacimiento" valor={datosEditables.fechaNacimiento} onChange={manejarCambioInput} nombre="fechaNacimiento" tipo="date" />
               <EntradaSeleccion etiqueta="Sexo" valor={datosEditables.sexo} onChange={manejarCambioInput} nombre="sexo" opciones={[{ valor: 'Masculino', etiqueta: 'Masculino' }, { valor: 'Femenino', etiqueta: 'Femenino' }, { valor: 'No Binario', etiqueta: 'No Binario' }]} />
               <EntradaFormulario etiqueta="Correo electrónico" valor={datosEditables.email} onChange={manejarCambioInput} nombre="email" tipo="email" placeholder="correo@ejemplo.com" />

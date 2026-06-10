@@ -49,20 +49,22 @@ export default function EntradaSeleccion({
         required={requerido}
         style={{
           width: '100%',
-          padding: '10px 12px',
-          border: '1px solid #cbd5e1',
-          borderRadius: '6px',
+          padding: '10px 16px',
+          border: deshabilitado ? '1.5px solid #e2e8f0' : '1.5px solid #cbd5e1',
+          borderRadius: '8px',
           fontSize: '14px',
           fontFamily: 'inherit',
-          backgroundColor: deshabilitado ? '#f1f5f9' : 'white',
-          color: valor ? '#1e293b' : '#94a3b8',
+          backgroundColor: deshabilitado ? '#f8fafc' : 'white',
+          color: deshabilitado ? '#64748b' : (valor ? '#1e293b' : '#94a3b8'),
+          fontWeight: deshabilitado ? '600' : '500',
           cursor: deshabilitado ? 'not-allowed' : 'pointer',
           transition: 'all 0.2s ease',
+          opacity: deshabilitado ? 0.9 : 1,
           appearance: 'none',
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230b4ea6' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right 12px center',
-          paddingRight: '36px',
+          backgroundPosition: 'right 16px center',
+          paddingRight: '40px',
           ...estilo
         }}
         onFocus={(e) => {
