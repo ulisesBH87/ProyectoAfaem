@@ -547,7 +547,7 @@ export default function AdminSolicitudes() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         {/* TARJETA PENDIENTES — Primero */}
         <div
           onClick={() => setFiltroEstatus('1')}
@@ -617,42 +617,48 @@ export default function AdminSolicitudes() {
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de solicitudes</h3>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <SearchBar
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar solicitud..."
-              width="280px"
-            />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <SearchBar
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar solicitud..."
+                width="100%"
+              />
+            </div>
 
-            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: '1 1 auto' }}>
+              <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', justifyContent: 'center' }}>
+                {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
+              </button>
 
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
+              <button onClick={() => loadSolicitudes(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px', flex: '1 1 auto', justifyContent: 'center' }}>
+                <FaSyncAlt />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)', flexWrap: 'wrap', flex: '1 1 100%' }}>
               {['todos', '1', '4', '2', '3'].map((val) => (
-                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
+                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700', flex: '1 1 auto' }}>
                   {val === 'todos' ? 'Todas' : (val === '1' ? 'Pendientes' : (val === '4' ? 'Docs' : (val === '2' ? 'Aprobadas' : 'Rechazadas')))}
                 </button>
               ))}
             </div>
-
-            <button onClick={() => loadSolicitudes(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
-              <FaSyncAlt />
-            </button>
           </div>
         </div>
 
-        <DashboardTable
-          columns={columns}
-          data={paginatedSolicitudes}
-          isLoading={loading}
-          totalItems={filteredSolicitudes.length}
-          itemsPerPage={itemsPerPage}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          emptyMessage="No hay solicitudes que coincidan con la búsqueda."
-        />
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <DashboardTable
+            columns={columns}
+            data={paginatedSolicitudes}
+            isLoading={loading}
+            totalItems={filteredSolicitudes.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            emptyMessage="No hay solicitudes que coincidan con la búsqueda."
+          />
+        </div>
       </div>
 
       <DetalleSolicitudModal

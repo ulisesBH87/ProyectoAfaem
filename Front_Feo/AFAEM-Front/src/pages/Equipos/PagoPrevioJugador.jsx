@@ -620,7 +620,7 @@ export default function PagoPrevioJugador() {
   // VISTA: SUBIR COMPROBANTE
   if (accion === 'subir-comprobante') {
     return (
-      <div className="fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div className="fade-in" style={{ maxWidth: '980px', margin: '0 auto' }}>
         <button
           onClick={() => navigate('/presidente-equipo/equipos')}
           style={{
@@ -695,7 +695,7 @@ export default function PagoPrevioJugador() {
   // VISTA: EN REVISIÓN
   if (accion === 'en-revision') {
     return (
-      <div className="fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div className="fade-in" style={{ maxWidth: '980px', margin: '0 auto' }}>
         <button
           onClick={() => navigate('/presidente-equipo/equipos')}
           style={{
@@ -793,7 +793,7 @@ export default function PagoPrevioJugador() {
   // VISTA: REENVIAR COMPROBANTE
   if (accion === 'reenviar-comprobante') {
     return (
-      <div className="fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div className="fade-in" style={{ maxWidth: '980px', margin: '0 auto' }}>
         <button
           onClick={() => navigate('/presidente-equipo/equipos')}
           style={{

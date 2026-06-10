@@ -317,7 +317,7 @@ const AdminPagos = () => {
         <p style={{ color: 'var(--text-muted)', fontWeight: '500', marginTop: '6px' }}>Gestiona y verifica los comprobantes de pago recibidos.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '32px' }}>
         {[
           { label: 'Pendientes', value: pendientes, filter: '2', color: 'var(--warning)', icon: <FaClock /> },
           { label: 'Total Órdenes', value: totalPagos, filter: 'todos', color: 'var(--primary)', icon: <FaWallet /> },
@@ -358,33 +358,39 @@ const AdminPagos = () => {
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Órdenes de pago</h3>
           
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <SearchBar 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar..."
-              width="280px"
-            />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <SearchBar 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar..."
+                width="100%"
+              />
+            </div>
 
-            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: '1 1 auto' }}>
+              <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', justifyContent: 'center' }}>
+                {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
+              </button>
 
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
+              <button onClick={() => fetchPagos(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px', flex: '1 1 auto', justifyContent: 'center' }}>
+                <FaSyncAlt />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)', flexWrap: 'wrap', flex: '1 1 100%' }}>
               {['todos', '2', '3', '4'].map((val) => (
-                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
+                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700', flex: '1 1 auto' }}>
                   {val === 'todos' ? 'Todos' : (val === '2' ? 'Pendientes' : (val === '3' ? 'Aprobados' : 'Rechazados'))}
                 </button>
               ))}
             </div>
-
-            <button onClick={() => fetchPagos(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
-              <FaSyncAlt />
-            </button>
           </div>
         </div>
 
-        <DashboardTable columns={columns} data={paginatedPagos} isLoading={loading} totalItems={filteredPagos.length} itemsPerPage={itemsPerPage} currentPage={currentPage} onPageChange={setCurrentPage} emptyMessage="No hay órdenes de pago registradas." />
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <DashboardTable columns={columns} data={paginatedPagos} isLoading={loading} totalItems={filteredPagos.length} itemsPerPage={itemsPerPage} currentPage={currentPage} onPageChange={setCurrentPage} emptyMessage="No hay órdenes de pago registradas." />
+        </div>
       </div>
     </div>
   );

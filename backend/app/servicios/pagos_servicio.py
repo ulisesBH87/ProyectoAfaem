@@ -60,6 +60,32 @@ class PagosServicio:
             "total": float(orden_pago.TotalPagar)
         }
 
+    def buscar_orden_ampliacion_admin(self, equipo_id: int):
+        orden_pago = pagos_repositorio.buscar_orden_pago_repo(self.db, TiposSolicitudEnum.JUGADOR.value, None, equipo_id)
+        
+        if not orden_pago:
+            return {
+                "tiene_orden": False,
+                "accion": "CREAR_ORDEN"
+            }
+        
+        accion = None
+        if orden_pago.EstatusPagoId == EstatusValidacionPago.NOENVIADO:
+            accion = "SUBIR_COMPROBANTE"
+        elif orden_pago.EstatusPagoId == EstatusValidacionPago.ESPERA:
+            accion = "EN_REVISION"
+        elif orden_pago.EstatusPagoId == EstatusValidacionPago.RECHAZADO:
+            accion = "REENVIAR_COMPROBANTE"
+            
+        return {
+            "tiene_orden": True,
+            "accion": accion,
+            "orden_id": orden_pago.OrdenPagoId,
+            "estatus_pago_id": orden_pago.EstatusPagoId,
+            "total": float(orden_pago.TotalPagar),
+            "ruta_voucher": orden_pago.RutaVoucher
+        }
+
 
 
     def crear_orden_pago(self, usuario_id, orden, solicitud_id):

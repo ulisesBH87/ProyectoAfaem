@@ -2556,7 +2556,7 @@ export default function ConfigurarEquipo() {
                   {/* CAMPOS DEL FORMULARIO */}
                   <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
                         <input type="text" value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -2571,7 +2571,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                         <input type="number" value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -2624,7 +2624,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
                         <input
@@ -2658,7 +2658,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
                         <input type="email" value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -2795,7 +2795,7 @@ export default function ConfigurarEquipo() {
 
                       {extractedData.esForaneo ? (
                         <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del jugador"
                               valor={extractedData.nacionalidadJugador}
@@ -2810,7 +2810,7 @@ export default function ConfigurarEquipo() {
                             />
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', alignItems: 'end' }}>
                             <EntradaSeleccion
                               etiqueta="¿El jugador ha vivido en el extranjero?"
                               valor={extractedData.haVividoExtranjero ? '1' : '0'}
@@ -2833,7 +2833,7 @@ export default function ConfigurarEquipo() {
                             )}
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del padre"
                               valor={extractedData.nacionalidadPadre}

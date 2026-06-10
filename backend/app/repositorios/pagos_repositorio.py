@@ -58,7 +58,6 @@ def buscar_orden_pago_repo(db, tipo_solicitud, usuario_id, equipo_id: Optional[i
     consulta = db.query(OrdenPago)\
         .join(Solicitud)\
         .filter(
-            OrdenPago.UsuarioId == usuario_id,
             Solicitud.TipoSolicitudId == tipo_solicitud,
             OrdenPago.EstatusPagoId.in_([
                 EstatusValidacionPago.NOENVIADO,
@@ -66,17 +65,21 @@ def buscar_orden_pago_repo(db, tipo_solicitud, usuario_id, equipo_id: Optional[i
                 EstatusValidacionPago.RECHAZADO
             ])
         )
+        
+    if usuario_id is not None:
+        consulta = consulta.filter(OrdenPago.UsuarioId == usuario_id)
+        
     #("🎈🎈🎈🎈REPO")
     #print("🎈🎈🎈🎈TIPO DE SOLICITUD: ")
     #print(tipo_solicitud)
     #print("🎈🎈🎈🎈Usuario id")
     #print(usuario_id)
-    if tipo_solicitud == TiposSolicitudEnum.JUGADOR:
+    if tipo_solicitud == TiposSolicitudEnum.JUGADOR or tipo_solicitud == TiposSolicitudEnum.JUGADOR.value:
         consulta = consulta.filter(
             Solicitud.EquipoId == equipo_id
         )
 
-    orden = consulta.first()
+    orden = consulta.order_by(OrdenPago.OrdenPagoId.desc()).first()
     
     return orden
 
