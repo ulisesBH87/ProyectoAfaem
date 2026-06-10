@@ -12,8 +12,9 @@ import {
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable, FaUsers, FaCheckCircle, FaTimesCircle, FaMale, FaFemale, FaIdCard, FaExclamationTriangle, FaUser } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
+import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
 
 /**
@@ -432,6 +433,7 @@ export default function AdminJugadores() {
   // ESTADO PARA EDICIÓN (MODAL PROFESIONAL)
   const [modalEdicion, setModalEdicion] = useState(false);
   const [jugadorEdicion, setJugadorEdicion] = useState(null);
+  const [fotoJugadorEdicion, setFotoJugadorEdicion] = useState(null);
   const [datosEditables, setDatosEditables] = useState({});
   const [haCambiado, setHaCambiado] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -718,6 +720,7 @@ export default function AdminJugadores() {
 
   const handleEditarJugador = (jugador) => {
     setJugadorEdicion(jugador);
+    setFotoJugadorEdicion(null);
     setDatosEditables({
       nombre: jugador.Nombre || '',
       primerApellido: jugador.PrimerApellido || '',
@@ -732,6 +735,19 @@ export default function AdminJugadores() {
     setHaCambiado(false);
     setOcrCargando(false);
     setModalEdicion(true);
+
+    // Obtener documentos del jugador en background para extraer su fotografía si existe
+    getJugadorDocumentos(jugador.MiembroEquipoId)
+      .then((docs) => {
+        const docFoto = obtenerDocumentoMasRecientePorTipo(docs, 25);
+        if (docFoto) {
+          const urlFoto = obtenerUrlDocumento(docFoto);
+          setFotoJugadorEdicion(urlFoto);
+        }
+      })
+      .catch((err) => {
+        console.error("Error cargando foto del jugador:", err);
+      });
   };
 
   // PROCESAR OCR PARA EL MODAL DE EDICIÓN
@@ -993,8 +1009,8 @@ export default function AdminJugadores() {
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores aprobados</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona la matrícula activa de la liga.</p>
+          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores registrados</h2>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona jugadores.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -1037,7 +1053,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaUsers /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL JUGADORES</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
@@ -1057,7 +1073,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES ACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
         </div>
@@ -1077,7 +1093,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🔴</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES INACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
         </div>
@@ -1097,7 +1113,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'hombres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🧑</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#3b82f6' }}><FaMale /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>MASCULINO</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#3b82f6' }}>{stats.hombres}</div>
         </div>
@@ -1117,7 +1133,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'mujeres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>👩</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f43f5e' }}><FaFemale /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>FEMENINO</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
         </div>
@@ -1132,7 +1148,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'conNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🆔</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#8b5cf6' }}><FaIdCard /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>CON NUI</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#8b5cf6' }}>{stats.conNUI}</div>
         </div>
@@ -1148,7 +1164,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'sinNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>⚠️</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f59e0b' }}><FaExclamationTriangle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>SIN NUI</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.sinNUI}</div>
         </div>
@@ -1213,143 +1229,87 @@ export default function AdminJugadores() {
           </>
         }
       >
-        {/* BANNER INFORMATIVO */}
-        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px 20px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-          <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
-          <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', fontWeight: '600' }}>
-            Los campos marcados con <strong>*</strong> (Nombre, Apellidos, CURP) solo se actualizan cargando el Acta de Nacimiento o la INE. El OCR los leerá automáticamente.
-            Los demás campos son editables de forma manual.
-          </p>
-        </div>
-
-        {/* SECCIÓN OCR */}
-        <div style={{ background: '#f8fafc', border: '1.5px dashed #94a3b8', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '22px' }}>📄</span>
+        <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
+          {/* FOTO DEL JUGADOR Y CABECERA */}
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
+                <img src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`} alt="Foto del jugador" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <FaUser style={{ fontSize: '40px', color: '#cbd5e1' }} />
+              )}
+            </div>
             <div>
-              <p style={{ margin: 0, fontWeight: '800', fontSize: '14px', color: '#1e293b' }}>Actualizar datos con documento oficial</p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Sube el Acta de Nacimiento o la INE para rellenar automáticamente los campos protegidos.</p>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
+                {datosEditables.nombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
+              </h3>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                {datosEditables.curp || 'CURP NO REGISTRADA'} • {jugadorEdicion?.EquipoNombre || 'Sin Equipo'}
+              </p>
+              {datosEditables.estatus === '1' ? (
+                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: '1px solid #a7f3d0' }}>ACTIVO</span>
+              ) : (
+                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: '#fef2f2', color: '#dc2626', fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: '1px solid #fecaca' }}>BAJA</span>
+              )}
             </div>
           </div>
-          <div className="aj-ocr-grid">
-            {/* ACTA */}
-            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '20px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: 'white', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
-              <span style={{ fontSize: '28px' }}>📋</span>
-              <span style={{ fontWeight: '700', fontSize: '13px', color: '#475569' }}>Acta de Nacimiento</span>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>PDF o imagen</span>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                style={{ display: 'none' }}
-                disabled={ocrCargando}
-                onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }}
-              />
-            </label>
-            {/* INE */}
-            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '20px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: 'white', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
-              <span style={{ fontSize: '28px' }}>🪪</span>
-              <span style={{ fontWeight: '700', fontSize: '13px', color: '#475569' }}>INE / Identificación</span>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>PDF o imagen</span>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                style={{ display: 'none' }}
-                disabled={ocrCargando}
-                onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }}
-              />
-            </label>
+          
+          {/* PRIMERA FILA: AVISO Y OCR */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            {/* AVISO CAMPOS PROTEGIDOS */}
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '20px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>ℹ️</span>
+                <strong style={{ fontSize: '14px', color: '#1e40af' }}>Campos Protegidos</strong>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: '#1e3a8a', lineHeight: '1.6' }}>
+                El Nombre, Apellidos y CURP están bloqueados. Solo se actualizan automáticamente subiendo el Acta de Nacimiento o la INE para lectura OCR.
+              </p>
+            </div>
+
+            {/* CARGA DE DOCUMENTO OFICIAL (OCR) */}
+            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Carga de Documento Oficial (OCR)</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
+                  <span style={{ fontSize: '24px' }}>📋</span>
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>Acta</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
+                  </div>
+                  <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
+                  <span style={{ fontSize: '24px' }}>🪪</span>
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>INE</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
+                  </div>
+                  <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
+                </label>
+              </div>
+              {ocrCargando && (
+                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento con OCR...</p>
+              )}
+            </div>
           </div>
-          {ocrCargando && (
-            <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600' }}>⏳ Procesando documento con OCR...</p>
-          )}
-        </div>
 
-        {/* CAMPOS DEL FORMULARIO */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-          {/* BLOQUEADOS — se rellenan con OCR */}
-          <EntradaFormulario
-            etiqueta="Nombre(s) *"
-            valor={datosEditables.nombre}
-            onChange={manejarCambioInput}
-            nombre="nombre"
-            obligatorio
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
-          <EntradaFormulario
-            etiqueta="Primer apellido *"
-            valor={datosEditables.primerApellido}
-            onChange={manejarCambioInput}
-            nombre="primerApellido"
-            obligatorio
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
-          <EntradaFormulario
-            etiqueta="Segundo apellido *"
-            valor={datosEditables.segundoApellido}
-            onChange={manejarCambioInput}
-            nombre="segundoApellido"
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
-          <EntradaFormulario
-            etiqueta="CURP *"
-            valor={datosEditables.curp}
-            onChange={manejarCambioInput}
-            nombre="curp"
-            obligatorio
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
-
-          {/* EDITABLES MANUALMENTE */}
-          <EntradaFormulario
-            etiqueta="Correo electrónico"
-            valor={datosEditables.email}
-            onChange={manejarCambioInput}
-            nombre="email"
-            tipo="email"
-            placeholder="correo@ejemplo.com"
-          />
-          <EntradaSeleccion
-            etiqueta="Sexo"
-            valor={datosEditables.sexo}
-            onChange={manejarCambioInput}
-            nombre="sexo"
-            opciones={[
-              { valor: 'Masculino', etiqueta: 'Masculino' },
-              { valor: 'Femenino', etiqueta: 'Femenino' },
-              { valor: 'No Binario', etiqueta: 'No Binario' }
-            ]}
-          />
-          <EntradaFormulario
-            etiqueta="Fecha de nacimiento"
-            valor={datosEditables.fechaNacimiento}
-            onChange={manejarCambioInput}
-            nombre="fechaNacimiento"
-            tipo="date"
-          />
-          <EntradaFormulario
-            etiqueta="NUI"
-            valor={datosEditables.NUI}
-            onChange={manejarCambioInput}
-            nombre="NUI"
-          />
-          <EntradaSeleccion
-            etiqueta="Estatus del jugador"
-            valor={datosEditables.estatus}
-            onChange={manejarCambioInput}
-            nombre="estatus"
-            opciones={[
-              { valor: '1', etiqueta: 'Activo' },
-              { valor: '0', etiqueta: 'Baja' }
-            ]}
-          />
+          {/* SEGUNDA FILA: FORMULARIO */}
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <h4 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>Datos del Jugador</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+              <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
+              <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
+              <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
+              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza con OCR" disabled style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }} />
+              
+              <EntradaFormulario etiqueta="Fecha de nacimiento" valor={datosEditables.fechaNacimiento} onChange={manejarCambioInput} nombre="fechaNacimiento" tipo="date" />
+              <EntradaSeleccion etiqueta="Sexo" valor={datosEditables.sexo} onChange={manejarCambioInput} nombre="sexo" opciones={[{ valor: 'Masculino', etiqueta: 'Masculino' }, { valor: 'Femenino', etiqueta: 'Femenino' }, { valor: 'No Binario', etiqueta: 'No Binario' }]} />
+              <EntradaFormulario etiqueta="Correo electrónico" valor={datosEditables.email} onChange={manejarCambioInput} nombre="email" tipo="email" placeholder="correo@ejemplo.com" />
+              <EntradaFormulario etiqueta="NUI" valor={datosEditables.NUI} onChange={manejarCambioInput} nombre="NUI" />
+              <EntradaSeleccion etiqueta="Estatus del jugador" valor={datosEditables.estatus} onChange={manejarCambioInput} nombre="estatus" opciones={[{ valor: '1', etiqueta: 'Activo' }, { valor: '0', etiqueta: 'Baja' }]} />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

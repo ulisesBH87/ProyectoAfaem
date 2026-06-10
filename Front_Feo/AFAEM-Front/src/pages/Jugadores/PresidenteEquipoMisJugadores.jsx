@@ -16,6 +16,31 @@ import {
   FaUserPlus 
 } from 'react-icons/fa';
 
+// Componente de avatar de jugador para manejar fallback de imagen si falla la carga o no existe
+function PlayerAvatar({ rutaFoto, nombre, fallbackIcon }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (rutaFoto && !hasError) {
+    const cleanPath = rutaFoto.replace(/\\/g, '/');
+    const src = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+    return (
+      <img
+        src={src}
+        alt={nombre}
+        onError={() => setHasError(true)}
+        style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '12px',
+          objectFit: 'cover'
+        }}
+      />
+    );
+  }
+
+  return <>{nombre ? nombre.charAt(0).toUpperCase() : fallbackIcon}</>;
+}
+
 export default function PresidenteEquipoMisJugadores() {
   const navigate = useNavigate();
   
@@ -100,9 +125,10 @@ export default function PresidenteEquipoMisJugadores() {
             width: '40px', height: '40px', borderRadius: '12px', 
             background: 'var(--primary-light)', color: 'var(--primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '15px', fontWeight: '800', border: '1px solid var(--border-light)'
+            fontSize: '15px', fontWeight: '800', border: '1px solid var(--border-light)',
+            overflow: 'hidden'
           }}>
-            {val ? val.charAt(0).toUpperCase() : <FaUser />}
+            <PlayerAvatar rutaFoto={row.RutaFoto} nombre={val} fallbackIcon={<FaUser />} />
           </div>
           <div>
             <div style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '14px' }}>{val}</div>

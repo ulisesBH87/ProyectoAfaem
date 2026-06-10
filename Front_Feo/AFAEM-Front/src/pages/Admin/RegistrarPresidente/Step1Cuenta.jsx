@@ -12,7 +12,6 @@ export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codi
     <div>
       <PasoHeader
         titulo="Datos de la Cuenta"
-        descripcion="El administrador define las credenciales de acceso del nuevo presidente."
       />
 
       {/* Aviso admin */}

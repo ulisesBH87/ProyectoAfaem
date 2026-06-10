@@ -380,6 +380,19 @@ export const regenerarInvitacion = async (usuarioId) => {
   return response.data;
 };
 
+export const guardarBorradorPresidente = async (datos, borradorId = null) => {
+  const url = borradorId 
+    ? `/equipo-temporal/borrador-presidente?borrador_id=${borradorId}` 
+    : `/equipo-temporal/borrador-presidente`;
+  const response = await api.post(url, { datos });
+  return response.data;
+};
+
+export const obtenerBorradorPresidente = async (borradorId) => {
+  const response = await api.get(`/equipo-temporal/borrador-presidente/${borradorId}`);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -407,5 +420,7 @@ export default {
   enviarLinkRegistroPresidenteWhatsApp,
   obtenerLinkInvitacion,
   regenerarInvitacion,
+  guardarBorradorPresidente,
+  obtenerBorradorPresidente,
   getCatalogosRegistro
 };

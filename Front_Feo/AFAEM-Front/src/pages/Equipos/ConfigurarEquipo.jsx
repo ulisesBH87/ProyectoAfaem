@@ -1681,7 +1681,7 @@ export default function ConfigurarEquipo() {
             {(!equipoId || !equipoTemporalId) && isAdmin ? 'Crear Nuevo Equipo' : 'Registrar Jugadores de Equipo'}
           </h2>
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            {(!equipoId || !equipoTemporalId) && isAdmin ? 'Asistente de configuración de equipo para presidente' : 'Registrar jugadores en slots pagados restantes.'}
+            {(!equipoId || !equipoTemporalId) && isAdmin ? 'Asistente de configuración de equipo para presidente' : 'Registrar jugadores en espacios pagados restantes.'}
           </p>
         </div>
       </div>

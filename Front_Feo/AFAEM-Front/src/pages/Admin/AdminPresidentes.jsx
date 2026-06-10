@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink } from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
@@ -85,7 +85,7 @@ export default function AdminPresidentes() {
   const [cargando, setCargando] = useState(true);
 
   // Estados para filtros, búsqueda y paginación
-  const [filtroEstatus, setFiltroEstatus] = useState('todos');
+  const [filtroEstatus, setFiltroEstatus] = useState('pendientes');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -242,21 +242,32 @@ export default function AdminPresidentes() {
       if (filtroEstatus === 'activos') {
         result = result.filter(esPresidenteActivo);
       } else if (filtroEstatus === 'inactivos') {
-        result = result.filter(p => !esPresidenteActivo(p));
+        result = result.filter(p => !esPresidenteActivo(p) && p.estatus !== 8 && (p.estatusNombre || '').toUpperCase().trim() !== 'BORRADOR');
+      } else if (filtroEstatus === 'pendientes') {
+        result = result.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR');
       }
     }
 
     // Búsqueda por término
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(p =>
-        (p.nombre && p.nombre.toLowerCase().includes(query)) ||
-        (p.Nombre && p.Nombre.toLowerCase().includes(query)) ||
-        (p.correo && p.correo.toLowerCase().includes(query)) ||
-        (p.Email && p.Email.toLowerCase().includes(query)) ||
-        (p.curp && p.curp.toLowerCase().includes(query)) ||
-        (p.CURP && p.CURP.toLowerCase().includes(query))
-      );
+      result = result.filter(p => {
+        const emailVal = p.correo || p.Email || '';
+        const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
+        
+        // Si buscan "en espera de registro", que coincidan los correos temporales
+        if (query === 'en espera de registro' && esEmailTemporal) {
+          return true;
+        }
+        
+        return (
+          (p.nombre && p.nombre.toLowerCase().includes(query)) ||
+          (p.Nombre && p.Nombre.toLowerCase().includes(query)) ||
+          (!esEmailTemporal && emailVal.toLowerCase().includes(query)) ||
+          (p.curp && p.curp.toLowerCase().includes(query)) ||
+          (p.CURP && p.CURP.toLowerCase().includes(query))
+        );
+      });
     }
 
     // Ordenamiento
@@ -277,10 +288,12 @@ export default function AdminPresidentes() {
 
   const stats = useMemo(() => {
     const activosCount = presidentes.filter(esPresidenteActivo).length;
+    const pendientesCount = presidentes.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR').length;
     return {
       total: presidentes.length,
       activos: activosCount,
-      inactivos: presidentes.length - activosCount
+      inactivos: presidentes.length - activosCount - pendientesCount,
+      pendientes: pendientesCount
     };
   }, [presidentes]);
   const cerrarModal = () => { setModalAbierto(false); resetModal(); };
@@ -502,15 +515,18 @@ export default function AdminPresidentes() {
     { id: 5, nombre: 'PRE_APROBADO', label: 'Pre-Aprobado', bg: '#d1fae5', color: '#065f46' },
     { id: 6, nombre: 'REGISTRO_PENDIENTE', label: 'Registro Pendiente', bg: '#f1f5f9', color: '#475569' },
     { id: 7, nombre: 'ACTIVO', label: 'Activo', bg: '#dcfce7', color: '#166534' },
+    { id: 8, nombre: 'BORRADOR', label: 'Borrador (Incompleto)', bg: 'rgba(217, 119, 6, 0.1)', color: '#d97706' },
   ];
 
   const handleEditarPresidente = (pres) => {
     setPresidenteEnEdicion(pres);
+    const emailVal = pres.correo || pres.Email || '';
+    const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
     setDatosEditables({
       primerNombre: pres.primerNombre || '',
       primerApellido: pres.primerApellido || '',
       segundoApellido: pres.segundoApellido || '',
-      correo: pres.correo || '',
+      correo: esEmailTemporal ? '' : emailVal,
       telefono: pres.telefono || '',
       curp: pres.curp || '',
       estatusId: pres.estatus || 6,
@@ -716,64 +732,121 @@ export default function AdminPresidentes() {
     { key: 'acciones', label: 'Acciones', style: { textAlign: 'center' } },
   ];
 
-  const dataTransformada = paginatedPresidentes.map(p => ({
-    id: <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
-    presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
-    contacto: <div><div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{p.correo || p.Email || 'Sin correo'}</div><div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div></div>,
-    curp: <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
-    estatus: (() => {
-      const cfg = ESTATUS_CATALOGO.find(e => e.id === p.estatus || e.nombre === p.estatusNombre);
-      const bg = cfg?.bg || '#f1f5f9';
-      const color = cfg?.color || '#475569';
-      const label = cfg?.label || p.estatusNombre || String(p.estatus) || '—';
-      return <span style={{ background: bg, color, padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>{label}</span>;
-    })(),
+  const dataTransformada = paginatedPresidentes.map(p => {
+    const esBorrador = p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR';
+    
+    return {
+      id: <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
+      presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
+      contacto: (() => {
+        const emailVal = p.correo || p.Email || '';
+        const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
+        return (
+          <div>
+            {esEmailTemporal ? (
+              <div style={{ fontSize: 13, color: '#64748b', fontStyle: 'italic', fontWeight: 600 }}>En espera de registro</div>
+            ) : (
+              <div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{emailVal || 'Sin correo'}</div>
+            )}
+            <div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div>
+          </div>
+        );
+      })(),
+      curp: <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
+      estatus: (() => {
+        const cfg = ESTATUS_CATALOGO.find(e => e.id === p.estatus || e.nombre === p.estatusNombre);
+        const bg = cfg?.bg || '#f1f5f9';
+        const color = cfg?.color || '#475569';
+        const label = cfg?.label || p.estatusNombre || String(p.estatus) || '—';
+        return <span style={{ background: bg, color, padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>{label}</span>;
+      })(),
 
-    invitacion: (
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-        <button
-          onClick={() => handleCopiarEnlace(p)}
-          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
-          title="Copiar Enlace de Invitación"
-        >
-          <FaCopy />
-        </button>
-        <button
-          onClick={() => handleReenviarWhatsApp(p)}
-          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#25d366', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
-          title="Reenviar Invitación por WhatsApp"
-        >
-          <FaWhatsapp />
-        </button>
-        <button
-          onClick={() => handleRegenerarInvitacion(p)}
-          style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#d97706', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
-          title="Regenerar Invitación"
-        >
-          <FaLink />
-        </button>
-      </div>
-    ),
+      invitacion: (
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+          <button
+            disabled={esBorrador}
+            onClick={() => handleCopiarEnlace(p)}
+            style={{ 
+              background: esBorrador ? '#f1f5f9' : '#f0fdf4', 
+              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0', 
+              color: esBorrador ? '#94a3b8' : '#16a34a', 
+              cursor: esBorrador ? 'not-allowed' : 'pointer', 
+              padding: '8px', 
+              borderRadius: 8, 
+              fontSize: 14, 
+              transition: 'all 0.2s' 
+            }}
+            title={esBorrador ? "No disponible para borradores (Incompleto)" : "Copiar Enlace de Invitación"}
+          >
+            <FaCopy />
+          </button>
+          <button
+            disabled={esBorrador}
+            onClick={() => handleReenviarWhatsApp(p)}
+            style={{ 
+              background: esBorrador ? '#f1f5f9' : '#f0fdf4', 
+              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0', 
+              color: esBorrador ? '#94a3b8' : '#25d366', 
+              cursor: esBorrador ? 'not-allowed' : 'pointer', 
+              padding: '8px', 
+              borderRadius: 8, 
+              fontSize: 14, 
+              transition: 'all 0.2s' 
+            }}
+            title={esBorrador ? "No disponible para borradores (Incompleto)" : "Reenviar Invitación por WhatsApp"}
+          >
+            <FaWhatsapp />
+          </button>
+          <button
+            disabled={esBorrador}
+            onClick={() => handleRegenerarInvitacion(p)}
+            style={{ 
+              background: esBorrador ? '#f1f5f9' : '#fef3c7', 
+              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #fde68a', 
+              color: esBorrador ? '#94a3b8' : '#d97706', 
+              cursor: esBorrador ? 'not-allowed' : 'pointer', 
+              padding: '8px', 
+              borderRadius: 8, 
+              fontSize: 14, 
+              transition: 'all 0.2s' 
+            }}
+            title={esBorrador ? "No disponible para borradores (Incompleto)" : "Regenerar Invitación"}
+          >
+            <FaLink />
+          </button>
+        </div>
+      ),
 
-    acciones: (
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-        <button
-          onClick={() => handleEditarPresidente(p)}
-          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
-          title="Ver / Editar"
-        >
-          <FaEdit />
-        </button>
-        <button
-          onClick={() => handleEliminar(p)}
-          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
-          title="Eliminar Permanente"
-        >
-          <FaTrash />
-        </button>
-      </div>
-    ),
-  }));
+      acciones: (
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+          {esBorrador ? (
+            <button
+              onClick={() => navigate(`/admin/registrar-presidente?borradorId=${p.id}`)}
+              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+              title="Continuar Registro"
+            >
+              <FaArrowRight />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleEditarPresidente(p)}
+              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+              title="Ver / Editar"
+            >
+              <FaEdit />
+            </button>
+          )}
+          <button
+            onClick={() => handleEliminar(p)}
+            style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+            title="Eliminar Permanente"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      ),
+    };
+  });
 
   /* ══════════════════════════════════════════════════════════════
      RENDER
@@ -906,7 +979,26 @@ export default function AdminPresidentes() {
             justify-content: center !important;
           }
           .pres-stats-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+          .pres-stats-grid > div {
+            padding: 12px !important;
+            gap: 10px !important;
+            flex-direction: column !important;
+            text-align: center !important;
+            justify-content: center !important;
+          }
+          .pres-stats-grid > div > div:first-child {
+            width: 48px !important;
+            height: 48px !important;
+            font-size: 20px !important;
+          }
+          .pres-stats-grid > div > div:last-child p {
+            font-size: 11px !important;
+          }
+          .pres-stats-grid > div > div:last-child h3 {
+            font-size: 22px !important;
           }
           .pres-card-table {
             padding: 16px !important;
@@ -979,6 +1071,7 @@ export default function AdminPresidentes() {
       {/* ─── Stats ─── */}
       <div className="pres-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
+          { icon: <FaFileAlt />, bg: 'rgba(217, 119, 6, 0.1)', color: '#d97706', label: 'PENDIENTES', val: stats.pendientes, key: 'pendientes' },
           { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
           { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
           { icon: <FaTimes />, bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
@@ -1033,7 +1126,7 @@ export default function AdminPresidentes() {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '5px', borderRadius: '14px', border: '1.5px solid #e2e8f0' }}>
-              {['todos', 'activos', 'inactivos'].map((val) => (
+              {['pendientes', 'todos', 'activos', 'inactivos'].map((val) => (
                 <button
                   key={val}
                   onClick={() => setFiltroEstatus(val)}
@@ -1042,7 +1135,7 @@ export default function AdminPresidentes() {
                     borderRadius: '10px',
                     border: 'none',
                     background: filtroEstatus === val ? 'white' : 'transparent',
-                    color: filtroEstatus === val ? '#0b4ea6' : '#64748b',
+                    color: filtroEstatus === val ? (val === 'pendientes' ? '#d97706' : '#0b4ea6') : '#64748b',
                     boxShadow: filtroEstatus === val ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                     fontSize: '11px',
                     fontWeight: '800',
@@ -1050,7 +1143,7 @@ export default function AdminPresidentes() {
                     cursor: 'pointer'
                   }}
                 >
-                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : 'Inactivos')}
+                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : (val === 'inactivos' ? 'Inactivos' : 'Pendientes'))}
                 </button>
               ))}
             </div>
@@ -1121,7 +1214,12 @@ export default function AdminPresidentes() {
               nombre="correo"
               valor={datosEditables.correo}
               onChange={manejarCambioInput}
-              placeholder="ejemplo@correo.com"
+              placeholder={
+                (presidenteEnEdicion && (() => {
+                  const emailVal = presidenteEnEdicion.correo || presidenteEnEdicion.Email || '';
+                  return emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
+                })()) ? "En espera de registro" : "ejemplo@correo.com"
+              }
             />
             <EntradaFormulario
               etiqueta="Teléfono"
@@ -1137,12 +1235,12 @@ export default function AdminPresidentes() {
               onChange={manejarCambioInput}
               placeholder="CURP de 18 caracteres"
             />
-            <EntradaSeleccion
+             <EntradaSeleccion
               etiqueta="Estatus del Presidente"
               nombre="estatusId"
               valor={String(datosEditables.estatusId || '')}
               onChange={manejarCambioInput}
-              opciones={ESTATUS_CATALOGO.map(e => ({ valor: String(e.id), etiqueta: e.label }))}
+              opciones={ESTATUS_CATALOGO.filter(e => e.id !== 8).map(e => ({ valor: String(e.id), etiqueta: e.label }))}
             />
           </div>
         </div>

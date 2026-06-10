@@ -40,6 +40,7 @@ class MiembroResponse(BaseModel):
     Equipo: str
     FechaIngreso: datetime
     Estatus: bool
+    RutaFoto: Optional[str] = None
 
     class Config:
         from_attributes = True
