@@ -135,7 +135,7 @@ const AdminDashboard = () => {
           label="Solicitudes Pendientes"
           val={statsData.solicitudesPendientes}
           ruta="/admin/solicitudes"
-          badge={{ text: '⚡ Revisar', color: 'var(--primary)', bg: 'rgba(37,99,235,0.08)' }}
+          badge={{ text: 'Revisar', color: 'var(--primary)', bg: 'rgba(37,99,235,0.08)' }}
         />
 
         {/* STAT 2: PAGOS PENDIENTES */}
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
           label="Pagos Pendientes"
           val={statsData.pagosPendientes}
           ruta="/admin/pagos"
-          badge={{ text: '⏳ Validar', color: 'var(--warning)', bg: 'rgba(245,158,11,0.08)' }}
+          badge={{ text: 'Validar', color: 'var(--warning)', bg: 'rgba(245,158,11,0.08)' }}
         />
 
         {/* CHART: RECAUDACIÓN (2x2) */}
@@ -156,7 +156,6 @@ const AdminDashboard = () => {
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
             <div>
               <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Ingresos del Mes</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>Desempeño mensual respecto a la meta</p>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '350px' }}>
               {meses.map(m => (
@@ -221,7 +220,6 @@ const AdminDashboard = () => {
           label="Equipos Aprobados"
           val={statsData.equipos}
           ruta="/admin/equipos"
-          badge={{ text: 'ACTIVO', color: 'var(--secondary)', bg: 'rgba(16,185,129,0.08)' }}
         />
 
         {/* STAT 4: JUGADORES ACTIVOS */}

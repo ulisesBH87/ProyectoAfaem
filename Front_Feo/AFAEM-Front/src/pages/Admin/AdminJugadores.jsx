@@ -12,7 +12,7 @@ import {
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable, FaUsers, FaCheckCircle, FaTimesCircle, FaMale, FaFemale, FaIdCard, FaExclamationTriangle } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Loader from '../../components/Loader';
 
@@ -993,8 +993,8 @@ export default function AdminJugadores() {
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores aprobados</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona la matrícula activa de la liga.</p>
+          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores registrados</h2>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona jugadores.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -1037,7 +1037,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaUsers /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL JUGADORES</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
@@ -1057,7 +1057,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES ACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
         </div>
@@ -1077,7 +1077,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🔴</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES INACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
         </div>
@@ -1097,7 +1097,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'hombres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🧑</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#3b82f6' }}><FaMale /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>MASCULINO</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#3b82f6' }}>{stats.hombres}</div>
         </div>
@@ -1117,7 +1117,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'mujeres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>👩</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f43f5e' }}><FaFemale /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>FEMENINO</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
         </div>
@@ -1132,7 +1132,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'conNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🆔</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#8b5cf6' }}><FaIdCard /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>CON NUI</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#8b5cf6' }}>{stats.conNUI}</div>
         </div>
@@ -1148,7 +1148,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'sinNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>⚠️</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f59e0b' }}><FaExclamationTriangle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>SIN NUI</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.sinNUI}</div>
         </div>

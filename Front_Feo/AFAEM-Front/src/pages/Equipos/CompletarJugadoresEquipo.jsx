@@ -799,7 +799,7 @@ export default function CompletarJugadoresEquipo() {
         </button>
         <div>
           <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Completar Jugadores de Equipo</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar jugadores en slots pagados restantes.</p>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar jugadores en espacios pagados restantes.</p>
         </div>
       </div>
 

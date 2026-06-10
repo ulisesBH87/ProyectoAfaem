@@ -4,7 +4,7 @@ import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos, getPresid
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable, FaFileArchive } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable, FaFileArchive, FaCheckCircle, FaTimesCircle, FaClipboardList } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Loader from '../../components/Loader';
 
@@ -338,8 +338,8 @@ export default function AdminEquipos() {
     ),
     NumeroJugadoresRegistrados: <span style={{ fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '4px 10px', borderRadius: '20px' }}>{eq.NumeroJugadoresRegistrados}</span>,
     Estatus: eq.Estatus ?
-      <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>🟢 ACTIVO</span> :
-      <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>🔴 INACTIVO</span>,
+      <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>ACTIVO</span> :
+      <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>INACTIVO</span>,
     Acciones: (
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button
@@ -387,7 +387,7 @@ export default function AdminEquipos() {
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Directorio de equipos</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza los equipos que han completado su registro oficial.</p>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza los equipos registrados.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -423,7 +423,7 @@ export default function AdminEquipos() {
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaClipboardList /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL EQUIPOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
@@ -443,7 +443,7 @@ export default function AdminEquipos() {
             transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>EQUIPOS ACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
         </div>
@@ -463,7 +463,7 @@ export default function AdminEquipos() {
             transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🔴</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>EQUIPOS INACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
         </div>
@@ -471,7 +471,7 @@ export default function AdminEquipos() {
 
       <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
         <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de equipos confirmados</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de equipos</h3>
 
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
             <SearchBar

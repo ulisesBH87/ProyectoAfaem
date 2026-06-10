@@ -8,7 +8,7 @@ import { getSolicitudDetalle, getSolicitudDocumentos, updateSolicitudEstatus } f
 import Swal from 'sweetalert2';
 import DetalleSolicitudModal from '../../components/Admin/DetalleSolicitudModal';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaHourglassHalf, FaClipboardList, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import Loader from '../../components/Loader';
 
 export default function AdminSolicitudes() {
@@ -559,7 +559,7 @@ export default function AdminSolicitudes() {
             transform: filtroEstatus === '1' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>⏳</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f59e0b' }}><FaHourglassHalf /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>PENDIENTES</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
         </div>
@@ -575,7 +575,7 @@ export default function AdminSolicitudes() {
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaClipboardList /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
@@ -591,7 +591,7 @@ export default function AdminSolicitudes() {
             transform: filtroEstatus === '2' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>APROBADAS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.aprobadas}</div>
         </div>
@@ -607,7 +607,7 @@ export default function AdminSolicitudes() {
             transform: filtroEstatus === '3' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>❌</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>RECHAZADAS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.rechazadas}</div>
         </div>
