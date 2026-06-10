@@ -17,7 +17,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
-  
+
   // DEFINICIÓN DE TEMAS (Glassmorphism)
   const isAdmin = hasRole('Admin') || hasRole('Administrador');
 
@@ -104,14 +104,14 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
         {!collapsed && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <h1
-              onClick={handleLogoClick} 
-              style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px', cursor: 'pointer'}}>
+              onClick={handleLogoClick}
+              style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px', cursor: 'pointer' }}>
               AFAEM
             </h1>
             <p
               onClick={handleLogoClick}
               style={{ fontSize: '7.5px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase', cursor: 'pointer' }}>
-              Management System
+              Sistema de gestión
             </p>
           </div>
         )}
@@ -125,14 +125,14 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
             if (item.Ruta && item.Ruta.startsWith('/admin') && !isAdmin) return false;
             // Si es Catálogos o Directorio de Equipos y no es Admin, ocultar
             if ((item.Nombre === 'Catálogos' || item.Nombre === 'Equipos') && !isAdmin) {
-               // A menos que sea un "Ver Mi Equipo" específico para presidentes (otra ruta)
-               if (item.Ruta !== '/presidente-equipo/equipos') return false;
+              // A menos que sea un "Ver Mi Equipo" específico para presidentes (otra ruta)
+              if (item.Ruta !== '/presidente-equipo/equipos') return false;
             }
             // Si es 'Mi Equipo' y es Admin, ocultar (porque pertenece a la vista de presidente)
             if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
             // Ocultar Auditorías temporalmente del sidebar (sin borrar)
             if (item.Nombre === 'Auditorías') return false;
-            
+
             // Ocultar Inicio y Solicitudes para Presidente de Equipo (Solo dejar Equipos y Jugadores) en el nivel superior
             if (!isAdmin && (item.Nombre === 'Inicio' || item.Nombre === 'Solicitudes' || item.Nombre === 'Dashboard' || item.Nombre === 'Reportes')) return false;
 
@@ -140,93 +140,93 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
           })
           .map((item, idx) => {
             const isActive = location.pathname === item.Ruta;
-            
+
             // FILTRAR SUBMENÚS PARA PRESIDENTES
             let filteredSubMenus = item.SubMenus || [];
             if (!isAdmin) {
-              filteredSubMenus = filteredSubMenus.filter(sub => 
+              filteredSubMenus = filteredSubMenus.filter(sub =>
                 !['inicio', 'solicitudes', 'reportes', 'dashboard'].includes(sub.Nombre.toLowerCase())
               );
             }
-            
+
             const hasChildren = filteredSubMenus.length > 0;
 
-          return (
-            <React.Fragment key={idx}>
-              <div
-                onClick={() => item.Ruta && navigate(item.Ruta)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  margin: '6px 0',
-                  borderRadius: '10px',
-                  cursor: item.Ruta ? 'pointer' : 'default',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backgroundColor: isActive ? theme.activeBg : 'transparent',
-                  color: isActive ? theme.activeText : theme.text,
-                  boxShadow: isActive ? (isAdmin ? '0 4px 12px rgba(37, 99, 235, 0.4)' : '0 4px 8px rgba(11, 78, 166, 0.3)') : 'none',
-                  padding: collapsed ? '12px 0' : '8px 12px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = theme.hoverBg;
-                    e.currentTarget.style.color = isAdmin ? '#ffffff' : 'var(--primary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = theme.text;
-                  }
-                }}
-              >
-                <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center'}}>
-                  {getIcon(item.Icono)}
-                </span>
-                {!collapsed && (
-                <span
+            return (
+              <React.Fragment key={idx}>
+                <div
+                  onClick={() => item.Ruta && navigate(item.Ruta)}
                   style={{
-                    marginLeft: '12px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    whiteSpace: 'nowrap',
-                    animation: 'fadeIn 0.2s ease'
+                    display: 'flex',
+                    alignItems: 'center',
+                    margin: '6px 0',
+                    borderRadius: '10px',
+                    cursor: item.Ruta ? 'pointer' : 'default',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backgroundColor: isActive ? theme.activeBg : 'transparent',
+                    color: isActive ? theme.activeText : theme.text,
+                    boxShadow: isActive ? (isAdmin ? '0 4px 12px rgba(37, 99, 235, 0.4)' : '0 4px 8px rgba(11, 78, 166, 0.3)') : 'none',
+                    padding: collapsed ? '12px 0' : '8px 12px',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = theme.hoverBg;
+                      e.currentTarget.style.color = isAdmin ? '#ffffff' : 'var(--primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = theme.text;
+                    }
                   }}
                 >
-                  {item.Nombre}
-                </span>
-              )}
-              </div>
+                  <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center' }}>
+                    {getIcon(item.Icono)}
+                  </span>
+                  {!collapsed && (
+                    <span
+                      style={{
+                        marginLeft: '12px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        animation: 'fadeIn 0.2s ease'
+                      }}
+                    >
+                      {item.Nombre}
+                    </span>
+                  )}
+                </div>
 
-              {/* Submenus if present */}
-              {!collapsed && hasChildren && filteredSubMenus.map((child, cIdx) => {
-                const isChildActive = location.pathname === child.Ruta;
-                return (
-                  <div
-                    key={`${idx}-${cIdx}`}
-                    onClick={() => navigate(child.Ruta)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '6px 12px 6px 44px',
-                      margin: '1px 0',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      backgroundColor: isChildActive ? (isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.08)') : 'transparent',
-                      color: isChildActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.textMuted,
-                      fontSize: '12px',
-                      fontWeight: '500'
-                    }}
-                  >
-                    {child.Nombre}
-                  </div>
-                );
-              })}
-            </React.Fragment>
-          );
-        })}
+                {/* Submenus if present */}
+                {!collapsed && hasChildren && filteredSubMenus.map((child, cIdx) => {
+                  const isChildActive = location.pathname === child.Ruta;
+                  return (
+                    <div
+                      key={`${idx}-${cIdx}`}
+                      onClick={() => navigate(child.Ruta)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '6px 12px 6px 44px',
+                        margin: '1px 0',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        backgroundColor: isChildActive ? (isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.08)') : 'transparent',
+                        color: isChildActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.textMuted,
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      {child.Nombre}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            );
+          })}
       </nav>
 
       {/* FOOTER ACTIONS */}
