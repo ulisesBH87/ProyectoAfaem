@@ -130,35 +130,57 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
 
 def obtener_disponibilidad_equipo(db, equipo_id):
 
-    equipo_temporal = (
+    equipos_temporales = (
         db.query(EquipoTemporal)
         .options(selectinload(EquipoTemporal.EquipoTemporalJugadorRelacion))
         .filter(
             EquipoTemporal.EquipoId == equipo_id,
             EquipoTemporal.Activo == True
         )
-        .first()
+        .order_by(EquipoTemporal.EquipoTemporalId.desc())
+        .all()
     )
 
-    if not equipo_temporal:
+    if not equipos_temporales:
         return None
+        
+    equipo_temporal = None
+    slots_disponibles = 0
+    cantidad_slots = 0
+    ocupados = 0
+    
+    # Buscar el primer equipo temporal que tenga slots disponibles
+    for eq in equipos_temporales:
+        slots = eq.EquipoTemporalJugadorRelacion
+        cant = len(slots)
+        ocup = sum(1 for s in slots if s.Completo)
+        disp = cant - ocup
+        
+        if disp > 0:
+            equipo_temporal = eq
+            slots_disponibles = disp
+            cantidad_slots = cant
+            ocupados = ocup
+            break
+            
+    # Si todos están llenos, retornar el más reciente
+    if not equipo_temporal:
+        equipo_temporal = equipos_temporales[0]
+        slots = equipo_temporal.EquipoTemporalJugadorRelacion
+        cantidad_slots = len(slots)
+        ocupados = sum(1 for s in slots if s.Completo)
+        slots_disponibles = cantidad_slots - ocupados
 
-    #Si hay slots
-    slots = equipo_temporal.EquipoTemporalJugadorRelacion
-
-    # total disponibles
-    disponibles = sum(1 for s in slots if s.Completo == 0)
-
-    # seguros disponibles (solo slots libres)
+    # Seguros disponibles (solo slots libres)
     seguros = {}
-    for s in slots:
-        if s.Completo == 0 and s.SeguroId:
+    for s in equipo_temporal.EquipoTemporalJugadorRelacion:
+        if not s.Completo and s.SeguroId:
             seguros[s.SeguroId] = seguros.get(s.SeguroId, 0) + 1
 
     return {
         "equipo_temporal_activo": True,
         "equipo_temporal_id": equipo_temporal.EquipoTemporalId,
-        "slots_disponibles": disponibles,
+        "slots_disponibles": slots_disponibles,
         "seguros_disponibles": [
             {"SeguroId": k, "Cantidad": v}
             for k, v in seguros.items()

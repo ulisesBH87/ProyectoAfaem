@@ -109,7 +109,7 @@ export default function PagoPrevioJugador() {
     const totalNecesario = Number(numJugadoresAgregar) || 0;
     setAsignacionSegurosAgregar(prev => {
       const nuevaAsignacion = { ...prev };
-      
+
       // Reiniciar todos los seguros
       catalogs.seguros.forEach(s => {
         nuevaAsignacion[String(s.id)] = 0;
@@ -744,12 +744,9 @@ export default function PagoPrevioJugador() {
             padding: '20px',
             marginBottom: '24px'
           }}>
-            <p style={{ color: '#831843', fontWeight: '600', marginBottom: '12px' }}>
-              ⏳ Estado: En Revisión
-            </p>
             <p style={{ color: '#831843', lineHeight: '1.6', marginBottom: 0 }}>
               Tu comprobante de pago fue recibido correctamente y está siendo revisado por el equipo de administración de AFAEM.
-              Este proceso generalmente toma 24-48 horas. Recibirás una notificación cuando sea aprobado.
+              Podrás continuar cuando el pago sea aprobado.
             </p>
           </div>
 
@@ -764,8 +761,7 @@ export default function PagoPrevioJugador() {
             </h3>
             <ol style={{ marginLeft: '20px', color: 'var(--text-muted)', lineHeight: '1.8', marginBottom: 0 }}>
               <li>El equipo administrativo verifica tu comprobante</li>
-              <li>Se confirma que el pago fue recibido correctamente</li>
-              <li>Tu orden de pago se aprueba automáticamente</li>
+              <li>Tu orden de pago se aprueba</li>
               <li>Podrás agregar los nuevos jugadores a tu equipo</li>
             </ol>
           </div>
