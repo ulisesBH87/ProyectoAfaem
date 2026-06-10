@@ -113,14 +113,18 @@ export default function AdminEquipos() {
   }, [equipos]);
 
   const handleVerDetalles = async (equipo) => {
+    const emailVal = equipo.PresidenteEmail || '';
+    const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
+    const displayEmail = esEmailTemporal ? 'En espera de registro' : (emailVal || 'Sin correo');
+
     Swal.fire({
       title: 'Información del Equipo',
       html: `
         <div style="text-align: left;">
           <p><strong>ID:</strong> ${equipo.EquipoId}</p>
           <p><strong>Nombre:</strong> ${equipo.NombreEquipo}</p>
-          <p><strong>Presidente:</strong> ${equipo.PresidenteNombreCompleto}</p>
-          <p><strong>Email:</strong> ${equipo.PresidenteEmail}</p>
+          <p><strong>Presidente:</strong> ${equipo.PresidenteNombreCompleto || 'Sin presidente'}</p>
+          <p><strong>Email:</strong> ${displayEmail}</p>
           <p><strong>Liga:</strong> ${equipo.Liga}</p>
           <p><strong>Categoría:</strong> ${equipo.Categoria} - ${equipo.Rama}</p>
           <p><strong>Jugadores Registrados:</strong> ${equipo.NumeroJugadoresRegistrados}</p>
@@ -303,12 +307,20 @@ export default function AdminEquipos() {
         <div style={{ fontSize: '11px', color: '#64748b' }}>{eq.Categoria} - {eq.Rama}</div>
       </div>
     ),
-    Presidente: eq.PresidenteNombreCompleto ? (
-      <div>
-        <div style={{ fontWeight: '600', fontSize: '13px' }}>{eq.PresidenteNombreCompleto}</div>
-        <div style={{ fontSize: '11px', color: '#64748b' }}>{eq.PresidenteEmail}</div>
-      </div>
-    ) : (
+    Presidente: eq.PresidenteNombreCompleto ? (() => {
+      const emailVal = eq.PresidenteEmail || '';
+      const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
+      return (
+        <div>
+          <div style={{ fontWeight: '600', fontSize: '13px' }}>{eq.PresidenteNombreCompleto}</div>
+          {esEmailTemporal ? (
+            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', fontWeight: 600 }}>En espera de registro</div>
+          ) : (
+            <div style={{ fontSize: '11px', color: '#64748b' }}>{emailVal}</div>
+          )}
+        </div>
+      );
+    })() : (
       <div style={{
         background: '#fee2e2',
         color: '#991b1b',

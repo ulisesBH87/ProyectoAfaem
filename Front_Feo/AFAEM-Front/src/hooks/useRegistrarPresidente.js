@@ -1,7 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { registrarPresidenteAdmin, enviarLinkRegistroPresidenteWhatsApp } from '../services/admin';
+import { 
+  registrarPresidenteAdmin, 
+  enviarLinkRegistroPresidenteWhatsApp, 
+  guardarBorradorPresidente, 
+  obtenerBorradorPresidente 
+} from '../services/admin';
 import { useSeguros } from './useSeguros';
 import { useOCR } from './useOCR';
 import { useFotografia } from './useFotografia';
@@ -22,6 +27,16 @@ const CUENTA_INICIAL = {
  */
 export function useRegistrarPresidente() {
   const navigate = useNavigate();
+
+  // ── Estado del borrador ──────────────────────────────────────────────────
+  const [borradorId, setBorradorId] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('borradorId') || null;
+  });
+  const [toastVisible, setToastVisible] = useState(false);
+  const [cargandoBorrador, setCargandoBorrador] = useState(false);
+  const toastTimeoutRef = useRef(null);
+  const hasLoadedRef = useRef(false);
 
   // ── Estado del wizard ────────────────────────────────────────────────────
   const [paso, setPaso] = useState(1);
@@ -87,6 +102,126 @@ export function useRegistrarPresidente() {
   const { procesarFoto, forzarFoto, fotoError, fotoFallida, fotoArchivo } = fotoHook;
 
   const { descargarFormato } = useGenerarPDF();
+
+  const triggerToast = () => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastVisible(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastVisible(false);
+    }, 2500);
+  };
+
+  // Cargar borrador al montar si borradorId está en la URL
+  useEffect(() => {
+    const fetchBorrador = async () => {
+      if (!borradorId) {
+        hasLoadedRef.current = true;
+        return;
+      }
+      try {
+        setCargandoBorrador(true);
+        const data = await obtenerBorradorPresidente(borradorId);
+        if (data && data.datos) {
+          const d = data.datos;
+          if (d.paso) setPaso(d.paso);
+          if (d.cuenta) setCuenta(prev => ({ ...prev, ...d.cuenta }));
+          if (d.codigoPaisCuenta) setCodigoPaisCuenta(d.codigoPaisCuenta);
+          if (d.numPersonas) setNumPersonas(d.numPersonas);
+          if (d.asignacion) setAsignacion(d.asignacion);
+          if (d.correoDoc) setCorreoDoc(d.correoDoc);
+          if (d.telefonoDoc) setTelefonoDoc(d.telefonoDoc);
+          if (d.codigoPaisDoc) setCodigoPaisDoc(d.codigoPaisDoc);
+          if (d.equipo) setEquipo(d.equipo);
+          if (d.tipoAfiliacion) setTipoAfiliacion(d.tipoAfiliacion);
+          if (d.liga) setLiga(d.liga);
+          if (d.ocrResults) setOcrResults(prev => ({ ...prev, ...d.ocrResults }));
+        }
+      } catch (err) {
+        console.error('Error al cargar borrador:', err);
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudo cargar el borrador de presidente.',
+          icon: 'error',
+          confirmButtonColor: C.amberDark
+        });
+      } finally {
+        setCargandoBorrador(false);
+        // Esperamos un tick antes de activar el autoguardado para evitar sobreescritura
+        setTimeout(() => {
+          hasLoadedRef.current = true;
+        }, 150);
+      }
+    };
+    fetchBorrador();
+  }, [borradorId]);
+
+  // Guardar borrador automáticamente al cambiar los datos (con debounce)
+  useEffect(() => {
+    if (!hasLoadedRef.current || cargandoBorrador) return;
+
+    const tieneDatos = !!(
+      cuenta.nombre?.trim() ||
+      cuenta.primerApellido?.trim() ||
+      cuenta.segundoApellido?.trim() ||
+      cuenta.correo?.trim() ||
+      cuenta.telefono?.trim() ||
+      cuenta.curp?.trim() ||
+      cuenta.contrasena?.trim() ||
+      equipo?.trim() ||
+      numPersonas
+    );
+    if (!tieneDatos) return;
+
+    const delayDebounceFn = setTimeout(() => {
+      const payloadDatos = {
+        paso,
+        cuenta,
+        codigoPaisCuenta,
+        numPersonas,
+        asignacion,
+        correoDoc,
+        telefonoDoc,
+        codigoPaisDoc,
+        equipo,
+        tipoAfiliacion,
+        liga,
+        ocrResults,
+      };
+
+      const save = async () => {
+        try {
+          const resData = await guardarBorradorPresidente(payloadDatos, borradorId);
+          if (resData && resData.presidente_id && !borradorId) {
+            setBorradorId(resData.presidente_id);
+            const newUrl = `${window.location.pathname}?borradorId=${resData.presidente_id}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+          }
+          triggerToast();
+        } catch (err) {
+          console.warn('Error al guardar el borrador del presidente:', err);
+        }
+      };
+
+      save();
+    }, 1000); // 1 segundo de debounce
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [
+    paso, cuenta, codigoPaisCuenta, numPersonas, asignacion,
+    correoDoc, telefonoDoc, codigoPaisDoc, equipo, tipoAfiliacion, liga, ocrResults,
+    borradorId, cargandoBorrador
+  ]);
+
+  // Cleanup del toast al desmontar
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ── Sincronizar tipo de afiliación con seguro de presidente ─────────────
   useEffect(() => {
@@ -190,6 +325,9 @@ export function useRegistrarPresidente() {
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
       fd.append('contrasena', cuenta.contrasena);
       fd.append('numPersonas', String(numPersonas));
+      if (borradorId) {
+        fd.append('borradorId', String(borradorId));
+      }
 
       // Filtrar seguros de presidente (solo se envían los de jugadores)
       const segFiltrados = {};
@@ -254,6 +392,8 @@ export function useRegistrarPresidente() {
   return {
     // Navegación
     paso, setPaso, avanzar, procesarRegistro, loading,
+    // Borrador
+    borradorId, toastVisible, cargandoBorrador,
     // Paso 1
     cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
     // Paso 2

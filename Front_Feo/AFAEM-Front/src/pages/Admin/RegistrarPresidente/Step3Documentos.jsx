@@ -55,9 +55,9 @@ export default function Step3Documentos({
           <div>
             <label style={fieldStyles.label}>Correo <span style={{ color: C.amber }}>*</span></label>
             <input
-              style={{ ...fieldStyles.input, textTransform: 'uppercase' }}
+              style={{ ...fieldStyles.input, textTransform: 'uppercase', cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}
               type="email" value={correoDoc} placeholder="CORREO@EXAMPLE.COM"
-              onChange={e => setCorreoDoc(e.target.value.toUpperCase())}
+              disabled
             />
           </div>
           <div>

@@ -6,6 +6,8 @@ import StepBar from './RegistrarPresidente/StepBar';
 import Step1Cuenta from './RegistrarPresidente/Step1Cuenta';
 import Step2Cuotas from './RegistrarPresidente/Step2Cuotas';
 import Step3Documentos from './RegistrarPresidente/Step3Documentos';
+import { FaCheckCircle } from 'react-icons/fa';
+import Loader from '../../components/Loader';
 
 /**
  * RegistrarPresidente
@@ -18,6 +20,8 @@ export default function RegistrarPresidente() {
   const {
     // Wizard
     paso, setPaso, avanzar, procesarRegistro, loading,
+    // Borrador
+    toastVisible, cargandoBorrador,
     // Paso 1
     cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
     // Paso 2
@@ -38,6 +42,10 @@ export default function RegistrarPresidente() {
     // Handlers
     handleFileUpload, handleDescargarFormato,
   } = useRegistrarPresidente();
+
+  if (cargandoBorrador) {
+    return <Loader text="Cargando borrador..." />;
+  }
 
   return (
     <div className="rp-page-wrapper" style={{
@@ -143,6 +151,35 @@ export default function RegistrarPresidente() {
             justify-content: space-between;
             width: 100%;
           }
+        }
+
+        .toast-auto-save {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          background: rgba(255, 255, 255, 0.75);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          padding: 12px 20px;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+          z-index: 9999;
+          font-family: inherit;
+          font-size: 14px;
+          font-weight: 700;
+          color: #1e293b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          pointer-events: none;
+          opacity: 0;
+          transform: translateY(-20px);
+          transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .toast-auto-save.show {
+          opacity: 1;
+          transform: translateY(0);
         }
       `}</style>
       {/* Header de página */}
@@ -261,6 +298,12 @@ export default function RegistrarPresidente() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Notificación de autoguardado */}
+      <div className={`toast-auto-save ${toastVisible ? 'show' : ''}`}>
+        <FaCheckCircle style={{ color: '#10b981', fontSize: '16px' }} />
+        <span>Borrador guardado</span>
       </div>
     </div>
   );
