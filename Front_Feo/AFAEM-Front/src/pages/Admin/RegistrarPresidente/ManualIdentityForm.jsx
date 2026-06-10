@@ -19,7 +19,7 @@ export default function ManualIdentityForm({ ocrResults, onOcrManual }) {
         ✏️ Formulario Manual de Identidad
       </h4>
       <p style={{ fontSize: 12, color: C.textDim, margin: '0 0 18px', lineHeight: 1.5 }}>
-        Si el OCR no pudo extraer los datos, ingrésalos aquí. Los campos marcados con{' '}
+        Si los datos no se extrajeron automáticamente, ingrésalos aquí. Los campos marcados con{' '}
         <span style={{ color: C.amber }}>*</span> son necesarios para finalizar.
       </p>
 

@@ -309,7 +309,7 @@ export default function CompletarJugadoresEquipo() {
     if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
       Swal.fire({
         title: 'Analizando Documento...',
-        html: 'Extrayendo información vía OCR. Por favor espere.',
+        html: 'Extrayendo información. Por favor espere.',
         allowOutsideClick: false,
         allowEscapeKey: false,
         didOpen: () => { Swal.showLoading(); }
@@ -399,7 +399,6 @@ export default function CompletarJugadoresEquipo() {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
       } catch (err) {
-        console.error("Error OCR:", err);
         Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
       }
     }
@@ -758,7 +757,7 @@ export default function CompletarJugadoresEquipo() {
   if (loading) {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <Loader text="Cargando información del equipo y slots disponibles..." />
+        <Loader text="Cargando información del equipo y espacios disponibles..." />
       </div>
     );
   }
@@ -799,7 +798,7 @@ export default function CompletarJugadoresEquipo() {
         </button>
         <div>
           <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Completar Jugadores de Equipo</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar jugadores en slots pagados restantes.</p>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar jugadores en espacios pagados restantes.</p>
         </div>
       </div>
 
@@ -832,9 +831,9 @@ export default function CompletarJugadoresEquipo() {
           </div>
 
           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
+            <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Espacios disponibles</span>
             <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
-              {slotsData?.slots_disponibles || 0} slots
+              {slotsData?.slots_disponibles || 0} espacios
             </span>
           </div>
         </div>
@@ -853,10 +852,9 @@ export default function CompletarJugadoresEquipo() {
           border: '1px solid #fee2e2'
         }}>
           <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin Slots / Seguros Disponibles</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin espacios disponibles</h2>
           <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
-            Este equipo ya ha completado todos los seguros y slots contratados por el presidente.
-            No es posible agregar más jugadores hasta que el presidente adquiera nuevos slots de registro.
+            Este equipo ya ha completado todos los espacios contratados por el presidente. Da clic en el botón para agregar más jugadores.
           </p>
           <BotonSecundario
             etiqueta="Volver al Directorio de Equipos"

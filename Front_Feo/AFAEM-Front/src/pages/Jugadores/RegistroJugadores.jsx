@@ -11,7 +11,9 @@ import {
   FaCheckCircle,
   FaSearchPlus,
   FaGlobeAmericas,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaChevronLeft,
+  FaChevronRight
 } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { PDFDocument } from 'pdf-lib';
@@ -384,7 +386,7 @@ export default function RegistroJugadores() {
       }
     } else if (step === 4) {
       if (!datos.numCamiseta || String(datos.numCamiseta).trim() === '') errors.numCamiseta = 'El número de camiseta es obligatorio.';
-      if (!datos.posicion) errors.posicion = 'La posición en el campo es obligatoria.';
+      if (!datos.posicion) errors.posicion = 'La posición es obligatoria.';
       if (!datos.nui || String(datos.nui).trim() === '') errors.nui = 'El NUI es obligatorio.';
     } else if (step === 5) {
       if (datos.esForaneo) {
@@ -855,10 +857,10 @@ export default function RegistroJugadores() {
   }, [currentPlayerIndex]);
 
   const playerStatusConfig = {
-    VACIO: { icon: '⚪', label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
-    EN_CAPTURA: { icon: '🟡', label: 'EN CAPTURA', bg: '#fffbeb', color: '#92400e' },
-    LISTO: { icon: '🔵', label: 'LISTO PARA REGISTRAR', bg: '#eff6ff', color: '#1e40af' },
-    INSCRITO: { icon: '🟢', label: 'INSCRITO', bg: '#dcfce7', color: '#166534' }
+    VACIO: { label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
+    EN_CAPTURA: { label: 'EN CAPTURA', bg: '#fffbeb', color: '#92400e' },
+    LISTO: { label: 'LISTO PARA REGISTRAR', bg: '#eff6ff', color: '#1e40af' },
+    INSCRITO: { label: 'INSCRITO', bg: '#dcfce7', color: '#166534' }
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
@@ -949,7 +951,7 @@ export default function RegistroJugadores() {
     if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
       Swal.fire({
         title: 'Analizando Documento...',
-        html: 'Extrayendo información vía OCR. Por favor espere.',
+        html: 'Extrayendo información. Por favor espere.',
         allowOutsideClick: false,
         allowEscapeKey: false,
         didOpen: () => { Swal.showLoading(); }
@@ -1043,7 +1045,6 @@ export default function RegistroJugadores() {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
       } catch (err) {
-        console.error("Error OCR:", err);
         Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
       }
     }
@@ -1745,62 +1746,141 @@ export default function RegistroJugadores() {
           </button>
         )}
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Panel de Registro de Jugadores</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugadores</h2>
           <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registra y guarda los borradores de tus jugadores libremente.</p>
         </div>
       </div>
 
-      {/* SLOT NAVIGATION BAR */}
-      {jugadores.length > 0 && (
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          overflowX: 'auto',
-          padding: '10px 16px 15px 16px',
-          background: '#f8fafc',
-          borderRadius: '16px',
-          marginBottom: '25px',
-          border: '1px solid #e2e8f0',
-          scrollbarWidth: 'thin'
-        }}>
-          {jugadores.map((player, idx) => {
-            const status = getPlayerStatus(player);
-            const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
-            const isSelected = idx === currentPlayerIndex;
-            return (
-              <button
-                key={`slot-nav-${idx}`}
-                type="button"
-                onClick={() => setCurrentPlayerIndex(idx)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '12px 18px',
-                  borderRadius: '14px',
-                  border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                  backgroundColor: isSelected ? '#eff6ff' : 'white',
-                  color: '#1e293b',
-                  cursor: 'pointer',
-                  minWidth: '200px',
-                  textAlign: 'left',
-                  flexShrink: 0,
-                  boxShadow: isSelected ? '0 4px 6px -1px rgba(11, 78, 166, 0.1)' : '0 1px 3px rgba(0,0,0,0.05)',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <span style={{ fontSize: '15px' }}>{config.icon}</span>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: '800', fontSize: '13px' }}>Jugador {idx + 1} de {jugadores.length}</span>
-                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>
-                    {config.label}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* SLOT NAVIGATION CONTROL */}
+      {jugadores.length > 0 && (() => {
+        const activePlayer = jugadores[currentPlayerIndex];
+        const status = activePlayer ? getPlayerStatus(activePlayer) : 'VACIO';
+        const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
+        return (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            margin: '0 auto 25px auto',
+            maxWidth: '1000px',
+            width: '100%',
+            padding: '16px 35px',
+            background: 'white',
+            borderRadius: '24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            transition: 'all 0.3s ease'
+          }}>
+            {/* Left Arrow Button */}
+            <button
+              type="button"
+              disabled={currentPlayerIndex === 0}
+              onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                border: '1px solid #cbd5e1',
+                backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
+                color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
+                cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
+                opacity: currentPlayerIndex === 0 ? 0.4 : 1,
+                transition: 'all 0.2s',
+                boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (currentPlayerIndex !== 0) {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPlayerIndex !== 0) {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }
+              }}
+            >
+              <FaChevronLeft style={{ fontSize: '14px' }} />
+            </button>
+
+            {/* Center Area: Number & Status */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <span style={{
+                fontSize: '28px',
+                fontWeight: '900',
+                color: '#1e293b',
+                userSelect: 'none',
+                lineHeight: '1.2'
+              }}>
+                {currentPlayerIndex + 1}
+              </span>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                backgroundColor: config.bg,
+                color: config.color,
+                fontSize: '11px',
+                fontWeight: '800',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                border: `1px solid ${config.color}30`,
+                marginTop: '8px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              }}>
+                <span>{config.label}</span>
+              </div>
+            </div>
+
+            {/* Right Arrow Button */}
+            <button
+              type="button"
+              disabled={currentPlayerIndex === jugadores.length - 1}
+              onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                border: '1px solid #cbd5e1',
+                backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
+                color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
+                cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
+                opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
+                transition: 'all 0.2s',
+                boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+              onMouseEnter={(e) => {
+                if (currentPlayerIndex !== jugadores.length - 1) {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#94a3b8';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPlayerIndex !== jugadores.length - 1) {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }
+              }}
+            >
+              <FaChevronRight style={{ fontSize: '14px' }} />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* DETALLES DEL EQUIPO */}
       <div className="premium-card fade-in" style={{
@@ -1862,7 +1942,8 @@ export default function RegistroJugadores() {
           )}
         </div>
       ) : (
-        <div className="premium-card fade-in main-card-responsive" style={{
+        <>
+          <div className="premium-card fade-in main-card-responsive" style={{
           maxWidth: '1000px',
           margin: '0 auto',
           background: 'white',
@@ -2043,7 +2124,7 @@ export default function RegistroJugadores() {
                     fontWeight: '600'
                   }}>
                     <span style={{ fontSize: '18px' }}>📋</span>
-                    Opcional: puedes subir los documentos ahora para auto-llenar los campos vía OCR, o continuar sin archivos y cargarlos después.
+                    Opcional: puedes subir los documentos ahora para llenar los campos automáticamente, o continuar sin archivos y cargarlos después.
                   </div>
 
                   <div style={{
@@ -2231,7 +2312,7 @@ export default function RegistroJugadores() {
                   {/* Loader temporal OCR */}
                   {currentDocuments.acta && !currentDatos.fechaNacimiento && (
                     <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                      ⏳ Analizando el Acta de Nacimiento vía OCR... Los campos del formulario se auto-completarán en breve.
+                      ⏳ Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
                     </div>
                   )}
                 </section>
@@ -2536,7 +2617,7 @@ export default function RegistroJugadores() {
                         {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición  <span className="required-star">*</span></label>
                         <select
                           value={currentDatos.posicion}
                           onChange={e => {
@@ -2562,27 +2643,6 @@ export default function RegistroJugadores() {
                           ))}
                         </select>
                         {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          value={currentDatos.nui || ''}
-                          onChange={e => {
-                            handleFieldChange('nui', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, nui: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. 123"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.nui ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
-                        />
-                        {validationErrors.nui && <span className="field-error-msg">❌ {validationErrors.nui}</span>}
                       </div>
                     </div>
                   </div>
@@ -3028,9 +3088,142 @@ export default function RegistroJugadores() {
                   </button>
                 )}
               </div>
-            </>
+
+          </>
           )}
         </div>
+
+        {/* DUP SLOT NAVIGATION CONTROL AT BOTTOM */}
+        {jugadores.length > 0 && (() => {
+          const activePlayer = jugadores[currentPlayerIndex];
+          const status = activePlayer ? getPlayerStatus(activePlayer) : 'VACIO';
+          const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
+          return (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              margin: '25px auto 0 auto',
+              maxWidth: '1000px',
+              width: '100%',
+              padding: '16px 35px',
+              background: 'white',
+              borderRadius: '24px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              transition: 'all 0.3s ease'
+            }}>
+              {/* Left Arrow Button */}
+              <button
+                type="button"
+                disabled={currentPlayerIndex === 0}
+                onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
+                  color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
+                  cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
+                  opacity: currentPlayerIndex === 0 ? 0.4 : 1,
+                  transition: 'all 0.2s',
+                  boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPlayerIndex !== 0) {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPlayerIndex !== 0) {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }
+                }}
+              >
+                <FaChevronLeft style={{ fontSize: '14px' }} />
+              </button>
+
+              {/* Center Area: Number & Status */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <span style={{
+                  fontSize: '28px',
+                  fontWeight: '900',
+                  color: '#1e293b',
+                  userSelect: 'none',
+                  lineHeight: '1.2'
+                }}>
+                  {currentPlayerIndex + 1}
+                </span>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  backgroundColor: config.bg,
+                  color: config.color,
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase',
+                  border: `1px solid ${config.color}30`,
+                  marginTop: '8px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                }}>
+                  <span>{config.label}</span>
+                </div>
+              </div>
+
+              {/* Right Arrow Button */}
+              <button
+                type="button"
+                disabled={currentPlayerIndex === jugadores.length - 1}
+                onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
+                  color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
+                  cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
+                  transition: 'all 0.2s',
+                  boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPlayerIndex !== jugadores.length - 1) {
+                    e.currentTarget.style.backgroundColor = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentPlayerIndex !== jugadores.length - 1) {
+                    e.currentTarget.style.backgroundColor = 'white';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }
+                }}
+              >
+                <FaChevronRight style={{ fontSize: '14px' }} />
+              </button>
+            </div>
+          );
+        })()}
+      </>
       )}
 
       {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}

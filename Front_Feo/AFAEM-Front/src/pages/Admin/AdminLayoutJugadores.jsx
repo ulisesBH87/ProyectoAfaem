@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getJugadoresDirectorio, getEquiposDirectorio } from '../../services/admin';
-import { FaSyncAlt, FaCopy, FaCheck, FaFilter } from 'react-icons/fa';
-import { useSearchParams } from 'react-router-dom';
+import { FaSyncAlt, FaCopy, FaCheck, FaFilter, FaUsers } from 'react-icons/fa';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import SearchBar from '../../components/Common/SearchBar';
 import Loader from '../../components/Loader';
 
@@ -13,6 +13,7 @@ export default function AdminLayoutJugadores() {
   const [searchParams] = useSearchParams();
   const [filtroEquipo, setFiltroEquipo] = useState(searchParams.get('equipo') || 'todos');
   const [copiedCell, setCopiedCell] = useState(null);
+  const navigate = useNavigate();
 
   const fetchData = async (forceRefresh = false) => {
     setLoading(true);
@@ -115,12 +116,20 @@ export default function AdminLayoutJugadores() {
             Haz clic en cualquier dato para copiarlo al portapapeles.
           </p>
         </div>
-        <button
-          onClick={() => fetchData(true)} // Recarga asíncrona en lugar de reload()
-          style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: '#334155' }}
-        >
-          <FaSyncAlt />
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => fetchData(true)}
+            style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: '#334155' }}
+          >
+            <FaSyncAlt />
+          </button>
+          <button
+            onClick={() => navigate('/admin/jugadores')}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FaUsers /> Catálogo de jugadores
+          </button>
+        </div>
       </div>
 
       {/* FILTROS */}
@@ -189,7 +198,7 @@ export default function AdminLayoutJugadores() {
                   <CeldaCopia value={j.EquipoNombre} id={`equipo-${idx}`} />
                   <CeldaCopia value={j.Liga} id={`liga-${idx}`} />
                   <CeldaCopia value={j.Email} id={`email-${idx}`} />
-                  <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX', {timeZone:'UTC'}) : null} id={`fnac-${idx}`} />
+                  <CeldaCopia value={j.FechaNacimiento ? new Date(j.FechaNacimiento).toLocaleDateString('es-MX', { timeZone: 'UTC' }) : null} id={`fnac-${idx}`} />
                   <CeldaCopia value={j.NUI} id={`nui-${idx}`} />
                 </tr>
               ))
@@ -199,7 +208,7 @@ export default function AdminLayoutJugadores() {
       </div>
 
       <p style={{ marginTop: '16px', fontSize: '12px', color: '#7c8b9d', textAlign: 'center' }}>
-        💡 Tip: Clic en cualquier celda para copiar el dato al portapapeles. La columna NUI se llena cuando el backend asigne el identificador.
+        💡 Clic en cualquier celda para copiar el dato al portapapeles.
       </p>
     </div>
   );

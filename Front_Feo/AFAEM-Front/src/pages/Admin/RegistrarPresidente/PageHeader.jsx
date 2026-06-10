@@ -37,9 +37,6 @@ export default function PageHeader({ onBack }) {
             Registrar Nuevo Presidente
           </h1>
         </div>
-        <p style={{ margin: '4px 0 0 15px', fontSize: 13, color: 'black' }}>
-          Flujo completo de alta sin validación previa — activación inmediata.
-        </p>
       </div>
     </div>
   );

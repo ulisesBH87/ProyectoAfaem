@@ -9,3 +9,4 @@ class PresidenteEquipoEstatus(str, Enum):
     PRE_APROBADO = 5
     REGISTRO_PENDIENTE = 6
     ACTIVO = 7
+    BORRADOR = 8

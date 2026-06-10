@@ -12,8 +12,9 @@ import {
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, FaFileArchive, FaPlus, FaEdit, FaSave, FaTimes, FaTable, FaUsers, FaCheckCircle, FaTimesCircle, FaMale, FaFemale, FaIdCard, FaExclamationTriangle, FaUser } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
+import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
 
 /**
@@ -90,26 +91,26 @@ const getDocumentoEstatusInfo = (estadoId) => {
     case 1:
       return {
         texto: 'Espera',
-        color: '#92400e',
-        bg: '#fef3c7',
-        cardBg: 'linear-gradient(180deg, #fef3c7 0%, #fef08a 100%)',
-        border: '#f59e0b',
+        color: '#d97706', // Amber-600
+        bg: '#fffbeb', // Amber-50
+        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
+        border: '#f59e0b', // Amber-500
       };
     case 2:
       return {
         texto: 'Aceptado',
-        color: '#14532d',
-        bg: '#dcfce7',
-        cardBg: 'linear-gradient(180deg, #dcfce7 0%, #bbf7d0 100%)',
-        border: '#4ade80',
+        color: '#16a34a', // Green-600
+        bg: '#f0fdf4', // Green-50
+        cardBg: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
+        border: '#10b981', // Green-500
       };
     case 3:
       return {
         texto: 'Rechazado',
-        color: '#7f1d1d',
-        bg: '#fee2e2',
-        cardBg: 'linear-gradient(180deg, #fee2e2 0%, #fecaca 100%)',
-        border: '#f87171',
+        color: '#dc2626', // Red-600
+        bg: '#fef2f2', // Red-50
+        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fef2f2 100%)',
+        border: '#ef4444', // Red-500
       };
     default:
       return null;
@@ -138,17 +139,17 @@ const getDocumentActionButtons = (documento, tipoId) => {
     acciones.push({ key: 'aceptar', label: 'Aceptar' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
   } else if (estado === 2) {
-    acciones.push({ key: 'espera', label: 'Poner en espera' });
+    acciones.push({ key: 'espera', label: 'Espera' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
   } else if (estado === 3) {
-    acciones.push({ key: 'espera', label: 'Poner en espera' });
+    acciones.push({ key: 'espera', label: 'Espera' });
     acciones.push({ key: 'aceptar', label: 'Aceptar' });
   }
 
   const actionStyles = {
-    aceptar: 'background: #15803d; color: white;',
-    rechazar: 'background: #dc2626; color: white;',
-    espera: 'background: #ea580c; color: white;',
+    aceptar: 'background: #10b981; color: white; border: none; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);',
+    rechazar: 'background: #ef4444; color: white; border: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);',
+    espera: 'background: #f59e0b; color: white; border: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);',
   };
 
   return acciones
@@ -158,18 +159,23 @@ const getDocumentActionButtons = (documento, tipoId) => {
           type="button"
           data-action-button
           data-action="${accion.key}"
-          data-action-text="${accion.label.toLowerCase()}"
+          data-action-text="${accion.label === 'Espera' ? 'poner en espera' : accion.label.toLowerCase()}"
           data-doc-id="${escaparHtml(documento.DocumentosSolicitudId ?? documento.DocumentoId ?? documento.documentoId ?? documento.Id ?? '')}"
           data-tipo-id="${escaparHtml(tipoId)}"
           style="
-            padding: 8px 12px;
-            border-radius: 999px;
-            border: none;
+            flex: 1;
+            padding: 7px 10px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
+            text-align: center;
+            transition: all 0.2s;
+            box-sizing: border-box;
             ${actionStyles[accion.key] || 'background: #0b4ea6; color: white;'}
           "
+          onmouseover="this.style.filter='brightness(0.95)'"
+          onmouseout="this.style.filter='none'"
         >
           ${accion.label}
         </button>
@@ -237,22 +243,23 @@ const attachActionButtonListeners = (root = document) => {
         align-items: center;
         justify-content: center;
         z-index: 10000;
+        border-radius: 16px;
       `;
       popup.style.position = 'relative';
 
       overlay.innerHTML = `
-        <div style="background: white; border-radius: 20px; padding: 24px; width: min(480px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center;">
+        <div style="background: white; border-radius: 20px; padding: 24px; width: min(480px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center; font-family: 'Inter', sans-serif;">
           <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">¿Deseas ${actionText} este documento?</div>
           ${isRejectAction ? `
             <div style="text-align:left; margin-bottom: 14px;">
               <label for="rechazo-motivo" style="display:block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Motivo de rechazo</label>
-              <textarea id="rechazo-motivo" data-reject-reason rows="4" style="width: 100%; min-height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 12px; resize: vertical; font-size: 14px; color: #0f172a;" placeholder="Describe brevemente por qué se rechaza este documento."></textarea>
-              <div data-rejection-error style="font-size: 13px; color: #b91c1c; margin-top: 6px; min-height: 18px;"></div>
+              <textarea id="rechazo-motivo" data-reject-reason rows="4" style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; resize: vertical; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box;" placeholder="Describe brevemente por qué se rechaza este documento."></textarea>
+              <div data-rejection-error style="font-size: 13px; color: #b91c1c; margin-top: 6px; min-height: 18px; font-weight: 600;"></div>
             </div>
           ` : ''}
           <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-            <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: #0b4ea6; color: white; font-weight: 700; cursor: pointer;">Aceptar</button>
-            <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 700; cursor: pointer;">Cancelar</button>
+            <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: #0b4ea6; color: white; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#083b7e'" onmouseout="this.style.background='#0b4ea6'">Aceptar</button>
+            <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Cancelar</button>
           </div>
         </div>
       `;
@@ -279,7 +286,7 @@ const attachActionButtonListeners = (root = document) => {
         try {
           const waitingText = document.createElement('div');
           waitingText.textContent = 'Actualizando estado...';
-          waitingText.style = 'margin-top: 14px; color: #334155; font-size: 14px;';
+          waitingText.style = 'margin-top: 14px; color: #334155; font-size: 14px; font-weight: 600;';
           overlay.querySelector('div').appendChild(waitingText);
           boton.disabled = true;
           if (confirmButton) confirmButton.disabled = true;
@@ -299,20 +306,20 @@ const attachActionButtonListeners = (root = document) => {
 };
 
 const estilosCardDocumento = `
-  aspect-ratio: 1 / 1;
-  min-height: 170px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 18px;
+  padding: 20px 16px 16px 16px;
   text-align: center;
-  border-radius: 18px;
-  border: 1px solid #dbe4f0;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   color: #1e293b;
+  box-sizing: border-box;
 `;
 
 const construirCardDocumentoHtml = (tipo, documento) => {
@@ -324,7 +331,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
     const fechaSubida = formatearFechaSubida(documento.FechaEntrega);
     const estadoInfo = getDocumentoEstatusInfo(documento.EstadoValidacionId);
     const estadoBadge = estadoInfo
-      ? `<div data-doc-status-badge style="position: absolute; top: 14px; right: 14px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg};">${estadoInfo.texto}</div>`
+      ? `<div data-doc-status-badge style="position: absolute; top: 12px; right: 12px; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; color: ${estadoInfo.color}; background: ${estadoInfo.bg}; letter-spacing: 0.05em; text-transform: uppercase;">${estadoInfo.texto}</div>`
       : '';
     const estadoCardStyle = estadoInfo
       ? `background: ${estadoInfo.cardBg}; border-color: ${estadoInfo.border};`
@@ -342,44 +349,61 @@ const construirCardDocumentoHtml = (tipo, documento) => {
           text-decoration: none;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         "
-        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 16px 30px rgba(15, 23, 42, 0.12)'"
-        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(15, 23, 42, 0.08)'"
+        onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px rgba(0, 0, 0, 0.15)'; this.querySelector('.doc-icon-wrapper').style.background='#e0f2fe';"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.05)'; this.querySelector('.doc-icon-wrapper').style.background='#f0f9ff';"
       >
         ${estadoBadge}
         <a
           href="${escaparHtml(urlDocumento)}"
           target="_blank"
           rel="noopener noreferrer"
-          style="display: contents;"
+          style="display: flex; flex-direction: column; align-items: center; width: 100%; gap: 10px; text-decoration: none;"
+          title="Ver documento en pestaña nueva"
         >
-          <div style="width: 60px; height: 60px; border-radius: 16px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 30px;">📄</div>
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">${tituloTipo}</span>
-            <span style="font-size: 12px; color: #64748b; line-height: 1.45;">Subido el ${fechaSubida}</span>
+          <div class="doc-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: #f0f9ff; color: #0284c7; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
+            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
+            <span style="font-size: 12px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+            <span style="font-size: 11px; color: #64748b; line-height: 1.4; text-align: center;">Subido el ${fechaSubida}</span>
           </div>
         </a>
-        <div data-doc-action-buttons style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: auto; width: 100%;">
-          ${botonesEstado}
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: auto; width: 100%;">
+          <div data-doc-action-buttons style="display: flex; gap: 6px; width: 100%;">
+            ${botonesEstado}
+          </div>
           <button
             type="button"
             data-replace-doc="${tipo.id}"
             title="Subir nueva versión de este documento"
             style="
-              margin-top: 2px;
               padding: 6px 12px;
-              border-radius: 10px;
-              border: 1.5px solid #0ea5e9;
+              border-radius: 8px;
+              border: 1.5px solid #0284c7;
               background: white;
-              color: #0ea5e9;
+              color: #0284c7;
               font-size: 11px;
               font-weight: 700;
               cursor: pointer;
               display: inline-flex;
               align-items: center;
-              gap: 4px;
+              justify-content: center;
+              gap: 6px;
+              transition: all 0.2s;
+              width: 100%;
+              box-sizing: border-box;
             "
+            onmouseover="this.style.background='#f0f9ff'"
+            onmouseout="this.style.background='white'"
           >
-            📤 Reemplazar
+            <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="12" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Reemplazar
           </button>
         </div>
       </div>
@@ -387,26 +411,42 @@ const construirCardDocumentoHtml = (tipo, documento) => {
   }
 
   return `
-    <div style="${estilosCardDocumento} border-style: dashed; border-color: #cbd5e1; background: #f8fafc; box-shadow: none;">
-      <div style="width: 60px; height: 60px; border-radius: 16px; background: #fef2f2; display: flex; align-items: center; justify-content: center; font-size: 28px;">📋</div>
-      <div style="display: flex; flex-direction: column; gap: 6px;">
-        <span style="font-size: 15px; font-weight: 700; line-height: 1.35;">${tituloTipo}</span>
-        <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">Documento faltante</span>
+    <div
+      style="${estilosCardDocumento}"
+      onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px rgba(0, 0, 0, 0.1)'; this.querySelector('.missing-icon-wrapper').style.background='#ffe4e6';"
+      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'; this.querySelector('.missing-icon-wrapper').style.background='#fef2f2';"
+    >
+      <div class="missing-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: #fef2f2; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
+        <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg" style="color: #ef4444;">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="18" x2="12" y2="12"></line>
+          <line x1="9" y1="15" x2="15" y2="15"></line>
+        </svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
+        <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+        <span style="font-size: 11px; color: #f43f5e; font-weight: 700; background: #fff1f2; padding: 2px 8px; border-radius: 20px;">Faltante</span>
       </div>
       <button
         type="button"
         data-add-doc="${tipo.id}"
         style="
-          margin-top: 4px;
+          margin-top: auto;
           padding: 8px 14px;
-          border-radius: 10px;
+          border-radius: 8px;
           border: none;
           background: #0b4ea6;
           color: white;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           cursor: pointer;
+          width: 100%;
+          box-sizing: border-box;
+          transition: all 0.2s;
         "
+        onmouseover="this.style.background='#083b7e'"
+        onmouseout="this.style.background='#0b4ea6'"
       >
         Añadir documento
       </button>
@@ -432,6 +472,7 @@ export default function AdminJugadores() {
   // ESTADO PARA EDICIÓN (MODAL PROFESIONAL)
   const [modalEdicion, setModalEdicion] = useState(false);
   const [jugadorEdicion, setJugadorEdicion] = useState(null);
+  const [fotoJugadorEdicion, setFotoJugadorEdicion] = useState(null);
   const [datosEditables, setDatosEditables] = useState({});
   const [haCambiado, setHaCambiado] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -455,6 +496,18 @@ export default function AdminJugadores() {
   useEffect(() => {
     loadJugadores();
   }, [navigate]);
+
+  // EFECTO PARA LEER FILTRO DE EQUIPO DESDE NAVEGACIÓN
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const equipoQuery = queryParams.get('equipo');
+    const equipoState = location.state?.filtroEquipo;
+    const equipoFiltro = equipoQuery || equipoState;
+
+    if (equipoFiltro) {
+      setSearchTerm(equipoFiltro);
+    }
+  }, [location]);
 
   // EFECTO PARA ABRIR EDICIÓN AUTOMÁTICA DESDE BÚSQUEDA
   useEffect(() => {
@@ -594,16 +647,39 @@ export default function AdminJugadores() {
 
     Swal.fire({
       title: `Documentos de ${jugador.NombreCompleto}`,
+      width: 'min(860px, 95vw)',
       html: `
-        <div style="max-height: 420px; overflow-y: auto; padding: 4px;">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+        <style>
+          .doc-card-container {
+            max-height: 480px;
+            overflow-y: auto;
+            padding: 8px 6px;
+            margin-top: 10px;
+          }
+          .doc-card-container::-webkit-scrollbar {
+            width: 6px;
+          }
+          .doc-card-container::-webkit-scrollbar-track {
+            background: #f8fafc;
+            border-radius: 10px;
+          }
+          .doc-card-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+          }
+          .doc-card-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+          }
+        </style>
+        <div class="doc-card-container">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;">
             ${htmlCards}
           </div>
         </div>
       `,
       showConfirmButton: true,
       confirmButtonText: 'Cerrar',
-      confirmButtonColor: '#ff0000',
+      confirmButtonColor: '#0b4ea6',
       didOpen: () => {
         // Botón: Añadir documento faltante
         document.querySelectorAll('[data-add-doc]').forEach((boton) => {
@@ -718,6 +794,7 @@ export default function AdminJugadores() {
 
   const handleEditarJugador = (jugador) => {
     setJugadorEdicion(jugador);
+    setFotoJugadorEdicion(null);
     setDatosEditables({
       nombre: jugador.Nombre || '',
       primerApellido: jugador.PrimerApellido || '',
@@ -732,6 +809,19 @@ export default function AdminJugadores() {
     setHaCambiado(false);
     setOcrCargando(false);
     setModalEdicion(true);
+
+    // Obtener documentos del jugador en background para extraer su fotografía si existe
+    getJugadorDocumentos(jugador.MiembroEquipoId)
+      .then((docs) => {
+        const docFoto = obtenerDocumentoMasRecientePorTipo(docs, 25);
+        if (docFoto) {
+          const urlFoto = obtenerUrlDocumento(docFoto);
+          setFotoJugadorEdicion(urlFoto);
+        }
+      })
+      .catch((err) => {
+        console.error("Error cargando foto del jugador:", err);
+      });
   };
 
   // PROCESAR OCR PARA EL MODAL DE EDICIÓN
@@ -904,7 +994,26 @@ export default function AdminJugadores() {
     Sexo: <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>{j.Sexo || 'N/A'}</span>,
     EquipoLiga: (
       <div style={{ maxWidth: '340px' }}>
-        <div style={{ fontWeight: '700', fontSize: '14px', color: '#0b4ea6' }}>{j.EquipoNombre}</div>
+        {j.EquipoId ? (
+          <div
+            style={{
+              fontWeight: '700',
+              fontSize: '14px',
+              color: '#0b4ea6',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/equipos?abrirDetalle=${j.EquipoId}`);
+            }}
+            title="Ver detalle del equipo"
+          >
+            {j.EquipoNombre}
+          </div>
+        ) : (
+          <div style={{ fontWeight: '700', fontSize: '14px', color: '#64748b' }}>{j.EquipoNombre || 'Sin equipo'}</div>
+        )}
         <div style={{ fontSize: '12px', color: '#64748b' }}>{j.Liga}</div>
       </div>
     ),
@@ -935,7 +1044,7 @@ export default function AdminJugadores() {
           style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
           onClick={() => handleEditarJugador(j)}
         >
-          <FaEdit /> Ver / Editar
+          <FaEdit />
         </button>
       </div>
     )
@@ -993,8 +1102,8 @@ export default function AdminJugadores() {
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores aprobados</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona la matrícula activa de la liga.</p>
+          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores registrados</h2>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona jugadores.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -1037,7 +1146,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>📋</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaUsers /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL JUGADORES</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
         </div>
@@ -1057,7 +1166,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>✅</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES ACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
         </div>
@@ -1077,7 +1186,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🔴</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES INACTIVOS</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
         </div>
@@ -1097,7 +1206,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'hombres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🧑</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#3b82f6' }}><FaMale /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>MASCULINO</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#3b82f6' }}>{stats.hombres}</div>
         </div>
@@ -1117,7 +1226,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'mujeres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>👩</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f43f5e' }}><FaFemale /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>FEMENINO</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
         </div>
@@ -1132,7 +1241,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'conNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>🆔</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#8b5cf6' }}><FaIdCard /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>CON NUI</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#8b5cf6' }}>{stats.conNUI}</div>
         </div>
@@ -1148,7 +1257,7 @@ export default function AdminJugadores() {
             transform: filtroEstatus === 'sinNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px' }}>⚠️</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f59e0b' }}><FaExclamationTriangle /></div>
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>SIN NUI</div>
           <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.sinNUI}</div>
         </div>
@@ -1158,7 +1267,6 @@ export default function AdminJugadores() {
         <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de jugadores</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
 
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
@@ -1170,7 +1278,7 @@ export default function AdminJugadores() {
             />
 
             <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569' }}>
-              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
+              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DEC'}
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
@@ -1201,6 +1309,7 @@ export default function AdminJugadores() {
         alCerrar={handleCerrarModal}
         titulo="Detalle y edición del jugador"
         tamanio="grande"
+        bloquearCierreFondo={true}
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
@@ -1213,143 +1322,98 @@ export default function AdminJugadores() {
           </>
         }
       >
-        {/* BANNER INFORMATIVO */}
-        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px 20px', borderRadius: '10px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-          <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
-          <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', fontWeight: '600' }}>
-            Los campos marcados con <strong>*</strong> (Nombre, Apellidos, CURP) solo se actualizan cargando el Acta de Nacimiento o la INE. El OCR los leerá automáticamente.
-            Los demás campos son editables de forma manual.
-          </p>
-        </div>
-
-        {/* SECCIÓN OCR */}
-        <div style={{ background: '#f8fafc', border: '1.5px dashed #94a3b8', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '22px' }}>📄</span>
+        <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
+          {/* FOTO DEL JUGADOR Y CABECERA */}
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
+                <img
+                  src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`}
+                  alt="Foto del jugador"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const sib = e.target.parentNode.querySelector('.fallback-icon');
+                    if (sib) sib.style.display = 'block';
+                  }}
+                />
+              ) : null}
+              <FaUser
+                className="fallback-icon"
+                style={{ display: (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }}
+              />
+            </div>
             <div>
-              <p style={{ margin: 0, fontWeight: '800', fontSize: '14px', color: '#1e293b' }}>Actualizar datos con documento oficial</p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Sube el Acta de Nacimiento o la INE para rellenar automáticamente los campos protegidos.</p>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
+                {datosEditables.nombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
+              </h3>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                {datosEditables.curp || 'CURP NO REGISTRADA'} • {jugadorEdicion?.EquipoNombre || 'Sin Equipo'}
+              </p>
+              {datosEditables.estatus === '1' ? (
+                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: '1px solid #a7f3d0' }}>ACTIVO</span>
+              ) : (
+                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: '#fef2f2', color: '#dc2626', fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: '1px solid #fecaca' }}>BAJA</span>
+              )}
             </div>
           </div>
-          <div className="aj-ocr-grid">
-            {/* ACTA */}
-            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '20px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: 'white', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
-              <span style={{ fontSize: '28px' }}>📋</span>
-              <span style={{ fontWeight: '700', fontSize: '13px', color: '#475569' }}>Acta de Nacimiento</span>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>PDF o imagen</span>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                style={{ display: 'none' }}
-                disabled={ocrCargando}
-                onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }}
-              />
-            </label>
-            {/* INE */}
-            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '20px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: 'white', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
-              <span style={{ fontSize: '28px' }}>🪪</span>
-              <span style={{ fontWeight: '700', fontSize: '13px', color: '#475569' }}>INE / Identificación</span>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>PDF o imagen</span>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                style={{ display: 'none' }}
-                disabled={ocrCargando}
-                onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }}
-              />
-            </label>
+
+          {/* PRIMERA FILA: AVISO Y OCR */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            {/* AVISO CAMPOS PROTEGIDOS */}
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '20px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>ℹ️</span>
+                <strong style={{ fontSize: '14px', color: '#1e40af' }}>Campos Protegidos</strong>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: '#1e3a8a', lineHeight: '1.6' }}>
+                El Nombre, Apellidos y CURP están bloqueados. Solo se actualizan automáticamente subiendo y verificando el Acta de Nacimiento o la INE.
+              </p>
+            </div>
+
+            {/* CARGA DE DOCUMENTO OFICIAL (OCR) */}
+            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Carga de Documento Oficial</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
+                  <span style={{ fontSize: '24px' }}>📋</span>
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>Acta</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
+                  </div>
+                  <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
+                  <span style={{ fontSize: '24px' }}>🪪</span>
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>INE</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
+                  </div>
+                  <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
+                </label>
+              </div>
+              {ocrCargando && (
+                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento...</p>
+              )}
+            </div>
           </div>
-          {ocrCargando && (
-            <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600' }}>⏳ Procesando documento con OCR...</p>
-          )}
-        </div>
 
-        {/* CAMPOS DEL FORMULARIO */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-          {/* BLOQUEADOS — se rellenan con OCR */}
-          <EntradaFormulario
-            etiqueta="Nombre(s) *"
-            valor={datosEditables.nombre}
-            onChange={manejarCambioInput}
-            nombre="nombre"
-            obligatorio
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
-          <EntradaFormulario
-            etiqueta="Primer apellido *"
-            valor={datosEditables.primerApellido}
-            onChange={manejarCambioInput}
-            nombre="primerApellido"
-            obligatorio
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
-          <EntradaFormulario
-            etiqueta="Segundo apellido *"
-            valor={datosEditables.segundoApellido}
-            onChange={manejarCambioInput}
-            nombre="segundoApellido"
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
-          <EntradaFormulario
-            etiqueta="CURP *"
-            valor={datosEditables.curp}
-            onChange={manejarCambioInput}
-            nombre="curp"
-            obligatorio
-            placeholder="Se actualiza con OCR"
-            disabled
-            style={{ opacity: 0.7, cursor: 'not-allowed', background: '#f1f5f9' }}
-          />
+          {/* SEGUNDA FILA: FORMULARIO */}
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Datos del Jugador</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: '16px', rowGap: '0', alignItems: 'start' }}>
+              <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
+              <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
+              <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza con OCR" deshabilitado={true} />
+              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
 
-          {/* EDITABLES MANUALMENTE */}
-          <EntradaFormulario
-            etiqueta="Correo electrónico"
-            valor={datosEditables.email}
-            onChange={manejarCambioInput}
-            nombre="email"
-            tipo="email"
-            placeholder="correo@ejemplo.com"
-          />
-          <EntradaSeleccion
-            etiqueta="Sexo"
-            valor={datosEditables.sexo}
-            onChange={manejarCambioInput}
-            nombre="sexo"
-            opciones={[
-              { valor: 'Masculino', etiqueta: 'Masculino' },
-              { valor: 'Femenino', etiqueta: 'Femenino' },
-              { valor: 'No Binario', etiqueta: 'No Binario' }
-            ]}
-          />
-          <EntradaFormulario
-            etiqueta="Fecha de nacimiento"
-            valor={datosEditables.fechaNacimiento}
-            onChange={manejarCambioInput}
-            nombre="fechaNacimiento"
-            tipo="date"
-          />
-          <EntradaFormulario
-            etiqueta="NUI"
-            valor={datosEditables.NUI}
-            onChange={manejarCambioInput}
-            nombre="NUI"
-          />
-          <EntradaSeleccion
-            etiqueta="Estatus del jugador"
-            valor={datosEditables.estatus}
-            onChange={manejarCambioInput}
-            nombre="estatus"
-            opciones={[
-              { valor: '1', etiqueta: 'Activo' },
-              { valor: '0', etiqueta: 'Baja' }
-            ]}
-          />
+              <EntradaFormulario etiqueta="Fecha de nacimiento" valor={datosEditables.fechaNacimiento} onChange={manejarCambioInput} nombre="fechaNacimiento" tipo="date" />
+              <EntradaSeleccion etiqueta="Sexo" valor={datosEditables.sexo} onChange={manejarCambioInput} nombre="sexo" opciones={[{ valor: 'Masculino', etiqueta: 'Masculino' }, { valor: 'Femenino', etiqueta: 'Femenino' }, { valor: 'No Binario', etiqueta: 'No Binario' }]} />
+              <EntradaFormulario etiqueta="Correo electrónico" valor={datosEditables.email} onChange={manejarCambioInput} nombre="email" tipo="email" placeholder="correo@ejemplo.com" />
+              <EntradaFormulario etiqueta="NUI" valor={datosEditables.NUI} onChange={manejarCambioInput} nombre="NUI" />
+              <EntradaSeleccion etiqueta="Estatus del jugador" valor={datosEditables.estatus} onChange={manejarCambioInput} nombre="estatus" opciones={[{ valor: '1', etiqueta: 'Activo' }, { valor: '0', etiqueta: 'Baja' }]} />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

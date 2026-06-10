@@ -490,6 +490,151 @@ def guardar_borrador_jugador(
     return {"mensaje": "Borrador guardado correctamente"}
 
 
+class BorradorPresidentePayload(BaseModel):
+    datos: dict
+
+@router.post("/borrador-presidente")
+def crear_o_actualizar_borrador_presidente(
+    payload: BorradorPresidentePayload,
+    borrador_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual),
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+
+    datos = payload.datos
+    cuenta = datos.get("cuenta", {})
+
+    correo = (cuenta.get("correo") or "").strip()
+    contrasena = (cuenta.get("contrasena") or "").strip()
+    nombre = (cuenta.get("nombre") or "").strip()
+    primer_apellido = (cuenta.get("primerApellido") or "").strip()
+    segundo_apellido = (cuenta.get("segundoApellido") or "").strip()
+    telefono = (cuenta.get("telefono") or "").strip()
+    curp = (cuenta.get("curp") or "").strip()
+
+    # Check if we are updating an existing draft
+    if borrador_id:
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == borrador_id).first()
+        if not presidente:
+            raise HTTPException(status_code=404, detail="Borrador no encontrado")
+        persona = db.query(Personas).filter(Personas.PersonaId == presidente.PersonaId).first()
+        usuario_db = db.query(Usuario).filter(Usuario.PersonaId == presidente.PersonaId).first()
+    else:
+        # Check if email is already in use (only for real non-placeholder emails)
+        if correo and not correo.endswith("@temporary.afaem.com"):
+            existing_user = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.Eliminado == False).first()
+            if existing_user:
+                # If the existing user is a draft, we can reuse it!
+                pres = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == existing_user.PersonaId).first()
+                if pres and pres.EstatusId == 8:
+                    presidente = pres
+                    persona = db.query(Personas).filter(Personas.PersonaId == presidente.PersonaId).first()
+                    usuario_db = existing_user
+                else:
+                    raise HTTPException(status_code=400, detail="El correo ya está registrado por otro usuario")
+            else:
+                persona = None
+                presidente = None
+                usuario_db = None
+        else:
+            persona = None
+            presidente = None
+            usuario_db = None
+
+    # Create if not exists
+    if not presidente:
+        from app.core.telefono_utils import validar_y_normalizar_telefono
+        telefono_normalizado = validar_y_normalizar_telefono(telefono) if telefono else None
+
+        persona = Personas(
+            Nombre=nombre,
+            PrimerApellido=primer_apellido,
+            SegundoApellido=segundo_apellido or None,
+            CURP=curp or None,
+            NumeroTelefono=telefono_normalizado
+        )
+        db.add(persona)
+        db.flush()
+
+        import uuid
+        email_to_use = correo if correo else f"draft_{uuid.uuid4().hex}@temporary.afaem.com"
+        pass_to_use = contrasena if contrasena else uuid.uuid4().hex
+
+        from app.core.seguridad import generar_salt, generar_hash
+        salt = generar_salt()
+        hash_pass = generar_hash(salt, pass_to_use)
+
+        usuario_db = Usuario(
+            PersonaId=persona.PersonaId,
+            Correo=email_to_use,
+            Contrasena=hash_pass,
+            Salt=salt,
+            RolId=3,
+            Estatus=False
+        )
+        db.add(usuario_db)
+        db.flush()
+
+        presidente = PresidenteEquipo(
+            PersonaId=persona.PersonaId,
+            EstatusId=8, # BORRADOR
+        )
+        db.add(presidente)
+        db.flush()
+
+    # Update records with latest draft info
+    persona.Nombre = nombre
+    persona.PrimerApellido = primer_apellido
+    persona.SegundoApellido = segundo_apellido or None
+    if curp:
+        persona.CURP = curp
+    if telefono:
+        from app.core.telefono_utils import validar_y_normalizar_telefono
+        persona.NumeroTelefono = validar_y_normalizar_telefono(telefono)
+    
+    if contrasena:
+        from app.core.seguridad import generar_salt, generar_hash
+        salt = generar_salt()
+        hash_pass = generar_hash(salt, contrasena)
+        usuario_db.Contrasena = hash_pass
+        usuario_db.Salt = salt
+    
+    if correo:
+        duplicado = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.PersonaId != persona.PersonaId, Usuario.Eliminado == False).first()
+        if not duplicado:
+            usuario_db.Correo = correo
+
+    # Update JSON data draft column
+    presidente.DatosBorrador = json.dumps(datos, ensure_ascii=False)
+    db.commit()
+
+    return {
+        "presidente_id": presidente.PresidenteEquipoId,
+        "usuario_id": usuario_db.UsuarioId,
+        "mensaje": "Borrador guardado correctamente"
+    }
+
+@router.get("/borrador-presidente/{borrador_id}")
+def obtener_borrador_presidente(
+    borrador_id: int,
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual),
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+
+    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == borrador_id).first()
+    if not presidente:
+        raise HTTPException(status_code=404, detail="Borrador no encontrado")
+
+    datos = json.loads(presidente.DatosBorrador) if presidente.DatosBorrador else {}
+    return {"datos": datos}
+
+
 # --- NUEVOS ENDPOINTS PARA TABLAS REALES (PRESIDENTE Y ADMIN) ---
 @router.get("/user-real-teams", response_model=List[EquipoResponse])
 def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -559,20 +704,31 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
 @router.get("/mis-jugadores-reales", response_model=List[MiembroResponse])
 def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
-        # 1. Base query with joins
+        # 1. Subconsulta escalar para obtener la fotografía más reciente del jugador (DocumentoId 4 en el catálogo)
+        from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+        foto_subquery = db.query(DocumentosEntregados.RutaArchivo)\
+            .join(DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId)\
+            .filter(DocumentosEntregados.PersonaId == Personas.PersonaId)\
+            .filter(DocumentoAfiliacion.DocumentoId == 4)\
+            .order_by(DocumentosEntregados.FechaEntrega.desc())\
+            .limit(1)\
+            .scalar_subquery()
+
+        # 2. Base query with joins
         query = db.query(
             MiembrosEquipo.MiembroEquipoId,
             (Personas.Nombre + " " + Personas.PrimerApellido).label("NombreCompleto"),
             RolesDeEquipo.NombreRol.label("Rol"),
             Equipos.NombreEquipo.label("Equipo"),
             MiembrosEquipo.FechaIngreso,
-            MiembrosEquipo.Estatus
+            MiembrosEquipo.Estatus,
+            foto_subquery.label("RutaFoto")
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
          .join(Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId)\
          .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)
 
-        # 2. Add filter if not ADMINISTRADOR (RolId == 1)
+        # 3. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
         
         if rol_id != 1:
@@ -590,7 +746,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "Rol": r.Rol,
                 "Equipo": r.Equipo,
                 "FechaIngreso": r.FechaIngreso,
-                "Estatus": bool(r.Estatus)
+                "Estatus": bool(r.Estatus),
+                "RutaFoto": r.RutaFoto
             } for r in resultados
         ]
     except Exception as e:
@@ -609,6 +766,28 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
     try:
         from app.modelos.usuario_modelo import Usuario
         from app.modelos.catalogo_estatus_presidente import EstatusPresidente
+        from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+
+        foto_subquery = db.query(DocumentosEntregados.RutaArchivo)\
+            .join(DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId)\
+            .filter(DocumentosEntregados.PersonaId == Personas.PersonaId)\
+            .filter(DocumentoAfiliacion.DocumentoId == 4)\
+            .order_by(DocumentosEntregados.FechaEntrega.desc())\
+            .limit(1)\
+            .scalar_subquery()
+
+        # Subconsultas para obtener el equipo del presidente
+        equipo_name_subquery = db.query(Equipos.NombreEquipo)\
+            .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
+            .filter(EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+            .limit(1)\
+            .scalar_subquery()
+
+        equipo_id_subquery = db.query(Equipos.EquipoId)\
+            .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
+            .filter(EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+            .limit(1)\
+            .scalar_subquery()
 
         query = db.query(
             PresidenteEquipo.PresidenteEquipoId,
@@ -616,10 +795,14 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             Personas.PrimerApellido,
             Personas.SegundoApellido,
             Personas.CURP,
+            Personas.NumeroTelefono,
             PresidenteEquipo.EstatusId,
             EstatusPresidente.Nombre.label('EstatusNombre'),
             Usuario.Correo.label('CorreoLogin'),
-            Usuario.UsuarioId.label('UsuarioId')
+            Usuario.UsuarioId.label('UsuarioId'),
+            foto_subquery.label("RutaFoto"),
+            equipo_name_subquery.label("NombreEquipo"),
+            equipo_id_subquery.label("EquipoId")
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
          .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
@@ -634,10 +817,14 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "primerApellido": r.PrimerApellido   or '',
                 "segundoApellido":r.SegundoApellido  or '',
                 "curp":           r.CURP,
+                "telefono":       r.NumeroTelefono   or '',
                 "estatus":        r.EstatusId,
                 "estatusNombre":  r.EstatusNombre    or '',
                 "correo":         r.CorreoLogin      or '',
-                "usuarioId":      r.UsuarioId
+                "usuarioId":      r.UsuarioId,
+                "RutaFoto":       r.RutaFoto,
+                "equipo":         r.NombreEquipo,
+                "equipoId":       r.EquipoId
             } for r in resultados
         ]
     except Exception as e:
@@ -954,6 +1141,7 @@ async def registrar_presidente_admin(
     ligaNombre: Optional[str] = Form(None),
     nombreEquipo: Optional[str] = Form(None),
     afiliacion: Optional[str] = Form(None),
+    borradorId: Optional[int] = Form(None),
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
@@ -962,53 +1150,94 @@ async def registrar_presidente_admin(
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
     
     try:
-        # Check if email exists
-        usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo).first()
-        if usuario_existente:
-            raise HTTPException(status_code=400, detail="El correo ya está registrado.")
-
-        # Create Persona con datos completos
         from app.core.telefono_utils import validar_y_normalizar_telefono
-        telefono_normalizado = validar_y_normalizar_telefono(telefono)
+        telefono_normalizado = validar_y_normalizar_telefono(telefono) if telefono else None
 
-        nueva_persona = Personas(
-            Nombre=nombre,
-            PrimerApellido=primerApellido or "",
-            SegundoApellido=segundoApellido or "",
-            CURP=curp,
-            RFC=rfc.strip().upper() if rfc and rfc.strip() else None,
-            NumeroTelefono=telefono_normalizado,
-            SexoId=sexoId if sexoId else None,
-            FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
-        )
-        db.add(nueva_persona)
-        db.flush()
-        
-        # Hash la contraseña asignada por el admin (o usar default si no se proporcionó)
-        password_to_use = contrasena if contrasena else "Hola1234?"
-        salt = generar_salt()
-        hash_pass = generar_hash(salt, password_to_use)
-        
-        # Create Usuario
-        nuevo_usuario = Usuario(
-            PersonaId=nueva_persona.PersonaId,
-            Correo=correo,
-            Contrasena=hash_pass,
-            Salt=salt,
-            RolId=3, # Presidente
-            Estatus=True
-        )
-        db.add(nuevo_usuario)
-        db.flush()
-        
-        # Create PresidenteEquipo
-        nuevo_presidente = PresidenteEquipo(
-            PersonaId=nueva_persona.PersonaId,
-            EstatusId=7, # Activo
-            Afiliacion=afiliacion
-        )
-        db.add(nuevo_presidente)
-        db.flush()
+        if borradorId:
+            # Load the existing draft records
+            nuevo_presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == borradorId).first()
+            if not nuevo_presidente:
+                raise HTTPException(status_code=404, detail="Borrador de presidente no encontrado")
+            
+            nueva_persona = db.query(Personas).filter(Personas.PersonaId == nuevo_presidente.PersonaId).first()
+            nuevo_usuario = db.query(Usuario).filter(Usuario.PersonaId == nuevo_presidente.PersonaId).first()
+
+            # Check email uniqueness excluding current user
+            usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.PersonaId != nueva_persona.PersonaId, Usuario.Eliminado == False).first()
+            if usuario_existente:
+                raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+
+            # Update Persona
+            nueva_persona.Nombre = nombre
+            nueva_persona.PrimerApellido = primerApellido or ""
+            nueva_persona.SegundoApellido = segundoApellido or None
+            nueva_persona.CURP = curp
+            nueva_persona.RFC = rfc.strip().upper() if rfc and rfc.strip() else None
+            nueva_persona.NumeroTelefono = telefono_normalizado
+            nueva_persona.SexoId = sexoId if sexoId else None
+            nueva_persona.FechaNacimiento = fechaNacimiento if fechaNacimiento else None
+
+            # Update User password if provided
+            if contrasena:
+                password_to_use = contrasena
+                salt = generar_salt()
+                hash_pass = generar_hash(salt, password_to_use)
+                nuevo_usuario.Contrasena = hash_pass
+                nuevo_usuario.Salt = salt
+            
+            nuevo_usuario.Correo = correo
+            nuevo_usuario.Estatus = True
+
+            # Complete President status
+            nuevo_presidente.EstatusId = 7 # ACTIVO
+            nuevo_presidente.Afiliacion = afiliacion
+            nuevo_presidente.DatosBorrador = None # Clear draft data
+
+        else:
+            # Check if email exists
+            usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.Eliminado == False).first()
+            if usuario_existente:
+                raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+
+            # Create Persona con datos completos
+            nueva_persona = Personas(
+                Nombre=nombre,
+                PrimerApellido=primerApellido or "",
+                SegundoApellido=segundoApellido or "",
+                CURP=curp,
+                RFC=rfc.strip().upper() if rfc and rfc.strip() else None,
+                NumeroTelefono=telefono_normalizado,
+                SexoId=sexoId if sexoId else None,
+                FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
+            )
+            db.add(nueva_persona)
+            db.flush()
+            
+            # Hash la contraseña asignada por el admin (o usar default si no se proporcionó)
+            password_to_use = contrasena if contrasena else "Hola1234?"
+            salt = generar_salt()
+            hash_pass = generar_hash(salt, password_to_use)
+            
+            # Create Usuario
+            nuevo_usuario = Usuario(
+                PersonaId=nueva_persona.PersonaId,
+                Correo=correo,
+                Contrasena=hash_pass,
+                Salt=salt,
+                RolId=3, # Presidente
+                Estatus=True
+            )
+            db.add(nuevo_usuario)
+            db.flush()
+            
+            # Create PresidenteEquipo
+            nuevo_presidente = PresidenteEquipo(
+                PersonaId=nueva_persona.PersonaId,
+                EstatusId=7, # Activo
+                Afiliacion=afiliacion
+            )
+            db.add(nuevo_presidente)
+            db.flush()
         
         # Create Solicitud
         from app.modelos.solicitud_modelo import Solicitud
@@ -1026,6 +1255,37 @@ async def registrar_presidente_admin(
         # Calculate Order Detalle and Total
         total = 0
         detalles = []
+
+        # Fetch costs for inscriptions
+        from app.modelos.catalogo_tipo_afiliacion import CatalogoTiposAfiliacion
+        pres_af = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 2).first()
+        jug_af = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 4).first()
+        precio_pres = pres_af.CostoActual if pres_af else 0
+        precio_jug = jug_af.CostoActual if jug_af else 0
+
+        # Add President Inscription
+        detalles.append({
+            "tipo_concepto": 2, # INSCRIPCION
+            "tipo_afiliacion_id": 2, # PRESIDENTE
+            "seguro_id": None,
+            "cantidad": 1,
+            "precio": precio_pres,
+            "subtotal": precio_pres
+        })
+        total += precio_pres
+
+        # Add Player Inscriptions
+        if numPersonas > 0:
+            subtotal_jug = precio_jug * numPersonas
+            detalles.append({
+                "tipo_concepto": 2, # INSCRIPCION
+                "tipo_afiliacion_id": 4, # JUGADOR
+                "seguro_id": None,
+                "cantidad": numPersonas,
+                "precio": precio_jug,
+                "subtotal": subtotal_jug
+            })
+            total += subtotal_jug
             
         if segurosAsignados:
             try:

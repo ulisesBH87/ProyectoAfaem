@@ -18,8 +18,24 @@ export default function Modal({
   pie,
   tamanio = 'medio',
   clasesPersonalizadas = '',
+  bloquearCierreFondo = false,
   ...accesorios
 }) {
+  React.useEffect(() => {
+    if (!estaAbierto) return;
+
+    const manejarTecla = (e) => {
+      if (e.key === 'Escape') {
+        if (!bloquearCierreFondo && alCerrar) {
+          alCerrar();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', manejarTecla);
+    return () => window.removeEventListener('keydown', manejarTecla);
+  }, [estaAbierto, bloquearCierreFondo, alCerrar]);
+
   if (!estaAbierto) return null;
 
   const content = children || hijos;
@@ -35,7 +51,7 @@ export default function Modal({
     <>
       {/* CAPA DE FONDO */}
       <div
-        onClick={alCerrar}
+        onClick={bloquearCierreFondo ? undefined : alCerrar}
         style={{
           position: 'fixed',
           top: 0,
@@ -61,18 +77,24 @@ export default function Modal({
             width: '100%',
             ...estilosPorTamanio[tamanio],
             maxHeight: '90vh',
-            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
           }}
           {...accesorios}
         >
           {/* ENCABEZADO */}
           <div
             style={{
+              flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '20px 24px',
               borderBottom: '1px solid #e2e8f0',
+              backgroundColor: 'white',
+              borderTopLeftRadius: '12px',
+              borderTopRightRadius: '12px',
+              zIndex: 10,
             }}
           >
             <h2
@@ -108,17 +130,22 @@ export default function Modal({
           </div>
 
           {/* CUERPO */}
-          <div style={{ padding: '24px' }}>{content}</div>
+          <div style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>{content}</div>
 
           {/* PIE */}
           {pie && (
             <div
               style={{
+                flexShrink: 0,
                 padding: '16px 24px',
                 borderTop: '1px solid #e2e8f0',
                 display: 'flex',
                 gap: '12px',
                 justifyContent: 'flex-end',
+                backgroundColor: 'white',
+                borderBottomLeftRadius: '12px',
+                borderBottomRightRadius: '12px',
+                zIndex: 10,
               }}
             >
               {pie}
