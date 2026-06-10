@@ -18,7 +18,6 @@ export const getUserProfile = async (email) => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error obteniendo perfil:', error);
     throw error;
   }
 };
@@ -33,8 +32,6 @@ export const getUserTeams = async (email) => {
     });
     return response.data;
   } catch (error) {
-    //console.warn('⚠️ Backend no disponible, buscando equipos en localStorage...', error.message);
-    // FALLBACK: BUSCAR EN LOCALSTORAGE
     return getTeamsLocally(email);
   }
 };
@@ -54,7 +51,6 @@ const getTeamsLocally = (email) => {
       message: 'Datos cargados localmente (backend no disponible)'
     };
   } catch (error) {
-    //console.error('❌ Error obtiendo equipos de localStorage:', error);
     return { teams: [], total: 0, error: true };
   }
 };
@@ -69,7 +65,6 @@ export const getTeamDetail = async (teamId, email) => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error obteniendo detalles del equipo:', error);
     throw error;
   }
 };
@@ -166,7 +161,6 @@ const saveTeamLocally = (teamData) => {
       message: 'Equipo guardado localmente (backend no disponible)'
     };
   } catch (error) {
-    //console.error('❌ Error guardando en localStorage:', error);
     throw error;
   }
 };
@@ -181,7 +175,6 @@ export const certifyUser = async (email) => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error certificando usuario:', error);
     throw error;
   }
 };
@@ -201,7 +194,6 @@ export const registrarJugadorTemporal = async (data) => {
     const response = await api.post('/equipo-temporal/registrar-jugador', data, { headers });
     return response.data;
   } catch (error) {
-    //console.error('Error guardando jugador temporal:', error);
     throw error;
   }
 };
@@ -227,7 +219,6 @@ export const getAvailableSlots = async (equipoTemporalId, invitation = null) => 
     });
     return response.data;
   } catch (error) {
-    //console.error('Error obteniendo slots:', error);
     throw error;
   }
 };
@@ -240,7 +231,6 @@ export const getInvitationInfo = async (tokenIdentificador, tokenSecreto) => {
     const response = await api.get(`/equipo-temporal/invitacion/${tokenIdentificador}/${tokenSecreto}`);
     return response.data;
   } catch (error) {
-    //console.error('Error obteniendo slots por token:', error);
     throw error;
   }
 };
@@ -258,7 +248,6 @@ export const getEquipoTemporalInfo = async () => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error obteniendo equipo temporal info:', error);
     throw error;
   }
 };
@@ -296,7 +285,6 @@ export const getUserTeamsReal = async () => {
 
     return uniqueTeams;
   } catch (error) {
-   // console.error('Error obteniendo equipos reales:', error);
     throw error;
   }
 };
@@ -312,7 +300,6 @@ export const getUserPlayersReal = async () => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error obteniendo jugadores reales:', error);
     throw error;
   }
 };
@@ -344,7 +331,6 @@ export const getPresidentesActivos = async () => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error obteniendo directorio de presidentes:', error);
     throw error;
   }
 };
@@ -423,7 +409,6 @@ export const createTeamCompleto = async (data) => {
     return response.data;
 
   } catch (error) {
-    //console.error('Error creando equipo completo:', error);
     throw error;
   }
 };
@@ -439,7 +424,6 @@ export const finalizarSolicitudCompleta = async (solicitudId) => {
     });
     return response.data;
   } catch (error) {
-    //console.error('Error finalizando solicitud:', error);
     throw error;
   }
 };
@@ -454,11 +438,9 @@ export const checkTeamSlots = async (equipoId) => {
     const response = await api.get(`/equipo-temporal/hay-slots`, {
       params: { equipo_id: equipoId }
     });
-    //alert('LOS DATOS SON: ' + JSON.stringify(response.data));
     return response.data;
   } catch (error) {
     alert('Error verificando slots del equipo. Por favor, intenta de nuevo más tarde.');
-    //console.error('Error verificando slots del equipo:', error);
     throw error;
   }
 };

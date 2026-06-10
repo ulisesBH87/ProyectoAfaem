@@ -10,21 +10,21 @@ async function createTemplate(name) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([600, 800]);
   const form = pdfDoc.getForm();
-  
+
   // Agregar campos de texto requeridos por el form pre-llenado
   const fields = [
-    'Apellido Paterno', 
-    'Apellido Materno', 
-    'Nombres', 
-    'CURP o Clave Única de Registro de Población', 
-    'Fecha de Nacimiento', 
-    'Correo electrónico', 
-    'Nombre Completo', 
-    'Tipo de Sangre', 
-    'Alergias', 
+    'Apellido Paterno',
+    'Apellido Materno',
+    'Nombres',
+    'CURP o Clave Única de Registro de Población',
+    'Fecha de Nacimiento',
+    'Correo electrónico',
+    'Nombre Completo',
+    'Tipo de Sangre',
+    'Alergias',
     'Enfermedad o Lesión'
   ];
-  
+
   fields.forEach((fieldName, index) => {
     try {
       const field = form.createTextField(fieldName);
@@ -37,7 +37,6 @@ async function createTemplate(name) {
   const pdfBytes = await pdfDoc.save();
   const filePath = path.join(__dirname, 'public', `${name}.pdf`);
   fs.writeFileSync(filePath, pdfBytes);
-  //console.log(`Created ${filePath}`);
 }
 
 async function main() {

@@ -46,7 +46,6 @@ function decodeToken(token) {
     const decoded = JSON.parse(atob(payload));
     return decoded;
   } catch (error) {
-    //console.error('Error decodificando token:', error);
     return null;
   }
 }
@@ -123,7 +122,6 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
     return response.data;
   } catch (error) {
     const errorDetail = error.response?.data?.detail;
-    //console.error('Error enviando solicitud:', errorDetail);
     throw error;
   }
 };
@@ -229,7 +227,6 @@ export const getMisSolicitudes = async () => {
     }
     return data;
   } catch (error) {
-    //console.warn('Error obteniendo mis solicitudes:', error);
     return [];
   }
 };
@@ -255,7 +252,6 @@ export const getRequisitos = async (tipoAfiliacionId) => {
     return response.data;
   } catch (error) {
     const errorDetail = error.response?.data?.detail;
-    //console.error('❌ Error obteniendo requisitos:', errorDetail);
     throw error;
   }
 };

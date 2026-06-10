@@ -33,10 +33,10 @@ export async function forgotPassword(email) {
 
 // RESETEAR CONTRASEÑA
 export async function resetPassword(email, token, nueva_contrasena) {
-  const res = await api.post('/auth/resetear-contrasena', { 
-    Correo: email, 
-    token, 
-    nueva_contrasena 
+  const res = await api.post('/auth/resetear-contrasena', {
+    Correo: email,
+    token,
+    nueva_contrasena
   });
   return res.data;
 }
@@ -53,13 +53,12 @@ export async function login(email, password) {
     Correo: email,
     Contrasena: password,
   };
-  
+
   try {
     const res = await api.post('/auth/iniciar-sesion', payload);
     return res.data;
   } catch (error) {
     const errorDetail = error.response?.data?.detail;
-    //console.error('Error en login:', errorDetail);
     throw error;
   }
 }
@@ -87,7 +86,7 @@ export function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
       return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
     return JSON.parse(jsonPayload);
