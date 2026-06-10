@@ -20,6 +20,24 @@ const CUENTA_INICIAL = {
   contrasena: '', confirmarContrasena: '',
 };
 
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = error => reject(error);
+});
+
+const base64ToFile = async (dataurl, filename) => {
+  try {
+    const res = await fetch(dataurl);
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type });
+  } catch (err) {
+    console.error("Error decodificando base64 a archivo:", err);
+    throw err;
+  }
+};
+
 /**
  * useRegistrarPresidente
  * Hook maestro que orquesta todo el estado y la lógica del wizard de registro.
@@ -137,6 +155,27 @@ export function useRegistrarPresidente() {
           if (d.tipoAfiliacion) setTipoAfiliacion(d.tipoAfiliacion);
           if (d.liga) setLiga(d.liga);
           if (d.ocrResults) setOcrResults(prev => ({ ...prev, ...d.ocrResults }));
+
+          if (d.documentosBorrador) {
+            const restoredDocs = {};
+            const restoredPreviews = {};
+            for (const key of Object.keys(d.documentosBorrador)) {
+              const docData = d.documentosBorrador[key];
+              if (docData && docData.data && docData.name) {
+                try {
+                  const file = await base64ToFile(docData.data, docData.name);
+                  restoredDocs[key] = file;
+                  restoredPreviews[key] = file.type === 'application/pdf' ? 'pdf' : URL.createObjectURL(file);
+                } catch (e) {
+                  console.warn(`Error al restaurar el documento ${key} desde el borrador:`, e);
+                }
+              }
+            }
+            if (Object.keys(restoredDocs).length > 0) {
+              setDocuments(prev => ({ ...prev, ...restoredDocs }));
+              setPreviews(prev => ({ ...prev, ...restoredPreviews }));
+            }
+          }
         }
       } catch (err) {
         console.error('Error al cargar borrador:', err);
@@ -170,28 +209,39 @@ export function useRegistrarPresidente() {
       cuenta.curp?.trim() ||
       cuenta.contrasena?.trim() ||
       equipo?.trim() ||
-      numPersonas
+      numPersonas ||
+      Object.keys(documents).length > 0
     );
     if (!tieneDatos) return;
 
     const delayDebounceFn = setTimeout(() => {
-      const payloadDatos = {
-        paso,
-        cuenta,
-        codigoPaisCuenta,
-        numPersonas,
-        asignacion,
-        correoDoc,
-        telefonoDoc,
-        codigoPaisDoc,
-        equipo,
-        tipoAfiliacion,
-        liga,
-        ocrResults,
-      };
-
       const save = async () => {
         try {
+          const docsB64 = {};
+          for (const key of Object.keys(documents)) {
+            if (documents[key]) {
+              docsB64[key] = {
+                name: documents[key].name,
+                data: await fileToBase64(documents[key])
+              };
+            }
+          }
+
+          const payloadDatos = {
+            paso,
+            cuenta,
+            codigoPaisCuenta,
+            numPersonas,
+            asignacion,
+            correoDoc,
+            telefonoDoc,
+            codigoPaisDoc,
+            equipo,
+            tipoAfiliacion,
+            liga,
+            ocrResults,
+            documentosBorrador: docsB64
+          };
           const resData = await guardarBorradorPresidente(payloadDatos, borradorId);
           if (resData && resData.presidente_id && !borradorId) {
             setBorradorId(resData.presidente_id);
@@ -211,7 +261,7 @@ export function useRegistrarPresidente() {
   }, [
     paso, cuenta, codigoPaisCuenta, numPersonas, asignacion,
     correoDoc, telefonoDoc, codigoPaisDoc, equipo, tipoAfiliacion, liga, ocrResults,
-    borradorId, cargandoBorrador
+    documents, borradorId, cargandoBorrador
   ]);
 
   // Cleanup del toast al desmontar
