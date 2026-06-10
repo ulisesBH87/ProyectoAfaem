@@ -116,8 +116,8 @@ export const getSolicitudDocumentos = async (solicitudId) => {
     const response = await api.get(`/solicitud/${solicitudId}/documentos`);
     return response.data;
   } catch (error) {
-    console.warn(`Backend no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
-    // FALLBACK MOCK (Para que el front siga funcionando mientras el back implementa)
+    console.warn(`Servidor no listo para GET /solicitud/${solicitudId}/documentos. Usando Mock.`);
+    // FALLBACK MOCK
     return {
       Equipo: "Galgos de Tijuana (Mock)",
       SolicitudId: solicitudId,

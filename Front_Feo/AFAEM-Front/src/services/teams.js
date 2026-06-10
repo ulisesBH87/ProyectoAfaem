@@ -103,16 +103,11 @@ export const createTeam = async (teamData) => {
 
     return response.data;
   } catch (error) {
-    console.warn('⚠️ Backend no disponible, guardando equipo en localStorage...', error.message);
-
-    // FALLBACK: GUARDAR EN LOCALSTORAGE SI EL BACKEND NO ESTÁ DISPONIBLE
+    console.warn('Servidor no disponible, guardando equipo en localStorage...', error.message);
     return saveTeamLocally(teamData);
   }
 };
 
-/**
- * GUARDA UN EQUIPO EN LOCALSTORAGE (FALLBACK)
- */
 const saveTeamLocally = (teamData) => {
   try {
     // OBTENER EQUIPOS EXISTENTES

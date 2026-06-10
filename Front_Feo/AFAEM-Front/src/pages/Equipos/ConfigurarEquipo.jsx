@@ -317,7 +317,7 @@ export default function ConfigurarEquipo() {
         })
       });
     } catch (err) {
-      console.warn('No se pudo guardar el borrador en la BD:', err);
+      console.warn('No se pudo guardar el borrador:', err);
     }
   };
 

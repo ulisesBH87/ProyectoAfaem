@@ -19,7 +19,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      console.warn('⚠️ Acceso denegado (401). Error presentado al usuario.');
+      console.warn('Acceso denegado (401)');
     }
     return Promise.reject(error);
   }

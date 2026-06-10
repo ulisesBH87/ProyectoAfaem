@@ -85,7 +85,7 @@ export const sendRegistroSolicitud = async (curp, rfc, sexoId, fechaNacimiento) 
     // 3. SI AÚN NO EXISTE, USAR FALLBACK (CUALQUIER MÁQUINA, NO SOLO LOCALHOST)
     if (!usuarioId) {
       usuarioId = 1;
-      console.warn('⚠️ UsuarioId no disponible: usando fallback ID = 1');
+      console.warn('Usando fallback ID = 1');
     }
 
     // OBTENER FECHA Y HORA EXACTA DEL SISTEMA

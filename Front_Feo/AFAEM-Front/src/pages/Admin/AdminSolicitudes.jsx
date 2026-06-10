@@ -164,7 +164,7 @@ export default function AdminSolicitudes() {
         width: '550px'
       });
     } catch (error) {
-      console.warn('⚠️ Error cargando detalle:', error);
+      console.warn('Error cargando detalle:', error);
       const row = solicitudes.find(s => s.SolicitudId === id) || {};
 
       Swal.fire({
