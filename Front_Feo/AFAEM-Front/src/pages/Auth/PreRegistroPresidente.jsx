@@ -1092,7 +1092,7 @@ function PreRegistroPresidente() {
   const procesarOCRReal = async (docKey, file) => {
     Swal.fire({
       title: 'Analizando Documento...',
-      html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>',
+      html: 'Extrayendo información. <b>Por favor espere.</b>',
       allowOutsideClick: false,
       allowEscapeKey: false,
       didOpen: () => {
@@ -1176,9 +1176,8 @@ function PreRegistroPresidente() {
       }
 
     } catch (err) {
-      console.error("Error OCR:", err);
       Swal.fire({
-        title: 'Error OCR',
+        title: 'Error',
         text: 'No se pudo leer el documento de forma automática. Podrás continuar.',
         icon: 'warning'
       });
@@ -2776,7 +2775,7 @@ function PreRegistroPresidente() {
                   gap: '8px'
                 }}
               >
-                <span>⌨️</span> {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos de OCR Manualmente'}
+                <span>⌨️</span> {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
               </button>
             </div>
 

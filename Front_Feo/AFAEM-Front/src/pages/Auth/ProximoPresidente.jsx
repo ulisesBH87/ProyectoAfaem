@@ -105,9 +105,9 @@ export default function ProximoPresidente() {
         Correo: documentData.Correo,
         Telefono: documentData.Telefono
       };
-      
+
       const response = await postJSON('/president-data', payload);
-      
+
       if (response.ok) {
         setMessage('✓ Datos personales guardados exitosamente.');
         // ACTUALIZAR INFO LOCAL
@@ -192,7 +192,7 @@ export default function ProximoPresidente() {
         </div>
 
         <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-          
+
           {/* SECCIÓN: DOCUMENTOS REQUERIDOS */}
           <section>
             <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -239,8 +239,8 @@ export default function ProximoPresidente() {
               cursor: 'pointer',
               transition: 'all 0.3s ease'
             }}
-            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
-            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)'}>
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)'}>
               <label style={{ display: 'block', cursor: 'pointer' }}>
                 <input
                   type="file"
@@ -320,7 +320,7 @@ export default function ProximoPresidente() {
               <span style={{ fontSize: '24px' }}>👤</span> Datos Personales
             </h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              ℹ️ Los campos se auto-completan mediante validación OCR de tus documentos.
+              ℹ️ Los campos se auto-completan mediante validación de tus documentos.
             </p>
             <div style={{
               display: 'grid',
@@ -443,7 +443,7 @@ export default function ProximoPresidente() {
 
         <div style={{ marginTop: '40px', padding: '20px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
           <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: '1.5' }}>
-             <strong>Nota de Proceso:</strong> Los documentos son validados por nuestro sistema inteligente. Una vez aprobados, tu cuenta será habilitada para la gestión deportiva completa.
+            <strong>Nota de Proceso:</strong> Los documentos son validados por nuestro sistema inteligente. Una vez aprobados, tu cuenta será habilitada para la gestión deportiva completa.
           </div>
         </div>
       </div>

@@ -949,7 +949,7 @@ export default function RegistroJugadores() {
     if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
       Swal.fire({
         title: 'Analizando Documento...',
-        html: 'Extrayendo información vía OCR. Por favor espere.',
+        html: 'Extrayendo información. Por favor espere.',
         allowOutsideClick: false,
         allowEscapeKey: false,
         didOpen: () => { Swal.showLoading(); }
@@ -1043,7 +1043,6 @@ export default function RegistroJugadores() {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
       } catch (err) {
-        console.error("Error OCR:", err);
         Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
       }
     }
@@ -2043,7 +2042,7 @@ export default function RegistroJugadores() {
                     fontWeight: '600'
                   }}>
                     <span style={{ fontSize: '18px' }}>📋</span>
-                    Opcional: puedes subir los documentos ahora para auto-llenar los campos vía OCR, o continuar sin archivos y cargarlos después.
+                    Opcional: puedes subir los documentos ahora para llenar los campos automáticamente, o continuar sin archivos y cargarlos después.
                   </div>
 
                   <div style={{
@@ -2231,7 +2230,7 @@ export default function RegistroJugadores() {
                   {/* Loader temporal OCR */}
                   {currentDocuments.acta && !currentDatos.fechaNacimiento && (
                     <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                      ⏳ Analizando el Acta de Nacimiento vía OCR... Los campos del formulario se auto-completarán en breve.
+                      ⏳ Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
                     </div>
                   )}
                 </section>

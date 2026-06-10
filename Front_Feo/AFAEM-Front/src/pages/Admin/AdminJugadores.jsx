@@ -951,7 +951,7 @@ export default function AdminJugadores() {
           style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
           onClick={() => handleEditarJugador(j)}
         >
-          <FaEdit /> Ver / Editar
+          <FaEdit />
         </button>
       </div>
     )
@@ -1174,7 +1174,6 @@ export default function AdminJugadores() {
         <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de jugadores</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Usa los filtros para búsqueda por nombre, CURP o correo electrónico.</p>
           </div>
 
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
@@ -1186,7 +1185,7 @@ export default function AdminJugadores() {
             />
 
             <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569' }}>
-              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
+              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DEC'}
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
@@ -1217,6 +1216,7 @@ export default function AdminJugadores() {
         alCerrar={handleCerrarModal}
         titulo="Detalle y edición del jugador"
         tamanio="grande"
+        bloquearCierreFondo={true}
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
@@ -1234,10 +1234,21 @@ export default function AdminJugadores() {
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
-                <img src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`} alt="Foto del jugador" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <FaUser style={{ fontSize: '40px', color: '#cbd5e1' }} />
-              )}
+                <img
+                  src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`}
+                  alt="Foto del jugador"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const sib = e.target.parentNode.querySelector('.fallback-icon');
+                    if (sib) sib.style.display = 'block';
+                  }}
+                />
+              ) : null}
+              <FaUser
+                className="fallback-icon"
+                style={{ display: (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }}
+              />
             </div>
             <div>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
@@ -1263,7 +1274,7 @@ export default function AdminJugadores() {
                 <strong style={{ fontSize: '14px', color: '#1e40af' }}>Campos Protegidos</strong>
               </div>
               <p style={{ margin: 0, fontSize: '13px', color: '#1e3a8a', lineHeight: '1.6' }}>
-                El Nombre, Apellidos y CURP están bloqueados. Solo se actualizan automáticamente subiendo el Acta de Nacimiento o la INE para lectura OCR.
+                El Nombre, Apellidos y CURP están bloqueados. Solo se actualizan automáticamente subiendo y verificando el Acta de Nacimiento o la INE.
               </p>
             </div>
 
@@ -1289,7 +1300,7 @@ export default function AdminJugadores() {
                 </label>
               </div>
               {ocrCargando && (
-                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento con OCR...</p>
+                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento...</p>
               )}
             </div>
           </div>
