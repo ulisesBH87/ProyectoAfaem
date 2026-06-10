@@ -15,6 +15,7 @@ import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
+import { API_BASE } from '../../config/config';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -175,9 +176,23 @@ export default function CompletarJugadoresEquipo() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
-  
+
   const [ordenAmpliacion, setOrdenAmpliacion] = useState(null);
   const [cargandoOrdenAmpliacion, setCargandoOrdenAmpliacion] = useState(false);
+
+  // Estados para creación de ampliación administrativa
+  const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(1);
+  const [asignacionSegurosAmpliacion, setAsignacionSegurosAmpliacion] = useState({});
+  const [aprobarAutomaticamente, setAprobarAutomaticamente] = useState(true);
+  const [procesandoAmpliacionAdmin, setProcesandoAmpliacionAdmin] = useState(false);
+  const [afiliacionesCatalogo, setAfiliacionesCatalogo] = useState([]);
+
+  const getSeguroTipoPersonaId = (seguro) => Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
+  const segurosJugador = (catalogs?.seguros || []).filter(seguro => {
+    const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+    const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+  });
 
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!selectedSeguroId;
@@ -191,9 +206,15 @@ export default function CompletarJugadoresEquipo() {
       try {
         setLoading(true);
 
-        // 1. Obtener catálogos
+        // 1. Obtener catálogos y afiliaciones
         const catalogsData = await teamsService.getCatalogs();
         setCatalogs(catalogsData);
+        try {
+          const afData = await adminService.getAfiliaciones();
+          setAfiliacionesCatalogo(afData);
+        } catch (e) {
+          console.error("No se pudo cargar afiliaciones", e);
+        }
 
         // 2. Obtener datos del equipo del directorio
         const equiposList = await adminService.getEquiposDirectorio();
@@ -211,7 +232,7 @@ export default function CompletarJugadoresEquipo() {
         if (slotsResponse?.seguros_disponibles?.length > 0) {
           setSelectedSeguroId(String(slotsResponse.seguros_disponibles[0].SeguroId));
         }
-        
+
         // 4. Si no hay slots, verificamos si existe orden de ampliación
         if (slotsResponse?.slots_disponibles === 0 || slotsResponse?.hay_slots === false) {
           setCargandoOrdenAmpliacion(true);
@@ -417,6 +438,69 @@ export default function CompletarJugadoresEquipo() {
       } catch (err) {
         Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
       }
+    }
+  };
+
+  const handleGenerarAmpliacionAdmin = async () => {
+    try {
+      setProcesandoAmpliacionAdmin(true);
+      const token = localStorage.getItem('token');
+
+      const segurosPayload = Object.entries(asignacionSegurosAmpliacion)
+        .filter(([, cantidad]) => Number(cantidad) > 0)
+        .map(([seguroId, cantidad]) => ({
+          SeguroId: Number(seguroId),
+          Cantidad: Number(cantidad)
+        }));
+
+      // 1. Crear Orden
+      const res = await fetch(`${API_BASE}/ordenes-pago/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          CantidadJugadores: Number(numJugadoresAmpliacion),
+          Seguros: segurosPayload,
+          TipoSolicitud: 3, // JUGADOR
+          EquipoId: Number(equipoId)
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo crear la orden de ampliación.');
+      }
+
+      const data = await res.json();
+      const ordenId = data.orden_pago_id || data.OrdenPagoId || data.id;
+
+      if (aprobarAutomaticamente) {
+        // 2. Aprobar inmediatamente
+        await adminService.updateEstatusPago(ordenId, 3);
+        Swal.fire({
+          title: '¡Ampliación generada y aprobada!',
+          text: `Se crearon los espacios para ${numJugadoresAmpliacion} jugador(es).`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        // Recargar slots
+        const slotsResponse = await teamsService.checkTeamSlots(equipoId);
+        setSlotsData(slotsResponse);
+      } else {
+        Swal.fire('Orden Creada', `La orden #${ordenId} se generó exitosamente, pero queda pendiente de comprobante.`, 'success');
+        // Recargar orden
+        const ampliacionData = await adminService.checkOrdenAmpliacionAdmin(equipoId);
+        setOrdenAmpliacion(ampliacionData);
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', err.message || 'Error al generar la ampliación.', 'error');
+    } finally {
+      setProcesandoAmpliacionAdmin(false);
     }
   };
 
@@ -768,18 +852,18 @@ export default function CompletarJugadoresEquipo() {
       confirmButtonColor: 'var(--secondary)',
       cancelButtonColor: 'var(--text-muted)'
     });
-    
+
     if (!result.isConfirmed) return;
-    
+
     try {
       Swal.fire({
         title: 'Aprobando ampliación...',
-        text: 'Generando slots...',
+        text: 'Generando cupos...',
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
       });
       await adminService.updateEstatusPago(ordenId, 3);
-      
+
       Swal.fire({
         title: '¡Ampliación aprobada!',
         text: `Los espacios han sido habilitados correctamente.`,
@@ -787,7 +871,7 @@ export default function CompletarJugadoresEquipo() {
         timer: 2000,
         showConfirmButton: false
       });
-      
+
       // Recargamos la vista para que tome los nuevos slots
       window.location.reload();
     } catch (err) {
@@ -914,30 +998,132 @@ export default function CompletarJugadoresEquipo() {
             <>
               <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
               <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin espacios disponibles</h2>
-              
+
               {!ordenAmpliacion?.tiene_orden ? (
                 // CASO 1: No existe ninguna orden de ampliación
-                <>
-                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
-                    El presidente aún no ha solicitado espacios adicionales para este equipo.
+                <div style={{ textAlign: 'left', marginTop: '10px' }}>
+                  <p style={{ color: '#64748b', marginBottom: '20px', lineHeight: '1.6', textAlign: 'center' }}>
+                    El presidente no ha solicitado espacios adicionales. Puedes generar una orden de ampliación administrativa para este equipo.
                   </p>
-                  <BotonSecundario
-                    etiqueta="Volver al Directorio de Equipos"
-                    alHacerClick={() => navigate('/admin/equipos')}
-                  />
-                </>
+
+                  <div style={{ background: '#f8fafc', padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
+                    {/* Cantidad de Jugadores */}
+                    <div style={{ marginBottom: '25px' }}>
+                      <label style={{ display: 'block', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>
+                        Cantidad de espacios a generar (Jugadores)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={numJugadoresAmpliacion}
+                        onChange={(e) => setNumJugadoresAmpliacion(Math.max(1, parseInt(e.target.value) || 1))}
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '15px' }}
+                      />
+                    </div>
+
+                    {/* Seguros */}
+                    <div style={{ marginBottom: '25px' }}>
+                      <label style={{ display: 'block', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>
+                        Selección de Seguros
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+                        {segurosJugador.map(seg => (
+                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                            <div>
+                              <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{seg.nombre}</div>
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              value={asignacionSegurosAmpliacion[seg.id] || ''}
+                              placeholder="0"
+                              onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                              style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resumen */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>Resumen de Costos</h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: '#64748b' }}>
+                        <span>Afiliación de jugador x{numJugadoresAmpliacion}</span>
+                        <span style={{ fontWeight: '700', color: '#1e293b' }}>
+                          ${(Number(afiliacionesCatalogo.find(a => a.Tipo === 'JUGADOR')?.Costo || 0) * numJugadoresAmpliacion).toFixed(2)}
+                        </span>
+                      </div>
+
+                      {segurosJugador.map(seg => {
+                        const cant = asignacionSegurosAmpliacion[seg.id] || 0;
+                        if (cant === 0) return null;
+                        return (
+                          <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: '#64748b' }}>
+                            <span>Seguro {seg.nombre} x{cant}</span>
+                            <span style={{ fontWeight: '700', color: '#1e293b' }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                          </div>
+                        );
+                      })}
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: '2px solid #f1f5f9' }}>
+                        <span style={{ fontWeight: '800', color: '#1e293b' }}>TOTAL A PAGAR</span>
+                        <span style={{ fontWeight: '900', color: '#0b4ea6', fontSize: '18px' }}>
+                          ${(
+                            (Number(afiliacionesCatalogo.find(a => a.Tipo === 'JUGADOR')?.Costo || 0) * numJugadoresAmpliacion) +
+                            Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
+                              const s = segurosJugador.find(x => String(x.id) === String(id));
+                              if (s) {
+                                return acc + (cant * Number(s.precio || 0));
+                              }
+                              return acc;
+                            }, 0)
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Checkbox de aprobación */}
+                    <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', background: '#ecfdf5', padding: '15px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+                      <input
+                        type="checkbox"
+                        id="checkAprobarAuto"
+                        checked={aprobarAutomaticamente}
+                        onChange={(e) => setAprobarAutomaticamente(e.target.checked)}
+                        style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                      />
+                      <label htmlFor="checkAprobarAuto" style={{ fontWeight: '700', color: '#047857', cursor: 'pointer', margin: 0 }}>
+                        Aprobar orden automáticamente y generar espacios
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                    <BotonSecundario
+                      etiqueta="Cancelar"
+                      alHacerClick={() => navigate('/admin/equipos')}
+                    />
+                    <BotonPrimario
+                      etiqueta={procesandoAmpliacionAdmin ? "Procesando..." : "Generar Ampliación"}
+                      alHacerClick={handleGenerarAmpliacionAdmin}
+                      deshabilitado={procesandoAmpliacionAdmin}
+                      estilo={{ padding: '12px 24px', fontSize: '15px', minWidth: '200px' }}
+                    />
+                  </div>
+                </div>
               ) : ordenAmpliacion.accion === 'SUBIR_COMPROBANTE' ? (
                 // CASO 2: Existe orden con estatus NO_ENVIADA
                 <>
                   <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
-                    El presidente generó una orden de ampliación (Orden #{ordenAmpliacion.orden_id}) pero aún no ha subido comprobante de pago.
+                    Se generó una orden de ampliación (Orden #{ordenAmpliacion.orden_id}) pero aún no se ha subido comprobante de pago.
                   </p>
                   <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                     <BotonSecundario
                       etiqueta="Volver al Directorio"
                       alHacerClick={() => navigate('/admin/equipos')}
                     />
-                    <button 
+                    <button
                       className="btn-premium"
                       onClick={() => handleAprobarOrdenAmpliacion(ordenAmpliacion.orden_id, 'Autorizar pago sin comprobante')}
                       style={{ padding: '12px 24px', borderRadius: '12px', fontSize: '15px' }}
@@ -957,7 +1143,7 @@ export default function CompletarJugadoresEquipo() {
                       etiqueta="Volver al Directorio"
                       alHacerClick={() => navigate('/admin/equipos')}
                     />
-                    <button 
+                    <button
                       onClick={() => window.open(`/${ordenAmpliacion.ruta_voucher}`, '_blank')}
                       style={{
                         padding: '12px 24px',
@@ -971,7 +1157,7 @@ export default function CompletarJugadoresEquipo() {
                     >
                       Ver comprobante
                     </button>
-                    <button 
+                    <button
                       className="btn-premium"
                       onClick={() => handleAprobarOrdenAmpliacion(ordenAmpliacion.orden_id, 'Aprobar pago')}
                       style={{ padding: '12px 24px', borderRadius: '12px', fontSize: '15px' }}
