@@ -1234,10 +1234,21 @@ export default function AdminJugadores() {
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
-                <img src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`} alt="Foto del jugador" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <FaUser style={{ fontSize: '40px', color: '#cbd5e1' }} />
-              )}
+                <img 
+                  src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`} 
+                  alt="Foto del jugador" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const sib = e.target.parentNode.querySelector('.fallback-icon');
+                    if (sib) sib.style.display = 'block';
+                  }}
+                />
+              ) : null}
+              <FaUser 
+                className="fallback-icon" 
+                style={{ display: (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }} 
+              />
             </div>
             <div>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
