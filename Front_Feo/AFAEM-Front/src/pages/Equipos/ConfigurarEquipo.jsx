@@ -1204,7 +1204,7 @@ export default function ConfigurarEquipo() {
     if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
       Swal.fire({
         title: 'Analizando Documento...',
-        html: 'Extrayendo información vía OCR. Por favor espere.',
+        html: 'Extrayendo información. Por favor espere.',
         allowOutsideClick: false,
         allowEscapeKey: false,
         didOpen: () => { Swal.showLoading(); }
@@ -1296,7 +1296,6 @@ export default function ConfigurarEquipo() {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
       } catch (err) {
-        console.error("Error OCR:", err);
         Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
       }
     }

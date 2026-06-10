@@ -322,11 +322,11 @@ export default function AdminPresidentes() {
   };
 
   const procesarOCRReal = async (docKey, file) => {
-    Swal.fire({ title: 'Analizando Documento...', html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Analizando Documento...', html: 'Extrayendo información . <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     try {
       const fd = new FormData(); fd.append('file_id', file);
       const res = await fetch('/ocr-api', { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('Error al conectar con el servidor OCR');
+      if (!res.ok) throw new Error('Error al conectar con el servidor');
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
       let extracted = {};
@@ -351,7 +351,7 @@ export default function AdminPresidentes() {
         icon: 'success', timer: 2000, showConfirmButton: false
       });
     } catch (_err) {
-      Swal.fire({ title: 'Error OCR', text: 'No se pudo leer el documento de forma automática. Podrás continuar.', icon: 'warning' });
+      Swal.fire({ title: 'Error', text: 'No se pudo leer el documento de forma automática. Podrás continuar manualmente.', icon: 'warning' });
     }
   };
 

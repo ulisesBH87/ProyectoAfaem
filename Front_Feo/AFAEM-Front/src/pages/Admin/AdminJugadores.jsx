@@ -1263,7 +1263,7 @@ export default function AdminJugadores() {
                 <strong style={{ fontSize: '14px', color: '#1e40af' }}>Campos Protegidos</strong>
               </div>
               <p style={{ margin: 0, fontSize: '13px', color: '#1e3a8a', lineHeight: '1.6' }}>
-                El Nombre, Apellidos y CURP están bloqueados. Solo se actualizan automáticamente subiendo el Acta de Nacimiento o la INE para lectura OCR.
+                El Nombre, Apellidos y CURP están bloqueados. Solo se actualizan automáticamente subiendo y verificando el Acta de Nacimiento o la INE.
               </p>
             </div>
 
@@ -1289,7 +1289,7 @@ export default function AdminJugadores() {
                 </label>
               </div>
               {ocrCargando && (
-                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento con OCR...</p>
+                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento...</p>
               )}
             </div>
           </div>
