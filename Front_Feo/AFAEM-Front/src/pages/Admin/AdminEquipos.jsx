@@ -39,6 +39,7 @@ export default function AdminEquipos() {
   const [collapseOpen, setCollapseOpen] = useState({ liga: false, modalidad: false, categoria: false, rama: false });
   const [catSeleccionada, setCatSeleccionada] = useState({ ligaId: null, modalidadId: null, categoriaId: null, ramaId: null });
   const [loadingExtras, setLoadingExtras] = useState(false);
+  const [collapsePresidente, setCollapsePresidente] = useState(false);
 
   useEffect(() => {
     loadEquipos();
@@ -373,45 +374,60 @@ export default function AdminEquipos() {
       <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>ACTIVO</span> :
       <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>INACTIVO</span>,
     Acciones: (
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
+        {/* Editar */}
         <button
           className="btn btn-sm btn-primary"
-          style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
+          style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}
           onClick={(e) => { e.stopPropagation(); handleEditarEquipo(eq); }}
+          title="Editar equipo"
         >
           <FaEdit />
         </button>
+        {/* Jugadores */}
         <button
           className="btn btn-sm btn-primary"
-          style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
+          style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', whiteSpace: 'nowrap' }}
           onClick={(e) => { e.stopPropagation(); navigate(`/admin/layout-jugadores?equipo=${encodeURIComponent(eq.NombreEquipo)}`); }}
+          title="Ver jugadores del equipo"
         >
           <FaTable /> Jugadores
         </button>
+        {/* Descargar Docs */}
         <button
           className="btn btn-sm"
-          style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', background: 'white', color: '#059669', border: '1.5px solid #86efac' }}
+          style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', background: 'white', color: '#059669', border: '1.5px solid #86efac', whiteSpace: 'nowrap' }}
           onClick={(e) => { e.stopPropagation(); handleExportarEquipo(eq); }}
           title="Descargar documentos de todos los jugadores del equipo"
         >
-          <FaFileArchive /> Descargar docs
+          <FaFileArchive /> Docs
         </button>
+        {/* Agregar Jugador */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/admin/equipos/completar-jugadores/${eq.EquipoId}`);
           }}
           style={{
-            background: 'none',
-            border: 'none',
+            padding: '6px 10px',
+            borderRadius: '8px',
+            border: '1.5px solid #cbd5e1',
+            background: 'white',
+            color: '#0b4ea6',
             cursor: 'pointer',
-            fontSize: '18px',
-            color: 'var(--primary, #0b4ea6)',
-            padding: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft: '8px'
+            transition: 'all 0.2s',
+            fontWeight: '700'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#f1f5f9';
+            e.currentTarget.style.borderColor = '#94a3b8';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
+            e.currentTarget.style.borderColor = '#cbd5e1';
           }}
           title="Agregar Jugador"
         >
@@ -567,7 +583,7 @@ export default function AdminEquipos() {
         alCerrar={handleCerrarModal}
         titulo="Detalles y gestión del equipo"
         tamanio="grande"
-        bloquearCierreFondo={esNavegacionCruzada}
+        bloquearCierreFondo={true}
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" onClick={handleCerrarModal} />
@@ -637,6 +653,91 @@ export default function AdminEquipos() {
           {equipoEdicion && (
             <div style={{ gridColumn: 'span 2' }}>
 
+              {/* ACCESO A JUGADORES FILTRADOS */}
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px 20px',
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                border: '1px solid #bbf7d0',
+                borderRadius: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 6px -1px rgba(22, 163, 74, 0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '20px' }}>👥</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#166534' }}>Ver jugadores del equipo</div>
+                    <div style={{ fontSize: '12px', color: '#15803d', marginTop: '1px' }}>
+                      Ver catálogo de jugadores de: <strong>{equipoEdicion.NombreEquipo}</strong>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const irAJugadores = () => {
+                      setModalEdicion(false);
+                      if (esNavegacionCruzada) {
+                        setEsNavegacionCruzada(false);
+                        searchParams.delete('abrirDetalle');
+                        setSearchParams(searchParams, { replace: true });
+                      }
+                      navigate(`/admin/jugadores?equipo=${encodeURIComponent(equipoEdicion.NombreEquipo)}`, {
+                        state: { filtroEquipo: equipoEdicion.NombreEquipo }
+                      });
+                    };
+
+                    if (haCambiado) {
+                      Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Tienes cambios sin guardar que se perderán.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'Sí, salir sin guardar',
+                        cancelButtonText: 'Cancelar navegación'
+                      }).then((result) => {
+                        if (result.isConfirmed) {
+                          setSearchPresidente('');
+                          irAJugadores();
+                        }
+                      });
+                    } else {
+                      setSearchPresidente('');
+                      irAJugadores();
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #166534',
+                    background: '#166534',
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(22, 101, 52, 0.15)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#15803d';
+                    e.currentTarget.style.borderColor = '#15803d';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#166534';
+                    e.currentTarget.style.borderColor = '#166534';
+                  }}
+                >
+                  <FaTable /> Ver catálogo
+                </button>
+              </div>
+
               {/* ── SECCIÓN: PRESIDENTE RESPONSABLE ── */}
               <div style={{ marginBottom: '16px', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -699,53 +800,79 @@ export default function AdminEquipos() {
                   {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Sincronizando...</span>}
                 </div>
 
-                <div style={{ padding: '16px 20px', background: 'white' }}>
-                  <input
-                    type="text"
-                    placeholder="Buscar presidente por nombre..."
-                    value={searchPresidente}
-                    onChange={e => setSearchPresidente(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dbeafe', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
-                      🟢 Solo presidentes con estatus Activo
-                    </span>
-                  </div>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
-                    {loadingExtras ? (
-                      <Loader inline text="Cargando presidentes..." />
-                    ) : presidentes.filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase())).length === 0 ? (
-                      <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No se encontraron presidentes</div>
-                    ) : (
-                      presidentes
-                        .filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase()))
-                        .map(p => (
-                          <div
-                            key={p.id}
-                            onClick={() => { setPresidenteSeleccionado(p.id); setHaCambiado(true); }}
-                            style={{
-                              padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                              borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
-                              backgroundColor: presidenteSeleccionado === p.id ? '#eff6ff' : 'white'
-                            }}
-                          >
-                            <div style={{
-                              width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-                              background: presidenteSeleccionado === p.id ? '#0b4ea6' : '#f1f5f9',
-                              color: presidenteSeleccionado === p.id ? 'white' : '#64748b',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '11px', fontWeight: '800'
-                            }}>
-                              {p.nombre.charAt(0).toUpperCase()}
+                <button
+                  type="button"
+                  onClick={() => setCollapsePresidente(!collapsePresidente)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 20px',
+                    background: collapsePresidente ? '#f8fafc' : 'white',
+                    border: 'none',
+                    borderTop: '1px solid #e2e8f0',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#0b4ea6', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Cambiar presidente
+                  </span>
+                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    {collapsePresidente ? '▲' : '▼'}
+                  </span>
+                </button>
+
+                {collapsePresidente && (
+                  <div style={{ padding: '16px 20px', background: 'white', borderTop: '1px solid #f1f5f9' }}>
+                    <input
+                      type="text"
+                      placeholder="Buscar presidente por nombre..."
+                      value={searchPresidente}
+                      onChange={e => setSearchPresidente(e.target.value)}
+                      style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dbeafe', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                        Solo presidentes con estatus Activo
+                      </span>
+                    </div>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
+                      {loadingExtras ? (
+                        <Loader inline text="Cargando presidentes..." />
+                      ) : presidentes.filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase())).length === 0 ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No se encontraron presidentes</div>
+                      ) : (
+                        presidentes
+                          .filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase()))
+                          .map(p => (
+                            <div
+                              key={p.id}
+                              onClick={() => { setPresidenteSeleccionado(p.id); setHaCambiado(true); }}
+                              style={{
+                                padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                                borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
+                                backgroundColor: presidenteSeleccionado === p.id ? '#eff6ff' : 'white'
+                              }}
+                            >
+                              <div style={{
+                                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                                background: presidenteSeleccionado === p.id ? '#0b4ea6' : '#f1f5f9',
+                                color: presidenteSeleccionado === p.id ? 'white' : '#64748b',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '11px', fontWeight: '800'
+                              }}>
+                                {p.nombre.charAt(0).toUpperCase()}
+                              </div>
+                              <span style={{ fontSize: '13px', fontWeight: presidenteSeleccionado === p.id ? '700' : '500', color: '#1e293b', flex: 1 }}>{p.nombre}</span>
+                              {presidenteSeleccionado === p.id && <span style={{ color: '#0b4ea6', fontWeight: '800' }}>✓</span>}
                             </div>
-                            <span style={{ fontSize: '13px', fontWeight: presidenteSeleccionado === p.id ? '700' : '500', color: '#1e293b', flex: 1 }}>{p.nombre}</span>
-                            {presidenteSeleccionado === p.id && <span style={{ color: '#0b4ea6', fontWeight: '800' }}>✓</span>}
-                          </div>
-                        ))
-                    )}
+                          ))
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* ── SECCIÓN: ASIGNACIÓN DE LIGA ── */}
