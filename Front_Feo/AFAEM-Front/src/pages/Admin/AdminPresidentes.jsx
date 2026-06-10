@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaCheck, FaTimes, FaUserTie, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
+import { FaPlus, FaCheck, FaTimes, FaUserTie, FaUser, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
@@ -1169,7 +1169,7 @@ export default function AdminPresidentes() {
         estaAbierto={modalEdicion}
         alCerrar={() => setModalEdicion(false)}
         titulo="Detalle del Presidente"
-        tamanio="medio"
+        tamanio="grande"
         pie={
           <>
             <BotonSecundario etiqueta="Cancelar" alHacerClick={() => setModalEdicion(false)} />
@@ -1182,69 +1182,113 @@ export default function AdminPresidentes() {
           </>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Fila de nombre — 3 columnas */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-            <EntradaFormulario
-              etiqueta="Nombre(s)"
-              nombre="primerNombre"
-              valor={datosEditables.primerNombre}
-              onChange={manejarCambioInput}
-              placeholder="Ej: Juan"
-            />
-            <EntradaFormulario
-              etiqueta="Primer Apellido"
-              nombre="primerApellido"
-              valor={datosEditables.primerApellido}
-              onChange={manejarCambioInput}
-              placeholder="Ej: Pérez"
-            />
-            <EntradaFormulario
-              etiqueta="Segundo Apellido"
-              nombre="segundoApellido"
-              valor={datosEditables.segundoApellido}
-              onChange={manejarCambioInput}
-              placeholder="Ej: García"
-            />
+        <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
+          {/* FOTO DEL PRESIDENTE Y CABECERA */}
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {presidenteEnEdicion?.RutaFoto ? (
+                <img 
+                  src={presidenteEnEdicion.RutaFoto.startsWith('http') ? presidenteEnEdicion.RutaFoto : `${API_BASE}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/').startsWith('/') ? '' : '/'}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/')}`} 
+                  alt="Foto del presidente" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => { 
+                    e.target.style.display = 'none'; 
+                    const sib = e.target.parentNode.querySelector('.fallback-icon');
+                    if (sib) sib.style.display = 'block';
+                  }}
+                />
+              ) : null}
+              <FaUser className="fallback-icon" style={{ display: presidenteEnEdicion?.RutaFoto ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }} />
+            </div>
+            <div>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
+                {datosEditables.primerNombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
+              </h3>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                {datosEditables.curp || 'CURP NO REGISTRADA'} • {presidenteEnEdicion?.equipo || 'Sin Equipo'}
+              </p>
+              {(() => {
+                const statusCfg = ESTATUS_CATALOGO.find(e => e.id === Number(datosEditables.estatusId));
+                return (
+                  <span style={{
+                    display: 'inline-block',
+                    marginTop: '10px',
+                    padding: '4px 10px',
+                    background: statusCfg?.bg || '#f1f5f9',
+                    color: statusCfg?.color || '#475569',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    borderRadius: '6px',
+                    border: `1px solid ${statusCfg?.color || '#cbd5e1'}22`
+                  }}>
+                    {statusCfg?.label?.toUpperCase() || 'DESCONOCIDO'}
+                  </span>
+                );
+              })()}
+            </div>
           </div>
-          {/* Resto de campos — 2 columnas */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <EntradaFormulario
-              etiqueta="Correo Electrónico"
-              nombre="correo"
-              valor={datosEditables.correo}
-              onChange={manejarCambioInput}
-              placeholder={
-                (presidenteEnEdicion && (() => {
-                  const emailVal = presidenteEnEdicion.correo || presidenteEnEdicion.Email || '';
-                  return emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
-                })()) ? "En espera de registro" : "ejemplo@correo.com"
-              }
-            />
-            <EntradaFormulario
-              etiqueta="Teléfono"
-              nombre="telefono"
-              valor={datosEditables.telefono}
-              onChange={manejarCambioInput}
-              placeholder="55 0000 0000"
-            />
-            <EntradaFormulario
-              etiqueta="CURP"
-              nombre="curp"
-              valor={datosEditables.curp}
-              onChange={manejarCambioInput}
-              placeholder="CURP de 18 caracteres"
-            />
-             <EntradaSeleccion
-              etiqueta="Estatus del Presidente"
-              nombre="estatusId"
-              valor={String(datosEditables.estatusId || '')}
-              onChange={manejarCambioInput}
-              opciones={ESTATUS_CATALOGO.filter(e => e.id !== 8).map(e => ({ valor: String(e.id), etiqueta: e.label }))}
-            />
+
+          {/* SECCIÓN: DATOS DEL PRESIDENTE */}
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+            <h4 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>Datos del Presidente</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <EntradaFormulario
+                etiqueta="Nombre(s)"
+                nombre="primerNombre"
+                valor={datosEditables.primerNombre}
+                onChange={manejarCambioInput}
+                placeholder="Ej: Juan"
+              />
+              <EntradaFormulario
+                etiqueta="Primer Apellido"
+                nombre="primerApellido"
+                valor={datosEditables.primerApellido}
+                onChange={manejarCambioInput}
+                placeholder="Ej: Pérez"
+              />
+              <EntradaFormulario
+                etiqueta="Segundo Apellido"
+                nombre="segundoApellido"
+                valor={datosEditables.segundoApellido}
+                onChange={manejarCambioInput}
+                placeholder="Ej: García"
+              />
+              <EntradaFormulario
+                etiqueta="Correo Electrónico"
+                nombre="correo"
+                valor={datosEditables.correo}
+                onChange={manejarCambioInput}
+                placeholder={
+                  (presidenteEnEdicion && (() => {
+                    const emailVal = presidenteEnEdicion.correo || presidenteEnEdicion.Email || '';
+                    return emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
+                  })()) ? "En espera de registro" : "ejemplo@correo.com"
+                }
+              />
+              <EntradaFormulario
+                etiqueta="Teléfono"
+                nombre="telefono"
+                valor={datosEditables.telefono}
+                onChange={manejarCambioInput}
+                placeholder="55 0000 0000"
+              />
+              <EntradaFormulario
+                etiqueta="CURP"
+                nombre="curp"
+                valor={datosEditables.curp}
+                onChange={manejarCambioInput}
+                placeholder="CURP de 18 caracteres"
+              />
+              <EntradaSeleccion
+                etiqueta="Estatus del Presidente"
+                nombre="estatusId"
+                valor={String(datosEditables.estatusId || '')}
+                onChange={manejarCambioInput}
+                opciones={ESTATUS_CATALOGO.filter(e => e.id !== 8).map(e => ({ valor: String(e.id), etiqueta: e.label }))}
+              />
+            </div>
           </div>
         </div>
-
       </Modal>
 
       {/* ══ MODAL DE REASIGNACIÓN ══ */}
