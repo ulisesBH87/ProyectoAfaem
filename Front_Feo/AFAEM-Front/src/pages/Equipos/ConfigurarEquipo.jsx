@@ -1630,7 +1630,7 @@ export default function ConfigurarEquipo() {
   if (loading) {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <Loader text="Cargando información del equipo y slots disponibles..." />
+        <Loader text="Cargando información del equipo y cupos disponibles..." />
       </div>
     );
   }
@@ -1834,7 +1834,7 @@ export default function ConfigurarEquipo() {
                     </div>
                     <h4 style={{ fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>Pago verificado y aprobado</h4>
                     <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
-                      Este presidente tiene slots disponibles. Haz clic en continuar para configurar el equipo.
+                      Este presidente tiene cupos disponibles. Haz clic en continuar para configurar el equipo.
                     </p>
                     <button
                       onClick={() => setActiveStep(1)}
@@ -2190,9 +2190,9 @@ export default function ConfigurarEquipo() {
               </div>
 
               <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-                <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Slots Disponibles</span>
+                <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Cupos Disponibles</span>
                 <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
-                  {slotsData?.slots_disponibles || 0} slots
+                  {slotsData?.slots_disponibles || 0} cupo(s)
                 </span>
               </div>
             </div>
