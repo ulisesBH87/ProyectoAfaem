@@ -166,12 +166,17 @@ export default function DocumentCard({
       {/* Botones de acción */}
       <div style={{ display: 'flex', gap: 8 }}>
         {doc.hasDownload && (
-          <button onClick={descargarFormato} style={{
-            flex: 1, padding: '8px 10px', border: `1px solid ${C.inputBorder}`,
-            background: 'rgba(255,255,255,0.03)', color: C.textMid,
-            borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          }}>
+          <button 
+            onClick={descargarFormato} 
+            disabled={disabledUpload}
+            style={{
+              flex: 1, padding: '8px 10px', border: `1px solid ${C.inputBorder}`,
+              background: 'rgba(255,255,255,0.03)', color: disabledUpload ? C.textDim : C.textMid,
+              borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: disabledUpload ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              opacity: disabledUpload ? 0.5 : 1
+            }}
+          >
             <FaFilePdf /> Descargar
           </button>
         )}
