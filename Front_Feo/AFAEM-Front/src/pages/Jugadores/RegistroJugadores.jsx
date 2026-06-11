@@ -2665,6 +2665,8 @@ export default function RegistroJugadores() {
 
                     <div style={{
                       display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '10px',
                       background: '#f1f5f9',
                       padding: '4px',
                       borderRadius: '12px',
@@ -2729,7 +2731,7 @@ export default function RegistroJugadores() {
                     </div>
 
                     {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
+                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', width: '100%', boxSizing: 'border-box' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
                         <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
                           <FaGlobeAmericas />
@@ -2738,8 +2740,8 @@ export default function RegistroJugadores() {
                       </div>
 
                       {currentDatos.esForaneo ? (
-                        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
-                          <div className="form-grid-2-foraneo">
+                        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del jugador"
                               valor={currentDatos.nacionalidadJugador}
@@ -2762,7 +2764,7 @@ export default function RegistroJugadores() {
                             />
                           </div>
 
-                          <div className="form-grid-2-align-end">
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
                             <EntradaSeleccion
                               etiqueta="¿El jugador ha vivido en el extranjero?"
                               valor={currentDatos.haVividoExtranjero ? '1' : '0'}
@@ -2792,7 +2794,7 @@ export default function RegistroJugadores() {
                             )}
                           </div>
 
-                          <div className="form-grid-2-foraneo">
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del padre"
                               valor={currentDatos.nacionalidadPadre}
@@ -2828,7 +2830,7 @@ export default function RegistroJugadores() {
                             error={validationErrors.registroAsociacionExtranjera}
                           />
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={val => { handleFieldChange('nacAbueloPaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
                             <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={val => { handleFieldChange('nacAbuelaPaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
                             <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={val => { handleFieldChange('nacAbueloMaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />

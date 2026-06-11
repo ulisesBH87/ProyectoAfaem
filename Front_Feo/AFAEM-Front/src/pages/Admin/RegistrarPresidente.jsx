@@ -199,7 +199,7 @@ export default function RegistrarPresidente() {
         }} />
 
         {/* Barra de progreso de pasos */}
-        <StepBar paso={paso} />
+        <StepBar paso={paso} setPaso={setPaso} />
 
         {/* ── Paso 1: Cuenta ── */}
         {paso === 1 && (

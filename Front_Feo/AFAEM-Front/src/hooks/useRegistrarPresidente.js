@@ -20,6 +20,24 @@ const CUENTA_INICIAL = {
   contrasena: '', confirmarContrasena: '',
 };
 
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = error => reject(error);
+});
+
+const base64ToFile = async (dataurl, filename) => {
+  try {
+    const res = await fetch(dataurl);
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type });
+  } catch (err) {
+    console.error("Error decodificando base64 a archivo:", err);
+    throw err;
+  }
+};
+
 /**
  * useRegistrarPresidente
  * Hook maestro que orquesta todo el estado y la lógica del wizard de registro.
@@ -137,6 +155,27 @@ export function useRegistrarPresidente() {
           if (d.tipoAfiliacion) setTipoAfiliacion(d.tipoAfiliacion);
           if (d.liga) setLiga(d.liga);
           if (d.ocrResults) setOcrResults(prev => ({ ...prev, ...d.ocrResults }));
+
+          if (d.documentosBorrador) {
+            const restoredDocs = {};
+            const restoredPreviews = {};
+            for (const key of Object.keys(d.documentosBorrador)) {
+              const docData = d.documentosBorrador[key];
+              if (docData && docData.data && docData.name) {
+                try {
+                  const file = await base64ToFile(docData.data, docData.name);
+                  restoredDocs[key] = file;
+                  restoredPreviews[key] = file.type === 'application/pdf' ? 'pdf' : URL.createObjectURL(file);
+                } catch (e) {
+                  console.warn(`Error al restaurar el documento ${key} desde el borrador:`, e);
+                }
+              }
+            }
+            if (Object.keys(restoredDocs).length > 0) {
+              setDocuments(prev => ({ ...prev, ...restoredDocs }));
+              setPreviews(prev => ({ ...prev, ...restoredPreviews }));
+            }
+          }
         }
       } catch (err) {
         console.error('Error al cargar borrador:', err);
@@ -170,28 +209,39 @@ export function useRegistrarPresidente() {
       cuenta.curp?.trim() ||
       cuenta.contrasena?.trim() ||
       equipo?.trim() ||
-      numPersonas
+      numPersonas ||
+      Object.keys(documents).length > 0
     );
     if (!tieneDatos) return;
 
     const delayDebounceFn = setTimeout(() => {
-      const payloadDatos = {
-        paso,
-        cuenta,
-        codigoPaisCuenta,
-        numPersonas,
-        asignacion,
-        correoDoc,
-        telefonoDoc,
-        codigoPaisDoc,
-        equipo,
-        tipoAfiliacion,
-        liga,
-        ocrResults,
-      };
-
       const save = async () => {
         try {
+          const docsB64 = {};
+          for (const key of Object.keys(documents)) {
+            if (documents[key]) {
+              docsB64[key] = {
+                name: documents[key].name,
+                data: await fileToBase64(documents[key])
+              };
+            }
+          }
+
+          const payloadDatos = {
+            paso,
+            cuenta,
+            codigoPaisCuenta,
+            numPersonas,
+            asignacion,
+            correoDoc,
+            telefonoDoc,
+            codigoPaisDoc,
+            equipo,
+            tipoAfiliacion,
+            liga,
+            ocrResults,
+            documentosBorrador: docsB64
+          };
           const resData = await guardarBorradorPresidente(payloadDatos, borradorId);
           if (resData && resData.presidente_id && !borradorId) {
             setBorradorId(resData.presidente_id);
@@ -211,7 +261,7 @@ export function useRegistrarPresidente() {
   }, [
     paso, cuenta, codigoPaisCuenta, numPersonas, asignacion,
     correoDoc, telefonoDoc, codigoPaisDoc, equipo, tipoAfiliacion, liga, ocrResults,
-    borradorId, cargandoBorrador
+    documents, borradorId, cargandoBorrador
   ]);
 
   // Cleanup del toast al desmontar
@@ -266,30 +316,30 @@ export function useRegistrarPresidente() {
 
   // ── Navegación entre pasos ───────────────────────────────────────────────
   const avanzar = () => {
-    if (paso === 1) {
-      if (!validarPaso1()) {
-        Swal.fire({ title: 'Completa los campos requeridos', icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-    }
-    if (paso === 2) {
-      if (Number(numPersonas) <= 0) {
-        Swal.fire({ title: 'Atención', text: 'Ingresa el número de jugadores.', icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-      if (totalAsignados !== segurosRequeridos) {
-        const msg = totalAsignados > segurosRequeridos
-          ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
-          : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar.`;
-        Swal.fire({ title: 'Atención', text: msg, icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-    }
     setPaso(p => p + 1);
   };
 
   // ── Envío final ──────────────────────────────────────────────────────────
   const procesarRegistro = async () => {
+    if (!validarPaso1()) {
+      Swal.fire('Atención', 'Revisa y completa los campos obligatorios del Paso 1 (Cuenta).', 'warning');
+      setPaso(1);
+      return;
+    }
+    if (Number(numPersonas) <= 0) {
+      Swal.fire('Atención', 'Ingresa el número de jugadores en el Paso 2 (Cuotas).', 'warning');
+      setPaso(2);
+      return;
+    }
+    if (totalAsignados !== segurosRequeridos) {
+      const msg = totalAsignados > segurosRequeridos
+        ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
+        : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar en el Paso 2.`;
+      Swal.fire('Atención', msg, 'warning');
+      setPaso(2);
+      return;
+    }
+
     const correoFinal = correoDoc || cuenta.correo;
     if (!correoFinal) { Swal.fire('Atención', 'El correo es obligatorio.', 'warning'); return; }
     if (!equipo?.trim()) { Swal.fire('Atención', 'El Nombre del Equipo es obligatorio.', 'warning'); return; }

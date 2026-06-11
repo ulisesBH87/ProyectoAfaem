@@ -206,7 +206,7 @@ export default function AdminSolicitudes() {
       title: tieneRechazos ? 'Solicitud con Observaciones' : 'Aprobar solicitud',
       text: tieneRechazos
         ? "Has rechazado algunos documentos. La solicitud se marcará como 'Revisada con Observaciones' y el usuario deberá corregirlos."
-        : "Al aprobar, el usuario recibirá acceso completo a su dashboard de AFAEM.",
+        : "Al aprobar, el usuario recibirá acceso completo a su panel de AFAEM.",
       icon: tieneRechazos ? 'warning' : 'question',
       showCancelButton: true,
       confirmButtonText: tieneRechazos ? 'Enviar observaciones' : 'Sí, aprobar',
@@ -531,7 +531,7 @@ export default function AdminSolicitudes() {
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Validación de Solicitudes</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro de presidente de equipo entrantes.</p>
+          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro de presidente de equipo</p>
         </div>
         <button
           onClick={() => loadSolicitudes(true)}

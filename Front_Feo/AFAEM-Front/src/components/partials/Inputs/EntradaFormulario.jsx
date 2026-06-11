@@ -40,6 +40,8 @@ export default function EntradaFormulario({
             color: '#25303b',
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
+            wordWrap: 'break-word',
+            whiteSpace: 'normal'
           }}
         >
           {etiqueta} {requerido && <span style={{ color: '#dc3545' }}>*</span>}
@@ -70,6 +72,7 @@ export default function EntradaFormulario({
           className={clasesPersonalizadas}
           style={{
             width: '100%',
+            boxSizing: 'border-box',
             padding: icono ? '10px 16px 10px 40px' : '10px 16px',
             fontSize: '14px',
             border: `1.5px solid ${error ? '#dc3545' : estaEnfocado ? '#0b4ea6' : (deshabilitado ? '#e2e8f0' : '#cbd5e1')}`,
