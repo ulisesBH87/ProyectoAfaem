@@ -710,6 +710,32 @@ export default function CompletarJugadoresEquipo() {
       return;
     }
 
+    if (extractedData.fechaNacimiento) {
+      const parts = extractedData.fechaNacimiento.split('-');
+      const fechaDate = new Date(extractedData.fechaNacimiento);
+      const hoy = new Date();
+      
+      // Validación estricta para evitar salto de meses (ej. 30 de febrero)
+      if (
+        isNaN(fechaDate.getTime()) ||
+        (parts.length === 3 && (fechaDate.getUTCFullYear() !== parseInt(parts[0], 10) || fechaDate.getUTCMonth() + 1 !== parseInt(parts[1], 10) || fechaDate.getUTCDate() !== parseInt(parts[2], 10)))
+      ) {
+        Swal.fire('Atención', 'La fecha ingresada no es válida (revisa el mes o día).', 'warning');
+        return;
+      }
+      
+      if (fechaDate.getFullYear() < 1900 || fechaDate.getFullYear() > hoy.getFullYear()) {
+        Swal.fire('Atención', 'El año de nacimiento no es válido.', 'warning');
+        return;
+      }
+      
+      const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
+      if (fechaDate > minAgeDate) {
+        Swal.fire('Atención', 'El jugador debe tener al menos 5 años de edad.', 'warning');
+        return;
+      }
+    }
+
     // Validar documentos requeridos cargados
     if (!documents.acta) {
       Swal.fire('Atención', 'El Acta de Nacimiento es obligatoria.', 'warning');
@@ -1575,11 +1601,37 @@ export default function CompletarJugadoresEquipo() {
                     <input
                       type="date"
                       value={extractedData.fechaNacimiento || ''}
-                      min={minDateStr}
-                      max={today}
                       onChange={e => setExtractedData({ ...extractedData, fechaNacimiento: e.target.value })}
                       style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                     />
+                    {(() => {
+                      const val = extractedData.fechaNacimiento;
+                      if (!val) return null;
+                      const parts = val.split('-');
+                      const fechaDate = new Date(val);
+                      const hoy = new Date();
+                      
+                      if (
+                        isNaN(fechaDate.getTime()) ||
+                        (parts.length === 3 && (fechaDate.getUTCFullYear() !== parseInt(parts[0], 10) || fechaDate.getUTCMonth() + 1 !== parseInt(parts[1], 10) || fechaDate.getUTCDate() !== parseInt(parts[2], 10)))
+                      ) {
+                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>La fecha ingresada no existe en el calendario</div>;
+                      }
+
+                      if (fechaDate.getFullYear() < 1900) {
+                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
+                      }
+                      if (fechaDate.getFullYear() > hoy.getFullYear()) {
+                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
+                      }
+                      
+                      const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
+                      if (fechaDate > minAgeDate) {
+                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
+                      }
+                      
+                      return null;
+                    })()}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>

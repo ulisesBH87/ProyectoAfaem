@@ -113,9 +113,29 @@ export default function Step2Cuenta({
           <label style={fieldStyles.label}>Fecha de Nacimiento</label>
           <input
             style={{ ...fieldStyles.input, colorScheme: 'dark' }}
-            type="date" value={cuenta.fechaNacimiento}
+            type="date" value={cuenta.fechaNacimiento || ''}
             onChange={e => setCuentaField('fechaNacimiento', e.target.value)}
           />
+          {(() => {
+            const val = cuenta.fechaNacimiento;
+            if (!val) return null;
+            const fechaDate = new Date(val);
+            const hoy = new Date();
+            
+            if (fechaDate.getFullYear() < 1900) {
+              return <span style={{ fontSize: 11, color: C.rose, marginTop: 4, display: 'block' }}>El año de nacimiento no puede ser menor a 1900</span>;
+            }
+            if (fechaDate.getFullYear() > hoy.getFullYear()) {
+              return <span style={{ fontSize: 11, color: C.rose, marginTop: 4, display: 'block' }}>El año de nacimiento es inválido</span>;
+            }
+            
+            const limitDate = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate());
+            if (fechaDate > limitDate) {
+              return <span style={{ fontSize: 11, color: C.rose, marginTop: 4, display: 'block' }}>El presidente debe tener más de 18 años</span>;
+            }
+            
+            return null;
+          })()}
         </div>
         <div>
           <label style={fieldStyles.label}>Nacionalidad</label>
