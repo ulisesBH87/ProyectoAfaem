@@ -815,6 +815,8 @@ export default function RegistroJugadores() {
     let formattedValue = value;
     if (field === 'telefono') {
       formattedValue = value.replace(/\D/g, '').slice(0, 10);
+    } else if (field === 'numCamiseta') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 3);
     }
     updatePlayerDatos(currentPlayerIndex, { [field]: formattedValue });
   };
@@ -2796,7 +2798,9 @@ export default function RegistroJugadores() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={currentDatos.numCamiseta}
                             onChange={e => {
                               handleFieldChange('numCamiseta', e.target.value);
