@@ -2886,6 +2886,22 @@ function PreRegistroPresidente() {
                       className="premium-input"
                       style={{ colorScheme: 'dark', cursor: 'pointer' }}
                     />
+                    {(() => {
+                      const val = convertToYYYYMMDD(ocrResults.fecha_nac);
+                      if (!val) return null;
+                      const fechaDate = new Date(val);
+                      if (fechaDate.getFullYear() < 1900) {
+                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
+                      }
+                      if (fechaDate.getFullYear() > new Date().getFullYear()) {
+                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
+                      }
+                      const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
+                      if (fechaDate > limitDate) {
+                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>Debes tener más de 18 años</div>;
+                      }
+                      return null;
+                    })()}
                   </div>
                   <div className="premium-input-group">
                     <label className="premium-label">Sexo *</label>
@@ -2961,9 +2977,20 @@ function PreRegistroPresidente() {
 
             {/* TARJETAS DE DOCUMENTOS */}
             {(() => {
+              const esMayorDeEdad = (() => {
+                if (!ocrResults.fecha_nac) return false;
+                const val = convertToYYYYMMDD(ocrResults.fecha_nac);
+                if (!val) return false;
+                const fechaDate = new Date(val);
+                if (fechaDate.getFullYear() < 1900) return false;
+                if (fechaDate.getFullYear() > new Date().getFullYear()) return false;
+                const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
+                return fechaDate <= limitDate;
+              })();
+
               const formatAfiliacionLocked = !(
                 ocrResults.equipo && ocrResults.nombre && ocrResults.curp &&
-                ocrResults.fecha_nac && ocrResults.nacionalidad && ocrResults.sexo &&
+                ocrResults.fecha_nac && esMayorDeEdad && ocrResults.nacionalidad && ocrResults.sexo &&
                 ocrResults.telefono && liga && tipoAfiliacion &&
                 documents.actaNacimiento && documents.identificacion && documents.fotografia
               );
