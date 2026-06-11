@@ -1451,9 +1451,24 @@ export default function AdminJugadores() {
               <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
                 {datosEditables.nombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
               </h3>
-              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                {datosEditables.curp || 'CURP NO REGISTRADA'} • {jugadorEdicion?.EquipoNombre || 'Sin Equipo'}
-              </p>
+              <div style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                <span>{datosEditables.curp || 'CURP NO REGISTRADA'}</span>
+                <span>•</span>
+                {jugadorEdicion?.EquipoId ? (
+                  <span
+                    style={{ color: '#0b4ea6', cursor: 'pointer', textDecoration: 'underline' }}
+                    title="Ver detalle del equipo"
+                    onClick={() => {
+                      setModalEdicion(false);
+                      navigate(`/admin/equipos?abrirDetalle=${jugadorEdicion.EquipoId}`);
+                    }}
+                  >
+                    {jugadorEdicion.EquipoNombre}
+                  </span>
+                ) : (
+                  <span>{jugadorEdicion?.EquipoNombre || 'Sin Equipo'}</span>
+                )}
+              </div>
               {datosEditables.estatus === '1' ? (
                 <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: '1px solid #a7f3d0' }}>ACTIVO</span>
               ) : (
