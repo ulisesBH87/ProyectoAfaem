@@ -29,6 +29,8 @@ export default function Step3Documentos({
   descargarFormato,
   // Modal de preview
   previewDoc, setPreviewDoc,
+  // Validación de pasos anteriores
+  pasosAnterioresLlenos,
 }) {
   const handleOpenPreview = (doc, previewUrl, file) => {
     setPreviewDoc({
@@ -149,24 +151,39 @@ export default function Step3Documentos({
 
       {/* Cuadrícula de documentos */}
       <div className="rp-grid-docs">
-        {REQUISITOS.map(doc => (
-          <DocumentCard
-            key={doc.documento}
-            doc={doc}
-            documents={documents}
-            previews={previews}
-            ocrResults={ocrResults}
-            detailsOpen={detailsOpen}
-            setDetailsOpen={setDetailsOpen}
-            fotoError={fotoError}
-            fotoFallida={fotoFallida}
-            fotoArchivo={fotoArchivo}
-            forzarFoto={forzarFoto}
-            handleFileUpload={handleFileUpload}
-            descargarFormato={descargarFormato}
-            onOpenPreview={handleOpenPreview}
-          />
-        ))}
+        {REQUISITOS.map(doc => {
+          const isFormatoReady = 
+            pasosAnterioresLlenos &&
+            !!equipo?.trim() && 
+            !!liga?.trim() &&
+            !!documents.actaNacimiento &&
+            !!documents.identificacion &&
+            !!documents.fotografia &&
+            !!ocrResults?.nombre && ocrResults.nombre !== 'No detectado' &&
+            !!ocrResults?.curp && ocrResults.curp !== 'No detectado';
+          
+          const isDisabledUpload = doc.documento === 'formatoAfiliacion' && !isFormatoReady;
+
+          return (
+            <DocumentCard
+              key={doc.documento}
+              doc={doc}
+              documents={documents}
+              previews={previews}
+              ocrResults={ocrResults}
+              detailsOpen={detailsOpen}
+              setDetailsOpen={setDetailsOpen}
+              fotoError={fotoError}
+              fotoFallida={fotoFallida}
+              fotoArchivo={fotoArchivo}
+              forzarFoto={forzarFoto}
+              handleFileUpload={handleFileUpload}
+              descargarFormato={descargarFormato}
+              onOpenPreview={handleOpenPreview}
+              disabledUpload={isDisabledUpload}
+            />
+          );
+        })}
       </div>
 
       {/* Modal de previsualización */}

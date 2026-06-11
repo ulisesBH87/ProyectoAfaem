@@ -47,6 +47,26 @@ export default function RegistrarPresidente() {
     return <Loader text="Cargando borrador..." />;
   }
 
+  const isPaso1Ready = 
+    !!cuenta.nombre?.trim() &&
+    !!cuenta.primerApellido?.trim() &&
+    !!cuenta.correo?.trim() &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cuenta.correo) &&
+    !!cuenta.telefono?.trim() &&
+    /^\d{10}$/.test(cuenta.telefono) &&
+    !!cuenta.curp?.trim() &&
+    cuenta.curp.length === 18 &&
+    !!cuenta.contrasena &&
+    cuenta.contrasena.length >= 6 &&
+    cuenta.contrasena === cuenta.confirmarContrasena;
+
+  const isPaso2Ready = 
+    Number(numPersonas) > 0 && 
+    totalAsignados === segurosRequeridos;
+
+  const pasosAnterioresLlenos = isPaso1Ready && isPaso2Ready;
+
+
   return (
     <div className="rp-page-wrapper" style={{
       color: C.text,
@@ -262,6 +282,7 @@ export default function RegistrarPresidente() {
             descargarFormato={handleDescargarFormato}
             previewDoc={previewDoc}
             setPreviewDoc={setPreviewDoc}
+            pasosAnterioresLlenos={pasosAnterioresLlenos}
           />
         )}
 
