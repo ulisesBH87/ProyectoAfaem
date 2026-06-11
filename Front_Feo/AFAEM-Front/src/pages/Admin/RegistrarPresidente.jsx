@@ -51,6 +51,16 @@ export default function RegistrarPresidente() {
     !!documents.identificacion &&
     !!documents.fotografia;
 
+  const esFechaPresidenteValida = (() => {
+    if (!cuenta.fechaNacimiento) return true; // Si no es obligatorio, no lo validamos aquí, pero si existe:
+    const val = cuenta.fechaNacimiento;
+    const fechaDate = new Date(val);
+    const hoy = new Date();
+    if (fechaDate.getFullYear() < 1900 || fechaDate.getFullYear() > hoy.getFullYear()) return false;
+    const limitDate = new Date(hoy.getFullYear() - 18, hoy.getMonth(), hoy.getDate());
+    return fechaDate <= limitDate;
+  })();
+
   const isPaso2Ready = 
     !!cuenta.nombre?.trim() &&
     !!cuenta.primerApellido?.trim() &&
@@ -64,7 +74,8 @@ export default function RegistrarPresidente() {
     cuenta.contrasena.length >= 6 &&
     cuenta.contrasena === cuenta.confirmarContrasena &&
     !!equipo?.trim() && 
-    !!liga?.trim();
+    !!liga?.trim() &&
+    esFechaPresidenteValida;
 
   const isPaso3Ready = 
     Number(numPersonas) > 0 && 
