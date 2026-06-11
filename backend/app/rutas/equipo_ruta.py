@@ -1320,6 +1320,24 @@ async def registrar_presidente_admin(
             except Exception:
                 pass
                 
+        # Agregar los detalles de inscripción con costo 0 para cumplir con la validación de slots
+        detalles.append({
+            "tipo_concepto": 2,          # INSCRIPCION
+            "tipo_afiliacion_id": 2,     # TIPO_AFILIACION_PRESIDENTE
+            "seguro_id": None,
+            "cantidad": 1,
+            "precio": 0.0,
+            "subtotal": 0.0
+        })
+        detalles.append({
+            "tipo_concepto": 2,          # INSCRIPCION
+            "tipo_afiliacion_id": 4,     # TIPO_AFILIACION_JUGADOR
+            "seguro_id": None,
+            "cantidad": numPersonas,
+            "precio": 0.0,
+            "subtotal": 0.0
+        })
+                
         # Create OrdenPago
         nueva_orden = OrdenPago(
             UsuarioId=nuevo_usuario.UsuarioId,

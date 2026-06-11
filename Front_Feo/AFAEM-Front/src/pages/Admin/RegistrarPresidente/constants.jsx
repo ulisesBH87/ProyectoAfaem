@@ -3,9 +3,9 @@ import { FaUser, FaMoneyBillWave, FaFolderOpen } from 'react-icons/fa';
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 export const C = {
   bg: '#FFFFFF',
-  surface: '#181c27',
-  card: 'rgba(255,255,255,0.03)',
-  cardBorder: 'rgba(255,255,255,0.07)',
+  surface: '#272d3eff',
+  card: '#272d3eff',
+  cardBorder: 'rgba(54, 70, 153, 0.29)',
   amber: '#f59e0b',
   amberDark: '#d97706',
   amberLight: '#fbbf24',
@@ -14,9 +14,9 @@ export const C = {
   green: '#4ade80',
   greenDim: 'rgba(74,222,128,0.15)',
   text: 'rgba(255,255,255,0.87)',
-  textMid: 'rgba(255,255,255,0.5)',
-  textDim: 'rgba(255,255,255,0.28)',
-  inputBg: 'rgba(255,255,255,0.04)',
+  textMid: 'rgba(255, 255, 255, 1)',
+  textDim: 'rgba(255, 255, 255, 1)',
+  inputBg: 'rgba(255, 255, 255, 0.04)',
   inputBorder: 'rgba(255,255,255,0.1)',
   focusBorder: '#f59e0b',
 };

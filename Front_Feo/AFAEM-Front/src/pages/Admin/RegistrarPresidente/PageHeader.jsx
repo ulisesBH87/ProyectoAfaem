@@ -14,7 +14,7 @@ export default function PageHeader({ onBack }) {
           width: 42, height: 42, borderRadius: 12,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.cardBorder}`,
-          color: C.textMid, cursor: 'pointer', fontSize: 15, transition: 'all .2s',
+          color: C.textArrow, cursor: 'pointer', fontSize: 15, transition: 'all .2s',
         }}
         onMouseEnter={e => {
           e.currentTarget.style.background = 'rgba(245,158,11,0.1)';
@@ -24,7 +24,7 @@ export default function PageHeader({ onBack }) {
         onMouseLeave={e => {
           e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
           e.currentTarget.style.borderColor = C.cardBorder;
-          e.currentTarget.style.color = C.textMid;
+          e.currentTarget.style.color = C.textArrow;
         }}
       >
         <FaArrowLeft />
