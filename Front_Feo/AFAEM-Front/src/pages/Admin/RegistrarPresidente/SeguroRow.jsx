@@ -45,7 +45,7 @@ export default function SeguroRow({ seg, isPres, isChecked, asignacion, onSelect
         />
       ) : (
         <input
-          type="number" min="0"
+          type="text" inputMode="numeric" pattern="[0-9]*"
           style={{
             width: 58, padding: '6px 8px', borderRadius: 8,
             background: C.inputBg, border: `1px solid ${C.inputBorder}`,
