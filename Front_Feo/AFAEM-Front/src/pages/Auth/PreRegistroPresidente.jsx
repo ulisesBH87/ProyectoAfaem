@@ -2846,7 +2846,7 @@ function PreRegistroPresidente() {
                 </div>
 
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: '1.5' }}>
-                  Si el sistema automático de lectura (OCR) no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
+                  Si el sistema automático de lectura no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
@@ -2932,17 +2932,18 @@ function PreRegistroPresidente() {
                       <select
                         value={codigoPais}
                         onChange={(e) => setCodigoPais(e.target.value)}
+                        className="premium-input"
+                        disabled={true}
                         style={{
-                          width: '120px',
-                          flexShrink: 0,
-                          padding: '13px 12px',
+                          width: '100px',
+                          padding: '12px 16px',
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '12px',
                           color: 'white',
                           fontSize: '14px',
                           outline: 'none',
-                          cursor: 'pointer',
+                          cursor: 'not-allowed',
                           backdropFilter: 'blur(4px)'
                         }}
                       >
@@ -2972,7 +2973,9 @@ function PreRegistroPresidente() {
                         value={ocrResults.telefono || ''}
                         onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
                         className="premium-input"
-                        style={{ cursor: 'text', flexGrow: 1 }}
+                        disabled={true}
+                        readOnly={true}
+                        style={{ cursor: 'not-allowed', flexGrow: 1, backgroundColor: 'rgba(255,255,255,0.05)' }}
                       />
                     </div>
                   </div>
@@ -2981,8 +2984,16 @@ function PreRegistroPresidente() {
             )}
 
             {/* TARJETAS DE DOCUMENTOS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '35px' }}>
-              {requisitos.map((doc, idx) => {
+            {(() => {
+              const formatAfiliacionLocked = !(
+                ocrResults.equipo && ocrResults.nombre && ocrResults.curp &&
+                ocrResults.fecha_nac && ocrResults.nacionalidad && ocrResults.sexo &&
+                ocrResults.telefono && liga && tipoAfiliacion &&
+                documents.actaNacimiento && documents.identificacion && documents.fotografia
+              );
+              return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '35px' }}>
+                {requisitos.map((doc, idx) => {
                 const isUploaded = !!documents[doc.documento];
                 const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
                 const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
@@ -3048,15 +3059,32 @@ function PreRegistroPresidente() {
                     {/* Action buttons */}
                     <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                       {doc.hasDownload && (
-                        <button onClick={handleDownloadFormato} className="doc-download-btn">⬇ Descargar</button>
+                        <button 
+                          onClick={(e) => {
+                            if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                              e.preventDefault();
+                              return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
+                            }
+                            handleDownloadFormato(e);
+                          }}
+                          className="doc-download-btn"
+                          style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                        >⬇ Descargar</button>
                       )}
                       <button
-                        onClick={() => document.getElementById(`file-${doc.documento}`).click()}
+                        onClick={() => {
+                          if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                            return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                          }
+                          document.getElementById(`file-${doc.documento}`).click();
+                        }}
                         className="doc-action-btn"
                         style={{
                           border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
                           background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
                           color: isUploaded ? '#34d399' : 'var(--text-muted)',
+                          opacity: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 0.5 : 1,
+                          cursor: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'
                         }}
                       >
                         {isUploaded ? '🔄 Cambiar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir')}
@@ -3103,6 +3131,8 @@ function PreRegistroPresidente() {
                 );
               })}
             </div>
+            );
+            })()}
 
             {/* BOTONES DE NAVEGACIÓN */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
