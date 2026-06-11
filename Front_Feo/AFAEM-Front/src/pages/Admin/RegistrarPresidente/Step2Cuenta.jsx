@@ -7,7 +7,9 @@ import PasswordField from './PasswordField';
  * Step1Cuenta
  * Paso 1 del wizard: datos de cuenta del nuevo presidente.
  */
-export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta }) {
+export default function Step2Cuenta({
+  cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta
+}) {
   return (
     <div>
       <PasoHeader
@@ -105,8 +107,8 @@ export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codi
         </div>
       </div>
 
-      {/* Fecha de nacimiento + contraseñas */}
-      <div className="rp-grid-3cols-equal">
+      {/* Fecha de nacimiento y nacionalidad */}
+      <div className="rp-grid-2cols">
         <div>
           <label style={fieldStyles.label}>Fecha de Nacimiento</label>
           <input
@@ -115,6 +117,19 @@ export default function Step1Cuenta({ cuenta, setCuentaField, cuentaErrors, codi
             onChange={e => setCuentaField('fechaNacimiento', e.target.value)}
           />
         </div>
+        <div>
+          <label style={fieldStyles.label}>Nacionalidad</label>
+          <input
+            style={{ ...fieldStyles.input, textTransform: 'uppercase' }}
+            type="text" placeholder="EJ: MEXICANA"
+            value={cuenta.nacionalidad}
+            onChange={e => setCuentaField('nacionalidad', e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Contraseñas */}
+      <div className="rp-grid-2cols">
         <PasswordField
           label="Contraseña"
           value={cuenta.contrasena}

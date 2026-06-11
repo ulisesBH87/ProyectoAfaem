@@ -16,7 +16,7 @@ export default function DocumentCard({
   doc,
   documents,
   previews,
-  ocrResults,
+  ocrResults = {},
   detailsOpen,
   setDetailsOpen,
   fotoError,

@@ -59,9 +59,10 @@ export const fieldStyles = {
 
 // ─── Pasos del wizard ─────────────────────────────────────────────────────────
 export const PASOS = [
-  { id: 1, label: 'Cuenta', icon: <FaUser />, desc: 'Credenciales de acceso' },
-  { id: 2, label: 'Cuotas', icon: <FaMoneyBillWave />, desc: 'Seguros y pago' },
-  { id: 3, label: 'Documentos', icon: <FaFolderOpen />, desc: 'Expediente' },
+  { id: 1, label: 'Documentos', icon: <FaFolderOpen />, desc: 'Expediente personal' },
+  { id: 2, label: 'Cuenta', icon: <FaUser />, desc: 'Credenciales de acceso' },
+  { id: 3, label: 'Cuotas', icon: <FaMoneyBillWave />, desc: 'Seguros y pago' },
+  { id: 4, label: 'Afiliación', icon: <FaFolderOpen />, desc: 'Formato de Afiliación' },
 ];
 
 // ─── Documentos requeridos ────────────────────────────────────────────────────

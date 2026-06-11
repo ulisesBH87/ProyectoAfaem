@@ -98,16 +98,6 @@ export function useOCR() {
   };
 
   // ── Edición manual de campos OCR ─────────────────────────────────────────
-  const handleOcrManual = (field, val) => {
-    const uppercased = typeof val === 'string' ? val.toUpperCase() : val;
-    setOcrResults(prev => ({
-      ...prev,
-      [field]: uppercased,
-      actaNacimiento: prev.actaNacimiento || 'Manual',
-      identificacion: prev.identificacion || 'Manual',
-    }));
-  };
-
   // ── Pre-rellenar con datos de cuenta al llegar al paso 3 ─────────────────
   const preFillFromCuenta = (cuenta) => {
     setOcrResults(prev => {
@@ -127,7 +117,6 @@ export function useOCR() {
     ocrResults,
     setOcrResults,
     procesarOCR,
-    handleOcrManual,
     preFillFromCuenta,
   };
 }
