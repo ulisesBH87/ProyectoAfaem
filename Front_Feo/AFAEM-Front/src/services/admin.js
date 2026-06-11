@@ -85,6 +85,14 @@ export const updateEstatusPago = async (ordenPagoId, estatus) => {
 };
 
 /**
+ * OBTIENE EL DETALLE DE UNA ORDEN DE PAGO INDIVIDUAL
+ */
+export const getPagoIndividual = async (ordenPagoId) => {
+  const response = await api.get(`/ordenes-pago/${ordenPagoId}`);
+  return response.data;
+};
+
+/**
  * OBTIENE CATÁLOGO DE SEGUROS
  */
 export const getSeguros = async () => {
@@ -401,6 +409,7 @@ export default {
   getSolicitudDetalle,
   getPagosGenerales,
   updateEstatusPago,
+  getPagoIndividual,
   getSeguros,
   getAfiliaciones,
   getRequisitosPorTipo,

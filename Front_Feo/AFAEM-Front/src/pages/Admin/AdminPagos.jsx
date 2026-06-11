@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import DashboardTable from '../../components/DashboardTable';
-import { getPagosGenerales, updateEstatusPago } from '../../services/admin';
+import { getPagosGenerales, updateEstatusPago, getPagoIndividual, getSeguros, getAfiliaciones } from '../../services/admin';
 import { API_BASE } from '../../config/config';
 import Swal from 'sweetalert2';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
-import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWallet, FaCheckCircle, FaTimesCircle, FaClock, FaFileInvoice } from 'react-icons/fa';
+import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWallet, FaCheckCircle, FaTimesCircle, FaClock, FaFileInvoice, FaFileAlt } from 'react-icons/fa';
+import Modal from '../../components/partials/Forms/Modal';
 
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
@@ -15,6 +16,31 @@ const AdminPagos = () => {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Modal states for payment order details and voucher
+  const [modalOpen, setModalOpen] = useState(false);
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
+  const [pagoDetalle, setPagoDetalle] = useState(null);
+  const [catalogoSeguros, setCatalogoSeguros] = useState([]);
+  const [catalogoAfiliaciones, setCatalogoAfiliaciones] = useState([]);
+  const [voucherDisponible, setVoucherDisponible] = useState(true);
+
+  // Fetch catalogs on mount for display mapping
+  useEffect(() => {
+    const cargarCatalogos = async () => {
+      try {
+        const [segurosData, afiliacionesData] = await Promise.all([
+          getSeguros(),
+          getAfiliaciones()
+        ]);
+        setCatalogoSeguros(segurosData || []);
+        setCatalogoAfiliaciones(afiliacionesData || []);
+      } catch (err) {
+        console.error('Error al cargar catálogos en AdminPagos:', err);
+      }
+    };
+    cargarCatalogos();
+  }, []);
 
   const fetchPagos = async (forceRefresh = false) => {
     setLoading(true);
@@ -128,21 +154,41 @@ const AdminPagos = () => {
     }
   };
 
-  const handleVerVoucher = (rutaVoucher, ordenId) => {
-    if (!rutaVoucher) {
-      Swal.fire({
-        title: 'Sin comprobante',
-        text: `La orden #${ordenId} aún no tiene un comprobante de pago adjunto.`,
-        icon: 'info',
-        confirmButtonColor: '#2563eb'
-      });
-      return;
-    }
+  const handleVerVoucher = async (rutaVoucher, ordenId) => {
+    setLoadingDetalle(true);
+    setModalOpen(true);
+    setPagoDetalle(null);
+    setVoucherDisponible(true);
 
-    // Construir la URL del archivo estático desde el backend
-    // RutaVoucher viene como "uploads/vouchers/orden_XX.ext"
-    const url = `/${rutaVoucher}`;
-    window.open(url, '_blank');
+    try {
+      const data = await getPagoIndividual(ordenId);
+      setPagoDetalle(data);
+
+      if (data.RutaVoucher) {
+        try {
+          const checkRes = await fetch(`/${data.RutaVoucher}`, { method: 'HEAD' });
+          if (checkRes.ok) {
+            setVoucherDisponible(true);
+          } else {
+            setVoucherDisponible(false);
+          }
+        } catch (e) {
+          setVoucherDisponible(false);
+        }
+      } else {
+        setVoucherDisponible(false);
+      }
+    } catch (error) {
+      console.error('Error al cargar detalle del pago:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Ocurrió un error al consultar los detalles de la orden de pago.',
+        icon: 'error'
+      });
+      setModalOpen(false);
+    } finally {
+      setLoadingDetalle(false);
+    }
   };
 
   // Stats
@@ -154,9 +200,9 @@ const AdminPagos = () => {
 
   const formatDate = (val) => {
     if (!val) return '—';
-    return new Date(val).toLocaleDateString('es-MX', { 
-      day: '2-digit', month: 'short', year: 'numeric', 
-      hour: '2-digit', minute: '2-digit' 
+    return new Date(val).toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
@@ -171,9 +217,9 @@ const AdminPagos = () => {
       result = result.filter(p => {
         const dateStr = p.FechaEnvio ? formatDate(p.FechaEnvio).toLowerCase() : '';
         return (p.Correo && p.Correo.toLowerCase().includes(query)) ||
-               (p.UsuarioId && String(p.UsuarioId).includes(query)) ||
-               (p.OrdenPagoId && String(p.OrdenPagoId).includes(query)) ||
-               (dateStr.includes(query));
+          (p.UsuarioId && String(p.UsuarioId).includes(query)) ||
+          (p.OrdenPagoId && String(p.OrdenPagoId).includes(query)) ||
+          (dateStr.includes(query));
       });
     }
     result.sort((a, b) => {
@@ -190,18 +236,17 @@ const AdminPagos = () => {
 
   const columns = [
     { key: 'OrdenPagoId', label: '# Orden' },
-    { 
-      key: 'Correo', 
+    {
+      key: 'Correo',
       label: 'Usuario',
       render: (val, row) => (
         <div>
           <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>{val || '—'}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {row.UsuarioId}</div>
         </div>
       )
     },
-    { 
-      key: 'TotalPagar', 
+    {
+      key: 'TotalPagar',
       label: 'Monto',
       render: (val) => (
         <span style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '14px' }}>
@@ -216,19 +261,19 @@ const AdminPagos = () => {
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{formatDate(val)}</span>
       )
     },
-    { 
-      key: 'EstatusPagoId', 
+    {
+      key: 'EstatusPagoId',
       label: 'Estatus',
       render: (val) => {
-        const config = { 
-          2: { label: 'Pendiente', bg: '#fef3c7', color: '#92400e', icon: <FaClock /> }, 
-          3: { label: 'Aprobado', bg: '#dcfce7', color: '#166534', icon: <FaCheckCircle /> }, 
+        const config = {
+          2: { label: 'Pendiente', bg: '#fef3c7', color: '#92400e', icon: <FaClock /> },
+          3: { label: 'Aprobado', bg: '#dcfce7', color: '#166534', icon: <FaCheckCircle /> },
           4: { label: 'Rechazado', bg: '#fee2e2', color: '#991b1b', icon: <FaTimesCircle /> },
-          5: { label: 'Caducado', bg: '#fee2e2', color: '#006774', icon: <FaTimesCircle /> } 
+          5: { label: 'Caducado', bg: '#fee2e2', color: '#006774', icon: <FaTimesCircle /> }
         };
         const c = config[val] || { label: 'Desconocido', bg: '#f1f5f9', color: '#64748b', icon: null };
         return (
-          <span style={{ 
+          <span style={{
             padding: '5px 12px', borderRadius: '20px', background: c.bg, color: c.color,
             fontSize: '11px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '6px'
           }}>
@@ -242,10 +287,10 @@ const AdminPagos = () => {
       label: 'Acciones',
       render: (_, row) => (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button 
+          <button
             onClick={() => handleVerVoucher(row.RutaVoucher, row.OrdenPagoId)}
-            style={{ 
-              padding: '6px 12px', 
+            style={{
+              padding: '6px 12px',
               fontSize: '11px',
               display: 'flex',
               alignItems: 'center',
@@ -270,9 +315,9 @@ const AdminPagos = () => {
           </button>
 
           {(row.EstatusPagoId === 3 || row.EstatusPagoId === 4) ? (
-            <button 
+            <button
               onClick={() => handleCambiarEstatusTerminal(row.OrdenPagoId, row.EstatusPagoId)}
-              style={{ 
+              style={{
                 padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
                 background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px'
               }}
@@ -281,18 +326,18 @@ const AdminPagos = () => {
             </button>
           ) : (
             <>
-              <button 
+              <button
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 3, 'Aprobar')}
-                style={{ 
+                style={{
                   padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
                   background: '#10b981', color: 'white', border: 'none', borderRadius: '8px'
                 }}
               >
                 Aprobar
               </button>
-              <button 
+              <button
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 4, 'Rechazar')}
-                style={{ 
+                style={{
                   padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
                   background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px'
                 }}
@@ -325,42 +370,42 @@ const AdminPagos = () => {
           { label: 'Rechazados', value: rechazados, filter: '4', color: 'var(--danger)', icon: <FaTimesCircle /> },
           { label: 'Monto Total', value: `$${montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, color: 'var(--primary)', icon: <FaWallet />, isMetricOnly: true }
         ]
-        .map((stat, i) => (
-          <div 
-            key={i} 
-            onClick={() => stat.filter && setFiltroEstatus(stat.filter)}
-            className="card" 
-            style={{ 
-              padding: '20px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '16px',
-              cursor: stat.isMetricOnly ? 'default' : 'pointer',
-              transition: 'all 0.2s ease',
-              border: filtroEstatus === stat.filter ? `2px solid ${stat.color}` : '1.5px solid var(--border-light)',
-              transform: filtroEstatus === stat.filter ? 'translateY(-3px)' : 'none',
-              boxShadow: filtroEstatus === stat.filter ? `0 8px 15px ${stat.color}15` : 'none'
-            }}
-          >
-            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `${stat.color}15`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-              <div style={{ margin: '0 auto' }}>{stat.icon}</div>
+          .map((stat, i) => (
+            <div
+              key={i}
+              onClick={() => stat.filter && setFiltroEstatus(stat.filter)}
+              className="card"
+              style={{
+                padding: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                cursor: stat.isMetricOnly ? 'default' : 'pointer',
+                transition: 'all 0.2s ease',
+                border: filtroEstatus === stat.filter ? `2px solid ${stat.color}` : '1.5px solid var(--border-light)',
+                transform: filtroEstatus === stat.filter ? 'translateY(-3px)' : 'none',
+                boxShadow: filtroEstatus === stat.filter ? `0 8px 15px ${stat.color}15` : 'none'
+              }}
+            >
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `${stat.color}15`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                <div style={{ margin: '0 auto' }}>{stat.icon}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{stat.label}</div>
+                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{stat.value}</div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{stat.label}</div>
-              <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{stat.value}</div>
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       {/* TABLE SECTION */}
       <div className="card" style={{ padding: '32px' }}>
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Órdenes de pago</h3>
-          
+
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
             <div style={{ flex: '1 1 200px' }}>
-              <SearchBar 
+              <SearchBar
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar..."
@@ -392,6 +437,183 @@ const AdminPagos = () => {
           <DashboardTable columns={columns} data={paginatedPagos} isLoading={loading} totalItems={filteredPagos.length} itemsPerPage={itemsPerPage} currentPage={currentPage} onPageChange={setCurrentPage} emptyMessage="No hay órdenes de pago registradas." />
         </div>
       </div>
+
+      {/* MODAL DETALLE Y COMPROBANTE DE PAGO */}
+      <Modal
+        estaAbierto={modalOpen}
+        titulo="Detalle y Comprobante de Pago"
+        alCerrar={() => setModalOpen(false)}
+        tamanio="grande"
+        pie={
+          <button
+            onClick={() => setModalOpen(false)}
+            style={{
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              background: '#94a3b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#64748b'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#94a3b8'}
+          >
+            Cerrar
+          </button>
+        }
+      >
+        {loadingDetalle ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0' }}>
+            <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+              <span className="visually-hidden">Cargando...</span>
+            </div>
+            <span style={{ marginTop: '16px', color: '#64748b', fontWeight: '600' }}>Cargando detalles de la orden...</span>
+          </div>
+        ) : pagoDetalle ? (
+          <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '24px' }}>
+            {/* Columna izquierda: Detalles del pago */}
+            <div style={{ flex: '1 1 350px', minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ padding: '20px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0b4ea6', marginBottom: '16px', marginTop: 0 }}>Conceptos de la Orden #{pagoDetalle.OrdenPagoId}</h4>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {pagoDetalle.OrdenPagoDetalleRelacion && pagoDetalle.OrdenPagoDetalleRelacion.length > 0 ? (
+                    pagoDetalle.OrdenPagoDetalleRelacion.map((detalle, idx) => {
+                      let nombreConcepto = 'Concepto desconocido';
+                      if (detalle.TipoConceptoId === 1) {
+                        const seg = catalogoSeguros.find(s => s.SeguroId === detalle.SeguroId);
+                        nombreConcepto = seg ? `Seguro: ${seg.Nombre}` : `Seguro (ID: ${detalle.SeguroId})`;
+                      } else if (detalle.TipoConceptoId === 2) {
+                        const af = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === detalle.TipoAfiliacionId);
+                        nombreConcepto = af ? `Inscripción: ${af.NombreAfiliacion}` : `Inscripción (ID: ${detalle.TipoAfiliacionId})`;
+                      }
+
+                      return (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                          <div>
+                            <div style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b' }}>{nombreConcepto}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Cant: {detalle.Cantidad} x ${parseFloat(detalle.PrecioUnitarioCobrado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                          </div>
+                          <div style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b', alignSelf: 'center' }}>
+                            ${parseFloat(detalle.Subtotal).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ color: '#64748b', fontSize: '12px', fontStyle: 'italic', textAlign: 'center', padding: '10px 0' }}>
+                      No hay conceptos registrados para esta orden.
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '2px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#64748b' }}>Total de la orden:</span>
+                  <span style={{ fontSize: '20px', fontWeight: '900', color: '#0b4ea6' }}>
+                    ${parseFloat(pagoDetalle.TotalPagar).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', background: 'white' }}>
+                <h5 style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: '0 0 10px 0' }}>Información de Pago</h5>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+                  <div>
+                    <span style={{ color: '#64748b', fontWeight: '600' }}>Usuario:</span> <span style={{ color: '#1e293b' }}>{pagoDetalle.Correo || '—'}</span>
+                  </div>
+                  {pagoDetalle.FechaEnvio && (
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: '600' }}>Fecha envío:</span> <span style={{ color: '#1e293b' }}>{formatDate(pagoDetalle.FechaEnvio)}</span>
+                    </div>
+                  )}
+                  {pagoDetalle.FechaDePago && (
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: '600' }}>Fecha pago:</span> <span style={{ color: '#1e293b' }}>{formatDate(pagoDetalle.FechaDePago)}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span style={{ color: '#64748b', fontWeight: '600' }}>Estatus actual:</span>{' '}
+                    {(() => {
+                      const estatusConfig = {
+                        2: { label: 'PENDIENTE', bg: '#fef3c7', color: '#92400e' },
+                        3: { label: 'APROBADO', bg: '#dcfce7', color: '#166534' },
+                        4: { label: 'RECHAZADO', bg: '#fee2e2', color: '#991b1b' },
+                        5: { label: 'CADUCADO', bg: '#fee2e2', color: '#006774' }
+                      };
+                      const conf = estatusConfig[pagoDetalle.EstatusPagoId] || { label: 'DESCONOCIDO', bg: '#f1f5f9', color: '#64748b' };
+                      return (
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', background: conf.bg, color: conf.color, fontSize: '10px', fontWeight: '700' }}>
+                          {conf.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Columna derecha: Comprobante/Voucher */}
+            <div style={{ flex: '1 1 350px', minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0 }}>Comprobante de Pago</h4>
+                {voucherDisponible && pagoDetalle.RutaVoucher && (
+                  <a
+                    href={`/${pagoDetalle.RutaVoucher}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    Ver en pantalla completa ↗
+                  </a>
+                )}
+              </div>
+
+              {!voucherDisponible || !pagoDetalle.RutaVoucher ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', borderRadius: '12px', height: '400px', padding: '24px', background: '#f8fafc', color: '#64748b', textAlign: 'center' }}>
+                  <FaFileAlt style={{ fontSize: '48px', color: '#94a3b8', marginBottom: '16px' }} />
+                  <h5 style={{ fontSize: '14px', fontWeight: '800', color: '#475569', margin: '0 0 8px 0' }}>El comprobante no se encuentra disponible.</h5>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>El usuario aún no ha cargado un voucher o el archivo ya no existe.</p>
+                </div>
+              ) : pagoDetalle.RutaVoucher.toLowerCase().includes('.pdf') ? (
+                <object
+                  data={`/${pagoDetalle.RutaVoucher}`}
+                  type="application/pdf"
+                  style={{ width: '100%', height: '400px', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '24px', background: '#f8fafc', color: '#64748b', textAlign: 'center' }}>
+                    <FaFileAlt style={{ fontSize: '32px', marginBottom: '8px' }} />
+                    <span style={{ fontSize: '13px', fontWeight: '500' }}>No se puede previsualizar el PDF directamente.</span>
+                    <a
+                      href={`/${pagoDetalle.RutaVoucher}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ marginTop: '12px', padding: '8px 16px', background: '#2563eb', color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}
+                    >
+                      Abrir PDF en nueva pestaña
+                    </a>
+                  </div>
+                </object>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', height: '400px', padding: '8px' }}>
+                  <img
+                    src={`/${pagoDetalle.RutaVoucher}`}
+                    alt="Voucher"
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', color: '#ef4444' }}>
+            <FaTimesCircle style={{ fontSize: '32px', marginBottom: '12px' }} />
+            <span style={{ fontWeight: '700' }}>No se pudieron obtener los detalles de la orden de pago.</span>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
