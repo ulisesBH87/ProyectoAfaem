@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { 
@@ -16,8 +16,26 @@ import { REQUISITOS, C } from '../pages/Admin/RegistrarPresidente/constants';
 const CUENTA_INICIAL = {
   nombre: '', primerApellido: '', segundoApellido: '',
   correo: '', telefono: '', curp: '',
-  sexoId: '', fechaNacimiento: '',
+  sexoId: '', fechaNacimiento: '', nacionalidad: '',
   contrasena: '', confirmarContrasena: '',
+};
+
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = error => reject(error);
+});
+
+const base64ToFile = async (dataurl, filename) => {
+  try {
+    const res = await fetch(dataurl);
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type });
+  } catch (err) {
+    console.error("Error decodificando base64 a archivo:", err);
+    throw err;
+  }
 };
 
 /**
@@ -81,9 +99,6 @@ export function useRegistrarPresidente() {
   const segurosRequeridos = Number(numPersonas || 0);
 
   // ── Paso 3: Documentos ───────────────────────────────────────────────────
-  const [correoDoc, setCorreoDoc] = useState('');
-  const [telefonoDoc, setTelefonoDoc] = useState('');
-  const [codigoPaisDoc, setCodigoPaisDoc] = useState('+52');
   const [equipo, setEquipo] = useState('');
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
   const [asociacion] = useState('AFAEM');
@@ -91,12 +106,11 @@ export function useRegistrarPresidente() {
   const [documents, setDocuments] = useState({});
   const [previews, setPreviews] = useState({});
   const [detailsOpen, setDetailsOpen] = useState({});
-  const [mostrarManual, setMostrarManual] = useState(false);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
 
   // ── Hooks de lógica ──────────────────────────────────────────────────────
   const ocrHook = useOCR();
-  const { ocrResults, setOcrResults, procesarOCR, handleOcrManual, preFillFromCuenta } = ocrHook;
+  const { ocrResults, setOcrResults, procesarOCR, preFillFromCuenta } = ocrHook;
 
   const fotoHook = useFotografia({ setDocuments, setPreviews });
   const { procesarFoto, forzarFoto, fotoError, fotoFallida, fotoArchivo } = fotoHook;
@@ -130,13 +144,31 @@ export function useRegistrarPresidente() {
           if (d.codigoPaisCuenta) setCodigoPaisCuenta(d.codigoPaisCuenta);
           if (d.numPersonas) setNumPersonas(d.numPersonas);
           if (d.asignacion) setAsignacion(d.asignacion);
-          if (d.correoDoc) setCorreoDoc(d.correoDoc);
-          if (d.telefonoDoc) setTelefonoDoc(d.telefonoDoc);
-          if (d.codigoPaisDoc) setCodigoPaisDoc(d.codigoPaisDoc);
           if (d.equipo) setEquipo(d.equipo);
           if (d.tipoAfiliacion) setTipoAfiliacion(d.tipoAfiliacion);
           if (d.liga) setLiga(d.liga);
           if (d.ocrResults) setOcrResults(prev => ({ ...prev, ...d.ocrResults }));
+
+          if (d.documentosBorrador) {
+            const restoredDocs = {};
+            const restoredPreviews = {};
+            for (const key of Object.keys(d.documentosBorrador)) {
+              const docData = d.documentosBorrador[key];
+              if (docData && docData.data && docData.name) {
+                try {
+                  const file = await base64ToFile(docData.data, docData.name);
+                  restoredDocs[key] = file;
+                  restoredPreviews[key] = file.type === 'application/pdf' ? 'pdf' : URL.createObjectURL(file);
+                } catch (e) {
+                  console.warn(`Error al restaurar el documento ${key} desde el borrador:`, e);
+                }
+              }
+            }
+            if (Object.keys(restoredDocs).length > 0) {
+              setDocuments(prev => ({ ...prev, ...restoredDocs }));
+              setPreviews(prev => ({ ...prev, ...restoredPreviews }));
+            }
+          }
         }
       } catch (err) {
         console.error('Error al cargar borrador:', err);
@@ -170,28 +202,36 @@ export function useRegistrarPresidente() {
       cuenta.curp?.trim() ||
       cuenta.contrasena?.trim() ||
       equipo?.trim() ||
-      numPersonas
+      numPersonas ||
+      Object.keys(documents).length > 0
     );
     if (!tieneDatos) return;
 
     const delayDebounceFn = setTimeout(() => {
-      const payloadDatos = {
-        paso,
-        cuenta,
-        codigoPaisCuenta,
-        numPersonas,
-        asignacion,
-        correoDoc,
-        telefonoDoc,
-        codigoPaisDoc,
-        equipo,
-        tipoAfiliacion,
-        liga,
-        ocrResults,
-      };
-
       const save = async () => {
         try {
+          const docsB64 = {};
+          for (const key of Object.keys(documents)) {
+            if (documents[key]) {
+              docsB64[key] = {
+                name: documents[key].name,
+                data: await fileToBase64(documents[key])
+              };
+            }
+          }
+
+          const payloadDatos = {
+            paso,
+            cuenta,
+            codigoPaisCuenta,
+            numPersonas,
+            asignacion,
+            equipo,
+            tipoAfiliacion,
+            liga,
+            ocrResults,
+            documentosBorrador: docsB64
+          };
           const resData = await guardarBorradorPresidente(payloadDatos, borradorId);
           if (resData && resData.presidente_id && !borradorId) {
             setBorradorId(resData.presidente_id);
@@ -210,8 +250,8 @@ export function useRegistrarPresidente() {
     return () => clearTimeout(delayDebounceFn);
   }, [
     paso, cuenta, codigoPaisCuenta, numPersonas, asignacion,
-    correoDoc, telefonoDoc, codigoPaisDoc, equipo, tipoAfiliacion, liga, ocrResults,
-    borradorId, cargandoBorrador
+    equipo, tipoAfiliacion, liga, ocrResults,
+    documents, borradorId, cargandoBorrador
   ]);
 
   // Cleanup del toast al desmontar
@@ -231,14 +271,9 @@ export function useRegistrarPresidente() {
     }
   }, [asignacion, seguros, segurosPresidente]);
 
-  // ── Pre-rellenar al entrar al Paso 3 ────────────────────────────────────
+  // ── Pre-rellenar al avanzar al Paso 2 (Cuenta) o después ────────────────
   useEffect(() => {
-    if (paso === 3) {
-      if (!correoDoc && cuenta.correo) setCorreoDoc(cuenta.correo);
-      if (!telefonoDoc && cuenta.telefono) {
-        setTelefonoDoc(cuenta.telefono);
-        setCodigoPaisDoc(codigoPaisCuenta);
-      }
+    if (paso >= 2) {
       preFillFromCuenta(cuenta);
     }
   }, [paso]);
@@ -259,52 +294,49 @@ export function useRegistrarPresidente() {
 
   // ── Wrapper descargarFormato con contexto actual ─────────────────────────
   const handleDescargarFormato = () => descargarFormato({
-    ocrResults, cuenta, documents, correoDoc, telefonoDoc,
-    codigoPaisDoc, codigoPaisCuenta, tipoAfiliacion, asociacion,
+    ocrResults, cuenta, documents, codigoPaisCuenta, tipoAfiliacion, asociacion,
     liga, ligasCatalogo, equipo,
   });
 
   // ── Navegación entre pasos ───────────────────────────────────────────────
   const avanzar = () => {
-    if (paso === 1) {
-      if (!validarPaso1()) {
-        Swal.fire({ title: 'Completa los campos requeridos', icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-    }
-    if (paso === 2) {
-      if (Number(numPersonas) <= 0) {
-        Swal.fire({ title: 'Atención', text: 'Ingresa el número de jugadores.', icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-      if (totalAsignados !== segurosRequeridos) {
-        const msg = totalAsignados > segurosRequeridos
-          ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
-          : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar.`;
-        Swal.fire({ title: 'Atención', text: msg, icon: 'warning', confirmButtonColor: C.amberDark });
-        return;
-      }
-    }
     setPaso(p => p + 1);
   };
 
   // ── Envío final ──────────────────────────────────────────────────────────
   const procesarRegistro = async () => {
-    const correoFinal = correoDoc || cuenta.correo;
-    if (!correoFinal) { Swal.fire('Atención', 'El correo es obligatorio.', 'warning'); return; }
-    if (!equipo?.trim()) { Swal.fire('Atención', 'El Nombre del Equipo es obligatorio.', 'warning'); return; }
-    if (!liga?.trim()) { Swal.fire('Atención', 'La Liga Destino es obligatoria.', 'warning'); return; }
-
-    const missing = REQUISITOS.find(r => !documents[r.documento]);
-    if (missing) { Swal.fire('Atención', `Falta subir: ${missing.nombre}`, 'warning'); return; }
-
-    const nombreDetectado = ocrResults.nombre;
-    const curpDetectada = ocrResults.curp;
-    if (!nombreDetectado || nombreDetectado === 'No detectado') {
-      Swal.fire('Atención', 'Nombre no detectado. Complétalo en el Formulario Manual.', 'warning'); return;
+    if (!validarPaso1()) {
+      Swal.fire('Atención', 'Revisa y completa los campos obligatorios de la Cuenta (Paso 2).', 'warning');
+      setPaso(2);
+      return;
     }
-    if (!curpDetectada || curpDetectada === 'No detectado') {
-      Swal.fire('Atención', 'CURP no detectado. Complétalo en el Formulario Manual.', 'warning'); return;
+    if (Number(numPersonas) <= 0) {
+      Swal.fire('Atención', 'Ingresa el número de jugadores en Cuotas (Paso 3).', 'warning');
+      setPaso(3);
+      return;
+    }
+    if (totalAsignados !== segurosRequeridos) {
+      const msg = totalAsignados > segurosRequeridos
+        ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
+        : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar en Cuotas (Paso 3).`;
+      Swal.fire('Atención', msg, 'warning');
+      setPaso(3);
+      return;
+    }
+
+    const correoFinal = cuenta.correo;
+    if (!correoFinal) { Swal.fire('Atención', 'El correo es obligatorio.', 'warning'); setPaso(2); return; }
+    if (!equipo?.trim()) { Swal.fire('Atención', 'El Nombre del Equipo es obligatorio en Datos del Expediente.', 'warning'); setPaso(2); return; }
+    if (!liga?.trim()) { Swal.fire('Atención', 'La Liga Destino es obligatoria en Datos del Expediente.', 'warning'); setPaso(2); return; }
+    if (!documents.actaNacimiento || !documents.identificacion || !documents.fotografia) {
+      Swal.fire('Atención', 'Faltan documentos personales.', 'warning');
+      setPaso(1);
+      return;
+    }
+    if (!documents.formatoAfiliacion) {
+      Swal.fire('Atención', 'Falta el Formato de Afiliación.', 'warning');
+      setPaso(4);
+      return;
     }
 
     try {
@@ -317,10 +349,10 @@ export function useRegistrarPresidente() {
       fd.append('segundoApellido', cuenta.segundoApellido || '');
       fd.append('correo', correoFinal);
 
-      const telLocal = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
-      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : (telefonoDoc ? codigoPaisDoc : codigoPaisCuenta);
+      const telLocal = ocrResults.telefono || cuenta.telefono || '';
+      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : codigoPaisCuenta;
       fd.append('telefono', codPais + telLocal);
-      fd.append('curp', curpDetectada);
+      fd.append('curp', ocrResults.curp || cuenta.curp || '');
       fd.append('sexoId', cuenta.sexoId || '');
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
       fd.append('contrasena', cuenta.contrasena);
@@ -401,14 +433,12 @@ export function useRegistrarPresidente() {
     seguros, segurosPresidente, segurosJugadores, asignacion, setAsignacion,
     cargandoSeguros, ligasCatalogo, totalAsignados, totalPagar, segurosRequeridos,
     // Paso 3
-    correoDoc, setCorreoDoc, telefonoDoc, setTelefonoDoc,
-    codigoPaisDoc, setCodigoPaisDoc, equipo, setEquipo,
+    equipo, setEquipo,
     tipoAfiliacion, asociacion, liga, setLiga,
     documents, previews, detailsOpen, setDetailsOpen,
-    mostrarManual, setMostrarManual,
     previewDoc, setPreviewDoc,
     // OCR
-    ocrResults, handleOcrManual,
+    ocrResults,
     // Foto
     fotoError, fotoFallida, fotoArchivo, forzarFoto,
     // Handlers

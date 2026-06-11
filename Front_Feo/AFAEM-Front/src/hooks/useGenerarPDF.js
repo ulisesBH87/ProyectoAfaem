@@ -28,9 +28,6 @@ export function useGenerarPDF() {
    * @param {object} params.ocrResults        - Datos extraídos por OCR
    * @param {object} params.cuenta            - Datos de cuenta (Paso 1)
    * @param {object} params.documents         - Archivos subidos
-   * @param {string} params.correoDoc         - Correo del expediente (Paso 3)
-   * @param {string} params.telefonoDoc       - Teléfono del expediente (Paso 3)
-   * @param {string} params.codigoPaisDoc     - Código de país del expediente
    * @param {string} params.codigoPaisCuenta  - Código de país de cuenta
    * @param {string} params.tipoAfiliacion    - Tipo de afiliación seleccionado
    * @param {string} params.asociacion        - Nombre de la asociación
@@ -42,9 +39,6 @@ export function useGenerarPDF() {
     ocrResults,
     cuenta,
     documents,
-    correoDoc,
-    telefonoDoc,
-    codigoPaisDoc,
     codigoPaisCuenta,
     tipoAfiliacion,
     asociacion,
@@ -72,7 +66,8 @@ export function useGenerarPDF() {
       }
 
       // Nombre
-      const { nombre, curp, fecha_nac, nacionalidad } = ocrResults;
+      const { nombre, curp, fecha_nac } = ocrResults;
+      const nacionalidad = cuenta.nacionalidad || ocrResults.nacionalidad;
       if (nombre && nombre !== 'No detectado') {
         const parts = nombre.split(' ');
         if (parts.length >= 3) {
@@ -91,13 +86,13 @@ export function useGenerarPDF() {
       safeField(form, 'Fecha de Nacimiento', fecha_nac);
 
       // Correo (tamaño adaptativo)
-      const correoVal = correoDoc || cuenta.correo || '';
+      const correoVal = cuenta.correo || '';
       const correoFontSize = correoVal.length > 35 ? 6 : correoVal.length > 25 ? 7 : correoVal.length > 18 ? 8 : 10;
       safeField(form, 'Correo electrónico', correoVal, correoFontSize);
 
       // Teléfono
-      const telLocal = ocrResults.telefono || telefonoDoc || cuenta.telefono || '';
-      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : (telefonoDoc ? codigoPaisDoc : codigoPaisCuenta);
+      const telLocal = ocrResults.telefono || cuenta.telefono || '';
+      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : codigoPaisCuenta;
       safeField(form, 'Teléfono', codPais + telLocal);
 
       // Afiliación

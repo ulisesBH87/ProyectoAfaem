@@ -17,6 +17,18 @@ export default function AdminCatalogos() {
   const [seccionActiva, setSeccionActiva] = useState('ligas');
   const [cargando, setCargando] = useState(true);
 
+  // Estados para Modal Bootstrap
+  const [modalShow, setModalShow] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ tipo: 'crear', item: null });
+  const [enviando, setEnviando] = useState(false);
+  const [formData, setFormData] = useState({
+    nombre: '',
+    descripcion: '',
+    categoriaId: '',
+    modalidadId: '',
+    ramaId: ''
+  });
+
   useEffect(() => {
     cargarDatos();
   }, []);
@@ -104,159 +116,73 @@ export default function AdminCatalogos() {
   };
 
   const handleEditar = (item) => {
-    const isLiga = seccionActiva === 'ligas';
-    
-    Swal.fire({
-      title: 'Editar Registro',
-      html: `
-        <div style="text-align: left;">
-          <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Nombre</label>
-          <input id="swal-input1" class="swal2-input" value="${item.nombre}" style="margin-top: 5px;">
-          ${isLiga ? `
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Descripción</label>
-            <input id="swal-input2" class="swal2-input" value="${item.descripcion || ''}" style="margin-top: 5px;">
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Categoría</label>
-            <select id="swal-select-categoria" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
-              <option value="">Selecciona Categoría...</option>
-              ${catalogos.categorias.map(c => `<option value="${c.id}" ${String(c.id) === String(item.categoriaId) ? 'selected' : ''}>${c.nombre}</option>`).join('')}
-            </select>
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Modalidad</label>
-            <select id="swal-select-modalidad" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
-              <option value="">Selecciona Modalidad...</option>
-              ${catalogos.modalidades.map(m => `<option value="${m.id}" ${String(m.id) === String(item.modalidadId) ? 'selected' : ''}>${m.nombre}</option>`).join('')}
-            </select>
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Rama</label>
-            <select id="swal-select-rama" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
-              <option value="">Selecciona Rama...</option>
-              ${catalogos.ramas.map(r => `<option value="${r.id}" ${String(r.id) === String(item.ramaId) ? 'selected' : ''}>${r.nombre}</option>`).join('')}
-            </select>
-          ` : ''}
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Guardar',
-      showLoaderOnConfirm: true,
-      preConfirm: async () => {
-        const nombre = document.getElementById('swal-input1').value;
-        const descripcion = isLiga ? document.getElementById('swal-input2').value : null;
-        
-        if (!nombre) {
-          Swal.showValidationMessage('El nombre no puede estar vacío');
-          return false;
-        }
-
-        let payload = { nombre, descripcion };
-        if (isLiga) {
-          const categoriaId = document.getElementById('swal-select-categoria').value;
-          const modalidadId = document.getElementById('swal-select-modalidad').value;
-          const ramaId = document.getElementById('swal-select-rama').value;
-
-          if (!categoriaId || !modalidadId || !ramaId) {
-            Swal.showValidationMessage('Categoría, Modalidad y Rama son requeridas');
-            return false;
-          }
-          payload.categoriaId = parseInt(categoriaId);
-          payload.modalidadId = parseInt(modalidadId);
-          payload.ramaId = parseInt(ramaId);
-        }
-
-        try {
-          const response = await api.put(`/catalogos/${seccionActiva}/${item.id}`, payload);
-          return response.data;
-        } catch (error) {
-          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo actualizar'}`);
-          return false;
-        }
-      },
-      allowOutsideClick: () => !Swal.isLoading()
-    }).then((result) => {
-      if (result.isConfirmed && result.value) {
-        const itemActualizado = result.value;
-        setCatalogos(prev => ({
-          ...prev,
-          [seccionActiva]: prev[seccionActiva].map(i => i.id === item.id ? itemActualizado : i)
-        }));
-        Swal.fire('¡Actualizado!', 'El registro se ha guardado correctamente.', 'success');
-      }
+    setModalConfig({ tipo: 'editar', item });
+    setFormData({
+      nombre: item.nombre || '',
+      descripcion: item.descripcion || '',
+      categoriaId: item.categoriaId || '',
+      modalidadId: item.modalidadId || '',
+      ramaId: item.ramaId || ''
     });
+    setModalShow(true);
   };
 
   const handleCrear = () => {
+    setModalConfig({ tipo: 'crear', item: null });
+    setFormData({
+      nombre: '',
+      descripcion: '',
+      categoriaId: '',
+      modalidadId: '',
+      ramaId: ''
+    });
+    setModalShow(true);
+  };
+
+  const handleModalSubmit = async (e) => {
+    e.preventDefault();
     const isLiga = seccionActiva === 'ligas';
+    const { nombre, descripcion, categoriaId, modalidadId, ramaId } = formData;
 
-    Swal.fire({
-      title: `Nuevo Registro en ${seccionActiva.toUpperCase()}`,
-      html: `
-        <div style="text-align: left;">
-          <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Nombre</label>
-          <input id="swal-input1" class="swal2-input" placeholder="Nombre..." style="margin-top: 5px;">
-          ${isLiga ? `
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Descripción</label>
-            <input id="swal-input2" class="swal2-input" placeholder="Descripción..." style="margin-top: 5px;">
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Categoría</label>
-            <select id="swal-select-categoria" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
-              <option value="">Selecciona Categoría...</option>
-              ${catalogos.categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')}
-            </select>
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Modalidad</label>
-            <select id="swal-select-modalidad" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
-              <option value="">Selecciona Modalidad...</option>
-              ${catalogos.modalidades.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('')}
-            </select>
-            <label class="swal2-label" style="font-weight: 700; margin-top: 10px; display: block;">Rama</label>
-            <select id="swal-select-rama" class="swal2-input" style="margin-top: 5px; width: 100%; box-sizing: border-box; display: block;">
-              <option value="">Selecciona Rama...</option>
-              ${catalogos.ramas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('')}
-            </select>
-          ` : ''}
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Crear',
-      showLoaderOnConfirm: true,
-      preConfirm: async () => {
-        const nombre = document.getElementById('swal-input1').value;
-        const descripcion = isLiga ? document.getElementById('swal-input2').value : null;
+    if (!nombre) {
+      Swal.fire('Error', 'El nombre no puede estar vacío', 'error');
+      return;
+    }
 
-        if (!nombre) {
-          Swal.showValidationMessage('Debes ingresar un nombre');
-          return false;
-        }
+    let payload = { nombre, descripcion };
+    if (isLiga) {
+      if (!categoriaId || !modalidadId || !ramaId) {
+        Swal.fire('Error', 'Categoría, Modalidad y Rama son requeridas', 'error');
+        return;
+      }
+      payload.categoriaId = parseInt(categoriaId);
+      payload.modalidadId = parseInt(modalidadId);
+      payload.ramaId = parseInt(ramaId);
+    }
 
-        let payload = { nombre, descripcion };
-        if (isLiga) {
-          const categoriaId = document.getElementById('swal-select-categoria').value;
-          const modalidadId = document.getElementById('swal-select-modalidad').value;
-          const ramaId = document.getElementById('swal-select-rama').value;
-
-          if (!categoriaId || !modalidadId || !ramaId) {
-            Swal.showValidationMessage('Categoría, Modalidad y Rama son requeridas');
-            return false;
-          }
-          payload.categoriaId = parseInt(categoriaId);
-          payload.modalidadId = parseInt(modalidadId);
-          payload.ramaId = parseInt(ramaId);
-        }
-
-        try {
-          const response = await api.post(`/catalogos/${seccionActiva}`, payload);
-          return response.data;
-        } catch (error) {
-          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo crear'}`);
-          return false;
-        }
-      },
-      allowOutsideClick: () => !Swal.isLoading()
-    }).then((result) => {
-      if (result.isConfirmed && result.value) {
-        const nuevoRegistro = result.value;
+    setEnviando(true);
+    try {
+      if (modalConfig.tipo === 'crear') {
+        const response = await api.post(`/catalogos/${seccionActiva}`, payload);
         setCatalogos(prev => ({
           ...prev,
-          [seccionActiva]: [...prev[seccionActiva], nuevoRegistro]
+          [seccionActiva]: [...prev[seccionActiva], response.data]
         }));
         Swal.fire('¡Éxito!', 'El registro se ha creado correctamente.', 'success');
+      } else {
+        const response = await api.put(`/catalogos/${seccionActiva}/${modalConfig.item.id}`, payload);
+        setCatalogos(prev => ({
+          ...prev,
+          [seccionActiva]: prev[seccionActiva].map(i => i.id === modalConfig.item.id ? response.data : i)
+        }));
+        Swal.fire('¡Actualizado!', 'El registro se ha guardado correctamente.', 'success');
       }
-    });
+      setModalShow(false);
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.detail || 'No se pudo procesar la solicitud', 'error');
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const dataTransformada = dataActual.map(item => {
@@ -292,7 +218,7 @@ export default function AdminCatalogos() {
 
   return (
     <div style={{ padding: '30px' }}>
-      <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: '#1e293b' }}>Gestor de Catálogos</h2>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>Administra Ligas, Categorías, Modalidades y Ramas.</p>
@@ -309,7 +235,7 @@ export default function AdminCatalogos() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         {Object.keys(catalogos).map(seccion => (
           <div
             key={seccion}
@@ -343,13 +269,93 @@ export default function AdminCatalogos() {
          <h4 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
             Directorio de {seccionActiva.charAt(0).toUpperCase() + seccionActiva.slice(1)}
          </h4>
-         <DashboardTable 
-           columns={columns}
-           data={dataTransformada}
-           isLoading={cargando}
-           emptyMessage={`No hay registros en ${seccionActiva}`}
-         />
+         <div style={{ overflowX: 'auto', width: '100%' }}>
+           <DashboardTable 
+             columns={columns}
+             data={dataTransformada}
+             isLoading={cargando}
+             emptyMessage={`No hay registros en ${seccionActiva}`}
+           />
+         </div>
       </div>
+
+      {/* Modal Nativo de Bootstrap */}
+      {modalShow && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 1050 }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+              <div className="modal-header" style={{ borderBottom: '1px solid #f1f5f9', padding: '20px 24px' }}>
+                <h5 className="modal-title" style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
+                  {modalConfig.tipo === 'crear' ? `Nuevo Registro en ${seccionActiva.toUpperCase()}` : 'Editar Registro'}
+                </h5>
+                <button type="button" className="btn-close" onClick={() => setModalShow(false)} aria-label="Close" style={{ fontSize: '12px' }}></button>
+              </div>
+              
+              <form onSubmit={handleModalSubmit}>
+                <div className="modal-body" style={{ padding: '24px' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Nombre <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value={formData.nombre} 
+                      onChange={e => setFormData({...formData, nombre: e.target.value})} 
+                      placeholder="Ej. Liga MX" 
+                      style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: '#f8fafc', border: '1.5px solid #cbd5e1', boxShadow: 'none' }} 
+                      required 
+                    />
+                  </div>
+                  
+                  {seccionActiva === 'ligas' && (
+                    <>
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '13px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Descripción</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          value={formData.descripcion} 
+                          onChange={e => setFormData({...formData, descripcion: e.target.value})} 
+                          placeholder="Descripción opcional..." 
+                          style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: '#f8fafc', border: '1.5px solid #cbd5e1', boxShadow: 'none' }} 
+                        />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Categoría <span style={{ color: '#ef4444' }}>*</span></label>
+                          <select className="form-select" value={formData.categoriaId} onChange={e => setFormData({...formData, categoriaId: e.target.value})} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: '#f8fafc', cursor: 'pointer', border: '1.5px solid #cbd5e1', boxShadow: 'none' }} required>
+                            <option value="">Selecciona Categoría...</option>
+                            {catalogos.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Modalidad <span style={{ color: '#ef4444' }}>*</span></label>
+                          <select className="form-select" value={formData.modalidadId} onChange={e => setFormData({...formData, modalidadId: e.target.value})} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: '#f8fafc', cursor: 'pointer', border: '1.5px solid #cbd5e1', boxShadow: 'none' }} required>
+                            <option value="">Selecciona Modalidad...</option>
+                            {catalogos.modalidades.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>Rama <span style={{ color: '#ef4444' }}>*</span></label>
+                          <select className="form-select" value={formData.ramaId} onChange={e => setFormData({...formData, ramaId: e.target.value})} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: '#f8fafc', cursor: 'pointer', border: '1.5px solid #cbd5e1', boxShadow: 'none' }} required>
+                            <option value="">Selecciona Rama...</option>
+                            {catalogos.ramas.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', padding: '16px 24px', background: '#f8fafc', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+                  <button type="button" className="btn btn-light" onClick={() => setModalShow(false)} style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b' }} disabled={enviando}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: '#0b4ea6', border: 'none' }} disabled={enviando}>
+                    {enviando ? 'Guardando...' : (modalConfig.tipo === 'crear' ? 'Crear Registro' : 'Guardar Cambios')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

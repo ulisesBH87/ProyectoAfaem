@@ -1,4 +1,5 @@
 import { FaUpload, FaFilePdf, FaSearchPlus, FaSyncAlt, FaExclamationTriangle } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 import { C } from './constants';
 
 /**
@@ -15,7 +16,7 @@ export default function DocumentCard({
   doc,
   documents,
   previews,
-  ocrResults,
+  ocrResults = {},
   detailsOpen,
   setDetailsOpen,
   fotoError,
@@ -25,6 +26,7 @@ export default function DocumentCard({
   handleFileUpload,
   descargarFormato,
   onOpenPreview,
+  disabledUpload,
 }) {
   const uploaded = !!documents[doc.documento];
   const ocrDone = doc.ocr && ocrResults[doc.documento];
@@ -62,8 +64,17 @@ export default function DocumentCard({
         }}
         onMouseEnter={e => { const o = e.currentTarget.querySelector('.overlay-actions'); if (o) o.style.opacity = '1'; }}
         onMouseLeave={e => { const o = e.currentTarget.querySelector('.overlay-actions'); if (o) o.style.opacity = '0'; }}
-        onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); const file = e.dataTransfer.files[0]; if (file) handleFileUpload(doc.documento, file); }}
+        onDragOver={e => { if (!disabledUpload) e.preventDefault(); }}
+        onDrop={e => { 
+          if (disabledUpload) {
+            e.preventDefault();
+            Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
+            return;
+          }
+          e.preventDefault(); 
+          const file = e.dataTransfer.files[0]; 
+          if (file) handleFileUpload(doc.documento, file); 
+        }}
       >
         {previews[doc.documento] ? (
           <>
@@ -108,8 +119,14 @@ export default function DocumentCard({
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', color: '#6b7280', cursor: 'pointer' }}
-            onClick={() => document.getElementById(`file-${doc.documento}`).click()}>
+          <div style={{ textAlign: 'center', color: '#6b7280', cursor: disabledUpload ? 'not-allowed' : 'pointer', opacity: disabledUpload ? 0.5 : 1 }}
+            onClick={() => {
+              if (disabledUpload) {
+                Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
+                return;
+              }
+              document.getElementById(`file-${doc.documento}`).click();
+            }}>
             <FaUpload style={{ fontSize: 28, marginBottom: 6 }} />
             <p style={{ fontSize: 11 }}>Sin archivo</p>
           </div>
@@ -149,17 +166,23 @@ export default function DocumentCard({
       {/* Botones de acción */}
       <div style={{ display: 'flex', gap: 8 }}>
         {doc.hasDownload && (
-          <button onClick={descargarFormato} style={{
-            flex: 1, padding: '8px 10px', border: `1px solid ${C.inputBorder}`,
-            background: 'rgba(255,255,255,0.03)', color: C.textMid,
-            borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          }}>
+          <button 
+            onClick={descargarFormato} 
+            disabled={disabledUpload}
+            style={{
+              flex: 1, padding: '8px 10px', border: `1px solid ${C.inputBorder}`,
+              background: 'rgba(255,255,255,0.03)', color: disabledUpload ? C.textDim : C.textMid,
+              borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: disabledUpload ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              opacity: disabledUpload ? 0.5 : 1
+            }}
+          >
             <FaFilePdf /> Descargar
           </button>
         )}
         <input
           type="file" id={`file-${doc.documento}`} style={{ display: 'none' }}
+          disabled={disabledUpload}
           onChange={e => handleFileUpload(doc.documento, e.target.files[0])}
         />
       </div>

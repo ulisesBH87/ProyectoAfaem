@@ -2336,7 +2336,7 @@ export default function ConfigurarEquipo() {
                       >
                         {/* Indicador de Menor para tutor/credencial */}
                         {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                          <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
+                          <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                         )}
 
                         <div style={{
@@ -2556,7 +2556,7 @@ export default function ConfigurarEquipo() {
                   {/* CAMPOS DEL FORMULARIO */}
                   <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
                         <input type="text" value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -2571,7 +2571,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                         <input type="number" value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -2624,7 +2624,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
                         <input
@@ -2658,10 +2658,10 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px', width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input type="email" value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="email" value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
@@ -2676,8 +2676,10 @@ export default function ConfigurarEquipo() {
                               border: '1px solid #cbd5e1',
                               fontSize: '14px',
                               backgroundColor: 'white',
-                              width: '110px',
-                              flexShrink: 0
+                              width: '35%',
+                              minWidth: '80px',
+                              flexShrink: 0,
+                              boxSizing: 'border-box'
                             }}
                           >
                             <option value="+52">México +52</option>
@@ -2710,7 +2712,10 @@ export default function ConfigurarEquipo() {
                               borderRadius: '8px',
                               border: '1px solid #cbd5e1',
                               fontSize: '14px',
-                              flexGrow: 1
+                              flexGrow: 1,
+                              width: '65%',
+                              minWidth: 0,
+                              boxSizing: 'border-box'
                             }}
                           />
                         </div>
@@ -2726,10 +2731,13 @@ export default function ConfigurarEquipo() {
 
                       <div style={{
                         display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '10px',
                         background: '#f1f5f9',
                         padding: '4px',
                         borderRadius: '12px',
-                        width: 'fit-content'
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}>
                         <button
                           type="button"
@@ -2785,7 +2793,7 @@ export default function ConfigurarEquipo() {
                     </div>
 
                     {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
+                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
                         <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
                           <FaGlobeAmericas />
@@ -2794,8 +2802,8 @@ export default function ConfigurarEquipo() {
                       </div>
 
                       {extractedData.esForaneo ? (
-                        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del jugador"
                               valor={extractedData.nacionalidadJugador}
@@ -2810,7 +2818,7 @@ export default function ConfigurarEquipo() {
                             />
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', alignItems: 'end' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
                             <EntradaSeleccion
                               etiqueta="¿El jugador ha vivido en el extranjero?"
                               valor={extractedData.haVividoExtranjero ? '1' : '0'}
@@ -2833,7 +2841,7 @@ export default function ConfigurarEquipo() {
                             )}
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del padre"
                               valor={extractedData.nacionalidadPadre}
@@ -2857,7 +2865,7 @@ export default function ConfigurarEquipo() {
                             obligatorio={true}
                           />
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
                             <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
                             <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />

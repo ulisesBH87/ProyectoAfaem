@@ -24,7 +24,7 @@ const PresidenteGuard = ({ children }) => {
   // EstatusId >= 5 o 7 (ACTIVO) significa que ya pasó el pre-registro y fue aprobado por admin.
   // IMPORTANTE: Permitimos 7 explícitamente y nos aseguramos de que existan los datos antes de denegar.
   const isAuthorized = isPresidente && (
-    (estatusId && parseInt(estatusId) >= 5) || 
+    (estatusId && parseInt(estatusId) >= 5) ||
     parseInt(estatusId) === 7
   );
 
@@ -44,17 +44,17 @@ const PresidenteGuard = ({ children }) => {
   }
 
   if (!isAuthorized) {
-    console.warn(`🚫 Acceso denegado. Rol: ${isPresidente ? 'Presidente' : 'Otro'}, EstatusId: ${estatusId}`);
-    
+    console.warn(`Acceso denegado. Rol: ${isPresidente ? 'Presidente' : 'Otro'}, EstatusId: ${estatusId}`);
+
     // Si es presidente pero fue rechazado o no ha terminado registro (Estatus < 5 y != 7), mandarlo a pre-registro
     // Pero solo si ya tenemos el estatus cargado (evitar estatus 0 momentáneo)
     if (isPresidente && estatusId !== undefined) {
-       // Si el estatus es 1, 2, 3 o 4, va a pre-registro
-       if ([1, 2, 3, 4].includes(parseInt(estatusId))) {
-         return <Navigate to="/pre-registro-presidente" replace />;
-       }
+      // Si el estatus es 1, 2, 3 o 4, va a pre-registro
+      if ([1, 2, 3, 4].includes(parseInt(estatusId))) {
+        return <Navigate to="/pre-registro-presidente" replace />;
+      }
     }
-    
+
     // Fallback: Si no es presidente o tiene un estatus desconocido, fuera
     if (!isPresidente && !isAdmin) {
       return <Navigate to="/ingresar" replace />;

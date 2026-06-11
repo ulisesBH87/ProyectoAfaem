@@ -85,6 +85,14 @@ export const updateEstatusPago = async (ordenPagoId, estatus) => {
 };
 
 /**
+ * OBTIENE EL DETALLE DE UNA ORDEN DE PAGO INDIVIDUAL
+ */
+export const getPagoIndividual = async (ordenPagoId) => {
+  const response = await api.get(`/ordenes-pago/${ordenPagoId}`);
+  return response.data;
+};
+
+/**
  * OBTIENE CATÁLOGO DE SEGUROS
  */
 export const getSeguros = async () => {
@@ -392,10 +400,16 @@ export const obtenerBorradorPresidente = async (borradorId) => {
   return response.data;
 };
 
+export const checkOrdenAmpliacionAdmin = async (equipoId) => {
+  const response = await api.get(`/ordenes-pago/admin/equipo/${equipoId}/orden-ampliacion`);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
   updateEstatusPago,
+  getPagoIndividual,
   getSeguros,
   getAfiliaciones,
   getRequisitosPorTipo,
@@ -421,5 +435,6 @@ export default {
   regenerarInvitacion,
   guardarBorradorPresidente,
   obtenerBorradorPresidente,
-  getCatalogosRegistro
+  getCatalogosRegistro,
+  checkOrdenAmpliacionAdmin
 };

@@ -34,7 +34,9 @@ export default function EntradaSeleccion({
           marginBottom: '6px',
           fontSize: '14px',
           fontWeight: '600',
-          color: '#1e293b'
+          color: '#1e293b',
+          wordWrap: 'break-word',
+          whiteSpace: 'normal'
         }}>
           {etiqueta}
           {requerido && <span style={{ color: '#dc3545' }}>*</span>}
@@ -49,6 +51,7 @@ export default function EntradaSeleccion({
         required={requerido}
         style={{
           width: '100%',
+          boxSizing: 'border-box',
           padding: '10px 16px',
           border: deshabilitado ? '1.5px solid #e2e8f0' : '1.5px solid #cbd5e1',
           borderRadius: '8px',
