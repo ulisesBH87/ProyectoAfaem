@@ -347,18 +347,18 @@ export default function RegistroJugadores() {
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimeoutRef = useRef(null);
 
-  // Función de validación por paso
-  const validarPasoActual = (step) => {
+  // Función que verifica requisitos sin lanzar alertas ni modificar estado
+  const verificarRequisitosPaso = (step) => {
     const errors = {};
     const player = jugadores[currentPlayerIndex];
-    if (!player) return false;
+    if (!player) return errors;
     const datos = player.datos || {};
 
-    if (step === 1) {
+    if (step === 5) {
       if (!player.seguroId) {
         errors.seguroId = 'Debe seleccionar un seguro para continuar.';
       }
-    } else if (step === 3) {
+    } else if (step === 2) {
       if (!datos.nombreJugador?.trim()) errors.nombreJugador = 'El nombre es obligatorio.';
       if (!datos.apellidoPaterno?.trim()) errors.apellidoPaterno = 'El apellido paterno es obligatorio.';
       if (!datos.apellidoMaterno?.trim()) errors.apellidoMaterno = 'El apellido materno es obligatorio.';
@@ -384,11 +384,11 @@ export default function RegistroJugadores() {
       } else if (datos.telefono.trim().length !== 10) {
         errors.telefono = 'El teléfono debe tener 10 dígitos.';
       }
-    } else if (step === 4) {
+    } else if (step === 3) {
       if (!datos.numCamiseta || String(datos.numCamiseta).trim() === '') errors.numCamiseta = 'El número de camiseta es obligatorio.';
       if (!datos.posicion) errors.posicion = 'La posición es obligatoria.';
       if (!datos.nui || String(datos.nui).trim() === '') errors.nui = 'El NUI es obligatorio.';
-    } else if (step === 5) {
+    } else if (step === 4) {
       if (datos.esForaneo) {
         if (!datos.nacionalidadJugador?.trim()) errors.nacionalidadJugador = 'La nacionalidad del jugador es obligatoria.';
         if (!datos.paisResidencia?.trim()) errors.paisResidencia = 'El país de residencia es obligatorio.';
@@ -406,6 +406,37 @@ export default function RegistroJugadores() {
       }
     }
 
+    return errors;
+  };
+
+  // Función que determina si un paso está 100% completo y válido (estado visual)
+  const esPasoCompleto = (step) => {
+    const player = jugadores[currentPlayerIndex];
+    if (!player) return false;
+    
+    if (step === 1) {
+      // Documentos
+      const docs = player.documentos || {};
+      const esMenor = isPlayerMinor(player.datos?.fechaNacimiento);
+      const docsRequeridos = ['acta', 'foto'];
+      if (esMenor) {
+        docsRequeridos.push('ineTutor', 'identificacionMenor');
+      } else {
+        docsRequeridos.push('ine');
+      }
+      return docsRequeridos.every(key => !!docs[key]);
+    } else if (step === 6) {
+      // Resumen completo si todos los anteriores están completos
+      return [1, 2, 3, 4, 5].every(s => esPasoCompleto(s));
+    } else {
+      const errores = verificarRequisitosPaso(step);
+      return Object.keys(errores).length === 0;
+    }
+  };
+
+  // Función de validación activa (muestra error y bloquea envíos)
+  const validarPasoActual = (step) => {
+    const errors = verificarRequisitosPaso(step);
     setValidationErrors(errors);
 
     if (Object.keys(errors).length > 0) {
@@ -1216,9 +1247,9 @@ export default function RegistroJugadores() {
 
   // VALIDACIÓN FINAL Y ENVÍO DE DATOS
   const handleInscribirClick = () => {
-    // Validar paso por paso del 1 al 5 (omitiendo el paso 2 de documentos que es opcional)
+    // Validar paso por paso del 1 al 5 (omitiendo el paso 1 de documentos que es opcional)
     for (let s = 1; s <= 5; s++) {
-      if (s === 2) continue;
+      if (s === 1) continue;
       if (!validarPasoActual(s)) {
         setCurrentStep(s);
         return;
@@ -1979,35 +2010,21 @@ export default function RegistroJugadores() {
                   />
                 </div>
                 {[
-                  { step: 1, label: 'Seguro' },
-                  { step: 2, label: 'Documentos' },
-                  { step: 3, label: 'Personales' },
-                  { step: 4, label: 'Deportivos' },
-                  { step: 5, label: 'Procedencia' },
+                  { step: 1, label: 'Documentos' },
+                  { step: 2, label: 'Personales' },
+                  { step: 3, label: 'Deportivos' },
+                  { step: 4, label: 'Procedencia' },
+                  { step: 5, label: 'Seguro' },
                   { step: 6, label: 'Resumen' }
                 ].map((s) => {
                   const isActive = currentStep === s.step;
-                  const isCompleted = currentStep > s.step;
+                  const isCompleted = esPasoCompleto(s.step);
                   return (
                     <div
                       key={`step-indicator-${s.step}`}
                       className={`stepper-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                       onClick={() => {
-                        if (s.step < currentStep) {
-                          setCurrentStep(s.step);
-                        } else if (s.step > currentStep) {
-                          let canAdvance = true;
-                          for (let checkStep = currentStep; checkStep < s.step; checkStep++) {
-                            if (checkStep === 2) continue; // Omitir paso opcional de documentos
-                            if (!validarPasoActual(checkStep)) {
-                              canAdvance = false;
-                              break;
-                            }
-                          }
-                          if (canAdvance) {
-                            setCurrentStep(s.step);
-                          }
-                        }
+                        setCurrentStep(s.step);
                       }}
                     >
                       <div className="stepper-bubble">
@@ -2019,11 +2036,11 @@ export default function RegistroJugadores() {
                 })}
               </div>
 
-              {/* PASO 1: SELECCION DE SEGURO / SLOT A CONSUMIR */}
-              {currentStep === 1 && (
+              {/* PASO 5: SELECCION DE SEGURO / SLOT A CONSUMIR */}
+              {currentStep === 5 && (
                 <section className="wizard-step-container">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
-                    <StepBadge number="1" isActive={true} isDone={!!currentSeguroId} />
+                    <StepBadge number="5" isActive={true} isDone={esPasoCompleto(5)} />
                     <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar</h3>
                   </div>
 
@@ -2102,11 +2119,11 @@ export default function RegistroJugadores() {
                 </section>
               )}
 
-              {/* PASO 2: CARGA DE DOCUMENTOS */}
-              {currentStep === 2 && (
+              {/* PASO 1: CARGA DE DOCUMENTOS */}
+              {currentStep === 1 && (
                 <section className="wizard-step-container">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                    <StepBadge number="2" isActive={true} isDone={Object.values(currentDocuments).some(d => d !== null)} />
+                    <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
                     <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación (Opcional)</h3>
                   </div>
 
@@ -2318,11 +2335,11 @@ export default function RegistroJugadores() {
                 </section>
               )}
 
-              {/* PASO 3: INFORMACIÓN PERSONAL */}
-              {currentStep === 3 && (
+              {/* PASO 2: INFORMACIÓN PERSONAL */}
+              {currentStep === 2 && (
                 <section className="wizard-step-container">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <StepBadge number="3" isActive={true} isDone={false} />
+                    <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
                     <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Personal</h3>
                   </div>
 
@@ -2585,11 +2602,11 @@ export default function RegistroJugadores() {
                 </section>
               )}
 
-              {/* PASO 4: INFORMACIÓN DEPORTIVA */}
-              {currentStep === 4 && (
+              {/* PASO 3: INFORMACIÓN DEPORTIVA */}
+              {currentStep === 3 && (
                 <section className="wizard-step-container">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <StepBadge number="4" isActive={true} isDone={false} />
+                    <StepBadge number="3" isActive={true} isDone={esPasoCompleto(3)} />
                     <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Deportiva</h3>
                   </div>
 
@@ -2649,11 +2666,11 @@ export default function RegistroJugadores() {
                 </section>
               )}
 
-              {/* PASO 5: PROCEDENCIA Y ANTECEDENTES */}
-              {currentStep === 5 && (
+              {/* PASO 4: PROCEDENCIA Y ANTECEDENTES */}
+              {currentStep === 4 && (
                 <section className="wizard-step-container">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <StepBadge number="5" isActive={true} isDone={false} />
+                    <StepBadge number="4" isActive={true} isDone={esPasoCompleto(4)} />
                     <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad y Antecedentes</h3>
                   </div>
 
@@ -3042,9 +3059,7 @@ export default function RegistroJugadores() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (validarPasoActual(currentStep)) {
-                        setCurrentStep(prev => prev + 1);
-                      }
+                      setCurrentStep(prev => prev + 1);
                     }}
                     style={{
                       padding: '12px 32px',
