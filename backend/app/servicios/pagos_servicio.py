@@ -318,12 +318,27 @@ class PagosServicio:
 
         solicitud = pagos_repositorio.obtener_solicitud_repo(self.db, orden.SolicitudId)
 
+        afiliacion_val = None
+        try:
+            from app.modelos.usuario_modelo import Usuario
+            from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+            usuario = self.db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+            if usuario and usuario.PersonaId:
+                presidente = self.db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+                if presidente and presidente.Afiliacion:
+                    afiliacion_val = presidente.Afiliacion
+        except Exception as e:
+            print(f"Error recuperando afiliacion de PresidenteEquipo: {e}")
+
+        if not afiliacion_val:
+            afiliacion_val = solicitud.Afiliacion if (solicitud and solicitud.Afiliacion) else None
+
         return {
             "tiene_orden": True,
             "orden_pago_id": orden.OrdenPagoId,
             "estatus": orden.EstatusPagoId,
             "tiene_comprobante": bool(orden.RutaVoucher),
-            "afiliacion": solicitud.Afiliacion if solicitud else None,
+            "afiliacion": afiliacion_val,
             "solicitud": {
                 "solicitud_id": solicitud.SolicitudId,
                 "estatus": solicitud.EstatusValidacion,

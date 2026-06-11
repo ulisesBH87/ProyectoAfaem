@@ -137,7 +137,7 @@ def crear_solicitud_servicio(db, tipo_afiliacion, tipo_solicitud, usuario, equip
     
     return solicitud_nueva
 
-def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, sexo_id=None, fecha_nacimiento=None, liga_id=None, nombre_equipo=None, afiliacion=None, telefono=None):
+def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, sexo_id=None, fecha_nacimiento=None, liga_id=None, nombre_equipo=None, afiliacion=None, telefono=None, lugar_nacimiento=None):
 
     solicitud = solicitud_repositorio.obtener_solicitud_por_id(db, solicitud_id)
 
@@ -160,6 +160,8 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
             persona.NumeroTelefono = telefono.strip()
         if sexo_id:
             persona.SexoId = sexo_id
+        if lugar_nacimiento:
+            persona.LugarNacimiento = lugar_nacimiento.strip().upper()
         if fecha_nacimiento:
             from datetime import datetime
             try:
