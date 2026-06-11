@@ -51,7 +51,8 @@ export const generarPDFCuota = ({
   yPosition += 8;
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
-  doc.text(`Nombre: ${user.Nombre || user.NombreUsuario || 'N/A'}`, margin, yPosition);
+  const userName = (user.usuario?.nombre || user.usuario?.Nombre || user.Nombre || user.NombreUsuario || 'N/A').toUpperCase();
+  doc.text(`Nombre: ${userName}`, margin, yPosition);
   yPosition += 6;
   doc.text(`Correo: ${user.Correo || user.email || 'N/A'}`, margin, yPosition);
   yPosition += 10;
@@ -82,22 +83,7 @@ export const generarPDFCuota = ({
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
 
-  const presidenteAf = catalogoAfiliaciones.find((a) => a.TipoAfiliacionId === 2);
-  const jugadorAf = catalogoAfiliaciones.find((a) => a.TipoAfiliacionId === 4);
-
-  if (incluirPresidente && presidenteAf) {
-    const subtotal = Number(presidenteAf.CostoActual || 0);
-    doc.text(`${presidenteAf.NombreAfiliacion} (x1)`, margin, yPosition);
-    doc.text(formatCurrency(subtotal), pageWidth - margin - 30, yPosition);
-    yPosition += 6;
-  }
-
-  if (jugadorAf && Number(cantidadJugadores) > 0) {
-    const subtotal = Number(jugadorAf.CostoActual || 0) * Number(cantidadJugadores || 0);
-    doc.text(`${jugadorAf.NombreAfiliacion} (x${Number(cantidadJugadores)})`, margin, yPosition);
-    doc.text(formatCurrency(subtotal), pageWidth - margin - 30, yPosition);
-    yPosition += 6;
-  }
+  // Afiliaciones (Omitidas del PDF según requerimiento)
 
   catalogoSeguros.forEach((seg) => {
     const cantidad = Number(asignacionSeguros[seg.id] || asignacionSeguros[String(seg.id)] || 0);

@@ -689,7 +689,8 @@ function PreRegistroPresidente() {
       yPosition += 8;
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      doc.text(`Nombre: ${user.Nombre || user.NombreUsuario || 'N/A'}`, margin, yPosition);
+      const userName = (user.usuario?.nombre || user.usuario?.Nombre || user.Nombre || user.NombreUsuario || 'N/A').toUpperCase();
+      doc.text(`Nombre: ${userName}`, margin, yPosition);
       yPosition += 6;
       doc.text(`Correo: ${user.Correo || user.email || 'N/A'}`, margin, yPosition);
       yPosition += 10;
@@ -722,23 +723,7 @@ function PreRegistroPresidente() {
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
 
-      // Afiliaciones
-      const presidenteAf = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2);
-      const jugadorAf = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4);
-
-      if (presidenteAf) {
-        const subtotal = presidenteAf.CostoActual;
-        doc.text(`${presidenteAf.NombreAfiliacion} (x1)`, margin, yPosition);
-        doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
-        yPosition += 6;
-      }
-
-      if (jugadorAf && numPersonas > 0) {
-        const subtotal = jugadorAf.CostoActual * numPersonas;
-        doc.text(`${jugadorAf.NombreAfiliacion} (x${numPersonas})`, margin, yPosition);
-        doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
-        yPosition += 6;
-      }
+      // Afiliaciones (Omitidas del PDF según requerimiento)
 
       // Seguros
       let tieneSeguros = false;
@@ -2412,12 +2397,17 @@ function PreRegistroPresidente() {
                         {ordenPendienteId ? 'Detalles de la Orden' : 'Resumen de pago'}
                       </h5>
                     </div>
-                    {ordenPendienteId && detalleInscripciones.map(detalle => (
-                      <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.55)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
-                        <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
-                      </div>
-                    ))}
+                    {ordenPendienteId && detalleInscripciones
+                      .filter(detalle => {
+                        const tafId = Number(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id);
+                        return tafId !== 2 && tafId !== 4;
+                      })
+                      .map(detalle => (
+                        <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.55)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
+                          <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
+                        </div>
+                      ))}
                     {catalogoSeguros.map(seg =>
                       asignacionSeguros[seg.id] > 0 && (
                         <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
@@ -2425,22 +2415,6 @@ function PreRegistroPresidente() {
                           <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
                         </div>
                       )
-                    )}
-                    {!ordenPendienteId && numPersonas > 0 && (
-                      <>
-                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 2).map(af => (
-                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x1)</span>
-                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual}</span>
-                          </div>
-                        ))}
-                        {catalogoAfiliaciones.filter(a => a.TipoAfiliacionId === 4).map(af => (
-                          <div key={af.TipoAfiliacionId} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '12px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.55)' }}>{af.NombreAfiliacion} (x{numPersonas})</span>
-                            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '700' }}>${af.CostoActual * numPersonas}</span>
-                          </div>
-                        ))}
-                      </>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: '14px', fontWeight: '800' }}>
                       <span style={{ color: 'rgba(255,255,255,0.7)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
