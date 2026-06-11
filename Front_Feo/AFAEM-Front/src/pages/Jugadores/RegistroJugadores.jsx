@@ -358,6 +358,28 @@ export default function RegistroJugadores() {
   const [failedPhoto, setFailedPhoto] = useState(null);
   const [linkError, setLinkError] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+  const changeStep = (stepOrUpdater) => {
+    setCurrentStep(prev => {
+      const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
+
+      setJugadores(jPrev => {
+        const next = [...jPrev];
+        const currentPlayerState = next[currentPlayerIndex];
+        if (currentPlayerState && currentPlayerState.slotId) {
+          const newDatos = { ...currentPlayerState.datos, currentStep: newStep };
+          next[currentPlayerIndex] = {
+            ...currentPlayerState,
+            datos: newDatos
+          };
+          guardarBorradorEnBD(currentPlayerState.slotId, newDatos);
+        }
+        return next;
+      });
+
+      return newStep;
+    });
+  };
   const [validationErrors, setValidationErrors] = useState({});
 
   // Estados y refs para autoguardado toast
@@ -384,6 +406,8 @@ export default function RegistroJugadores() {
         errors.curp = 'El CURP es obligatorio.';
       } else if (datos.curp.trim().length !== 18) {
         errors.curp = 'El CURP debe tener exactamente 18 caracteres.';
+      } else if (datos.isCurpDuplicated) {
+        errors.curp = 'Esta CURP ya se encuentra registrada.';
       }
 
       if (!datos.fechaNacimiento) errors.fechaNacimiento = 'La fecha de nacimiento es obligatoria.';
@@ -753,6 +777,33 @@ export default function RegistroJugadores() {
         })
       });
       if (response.ok) {
+        const result = await response.json();
+
+        setJugadores(prev => {
+          const next = [...prev];
+          const playerIdx = next.findIndex(p => p.slotId === slotId);
+          if (playerIdx !== -1) {
+            next[playerIdx] = {
+              ...next[playerIdx],
+              datos: {
+                ...next[playerIdx].datos,
+                isCurpDuplicated: !!result.curp_duplicada
+              }
+            };
+          }
+          return next;
+        });
+
+        if (result.curp_duplicada) {
+          setValidationErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
+        } else if (newData.curp && newData.curp.length === 18) {
+          setValidationErrors(prev => {
+            if (prev.curp === 'Esta CURP ya se encuentra registrada.') {
+              return { ...prev, curp: null };
+            }
+            return prev;
+          });
+        }
         triggerToast();
       }
     } catch (err) {
@@ -764,6 +815,8 @@ export default function RegistroJugadores() {
     let formattedValue = value;
     if (field === 'telefono') {
       formattedValue = value.replace(/\D/g, '').slice(0, 10);
+    } else if (field === 'numCamiseta') {
+      formattedValue = value.replace(/\D/g, '').slice(0, 3);
     }
     updatePlayerDatos(currentPlayerIndex, { [field]: formattedValue });
   };
@@ -934,6 +987,10 @@ export default function RegistroJugadores() {
 
       setJugadores(mappedJugadores);
 
+      if (mappedJugadores[currentPlayerIndex]?.datos?.currentStep) {
+        setCurrentStep(mappedJugadores[currentPlayerIndex].datos.currentStep);
+      }
+
     } catch (err) {
       console.error('Error al obtener info del equipo:', err);
       if (isPublicFlow || !location.state?.teamId) {
@@ -968,7 +1025,9 @@ export default function RegistroJugadores() {
       foto: null
     });
 
-    setCurrentStep(1);
+    const player = jugadores[currentPlayerIndex];
+    const savedStep = player?.datos?.currentStep || 1;
+    setCurrentStep(savedStep);
     setValidationErrors({});
 
     if (currentDocuments) {
@@ -989,6 +1048,25 @@ export default function RegistroJugadores() {
       });
     }
   }, [currentPlayerIndex]);
+
+  // Efecto para autovalidación de CURP con debounce
+  useEffect(() => {
+    const player = jugadores[currentPlayerIndex];
+    if (!player) return;
+
+    const curp = player.datos?.curp;
+
+    if (curp && curp.length === 18) {
+      const timer = setTimeout(() => {
+        setIsCheckingCurp(true);
+        guardarBorradorEnBD(player.slotId, player.datos).finally(() => {
+          setIsCheckingCurp(false);
+        });
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [jugadores[currentPlayerIndex]?.datos?.curp, currentPlayerIndex]);
 
   const playerStatusConfig = {
     VACIO: { label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
@@ -1354,7 +1432,7 @@ export default function RegistroJugadores() {
     for (let s = 1; s <= 5; s++) {
       if (s === 1) continue;
       if (!validarPasoActual(s)) {
-        setCurrentStep(s);
+        changeStep(s);
         return;
       }
     }
@@ -1848,8 +1926,8 @@ export default function RegistroJugadores() {
                 Swal.fire({
                   title: isPublicFlow && invitationTeams.length > 1 ? '¿Regresar a selección de equipos?' : '¿Abandonar registro?',
                   text: isPublicFlow && invitationTeams.length > 1
-                    ? 'Se perderán los documentos subidos no guardados y el progreso actual (excepto campos autoguardados en la BD).'
-                    : 'Se perderán los documentos subidos y el progreso actual (excepto los campos guardados en la BD).',
+                    ? 'Se perderán los documentos subidos no guardados y el progreso actual (excepto campos autoguardados).'
+                    : 'Se perderán los documentos subidos y el progreso actual (excepto los campos autoguardados en borrador).',
                   icon: 'warning',
                   showCancelButton: true,
                   confirmButtonColor: '#ef4444',
@@ -1955,7 +2033,7 @@ export default function RegistroJugadores() {
                 userSelect: 'none',
                 lineHeight: '1.2'
               }}>
-                {currentPlayerIndex + 1}
+                Jugador {currentPlayerIndex + 1}
               </span>
               <div style={{
                 display: 'inline-flex',
@@ -1974,6 +2052,14 @@ export default function RegistroJugadores() {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
               }}>
                 <span>{config.label}</span>
+              </div>
+              <div style={{
+                marginTop: '8px',
+                fontSize: '12px',
+                color: '#64748b',
+                fontWeight: '600'
+              }}>
+                Seguro seleccionado: {slotsData?.seguros?.find(s => String(s.seguro_id) === String(jugadores[currentPlayerIndex]?.seguroId))?.nombre || 'No asignado'}
               </div>
             </div>
 
@@ -2127,7 +2213,7 @@ export default function RegistroJugadores() {
                         key={`step-indicator-${s.step}`}
                         className={`stepper-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                         onClick={() => {
-                          setCurrentStep(s.step);
+                          changeStep(s.step);
                         }}
                       >
                         <div className="stepper-bubble">
@@ -2517,7 +2603,10 @@ export default function RegistroJugadores() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px', marginTop: '15px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                            CURP <span className="required-star">*</span>
+                            {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '10px' }}>Validando...</span>}
+                          </label>
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
@@ -2717,7 +2806,9 @@ export default function RegistroJugadores() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={currentDatos.numCamiseta}
                             onChange={e => {
                               handleFieldChange('numCamiseta', e.target.value);
@@ -3152,7 +3243,7 @@ export default function RegistroJugadores() {
                   {currentStep > 1 ? (
                     <button
                       type="button"
-                      onClick={() => setCurrentStep(prev => prev - 1)}
+                      onClick={() => changeStep(prev => prev - 1)}
                       style={{
                         padding: '12px 28px',
                         borderRadius: '12px',
@@ -3178,7 +3269,7 @@ export default function RegistroJugadores() {
                     <button
                       type="button"
                       onClick={() => {
-                        setCurrentStep(prev => prev + 1);
+                        changeStep(prev => prev + 1);
                       }}
                       style={{
                         padding: '12px 32px',

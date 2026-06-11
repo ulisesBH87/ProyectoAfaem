@@ -486,8 +486,19 @@ def guardar_borrador_jugador(
         raise HTTPException(status_code=404, detail="Slot de jugador temporal no encontrado")
     
     slot.DatosBorrador = json.dumps(payload.datos, ensure_ascii=False)
+    
+    curp_duplicada = False
+    curp = str(payload.datos.get("curp") or "").strip().upper()
+    if curp and len(curp) == 18:
+        from app.repositorios import equipo_repositorio
+        if equipo_repositorio.existe_persona_repo(db, curp):
+            curp_duplicada = True
+            
     db.commit()
-    return {"mensaje": "Borrador guardado correctamente"}
+    return {
+        "mensaje": "Borrador guardado correctamente",
+        "curp_duplicada": curp_duplicada
+    }
 
 
 class BorradorPresidentePayload(BaseModel):
