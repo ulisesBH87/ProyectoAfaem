@@ -1618,9 +1618,9 @@ function PreRegistroPresidente() {
           min-width: 0;
         }
         .insurance-card-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          gap: 12px;
           min-width: 0;
         }
         .insurance-player-card {
@@ -1828,13 +1828,12 @@ function PreRegistroPresidente() {
           from { width: 0%; } to { width: 100%; }
         }
 
-        /* Insurance Cards */
         .insurance-card {
           background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 16px; padding: 20px;
+          border-radius: 12px; padding: 12px 14px;
           display: flex; justify-content: space-between; align-items: center;
-          margin-bottom: 15px; transition: all 0.3s ease;
+          margin-bottom: 0; transition: all 0.3s ease;
         }
         .insurance-card:hover {
           background: rgba(255,255,255,0.06);
@@ -1876,8 +1875,8 @@ function PreRegistroPresidente() {
           background: #5d87e5;
           display: block;
         }
-        .insurance-info h4 { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
-        .insurance-info p { font-size: 13px; color: var(--text-muted); margin: 0; }
+        .insurance-info h4 { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+        .insurance-info p { font-size: 11.5px; color: var(--text-muted); margin: 0; }
 
         /* GLASS DOC CARDS */
         .doc-glass-card {
@@ -2211,7 +2210,7 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${cantAsignada > 0 ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '165px', padding: '15px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '15px' }}
                                 >
                                   {cantAsignada > 0 && (
                                     <div style={{
@@ -2235,13 +2234,13 @@ function PreRegistroPresidente() {
                                       {cantAsignada}
                                     </div>
                                   )}
-                                  <div className="insurance-player-content" style={{ flex: 1 }}>
-                                    <p className="insurance-player-name">{seg.nombre}</p>
-                                    <span className="insurance-player-price">${seg.precio} c/u</span>
-                                  </div>
+                                  <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                    <div className="insurance-player-content" style={{ flex: 1, textAlign: 'left', paddingRight: '10px' }}>
+                                      <p className="insurance-player-name" style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800' }}>{seg.nombre}</p>
+                                      <span className="insurance-player-price" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>${seg.precio} c/u</span>
+                                    </div>
 
-                                  {/* Input directo en la tarjeta */}
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0 8px', gap: '10px', width: '100%' }}>
+                                    {/* Input directo en la tarjeta */}
                                     <input
                                       type="number"
                                       min="0"
@@ -2298,7 +2297,7 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${checked ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '165px', padding: '15px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '15px' }}
                                 >
                                   {checked && (
                                     <div style={{
@@ -2322,12 +2321,7 @@ function PreRegistroPresidente() {
                                       ✓
                                     </div>
                                   )}
-                                  <div className="insurance-player-content" style={{ flex: 1 }}>
-                                    <p className="insurance-player-name">{seg.nombre}</p>
-                                    <span className="insurance-player-price">${seg.precio} c/u</span>
-                                  </div>
 
-                                  {/* Radio de selección en la tarjeta */}
                                   <div
                                     onClick={() => {
                                       const next = { ...asignacionSeguros };
@@ -2337,15 +2331,19 @@ function PreRegistroPresidente() {
                                       setAsignacionSeguros(next);
                                       setError(null);
                                     }}
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0 8px', gap: '10px', width: '100%', cursor: 'pointer' }}
+                                    style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', cursor: 'pointer' }}
                                   >
-                                    <span style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>Seleccionado:</span>
+                                    <div className="insurance-player-content" style={{ flex: 1, textAlign: 'left', paddingRight: '10px' }}>
+                                      <p className="insurance-player-name" style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800' }}>{seg.nombre}</p>
+                                      <span className="insurance-player-price" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>${seg.precio} c/u</span>
+                                    </div>
+
                                     <input
                                       type="radio"
                                       name="seguroPresidenteRadioCard"
                                       checked={checked}
                                       onChange={() => { }} // click en fila maneja el cambio
-                                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3d79ff' }}
+                                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3d79ff' }}
                                     />
                                   </div>
 
