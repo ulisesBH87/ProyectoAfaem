@@ -7,11 +7,11 @@ import { C, PASOS } from './constants';
  * Barra de progreso visual con los pasos del wizard.
  * Muestra ícono, etiqueta y línea conectora entre pasos.
  */
-export default function StepBar({ paso, setPaso }) {
+export default function StepBar({ paso, setPaso, stepStatus = {} }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 36 }}>
       {PASOS.map((p, i) => {
-        const done = paso > p.id;
+        const done = stepStatus[p.id] || false;
         const active = paso === p.id;
         return (
           <React.Fragment key={p.id}>

@@ -70,7 +70,16 @@ export default function RegistrarPresidente() {
     Number(numPersonas) > 0 && 
     totalAsignados === segurosRequeridos;
 
+  const isPaso4Ready = !!documents.formatoAfiliacion;
+
   const pasosAnterioresLlenos = isPaso1Ready && isPaso2Ready && isPaso3Ready;
+
+  const stepStatus = {
+    1: isPaso1Ready,
+    2: isPaso2Ready,
+    3: isPaso3Ready,
+    4: isPaso4Ready,
+  };
 
 
   return (
@@ -225,7 +234,7 @@ export default function RegistrarPresidente() {
         }} />
 
         {/* Barra de progreso de pasos */}
-        <StepBar paso={paso} setPaso={setPaso} />
+        <StepBar paso={paso} setPaso={setPaso} stepStatus={stepStatus} />
 
         {/* ── Paso 1: Documentos ── */}
         {paso === 1 && (
