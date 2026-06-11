@@ -1,19 +1,20 @@
-import { C, fieldStyles } from './constants';
+import { C, fieldStyles, CATALOGO_ROLES, CATALOGO_LIGAS_DEFAULT } from './constants';
 import PasoHeader from './PasoHeader';
 import SeguroRow from './SeguroRow';
 import VoucherUpload from './VoucherUpload';
 
 /**
- * Step2Cuotas
- * Paso 2 del wizard: configuración de plantilla y seguros.
+ * Step3Cuotas
+ * Paso 3 del wizard: asginación de seguros y resumen de pago.
  */
-export default function Step2Cuotas({
+export default function Step3Cuotas({
   numPersonas, setNumPersonas,
   segurosJugadores, segurosPresidente,
   asignacion, setAsignacion,
   cargandoSeguros,
   totalAsignados, segurosRequeridos, totalPagar,
   voucher, setVoucher,
+  equipo, setEquipo, tipoAfiliacion, asociacion, liga, setLiga, ligasCatalogo
 }) {
   const handleSelectPres = (seg, lista) => {
     setAsignacion(prev => {
@@ -34,6 +35,61 @@ export default function Step2Cuotas({
         titulo="Cuotas y Seguros"
         descripcion="Configura la plantilla inicial del equipo y asigna sus seguros."
       />
+
+      {/* Datos del expediente */}
+      <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: '20px 22px', marginBottom: 22 }}>
+        <h3 style={{ marginTop: 0, marginBottom: 16, color: C.text, fontSize: 16 }}>Datos del Expediente</h3>
+        
+        {/* Fila 1: Equipo */}
+        <div className="rp-grid-1cols" style={{ marginBottom: 16 }}>
+          <div>
+            <label style={fieldStyles.label}>Nombre del Equipo <span style={{ color: C.amber }}>*</span></label>
+            <input
+              style={{ ...fieldStyles.input, textTransform: 'uppercase' }}
+              type="text" value={equipo} placeholder="EJ: RAYADOS FC" required
+              onChange={e => setEquipo(e.target.value.toUpperCase())}
+            />
+          </div>
+        </div>
+
+        {/* Fila 2: Afiliación, Asociación, Liga */}
+        <div className="rp-grid-3cols-equal">
+          <div>
+            <label style={fieldStyles.label}>Cargo / Tipo de Afiliación</label>
+            <select
+              style={{ ...fieldStyles.select, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}
+              value={tipoAfiliacion}
+              disabled
+            >
+              <option value="">Selecciona…</option>
+              {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={fieldStyles.label}>Asociación</label>
+            <input
+              style={{
+                ...fieldStyles.input, cursor: 'not-allowed',
+                background: 'rgba(245,158,11,0.05)',
+                borderColor: 'rgba(245,158,11,0.2)',
+                color: C.amberLight,
+              }}
+              value={asociacion}
+              disabled
+            />
+          </div>
+          <div>
+            <label style={fieldStyles.label}>Liga Destino <span style={{ color: C.amber }}>*</span></label>
+            <select style={fieldStyles.select} value={liga} onChange={e => setLiga(e.target.value)} required>
+              <option value="">Selecciona…</option>
+              {ligasCatalogo.length > 0
+                ? ligasCatalogo.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)
+                : CATALOGO_LIGAS_DEFAULT.map(l => <option key={l.valor} value={l.valor}>{l.etiqueta}</option>)
+              }
+            </select>
+          </div>
+        </div>
+      </div>
 
       <div className="rp-grid-2to1-cuotas">
         {/* Panel de seguros */}

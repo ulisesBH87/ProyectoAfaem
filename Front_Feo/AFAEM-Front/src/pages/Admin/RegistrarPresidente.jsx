@@ -3,9 +3,10 @@ import { useRegistrarPresidente } from '../../hooks/useRegistrarPresidente';
 import { C, PASOS } from './RegistrarPresidente/constants';
 import PageHeader from './RegistrarPresidente/PageHeader';
 import StepBar from './RegistrarPresidente/StepBar';
-import Step1Cuenta from './RegistrarPresidente/Step1Cuenta';
-import Step2Cuotas from './RegistrarPresidente/Step2Cuotas';
-import Step3Documentos from './RegistrarPresidente/Step3Documentos';
+import Step1Documentos from './RegistrarPresidente/Step1Documentos';
+import Step2Cuenta from './RegistrarPresidente/Step2Cuenta';
+import Step3Cuotas from './RegistrarPresidente/Step3Cuotas';
+import Step4Afiliacion from './RegistrarPresidente/Step4Afiliacion';
 import { FaCheckCircle } from 'react-icons/fa';
 import Loader from '../../components/Loader';
 
@@ -26,17 +27,15 @@ export default function RegistrarPresidente() {
     cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
     // Paso 2
     numPersonas, setNumPersonas, voucher, setVoucher,
-    seguros, segurosPresidente, segurosJugadores, asignacion, setAsignacion,
+    segurosPresidente, segurosJugadores, asignacion, setAsignacion,
     cargandoSeguros, ligasCatalogo, totalAsignados, totalPagar, segurosRequeridos,
     // Paso 3
-    correoDoc, setCorreoDoc, telefonoDoc, setTelefonoDoc,
-    codigoPaisDoc, setCodigoPaisDoc, equipo, setEquipo,
+    equipo, setEquipo,
     tipoAfiliacion, asociacion, liga, setLiga,
     documents, previews, detailsOpen, setDetailsOpen,
-    mostrarManual, setMostrarManual,
     previewDoc, setPreviewDoc,
     // OCR
-    ocrResults, handleOcrManual,
+    ocrResults,
     // Foto
     fotoError, fotoFallida, fotoArchivo, forzarFoto,
     // Handlers
@@ -46,6 +45,42 @@ export default function RegistrarPresidente() {
   if (cargandoBorrador) {
     return <Loader text="Cargando borrador..." />;
   }
+
+  const isPaso1Ready = 
+    !!documents.actaNacimiento &&
+    !!documents.identificacion &&
+    !!documents.fotografia;
+
+  const isPaso2Ready = 
+    !!cuenta.nombre?.trim() &&
+    !!cuenta.primerApellido?.trim() &&
+    !!cuenta.correo?.trim() &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cuenta.correo) &&
+    !!cuenta.telefono?.trim() &&
+    /^\d{10}$/.test(cuenta.telefono) &&
+    !!cuenta.curp?.trim() &&
+    cuenta.curp.length === 18 &&
+    !!cuenta.contrasena &&
+    cuenta.contrasena.length >= 6 &&
+    cuenta.contrasena === cuenta.confirmarContrasena &&
+    !!equipo?.trim() && 
+    !!liga?.trim();
+
+  const isPaso3Ready = 
+    Number(numPersonas) > 0 && 
+    totalAsignados === segurosRequeridos;
+
+  const isPaso4Ready = !!documents.formatoAfiliacion;
+
+  const pasosAnterioresLlenos = isPaso1Ready && isPaso2Ready && isPaso3Ready;
+
+  const stepStatus = {
+    1: isPaso1Ready,
+    2: isPaso2Ready,
+    3: isPaso3Ready,
+    4: isPaso4Ready,
+  };
+
 
   return (
     <div className="rp-page-wrapper" style={{
@@ -199,11 +234,29 @@ export default function RegistrarPresidente() {
         }} />
 
         {/* Barra de progreso de pasos */}
-        <StepBar paso={paso} setPaso={setPaso} />
+        <StepBar paso={paso} setPaso={setPaso} stepStatus={stepStatus} />
 
-        {/* ── Paso 1: Cuenta ── */}
+        {/* ── Paso 1: Documentos ── */}
         {paso === 1 && (
-          <Step1Cuenta
+          <Step1Documentos
+            ocrResults={ocrResults}
+            documents={documents}
+            previews={previews}
+            detailsOpen={detailsOpen}
+            setDetailsOpen={setDetailsOpen}
+            fotoError={fotoError}
+            fotoFallida={fotoFallida}
+            fotoArchivo={fotoArchivo}
+            forzarFoto={forzarFoto}
+            handleFileUpload={handleFileUpload}
+            previewDoc={previewDoc}
+            setPreviewDoc={setPreviewDoc}
+          />
+        )}
+
+        {/* ── Paso 2: Cuenta ── */}
+        {paso === 2 && (
+          <Step2Cuenta
             cuenta={cuenta}
             setCuentaField={setCuentaField}
             cuentaErrors={cuentaErrors}
@@ -212,9 +265,9 @@ export default function RegistrarPresidente() {
           />
         )}
 
-        {/* ── Paso 2: Cuotas ── */}
-        {paso === 2 && (
-          <Step2Cuotas
+        {/* ── Paso 3: Cuotas ── */}
+        {paso === 3 && (
+          <Step3Cuotas
             numPersonas={numPersonas}
             setNumPersonas={setNumPersonas}
             segurosJugadores={segurosJugadores}
@@ -227,18 +280,6 @@ export default function RegistrarPresidente() {
             totalPagar={totalPagar}
             voucher={voucher}
             setVoucher={setVoucher}
-          />
-        )}
-
-        {/* ── Paso 3: Documentos ── */}
-        {paso === 3 && (
-          <Step3Documentos
-            correoDoc={correoDoc}
-            setCorreoDoc={setCorreoDoc}
-            telefonoDoc={telefonoDoc}
-            setTelefonoDoc={setTelefonoDoc}
-            codigoPaisDoc={codigoPaisDoc}
-            setCodigoPaisDoc={setCodigoPaisDoc}
             equipo={equipo}
             setEquipo={setEquipo}
             tipoAfiliacion={tipoAfiliacion}
@@ -246,22 +287,21 @@ export default function RegistrarPresidente() {
             liga={liga}
             setLiga={setLiga}
             ligasCatalogo={ligasCatalogo}
-            mostrarManual={mostrarManual}
-            setMostrarManual={setMostrarManual}
-            ocrResults={ocrResults}
-            handleOcrManual={handleOcrManual}
+          />
+        )}
+
+        {/* ── Paso 4: Afiliación ── */}
+        {paso === 4 && (
+          <Step4Afiliacion
             documents={documents}
             previews={previews}
             detailsOpen={detailsOpen}
             setDetailsOpen={setDetailsOpen}
-            fotoError={fotoError}
-            fotoFallida={fotoFallida}
-            fotoArchivo={fotoArchivo}
-            forzarFoto={forzarFoto}
             handleFileUpload={handleFileUpload}
             descargarFormato={handleDescargarFormato}
             previewDoc={previewDoc}
             setPreviewDoc={setPreviewDoc}
+            pasosAnterioresLlenos={pasosAnterioresLlenos}
           />
         )}
 
@@ -281,7 +321,7 @@ export default function RegistrarPresidente() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 12, color: C.textDim }}>Paso {paso} de {PASOS.length}</span>
             <button
-              onClick={paso === 3 ? procesarRegistro : avanzar}
+              onClick={paso === 4 ? procesarRegistro : avanzar}
               disabled={loading}
               style={{
                 padding: '11px 28px', borderRadius: 10,
@@ -294,7 +334,7 @@ export default function RegistrarPresidente() {
                 transition: 'all .2s',
               }}
             >
-              {loading ? '⏳ Procesando…' : paso === 3 ? '✓ Finalizar Registro' : 'Continuar →'}
+              {loading ? '⏳ Procesando…' : paso === 4 ? '✓ Finalizar Registro' : 'Continuar →'}
             </button>
           </div>
         </div>
