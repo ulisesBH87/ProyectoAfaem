@@ -1898,7 +1898,7 @@ function PreRegistroPresidente() {
         .doc-glass-card {
           background: rgba(255,255,255,0.03);
           border: 1px dashed rgba(255,255,255,0.12);
-          border-radius: 22px; padding: 26px 20px;
+          border-radius: 20px; padding: 16px 14px;
           display: flex; flex-direction: column; align-items: center; text-align: center;
           position: relative; overflow: hidden;
           transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
@@ -1920,16 +1920,16 @@ function PreRegistroPresidente() {
           position: absolute; top: 0; left: 0; right: 0; height: 1px;
         }
         .doc-glass-icon {
-          width: 68px; height: 68px; border-radius: 20px;
+          width: 50px; height: 50px; border-radius: 16px;
           display: flex; align-items: center; justify-content: center;
-          font-size: 30px; margin-bottom: 14px;
+          font-size: 24px; margin-bottom: 10px;
           transition: transform 0.3s ease;
         }
         .doc-glass-card:hover .doc-glass-icon { transform: scale(1.08); }
         .doc-status-pill {
-          position: absolute; top: 14px; right: 14px;
-          padding: 4px 10px; border-radius: 20px;
-          font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+          position: absolute; top: 10px; right: 10px;
+          padding: 3px 8px; border-radius: 20px;
+          font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
           display: flex; align-items: center; gap: 5px;
         }
         .doc-status-dot { width: 5px; height: 5px; border-radius: 50%; }
@@ -2007,6 +2007,23 @@ function PreRegistroPresidente() {
         }
         .fmf-logos img:hover {
           opacity: 1;
+        }
+        .doc-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 35px;
+        }
+        @media (max-width: 900px) {
+          .doc-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (max-width: 480px) {
+          .doc-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
         }
       `}</style>
 
@@ -2759,7 +2776,7 @@ function PreRegistroPresidente() {
                 <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Datos de Registro</h4>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '20px' }}>
                 <div className="premium-input-group">
                   <label className="premium-label">Asociación</label>
                   <input type="text" value={asociacion} disabled className="premium-input" style={{ backgroundColor: '#436c95ff', cursor: 'not-allowed' }} />
@@ -2849,7 +2866,7 @@ function PreRegistroPresidente() {
                   Si el sistema automático de lectura no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
                   <div className="premium-input-group">
                     <label className="premium-label">Nombre Completo *</label>
                     <input
@@ -2875,29 +2892,6 @@ function PreRegistroPresidente() {
                       style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' } : {}}
                     />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Fecha de Nacimiento *</label>
-                    <input
-                      type="date"
-                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
-                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
-                      className="premium-input"
-                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
-                    />
-                  </div>
-                  {/*<div className="premium-input-group">
-                    <label className="premium-label">Edad *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. 34 años"
-                      value={ocrResults.edad || ''}
-                      onChange={(e) => handleManualOcrChange('edad', e.target.value)}
-                      className="premium-input"
-                    />
-                  </div>*/}
                   <div className="premium-input-group">
                     <label className="premium-label">Nacionalidad *</label>
                     <input
@@ -2910,7 +2904,17 @@ function PreRegistroPresidente() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Fecha de Nacimiento *</label>
+                    <input
+                      type="date"
+                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
+                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
+                      className="premium-input"
+                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
+                    />
+                  </div>
                   <div className="premium-input-group">
                     <label className="premium-label">Sexo *</label>
                     <select
@@ -2992,7 +2996,7 @@ function PreRegistroPresidente() {
                 documents.actaNacimiento && documents.identificacion && documents.fotografia
               );
               return (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '35px' }}>
+              <div className="doc-cards-grid">
                 {requisitos.map((doc, idx) => {
                 const isUploaded = !!documents[doc.documento];
                 const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
