@@ -25,7 +25,8 @@ export default function Step3Cuotas({
   };
 
   const handleChangeNumero = (seg, val) => {
-    const num = val === '' ? '' : Math.max(0, parseInt(val) || 0);
+    const rawVal = val.replace(/\D/g, '').slice(0, 2);
+    const num = rawVal === '' ? '' : parseInt(rawVal, 10);
     setAsignacion(prev => ({ ...prev, [seg.id]: num }));
   };
 
@@ -111,8 +112,11 @@ export default function Step3Cuotas({
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
                 <input
-                  type="number" placeholder="0" min="0" value={numPersonas}
-                  onChange={e => setNumPersonas(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
+                  type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={numPersonas}
+                  onChange={e => {
+                    const rawVal = e.target.value.replace(/\D/g, '').slice(0, 2);
+                    setNumPersonas(rawVal === '' ? '' : parseInt(rawVal, 10));
+                  }}
                   style={{
                     width: 100, padding: '9px 14px', borderRadius: 10,
                     background: C.inputBg, border: `1px solid ${C.inputBorder}`,
