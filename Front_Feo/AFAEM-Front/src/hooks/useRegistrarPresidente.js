@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { 
-  registrarPresidenteAdmin, 
-  enviarLinkRegistroPresidenteWhatsApp, 
-  guardarBorradorPresidente, 
-  obtenerBorradorPresidente 
+import {
+  registrarPresidenteAdmin,
+  enviarLinkRegistroPresidenteWhatsApp,
+  guardarBorradorPresidente,
+  obtenerBorradorPresidente
 } from '../services/admin';
 import { useSeguros } from './useSeguros';
 import { useOCR } from './useOCR';
@@ -33,7 +33,6 @@ const base64ToFile = async (dataurl, filename) => {
     const blob = await res.blob();
     return new File([blob], filename, { type: blob.type });
   } catch (err) {
-    console.error("Error decodificando base64 a archivo:", err);
     throw err;
   }
 };

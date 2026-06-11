@@ -358,6 +358,28 @@ export default function RegistroJugadores() {
   const [failedPhoto, setFailedPhoto] = useState(null);
   const [linkError, setLinkError] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+
+  const changeStep = (stepOrUpdater) => {
+    setCurrentStep(prev => {
+      const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
+      
+      setJugadores(jPrev => {
+        const next = [...jPrev];
+        const currentPlayerState = next[currentPlayerIndex];
+        if (currentPlayerState && currentPlayerState.slotId) {
+          const newDatos = { ...currentPlayerState.datos, currentStep: newStep };
+          next[currentPlayerIndex] = {
+            ...currentPlayerState,
+            datos: newDatos
+          };
+          guardarBorradorEnBD(currentPlayerState.slotId, newDatos);
+        }
+        return next;
+      });
+
+      return newStep;
+    });
+  };
   const [validationErrors, setValidationErrors] = useState({});
 
   // Estados y refs para autoguardado toast
@@ -934,6 +956,10 @@ export default function RegistroJugadores() {
 
       setJugadores(mappedJugadores);
 
+      if (mappedJugadores[currentPlayerIndex]?.datos?.currentStep) {
+        setCurrentStep(mappedJugadores[currentPlayerIndex].datos.currentStep);
+      }
+
     } catch (err) {
       console.error('Error al obtener info del equipo:', err);
       if (isPublicFlow || !location.state?.teamId) {
@@ -968,7 +994,9 @@ export default function RegistroJugadores() {
       foto: null
     });
 
-    setCurrentStep(1);
+    const player = jugadores[currentPlayerIndex];
+    const savedStep = player?.datos?.currentStep || 1;
+    setCurrentStep(savedStep);
     setValidationErrors({});
 
     if (currentDocuments) {
@@ -1354,7 +1382,7 @@ export default function RegistroJugadores() {
     for (let s = 1; s <= 5; s++) {
       if (s === 1) continue;
       if (!validarPasoActual(s)) {
-        setCurrentStep(s);
+        changeStep(s);
         return;
       }
     }
@@ -2127,7 +2155,7 @@ export default function RegistroJugadores() {
                         key={`step-indicator-${s.step}`}
                         className={`stepper-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
                         onClick={() => {
-                          setCurrentStep(s.step);
+                          changeStep(s.step);
                         }}
                       >
                         <div className="stepper-bubble">
@@ -3152,7 +3180,7 @@ export default function RegistroJugadores() {
                   {currentStep > 1 ? (
                     <button
                       type="button"
-                      onClick={() => setCurrentStep(prev => prev - 1)}
+                      onClick={() => changeStep(prev => prev - 1)}
                       style={{
                         padding: '12px 28px',
                         borderRadius: '12px',
@@ -3178,7 +3206,7 @@ export default function RegistroJugadores() {
                     <button
                       type="button"
                       onClick={() => {
-                        setCurrentStep(prev => prev + 1);
+                        changeStep(prev => prev + 1);
                       }}
                       style={{
                         padding: '12px 32px',
