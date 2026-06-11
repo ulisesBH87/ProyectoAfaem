@@ -1883,7 +1883,7 @@ function PreRegistroPresidente() {
         .doc-glass-card {
           background: rgba(255,255,255,0.03);
           border: 1px dashed rgba(255,255,255,0.12);
-          border-radius: 22px; padding: 26px 20px;
+          border-radius: 20px; padding: 16px 14px;
           display: flex; flex-direction: column; align-items: center; text-align: center;
           position: relative; overflow: hidden;
           transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
@@ -1905,16 +1905,16 @@ function PreRegistroPresidente() {
           position: absolute; top: 0; left: 0; right: 0; height: 1px;
         }
         .doc-glass-icon {
-          width: 68px; height: 68px; border-radius: 20px;
+          width: 50px; height: 50px; border-radius: 16px;
           display: flex; align-items: center; justify-content: center;
-          font-size: 30px; margin-bottom: 14px;
+          font-size: 24px; margin-bottom: 10px;
           transition: transform 0.3s ease;
         }
         .doc-glass-card:hover .doc-glass-icon { transform: scale(1.08); }
         .doc-status-pill {
-          position: absolute; top: 14px; right: 14px;
-          padding: 4px 10px; border-radius: 20px;
-          font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+          position: absolute; top: 10px; right: 10px;
+          padding: 3px 8px; border-radius: 20px;
+          font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
           display: flex; align-items: center; gap: 5px;
         }
         .doc-status-dot { width: 5px; height: 5px; border-radius: 50%; }
@@ -1992,6 +1992,23 @@ function PreRegistroPresidente() {
         }
         .fmf-logos img:hover {
           opacity: 1;
+        }
+        .doc-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 35px;
+        }
+        @media (max-width: 900px) {
+          .doc-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (max-width: 480px) {
+          .doc-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
         }
       `}</style>
 
@@ -2733,7 +2750,7 @@ function PreRegistroPresidente() {
                 <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Datos de Registro</h4>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '20px' }}>
                 <div className="premium-input-group">
                   <label className="premium-label">Asociación</label>
                   <input type="text" value={asociacion} disabled className="premium-input" style={{ backgroundColor: '#436c95ff', cursor: 'not-allowed' }} />
@@ -2797,7 +2814,7 @@ function PreRegistroPresidente() {
                   gap: '8px'
                 }}
               >
-                <span>⌨️</span> {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
+                {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
               </button>
             </div>
 
@@ -2820,10 +2837,10 @@ function PreRegistroPresidente() {
                 </div>
 
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: '1.5' }}>
-                  Si el sistema automático de lectura (OCR) no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
+                  Si el sistema automático de lectura no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
                   <div className="premium-input-group">
                     <label className="premium-label">Nombre Completo *</label>
                     <input
@@ -2849,29 +2866,6 @@ function PreRegistroPresidente() {
                       style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' } : {}}
                     />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Fecha de Nacimiento *</label>
-                    <input
-                      type="date"
-                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
-                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
-                      className="premium-input"
-                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
-                    />
-                  </div>
-                  {/*<div className="premium-input-group">
-                    <label className="premium-label">Edad *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. 34 años"
-                      value={ocrResults.edad || ''}
-                      onChange={(e) => handleManualOcrChange('edad', e.target.value)}
-                      className="premium-input"
-                    />
-                  </div>*/}
                   <div className="premium-input-group">
                     <label className="premium-label">Nacionalidad *</label>
                     <input
@@ -2884,7 +2878,17 @@ function PreRegistroPresidente() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Fecha de Nacimiento *</label>
+                    <input
+                      type="date"
+                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
+                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
+                      className="premium-input"
+                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
+                    />
+                  </div>
                   <div className="premium-input-group">
                     <label className="premium-label">Sexo *</label>
                     <select
@@ -2906,17 +2910,18 @@ function PreRegistroPresidente() {
                       <select
                         value={codigoPais}
                         onChange={(e) => setCodigoPais(e.target.value)}
+                        className="premium-input"
+                        disabled={true}
                         style={{
-                          width: '120px',
-                          flexShrink: 0,
-                          padding: '13px 12px',
+                          width: '100px',
+                          padding: '12px 16px',
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '12px',
                           color: 'white',
                           fontSize: '14px',
                           outline: 'none',
-                          cursor: 'pointer',
+                          cursor: 'not-allowed',
                           backdropFilter: 'blur(4px)'
                         }}
                       >
@@ -2946,7 +2951,9 @@ function PreRegistroPresidente() {
                         value={ocrResults.telefono || ''}
                         onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
                         className="premium-input"
-                        style={{ cursor: 'text', flexGrow: 1 }}
+                        disabled={true}
+                        readOnly={true}
+                        style={{ cursor: 'not-allowed', flexGrow: 1, backgroundColor: 'rgba(255,255,255,0.05)' }}
                       />
                     </div>
                   </div>
@@ -2955,128 +2962,155 @@ function PreRegistroPresidente() {
             )}
 
             {/* TARJETAS DE DOCUMENTOS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '35px' }}>
-              {requisitos.map((doc, idx) => {
-                const isUploaded = !!documents[doc.documento];
-                const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
-                const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
-                const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
+            {(() => {
+              const formatAfiliacionLocked = !(
+                ocrResults.equipo && ocrResults.nombre && ocrResults.curp &&
+                ocrResults.fecha_nac && ocrResults.nacionalidad && ocrResults.sexo &&
+                ocrResults.telefono && liga && tipoAfiliacion &&
+                documents.actaNacimiento && documents.identificacion && documents.fotografia
+              );
+              return (
+                <div className="doc-cards-grid">
+                  {requisitos.map((doc, idx) => {
+                    const isUploaded = !!documents[doc.documento];
+                    const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
+                    const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
+                    const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
 
-                let statusLabel, statusColor, statusDotColor, statusBg;
-                if (ocrProcessed) {
-                  statusLabel = 'Procesado'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
-                } else if (isUploaded) {
-                  statusLabel = 'Listo'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
-                } else {
-                  statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDotColor = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
-                }
+                    let statusLabel, statusColor, statusDotColor, statusBg;
+                    if (ocrProcessed) {
+                      statusLabel = 'Procesado'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                    } else if (isUploaded) {
+                      statusLabel = 'Listo'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                    } else {
+                      statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDotColor = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
+                    }
 
-                return (
-                  <div key={idx} className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}>
-                    {/* Top sheen */}
-                    <div className="top-sheen" style={{ background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)' }} />
-                    {/* Status pill */}
-                    <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
-                      <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
-                      {statusLabel}
-                    </div>
-                    {/* Icon */}
-                    <div className="doc-glass-icon" style={{
-                      background: isUploaded ? 'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.08))' : 'linear-gradient(135deg,rgba(11,78,166,0.1),rgba(30,27,75,0.08))',
-                      border: isUploaded ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(93,135,229,0.12)',
-                    }}>
-                      <span>{icons[doc.documento]}</span>
-                    </div>
-                    {/* Title */}
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
-                      {doc.nombre}
-                    </h4>
-                    {/* Filename */}
-                    <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
-                      {isUploaded ? `📎 ${documents[doc.documento].name}` : 'Sin archivo seleccionado'}
-                    </p>
-                    {/* Photo error */}
-                    {error && doc.documento === 'fotografia' && (
-                      <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }}>
-                        ⚠️ {error}
-                      </div>
-                    )}
-                    {/* Photo validation bypass button */}
-                    {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
-                      <button
-                        onClick={handleForzarSubidaFoto}
-                        className="doc-action-btn"
-                        style={{
-                          border: '1px solid rgba(245,158,11,0.5)',
-                          background: 'rgba(245,158,11,0.15)',
-                          color: '#f59e0b',
-                          marginBottom: '14px',
-                          width: '100%',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ⚠️ Omitir validación y usar esta foto
-                      </button>
-                    )}
-                    {/* Action buttons */}
-                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                      {doc.hasDownload && (
-                        <button onClick={handleDownloadFormato} className="doc-download-btn">⬇ Descargar</button>
-                      )}
-                      <button
-                        onClick={() => document.getElementById(`file-${doc.documento}`).click()}
-                        className="doc-action-btn"
-                        style={{
-                          border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                          background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
-                          color: isUploaded ? '#34d399' : 'var(--text-muted)',
-                        }}
-                      >
-                        {isUploaded ? '🔄 Cambiar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir')}
-                      </button>
-                      <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
-                    </div>
-                    {/* OCR toggle */}
-                    <button
-                      onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}
-                      style={{ marginTop: '12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
-                    >
-                      {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
-                    </button>
-                    {detailsOpen[doc.documento] && (
-                      <div className="ocr-panel">
-                        {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {[
-                              { label: 'Nombre', value: ocrResults.nombre },
-                              { label: 'CURP', value: ocrResults.curp },
-                              { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
-                              { label: 'Edad', value: ocrResults.edad },
-                              { label: 'Nacionalidad', value: ocrResults.nacionalidad },
-                              { label: 'Sexo', value: ocrResults.sexo },
-                              { label: 'Teléfono', value: ocrResults.telefono },
-                              { label: 'Equipo', value: ocrResults.equipo },
-                            ].map((row, i) => (
-                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                                <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
-                                <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{row.value || '—'}</span>
-                              </div>
-                            ))}
+                    return (
+                      <div key={idx} className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}>
+                        {/* Top sheen */}
+                        <div className="top-sheen" style={{ background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)' }} />
+                        {/* Status pill */}
+                        <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
+                          <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
+                          {statusLabel}
+                        </div>
+                        {/* Icon */}
+                        <div className="doc-glass-icon" style={{
+                          background: isUploaded ? 'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.08))' : 'linear-gradient(135deg,rgba(11,78,166,0.1),rgba(30,27,75,0.08))',
+                          border: isUploaded ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(93,135,229,0.12)',
+                        }}>
+                          <span>{icons[doc.documento]}</span>
+                        </div>
+                        {/* Title */}
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
+                          {doc.nombre}
+                        </h4>
+                        {/* Filename */}
+                        <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+                          {isUploaded ? `📎 ${documents[doc.documento].name}` : 'Sin archivo seleccionado'}
+                        </p>
+                        {/* Photo error */}
+                        {error && doc.documento === 'fotografia' && (
+                          <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }}>
+                            ⚠️ {error}
                           </div>
-                        ) : doc.documento === 'fotografia' ? (
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📸 Validación automática de rostro, calidad y formato.</p>
-                        ) : doc.documento === 'formatoAfiliacion' ? (
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📝 Descarga el formato, fírmalo físicamente y súbelo aquí.</p>
-                        ) : (
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>Sube el documento primero para ver los datos extraídos.</p>
+                        )}
+                        {/* Photo validation bypass button */}
+                        {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
+                          <button
+                            onClick={handleForzarSubidaFoto}
+                            className="doc-action-btn"
+                            style={{
+                              border: '1px solid rgba(245,158,11,0.5)',
+                              background: 'rgba(245,158,11,0.15)',
+                              color: '#f59e0b',
+                              marginBottom: '14px',
+                              width: '100%',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ⚠️ Omitir validación y usar esta foto
+                          </button>
+                        )}
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                          {doc.hasDownload && (
+                            <button
+                              onClick={(e) => {
+                                if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                                  e.preventDefault();
+                                  return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
+                                }
+                                handleDownloadFormato(e);
+                              }}
+                              className="doc-download-btn"
+                              style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                            >⬇ Descargar</button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                                return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                              }
+                              document.getElementById(`file-${doc.documento}`).click();
+                            }}
+                            className="doc-action-btn"
+                            style={{
+                              border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                              background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                              color: isUploaded ? '#34d399' : 'var(--text-muted)',
+                              opacity: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 0.5 : 1,
+                              cursor: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isUploaded ? '🔄 Cambiar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir')}
+                          </button>
+                          <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
+                        </div>
+                        {/* OCR toggle */}
+                        <button
+                          onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}
+                          style={{ marginTop: '12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
+                        >
+                          {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
+                        </button>
+                        {detailsOpen[doc.documento] && (
+                          <div className="ocr-panel">
+                            {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {[
+                                  { label: 'Nombre', value: ocrResults.nombre },
+                                  { label: 'CURP', value: ocrResults.curp },
+                                  { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
+                                  { label: 'Edad', value: ocrResults.edad },
+                                  { label: 'Nacionalidad', value: ocrResults.nacionalidad },
+                                  { label: 'Sexo', value: ocrResults.sexo },
+                                  { label: 'Teléfono', value: ocrResults.telefono },
+                                  { label: 'Equipo', value: ocrResults.equipo },
+                                ].map((row, i) => (
+                                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                    <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
+                                    <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{row.value || '—'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : doc.documento === 'fotografia' ? (
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📸 Validación automática de rostro, calidad y formato.</p>
+                            ) : doc.documento === 'formatoAfiliacion' ? (
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📝 Descarga el formato, fírmalo físicamente y súbelo aquí.</p>
+                            ) : (
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>Sube el documento primero para ver los datos extraídos.</p>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* BOTONES DE NAVEGACIÓN */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
