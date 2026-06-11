@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import * as bootstrap from 'bootstrap';
 import {
   getJugadoresDirectorio,
   getJugadorDocumentos,
@@ -723,90 +724,115 @@ export default function AdminJugadores() {
 
     const htmlCards = htmlCardsRequeridos + htmlCardsOpcionales;
 
-    Swal.fire({
-      title: `Documentos de ${jugador.NombreCompleto}`,
-      width: 'min(860px, 95vw)',
-      html: `
-        <style>
-          .doc-card-container {
-            max-height: 480px;
-            overflow-y: auto;
-            padding: 8px 6px;
-            margin-top: 10px;
-          }
-          .doc-card-container::-webkit-scrollbar {
-            width: 6px;
-          }
-          .doc-card-container::-webkit-scrollbar-track {
-            background: #f8fafc;
-            border-radius: 10px;
-          }
-          .doc-card-container::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-          }
-          .doc-card-container::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        </style>
-        <div class="doc-card-container">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;">
-            ${htmlCards}
+    const modalId = 'modalDocumentosBootstrap';
+    let modalEl = document.getElementById(modalId);
+    if (modalEl) {
+      modalEl.remove();
+    }
+
+    modalEl = document.createElement('div');
+    modalEl.id = modalId;
+    modalEl.className = 'modal fade';
+    modalEl.tabIndex = -1;
+    modalEl.setAttribute('aria-hidden', 'true');
+
+    modalEl.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered" style="max-width: min(860px, 95vw);">
+        <div class="modal-content">
+          <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+            <h5 class="modal-title" style="font-size: 1.875em; font-weight: 600; text-align: center; width: 100%; color: #545454; padding-left: 32px;">Documentos de ${jugador.NombreCompleto}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" style="padding-top: 0;">
+            <style>
+              .doc-card-container {
+                max-height: 480px;
+                overflow-y: auto;
+                padding: 8px 6px;
+                margin-top: 10px;
+              }
+              .doc-card-container::-webkit-scrollbar {
+                width: 6px;
+              }
+              .doc-card-container::-webkit-scrollbar-track {
+                background: #f8fafc;
+                border-radius: 10px;
+              }
+              .doc-card-container::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 10px;
+              }
+              .doc-card-container::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+              }
+            </style>
+            <div class="doc-card-container">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;">
+                ${htmlCards}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer" style="border-top: none; justify-content: center; gap: 10px; padding-bottom: 20px;">
+            <button type="button" class="btn text-white" data-bs-dismiss="modal" style="background-color: #0b4ea6; border: none; padding: 10px 24px; font-weight: 500; border-radius: 0.25em;">Cerrar</button>
           </div>
         </div>
-      `,
-      showConfirmButton: true,
-      confirmButtonText: 'Cerrar',
-      confirmButtonColor: '#0b4ea6',
-      didOpen: () => {
-        // Botón: Añadir documento faltante
-        document.querySelectorAll('[data-add-doc]').forEach((boton) => {
-          boton.addEventListener('click', () => {
-            const tipoId = Number(boton.getAttribute('data-add-doc'));
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.pdf,image/*';
-            input.style.display = 'none';
-            input.onchange = (e) => {
-              const archivo = e.target.files?.[0];
-              if (archivo) {
-                Swal.close();
-                manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
-              }
-            };
-            document.body.appendChild(input);
-            input.click();
-            input.remove();
-          });
-        });
+      </div>
+    `;
 
-        // Botón: Reemplazar documento existente
-        document.querySelectorAll('[data-replace-doc]').forEach((boton) => {
-          boton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const tipoId = Number(boton.getAttribute('data-replace-doc'));
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.pdf,image/*';
-            input.style.display = 'none';
-            input.onchange = (ev) => {
-              const archivo = ev.target.files?.[0];
-              if (archivo) {
-                Swal.close();
-                manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
-              }
-            };
-            document.body.appendChild(input);
-            input.click();
-            input.remove();
-          });
-        });
+    document.body.appendChild(modalEl);
+    const bsModal = new bootstrap.Modal(modalEl);
 
-        const popup = Swal.getPopup();
-        attachActionButtonListeners(popup || document);
-      },
+    // Botón: Añadir documento faltante
+    modalEl.querySelectorAll('[data-add-doc]').forEach((boton) => {
+      boton.addEventListener('click', () => {
+        const tipoId = Number(boton.getAttribute('data-add-doc'));
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,image/*';
+        input.style.display = 'none';
+        input.onchange = (e) => {
+          const archivo = e.target.files?.[0];
+          if (archivo) {
+            bsModal.hide();
+            manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
+          }
+        };
+        document.body.appendChild(input);
+        input.click();
+        input.remove();
+      });
     });
+
+    // Botón: Reemplazar documento existente
+    modalEl.querySelectorAll('[data-replace-doc]').forEach((boton) => {
+      boton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const tipoId = Number(boton.getAttribute('data-replace-doc'));
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,image/*';
+        input.style.display = 'none';
+        input.onchange = (ev) => {
+          const archivo = ev.target.files?.[0];
+          if (archivo) {
+            bsModal.hide();
+            manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
+          }
+        };
+        document.body.appendChild(input);
+        input.click();
+        input.remove();
+      });
+    });
+
+    attachActionButtonListeners(modalEl);
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      modalEl.remove();
+    });
+
+    bsModal.show();
   };
 
   const handleDescargarDocs = async (jugador) => {
