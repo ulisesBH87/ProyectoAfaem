@@ -1926,8 +1926,8 @@ export default function RegistroJugadores() {
                 Swal.fire({
                   title: isPublicFlow && invitationTeams.length > 1 ? '¿Regresar a selección de equipos?' : '¿Abandonar registro?',
                   text: isPublicFlow && invitationTeams.length > 1
-                    ? 'Se perderán los documentos subidos no guardados y el progreso actual (excepto campos autoguardados en la BD).'
-                    : 'Se perderán los documentos subidos y el progreso actual (excepto los campos guardados en la BD).',
+                    ? 'Se perderán los documentos subidos no guardados y el progreso actual (excepto campos autoguardados).'
+                    : 'Se perderán los documentos subidos y el progreso actual (excepto los campos autoguardados en borrador).',
                   icon: 'warning',
                   showCancelButton: true,
                   confirmButtonColor: '#ef4444',
@@ -2033,7 +2033,7 @@ export default function RegistroJugadores() {
                 userSelect: 'none',
                 lineHeight: '1.2'
               }}>
-                {currentPlayerIndex + 1}
+                Jugador {currentPlayerIndex + 1}
               </span>
               <div style={{
                 display: 'inline-flex',
@@ -2052,6 +2052,14 @@ export default function RegistroJugadores() {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
               }}>
                 <span>{config.label}</span>
+              </div>
+              <div style={{
+                marginTop: '8px',
+                fontSize: '12px',
+                color: '#64748b',
+                fontWeight: '600'
+              }}>
+                Seguro seleccionado: {slotsData?.seguros?.find(s => String(s.seguro_id) === String(jugadores[currentPlayerIndex]?.seguroId))?.nombre || 'No asignado'}
               </div>
             </div>
 
