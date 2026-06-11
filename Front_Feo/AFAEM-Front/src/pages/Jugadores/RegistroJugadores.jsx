@@ -358,11 +358,11 @@ export default function RegistroJugadores() {
   const [failedPhoto, setFailedPhoto] = useState(null);
   const [linkError, setLinkError] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-
+  const [isCheckingCurp, setIsCheckingCurp] = useState(false);
   const changeStep = (stepOrUpdater) => {
     setCurrentStep(prev => {
       const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
-      
+
       setJugadores(jPrev => {
         const next = [...jPrev];
         const currentPlayerState = next[currentPlayerIndex];
@@ -406,6 +406,8 @@ export default function RegistroJugadores() {
         errors.curp = 'El CURP es obligatorio.';
       } else if (datos.curp.trim().length !== 18) {
         errors.curp = 'El CURP debe tener exactamente 18 caracteres.';
+      } else if (datos.isCurpDuplicated) {
+        errors.curp = 'Esta CURP ya se encuentra registrada.';
       }
 
       if (!datos.fechaNacimiento) errors.fechaNacimiento = 'La fecha de nacimiento es obligatoria.';
@@ -775,6 +777,33 @@ export default function RegistroJugadores() {
         })
       });
       if (response.ok) {
+        const result = await response.json();
+
+        setJugadores(prev => {
+          const next = [...prev];
+          const playerIdx = next.findIndex(p => p.slotId === slotId);
+          if (playerIdx !== -1) {
+            next[playerIdx] = {
+              ...next[playerIdx],
+              datos: {
+                ...next[playerIdx].datos,
+                isCurpDuplicated: !!result.curp_duplicada
+              }
+            };
+          }
+          return next;
+        });
+
+        if (result.curp_duplicada) {
+          setValidationErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
+        } else if (newData.curp && newData.curp.length === 18) {
+          setValidationErrors(prev => {
+            if (prev.curp === 'Esta CURP ya se encuentra registrada.') {
+              return { ...prev, curp: null };
+            }
+            return prev;
+          });
+        }
         triggerToast();
       }
     } catch (err) {
@@ -1017,6 +1046,25 @@ export default function RegistroJugadores() {
       });
     }
   }, [currentPlayerIndex]);
+
+  // Efecto para autovalidación de CURP con debounce
+  useEffect(() => {
+    const player = jugadores[currentPlayerIndex];
+    if (!player) return;
+
+    const curp = player.datos?.curp;
+
+    if (curp && curp.length === 18) {
+      const timer = setTimeout(() => {
+        setIsCheckingCurp(true);
+        guardarBorradorEnBD(player.slotId, player.datos).finally(() => {
+          setIsCheckingCurp(false);
+        });
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [jugadores[currentPlayerIndex]?.datos?.curp, currentPlayerIndex]);
 
   const playerStatusConfig = {
     VACIO: { label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
@@ -2545,7 +2593,10 @@ export default function RegistroJugadores() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px', marginTop: '15px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                            CURP <span className="required-star">*</span>
+                            {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '10px' }}>Validando...</span>}
+                          </label>
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
