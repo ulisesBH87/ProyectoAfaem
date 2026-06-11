@@ -413,7 +413,7 @@ export default function RegistroJugadores() {
   const esPasoCompleto = (step) => {
     const player = jugadores[currentPlayerIndex];
     if (!player) return false;
-    
+
     if (step === 1) {
       // Documentos
       const docs = player.documentos || {};
@@ -1975,1272 +1975,1271 @@ export default function RegistroJugadores() {
       ) : (
         <>
           <div className="premium-card fade-in main-card-responsive" style={{
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: 'white',
-          borderRadius: '24px',
-          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-          border: '1px solid #e2e8f0'
-        }}>
+            maxWidth: '1000px',
+            margin: '0 auto',
+            background: 'white',
+            borderRadius: '24px',
+            boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+            border: '1px solid #e2e8f0'
+          }}>
 
-          {currentPlayer.completo ? (
-            <div style={{
-              background: '#ecfdf5',
-              border: '1px solid #a7f3d0',
-              borderRadius: '16px',
-              padding: '24px',
-              textAlign: 'center',
-              color: '#065f46',
-              marginBottom: '30px'
-            }}>
-              <FaCheckCircle style={{ fontSize: '42px', marginBottom: '10px' }} />
-              <h3 style={{ fontWeight: '800', fontSize: '18px', margin: 0 }}>Este espacio ya está completamente registrado</h3>
-              <p style={{ fontSize: '13px', margin: '6px 0 0 0', color: '#047857' }}>
-                Los datos de este jugador ya fueron enviados y guardados en el sistema oficial. Selecciona otro espacio de arriba para registrar otro jugador.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* INDICADOR DE PROGRESO (STEPPER WIZARD) */}
-              <div className="stepper-container">
-                <div className="stepper-line">
-                  <div
-                    className="stepper-line-progress"
-                    style={{ width: `${((currentStep - 1) / 5) * 100}%` }}
-                  />
-                </div>
-                {[
-                  { step: 1, label: 'Documentos' },
-                  { step: 2, label: 'Personales' },
-                  { step: 3, label: 'Deportivos' },
-                  { step: 4, label: 'Procedencia' },
-                  { step: 5, label: 'Seguro' },
-                  { step: 6, label: 'Resumen' }
-                ].map((s) => {
-                  const isActive = currentStep === s.step;
-                  const isCompleted = esPasoCompleto(s.step);
-                  return (
-                    <div
-                      key={`step-indicator-${s.step}`}
-                      className={`stepper-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
-                      onClick={() => {
-                        setCurrentStep(s.step);
-                      }}
-                    >
-                      <div className="stepper-bubble">
-                        {isCompleted ? <FaCheckCircle /> : s.step}
-                      </div>
-                      <span className="stepper-label">{s.label}</span>
-                    </div>
-                  );
-                })}
+            {currentPlayer.completo ? (
+              <div style={{
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: '16px',
+                padding: '24px',
+                textAlign: 'center',
+                color: '#065f46',
+                marginBottom: '30px'
+              }}>
+                <FaCheckCircle style={{ fontSize: '42px', marginBottom: '10px' }} />
+                <h3 style={{ fontWeight: '800', fontSize: '18px', margin: 0 }}>Este espacio ya está completamente registrado</h3>
+                <p style={{ fontSize: '13px', margin: '6px 0 0 0', color: '#047857' }}>
+                  Los datos de este jugador ya fueron enviados y guardados en el sistema oficial. Selecciona otro espacio de arriba para registrar otro jugador.
+                </p>
               </div>
-
-              {/* PASO 5: SELECCION DE SEGURO / SLOT A CONSUMIR */}
-              {currentStep === 5 && (
-                <section className="wizard-step-container">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
-                    <StepBadge number="5" isActive={true} isDone={esPasoCompleto(5)} />
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar</h3>
+            ) : (
+              <>
+                {/* INDICADOR DE PROGRESO (STEPPER WIZARD) */}
+                <div className="stepper-container">
+                  <div className="stepper-line">
+                    <div
+                      className="stepper-line-progress"
+                      style={{ width: `${((currentStep - 1) / 5) * 100}%` }}
+                    />
                   </div>
-
-                  <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                    <div className="card" style={{ padding: '25px', borderRadius: '16px', border: `1.5px solid ${validationErrors.seguroId ? '#ef4444' : '#e2e8f0'}`, background: '#f8fafc' }}>
-                      <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
-                        Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                        {slotsData?.seguros?.map((seg) => {
-                          const isSelected = String(currentSeguroId) === String(seg.seguro_id);
-                          const noDisponible = seg.disponibles <= 0 && !isSelected;
-                          return (
-                            <div
-                              key={`seguro-card-${seg.seguro_id}`}
-                              onClick={() => {
-                                if (noDisponible) {
-                                  Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
-                                  return;
-                                }
-                                updatePlayerSeguro(currentPlayerIndex, String(seg.seguro_id));
-                                setValidationErrors(prev => ({ ...prev, seguroId: null }));
-                                const updated = { ...currentDatos };
-                                if (currentPlayer?.slotId) {
-                                  guardarBorradorEnBD(currentPlayer.slotId, updated);
-                                }
-                              }}
-                              style={{
-                                padding: '16px',
-                                borderRadius: '12px',
-                                border: isSelected
-                                  ? '2.5px solid #0b4ea6'
-                                  : noDisponible
-                                    ? '1px solid #e2e8f0'
-                                    : '1px solid #cbd5e1',
-                                backgroundColor: isSelected
-                                  ? '#eff6ff'
-                                  : noDisponible
-                                    ? '#f1f5f9'
-                                    : 'white',
-                                cursor: noDisponible ? 'not-allowed' : 'pointer',
-                                opacity: noDisponible ? 0.6 : 1,
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '6px'
-                              }}
-                            >
-                              <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : noDisponible ? '#94a3b8' : '#1e293b' }}>
-                                🛡️ {seg.nombre}
-                              </span>
-                              <div style={{
-                                marginTop: '5px',
-                                display: 'inline-flex',
-                                alignSelf: 'start',
-                                padding: '2px 8px',
-                                borderRadius: '20px',
-                                background: noDisponible ? '#e2e8f0' : '#dcfce7',
-                                color: noDisponible ? '#64748b' : '#15803d',
-                                fontSize: '11px',
-                                fontWeight: '800'
-                              }}>
-                                {seg.disponibles} disponibles
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {validationErrors.seguroId && (
-                        <span style={{ display: 'block', color: '#ef4444', fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
-                          ❌ {validationErrors.seguroId}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* PASO 1: CARGA DE DOCUMENTOS */}
-              {currentStep === 1 && (
-                <section className="wizard-step-container">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                    <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación (Opcional)</h3>
-                  </div>
-
-                  <div style={{
-                    background: '#f0f9ff',
-                    border: '1px solid #bae6fd',
-                    borderRadius: '12px',
-                    padding: '12px 18px',
-                    marginBottom: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    fontSize: '13px',
-                    color: '#0369a1',
-                    fontWeight: '600'
-                  }}>
-                    <span style={{ fontSize: '18px' }}>📋</span>
-                    Opcional: puedes subir los documentos ahora para llenar los campos automáticamente, o continuar sin archivos y cargarlos después.
-                  </div>
-
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: '20px'
-                  }}>
-                    {documentCards.map((doc) => (
+                  {[
+                    { step: 1, label: 'Documentos' },
+                    { step: 2, label: 'Personales' },
+                    { step: 3, label: 'Deportivos' },
+                    { step: 4, label: 'Procedencia' },
+                    { step: 5, label: 'Seguro' },
+                    { step: 6, label: 'Resumen' }
+                  ].map((s) => {
+                    const isActive = currentStep === s.step;
+                    const isCompleted = esPasoCompleto(s.step);
+                    return (
                       <div
-                        key={doc.key}
-                        className="document-card"
-                        style={{
-                          backgroundColor: 'white',
-                          borderRadius: '20px',
-                          border: currentDocuments[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                          padding: '15px',
-                          textAlign: 'center',
-                          transition: 'all 0.3s',
-                          position: 'relative',
-                          overflow: 'hidden'
+                        key={`step-indicator-${s.step}`}
+                        className={`stepper-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                        onClick={() => {
+                          setCurrentStep(s.step);
                         }}
                       >
-                        {/* Indicador de Menor para tutor/credencial */}
-                        {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                          <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
-                        )}
+                        <div className="stepper-bubble">
+                          {isCompleted ? <FaCheckCircle /> : s.step}
+                        </div>
+                        <span className="stepper-label">{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
 
-                        <div style={{
-                          height: '140px',
-                          width: '100%',
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '12px',
-                          marginBottom: '10px',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid #f1f5f9'
-                        }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            handleFileUpload(doc.key, e.dataTransfer.files[0]);
-                          }}
-                        >
-                          {previews[doc.key] ? (
-                            <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                              {currentDocuments[doc.key]?.type === 'application/pdf' ? (
-                                <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                  <FaFilePdf />
-                                  <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                {/* PASO 5: SELECCION DE SEGURO / SLOT A CONSUMIR */}
+                {currentStep === 5 && (
+                  <section className="wizard-step-container">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
+                      <StepBadge number="5" isActive={true} isDone={esPasoCompleto(5)} />
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar</h3>
+                    </div>
+
+                    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                      <div className="card" style={{ padding: '25px', borderRadius: '16px', border: `1.5px solid ${validationErrors.seguroId ? '#ef4444' : '#e2e8f0'}`, background: '#f8fafc' }}>
+                        <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
+                          Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                          {slotsData?.seguros?.map((seg) => {
+                            const isSelected = String(currentSeguroId) === String(seg.seguro_id);
+                            const noDisponible = seg.disponibles <= 0 && !isSelected;
+                            return (
+                              <div
+                                key={`seguro-card-${seg.seguro_id}`}
+                                onClick={() => {
+                                  if (noDisponible) {
+                                    Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
+                                    return;
+                                  }
+                                  updatePlayerSeguro(currentPlayerIndex, String(seg.seguro_id));
+                                  setValidationErrors(prev => ({ ...prev, seguroId: null }));
+                                  const updated = { ...currentDatos };
+                                  if (currentPlayer?.slotId) {
+                                    guardarBorradorEnBD(currentPlayer.slotId, updated);
+                                  }
+                                }}
+                                style={{
+                                  padding: '16px',
+                                  borderRadius: '12px',
+                                  border: isSelected
+                                    ? '2.5px solid #0b4ea6'
+                                    : noDisponible
+                                      ? '1px solid #e2e8f0'
+                                      : '1px solid #cbd5e1',
+                                  backgroundColor: isSelected
+                                    ? '#eff6ff'
+                                    : noDisponible
+                                      ? '#f1f5f9'
+                                      : 'white',
+                                  cursor: noDisponible ? 'not-allowed' : 'pointer',
+                                  opacity: noDisponible ? 0.6 : 1,
+                                  transition: 'all 0.2s',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '6px'
+                                }}
+                              >
+                                <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : noDisponible ? '#94a3b8' : '#1e293b' }}>
+                                  🛡️ {seg.nombre}
+                                </span>
+                                <div style={{
+                                  marginTop: '5px',
+                                  display: 'inline-flex',
+                                  alignSelf: 'start',
+                                  padding: '2px 8px',
+                                  borderRadius: '20px',
+                                  background: noDisponible ? '#e2e8f0' : '#dcfce7',
+                                  color: noDisponible ? '#64748b' : '#15803d',
+                                  fontSize: '11px',
+                                  fontWeight: '800'
+                                }}>
+                                  {seg.disponibles} disponibles
                                 </div>
-                              ) : (
-                                <img
-                                  src={previews[doc.key]}
-                                  alt="Preview"
-                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                              )}
-
-                              {/* OVERLAY ACTIONS */}
-                              <div className="overlay-actions" style={{
-                                position: 'absolute',
-                                top: 0, left: 0, right: 0, bottom: 0,
-                                backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '12px',
-                                opacity: 0,
-                                transition: 'opacity 0.2s ease',
-                                backdropFilter: 'blur(2px)'
-                              }}>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const isPdf = currentDocuments[doc.key]?.type === 'application/pdf';
-                                    setPreviewDoc({
-                                      open: true,
-                                      url: previews[doc.key],
-                                      type: isPdf ? 'pdf' : 'image',
-                                      title: doc.title
-                                    });
-                                  }}
-                                  className="btn-zoom"
-                                  style={{
-                                    width: '36px', height: '36px', borderRadius: '50%',
-                                    backgroundColor: '#fff', color: '#1e293b', border: 'none',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                                  }}
-                                >
-                                  <FaSearchPlus />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    document.getElementById(`file-${doc.key}`).click();
-                                  }}
-                                  className="btn-change"
-                                  style={{
-                                    width: '36px', height: '36px', borderRadius: '50%',
-                                    backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                                  }}
-                                >
-                                  <FaSyncAlt />
-                                </button>
                               </div>
-                            </div>
-                          ) : (
-                            /* ESTADO VACÍO */
-                            <div
-                              onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                              style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
-                            >
-                              <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                              <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
-                            </div>
-                          )}
+                            );
+                          })}
                         </div>
-
-                        <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                        <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
-                        <div style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '4px 12px',
-                          borderRadius: '20px',
-                          backgroundColor: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9',
-                          color: currentDocuments[doc.key] ? '#166534' : '#64748b',
-                          fontSize: '10px',
-                          fontWeight: '800'
-                        }}>
-                          {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                        </div>
-
-                        {/* Botón de validación fallida y bypass para fotografía */}
-                        {doc.key === 'foto' && !currentDocuments.foto && failedPhoto && (
-                          <div style={{ marginTop: '8px' }}>
-                            <button
-                              type="button"
-                              onClick={forceLoadFailedPhoto}
-                              style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                backgroundColor: '#f59e0b',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '11px',
-                                fontWeight: '800',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
-                                transition: 'background-color 0.2s'
-                              }}
-                              onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
-                              onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
-                            >
-                              ⚠️ Cargar igualmente
-                            </button>
-                          </div>
+                        {validationErrors.seguroId && (
+                          <span style={{ display: 'block', color: '#ef4444', fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
+                            ❌ {validationErrors.seguroId}
+                          </span>
                         )}
-
-                        <input
-                          type="file"
-                          id={`file-${doc.key}`}
-                          style={{ display: 'none' }}
-                          accept="image/*,.pdf"
-                          onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Loader temporal OCR */}
-                  {currentDocuments.acta && !currentDatos.fechaNacimiento && (
-                    <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                      ⏳ Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {/* PASO 2: INFORMACIÓN PERSONAL */}
-              {currentStep === 2 && (
-                <section className="wizard-step-container">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
-                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Personal</h3>
-                  </div>
-
-                  <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
-                    <div className="form-grid-3">
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          value={currentDatos.nombreJugador}
-                          onChange={e => {
-                            handleFieldChange('nombreJugador', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, nombreJugador: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. Juan"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.nombreJugador ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none',
-                            boxShadow: validationErrors.nombreJugador ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
-                          }}
-                        />
-                        {validationErrors.nombreJugador && <span className="field-error-msg">❌ {validationErrors.nombreJugador}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          value={currentDatos.apellidoPaterno}
-                          onChange={e => {
-                            handleFieldChange('apellidoPaterno', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, apellidoPaterno: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. Pérez"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.apellidoPaterno ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none',
-                            boxShadow: validationErrors.apellidoPaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
-                          }}
-                        />
-                        {validationErrors.apellidoPaterno && <span className="field-error-msg">❌ {validationErrors.apellidoPaterno}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          value={currentDatos.apellidoMaterno}
-                          onChange={e => {
-                            handleFieldChange('apellidoMaterno', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, apellidoMaterno: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. Gómez"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.apellidoMaterno ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none',
-                            boxShadow: validationErrors.apellidoMaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
-                          }}
-                        />
-                        {validationErrors.apellidoMaterno && <span className="field-error-msg">❌ {validationErrors.apellidoMaterno}</span>}
                       </div>
                     </div>
+                  </section>
+                )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px', marginTop: '15px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          value={currentDatos.curp || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            let sId = currentDatos.genero;
-                            if (val.length >= 11) {
-                              const char = val.charAt(10).toUpperCase();
-                              if (char === 'M') sId = '2'; // Femenino
-                              else if (char === 'H') sId = '1'; // Masculino
-                            }
-                            updatePlayerDatos(currentPlayerIndex, { curp: val, genero: sId });
-                            setValidationErrors(prev => ({ ...prev, curp: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="ABCD..."
-                          maxLength="18"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.curp ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none',
-                            boxShadow: validationErrors.curp ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
-                          }}
-                        />
-                        {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
-                      </div>
-                    </div>
-
-                    <div className="form-grid-3">
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
-                        <input
-                          type="date"
-                          value={currentDatos.fechaNacimiento || ''}
-                          min={minDateStr}
-                          max={today}
-                          onChange={e => {
-                            handleFieldChange('fechaNacimiento', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, fechaNacimiento: null }));
-                          }}
-                          onBlur={handleBlur}
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.fechaNacimiento ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
-                        />
-                        {validationErrors.fechaNacimiento && <span className="field-error-msg">❌ {validationErrors.fechaNacimiento}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          value={currentDatos.lugarNacimiento || ''}
-                          onChange={e => {
-                            handleFieldChange('lugarNacimiento', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, lugarNacimiento: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. Monterrey, NL"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.lugarNacimiento ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
-                        />
-                        {validationErrors.lugarNacimiento && <span className="field-error-msg">❌ {validationErrors.lugarNacimiento}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                        <select
-                          value={currentDatos.genero || ""}
-                          onChange={e => {
-                            handleFieldChange('genero', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, genero: null }));
-                            if (currentPlayer?.slotId) {
-                              guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, genero: e.target.value });
-                            }
-                          }}
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.genero ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            backgroundColor: 'white',
-                            outline: 'none'
-                          }}
-                        >
-                          <option value="">Seleccione...</option>
-                          <option value="1">MASCULINO</option>
-                          <option value="2">FEMENINO</option>
-                        </select>
-                        {validationErrors.genero && <span className="field-error-msg">❌ {validationErrors.genero}</span>}
-                      </div>
-                    </div>
-
-                    <div className="form-grid-2" style={{ marginTop: '15px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input
-                          type="email"
-                          value={currentDatos.correo}
-                          onChange={e => {
-                            handleFieldChange('correo', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, correo: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="correo@ejemplo.com"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.correo ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
-                        />
-                        {validationErrors.correo && <span className="field-error-msg">❌ {validationErrors.correo}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <select
-                            value={currentDatos.codigoPais || '+52'}
-                            onChange={e => handleFieldChange('codigoPais', e.target.value)}
-                            onBlur={handleBlur}
-                            style={{
-                              padding: '10px',
-                              borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
-                              fontSize: '14px',
-                              backgroundColor: 'white',
-                              width: '110px',
-                              flexShrink: 0
-                            }}
-                          >
-                            <option value="+52">México +52</option>
-                            <option value="+1">EE.UU./Canadá +1</option>
-                            <option value="+34">España +34</option>
-                            <option value="+54">Argentina +54</option>
-                            <option value="+55">Brasil +55</option>
-                            <option value="+56">Chile +56</option>
-                            <option value="+57">Colombia +57</option>
-                            <option value="+506">Costa Rica +506</option>
-                            <option value="+593">Ecuador +593</option>
-                            <option value="+503">El Salvador +503</option>
-                            <option value="+502">Guatemala +502</option>
-                            <option value="+504">Honduras +504</option>
-                            <option value="+505">Nicaragua +505</option>
-                            <option value="+507">Panamá +507</option>
-                            <option value="+595">Paraguay +595</option>
-                            <option value="+51">Perú +51</option>
-                            <option value="+598">Uruguay +598</option>
-                            <option value="+58">Venezuela +58</option>
-                          </select>
-                          <input
-                            type="tel"
-                            value={currentDatos.telefono}
-                            onChange={e => {
-                              handleFieldChange('telefono', e.target.value.replace(/\D/g, '').slice(0, 10));
-                              setValidationErrors(prev => ({ ...prev, telefono: null }));
-                            }}
-                            onBlur={handleBlur}
-                            placeholder="10 dígitos numéricos"
-                            style={{
-                              padding: '10px',
-                              borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.telefono ? '#ef4444' : '#cbd5e1'}`,
-                              fontSize: '14px',
-                              flexGrow: 1,
-                              outline: 'none'
-                            }}
-                          />
-                        </div>
-                        {validationErrors.telefono && <span className="field-error-msg">❌ {validationErrors.telefono}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* PASO 3: INFORMACIÓN DEPORTIVA */}
-              {currentStep === 3 && (
-                <section className="wizard-step-container">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <StepBadge number="3" isActive={true} isDone={esPasoCompleto(3)} />
-                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Deportiva</h3>
-                  </div>
-
-                  <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
-                    <div className="form-grid-3">
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
-                        <input
-                          type="number"
-                          value={currentDatos.numCamiseta}
-                          onChange={e => {
-                            handleFieldChange('numCamiseta', e.target.value);
-                            setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. 10"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            outline: 'none'
-                          }}
-                        />
-                        {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición  <span className="required-star">*</span></label>
-                        <select
-                          value={currentDatos.posicion}
-                          onChange={e => {
-                            const val = parseInt(e.target.value) || '';
-                            handleFieldChange('posicion', val);
-                            setValidationErrors(prev => ({ ...prev, posicion: null }));
-                            if (currentPlayer?.slotId) {
-                              guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, posicion: val });
-                            }
-                          }}
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`,
-                            fontSize: '14px',
-                            backgroundColor: 'white',
-                            outline: 'none'
-                          }}
-                        >
-                          <option value="">Posición...</option>
-                          {(catalogs?.roles_equipo || []).map(r => (
-                            <option key={r.id} value={r.id}>{r.nombre}</option>
-                          ))}
-                        </select>
-                        {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* PASO 4: PROCEDENCIA Y ANTECEDENTES */}
-              {currentStep === 4 && (
-                <section className="wizard-step-container">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <StepBadge number="4" isActive={true} isDone={esPasoCompleto(4)} />
-                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad y Antecedentes</h3>
-                  </div>
-
-                  <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                      <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
-                      <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Procedencia del jugador</h4>
+                {/* PASO 1: CARGA DE DOCUMENTOS */}
+                {currentStep === 1 && (
+                  <section className="wizard-step-container">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                      <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación (Opcional)</h3>
                     </div>
 
                     <div style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '10px',
-                      background: '#f1f5f9',
-                      padding: '4px',
+                      background: '#f0f9ff',
+                      border: '1px solid #bae6fd',
                       borderRadius: '12px',
-                      width: 'fit-content',
-                      marginBottom: '25px'
+                      padding: '12px 18px',
+                      marginBottom: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      fontSize: '13px',
+                      color: '#0369a1',
+                      fontWeight: '600'
                     }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = { ...currentDatos, esForaneo: false };
-                          updatePlayerDatos(currentPlayerIndex, { esForaneo: false });
-                          setValidationErrors({}); // Limpiar errores de foráneo si cambia a mexicano
-                          if (currentPlayer?.slotId) {
-                            guardarBorradorEnBD(currentPlayer.slotId, updated);
-                          }
-                        }}
-                        style={{
-                          padding: '10px 24px',
-                          borderRadius: '10px',
-                          border: 'none',
-                          background: !currentDatos.esForaneo ? 'white' : 'transparent',
-                          color: !currentDatos.esForaneo ? '#0b4ea6' : '#64748b',
-                          fontWeight: '800',
-                          fontSize: '13px',
-                          boxShadow: !currentDatos.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                          transition: 'all 0.2s',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🇲🇽 Mexicano
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = { ...currentDatos, esForaneo: true };
-                          updatePlayerDatos(currentPlayerIndex, { esForaneo: true });
-                          if (currentPlayer?.slotId) {
-                            guardarBorradorEnBD(currentPlayer.slotId, updated);
-                          }
-                        }}
-                        style={{
-                          padding: '10px 24px',
-                          borderRadius: '10px',
-                          border: 'none',
-                          background: currentDatos.esForaneo ? 'white' : 'transparent',
-                          color: currentDatos.esForaneo ? '#0b4ea6' : '#64748b',
-                          fontWeight: '800',
-                          fontSize: '13px',
-                          boxShadow: currentDatos.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
-                          transition: 'all 0.2s',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🌎 Extranjero
-                      </button>
+                      Opcional: puedes subir los documentos ahora para llenar los campos automáticamente, o continuar a los pasos siguientes y cargarlos después.
                     </div>
 
-                    {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
-                          <FaGlobeAmericas />
-                        </div>
-                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
-                      </div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                      gap: '20px'
+                    }}>
+                      {documentCards.map((doc) => (
+                        <div
+                          key={doc.key}
+                          className="document-card"
+                          style={{
+                            backgroundColor: 'white',
+                            borderRadius: '20px',
+                            border: currentDocuments[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                            padding: '15px',
+                            textAlign: 'center',
+                            transition: 'all 0.3s',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {/* Indicador de Menor para tutor/credencial */}
+                          {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
+                            <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
+                          )}
 
-                      {currentDatos.esForaneo ? (
-                        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
-                            <EntradaFormulario
-                              etiqueta="Nacionalidad del jugador"
-                              valor={currentDatos.nacionalidadJugador}
-                              alCambiar={val => {
-                                handleFieldChange('nacionalidadJugador', val);
-                                setValidationErrors(prev => ({ ...prev, nacionalidadJugador: null }));
-                              }}
-                              alPerderEnfoque={handleBlur}
-                              error={validationErrors.nacionalidadJugador}
-                            />
-                            <EntradaFormulario
-                              etiqueta="País de residencia actual"
-                              valor={currentDatos.paisResidencia}
-                              alCambiar={val => {
-                                handleFieldChange('paisResidencia', val);
-                                setValidationErrors(prev => ({ ...prev, paisResidencia: null }));
-                              }}
-                              alPerderEnfoque={handleBlur}
-                              error={validationErrors.paisResidencia}
-                            />
-                          </div>
+                          <div style={{
+                            height: '140px',
+                            width: '100%',
+                            backgroundColor: '#f8fafc',
+                            borderRadius: '12px',
+                            marginBottom: '10px',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid #f1f5f9'
+                          }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handleFileUpload(doc.key, e.dataTransfer.files[0]);
+                            }}
+                          >
+                            {previews[doc.key] ? (
+                              <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                {currentDocuments[doc.key]?.type === 'application/pdf' ? (
+                                  <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                    <FaFilePdf />
+                                    <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={previews[doc.key]}
+                                    alt="Preview"
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                  />
+                                )}
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
-                            <EntradaSeleccion
-                              etiqueta="¿El jugador ha vivido en el extranjero?"
-                              valor={currentDatos.haVividoExtranjero ? '1' : '0'}
-                              alCambiar={val => {
-                                const boolVal = val === '1';
-                                handleFieldChange('haVividoExtranjero', boolVal);
-                                setValidationErrors(prev => ({ ...prev, haVividoExtranjero: null }));
-                                if (currentPlayer?.slotId) {
-                                  guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, haVividoExtranjero: boolVal });
-                                }
-                              }}
-                              opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
-                              requerido={true}
-                            />
-                            {currentDatos.haVividoExtranjero && (
-                              <EntradaFormulario
-                                etiqueta="¿En qué país?"
-                                valor={currentDatos.dondeVividoExtranjero}
-                                alCambiar={val => {
-                                  handleFieldChange('dondeVividoExtranjero', val);
-                                  setValidationErrors(prev => ({ ...prev, dondeVividoExtranjero: null }));
-                                }}
-                                alPerderEnfoque={handleBlur}
-                                error={validationErrors.dondeVividoExtranjero}
-                                requerido={true}
-                              />
+                                {/* OVERLAY ACTIONS */}
+                                <div className="overlay-actions" style={{
+                                  position: 'absolute',
+                                  top: 0, left: 0, right: 0, bottom: 0,
+                                  backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '12px',
+                                  opacity: 0,
+                                  transition: 'opacity 0.2s ease',
+                                  backdropFilter: 'blur(2px)'
+                                }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const isPdf = currentDocuments[doc.key]?.type === 'application/pdf';
+                                      setPreviewDoc({
+                                        open: true,
+                                        url: previews[doc.key],
+                                        type: isPdf ? 'pdf' : 'image',
+                                        title: doc.title
+                                      });
+                                    }}
+                                    className="btn-zoom"
+                                    style={{
+                                      width: '36px', height: '36px', borderRadius: '50%',
+                                      backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                    }}
+                                  >
+                                    <FaSearchPlus />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      document.getElementById(`file-${doc.key}`).click();
+                                    }}
+                                    className="btn-change"
+                                    style={{
+                                      width: '36px', height: '36px', borderRadius: '50%',
+                                      backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                    }}
+                                  >
+                                    <FaSyncAlt />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              /* ESTADO VACÍO */
+                              <div
+                                onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                                style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                              >
+                                <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                                <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                              </div>
                             )}
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                          <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                          <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            backgroundColor: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9',
+                            color: currentDocuments[doc.key] ? '#166534' : '#64748b',
+                            fontSize: '10px',
+                            fontWeight: '800'
+                          }}>
+                            {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                          </div>
+
+                          {/* Botón de validación fallida y bypass para fotografía */}
+                          {doc.key === 'foto' && !currentDocuments.foto && failedPhoto && (
+                            <div style={{ marginTop: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={forceLoadFailedPhoto}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  backgroundColor: '#f59e0b',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
+                                  transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
+                                onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
+                              >
+                                ⚠️ Cargar igualmente
+                              </button>
+                            </div>
+                          )}
+
+                          <input
+                            type="file"
+                            id={`file-${doc.key}`}
+                            style={{ display: 'none' }}
+                            accept="image/*,.pdf"
+                            onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Loader temporal OCR */}
+                    {currentDocuments.acta && !currentDatos.fechaNacimiento && (
+                      <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                        ⏳ Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {/* PASO 2: INFORMACIÓN PERSONAL */}
+                {currentStep === 2 && (
+                  <section className="wizard-step-container">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                      <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Personal</h3>
+                    </div>
+
+                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
+                      <div className="form-grid-3">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
+                          <input
+                            type="text"
+                            value={currentDatos.nombreJugador}
+                            onChange={e => {
+                              handleFieldChange('nombreJugador', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, nombreJugador: null }));
+                            }}
+                            onBlur={handleBlur}
+                            placeholder="Ej. Juan"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.nombreJugador ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxShadow: validationErrors.nombreJugador ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                            }}
+                          />
+                          {validationErrors.nombreJugador && <span className="field-error-msg">❌ {validationErrors.nombreJugador}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
+                          <input
+                            type="text"
+                            value={currentDatos.apellidoPaterno}
+                            onChange={e => {
+                              handleFieldChange('apellidoPaterno', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, apellidoPaterno: null }));
+                            }}
+                            onBlur={handleBlur}
+                            placeholder="Ej. Pérez"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.apellidoPaterno ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxShadow: validationErrors.apellidoPaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                            }}
+                          />
+                          {validationErrors.apellidoPaterno && <span className="field-error-msg">❌ {validationErrors.apellidoPaterno}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
+                          <input
+                            type="text"
+                            value={currentDatos.apellidoMaterno}
+                            onChange={e => {
+                              handleFieldChange('apellidoMaterno', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, apellidoMaterno: null }));
+                            }}
+                            onBlur={handleBlur}
+                            placeholder="Ej. Gómez"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.apellidoMaterno ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxShadow: validationErrors.apellidoMaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                            }}
+                          />
+                          {validationErrors.apellidoMaterno && <span className="field-error-msg">❌ {validationErrors.apellidoMaterno}</span>}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px', marginTop: '15px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP <span className="required-star">*</span></label>
+                          <input
+                            type="text"
+                            value={currentDatos.curp || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              let sId = currentDatos.genero;
+                              if (val.length >= 11) {
+                                const char = val.charAt(10).toUpperCase();
+                                if (char === 'M') sId = '2'; // Femenino
+                                else if (char === 'H') sId = '1'; // Masculino
+                              }
+                              updatePlayerDatos(currentPlayerIndex, { curp: val, genero: sId });
+                              setValidationErrors(prev => ({ ...prev, curp: null }));
+                            }}
+                            onBlur={handleBlur}
+                            placeholder="ABCD..."
+                            maxLength="18"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.curp ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxShadow: validationErrors.curp ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                            }}
+                          />
+                          {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
+                        </div>
+                      </div>
+
+                      <div className="form-grid-3">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                          <input
+                            type="date"
+                            value={currentDatos.fechaNacimiento || ''}
+                            min={minDateStr}
+                            max={today}
+                            onChange={e => {
+                              handleFieldChange('fechaNacimiento', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, fechaNacimiento: null }));
+                            }}
+                            onBlur={handleBlur}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.fechaNacimiento ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          />
+                          {validationErrors.fechaNacimiento && <span className="field-error-msg">❌ {validationErrors.fechaNacimiento}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
+                          <input
+                            type="text"
+                            value={currentDatos.lugarNacimiento || ''}
+                            onChange={e => {
+                              handleFieldChange('lugarNacimiento', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, lugarNacimiento: null }));
+                            }}
+                            onBlur={handleBlur}
+                            placeholder="Ej. Monterrey, NL"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.lugarNacimiento ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          />
+                          {validationErrors.lugarNacimiento && <span className="field-error-msg">❌ {validationErrors.lugarNacimiento}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
+                          <select
+                            value={currentDatos.genero || ""}
+                            onChange={e => {
+                              handleFieldChange('genero', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, genero: null }));
+                              if (currentPlayer?.slotId) {
+                                guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, genero: e.target.value });
+                              }
+                            }}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.genero ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              backgroundColor: 'white',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="">Seleccione...</option>
+                            <option value="1">MASCULINO</option>
+                            <option value="2">FEMENINO</option>
+                          </select>
+                          {validationErrors.genero && <span className="field-error-msg">❌ {validationErrors.genero}</span>}
+                        </div>
+                      </div>
+
+                      <div className="form-grid-2" style={{ marginTop: '15px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
+                          <input
+                            type="email"
+                            value={currentDatos.correo}
+                            onChange={e => {
+                              handleFieldChange('correo', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, correo: null }));
+                            }}
+                            onBlur={handleBlur}
+                            placeholder="correo@ejemplo.com"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.correo ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          />
+                          {validationErrors.correo && <span className="field-error-msg">❌ {validationErrors.correo}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <select
+                              value={currentDatos.codigoPais || '+52'}
+                              onChange={e => handleFieldChange('codigoPais', e.target.value)}
+                              onBlur={handleBlur}
+                              style={{
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #cbd5e1',
+                                fontSize: '14px',
+                                backgroundColor: 'white',
+                                width: '110px',
+                                flexShrink: 0
+                              }}
+                            >
+                              <option value="+52">México +52</option>
+                              <option value="+1">EE.UU./Canadá +1</option>
+                              <option value="+34">España +34</option>
+                              <option value="+54">Argentina +54</option>
+                              <option value="+55">Brasil +55</option>
+                              <option value="+56">Chile +56</option>
+                              <option value="+57">Colombia +57</option>
+                              <option value="+506">Costa Rica +506</option>
+                              <option value="+593">Ecuador +593</option>
+                              <option value="+503">El Salvador +503</option>
+                              <option value="+502">Guatemala +502</option>
+                              <option value="+504">Honduras +504</option>
+                              <option value="+505">Nicaragua +505</option>
+                              <option value="+507">Panamá +507</option>
+                              <option value="+595">Paraguay +595</option>
+                              <option value="+51">Perú +51</option>
+                              <option value="+598">Uruguay +598</option>
+                              <option value="+58">Venezuela +58</option>
+                            </select>
+                            <input
+                              type="tel"
+                              value={currentDatos.telefono}
+                              onChange={e => {
+                                handleFieldChange('telefono', e.target.value.replace(/\D/g, '').slice(0, 10));
+                                setValidationErrors(prev => ({ ...prev, telefono: null }));
+                              }}
+                              onBlur={handleBlur}
+                              placeholder="10 dígitos numéricos"
+                              style={{
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: `1.5px solid ${validationErrors.telefono ? '#ef4444' : '#cbd5e1'}`,
+                                fontSize: '14px',
+                                flexGrow: 1,
+                                outline: 'none'
+                              }}
+                            />
+                          </div>
+                          {validationErrors.telefono && <span className="field-error-msg">❌ {validationErrors.telefono}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* PASO 3: INFORMACIÓN DEPORTIVA */}
+                {currentStep === 3 && (
+                  <section className="wizard-step-container">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                      <StepBadge number="3" isActive={true} isDone={esPasoCompleto(3)} />
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Deportiva</h3>
+                    </div>
+
+                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
+                      <div className="form-grid-3">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
+                          <input
+                            type="number"
+                            value={currentDatos.numCamiseta}
+                            onChange={e => {
+                              handleFieldChange('numCamiseta', e.target.value);
+                              setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+                            }}
+                            onBlur={handleBlur}
+                            placeholder="Ej. 10"
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              outline: 'none'
+                            }}
+                          />
+                          {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición  <span className="required-star">*</span></label>
+                          <select
+                            value={currentDatos.posicion}
+                            onChange={e => {
+                              const val = parseInt(e.target.value) || '';
+                              handleFieldChange('posicion', val);
+                              setValidationErrors(prev => ({ ...prev, posicion: null }));
+                              if (currentPlayer?.slotId) {
+                                guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, posicion: val });
+                              }
+                            }}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: `1.5px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`,
+                              fontSize: '14px',
+                              backgroundColor: 'white',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="">Posición...</option>
+                            {(catalogs?.roles_equipo || []).map(r => (
+                              <option key={r.id} value={r.id}>{r.nombre}</option>
+                            ))}
+                          </select>
+                          {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* PASO 4: PROCEDENCIA Y ANTECEDENTES */}
+                {currentStep === 4 && (
+                  <section className="wizard-step-container">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                      <StepBadge number="4" isActive={true} isDone={esPasoCompleto(4)} />
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad y Antecedentes</h3>
+                    </div>
+
+                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                        <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Procedencia del jugador</h4>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '10px',
+                        background: '#f1f5f9',
+                        padding: '4px',
+                        borderRadius: '12px',
+                        width: 'fit-content',
+                        marginBottom: '25px'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...currentDatos, esForaneo: false };
+                            updatePlayerDatos(currentPlayerIndex, { esForaneo: false });
+                            setValidationErrors({}); // Limpiar errores de foráneo si cambia a mexicano
+                            if (currentPlayer?.slotId) {
+                              guardarBorradorEnBD(currentPlayer.slotId, updated);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 24px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: !currentDatos.esForaneo ? 'white' : 'transparent',
+                            color: !currentDatos.esForaneo ? '#0b4ea6' : '#64748b',
+                            fontWeight: '800',
+                            fontSize: '13px',
+                            boxShadow: !currentDatos.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🇲🇽 Mexicano
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...currentDatos, esForaneo: true };
+                            updatePlayerDatos(currentPlayerIndex, { esForaneo: true });
+                            if (currentPlayer?.slotId) {
+                              guardarBorradorEnBD(currentPlayer.slotId, updated);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 24px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: currentDatos.esForaneo ? 'white' : 'transparent',
+                            color: currentDatos.esForaneo ? '#0b4ea6' : '#64748b',
+                            fontWeight: '800',
+                            fontSize: '13px',
+                            boxShadow: currentDatos.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🌎 Extranjero
+                        </button>
+                      </div>
+
+                      {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
+                      <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', width: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                            <FaGlobeAmericas />
+                          </div>
+                          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                        </div>
+
+                        {currentDatos.esForaneo ? (
+                          <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                              <EntradaFormulario
+                                etiqueta="Nacionalidad del jugador"
+                                valor={currentDatos.nacionalidadJugador}
+                                alCambiar={val => {
+                                  handleFieldChange('nacionalidadJugador', val);
+                                  setValidationErrors(prev => ({ ...prev, nacionalidadJugador: null }));
+                                }}
+                                alPerderEnfoque={handleBlur}
+                                error={validationErrors.nacionalidadJugador}
+                              />
+                              <EntradaFormulario
+                                etiqueta="País de residencia actual"
+                                valor={currentDatos.paisResidencia}
+                                alCambiar={val => {
+                                  handleFieldChange('paisResidencia', val);
+                                  setValidationErrors(prev => ({ ...prev, paisResidencia: null }));
+                                }}
+                                alPerderEnfoque={handleBlur}
+                                error={validationErrors.paisResidencia}
+                              />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
+                              <EntradaSeleccion
+                                etiqueta="¿El jugador ha vivido en el extranjero?"
+                                valor={currentDatos.haVividoExtranjero ? '1' : '0'}
+                                alCambiar={val => {
+                                  const boolVal = val === '1';
+                                  handleFieldChange('haVividoExtranjero', boolVal);
+                                  setValidationErrors(prev => ({ ...prev, haVividoExtranjero: null }));
+                                  if (currentPlayer?.slotId) {
+                                    guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, haVividoExtranjero: boolVal });
+                                  }
+                                }}
+                                opciones={[{ valor: '0', etiqueta: 'No' }, { valor: '1', etiqueta: 'Sí' }]}
+                                requerido={true}
+                              />
+                              {currentDatos.haVividoExtranjero && (
+                                <EntradaFormulario
+                                  etiqueta="¿En qué país?"
+                                  valor={currentDatos.dondeVividoExtranjero}
+                                  alCambiar={val => {
+                                    handleFieldChange('dondeVividoExtranjero', val);
+                                    setValidationErrors(prev => ({ ...prev, dondeVividoExtranjero: null }));
+                                  }}
+                                  alPerderEnfoque={handleBlur}
+                                  error={validationErrors.dondeVividoExtranjero}
+                                  requerido={true}
+                                />
+                              )}
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                              <EntradaFormulario
+                                etiqueta="Nacionalidad del padre"
+                                valor={currentDatos.nacionalidadPadre}
+                                alCambiar={val => {
+                                  handleFieldChange('nacionalidadPadre', val);
+                                  setValidationErrors(prev => ({ ...prev, nacionalidadPadre: null }));
+                                }}
+                                alPerderEnfoque={handleBlur}
+                                error={validationErrors.nacionalidadPadre}
+                              />
+                              <EntradaFormulario
+                                etiqueta="Nacionalidad de la madre"
+                                valor={currentDatos.nacionalidadMadre}
+                                alCambiar={val => {
+                                  handleFieldChange('nacionalidadMadre', val);
+                                  setValidationErrors(prev => ({ ...prev, nacionalidadMadre: null }));
+                                }}
+                                alPerderEnfoque={handleBlur}
+                                error={validationErrors.nacionalidadMadre}
+                              />
+                            </div>
+
                             <EntradaFormulario
-                              etiqueta="Nacionalidad del padre"
-                              valor={currentDatos.nacionalidadPadre}
+                              etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
+                              valor={currentDatos.registroAsociacionExtranjera}
                               alCambiar={val => {
-                                handleFieldChange('nacionalidadPadre', val);
-                                setValidationErrors(prev => ({ ...prev, nacionalidadPadre: null }));
+                                handleFieldChange('registroAsociacionExtranjera', val);
+                                setValidationErrors(prev => ({ ...prev, registroAsociacionExtranjera: null }));
                               }}
                               alPerderEnfoque={handleBlur}
-                              error={validationErrors.nacionalidadPadre}
+                              filas={2}
+                              requerido={true}
+                              error={validationErrors.registroAsociacionExtranjera}
                             />
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                              <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={val => { handleFieldChange('nacAbueloPaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={val => { handleFieldChange('nacAbuelaPaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
+                              <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={val => { handleFieldChange('nacAbueloMaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={val => { handleFieldChange('nacAbuelaMaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
+                            </div>
+
                             <EntradaFormulario
-                              etiqueta="Nacionalidad de la madre"
-                              valor={currentDatos.nacionalidadMadre}
+                              etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
+                              valor={currentDatos.juegoClubExtranjero}
                               alCambiar={val => {
-                                handleFieldChange('nacionalidadMadre', val);
-                                setValidationErrors(prev => ({ ...prev, nacionalidadMadre: null }));
+                                handleFieldChange('juegoClubExtranjero', val);
+                                setValidationErrors(prev => ({ ...prev, juegoClubExtranjero: null }));
                               }}
                               alPerderEnfoque={handleBlur}
-                              error={validationErrors.nacionalidadMadre}
+                              filas={3}
+                              requerido={true}
+                              error={validationErrors.juegoClubExtranjero}
                             />
                           </div>
-
-                          <EntradaFormulario
-                            etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
-                            valor={currentDatos.registroAsociacionExtranjera}
-                            alCambiar={val => {
-                              handleFieldChange('registroAsociacionExtranjera', val);
-                              setValidationErrors(prev => ({ ...prev, registroAsociacionExtranjera: null }));
-                            }}
-                            alPerderEnfoque={handleBlur}
-                            filas={2}
-                            requerido={true}
-                            error={validationErrors.registroAsociacionExtranjera}
-                          />
-
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
-                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={val => { handleFieldChange('nacAbueloPaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={val => { handleFieldChange('nacAbuelaPaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
-                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={val => { handleFieldChange('nacAbueloMaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={val => { handleFieldChange('nacAbuelaMaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '20px' }}>
+                            <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                              El jugador es mexicano. Si desea registrar antecedentes internacionales, cambie el toggle a "Extranjero" arriba.
+                            </p>
                           </div>
-
-                          <EntradaFormulario
-                            etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
-                            valor={currentDatos.juegoClubExtranjero}
-                            alCambiar={val => {
-                              handleFieldChange('juegoClubExtranjero', val);
-                              setValidationErrors(prev => ({ ...prev, juegoClubExtranjero: null }));
-                            }}
-                            alPerderEnfoque={handleBlur}
-                            filas={3}
-                            requerido={true}
-                            error={validationErrors.juegoClubExtranjero}
-                          />
-                        </div>
-                      ) : (
-                        <div style={{ textAlign: 'center', padding: '20px' }}>
-                          <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                            El jugador es mexicano. Si desea registrar antecedentes internacionales, cambie el toggle a "Extranjero" arriba.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* PASO 6: RESUMEN Y FINALIZACIÓN */}
-              {currentStep === 6 && (
-                <section className="wizard-step-container">
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '20px' }}>Resumen del Registro</h3>
-
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                    gap: '20px',
-                    marginBottom: '30px'
-                  }}>
-                    {/* Tarjeta de Datos Personales */}
-                    <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Datos Personales</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                        <div><strong>Nombre:</strong> {currentDatos.nombreJugador} {currentDatos.apellidoPaterno} {currentDatos.apellidoMaterno}</div>
-                        <div><strong>CURP:</strong> {currentDatos.curp}</div>
-                        <div><strong>Fecha de Nacimiento:</strong> {currentDatos.fechaNacimiento}</div>
-                        <div><strong>Sexo:</strong> {currentDatos.genero === '1' ? 'MASCULINO' : 'FEMENINO'}</div>
-                        <div><strong>Correo:</strong> {currentDatos.correo}</div>
-                        <div><strong>Teléfono:</strong> {currentDatos.codigoPais} {currentDatos.telefono}</div>
+                        )}
                       </div>
                     </div>
+                  </section>
+                )}
 
-                    {/* Tarjeta de Datos Deportivos */}
-                    <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Información Deportiva</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                        <div><strong>NUI:</strong> {currentDatos.nui}</div>
-                        <div><strong>Camiseta:</strong> #{currentDatos.numCamiseta}</div>
-                        <div>
-                          <strong>Posición:</strong> {
-                            catalogs?.roles_equipo?.find(r => String(r.id) === String(currentDatos.posicion))?.nombre || 'No asignada'
-                          }
+                {/* PASO 6: RESUMEN Y FINALIZACIÓN */}
+                {currentStep === 6 && (
+                  <section className="wizard-step-container">
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '20px' }}>Resumen del Registro</h3>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gap: '20px',
+                      marginBottom: '30px'
+                    }}>
+                      {/* Tarjeta de Datos Personales */}
+                      <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Datos Personales</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                          <div><strong>Nombre:</strong> {currentDatos.nombreJugador} {currentDatos.apellidoPaterno} {currentDatos.apellidoMaterno}</div>
+                          <div><strong>CURP:</strong> {currentDatos.curp}</div>
+                          <div><strong>Fecha de Nacimiento:</strong> {currentDatos.fechaNacimiento}</div>
+                          <div><strong>Sexo:</strong> {currentDatos.genero === '1' ? 'MASCULINO' : 'FEMENINO'}</div>
+                          <div><strong>Correo:</strong> {currentDatos.correo}</div>
+                          <div><strong>Teléfono:</strong> {currentDatos.codigoPais} {currentDatos.telefono}</div>
                         </div>
-                        <div>
-                          <strong>Seguro Seleccionado:</strong> {
-                            slotsData?.seguros?.find(s => String(s.seguro_id) === String(currentSeguroId))?.nombre || 'No asignado'
-                          }
-                        </div>
-                        <div><strong>Procedencia:</strong> {currentDatos.esForaneo ? '🌎 Extranjero' : '🇲🇽 Mexicano'}</div>
                       </div>
-                    </div>
 
-                    {/* Tarjeta de Documentación */}
-                    <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Documentos Cargados</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                        {documentCards.map(doc => (
-                          <div key={`summary-doc-${doc.key}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>{doc.title}:</span>
-                            <span style={{
-                              fontWeight: '800',
-                              color: currentDocuments[doc.key] ? '#166534' : '#64748b',
-                              background: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9',
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              fontSize: '11px'
-                            }}>
-                              {currentDocuments[doc.key] ? '✓ Listo' : 'Pendiente'}
-                            </span>
+                      {/* Tarjeta de Datos Deportivos */}
+                      <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Información Deportiva</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                          <div><strong>NUI:</strong> {currentDatos.nui}</div>
+                          <div><strong>Camiseta:</strong> #{currentDatos.numCamiseta}</div>
+                          <div>
+                            <strong>Posición:</strong> {
+                              catalogs?.roles_equipo?.find(r => String(r.id) === String(currentDatos.posicion))?.nombre || 'No asignada'
+                            }
                           </div>
-                        ))}
+                          <div>
+                            <strong>Seguro Seleccionado:</strong> {
+                              slotsData?.seguros?.find(s => String(s.seguro_id) === String(currentSeguroId))?.nombre || 'No asignado'
+                            }
+                          </div>
+                          <div><strong>Procedencia:</strong> {currentDatos.esForaneo ? '🌎 Extranjero' : '🇲🇽 Mexicano'}</div>
+                        </div>
+                      </div>
+
+                      {/* Tarjeta de Documentación */}
+                      <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Documentos Cargados</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                          {documentCards.map(doc => (
+                            <div key={`summary-doc-${doc.key}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>{doc.title}:</span>
+                              <span style={{
+                                fontWeight: '800',
+                                color: currentDocuments[doc.key] ? '#166534' : '#64748b',
+                                background: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontSize: '11px'
+                              }}>
+                                {currentDocuments[doc.key] ? '✓ Listo' : 'Pendiente'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Descarga de formato prellenado y carga del formato firmado */}
-                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '25px', marginBottom: '20px' }}>
-                    <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
-                    <p style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
-                      Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
-                      <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
-                    </p>
+                    {/* Descarga de formato prellenado y carga del formato firmado */}
+                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '25px', marginBottom: '20px' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
+                      <p style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                        Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
+                        <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
+                      </p>
 
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                      <button
-                        type="button"
-                        onClick={handleDownloadFormato}
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                        <button
+                          type="button"
+                          onClick={handleDownloadFormato}
+                          style={{
+                            padding: '12px 28px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: 'linear-gradient(135deg, #0b4ea6, #063f82)',
+                            color: 'white',
+                            fontWeight: '800',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)'
+                          }}
+                        >
+                          📥 Descargar Formato Prellenado
+                        </button>
+                      </div>
+
+                      <div
+                        onClick={() => document.getElementById('final-signed-form').click()}
                         style={{
-                          padding: '12px 28px',
-                          borderRadius: '12px',
-                          border: 'none',
-                          background: 'linear-gradient(135deg, #0b4ea6, #063f82)',
-                          color: 'white',
-                          fontWeight: '800',
-                          fontSize: '14px',
+                          border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+                          borderRadius: '20px',
+                          padding: '35px 20px',
+                          backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
                           cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)'
+                          transition: 'all 0.3s',
+                          textAlign: 'center',
+                          maxWidth: '600px',
+                          margin: '0 auto'
                         }}
                       >
-                        📥 Descargar Formato Prellenado
-                      </button>
+                        {signedForm ? (
+                          <div style={{ color: '#10b981' }}>
+                            <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
+                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{signedForm.name}</p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
+                          </div>
+                        ) : (
+                          <div style={{ color: '#0ea5e9' }}>
+                            <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
+                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado (Opcional)</p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b' }}>Solo se permiten archivos PDF</p>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          id="final-signed-form"
+                          style={{ display: 'none' }}
+                          accept=".pdf"
+                          onChange={(e) => {
+                            if (e.target.files[0]) {
+                              setSignedForm(e.target.files[0]);
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
+                  </section>
+                )}
 
-                    <div
-                      onClick={() => document.getElementById('final-signed-form').click()}
+                {/* BOTONES DE NAVEGACION INFERIOR */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '40px',
+                  borderTop: '1px solid #f1f5f9',
+                  paddingTop: '25px',
+                  gap: '20px'
+                }}>
+                  {currentStep > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(prev => prev - 1)}
                       style={{
-                        border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
-                        borderRadius: '20px',
-                        padding: '35px 20px',
-                        backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+                        padding: '12px 28px',
+                        borderRadius: '12px',
+                        border: '1px solid #cbd5e1',
+                        background: 'white',
+                        color: '#64748b',
+                        fontWeight: '800',
+                        fontSize: '14px',
                         cursor: 'pointer',
-                        transition: 'all 0.3s',
-                        textAlign: 'center',
-                        maxWidth: '600px',
-                        margin: '0 auto'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s'
                       }}
                     >
-                      {signedForm ? (
-                        <div style={{ color: '#10b981' }}>
-                          <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
-                          <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{signedForm.name}</p>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
-                        </div>
-                      ) : (
-                        <div style={{ color: '#0ea5e9' }}>
-                          <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
-                          <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado (Opcional)</p>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b' }}>Solo se permiten archivos PDF</p>
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        id="final-signed-form"
-                        style={{ display: 'none' }}
-                        accept=".pdf"
-                        onChange={(e) => {
-                          if (e.target.files[0]) {
-                            setSignedForm(e.target.files[0]);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                </section>
-              )}
+                      <FaArrowLeft /> Atrás
+                    </button>
+                  ) : (
+                    <div />
+                  )}
 
-              {/* BOTONES DE NAVEGACION INFERIOR */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: '40px',
-                borderTop: '1px solid #f1f5f9',
-                paddingTop: '25px',
-                gap: '20px'
-              }}>
-                {currentStep > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(prev => prev - 1)}
-                    style={{
-                      padding: '12px 28px',
-                      borderRadius: '12px',
-                      border: '1px solid #cbd5e1',
-                      background: 'white',
-                      color: '#64748b',
-                      fontWeight: '800',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <FaArrowLeft /> Atrás
-                  </button>
-                ) : (
-                  <div />
-                )}
-
-                {currentStep < 6 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep(prev => prev + 1);
-                    }}
-                    style={{
-                      padding: '12px 32px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      background: '#0b4ea6',
-                      color: 'white',
-                      fontWeight: '800',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    Siguiente <FaArrowRight />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleInscribirClick}
-                    disabled={uploading}
-                    style={{
-                      padding: '12px 32px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      background: '#10b981',
-                      color: 'white',
-                      fontWeight: '800',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
-                      transition: 'all 0.2s',
-                      opacity: uploading ? 0.7 : 1
-                    }}
-                  >
-                    {uploading ? "Procesando..." : "Finalizar e Inscribir"} <FaSave />
-                  </button>
-                )}
-              </div>
-
-          </>
-          )}
-        </div>
-
-        {/* DUP SLOT NAVIGATION CONTROL AT BOTTOM */}
-        {jugadores.length > 0 && (() => {
-          const activePlayer = jugadores[currentPlayerIndex];
-          const status = activePlayer ? getPlayerStatus(activePlayer) : 'VACIO';
-          const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
-          return (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              margin: '25px auto 0 auto',
-              maxWidth: '1000px',
-              width: '100%',
-              padding: '16px 35px',
-              background: 'white',
-              borderRadius: '24px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              transition: 'all 0.3s ease'
-            }}>
-              {/* Left Arrow Button */}
-              <button
-                type="button"
-                disabled={currentPlayerIndex === 0}
-                onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
-                  color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
-                  cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
-                  opacity: currentPlayerIndex === 0 ? 0.4 : 1,
-                  transition: 'all 0.2s',
-                  boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPlayerIndex !== 0) {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentPlayerIndex !== 0) {
-                    e.currentTarget.style.backgroundColor = 'white';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                  }
-                }}
-              >
-                <FaChevronLeft style={{ fontSize: '14px' }} />
-              </button>
-
-              {/* Center Area: Number & Status */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <span style={{
-                  fontSize: '28px',
-                  fontWeight: '900',
-                  color: '#1e293b',
-                  userSelect: 'none',
-                  lineHeight: '1.2'
-                }}>
-                  {currentPlayerIndex + 1}
-                </span>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '20px',
-                  backgroundColor: config.bg,
-                  color: config.color,
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  letterSpacing: '0.5px',
-                  textTransform: 'uppercase',
-                  border: `1px solid ${config.color}30`,
-                  marginTop: '8px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                }}>
-                  <span>{config.label}</span>
+                  {currentStep < 6 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentStep(prev => prev + 1);
+                      }}
+                      style={{
+                        padding: '12px 32px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: '#0b4ea6',
+                        color: 'white',
+                        fontWeight: '800',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Siguiente <FaArrowRight />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleInscribirClick}
+                      disabled={uploading}
+                      style={{
+                        padding: '12px 32px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: '#10b981',
+                        color: 'white',
+                        fontWeight: '800',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
+                        transition: 'all 0.2s',
+                        opacity: uploading ? 0.7 : 1
+                      }}
+                    >
+                      {uploading ? "Procesando..." : "Finalizar e Inscribir"} <FaSave />
+                    </button>
+                  )}
                 </div>
-              </div>
 
-              {/* Right Arrow Button */}
-              <button
-                type="button"
-                disabled={currentPlayerIndex === jugadores.length - 1}
-                onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
-                style={{
+              </>
+            )}
+          </div>
+
+          {/* DUP SLOT NAVIGATION CONTROL AT BOTTOM */}
+          {jugadores.length > 0 && (() => {
+            const activePlayer = jugadores[currentPlayerIndex];
+            const status = activePlayer ? getPlayerStatus(activePlayer) : 'VACIO';
+            const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
+            return (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                margin: '25px auto 0 auto',
+                maxWidth: '1000px',
+                width: '100%',
+                padding: '16px 35px',
+                background: 'white',
+                borderRadius: '24px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                transition: 'all 0.3s ease'
+              }}>
+                {/* Left Arrow Button */}
+                <button
+                  type="button"
+                  disabled={currentPlayerIndex === 0}
+                  onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
+                    color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
+                    cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
+                    opacity: currentPlayerIndex === 0 ? 0.4 : 1,
+                    transition: 'all 0.2s',
+                    boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentPlayerIndex !== 0) {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#94a3b8';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentPlayerIndex !== 0) {
+                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }
+                  }}
+                >
+                  <FaChevronLeft style={{ fontSize: '14px' }} />
+                </button>
+
+                {/* Center Area: Number & Status */}
+                <div style={{
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
-                  color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
-                  cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
-                  opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
-                  transition: 'all 0.2s',
-                  boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPlayerIndex !== jugadores.length - 1) {
-                    e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentPlayerIndex !== jugadores.length - 1) {
-                    e.currentTarget.style.backgroundColor = 'white';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                  }
-                }}
-              >
-                <FaChevronRight style={{ fontSize: '14px' }} />
-              </button>
-            </div>
-          );
-        })()}
-      </>
+                  justifyContent: 'center'
+                }}>
+                  <span style={{
+                    fontSize: '28px',
+                    fontWeight: '900',
+                    color: '#1e293b',
+                    userSelect: 'none',
+                    lineHeight: '1.2'
+                  }}>
+                    {currentPlayerIndex + 1}
+                  </span>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    backgroundColor: config.bg,
+                    color: config.color,
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase',
+                    border: `1px solid ${config.color}30`,
+                    marginTop: '8px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                  }}>
+                    <span>{config.label}</span>
+                  </div>
+                </div>
+
+                {/* Right Arrow Button */}
+                <button
+                  type="button"
+                  disabled={currentPlayerIndex === jugadores.length - 1}
+                  onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
+                    color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
+                    cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
+                    transition: 'all 0.2s',
+                    boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentPlayerIndex !== jugadores.length - 1) {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#94a3b8';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentPlayerIndex !== jugadores.length - 1) {
+                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }
+                  }}
+                >
+                  <FaChevronRight style={{ fontSize: '14px' }} />
+                </button>
+              </div>
+            );
+          })()}
+        </>
       )}
 
       {/* MODAL DE PREVISUALIZACIÓN DE DOCUMENTOS (ZOOM) */}
