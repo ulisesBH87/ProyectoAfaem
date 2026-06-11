@@ -1094,7 +1094,7 @@ export default function AdminCrearJugador() {
             {documents.actaNacimiento && extractedData.fechaNacimiento && esMenorDeEdad && (
               <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
                 <div className="document-card" style={{ borderRadius: '20px', border: documents.documentoEstudiante ? '2px solid #10b981' : '2px solid #fbbf24', background: documents.documentoEstudiante ? 'rgba(16,185,129,0.04)' : 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
+                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                   <div style={{ height: '140px', width: '100%', backgroundColor: '#fef9ec', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fde68a' }}>
                     {previews.documentoEstudiante ? (
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>

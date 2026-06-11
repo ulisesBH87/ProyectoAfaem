@@ -33,6 +33,23 @@ import {
 import Loader from '../../components/Loader';
 import '../../styles/dashboard.css';
 
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = error => reject(error);
+});
+
+const base64ToFile = async (dataurl, filename) => {
+  try {
+    const res = await fetch(dataurl);
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type });
+  } catch (err) {
+    throw err;
+  }
+};
+
 const parsearTelefonoE164 = (telefonoCompleto) => {
   if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
   const telClean = telefonoCompleto.trim();
@@ -489,7 +506,7 @@ export default function RegistroJugadores() {
   });
 
   const [showFinishModal, setShowFinishModal] = useState(false);
-  const [signedForm, setSignedForm] = useState(null);
+
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const selectedInvitationTeam = invitationTeams.find(
     (team) => String(team.equipo_temporal_id) === String(teamId)
@@ -594,16 +611,95 @@ export default function RegistroJugadores() {
     });
   };
 
-  const updatePlayerDocuments = (index, documentosPartial) => {
+  const updatePlayerDocuments = async (index, documentosPartial) => {
+    // 1. Convertir a Base64 asincronamente primero
+    const base64Docs = {};
+    for (const key of Object.keys(documentosPartial)) {
+      if (documentosPartial[key]) {
+        try {
+          base64Docs[key] = {
+            name: documentosPartial[key].name,
+            data: await fileToBase64(documentosPartial[key])
+          };
+        } catch (e) {
+          console.warn(`Error procesando documento ${key} a Base64:`, e);
+        }
+      }
+    }
+
+    // 2. Actualizar estado y guardar usando el estado más reciente
     setJugadores(prev => {
       const next = [...prev];
+      const currentPlayerState = next[index];
+      if (!currentPlayerState) return next;
+
+      let docsBorradorActual = { ...(currentPlayerState.datos.documentosBorrador || {}) };
+
+      for (const key of Object.keys(documentosPartial)) {
+        if (base64Docs[key]) {
+          docsBorradorActual[key] = base64Docs[key];
+        } else if (documentosPartial[key] === null) {
+          delete docsBorradorActual[key];
+        }
+      }
+
+      const newDatos = { ...currentPlayerState.datos, documentosBorrador: docsBorradorActual };
+
       next[index] = normalizePlayer({
-        ...next[index],
+        ...currentPlayerState,
+        datos: newDatos,
         documentos: {
-          ...next[index].documentos,
+          ...currentPlayerState.documentos,
           ...documentosPartial
         }
       });
+
+      // Guardar en BD usando el JSON más reciente (se evita sobreescribir con estado viejo)
+      if (currentPlayerState.slotId) {
+        guardarBorradorEnBD(currentPlayerState.slotId, newDatos);
+      }
+
+      return next;
+    });
+  };
+
+  const updatePlayerSignedForm = async (index, file) => {
+    let base64File = null;
+    if (file) {
+      try {
+        base64File = {
+          name: file.name,
+          data: await fileToBase64(file)
+        };
+      } catch (e) {
+        console.warn(`Error procesando formatoFirmado a Base64:`, e);
+      }
+    }
+
+    setJugadores(prev => {
+      const next = [...prev];
+      const currentPlayerState = next[index];
+      if (!currentPlayerState) return next;
+
+      let docsBorradorActual = { ...(currentPlayerState.datos.documentosBorrador || {}) };
+      if (base64File) {
+        docsBorradorActual.formatoFirmado = base64File;
+      } else if (file === null) {
+        delete docsBorradorActual.formatoFirmado;
+      }
+
+      const newDatos = { ...currentPlayerState.datos, documentosBorrador: docsBorradorActual };
+
+      next[index] = {
+        ...currentPlayerState,
+        signedForm: file,
+        datos: newDatos
+      };
+
+      if (currentPlayerState.slotId) {
+        guardarBorradorEnBD(currentPlayerState.slotId, newDatos);
+      }
+
       return next;
     });
   };
@@ -791,7 +887,7 @@ export default function RegistroJugadores() {
       const firstSeguroId = String(slotsResponse.seguros?.[0]?.seguro_id || '');
 
       // Mapear los slots de la base de datos al estado jugadores
-      const mappedJugadores = (slotsResponse.slots || []).map((slot, i) => {
+      const mappedJugadores = await Promise.all((slotsResponse.slots || []).map(async (slot, i) => {
         const datos = slot.datos_borrador || { ...defaultPlayerDatos };
         const parsedTel = parsearTelefonoE164(datos.telefono || '');
         const mergedDatos = {
@@ -805,23 +901,36 @@ export default function RegistroJugadores() {
           presidente: slotsResponse.nombre_presidente || inviteTeamInfo.presidente || 'No disponible'
         };
 
+        const restoredDocs = { acta: null, ine: null, ineTutor: null, identificacionMenor: null, foto: null };
+        let restoredSignedForm = null;
+
+        if (datos.documentosBorrador) {
+          for (const key of Object.keys(datos.documentosBorrador)) {
+            const docData = datos.documentosBorrador[key];
+            if (docData && docData.data && docData.name) {
+              try {
+                const file = await base64ToFile(docData.data, docData.name);
+                if (key === 'formatoFirmado') restoredSignedForm = file;
+                else restoredDocs[key] = file;
+              } catch (e) {
+                console.warn(`Error restaurando documento ${key}:`, e);
+              }
+            }
+          }
+        }
+
         return {
           numero: i + 1,
           slotId: slot.slot_id,
           estado: slot.completo ? 'INSCRITO' : (slot.datos_borrador ? 'EN_CAPTURA' : 'VACIO'),
           datos: mergedDatos,
-          documentos: {
-            acta: null,
-            ine: null,
-            ineTutor: null,
-            identificacionMenor: null,
-            foto: null
-          },
+          documentos: restoredDocs,
+          signedForm: restoredSignedForm,
           seguroId: String(slot.seguro_id || firstSeguroId),
           fillManually: !!slot.datos_borrador,
           completo: slot.completo
         };
-      });
+      }));
 
       setJugadores(mappedJugadores);
 
@@ -1317,7 +1426,7 @@ export default function RegistroJugadores() {
         if (player.documentos.ine) { docIds.push(26); files.push(player.documentos.ine); }
       }
       if (player.documentos.foto) { docIds.push(25); files.push(player.documentos.foto); }
-      if (signedForm) { docIds.push(28); files.push(signedForm); }
+      if (player.signedForm) { docIds.push(28); files.push(player.signedForm); }
 
       docIds.forEach(id => formData.append('documento_afiliacion_ids', id));
       files.forEach(file => formData.append('archivos', file));
@@ -1330,7 +1439,7 @@ export default function RegistroJugadores() {
         title: 'Jugador Inscrito Correctamente',
         text: 'El espacio se ha completado y los documentos se guardaron en el servidor.'
       }).then(() => {
-        setSignedForm(null);
+        fetchTeamInfo();
         fetchTeamInfo();
       });
     } catch (err) {
@@ -2118,7 +2227,7 @@ export default function RegistroJugadores() {
                   <section className="wizard-step-container">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                       <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación (Opcional)</h3>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
                     </div>
 
                     <div style={{
@@ -2134,7 +2243,7 @@ export default function RegistroJugadores() {
                       color: '#0369a1',
                       fontWeight: '600'
                     }}>
-                      Opcional: puedes subir los documentos ahora para llenar los campos automáticamente, o continuar a los pasos siguientes y cargarlos después.
+                      Puedes subir los documentos ahora para llenar los campos automáticamente, o continuar a los pasos siguientes y cargarlos después.
                     </div>
 
                     <div style={{
@@ -2159,7 +2268,7 @@ export default function RegistroJugadores() {
                         >
                           {/* Indicador de Menor para tutor/credencial */}
                           {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                            <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>🧒 MENOR</div>
+                            <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                           )}
 
                           <div style={{
@@ -2989,10 +3098,10 @@ export default function RegistroJugadores() {
                           }
                         }}
                         style={{
-                          border: signedForm ? '2px solid #10b981' : (esPasoCompleto(6) ? '2px dashed #0ea5e9' : '2px dashed #cbd5e1'),
+                          border: currentPlayer?.signedForm ? '2px solid #10b981' : (esPasoCompleto(6) ? '2px dashed #0ea5e9' : '2px dashed #cbd5e1'),
                           borderRadius: '20px',
                           padding: '35px 20px',
-                          backgroundColor: signedForm ? '#f0fdf4' : (esPasoCompleto(6) ? '#f8fafc' : '#f1f5f9'),
+                          backgroundColor: currentPlayer?.signedForm ? '#f0fdf4' : (esPasoCompleto(6) ? '#f8fafc' : '#f1f5f9'),
                           cursor: esPasoCompleto(6) ? 'pointer' : 'not-allowed',
                           transition: 'all 0.3s',
                           textAlign: 'center',
@@ -3001,10 +3110,10 @@ export default function RegistroJugadores() {
                           opacity: esPasoCompleto(6) ? 1 : 0.6
                         }}
                       >
-                        {signedForm ? (
+                        {currentPlayer?.signedForm ? (
                           <div style={{ color: '#10b981' }}>
                             <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
-                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{signedForm.name}</p>
+                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
                             <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
                           </div>
                         ) : (
@@ -3021,7 +3130,6 @@ export default function RegistroJugadores() {
                           accept=".pdf"
                           onChange={(e) => {
                             if (esPasoCompleto(6) && e.target.files[0]) {
-                              setSignedForm(e.target.files[0]);
                               updatePlayerSignedForm(currentPlayerIndex, e.target.files[0]);
                             }
                           }}
