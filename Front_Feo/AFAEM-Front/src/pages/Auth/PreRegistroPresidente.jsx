@@ -2840,7 +2840,7 @@ function PreRegistroPresidente() {
                   gap: '8px'
                 }}
               >
-                <span>⌨️</span> {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
+                {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
               </button>
             </div>
 
@@ -2996,146 +2996,146 @@ function PreRegistroPresidente() {
                 documents.actaNacimiento && documents.identificacion && documents.fotografia
               );
               return (
-              <div className="doc-cards-grid">
-                {requisitos.map((doc, idx) => {
-                const isUploaded = !!documents[doc.documento];
-                const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
-                const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
-                const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
+                <div className="doc-cards-grid">
+                  {requisitos.map((doc, idx) => {
+                    const isUploaded = !!documents[doc.documento];
+                    const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
+                    const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
+                    const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
 
-                let statusLabel, statusColor, statusDotColor, statusBg;
-                if (ocrProcessed) {
-                  statusLabel = 'Procesado'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
-                } else if (isUploaded) {
-                  statusLabel = 'Listo'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
-                } else {
-                  statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDotColor = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
-                }
+                    let statusLabel, statusColor, statusDotColor, statusBg;
+                    if (ocrProcessed) {
+                      statusLabel = 'Procesado'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                    } else if (isUploaded) {
+                      statusLabel = 'Listo'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                    } else {
+                      statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDotColor = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
+                    }
 
-                return (
-                  <div key={idx} className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}>
-                    {/* Top sheen */}
-                    <div className="top-sheen" style={{ background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)' }} />
-                    {/* Status pill */}
-                    <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
-                      <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
-                      {statusLabel}
-                    </div>
-                    {/* Icon */}
-                    <div className="doc-glass-icon" style={{
-                      background: isUploaded ? 'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.08))' : 'linear-gradient(135deg,rgba(11,78,166,0.1),rgba(30,27,75,0.08))',
-                      border: isUploaded ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(93,135,229,0.12)',
-                    }}>
-                      <span>{icons[doc.documento]}</span>
-                    </div>
-                    {/* Title */}
-                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
-                      {doc.nombre}
-                    </h4>
-                    {/* Filename */}
-                    <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
-                      {isUploaded ? `📎 ${documents[doc.documento].name}` : 'Sin archivo seleccionado'}
-                    </p>
-                    {/* Photo error */}
-                    {error && doc.documento === 'fotografia' && (
-                      <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }}>
-                        ⚠️ {error}
-                      </div>
-                    )}
-                    {/* Photo validation bypass button */}
-                    {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
-                      <button
-                        onClick={handleForzarSubidaFoto}
-                        className="doc-action-btn"
-                        style={{
-                          border: '1px solid rgba(245,158,11,0.5)',
-                          background: 'rgba(245,158,11,0.15)',
-                          color: '#f59e0b',
-                          marginBottom: '14px',
-                          width: '100%',
-                          fontWeight: '700',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ⚠️ Omitir validación y usar esta foto
-                      </button>
-                    )}
-                    {/* Action buttons */}
-                    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                      {doc.hasDownload && (
-                        <button 
-                          onClick={(e) => {
-                            if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
-                              e.preventDefault();
-                              return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
-                            }
-                            handleDownloadFormato(e);
-                          }}
-                          className="doc-download-btn"
-                          style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                        >⬇ Descargar</button>
-                      )}
-                      <button
-                        onClick={() => {
-                          if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
-                            return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
-                          }
-                          document.getElementById(`file-${doc.documento}`).click();
-                        }}
-                        className="doc-action-btn"
-                        style={{
-                          border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                          background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
-                          color: isUploaded ? '#34d399' : 'var(--text-muted)',
-                          opacity: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 0.5 : 1,
-                          cursor: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        {isUploaded ? '🔄 Cambiar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir')}
-                      </button>
-                      <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
-                    </div>
-                    {/* OCR toggle */}
-                    <button
-                      onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}
-                      style={{ marginTop: '12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
-                    >
-                      {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
-                    </button>
-                    {detailsOpen[doc.documento] && (
-                      <div className="ocr-panel">
-                        {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {[
-                              { label: 'Nombre', value: ocrResults.nombre },
-                              { label: 'CURP', value: ocrResults.curp },
-                              { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
-                              { label: 'Edad', value: ocrResults.edad },
-                              { label: 'Nacionalidad', value: ocrResults.nacionalidad },
-                              { label: 'Sexo', value: ocrResults.sexo },
-                              { label: 'Teléfono', value: ocrResults.telefono },
-                              { label: 'Equipo', value: ocrResults.equipo },
-                            ].map((row, i) => (
-                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                                <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
-                                <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{row.value || '—'}</span>
-                              </div>
-                            ))}
+                    return (
+                      <div key={idx} className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}>
+                        {/* Top sheen */}
+                        <div className="top-sheen" style={{ background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)' }} />
+                        {/* Status pill */}
+                        <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
+                          <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
+                          {statusLabel}
+                        </div>
+                        {/* Icon */}
+                        <div className="doc-glass-icon" style={{
+                          background: isUploaded ? 'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.08))' : 'linear-gradient(135deg,rgba(11,78,166,0.1),rgba(30,27,75,0.08))',
+                          border: isUploaded ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(93,135,229,0.12)',
+                        }}>
+                          <span>{icons[doc.documento]}</span>
+                        </div>
+                        {/* Title */}
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
+                          {doc.nombre}
+                        </h4>
+                        {/* Filename */}
+                        <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+                          {isUploaded ? `📎 ${documents[doc.documento].name}` : 'Sin archivo seleccionado'}
+                        </p>
+                        {/* Photo error */}
+                        {error && doc.documento === 'fotografia' && (
+                          <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }}>
+                            ⚠️ {error}
                           </div>
-                        ) : doc.documento === 'fotografia' ? (
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📸 Validación automática de rostro, calidad y formato.</p>
-                        ) : doc.documento === 'formatoAfiliacion' ? (
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📝 Descarga el formato, fírmalo físicamente y súbelo aquí.</p>
-                        ) : (
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>Sube el documento primero para ver los datos extraídos.</p>
+                        )}
+                        {/* Photo validation bypass button */}
+                        {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
+                          <button
+                            onClick={handleForzarSubidaFoto}
+                            className="doc-action-btn"
+                            style={{
+                              border: '1px solid rgba(245,158,11,0.5)',
+                              background: 'rgba(245,158,11,0.15)',
+                              color: '#f59e0b',
+                              marginBottom: '14px',
+                              width: '100%',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ⚠️ Omitir validación y usar esta foto
+                          </button>
+                        )}
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                          {doc.hasDownload && (
+                            <button
+                              onClick={(e) => {
+                                if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                                  e.preventDefault();
+                                  return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
+                                }
+                                handleDownloadFormato(e);
+                              }}
+                              className="doc-download-btn"
+                              style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                            >⬇ Descargar</button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                                return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                              }
+                              document.getElementById(`file-${doc.documento}`).click();
+                            }}
+                            className="doc-action-btn"
+                            style={{
+                              border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                              background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                              color: isUploaded ? '#34d399' : 'var(--text-muted)',
+                              opacity: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 0.5 : 1,
+                              cursor: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isUploaded ? '🔄 Cambiar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir')}
+                          </button>
+                          <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
+                        </div>
+                        {/* OCR toggle */}
+                        <button
+                          onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}
+                          style={{ marginTop: '12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
+                        >
+                          {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
+                        </button>
+                        {detailsOpen[doc.documento] && (
+                          <div className="ocr-panel">
+                            {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {[
+                                  { label: 'Nombre', value: ocrResults.nombre },
+                                  { label: 'CURP', value: ocrResults.curp },
+                                  { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
+                                  { label: 'Edad', value: ocrResults.edad },
+                                  { label: 'Nacionalidad', value: ocrResults.nacionalidad },
+                                  { label: 'Sexo', value: ocrResults.sexo },
+                                  { label: 'Teléfono', value: ocrResults.telefono },
+                                  { label: 'Equipo', value: ocrResults.equipo },
+                                ].map((row, i) => (
+                                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                    <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
+                                    <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{row.value || '—'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : doc.documento === 'fotografia' ? (
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📸 Validación automática de rostro, calidad y formato.</p>
+                            ) : doc.documento === 'formatoAfiliacion' ? (
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📝 Descarga el formato, fírmalo físicamente y súbelo aquí.</p>
+                            ) : (
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>Sube el documento primero para ver los datos extraídos.</p>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            );
+                    );
+                  })}
+                </div>
+              );
             })()}
 
             {/* BOTONES DE NAVEGACIÓN */}
