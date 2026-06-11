@@ -348,9 +348,9 @@ export default function RegistroJugadores() {
   const toastTimeoutRef = useRef(null);
 
   // Función que verifica requisitos sin lanzar alertas ni modificar estado
-  const verificarRequisitosPaso = (step) => {
+  const verificarRequisitosPaso = (step, targetPlayer = null) => {
     const errors = {};
-    const player = jugadores[currentPlayerIndex];
+    const player = targetPlayer || jugadores[currentPlayerIndex];
     if (!player) return errors;
     const datos = player.datos || {};
 
@@ -410,8 +410,8 @@ export default function RegistroJugadores() {
   };
 
   // Función que determina si un paso está 100% completo y válido (estado visual)
-  const esPasoCompleto = (step) => {
-    const player = jugadores[currentPlayerIndex];
+  const esPasoCompleto = (step, targetPlayer = null) => {
+    const player = targetPlayer || jugadores[currentPlayerIndex];
     if (!player) return false;
 
     if (step === 1) {
@@ -427,9 +427,9 @@ export default function RegistroJugadores() {
       return docsRequeridos.every(key => !!docs[key]);
     } else if (step === 6) {
       // Resumen completo si todos los anteriores están completos
-      return [1, 2, 3, 4, 5].every(s => esPasoCompleto(s));
+      return [1, 2, 3, 4, 5].every(s => esPasoCompleto(s, player));
     } else {
-      const errores = verificarRequisitosPaso(step);
+      const errores = verificarRequisitosPaso(step, player);
       return Object.keys(errores).length === 0;
     }
   };
@@ -556,19 +556,14 @@ export default function RegistroJugadores() {
   const getPlayerStatus = (player) => {
     if (!player) return 'VACIO';
     if (player.completo) return 'INSCRITO';
+    
+    const isReady = [1, 2, 3, 4, 5].every(s => esPasoCompleto(s, player));
+    
     const datos = player.datos || {};
     const docs = player.documentos || {};
-    const hasRequiredFields = Boolean(
-      datos.nombreJugador?.trim() &&
-      datos.apellidoPaterno?.trim() &&
-      datos.curp?.trim() &&
-      datos.fechaNacimiento &&
-      datos.lugarNacimiento?.trim() &&
-      datos.genero &&
-      datos.correo?.trim()
-    );
-    const hasAnyData = Object.values(datos).some(value => typeof value === 'string' ? value.trim() !== '' : Boolean(value)) || Object.values(docs).some(Boolean);
-    if (hasRequiredFields) return 'LISTO'; // Note: documents are optional for president flow
+    const hasAnyData = Object.values(datos).some(value => typeof value === 'string' ? value.trim() !== '' : Boolean(value)) || Object.values(docs).some(Boolean) || player.seguroId;
+    
+    if (isReady) return 'LISTO';
     if (hasAnyData) return 'EN_CAPTURA';
     return 'VACIO';
   };
