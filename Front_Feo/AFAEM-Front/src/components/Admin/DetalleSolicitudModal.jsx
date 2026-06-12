@@ -110,7 +110,30 @@ export default function DetalleSolicitudModal({
     });
   };
 
+  const ejecutarAprobacionAutomatica = async () => {
+    const resultado = await Swal.fire({
+      title: 'Confirmar aprobación',
+      text: 'Todos los documentos están marcados como aprobados. Al aceptar, se aprobará la solicitud del presidente y se crearán sus cupos para jugadores.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Aceptar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#94a3b8'
+    });
+
+    if (resultado.isConfirmed) {
+      await alAprobar(SolicitudId, validaciones, true);
+    }
+  };
+
   const confirmarCerrar = async () => {
+    const todosAprobados = Object.keys(validaciones).length > 0 && Object.values(validaciones).every(v => v.estado === 'aprobado');
+    if (todosAprobados) {
+      await ejecutarAprobacionAutomatica();
+      return;
+    }
+
     if (hayCambiosSinGuardar()) {
       const resultado = await Swal.fire({
         title: 'Cambios sin guardar',
@@ -232,7 +255,14 @@ export default function DetalleSolicitudModal({
               />
               <BotonPrimario
                 etiqueta="Finalizar Revisión"
-                alHacerClick={() => alAprobar(SolicitudId, validaciones)}
+                alHacerClick={() => {
+                  const todosAprobados = Object.keys(validaciones).length > 0 && Object.values(validaciones).every(v => v.estado === 'aprobado');
+                  if (todosAprobados) {
+                    ejecutarAprobacionAutomatica();
+                  } else {
+                    alAprobar(SolicitudId, validaciones);
+                  }
+                }}
                 deshabilitado={false} // Se permite aprobación sin documentos por falta de servidor de archivos
               />
             </div>

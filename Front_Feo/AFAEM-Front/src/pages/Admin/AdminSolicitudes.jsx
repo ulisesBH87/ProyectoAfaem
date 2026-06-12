@@ -215,8 +215,8 @@ export default function AdminSolicitudes() {
     }
   };
 
-  const handleAprobarSolicitud = async (id, reporteValidacion = null) => {
-    if (reporteValidacion) {
+  const handleAprobarSolicitud = async (id, reporteValidacion = null, saltarConfirmacion = false) => {
+    if (reporteValidacion && !saltarConfirmacion) {
       const tieneNoAprobados = Object.values(reporteValidacion).some(v => v.estado !== 'aprobado');
 
       if (tieneNoAprobados) {
@@ -236,6 +236,26 @@ export default function AdminSolicitudes() {
         }
         return;
       }
+    }
+
+    if (saltarConfirmacion) {
+      try {
+        setLoading(true);
+        await updateSolicitudEstatus(id, 2, reporteValidacion ? JSON.stringify(reporteValidacion) : null);
+        setModalAbierto(false);
+        Swal.fire({
+          title: '¡Éxito!',
+          text: 'La solicitud ha sido aprobada correctamente.',
+          icon: 'success'
+        }).then(() => {
+          loadSolicitudes(true);
+        });
+      } catch (error) {
+        Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
 
     const { isConfirmed } = await Swal.fire({
