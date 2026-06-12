@@ -1485,7 +1485,7 @@ export default function CompletarJugadoresEquipo() {
               {/* Loader temporal OCR */}
               {documents.acta && !extractedData.fechaNacimiento && (
                 <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                  ⏳ Analizando el Acta de Nacimiento vía OCR... Los documentos adicionales y campos se rellenarán automáticamente en breve.
+                  Analizando el Acta de Nacimiento... Los documentos adicionales y campos se rellenarán automáticamente en breve.
                 </div>
               )}
 

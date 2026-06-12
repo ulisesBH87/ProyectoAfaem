@@ -1487,8 +1487,7 @@ export default function ConfigurarEquipo() {
       { name: 'correo', label: 'Correo electrónico' },
       { name: 'telefono', label: 'Teléfono' },
       { name: 'numCamiseta', label: '# Camiseta' },
-      { name: 'posicion', label: 'Posición en el campo' },
-      { name: 'nui', label: 'NUI' }
+      { name: 'posicion', label: 'Posición' }
     ];
 
     const missingFields = requiredFields.filter(f => {
@@ -1517,7 +1516,7 @@ export default function ConfigurarEquipo() {
         Swal.fire('Atención', 'El año de nacimiento no es válido.', 'warning');
         return;
       }
-      
+
       const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
       if (fechaDate > minAgeDate) {
         Swal.fire('Atención', 'El jugador debe tener al menos 5 años de edad.', 'warning');
@@ -1630,16 +1629,16 @@ export default function ConfigurarEquipo() {
 
   // Documentos requeridos para renderizar dinámicamente
   const documentCards = [
-    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado (Opcional)' },
+    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación' },
     ...(esMenorDeEdad
       ? [
-        { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor (Opcional)' },
-        { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado (Opcional)' }
+        { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor' },
+        { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado' }
       ]
       : [
-        { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula (Opcional)' }
+        { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' }
       ]),
-    { key: 'foto', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal (Opcional)' }
+    { key: 'foto', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }
   ];
 
   if (loading) {
@@ -2326,7 +2325,7 @@ export default function ConfigurarEquipo() {
                     fontWeight: '600'
                   }}>
                     <span style={{ fontSize: '18px' }}>📋</span>
-                    Opcional: puedes subir los documentos ahora para auto-llenar los campos vía OCR, o continuar sin archivos y cargarlos después.
+                    Puedes subir los documentos ahora para auto-llenar los campos del formulario
                   </div>
 
                   <div style={{
@@ -2350,7 +2349,7 @@ export default function ConfigurarEquipo() {
                         }}
                       >
                         {/* Indicador de Menor para tutor/credencial */}
-                        {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
+                        {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
                           <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                         )}
 
@@ -2514,7 +2513,7 @@ export default function ConfigurarEquipo() {
                   {/* Loader temporal OCR */}
                   {documents.acta && !extractedData.fechaNacimiento && (
                     <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                      ⏳ Analizando el Acta de Nacimiento vía OCR... Los campos del formulario se auto-completarán en breve.
+                      Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
                     </div>
                   )}
                 </section>
@@ -2589,7 +2588,18 @@ export default function ConfigurarEquipo() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
-                        <input type="number" value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input
+                          type="text"
+                          maxLength={3}
+                          value={extractedData.numCamiseta}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 3);
+                            handleFieldChange('numCamiseta', val);
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. 10"
+                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                        />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
@@ -2607,10 +2617,6 @@ export default function ConfigurarEquipo() {
                             <option key={r.id} value={r.id}>{r.nombre}</option>
                           ))}
                         </select>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.nui || ''} onChange={e => handleFieldChange('nui', e.target.value)} onBlur={handleBlur} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                     </div>
 
@@ -2654,19 +2660,19 @@ export default function ConfigurarEquipo() {
                           if (!val) return null;
                           const fechaDate = new Date(val);
                           const hoy = new Date();
-                          
+
                           if (fechaDate.getFullYear() < 1900) {
                             return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
                           }
                           if (fechaDate.getFullYear() > hoy.getFullYear()) {
                             return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                           }
-                          
+
                           const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
                           if (fechaDate > minAgeDate) {
                             return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
                           }
-                          
+
                           return null;
                         })()}
                       </div>

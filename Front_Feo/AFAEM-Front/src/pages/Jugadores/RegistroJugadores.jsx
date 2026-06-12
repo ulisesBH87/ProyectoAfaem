@@ -750,16 +750,16 @@ export default function RegistroJugadores() {
 
   // Documentos requeridos según minoría de edad
   const documentCards = [
-    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado (Opcional)' },
+    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación' },
     ...(esMenorDeEdad
       ? [
-        { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor (Opcional)' },
-        { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado (Opcional)' }
+        { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor' },
+        { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado' }
       ]
       : [
-        { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula (Opcional)' }
+        { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' }
       ]),
-    { key: 'foto', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal (Opcional)' }
+    { key: 'foto', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }
   ];
 
   // Guardar Borrador en la Base de Datos
