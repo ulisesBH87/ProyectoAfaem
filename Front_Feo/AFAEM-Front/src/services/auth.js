@@ -97,3 +97,8 @@ export function parseJwt(token) {
 }
 
 export default api;
+// VERIFICAR CURP
+export async function verificarCurp(curp) {
+  const response = await api.get(`/auth/verificar-curp`, { params: { curp } });
+  return response.data;
+}

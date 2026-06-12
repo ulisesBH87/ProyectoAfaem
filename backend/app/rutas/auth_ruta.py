@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.core import seguridad
 from sqlalchemy.orm import Session
 
-from app.db.sesion import get_autenticacion_servicio
+from app.db.sesion import get_autenticacion_servicio, get_db
 
 from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 
@@ -12,6 +12,7 @@ from app.esquemas.auth_esquema import TokenResponse
 from app.esquemas.usuario_esquema import RegistroUsuario, InicioSesion, CambiarContrasena, RegistroAdmin
 
 from app.servicios.autenticacion_servicio import AutenticacionServicio
+from app.repositorios.equipo_repositorio import existe_persona_repo
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
 
@@ -122,3 +123,11 @@ def login_oauth(form_data: OAuth2PasswordRequestForm = Depends(), service: Auten
             "estatusId": estatus_id
         }
     }
+
+# == VERIFICAR CURP ==
+@router.get("/verificar-curp")
+def verificar_curp(curp: str, db: Session = Depends(get_db)):
+    if not curp or len(curp) != 18:
+        return {"existe": False}
+    existe = existe_persona_repo(db, curp.strip().upper())
+    return {"existe": existe}

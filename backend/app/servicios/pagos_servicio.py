@@ -92,60 +92,12 @@ class PagosServicio:
         if orden.CantidadJugadores < 1:
             raise pagos_excepciones.CantidadJugadoresError()
         
-        total_personas = orden.CantidadJugadores
-
-        total_seguros = sum(s.Cantidad for s in orden.Seguros)
-        
-        if total_seguros != total_personas:
-            raise pagos_excepciones.CantidadSegurosPersonasError()
+        if orden.CantidadJugadores < 0:
+            raise pagos_excepciones.CantidadJugadoresError()
         
         try:
-            
             detalles = []
             total = 0
-
-            #Si se crea presidente inicial o equipo nuevo se cobra afiliación de presidente
-            if(orden.TipoSolicitud == 1 or orden.TipoSolicitud == 2):
-                #Afiliación del presidente de equipo
-                afiliacion_presidente = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_PRESIDENTE)
-
-                if not afiliacion_presidente:
-                    raise pagos_excepciones.NoAfiliacionError()
-            
-                subtotal = afiliacion_presidente.CostoActual * 1
-            
-                #Detalles de la orden para el presidente de equipo
-                # (Solo si: 1. Se crea el presidente por primera vez o 2. Se crea un equipo nuevo)
-                detalles.append({
-                    "tipo_concepto": 2, #AFILIACION
-                    "tipo_afiliacion_id": self.TIPO_AFILIACION_PRESIDENTE,
-                    "seguro_id": None,
-                    "cantidad": 1,
-                    "precio": afiliacion_presidente.CostoActual,
-                    "subtotal": subtotal
-                })
-                
-                total += subtotal
-            
-            #Si se va a añadir a un jugador a un equipo ya hecho, no se cobra la afiliación de presidente
-            
-            #Se obtienen los costos de afiliación de jugador
-            afiliacion_jugador = pagos_repositorio.obtener_tipo_afiliacion_repo(self.db, self.TIPO_AFILIACION_JUGADOR)
-            if not afiliacion_jugador:
-                raise pagos_excepciones.NoAfiliacionError()
-
-            subtotal = afiliacion_jugador.CostoActual * orden.CantidadJugadores
-            
-            detalles.append({
-                "tipo_concepto": 2,
-                "tipo_afiliacion_id": self.TIPO_AFILIACION_JUGADOR,
-                "seguro_id": None,
-                "cantidad": orden.CantidadJugadores,
-                "precio": afiliacion_jugador.CostoActual,
-                "subtotal": subtotal
-            })
-
-            total += subtotal
             
             #seguros
             
@@ -296,8 +248,8 @@ class PagosServicio:
             result.append(ListaPagos(**data))
         return result
 
-    def estatus_pago(self, orden_pago_id, estatus):
-        orden = pagos_repositorio.estatus_pago_repo(self.db, orden_pago_id, estatus)
+    def estatus_pago(self, orden_pago_id, estatus, motivo=None):
+        orden = pagos_repositorio.estatus_pago_repo(self.db, orden_pago_id, estatus, motivo)
 
         return orden
 
@@ -308,7 +260,37 @@ class PagosServicio:
         if not orden:
             raise pagos_excepciones.OrdenNoEncontradaError()
         
-        return orden
+        nombre_completo = ""
+        correo = ""
+        if orden.UsuarioPagoRelacion:
+            correo = orden.UsuarioPagoRelacion.Correo
+            if orden.UsuarioPagoRelacion.PersonaRelacion:
+                p = orden.UsuarioPagoRelacion.PersonaRelacion
+                nombre_completo = f"{p.Nombre or ''} {p.PrimerApellido or ''} {p.SegundoApellido or ''}".strip()
+                nombre_completo = " ".join(nombre_completo.split())
+        
+        return {
+            "OrdenPagoId": orden.OrdenPagoId,
+            "UsuarioId": orden.UsuarioId,
+            "FechaDePago": orden.FechaDePago,
+            "FechaEnvio": orden.FechaEnvio,
+            "RutaVoucher": orden.RutaVoucher,
+            "EstatusPagoId": orden.EstatusPagoId,
+            "TotalPagar": orden.TotalPagar,
+            "Correo": correo,
+            "NombreCompleto": nombre_completo,
+            "OrdenPagoDetalleRelacion": [
+                {
+                    "OrdenPagoDetalleId": d.OrdenPagoDetalleId,
+                    "TipoAfiliacionId": d.TipoAfiliacionId,
+                    "TipoConceptoId": d.TipoConceptoId,
+                    "SeguroId": d.SeguroId,
+                    "Cantidad": d.Cantidad,
+                    "PrecioUnitarioCobrado": d.PrecioUnitarioCobrado,
+                    "Subtotal": d.Subtotal
+                } for d in orden.OrdenPagoDetalleRelacion
+            ]
+        }
     
     def mi_estado_pago(self, usuario_id):
         orden = pagos_repositorio.mi_estado_pago_repo(self.db, usuario_id)

@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
+import { verificarCurp } from '../../services/auth';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
@@ -278,6 +279,9 @@ export default function ConfigurarEquipo() {
     return edad < 18;
   }, [extractedData.fechaNacimiento]);
 
+  const [curpExistente, setCurpExistente] = useState(false);
+  const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+
   // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
   const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
   const [failedPhoto, setFailedPhoto] = useState(null);
@@ -322,8 +326,30 @@ export default function ConfigurarEquipo() {
   };
 
   const handleFieldChange = (field, value) => {
+    let cleanValue = value;
+    const nameAndGeoFields = [
+      'nombreJugador', 'apellidoPaterno', 'apellidoMaterno',
+      'nacionalidadJugador', 'paisResidencia', 'dondeVividoExtranjero',
+      'nacionalidadPadre', 'nacionalidadMadre',
+      'nacAbueloPaterno', 'nacAbuelaPaterna', 'nacAbueloMaterno', 'nacAbuelaMaterna',
+      'registroAsociacionExtranjera', 'juegoClubExtranjero'
+    ];
+
+    if (nameAndGeoFields.includes(field)) {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ\s]/gi, '');
+      if (['nombreJugador', 'apellidoPaterno', 'apellidoMaterno'].includes(field)) {
+        cleanValue = cleanValue.slice(0, 30);
+      }
+    } else if (field === 'lugarNacimiento') {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
+    } else if (field === 'correo') {
+      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+    } else if (field === 'telefono' || field === 'numCamiseta') {
+      cleanValue = value.replace(/\D/g, '');
+    }
+
     setExtractedData(prev => {
-      const updated = { ...prev, [field]: value };
+      const updated = { ...prev, [field]: cleanValue };
       return updated;
     });
   };
@@ -413,6 +439,28 @@ export default function ConfigurarEquipo() {
     };
     initData();
   }, [equipoId, equipoTemporalId]);
+
+  // Validar si la CURP ya existe en tiempo real
+  useEffect(() => {
+    const curp = (extractedData.curp || '').trim().toUpperCase();
+    if (curp.length === 18) {
+      setIsCheckingCurp(true);
+      const timer = setTimeout(async () => {
+        try {
+          const res = await verificarCurp(curp);
+          setCurpExistente(res.existe);
+        } catch (error) {
+          console.error("Error al verificar CURP:", error);
+          setCurpExistente(false);
+        } finally {
+          setIsCheckingCurp(false);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setCurpExistente(false);
+    }
+  }, [extractedData.curp]);
 
   const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
     if (!ordenId) return;
@@ -1466,6 +1514,59 @@ export default function ConfigurarEquipo() {
     }
   };
 
+  const esFormularioIncompleto = () => {
+    if (!selectedSeguroId) return true;
+
+    const camposRequeridos = [
+      'nombreJugador',
+      'apellidoPaterno',
+      'apellidoMaterno',
+      'curp',
+      'fechaNacimiento',
+      'lugarNacimiento',
+      'genero',
+      'correo',
+      'telefono',
+      'numCamiseta',
+      'posicion'
+    ];
+
+    const faltaCampo = camposRequeridos.some(f => {
+      const val = extractedData[f];
+      return val === undefined || val === null || String(val).trim() === '';
+    });
+
+    if (faltaCampo) return true;
+
+    if (!extractedData.curp || extractedData.curp.length !== 18 || curpExistente) {
+      return true;
+    }
+
+    if (extractedData.esForaneo) {
+      const {
+        nacionalidadJugador, paisResidencia, dondeVividoExtranjero, haVividoExtranjero,
+        nacionalidadPadre, nacionalidadMadre, registroAsociacionExtranjera,
+        nacAbueloPaterno, nacAbuelaPaterna, nacAbueloMaterno, nacAbuelaMaterna,
+        juegoClubExtranjero
+      } = extractedData;
+
+      const basicosForaneo = [
+        nacionalidadJugador, paisResidencia, nacionalidadPadre, nacionalidadMadre,
+        registroAsociacionExtranjera, nacAbueloPaterno, nacAbuelaPaterna,
+        nacAbueloMaterno, nacAbuelaMaterna, juegoClubExtranjero
+      ];
+
+      const foraneoIncompleto = basicosForaneo.some(campo => String(campo || '').trim() === '');
+      if (foraneoIncompleto) return true;
+
+      if (haVividoExtranjero && String(dondeVividoExtranjero || '').trim() === '') {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // PRE-GUARDAR Y DESCARGAR FORMATO
   const handleGuardar = async (e) => {
     if (e) e.preventDefault();
@@ -1486,7 +1587,7 @@ export default function ConfigurarEquipo() {
       { name: 'correo', label: 'Correo electrónico' },
       { name: 'telefono', label: 'Teléfono' },
       { name: 'numCamiseta', label: '# Camiseta' },
-      { name: 'posicion', label: 'Posición en el campo' }
+      { name: 'posicion', label: 'Posición' }
     ];
 
     const missingFields = requiredFields.filter(f => {
@@ -1505,6 +1606,13 @@ export default function ConfigurarEquipo() {
       return;
     }
 
+    if (curpExistente) {
+      Swal.fire('Atención', 'Esta CURP ya se encuentra registrada.', 'warning');
+      return;
+    }
+
+    // Nota: A diferencia del administrador, para el presidente los archivos (Acta, INE, Foto) son OPCIONALES.
+    // Por lo tanto, no se valida su presencia obligatoria en este panel.
     // Validar documentos obligatorios
     const missingDocs = [];
     if (!documents.acta) missingDocs.push('Acta de Nacimiento');
@@ -1569,7 +1677,7 @@ export default function ConfigurarEquipo() {
     setSubmitting(true);
     Swal.fire({
       title: 'Registrando Jugador',
-      text: 'Consumiendo slot y subiendo documentos al servidor...',
+      text: 'Consumiendo espacio y subiendo documentos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -1641,7 +1749,7 @@ export default function ConfigurarEquipo() {
 
   // Documentos requeridos para renderizar dinámicamente
   const documentCards = [
-    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado' },
+    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación' },
     ...(esMenorDeEdad
       ? [
         { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor' },
@@ -2313,7 +2421,7 @@ export default function ConfigurarEquipo() {
                     fontWeight: '600'
                   }}>
                     <span style={{ fontSize: '18px' }}>📋</span>
-                    Puedes subir el Acta de nacimiento para que podamos ayudarte con la información del jugador.
+                    Puedes subir los documentos ahora para auto-llenar los campos del formulario
                   </div>
 
                   <div className="document-upload-grid">
@@ -2337,8 +2445,8 @@ export default function ConfigurarEquipo() {
                         }}
                       >
                         {/* Indicador de Menor para tutor/credencial */}
-                        {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                          <div className="menor-badge-table">Menor de edad</div>
+                        {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
+                          <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                         )}
 
                         <div className="doc-card-body-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
@@ -2468,7 +2576,7 @@ export default function ConfigurarEquipo() {
                   {/* Loader temporal OCR */}
                   {documents.acta && !extractedData.fechaNacimiento && (
                     <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                      ⏳ Analizando el Acta de Nacimiento vía OCR... Los campos del formulario se auto-completarán en breve.
+                      Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
                     </div>
                   )}
                 </section>
@@ -2528,22 +2636,33 @@ export default function ConfigurarEquipo() {
                     <div className="form-inputs-grid-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                     </div>
 
                     <div className="form-inputs-grid-2">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
-                        <input type="number" value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} onBlur={handleBlur} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input
+                          type="text"
+                          maxLength={3}
+                          value={extractedData.numCamiseta}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 3);
+                            handleFieldChange('numCamiseta', val);
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. 10"
+                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                        />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
@@ -2566,12 +2685,15 @@ export default function ConfigurarEquipo() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                          CURP<span className="required-star">*</span>
+                          {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}>Validando...</span>}
+                        </label>
                         <input
                           type="text"
                           value={extractedData.curp || ''}
                           onChange={(e) => {
-                            const val = e.target.value.toUpperCase();
+                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
                             let sId = extractedData.genero;
                             if (val.length >= 11) {
                               const char = val.charAt(10);
@@ -2584,8 +2706,19 @@ export default function ConfigurarEquipo() {
                           onBlur={handleBlur}
                           placeholder="ABCD..."
                           maxLength="18"
-                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${curpExistente ? '#ef4444' : '#cbd5e1'}`,
+                            boxShadow: curpExistente ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none',
+                            fontSize: '14px'
+                          }}
                         />
+                        {curpExistente && (
+                          <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                            Esta CURP ya se encuentra registrada.
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2622,7 +2755,7 @@ export default function ConfigurarEquipo() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
@@ -2644,7 +2777,7 @@ export default function ConfigurarEquipo() {
                     <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input type="email" value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
+                        <input type="email" maxLength={30} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
@@ -2889,8 +3022,8 @@ export default function ConfigurarEquipo() {
                       etiqueta={submitting ? "Procesando..." : "Descargar formato y continuar"}
                       icono={<FaSave />}
                       alHacerClick={handleGuardar}
-                      deshabilitado={submitting}
-                      clasesPersonalizadas="w-100-mobile"
+                      deshabilitado={submitting || esFormularioIncompleto()}
+                      estilo={{ minWidth: '300px' }}
                     />
                   </div>
                 </section>

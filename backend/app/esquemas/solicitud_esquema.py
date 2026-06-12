@@ -142,6 +142,7 @@ class DocumentoInfo(BaseModel):
     Tipo: str
     Url: str
     Estado: str = "entregado"
+    EstadoValidacionId: Optional[int] = None
 
 class JugadorConDocumentos(BaseModel):
     Id: int
@@ -153,3 +154,4 @@ class SolicitudDocumentosResponse(BaseModel):
     Equipo: str
     SolicitudId: int
     Jugadores: List[JugadorConDocumentos]
+    EstatusValidacion: Optional[int] = None

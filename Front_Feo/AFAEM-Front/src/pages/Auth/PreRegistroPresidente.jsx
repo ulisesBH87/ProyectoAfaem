@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
 import { API_BASE } from '../../config/config';
-import { parseJwt } from '../../services/auth';
+import { parseJwt, verificarCurp } from '../../services/auth';
 import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 
 import { useRBAC } from '../../hooks/useRBAC';
@@ -239,6 +239,7 @@ function PreRegistroPresidente() {
   const [solicitudActualId, setSolicitudActualId] = useState(null);
   const [mensajeRechazoPago, setMensajeRechazoPago] = useState('');
   const [mensajeRechazoSolicitud, setMensajeRechazoSolicitud] = useState('');
+  const [curpExistente, setCurpExistente] = useState(false);
   const [tieneEstadoBackend, setTieneEstadoBackend] = useState(false);
 
   // PASO 1: Pago y Seguros
@@ -639,10 +640,7 @@ function PreRegistroPresidente() {
 
 
   const totalAsignados = segurosJugadores.reduce((acc, seg) => acc + Number(asignacionSeguros[seg.id] || 0), 0);
-  const precioPresidente = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0;
-  const precioJugador = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0;
-  const costoAfiliaciones = precioPresidente + (Number(numPersonas || 0) * precioJugador);
-  const totalPagar = costoAfiliaciones + catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
   const totalMostrado = ordenPendienteId ? totalOrdenPendiente : totalPagar;
   const nombreAfiliacion = (tipoAfiliacionId) => {
     const afiliacion = catalogoAfiliaciones.find(a => String(a.TipoAfiliacionId) === String(tipoAfiliacionId));
@@ -807,10 +805,6 @@ function PreRegistroPresidente() {
         const segurosPayload = [];
         for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
           if (cant > 0) {
-            const seguroObj = catalogoSeguros.find(s => String(s.id) === String(idStr));
-            if (seguroObj && ['TIPO G', 'SIN SEGURO'].includes(seguroObj.nombre.toUpperCase().trim())) {
-              continue;
-            }
             segurosPayload.push({
               SeguroId: parseInt(idStr, 10),
               Cantidad: cant
@@ -941,10 +935,6 @@ function PreRegistroPresidente() {
           const segurosPayload = [];
           for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
             if (cant > 0) {
-              const seguroObj = catalogoSeguros.find(s => String(s.id) === String(idStr));
-              if (seguroObj && ['TIPO G', 'SIN SEGURO'].includes(seguroObj.nombre.toUpperCase().trim())) {
-                continue;
-              }
               segurosPayload.push({
                 SeguroId: parseInt(idStr, 10),
                 Cantidad: cant
@@ -1408,16 +1398,37 @@ function PreRegistroPresidente() {
 
 
 
-  const handleManualOcrChange = (field, value) => {
+  const handleManualOcrChange = async (field, value) => {
     if (field === 'nombre') {
       return;
     }
-    setOcrResults(prev => ({
-      ...prev,
-      [field]: value,
-      actaNacimiento: prev.actaNacimiento || 'Manual',
-      identificacion: prev.identificacion || 'Manual'
-    }));
+
+    if (field === 'curp') {
+      setOcrResults(prev => ({
+        ...prev,
+        [field]: value,
+        actaNacimiento: prev.actaNacimiento || 'Manual',
+        identificacion: prev.identificacion || 'Manual'
+      }));
+
+      if (value.length === 18) {
+        try {
+          const res = await verificarCurp(value);
+          setCurpExistente(res.existe);
+        } catch (error) {
+          console.error("Error al verificar CURP", error);
+        }
+      } else {
+        setCurpExistente(false);
+      }
+    } else {
+      setOcrResults(prev => ({
+        ...prev,
+        [field]: value,
+        actaNacimiento: prev.actaNacimiento || 'Manual',
+        identificacion: prev.identificacion || 'Manual'
+      }));
+    }
   };
 
   const handleLogout = () => {
@@ -1470,7 +1481,7 @@ function PreRegistroPresidente() {
 
       Swal.fire({
         title: 'Subiendo Documentos...',
-        html: 'Enviando archivos al servidor. <b>Por favor espere.</b>',
+        html: 'Enviando archivos. <b>Por favor espere.</b>',
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
       });
@@ -2180,18 +2191,21 @@ function PreRegistroPresidente() {
                   </div>
                 ) : (
                   <div className="pago-card">
-                    <div className="input-group" style={{ flexDirection: 'column', gap: '6px' }}>
-                      <label className="input-label" style={{ textAlign: 'center', fontSize: '13px' }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
+                    <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                      <label className="input-label" style={{ textAlign: 'left', fontSize: '13px', margin: 0, flex: 1 }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength="2"
                         className="input-number"
                         value={numPersonas}
                         onChange={(e) => {
-                          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                          setNumPersonas(val);
+                          const val = e.target.value.replace(/\D/g, '');
+                          setNumPersonas(val === '' ? '' : parseInt(val, 10));
                           setError(null);
                         }}
-                        style={{ marginTop: '3px' }}
+                        style={{ marginTop: '0', width: '80px', textAlign: 'center' }}
                       />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 12px' }}>
@@ -2213,7 +2227,7 @@ function PreRegistroPresidente() {
                       <div className="insurance-grid">
                         <div className="insurance-section">
                           <div className="insurance-col-title">Seguros Jugadores.</div>
-                          <div className="insurance-card-list">
+                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                             {segurosJugadores.map(seg => {
                               const cantAsignada = Number(asignacionSeguros[seg.id] || 0);
                               return (
@@ -2252,13 +2266,15 @@ function PreRegistroPresidente() {
 
                                     {/* Input directo en la tarjeta */}
                                     <input
-                                      type="number"
-                                      min="0"
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      maxLength="2"
                                       className={`insurance-input ${totalAsignados > segurosRequeridos && cantAsignada > 0 ? 'error-state' : ''}`}
                                       value={asignacionSeguros[seg.id] ?? ''}
                                       onChange={(e) => {
-                                        const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                                        setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val }));
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
                                         setError(null);
                                       }}
                                     />
@@ -2299,7 +2315,7 @@ function PreRegistroPresidente() {
                           <div className="insurance-col-title">
                             Seguros Presidente.
                           </div>
-                          <div className="insurance-card-list">
+                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                             {segurosPresidente.map(seg => {
                               const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
 
@@ -2616,7 +2632,7 @@ function PreRegistroPresidente() {
                   <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
                     <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: 'var(--danger)' }}>Administrador: haz sido rechazado por este motivo:</h4>
                     <p style={{ fontSize: '14px', color: 'var(--text-main)', fontStyle: 'italic', margin: 0 }}>
-                      "{(ordenPendienteId && localStorage.getItem(`motivo_rechazo_${ordenPendienteId}`)) || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
+                      "{mensajeRechazoPago || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
                     </p>
                   </div>
 
@@ -2776,7 +2792,7 @@ function PreRegistroPresidente() {
                   </select>
                 </div>
                 <div className="premium-input-group">
-                  <label className="premium-label">Equipo *</label>
+                  <label className="premium-label">Nombre de equipo *</label>
                   <input
                     type="text"
                     placeholder="Nombre del Equipo"
@@ -2786,7 +2802,7 @@ function PreRegistroPresidente() {
                   />
                 </div>
                 <div className="premium-input-group">
-                  <label className="premium-label">Tipo de afiliación *</label>
+                  <label className="premium-label">Tipo de afiliación comprado*</label>
                   <select
                     value={tipoAfiliacion}
                     onChange={(e) => setTipoAfiliacion(e.target.value)}
@@ -2873,6 +2889,11 @@ function PreRegistroPresidente() {
                       disabled={!!user.usuario?.curp}
                       style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' } : {}}
                     />
+                    {curpExistente && (
+                      <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
+                        Esta CURP ya está registrada a otra persona.
+                      </div>
+                    )}
                   </div>
                   <div className="premium-input-group">
                     <label className="premium-label">Nacionalidad *</label>
@@ -2929,7 +2950,7 @@ function PreRegistroPresidente() {
                     </select>
                   </div>
                   <div className="premium-input-group">
-                    <label className="premium-label">Teléfono *</label>
+                    <label className="premium-label">Teléfono registrado*</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <select
                         value={codigoPais}
@@ -3176,17 +3197,16 @@ function PreRegistroPresidente() {
         {pasoActual === 4 && (
           <div className="pre-registro-section">
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-              <div style={{ fontSize: '80px', marginBottom: '30px' }}>⏳</div>
               <h2 style={{ color: 'var(--text-main)', fontSize: '28px', fontWeight: '800', marginBottom: '15px' }}>
                 Tu solicitud será aprobada pronto
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto 40px', lineHeight: '1.6' }}>
-                Tus documentos ya fueron enviados correctamente. El administrador está revisando tu solicitud y su aprobación llegará pronto.
+                Tus documentos fueron enviados correctamente. El administrador está revisando tu solicitud y su aprobación llegará pronto.
               </p>
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '25px', display: 'inline-block', textAlign: 'left' }}>
                 <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#34d399', fontWeight: '700' }}>✓ Pago Validado</p>
                 <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#f59e0b', fontWeight: '700' }}>⏳ Solicitud: EN ESPERA</p>
-                <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>○ Acceso al Dashboard: PENDIENTE</p>
+                <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>○ Acceso: PENDIENTE</p>
               </div>
               <div style={{ marginTop: '40px' }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Puedes cerrar sesión y volver más tarde para revisar tu estado.</p>
@@ -3247,6 +3267,8 @@ function PreRegistroPresidente() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
                 background: 'linear-gradient(90deg, #1e293b, #0f172a)'
               }}>
                 <div>
@@ -3267,7 +3289,7 @@ function PreRegistroPresidente() {
 
               {/* Content */}
               <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
@@ -3289,7 +3311,7 @@ function PreRegistroPresidente() {
                       <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
                         Detalles de la Póliza
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
                           <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
                           <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
@@ -3335,8 +3357,8 @@ function PreRegistroPresidente() {
                     <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
                       Montos de Cobertura
                     </h4>
-                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                         <thead>
                           <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                             <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
@@ -3365,6 +3387,8 @@ function PreRegistroPresidente() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '20px',
                 borderBottomLeftRadius: '24px',
                 borderBottomRightRadius: '24px'
               }}>
@@ -3374,7 +3398,7 @@ function PreRegistroPresidente() {
                       Este seguro se asignará a tu cuenta de Presidente de Equipo.
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600' }}>
                         Selecciona la cantidad:
                       </span>
@@ -3385,10 +3409,15 @@ function PreRegistroPresidente() {
                           style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(255,255,255,0.06)', color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >-</button>
                         <input
-                          type="number"
-                          min="0"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength="2"
                           value={cantidadModal}
-                          onChange={(e) => setCantidadModal(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setCantidadModal(val === '' ? 0 : parseInt(val, 10));
+                          }}
                           style={{ width: '60px', border: 'none', background: 'transparent', color: '#ffffff', textAlign: 'center', fontWeight: '900', fontSize: '16px' }}
                         />
                         <button
@@ -3449,7 +3478,7 @@ function PreRegistroPresidente() {
                       transition: 'all 0.2s'
                     }}
                   >
-                    {esPresidente ? 'Seleccionar Seguro ✓' : 'Confirmar Cantidad ✓'}
+                    {esPresidente ? 'Seleccionar Seguro' : 'Confirmar Cantidad'}
                   </button>
                 </div>
               </div>

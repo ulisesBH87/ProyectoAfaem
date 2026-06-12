@@ -248,8 +248,8 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
         "FechaNacimiento": persona.FechaNacimiento if persona else None,
         "Email": usuario.Correo if usuario else "",
         "FechaSolicitud": solicitud.FechaSolicitud,
-        "EstatusSolicitud": solicitud.EstatusValidacionRelacion.Nombre if solicitud and solicitud.EstatusValidacionRelacion else "",
-        "TipoSolicitud": solicitud.TipoAfiliacionRelacion.NombreAfiliacion if solicitud and solicitud.TipoAfiliacionRelacion else "",
+        "EstatusSolicitud": solicitud.CatalogoEstadosValidacion.Nombre if solicitud and solicitud.CatalogoEstadosValidacion else "",
+        "TipoSolicitud": solicitud.CatalogoTiposAfiliacionRelacion.NombreAfiliacion if solicitud and solicitud.CatalogoTiposAfiliacionRelacion else "",
         "SolicitudId": solicitud.SolicitudId,
         "Jugadores": jugadores,
         "DocumentosPresidente": [
@@ -328,7 +328,8 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
             docs_list.append({
                 "Tipo": cd.NombreDocumento,
                 "Url": f"{BASE_URL}/{url_path}",
-                "Estado": "entregado"
+                "Estado": "entregado",
+                "EstadoValidacionId": d.EstadoValidacionId
             })
             
         resultado.append({
@@ -341,7 +342,9 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
     return {
         "Equipo": f"{persona_solicitante.Nombre} {persona_solicitante.PrimerApellido}" if persona_solicitante else "SOLICITANTE DESCONOCIDO",
         "SolicitudId": solicitud_id,
-        "Jugadores": resultado
+        "Jugadores": resultado,
+        "ObservacionesGuardadas": solicitud.ObservacionesSolicitud,
+        "EstatusValidacion": solicitud.EstatusValidacion
     }
 
 def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus_db: int, observaciones: str = None):
@@ -350,6 +353,50 @@ def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus
         solicitud.EstatusValidacion = estatus_db
         if observaciones:
             solicitud.ObservacionesSolicitud = observaciones
+            try:
+                import json
+                from app.modelos.documentos_entregados_modelo import DocumentosEntregados
+                from app.modelos.catalogo_documento import CatalogoDocumentos
+                from app.modelos.catalogo_documentos_persona import CatalogoDocumentosPersonas
+                from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+                
+                validaciones = json.loads(observaciones)
+                for key, val in validaciones.items():
+                    partes = key.split("-", 1)
+                    if len(partes) == 2:
+                        persona_id_str, tipo_doc = partes
+                        persona_id = int(persona_id_str)
+                        estado = val.get("estado")
+                        
+                        # Mapeo a EstadoValidacionId: 1: Pendiente, 2: Aceptado (Aprobado), 3: Rechazado
+                        if estado == "aprobado":
+                            estado_val_id = 2
+                        elif estado == "rechazado":
+                            estado_val_id = 3
+                        else:
+                            estado_val_id = 1
+                            
+                        # Encontrar registro de DocumentosEntregados
+                        doc_entregado = db.query(DocumentosEntregados).join(
+                            DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId
+                        ).join(
+                            CatalogoDocumentosPersonas, DocumentoAfiliacion.DocumentoPersonaId == CatalogoDocumentosPersonas.DocumentosPersonasId
+                        ).join(
+                            CatalogoDocumentos, CatalogoDocumentosPersonas.DocumentoId == CatalogoDocumentos.DocumentoId
+                        ).filter(
+                            DocumentosEntregados.SolicitudId == solicitud_id,
+                            DocumentosEntregados.PersonaId == persona_id,
+                            CatalogoDocumentos.NombreDocumento == tipo_doc
+                        ).first()
+                        
+                        if doc_entregado:
+                            doc_entregado.EstadoValidacionId = estado_val_id
+                            if estado == "rechazado":
+                                doc_entregado.ObservacionesDocumento = val.get("motivo") or val.get("detalle") or ""
+                            else:
+                                doc_entregado.ObservacionesDocumento = None
+            except Exception as e:
+                print(f"Error actualizando EstadoValidacionId en bd: {e}")
         return solicitud
     return None
 
