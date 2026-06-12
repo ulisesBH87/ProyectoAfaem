@@ -493,11 +493,17 @@ export default function AdminSolicitudes() {
           ) : (
             <>
               <button
-                onClick={() => handleAprobarSolicitud(row.SolicitudId)}
+                onClick={() => {
+                  if (row.EstatusValidacion !== 2) {
+                    handleAprobarSolicitud(row.SolicitudId);
+                  }
+                }}
+                disabled={row.EstatusValidacion === 2}
                 style={{
                   padding: '7px 14px', background: '#10b981', color: 'white',
-                  border: 'none', borderRadius: '8px', cursor: 'pointer',
-                  fontSize: '12px', fontWeight: '700'
+                  border: 'none', borderRadius: '8px', cursor: row.EstatusValidacion === 2 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px', fontWeight: '700',
+                  opacity: row.EstatusValidacion === 2 ? 0.5 : 1
                 }}
               >
                 Aprobar

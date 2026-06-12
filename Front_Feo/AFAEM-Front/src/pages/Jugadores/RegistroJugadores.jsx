@@ -750,16 +750,16 @@ export default function RegistroJugadores() {
 
   // Documentos requeridos según minoría de edad
   const documentCards = [
-    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación y auto-llenado (Opcional)' },
+    { key: 'acta', title: 'Acta de Nacimiento', subtitle: 'Requerido para validación' },
     ...(esMenorDeEdad
       ? [
-        { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor (Opcional)' },
-        { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado (Opcional)' }
+        { key: 'ineTutor', title: 'INE de Padre o Tutor', subtitle: 'Identificación oficial del tutor' },
+        { key: 'identificacionMenor', title: 'Identificación de Menor', subtitle: 'Credencial escolar o certificado' }
       ]
       : [
-        { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula (Opcional)' }
+        { key: 'ine', title: 'Identificación Oficial (INE)', subtitle: 'INE, Pasaporte o Cédula' }
       ]),
-    { key: 'foto', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal (Opcional)' }
+    { key: 'foto', title: 'Fotografía del Jugador', subtitle: 'Fotografía infantil formal' }
   ];
 
   // Guardar Borrador en la Base de Datos
@@ -812,13 +812,31 @@ export default function RegistroJugadores() {
   };
 
   const handleFieldChange = (field, value) => {
-    let formattedValue = value;
-    if (field === 'telefono') {
-      formattedValue = value.replace(/\D/g, '').slice(0, 10);
+    let cleanValue = value;
+    const nameAndGeoFields = [
+      'nombreJugador', 'apellidoPaterno', 'apellidoMaterno',
+      'nacionalidadJugador', 'paisResidencia', 'dondeVividoExtranjero',
+      'nacionalidadPadre', 'nacionalidadMadre',
+      'nacAbueloPaterno', 'nacAbuelaPaterna', 'nacAbueloMaterno', 'nacAbuelaMaterna',
+      'registroAsociacionExtranjera', 'juegoClubExtranjero'
+    ];
+
+    if (nameAndGeoFields.includes(field)) {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ\s]/gi, '');
+      if (['nombreJugador', 'apellidoPaterno', 'apellidoMaterno'].includes(field)) {
+        cleanValue = cleanValue.slice(0, 30);
+      }
+    } else if (field === 'lugarNacimiento') {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
+    } else if (field === 'correo') {
+      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+    } else if (field === 'telefono') {
+      cleanValue = value.replace(/\D/g, '').slice(0, 10);
     } else if (field === 'numCamiseta') {
-      formattedValue = value.replace(/\D/g, '').slice(0, 3);
+      cleanValue = value.replace(/\D/g, '').slice(0, 3);
     }
-    updatePlayerDatos(currentPlayerIndex, { [field]: formattedValue });
+
+    updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
   };
 
   const handleBlur = () => {
@@ -2537,6 +2555,7 @@ export default function RegistroJugadores() {
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
                           <input
                             type="text"
+                            maxLength={30}
                             value={currentDatos.nombreJugador}
                             onChange={e => {
                               handleFieldChange('nombreJugador', e.target.value);
@@ -2559,6 +2578,7 @@ export default function RegistroJugadores() {
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
                           <input
                             type="text"
+                            maxLength={30}
                             value={currentDatos.apellidoPaterno}
                             onChange={e => {
                               handleFieldChange('apellidoPaterno', e.target.value);
@@ -2581,6 +2601,7 @@ export default function RegistroJugadores() {
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
                           <input
                             type="text"
+                            maxLength={30}
                             value={currentDatos.apellidoMaterno}
                             onChange={e => {
                               handleFieldChange('apellidoMaterno', e.target.value);
@@ -2611,10 +2632,10 @@ export default function RegistroJugadores() {
                             type="text"
                             value={currentDatos.curp || ''}
                             onChange={(e) => {
-                              const val = e.target.value;
+                              const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
                               let sId = currentDatos.genero;
                               if (val.length >= 11) {
-                                const char = val.charAt(10).toUpperCase();
+                                const char = val.charAt(10);
                                 if (char === 'M') sId = '2'; // Femenino
                                 else if (char === 'H') sId = '1'; // Masculino
                               }
@@ -2664,6 +2685,7 @@ export default function RegistroJugadores() {
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
                           <input
                             type="text"
+                            maxLength={30}
                             value={currentDatos.lugarNacimiento || ''}
                             onChange={e => {
                               handleFieldChange('lugarNacimiento', e.target.value);
@@ -2714,6 +2736,7 @@ export default function RegistroJugadores() {
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
                           <input
                             type="email"
+                            maxLength={30}
                             value={currentDatos.correo}
                             onChange={e => {
                               handleFieldChange('correo', e.target.value);

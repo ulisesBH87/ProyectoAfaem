@@ -248,8 +248,8 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
         "FechaNacimiento": persona.FechaNacimiento if persona else None,
         "Email": usuario.Correo if usuario else "",
         "FechaSolicitud": solicitud.FechaSolicitud,
-        "EstatusSolicitud": solicitud.EstatusValidacionRelacion.Nombre if solicitud and solicitud.EstatusValidacionRelacion else "",
-        "TipoSolicitud": solicitud.TipoAfiliacionRelacion.NombreAfiliacion if solicitud and solicitud.TipoAfiliacionRelacion else "",
+        "EstatusSolicitud": solicitud.CatalogoEstadosValidacion.Nombre if solicitud and solicitud.CatalogoEstadosValidacion else "",
+        "TipoSolicitud": solicitud.CatalogoTiposAfiliacionRelacion.NombreAfiliacion if solicitud and solicitud.CatalogoTiposAfiliacionRelacion else "",
         "SolicitudId": solicitud.SolicitudId,
         "Jugadores": jugadores,
         "DocumentosPresidente": [
