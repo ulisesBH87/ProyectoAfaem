@@ -4,6 +4,7 @@ import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
+import '../../styles/dashboard.css';
 import { 
   FaUser, 
   FaSyncAlt, 
@@ -121,18 +122,12 @@ export default function PresidenteEquipoMisJugadores() {
       label: 'Jugador',
       render: (val, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ 
-            width: '40px', height: '40px', borderRadius: '12px', 
-            background: 'var(--primary-light)', color: 'var(--primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '15px', fontWeight: '800', border: '1px solid var(--border-light)',
-            overflow: 'hidden'
-          }}>
+          <div className="team-logo-table">
             <PlayerAvatar rutaFoto={row.RutaFoto} nombre={val} fallbackIcon={<FaUser />} />
           </div>
-          <div>
-            <div style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '14px' }}>{val}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{row.Rol || 'Miembro Registrado'}</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="team-name-table">{val}</div>
+            <div className="team-subname-table">{row.Rol || 'Miembro Registrado'}</div>
           </div>
         </div>
       )
@@ -141,7 +136,7 @@ export default function PresidenteEquipoMisJugadores() {
       key: 'Equipo', 
       label: 'Equipo vinculado',
       render: (val) => (
-        <div style={{ fontWeight: '700', color: 'var(--text-muted)', fontSize: '12px', background: 'var(--bg-main)', padding: '4px 10px', borderRadius: '8px', display: 'inline-block' }}>
+        <div className="linked-team-badge-table">
           {val ? val.toUpperCase() : 'SIN EQUIPO'}
         </div>
       )
@@ -150,7 +145,7 @@ export default function PresidenteEquipoMisJugadores() {
       key: 'FechaIngreso',
       label: 'Fecha alta',
       render: (val) => (
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>
           {val ? new Date(val).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
         </div>
       )
@@ -160,13 +155,14 @@ export default function PresidenteEquipoMisJugadores() {
       label: 'Estado oficial',
       render: (status) => {
         return (
-          <span style={{ 
-            padding: '6px 14px', borderRadius: '20px', 
-            background: status ? '#dcfce7' : '#fee2e2', 
-            color: status ? '#166534' : '#991b1b',
-            fontSize: '11px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '6px',
-            border: status ? '1px solid #bbf7d0' : '1px solid #fecaca'
-          }}>
+          <span 
+            className="status-badge-table"
+            style={{ 
+              background: status ? '#dcfce7' : '#fee2e2', 
+              color: status ? '#166534' : '#991b1b',
+              border: status ? '1px solid #bbf7d0' : '1px solid #fecaca'
+            }}
+          >
             {status ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
             {status ? 'ACTIVO' : 'INACTIVO'}
           </span>
@@ -175,29 +171,22 @@ export default function PresidenteEquipoMisJugadores() {
     }
   ];
 
-  if (loading) {
+  if (loading && players.length === 0) {
     return <Loader text="Cargando tu directorio de jugadores..." />;
   }
 
   return (
     <div className="fade-in">
       {/* CABECERA ESTILO ADMIN/PAGOS */}
-      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header-premium">
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>Mi directorio de jugadores</h1>
-          <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Visualización y gestión de miembros activos en tus equipos registrados.</p>
+          <h1 className="page-header-title">Mi directorio de jugadores</h1>
+          <p className="page-header-subtitle">Visualización y gestión de miembros activos en tus equipos registrados.</p>
         </div>
-        {/*<button 
-          className="btn-premium" 
-          onClick={() => navigate('/presidente-equipo/registro-jugadores')}
-          style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
-        >
-          <FaUserPlus /> Registrar nuevo jugador
-        </button>*/}
       </div>
 
       {/* TARJETAS MÉTRICAS ESTILO ADMIN/PAGOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+      <div className="metrics-grid-4">
         {[
           { label: 'Total Jugadores', value: totalJugadores, filter: 'todos', color: 'var(--primary)', icon: <FaUsers /> },
           { label: 'Miembros Activos', value: activos, filter: 'activos', color: 'var(--secondary)', icon: <FaCheckCircle /> },
@@ -207,66 +196,48 @@ export default function PresidenteEquipoMisJugadores() {
           <div 
             key={i} 
             onClick={() => stat.filter && setFiltroEstatus(stat.filter)}
-            className="card" 
+            className={`metric-card ${filtroEstatus === stat.filter ? 'active' : ''}`}
             style={{ 
-              padding: '24px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '20px',
               cursor: stat.isMetricOnly ? 'default' : 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               border: filtroEstatus === stat.filter ? `2px solid ${stat.color}` : '1.5px solid var(--border-light)',
-              transform: filtroEstatus === stat.filter ? 'translateY(-5px)' : 'none',
-              boxShadow: filtroEstatus === stat.filter ? `0 12px 20px ${stat.color}15` : 'none',
-              borderRadius: '20px'
+              boxShadow: filtroEstatus === stat.filter ? `0 12px 20px ${stat.color}15` : 'none'
             }}
           >
-            <div style={{ 
-              width: '56px', height: '56px', borderRadius: '16px', 
-              background: `${stat.color}15`, color: stat.color, 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              fontSize: '22px' 
-            }}>
+            <div className="metric-icon-wrapper" style={{ background: `${stat.color}15`, color: stat.color }}>
               {stat.icon}
             </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{stat.label}</div>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-main)', lineHeight: 1 }}>{stat.value}</div>
+            <div className="metric-content">
+              <div className="metric-label">{stat.label}</div>
+              <div className="metric-value">{stat.value}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* SECCIÓN DE TABLA ESTILO ADMIN/PAGOS */}
-      <div className="card" style={{ padding: '35px', borderRadius: '24px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
-        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Listado oficial de la plantilla</h3>
+      <div className="dashboard-card">
+        <div className="table-header-actions">
+          <h3 className="table-header-title">Listado oficial de la plantilla</h3>
           
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <SearchBar 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre o equipo..."
-              width="300px"
-            />
+          <div className="table-actions-group">
+            <div className="search-wrapper-responsive">
+              <SearchBar 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por nombre o equipo..."
+                width="100%"
+                style={{ maxWidth: '300px' }}
+              />
+            </div>
 
             <button 
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} 
-              style={{ 
-                background: 'white', border: '1.5px solid var(--border-light)', 
-                padding: '10px 18px', borderRadius: '12px', 
-                fontSize: '13px', fontWeight: '700', 
-                display: 'flex', alignItems: 'center', gap: '8px',
-                color: 'var(--text-muted)', cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-light)'}
+              className="sort-btn-responsive"
             >
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
             </button>
 
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
+            <div className="filters-wrapper-responsive">
               {[
                 { val: 'todos', label: 'Todos' },
                 { val: 'activos', label: 'Activos' },
@@ -291,12 +262,7 @@ export default function PresidenteEquipoMisJugadores() {
 
             <button 
               onClick={loadPlayers} 
-              className="btn-premium" 
-              style={{ 
-                width: '42px', height: '42px', padding: 0, 
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '12px' 
-              }}
+              className="btn-premium reload-btn-responsive"
             >
               <FaSyncAlt />
             </button>

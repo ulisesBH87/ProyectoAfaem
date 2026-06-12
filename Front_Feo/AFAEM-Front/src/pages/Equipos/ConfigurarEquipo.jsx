@@ -1517,7 +1517,7 @@ export default function ConfigurarEquipo() {
         Swal.fire('Atención', 'El año de nacimiento no es válido.', 'warning');
         return;
       }
-      
+
       const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
       if (fechaDate > minAgeDate) {
         Swal.fire('Atención', 'El jugador debe tener al menos 5 años de edad.', 'warning');
@@ -2654,19 +2654,19 @@ export default function ConfigurarEquipo() {
                           if (!val) return null;
                           const fechaDate = new Date(val);
                           const hoy = new Date();
-                          
+
                           if (fechaDate.getFullYear() < 1900) {
                             return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
                           }
                           if (fechaDate.getFullYear() > hoy.getFullYear()) {
                             return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                           }
-                          
+
                           const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
                           if (fechaDate > minAgeDate) {
                             return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
                           }
-                          
+
                           return null;
                         })()}
                       </div>
