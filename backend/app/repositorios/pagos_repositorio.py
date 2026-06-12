@@ -191,7 +191,7 @@ def actualizar_comprobante_repo(db, orden_id, ruta):
 
 
 #Validación de pago
-def estatus_pago_repo(db, orden_pago_id, estatus):
+def estatus_pago_repo(db, orden_pago_id, estatus, motivo=None):
     from app.repositorios.equipo_repositorio import crear_equipo_temporal_repo
     orden = (db.query(OrdenPago).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
     if not orden:
@@ -202,6 +202,10 @@ def estatus_pago_repo(db, orden_pago_id, estatus):
     
     #Implementar lógica para el rechazo
     if estatus == EstatusValidacionPago.RECHAZADO.value: #si el pago no es aceptado se cambia el estatus
+        if motivo:
+            solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == orden.SolicitudId).first()
+            if solicitud:
+                solicitud.ObservacionesSolicitud = motivo
         db.commit()
         return orden 
 

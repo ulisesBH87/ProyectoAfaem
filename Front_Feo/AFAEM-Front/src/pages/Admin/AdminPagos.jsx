@@ -111,7 +111,7 @@ const AdminPagos = () => {
       if (estatus === 4) {
         localStorage.setItem(`motivo_rechazo_${id}`, motivoRechazo);
       }
-      await updateEstatusPago(id, estatus);
+      await updateEstatusPago(id, estatus, motivoRechazo);
       Swal.fire({
         title: '¡Actualizado!',
         text: `Pago ${label.toLowerCase()} correctamente.`,

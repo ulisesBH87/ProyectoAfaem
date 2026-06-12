@@ -248,8 +248,8 @@ class PagosServicio:
             result.append(ListaPagos(**data))
         return result
 
-    def estatus_pago(self, orden_pago_id, estatus):
-        orden = pagos_repositorio.estatus_pago_repo(self.db, orden_pago_id, estatus)
+    def estatus_pago(self, orden_pago_id, estatus, motivo=None):
+        orden = pagos_repositorio.estatus_pago_repo(self.db, orden_pago_id, estatus, motivo)
 
         return orden
 

@@ -74,12 +74,12 @@ export const getPagosGenerales = async (forceRefresh = false) => {
 /**
  * ACTUALIZA EL ESTATUS DE UNA ORDEN DE PAGO
  */
-export const updateEstatusPago = async (ordenPagoId, estatus) => {
-
-  // 3 = APROBADO. 4 = RECHAZADO
-  const response = await api.post('/ordenes-pago/estatus-pago', null, {
-    params: { orden_pago_id: ordenPagoId, estatus: estatus }
-  });
+export const updateEstatusPago = async (ordenPagoId, estatus, motivo = null) => {
+  const params = { orden_pago_id: ordenPagoId, estatus };
+  if (motivo) {
+    params.motivo = motivo;
+  }
+  const response = await api.post('/ordenes-pago/estatus-pago', null, { params });
   serviceCache.clear('/ordenes-pago/generales'); // Invalida caché de pagos
   return response.data;
 };
