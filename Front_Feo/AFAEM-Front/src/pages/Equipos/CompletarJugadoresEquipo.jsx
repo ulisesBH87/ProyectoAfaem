@@ -257,6 +257,37 @@ export default function CompletarJugadoresEquipo() {
     initData();
   }, [equipoId]);
 
+  const handleFieldChange = (field, value) => {
+    let cleanValue = value;
+    const nameAndGeoFields = [
+      'nombreJugador', 'apellidoPaterno', 'apellidoMaterno',
+      'nacionalidadJugador', 'paisResidencia', 'dondeVividoExtranjero',
+      'nacionalidadPadre', 'nacionalidadMadre',
+      'nacAbueloPaterno', 'nacAbuelaPaterna', 'nacAbueloMaterno', 'nacAbuelaMaterna',
+      'registroAsociacionExtranjera', 'juegoClubExtranjero'
+    ];
+
+    if (nameAndGeoFields.includes(field)) {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ\s]/gi, '');
+      if (['nombreJugador', 'apellidoPaterno', 'apellidoMaterno'].includes(field)) {
+        cleanValue = cleanValue.slice(0, 30);
+      }
+    } else if (field === 'lugarNacimiento' || field === 'nui') {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '');
+      if (field === 'lugarNacimiento') {
+        cleanValue = cleanValue.slice(0, 30);
+      }
+    } else if (field === 'correo') {
+      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+    } else if (field === 'telefono') {
+      cleanValue = value.replace(/\D/g, '').slice(0, 10);
+    } else if (field === 'numCamiseta') {
+      cleanValue = value.replace(/\D/g, '').slice(0, 3);
+    }
+
+    setExtractedData(prev => ({ ...prev, [field]: cleanValue }));
+  };
+
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
@@ -1547,22 +1578,22 @@ export default function CompletarJugadoresEquipo() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
-                    <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({ ...extractedData, numCamiseta: e.target.value })} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={3} value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
@@ -1575,7 +1606,7 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.nui || ''} onChange={e => setExtractedData({ ...extractedData, nui: e.target.value })} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" value={extractedData.nui || ''} onChange={e => handleFieldChange('nui', e.target.value)} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
 
@@ -1583,7 +1614,7 @@ export default function CompletarJugadoresEquipo() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
                     <input type="text" value={extractedData.curp || ''} onChange={(e) => {
-                      const val = e.target.value.toUpperCase();
+                      const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
                       let sId = extractedData.genero;
                       if (val.length >= 11) {
                         const char = val.charAt(10);
@@ -1635,7 +1666,7 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
@@ -1650,7 +1681,7 @@ export default function CompletarJugadoresEquipo() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                    <input type="email" value={extractedData.correo} onChange={e => setExtractedData({ ...extractedData, correo: e.target.value })} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="email" maxLength={30} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
@@ -1690,7 +1721,7 @@ export default function CompletarJugadoresEquipo() {
                       <input
                         type="tel"
                         value={extractedData.telefono}
-                        onChange={e => setExtractedData({ ...extractedData, telefono: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                        onChange={e => handleFieldChange('telefono', e.target.value)}
                         placeholder="10 dígitos numéricos"
                         style={{
                           padding: '10px',
@@ -1781,12 +1812,12 @@ export default function CompletarJugadoresEquipo() {
                         <EntradaFormulario
                           etiqueta="Nacionalidad del jugador"
                           valor={extractedData.nacionalidadJugador}
-                          alCambiar={e => setExtractedData({ ...extractedData, nacionalidadJugador: e.target.value })}
+                          alCambiar={e => handleFieldChange('nacionalidadJugador', e.target.value)}
                         />
                         <EntradaFormulario
                           etiqueta="País de residencia actual"
                           valor={extractedData.paisResidencia}
-                          alCambiar={e => setExtractedData({ ...extractedData, paisResidencia: e.target.value })}
+                          alCambiar={e => handleFieldChange('paisResidencia', e.target.value)}
                         />
                       </div>
 
@@ -1802,7 +1833,7 @@ export default function CompletarJugadoresEquipo() {
                           <EntradaFormulario
                             etiqueta="¿En qué país?"
                             valor={extractedData.dondeVividoExtranjero}
-                            alCambiar={e => setExtractedData({ ...extractedData, dondeVividoExtranjero: e.target.value })}
+                            alCambiar={e => handleFieldChange('dondeVividoExtranjero', e.target.value)}
                             obligatorio={true}
                           />
                         )}
@@ -1812,34 +1843,34 @@ export default function CompletarJugadoresEquipo() {
                         <EntradaFormulario
                           etiqueta="Nacionalidad del padre"
                           valor={extractedData.nacionalidadPadre}
-                          alCambiar={e => setExtractedData({ ...extractedData, nacionalidadPadre: e.target.value })}
+                          alCambiar={e => handleFieldChange('nacionalidadPadre', e.target.value)}
                         />
                         <EntradaFormulario
                           etiqueta="Nacionalidad de la madre"
                           valor={extractedData.nacionalidadMadre}
-                          alCambiar={e => setExtractedData({ ...extractedData, nacionalidadMadre: e.target.value })}
+                          alCambiar={e => handleFieldChange('nacionalidadMadre', e.target.value)}
                         />
                       </div>
 
                       <EntradaFormulario
                         etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                         valor={extractedData.registroAsociacionExtranjera}
-                        alCambiar={e => setExtractedData({ ...extractedData, registroAsociacionExtranjera: e.target.value })}
+                        alCambiar={e => handleFieldChange('registroAsociacionExtranjera', e.target.value)}
                         filas={2}
                         obligatorio={true}
                       />
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
-                        <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => setExtractedData({ ...extractedData, nacAbueloPaterno: e.target.value })} />
-                        <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => setExtractedData({ ...extractedData, nacAbuelaPaterna: e.target.value })} />
-                        <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => setExtractedData({ ...extractedData, nacAbueloMaterno: e.target.value })} />
-                        <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => setExtractedData({ ...extractedData, nacAbuelaMaterna: e.target.value })} />
+                        <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => handleFieldChange('nacAbueloPaterno', e.target.value)} />
+                        <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => handleFieldChange('nacAbuelaPaterna', e.target.value)} />
+                        <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => handleFieldChange('nacAbueloMaterno', e.target.value)} />
+                        <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => handleFieldChange('nacAbuelaMaterna', e.target.value)} />
                       </div>
 
                       <EntradaFormulario
                         etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                         valor={extractedData.juegoClubExtranjero}
-                        alCambiar={e => setExtractedData({ ...extractedData, juegoClubExtranjero: e.target.value })}
+                        alCambiar={e => handleFieldChange('juegoClubExtranjero', e.target.value)}
                         filas={3}
                         obligatorio={true}
                       />

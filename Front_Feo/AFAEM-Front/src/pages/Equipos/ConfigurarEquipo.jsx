@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
+import { verificarCurp } from '../../services/auth';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
@@ -278,6 +279,9 @@ export default function ConfigurarEquipo() {
     return edad < 18;
   }, [extractedData.fechaNacimiento]);
 
+  const [curpExistente, setCurpExistente] = useState(false);
+  const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+
   // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
   const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
   const [failedPhoto, setFailedPhoto] = useState(null);
@@ -322,8 +326,30 @@ export default function ConfigurarEquipo() {
   };
 
   const handleFieldChange = (field, value) => {
+    let cleanValue = value;
+    const nameAndGeoFields = [
+      'nombreJugador', 'apellidoPaterno', 'apellidoMaterno',
+      'nacionalidadJugador', 'paisResidencia', 'dondeVividoExtranjero',
+      'nacionalidadPadre', 'nacionalidadMadre',
+      'nacAbueloPaterno', 'nacAbuelaPaterna', 'nacAbueloMaterno', 'nacAbuelaMaterna',
+      'registroAsociacionExtranjera', 'juegoClubExtranjero'
+    ];
+
+    if (nameAndGeoFields.includes(field)) {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ\s]/gi, '');
+      if (['nombreJugador', 'apellidoPaterno', 'apellidoMaterno'].includes(field)) {
+        cleanValue = cleanValue.slice(0, 30);
+      }
+    } else if (field === 'lugarNacimiento') {
+      cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
+    } else if (field === 'correo') {
+      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+    } else if (field === 'telefono' || field === 'numCamiseta') {
+      cleanValue = value.replace(/\D/g, '');
+    }
+
     setExtractedData(prev => {
-      const updated = { ...prev, [field]: value };
+      const updated = { ...prev, [field]: cleanValue };
       return updated;
     });
   };
@@ -413,6 +439,28 @@ export default function ConfigurarEquipo() {
     };
     initData();
   }, [equipoId, equipoTemporalId]);
+
+  // Validar si la CURP ya existe en tiempo real
+  useEffect(() => {
+    const curp = (extractedData.curp || '').trim().toUpperCase();
+    if (curp.length === 18) {
+      setIsCheckingCurp(true);
+      const timer = setTimeout(async () => {
+        try {
+          const res = await verificarCurp(curp);
+          setCurpExistente(res.existe);
+        } catch (error) {
+          console.error("Error al verificar CURP:", error);
+          setCurpExistente(false);
+        } finally {
+          setIsCheckingCurp(false);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setCurpExistente(false);
+    }
+  }, [extractedData.curp]);
 
   const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
     if (!ordenId) return;
@@ -1506,6 +1554,11 @@ export default function ConfigurarEquipo() {
       return;
     }
 
+    if (curpExistente) {
+      Swal.fire('Atención', 'Esta CURP ya se encuentra registrada.', 'warning');
+      return;
+    }
+
     // Nota: A diferencia del administrador, para el presidente los archivos (Acta, INE, Foto) son OPCIONALES.
     // Por lo tanto, no se valida su presencia obligatoria en este panel.
 
@@ -2573,15 +2626,15 @@ export default function ConfigurarEquipo() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                     </div>
 
@@ -2622,12 +2675,15 @@ export default function ConfigurarEquipo() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                          CURP<span className="required-star">*</span>
+                          {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}>Validando...</span>}
+                        </label>
                         <input
                           type="text"
                           value={extractedData.curp || ''}
                           onChange={(e) => {
-                            const val = e.target.value.toUpperCase();
+                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
                             let sId = extractedData.genero;
                             if (val.length >= 11) {
                               const char = val.charAt(10);
@@ -2640,8 +2696,19 @@ export default function ConfigurarEquipo() {
                           onBlur={handleBlur}
                           placeholder="ABCD..."
                           maxLength="18"
-                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${curpExistente ? '#ef4444' : '#cbd5e1'}`,
+                            boxShadow: curpExistente ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none',
+                            fontSize: '14px'
+                          }}
                         />
+                        {curpExistente && (
+                          <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                            Esta CURP ya se encuentra registrada.
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2678,7 +2745,7 @@ export default function ConfigurarEquipo() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                        <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
@@ -2700,7 +2767,7 @@ export default function ConfigurarEquipo() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px', width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input type="email" value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
+                        <input type="email" maxLength={30} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
