@@ -701,6 +701,69 @@ export default function CompletarJugadoresEquipo() {
     }
   };
 
+  const esFormularioIncompleto = () => {
+    if (!selectedSeguroId) return true;
+
+    const camposRequeridos = [
+      'nombreJugador',
+      'apellidoPaterno',
+      'apellidoMaterno',
+      'curp',
+      'fechaNacimiento',
+      'lugarNacimiento',
+      'genero',
+      'correo',
+      'telefono',
+      'numCamiseta',
+      'posicion',
+      'nui'
+    ];
+
+    const faltaCampo = camposRequeridos.some(f => {
+      const val = extractedData[f];
+      return val === undefined || val === null || String(val).trim() === '';
+    });
+
+    if (faltaCampo) return true;
+
+    if (!extractedData.curp || extractedData.curp.length !== 18) {
+      return true;
+    }
+
+    // Validar documentos cargados
+    if (!documents.acta) return true;
+    if (esMenorDeEdad) {
+      if (!documents.ineTutor || !documents.identificacionMenor) return true;
+    } else {
+      if (!documents.ine) return true;
+    }
+    if (!documents.foto) return true;
+
+    if (extractedData.esForaneo) {
+      const {
+        nacionalidadJugador, paisResidencia, dondeVividoExtranjero, haVividoExtranjero,
+        nacionalidadPadre, nacionalidadMadre, registroAsociacionExtranjera,
+        nacAbueloPaterno, nacAbuelaPaterna, nacAbueloMaterno, nacAbuelaMaterna,
+        juegoClubExtranjero
+      } = extractedData;
+
+      const basicosForaneo = [
+        nacionalidadJugador, paisResidencia, nacionalidadPadre, nacionalidadMadre,
+        registroAsociacionExtranjera, nacAbueloPaterno, nacAbuelaPaterna,
+        nacAbueloMaterno, nacAbuelaMaterna, juegoClubExtranjero
+      ];
+
+      const foraneoIncompleto = basicosForaneo.some(campo => String(campo || '').trim() === '');
+      if (foraneoIncompleto) return true;
+
+      if (haVividoExtranjero && String(dondeVividoExtranjero || '').trim() === '') {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // PRE-GUARDAR Y DESCARGAR FORMATO
   const handleGuardar = async (e) => {
     if (e) e.preventDefault();
@@ -826,7 +889,7 @@ export default function CompletarJugadoresEquipo() {
     setSubmitting(true);
     Swal.fire({
       title: 'Registrando Jugador',
-      text: 'Consumiendo slot y subiendo documentos al servidor...',
+      text: 'Consumiendo espacio y subiendo documentos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -1896,7 +1959,7 @@ export default function CompletarJugadoresEquipo() {
                   etiqueta={submitting ? "Procesando..." : "Descargar formato y continuar"}
                   icono={<FaSave />}
                   alHacerClick={handleGuardar}
-                  deshabilitado={submitting}
+                  deshabilitado={submitting || esFormularioIncompleto()}
                   estilo={{ minWidth: '300px' }}
                 />
               </div>

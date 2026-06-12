@@ -1515,6 +1515,59 @@ export default function ConfigurarEquipo() {
     }
   };
 
+  const esFormularioIncompleto = () => {
+    if (!selectedSeguroId) return true;
+
+    const camposRequeridos = [
+      'nombreJugador',
+      'apellidoPaterno',
+      'apellidoMaterno',
+      'curp',
+      'fechaNacimiento',
+      'lugarNacimiento',
+      'genero',
+      'correo',
+      'telefono',
+      'numCamiseta',
+      'posicion'
+    ];
+
+    const faltaCampo = camposRequeridos.some(f => {
+      const val = extractedData[f];
+      return val === undefined || val === null || String(val).trim() === '';
+    });
+
+    if (faltaCampo) return true;
+
+    if (!extractedData.curp || extractedData.curp.length !== 18 || curpExistente) {
+      return true;
+    }
+
+    if (extractedData.esForaneo) {
+      const {
+        nacionalidadJugador, paisResidencia, dondeVividoExtranjero, haVividoExtranjero,
+        nacionalidadPadre, nacionalidadMadre, registroAsociacionExtranjera,
+        nacAbueloPaterno, nacAbuelaPaterna, nacAbueloMaterno, nacAbuelaMaterna,
+        juegoClubExtranjero
+      } = extractedData;
+
+      const basicosForaneo = [
+        nacionalidadJugador, paisResidencia, nacionalidadPadre, nacionalidadMadre,
+        registroAsociacionExtranjera, nacAbueloPaterno, nacAbuelaPaterna,
+        nacAbueloMaterno, nacAbuelaMaterna, juegoClubExtranjero
+      ];
+
+      const foraneoIncompleto = basicosForaneo.some(campo => String(campo || '').trim() === '');
+      if (foraneoIncompleto) return true;
+
+      if (haVividoExtranjero && String(dondeVividoExtranjero || '').trim() === '') {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // PRE-GUARDAR Y DESCARGAR FORMATO
   const handleGuardar = async (e) => {
     if (e) e.preventDefault();
@@ -1610,7 +1663,7 @@ export default function ConfigurarEquipo() {
     setSubmitting(true);
     Swal.fire({
       title: 'Registrando Jugador',
-      text: 'Consumiendo slot y subiendo documentos al servidor...',
+      text: 'Consumiendo espacio y subiendo documentos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -3008,7 +3061,7 @@ export default function ConfigurarEquipo() {
                       etiqueta={submitting ? "Procesando..." : "Descargar formato y continuar"}
                       icono={<FaSave />}
                       alHacerClick={handleGuardar}
-                      deshabilitado={submitting}
+                      deshabilitado={submitting || esFormularioIncompleto()}
                       estilo={{ minWidth: '300px' }}
                     />
                   </div>
