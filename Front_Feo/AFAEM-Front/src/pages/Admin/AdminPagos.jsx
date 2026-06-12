@@ -96,7 +96,7 @@ const AdminPagos = () => {
     } else {
       const result = await Swal.fire({
         title: `¿${label} este pago?`,
-        text: `Estás a punto de ${label.toLowerCase()} la orden de pago #${id}.`,
+        text: `Estás a punto de ${label.toLowerCase()} la orden de pago #${id}. Al hacerlo, el presidente podrá subir sus documentos.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: `Sí, ${label.toLowerCase()}`,

@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
 import { API_BASE } from '../../config/config';
-import { parseJwt } from '../../services/auth';
+import { parseJwt, verificarCurp } from '../../services/auth';
 import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 
 import { useRBAC } from '../../hooks/useRBAC';
@@ -239,6 +239,7 @@ function PreRegistroPresidente() {
   const [solicitudActualId, setSolicitudActualId] = useState(null);
   const [mensajeRechazoPago, setMensajeRechazoPago] = useState('');
   const [mensajeRechazoSolicitud, setMensajeRechazoSolicitud] = useState('');
+  const [curpExistente, setCurpExistente] = useState(false);
   const [tieneEstadoBackend, setTieneEstadoBackend] = useState(false);
 
   // PASO 1: Pago y Seguros
@@ -1390,16 +1391,37 @@ function PreRegistroPresidente() {
 
 
 
-  const handleManualOcrChange = (field, value) => {
+  const handleManualOcrChange = async (field, value) => {
     if (field === 'nombre') {
       return;
     }
-    setOcrResults(prev => ({
-      ...prev,
-      [field]: value,
-      actaNacimiento: prev.actaNacimiento || 'Manual',
-      identificacion: prev.identificacion || 'Manual'
-    }));
+
+    if (field === 'curp') {
+      setOcrResults(prev => ({
+        ...prev,
+        [field]: value,
+        actaNacimiento: prev.actaNacimiento || 'Manual',
+        identificacion: prev.identificacion || 'Manual'
+      }));
+
+      if (value.length === 18) {
+        try {
+          const res = await verificarCurp(value);
+          setCurpExistente(res.existe);
+        } catch (error) {
+          console.error("Error al verificar CURP", error);
+        }
+      } else {
+        setCurpExistente(false);
+      }
+    } else {
+      setOcrResults(prev => ({
+        ...prev,
+        [field]: value,
+        actaNacimiento: prev.actaNacimiento || 'Manual',
+        identificacion: prev.identificacion || 'Manual'
+      }));
+    }
   };
 
   const handleLogout = () => {
@@ -1452,7 +1474,7 @@ function PreRegistroPresidente() {
 
       Swal.fire({
         title: 'Subiendo Documentos...',
-        html: 'Enviando archivos al servidor. <b>Por favor espere.</b>',
+        html: 'Enviando archivos. <b>Por favor espere.</b>',
         allowOutsideClick: false,
         didOpen: () => { Swal.showLoading(); }
       });
@@ -2760,7 +2782,7 @@ function PreRegistroPresidente() {
                   </select>
                 </div>
                 <div className="premium-input-group">
-                  <label className="premium-label">Equipo *</label>
+                  <label className="premium-label">Nombre de equipo *</label>
                   <input
                     type="text"
                     placeholder="Nombre del Equipo"
@@ -2770,7 +2792,7 @@ function PreRegistroPresidente() {
                   />
                 </div>
                 <div className="premium-input-group">
-                  <label className="premium-label">Tipo de afiliación *</label>
+                  <label className="premium-label">Tipo de afiliación comprado*</label>
                   <select
                     value={tipoAfiliacion}
                     onChange={(e) => setTipoAfiliacion(e.target.value)}
@@ -2857,6 +2879,11 @@ function PreRegistroPresidente() {
                       disabled={!!user.usuario?.curp}
                       style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: 'rgba(255,255,255,0.05)' } : {}}
                     />
+                    {curpExistente && (
+                      <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
+                        Esta CURP ya está registrada a otra persona.
+                      </div>
+                    )}
                   </div>
                   <div className="premium-input-group">
                     <label className="premium-label">Nacionalidad *</label>
@@ -2913,7 +2940,7 @@ function PreRegistroPresidente() {
                     </select>
                   </div>
                   <div className="premium-input-group">
-                    <label className="premium-label">Teléfono *</label>
+                    <label className="premium-label">Teléfono registrado*</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <select
                         value={codigoPais}
@@ -3160,17 +3187,16 @@ function PreRegistroPresidente() {
         {pasoActual === 4 && (
           <div className="pre-registro-section">
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-              <div style={{ fontSize: '80px', marginBottom: '30px' }}>⏳</div>
               <h2 style={{ color: 'var(--text-main)', fontSize: '28px', fontWeight: '800', marginBottom: '15px' }}>
                 Tu solicitud será aprobada pronto
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto 40px', lineHeight: '1.6' }}>
-                Tus documentos ya fueron enviados correctamente. El administrador está revisando tu solicitud y su aprobación llegará pronto.
+                Tus documentos fueron enviados correctamente. El administrador está revisando tu solicitud y su aprobación llegará pronto.
               </p>
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '25px', display: 'inline-block', textAlign: 'left' }}>
                 <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#34d399', fontWeight: '700' }}>✓ Pago Validado</p>
                 <p style={{ margin: '0 0 10px', fontSize: '14px', color: '#f59e0b', fontWeight: '700' }}>⏳ Solicitud: EN ESPERA</p>
-                <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>○ Acceso al Dashboard: PENDIENTE</p>
+                <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255,255,255,0.3)', fontWeight: '700' }}>○ Acceso: PENDIENTE</p>
               </div>
               <div style={{ marginTop: '40px' }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Puedes cerrar sesión y volver más tarde para revisar tu estado.</p>
