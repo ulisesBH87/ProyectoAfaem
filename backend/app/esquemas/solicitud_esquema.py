@@ -154,3 +154,4 @@ class SolicitudDocumentosResponse(BaseModel):
     Equipo: str
     SolicitudId: int
     Jugadores: List[JugadorConDocumentos]
+    EstatusValidacion: Optional[int] = None

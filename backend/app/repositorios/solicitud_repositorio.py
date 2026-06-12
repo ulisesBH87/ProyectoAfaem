@@ -343,7 +343,8 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
         "Equipo": f"{persona_solicitante.Nombre} {persona_solicitante.PrimerApellido}" if persona_solicitante else "SOLICITANTE DESCONOCIDO",
         "SolicitudId": solicitud_id,
         "Jugadores": resultado,
-        "ObservacionesGuardadas": solicitud.ObservacionesSolicitud
+        "ObservacionesGuardadas": solicitud.ObservacionesSolicitud,
+        "EstatusValidacion": solicitud.EstatusValidacion
     }
 
 def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus_db: int, observaciones: str = None):
