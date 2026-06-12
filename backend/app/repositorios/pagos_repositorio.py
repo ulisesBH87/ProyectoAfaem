@@ -119,7 +119,15 @@ def obtener_pagos_repo(db):
     return db.query(OrdenPago).filter(OrdenPago.EstatusPagoId != EstatusValidacionPago.NOENVIADO).all()
 
 def orden_pago_individual_repo(db, orden_pago_id):
-    orden = (db.query(OrdenPago).options(selectinload(OrdenPago.OrdenPagoDetalleRelacion)).filter(OrdenPago.OrdenPagoId == orden_pago_id).first())
+    orden = (
+        db.query(OrdenPago)
+        .options(
+            selectinload(OrdenPago.OrdenPagoDetalleRelacion),
+            selectinload(OrdenPago.UsuarioPagoRelacion).selectinload(Usuario.PersonaRelacion)
+        )
+        .filter(OrdenPago.OrdenPagoId == orden_pago_id)
+        .first()
+    )
 
     return orden
 """

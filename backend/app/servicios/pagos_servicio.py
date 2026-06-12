@@ -260,7 +260,37 @@ class PagosServicio:
         if not orden:
             raise pagos_excepciones.OrdenNoEncontradaError()
         
-        return orden
+        nombre_completo = ""
+        correo = ""
+        if orden.UsuarioPagoRelacion:
+            correo = orden.UsuarioPagoRelacion.Correo
+            if orden.UsuarioPagoRelacion.PersonaRelacion:
+                p = orden.UsuarioPagoRelacion.PersonaRelacion
+                nombre_completo = f"{p.Nombre or ''} {p.PrimerApellido or ''} {p.SegundoApellido or ''}".strip()
+                nombre_completo = " ".join(nombre_completo.split())
+        
+        return {
+            "OrdenPagoId": orden.OrdenPagoId,
+            "UsuarioId": orden.UsuarioId,
+            "FechaDePago": orden.FechaDePago,
+            "FechaEnvio": orden.FechaEnvio,
+            "RutaVoucher": orden.RutaVoucher,
+            "EstatusPagoId": orden.EstatusPagoId,
+            "TotalPagar": orden.TotalPagar,
+            "Correo": correo,
+            "NombreCompleto": nombre_completo,
+            "OrdenPagoDetalleRelacion": [
+                {
+                    "OrdenPagoDetalleId": d.OrdenPagoDetalleId,
+                    "TipoAfiliacionId": d.TipoAfiliacionId,
+                    "TipoConceptoId": d.TipoConceptoId,
+                    "SeguroId": d.SeguroId,
+                    "Cantidad": d.Cantidad,
+                    "PrecioUnitarioCobrado": d.PrecioUnitarioCobrado,
+                    "Subtotal": d.Subtotal
+                } for d in orden.OrdenPagoDetalleRelacion
+            ]
+        }
     
     def mi_estado_pago(self, usuario_id):
         orden = pagos_repositorio.mi_estado_pago_repo(self.db, usuario_id)
