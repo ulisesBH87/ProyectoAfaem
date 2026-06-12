@@ -128,6 +128,12 @@ export default function DetalleSolicitudModal({
   };
 
   const confirmarCerrar = async () => {
+    const esSolicitudAprobada = datos?.EstatusValidacion === 2;
+    if (esSolicitudAprobada) {
+      alCerrar();
+      return;
+    }
+
     const todosAprobados = Object.keys(validaciones).length > 0 && Object.values(validaciones).every(v => v.estado === 'aprobado');
     if (todosAprobados) {
       await ejecutarAprobacionAutomatica();
@@ -256,6 +262,12 @@ export default function DetalleSolicitudModal({
               <BotonPrimario
                 etiqueta="Finalizar Revisión"
                 alHacerClick={() => {
+                  const esSolicitudAprobada = datos?.EstatusValidacion === 2;
+                  if (esSolicitudAprobada) {
+                    alCerrar();
+                    return;
+                  }
+
                   const todosAprobados = Object.keys(validaciones).length > 0 && Object.values(validaciones).every(v => v.estado === 'aprobado');
                   if (todosAprobados) {
                     ejecutarAprobacionAutomatica();
