@@ -48,12 +48,11 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
     #detalles de la orden de pago (seguros e inscripciones)
     detalles = db.query(OrdenPagoDetalle).filter(OrdenPagoDetalle.OrdenPagoId == orden.OrdenPagoId).all()
 
-    #obtener cantidad de slots pagados
+    #obtener cantidad de slots pagados a traves de los seguros
     for d in detalles:
-        #print("detalle:", d.TipoConceptoId, d.TipoAfiliacionId, d.Cantidad) DEBUG SOLAMENTE
-        if d.TipoConceptoId == ConceptoPagoEnum.INSCRIPCION.value:   #INSCRIPCION
-            # Excluimos la afiliación de presidente de equipo (ID 2) ya que no cuenta como slot de jugador
-            if d.TipoAfiliacionId != 2:
+        if d.TipoConceptoId == 1 and d.SeguroId is not None:   #SEGURO
+            seguro = db.query(Seguro).filter(Seguro.SeguroId == d.SeguroId).first()
+            if seguro and int(seguro.TipoPersonaId or 0) != 2:
                 cantidad_jugadores += d.Cantidad
 
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
@@ -91,7 +90,6 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
 
     #creación de slots
     total_slots_creados = 0
-    slot_presidente_asignado = False
 
     for d in detalles:
         if (
@@ -100,17 +98,17 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
         ):
             seguro = db.query(Seguro).filter(Seguro.SeguroId == d.SeguroId).first()
             es_seguro_presidente = bool(seguro and int(seguro.TipoPersonaId or 0) == 2)
+            if es_seguro_presidente:
+                continue
+
             for _ in range(d.Cantidad):
-                asignar_presidente = es_seguro_presidente and not slot_presidente_asignado and presidente_persona_id is not None
                 slot = EquipoTemporalJugador(
                     EquipoTemporalId=equipo.EquipoTemporalId,
-                    Completo=asignar_presidente,
-                    PersonaId=presidente_persona_id if asignar_presidente else None,
+                    Completo=False,
+                    PersonaId=None,
                     SeguroId=d.SeguroId  #Asignar seguro desde el inicio
                 )
                 db.add(slot)
-                if asignar_presidente:
-                    slot_presidente_asignado = True
                 total_slots_creados += 1
 
     # validación

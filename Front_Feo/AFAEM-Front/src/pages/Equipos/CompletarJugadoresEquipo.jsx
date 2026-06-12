@@ -714,7 +714,7 @@ export default function CompletarJugadoresEquipo() {
       const parts = extractedData.fechaNacimiento.split('-');
       const fechaDate = new Date(extractedData.fechaNacimiento);
       const hoy = new Date();
-      
+
       // Validación estricta para evitar salto de meses (ej. 30 de febrero)
       if (
         isNaN(fechaDate.getTime()) ||
@@ -723,12 +723,12 @@ export default function CompletarJugadoresEquipo() {
         Swal.fire('Atención', 'La fecha ingresada no es válida (revisa el mes o día).', 'warning');
         return;
       }
-      
+
       if (fechaDate.getFullYear() < 1900 || fechaDate.getFullYear() > hoy.getFullYear()) {
         Swal.fire('Atención', 'El año de nacimiento no es válido.', 'warning');
         return;
       }
-      
+
       const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
       if (fechaDate > minAgeDate) {
         Swal.fire('Atención', 'El jugador debe tener al menos 5 años de edad.', 'warning');
@@ -870,7 +870,7 @@ export default function CompletarJugadoresEquipo() {
   const handleAprobarOrdenAmpliacion = async (ordenId, label) => {
     const result = await Swal.fire({
       title: `¿${label}?`,
-      text: `Estás a punto de aprobar la orden de pago #${ordenId}. Se generarán y habilitarán los espacios contratados en el equipo.`,
+      text: `Estás a punto de aprobar la orden de pago. Se generarán y habilitarán los espacios contratados en el equipo.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: `Sí, aprobar`,
@@ -1610,7 +1610,7 @@ export default function CompletarJugadoresEquipo() {
                       const parts = val.split('-');
                       const fechaDate = new Date(val);
                       const hoy = new Date();
-                      
+
                       if (
                         isNaN(fechaDate.getTime()) ||
                         (parts.length === 3 && (fechaDate.getUTCFullYear() !== parseInt(parts[0], 10) || fechaDate.getUTCMonth() + 1 !== parseInt(parts[1], 10) || fechaDate.getUTCDate() !== parseInt(parts[2], 10)))
@@ -1624,12 +1624,12 @@ export default function CompletarJugadoresEquipo() {
                       if (fechaDate.getFullYear() > hoy.getFullYear()) {
                         return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                       }
-                      
+
                       const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
                       if (fechaDate > minAgeDate) {
                         return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
                       }
-                      
+
                       return null;
                     })()}
                   </div>

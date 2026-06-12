@@ -96,7 +96,7 @@ const AdminPagos = () => {
     } else {
       const result = await Swal.fire({
         title: `¿${label} este pago?`,
-        text: `Estás a punto de ${label.toLowerCase()} la orden de pago #${id}.`,
+        text: `Estás a punto de ${label.toLowerCase()} la orden de pago #${id}. Al hacerlo, el presidente podrá subir sus documentos.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: `Sí, ${label.toLowerCase()}`,
@@ -111,7 +111,7 @@ const AdminPagos = () => {
       if (estatus === 4) {
         localStorage.setItem(`motivo_rechazo_${id}`, motivoRechazo);
       }
-      await updateEstatusPago(id, estatus);
+      await updateEstatusPago(id, estatus, motivoRechazo);
       Swal.fire({
         title: '¡Actualizado!',
         text: `Pago ${label.toLowerCase()} correctamente.`,
@@ -522,7 +522,7 @@ const AdminPagos = () => {
                 <h5 style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: '0 0 10px 0' }}>Información de Pago</h5>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                   <div>
-                    <span style={{ color: '#64748b', fontWeight: '600' }}>Usuario:</span> <span style={{ color: '#1e293b' }}>{pagoDetalle.Correo || '—'}</span>
+                    <span style={{ color: '#64748b', fontWeight: '600' }}>Usuario:</span> <span style={{ color: '#1e293b' }}>{pagoDetalle.NombreCompleto ? `${pagoDetalle.NombreCompleto} (${pagoDetalle.Correo})` : (pagoDetalle.Correo || '—')}</span>
                   </div>
                   {pagoDetalle.FechaEnvio && (
                     <div>

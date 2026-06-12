@@ -146,8 +146,8 @@ def mi_estado_pago_equipo(
 #Se usa para que el administrador apruebe o rechace un pago
 # =================================================
 @router.post("/estatus-pago")
-def estatus_pago(orden_pago_id: int, estatus: int, service: PagosServicio = Depends(get_pagos_servicio)):
-    orden = service.estatus_pago(orden_pago_id, estatus)
+def estatus_pago(orden_pago_id: int, estatus: int, motivo: str | None = Query(None), service: PagosServicio = Depends(get_pagos_servicio)):
+    orden = service.estatus_pago(orden_pago_id, estatus, motivo)
 
     return orden
 

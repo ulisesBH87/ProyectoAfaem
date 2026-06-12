@@ -75,6 +75,8 @@ class OrdenPagoIndividual(BaseModel):
     RutaVoucher: str | None = None
     EstatusPagoId: int
     TotalPagar: Decimal
+    Correo: str | None = None
+    NombreCompleto: str | None = None
 
     OrdenPagoDetalleRelacion: list[OrdenPagoDetallesIndividual]
     class Config:

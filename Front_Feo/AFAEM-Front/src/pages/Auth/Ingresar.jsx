@@ -55,7 +55,7 @@ export default function Ingresar() {
         ...data
       };
       localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('email', email); 
+      localStorage.setItem('email', email);
       localStorage.setItem('token_timestamp', Date.now().toString()); // CONTROL DE 5 HORAS
 
       const role = (data?.usuario?.rol || data?.rol || '').toUpperCase();
@@ -110,7 +110,7 @@ export default function Ingresar() {
   return (
     <div className="auth-page">
       <div className="auth-overlay"></div>
-      
+
       <div className="auth-content fade-in-up">
         <div className="glass-dark auth-card-refined">
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -118,21 +118,21 @@ export default function Ingresar() {
             <h1 className="heading-outfit" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px', color: 'white' }}>Inicia Sesión</h1>
             <p className="glass-subtitle" style={{ fontWeight: '500', color: 'rgba(255,255,255,0.7)' }}>Bienvenido a la plataforma AFAEM</p>
           </div>
-          
+
           <form onSubmit={handleSubmit}>
             {!backendOk && (
               <div style={{ background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fef3c7', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', textAlign: 'center' }}>
-                <strong>Servidor no disponible</strong>
-                <div style={{ opacity: 0.8, marginTop: '4px' }}>{backendDiag}</div>
+                <strong>Problemas de conexión</strong>
+                <div style={{ opacity: 0.8, marginTop: '4px' }}>Estamos experimentando errores internos. Por favor, inténtalo de nuevo en unos minutos.</div>
               </div>
             )}
-            
+
             {err && (
               <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fecaca', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', textAlign: 'center', fontWeight: '600' }}>
                 {err}
               </div>
             )}
-            
+
             <div style={{ marginBottom: '24px' }}>
               <label className="auth-label">Correo electrónico</label>
               <input
@@ -145,7 +145,7 @@ export default function Ingresar() {
                 required
               />
             </div>
-            
+
             <div style={{ marginBottom: '20px' }}>
               <label className="auth-label">Contraseña</label>
               <div style={{ position: 'relative' }}>
@@ -161,8 +161,8 @@ export default function Ingresar() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{ 
-                    position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', 
+                  style={{
+                    position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)',
                     background: 'none', border: 'none', cursor: 'pointer', padding: '6px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     zIndex: 10
@@ -170,13 +170,13 @@ export default function Ingresar() {
                 >
                   {showPassword ? (
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                      <line x1="1" y1="1" x2="23" y2="23"/>
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
                   )}
                 </button>
@@ -189,7 +189,7 @@ export default function Ingresar() {
               </div>
               */}
             </div>
-            
+
             <button
               type="submit"
               className="btn-premium"
@@ -199,7 +199,7 @@ export default function Ingresar() {
               {loading ? 'Validando acceso...' : 'Ingresar al sistema'}
             </button>
           </form>
-          
+
           <div style={{ marginTop: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
             ¿No tienes cuenta? <Link to="/registrarse-cuenta" style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Regístrate ahora</Link>
           </div>
