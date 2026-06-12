@@ -142,6 +142,7 @@ class DocumentoInfo(BaseModel):
     Tipo: str
     Url: str
     Estado: str = "entregado"
+    EstadoValidacionId: Optional[int] = None
 
 class JugadorConDocumentos(BaseModel):
     Id: int

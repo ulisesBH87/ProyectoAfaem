@@ -198,72 +198,68 @@ export default function AdminSolicitudes() {
   };
 
 
+  const handleGuardarProgreso = async (id, reporteValidacion) => {
+    try {
+      setLoading(true);
+      await updateSolicitudEstatus(id, 1, JSON.stringify(reporteValidacion));
+      setModalAbierto(false);
+      Swal.fire({
+        title: '¡Progreso guardado!',
+        text: 'Se ha guardado el estado de los documentos.',
+        icon: 'success'
+      }).then(() => loadSolicitudes(true));
+    } catch (error) {
+      Swal.fire('Error', 'No se pudo guardar el progreso.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAprobarSolicitud = async (id, reporteValidacion = null) => {
-    const tieneRechazos = reporteValidacion && Object.values(reporteValidacion).some(v => v.estado === 'rechazado');
-    const tienePendientes = reporteValidacion && Object.values(reporteValidacion).some(v => v.estado === 'pendiente');
+    if (reporteValidacion) {
+      const tieneNoAprobados = Object.values(reporteValidacion).some(v => v.estado !== 'aprobado');
 
-    if (tienePendientes && !tieneRechazos) {
-      const { isConfirmed } = await Swal.fire({
-        title: 'Revisión incompleta',
-        text: 'Para que la solicitud se apruebe, todos los documentos deben aprobarse.',
-        icon: 'warning',
-        showCancelButton: true,
-        cancelButtonText: 'Seguir revisando',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#0b4ea6'
-      });
+      if (tieneNoAprobados) {
+        const { isConfirmed } = await Swal.fire({
+          title: 'Documentos pendientes',
+          text: 'La solicitud solo se aprobará cuando todos los documentos estén aprobados. Existen documentos sin aprobar. ¿Deseas guardar el progreso o continuar revisando documentos?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Guardar progreso',
+          cancelButtonText: 'Seguir revisando documentos',
+          confirmButtonColor: '#0b4ea6',
+          cancelButtonColor: '#94a3b8'
+        });
 
-      if (isConfirmed) {
-        // Save progress without approving
-        try {
-          setLoading(true);
-          // Estatus 1 = Pendiente
-          await updateSolicitudEstatus(id, 1, JSON.stringify(reporteValidacion));
-          setModalAbierto(false);
-          Swal.fire({
-            title: '¡Progreso guardado!',
-            text: 'Se ha guardado el estado de los documentos.',
-            icon: 'success'
-          }).then(() => loadSolicitudes(true));
-        } catch (error) {
-          Swal.fire('Error', 'No se pudo guardar el progreso.', 'error');
-        } finally {
-          setLoading(false);
+        if (isConfirmed) {
+          await handleGuardarProgreso(id, reporteValidacion);
         }
+        return;
       }
-      return;
     }
 
     const { isConfirmed } = await Swal.fire({
-      title: tieneRechazos ? 'Solicitud con Observaciones' : 'Aprobar solicitud',
-      text: tieneRechazos
-        ? "Has rechazado algunos documentos. La solicitud se marcará como 'Revisada con Observaciones' y el usuario deberá corregirlos."
-        : "Al aprobar, el usuario recibirá acceso completo a su panel de AFAEM.",
-      icon: tieneRechazos ? 'warning' : 'question',
+      title: 'Aprobar solicitud',
+      text: 'Al aprobar, el usuario recibirá acceso completo a su panel de AFAEM.',
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: tieneRechazos ? 'Enviar observaciones' : 'Sí, aprobar',
+      confirmButtonText: 'Sí, aprobar',
       cancelButtonText: 'Volver',
       cancelButtonColor: '#94a3b8',
-      confirmButtonColor: tieneRechazos ? '#f59e0b' : '#10b981'
+      confirmButtonColor: '#10b981'
     });
 
     if (isConfirmed) {
       try {
         setLoading(true);
-
-        // El estatus final dependerá de si hubo rechazos
-        // 2 = Aprobado total, 4 = Revisado con observaciones (Docs pendientes)
-        const estatusFinal = tieneRechazos ? 4 : 2;
-
-        await updateSolicitudEstatus(id, estatusFinal, JSON.stringify(reporteValidacion));
-
+        await updateSolicitudEstatus(id, 2, reporteValidacion ? JSON.stringify(reporteValidacion) : null);
         setModalAbierto(false);
         Swal.fire({
           title: '¡Éxito!',
-          text: tieneRechazos ? 'Se han enviado las observaciones al usuario.' : 'La solicitud ha sido aprobada correctamente.',
+          text: 'La solicitud ha sido aprobada correctamente.',
           icon: 'success'
         }).then(() => {
-          loadSolicitudes(true); // Recargar datos sin refrescar toda la página
+          loadSolicitudes(true);
         });
       } catch (error) {
         Swal.fire('Error', 'No se pudo actualizar el estatus de la solicitud.', 'error');
@@ -699,6 +695,7 @@ export default function AdminSolicitudes() {
         datos={datosRevision}
         alAprobar={handleAprobarSolicitud}
         alRechazar={handleRechazarSolicitud}
+        alGuardarProgreso={handleGuardarProgreso}
         cargando={cargandoRevision}
       />
     </div>

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, BotonPrimario, BotonSecundario, Insignia } from '../partials';
 import { FaUser, FaFileAlt, FaEye, FaCheck, FaTimes, FaInfoCircle, FaChevronRight } from 'react-icons/fa';
 import Loader from '../Loader';
+import Swal from 'sweetalert2';
 
 /**
  * CENTRO DE REVISIÓN DE DOCUMENTOS AFAEM
@@ -13,6 +14,7 @@ export default function DetalleSolicitudModal({
   datos,
   alAprobar,
   alRechazar,
+  alGuardarProgreso,
   cargando = false
 }) {
   const [documentoActivo, setDocumentoActivo] = useState(null);
@@ -20,6 +22,7 @@ export default function DetalleSolicitudModal({
   const [rechazandoId, setRechazandoId] = useState(null); // ID del doc que se está rechazando
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [motivoTextoLibre, setMotivoTextoLibre] = useState('');
+  const validacionesInicialesRef = useRef({});
 
   // Motivos predefinidos para el dropdown
   const motivosComunes = [
@@ -53,14 +56,35 @@ export default function DetalleSolicitudModal({
       datos.Jugadores.forEach(j => {
         j.Documentos.forEach(d => {
           const key = `${j.Id}-${d.Tipo}`;
+          
+          let dbEstado = 'pendiente';
+          if (d.EstadoValidacionId === 2) {
+            dbEstado = 'aprobado';
+          } else if (d.EstadoValidacionId === 3) {
+            dbEstado = 'rechazado';
+          }
+
           if (guardadas && guardadas[key]) {
-            inicial[key] = guardadas[key];
+            const finalEstado = (d.EstadoValidacionId === 2 || d.EstadoValidacionId === 3)
+              ? dbEstado
+              : (guardadas[key].estado || dbEstado);
+
+            inicial[key] = {
+              estado: finalEstado,
+              motivo: guardadas[key].motivo || '',
+              detalle: guardadas[key].detalle || ''
+            };
           } else {
-            inicial[key] = { estado: 'pendiente', motivo: '', detalle: '' };
+            inicial[key] = {
+              estado: dbEstado,
+              motivo: '',
+              detalle: ''
+            };
           }
         });
       });
       setValidaciones(inicial);
+      validacionesInicialesRef.current = JSON.parse(JSON.stringify(inicial));
     }
   }, [datos]);
 
@@ -77,8 +101,38 @@ export default function DetalleSolicitudModal({
     if (estado === 'rechazado') setRechazandoId(null);
   };
 
-  const confirmarCerrar = () => {
-    alCerrar();
+  const hayCambiosSinGuardar = () => {
+    const inicial = validacionesInicialesRef.current;
+    return Object.keys(validaciones).some(key => {
+      const act = validaciones[key];
+      const ini = inicial[key] || { estado: 'pendiente', motivo: '', detalle: '' };
+      return act.estado !== ini.estado || act.motivo !== ini.motivo || act.detalle !== ini.detalle;
+    });
+  };
+
+  const confirmarCerrar = async () => {
+    if (hayCambiosSinGuardar()) {
+      const resultado = await Swal.fire({
+        title: 'Cambios sin guardar',
+        text: 'Tienes cambios sin guardar.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Guardar progreso',
+        cancelButtonText: 'Salir sin guardar',
+        confirmButtonColor: '#0b4ea6',
+        cancelButtonColor: '#ef4444'
+      });
+
+      if (resultado.isConfirmed) {
+        if (alGuardarProgreso) {
+          await alGuardarProgreso(SolicitudId, validaciones);
+        }
+      } else if (resultado.dismiss === Swal.DismissReason.cancel) {
+        alCerrar();
+      }
+    } else {
+      alCerrar();
+    }
   };
 
   const totalDocs = Object.keys(validaciones).length;
@@ -173,7 +227,7 @@ export default function DetalleSolicitudModal({
             </div>
             <div className="footer-buttons" style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
               <BotonSecundario
-                etiqueta="Cerrar"
+                etiqueta="Cancelar"
                 alHacerClick={confirmarCerrar}
               />
               <BotonPrimario
