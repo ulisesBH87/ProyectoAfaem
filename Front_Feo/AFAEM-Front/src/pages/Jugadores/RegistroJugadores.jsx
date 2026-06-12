@@ -947,6 +947,24 @@ export default function RegistroJugadores() {
         effectiveTeamId,
         isPublicFlow ? { tokenIdentificador, tokenSecreto } : null
       );
+
+      const getSeguroTipoPersonaId = (seguro) => Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
+      const segurosPresidenteIds = new Set(
+        (catalogsData.seguros || [])
+          .filter(seguro => {
+            const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+            const tipoPersonaId = getSeguroTipoPersonaId(seguro);
+            return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+          })
+          .map(seguro => String(seguro.id))
+      );
+
+      if (slotsResponse && slotsResponse.seguros) {
+        slotsResponse.seguros = slotsResponse.seguros.filter(
+          s => !segurosPresidenteIds.has(String(s.seguro_id))
+        );
+      }
+
       setSlotsData(slotsResponse);
 
       const paidPlayers = parseInt(slotsResponse.cantidad_jugadores_pagados ?? slotsResponse.total_slots ?? 1, 10) || 1;
@@ -2736,7 +2754,7 @@ export default function RegistroJugadores() {
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
                           <input
                             type="email"
-                            maxLength={30}
+                            maxLength={60}
                             value={currentDatos.correo}
                             onChange={e => {
                               handleFieldChange('correo', e.target.value);

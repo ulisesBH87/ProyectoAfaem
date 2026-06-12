@@ -29,6 +29,7 @@ class EquipoResponse(BaseModel):
     RutaLogo: Optional[str] = None
     SolicitudId: Optional[int] = None
     SlotsComprados: Optional[int] = 0
+    PresidenteNombreCompleto: Optional[str] = None
 
     class Config:
         from_attributes = True
