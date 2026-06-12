@@ -41,10 +41,23 @@ export default function DetalleSolicitudModal({
 
       // Inicializar estados de validación si no existen
       const inicial = {};
+      let guardadas = null;
+      if (datos.ObservacionesGuardadas) {
+        try {
+          guardadas = JSON.parse(datos.ObservacionesGuardadas);
+        } catch (e) {
+          console.warn("Error parsing ObservacionesGuardadas", e);
+        }
+      }
+
       datos.Jugadores.forEach(j => {
         j.Documentos.forEach(d => {
           const key = `${j.Id}-${d.Tipo}`;
-          inicial[key] = { estado: 'pendiente', motivo: '', detalle: '' };
+          if (guardadas && guardadas[key]) {
+            inicial[key] = guardadas[key];
+          } else {
+            inicial[key] = { estado: 'pendiente', motivo: '', detalle: '' };
+          }
         });
       });
       setValidaciones(inicial);
@@ -290,7 +303,7 @@ export default function DetalleSolicitudModal({
                               <div className="card-buttons" style={{ display: 'flex', gap: '6px', width: '100%' }}>
                                 <button
                                   type="button"
-                                  onClick={() => handleValidarDoc(jugador.Id, doc.Tipo, 'aprobado')}
+                                  onClick={() => handleValidarDoc(jugador.Id, doc.Tipo, val.estado === 'aprobado' ? 'pendiente' : 'aprobado')}
                                   style={{
                                     flex: 1,
                                     padding: '7px 10px',
@@ -309,14 +322,18 @@ export default function DetalleSolicitudModal({
                                   onMouseOver={(e) => e.currentTarget.style.filter = 'brightness(0.95)'}
                                   onMouseOut={(e) => e.currentTarget.style.filter = 'none'}
                                 >
-                                  {val.estado === 'aprobado' ? 'Aprobado' : 'Aprobar'}
+                                  {val.estado === 'aprobado' ? 'Desaprobar' : 'Aprobar'}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setRechazandoId(key);
-                                    setMotivoRechazo(val.motivo || '');
-                                    setMotivoTextoLibre(val.detalle || '');
+                                    if (val.estado === 'rechazado') {
+                                      handleValidarDoc(jugador.Id, doc.Tipo, 'pendiente');
+                                    } else {
+                                      setRechazandoId(key);
+                                      setMotivoRechazo(val.motivo || '');
+                                      setMotivoTextoLibre(val.detalle || '');
+                                    }
                                   }}
                                   style={{
                                     flex: 1,

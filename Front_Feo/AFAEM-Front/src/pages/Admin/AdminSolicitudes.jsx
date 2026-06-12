@@ -199,8 +199,40 @@ export default function AdminSolicitudes() {
 
 
   const handleAprobarSolicitud = async (id, reporteValidacion = null) => {
-    // Si hay reporte, verificamos si hay algún rechazo
     const tieneRechazos = reporteValidacion && Object.values(reporteValidacion).some(v => v.estado === 'rechazado');
+    const tienePendientes = reporteValidacion && Object.values(reporteValidacion).some(v => v.estado === 'pendiente');
+
+    if (tienePendientes && !tieneRechazos) {
+      const { isConfirmed } = await Swal.fire({
+        title: 'Revisión incompleta',
+        text: 'Para que la solicitud se apruebe, todos los documentos deben aprobarse.',
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonText: 'Seguir revisando',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0b4ea6'
+      });
+
+      if (isConfirmed) {
+        // Save progress without approving
+        try {
+          setLoading(true);
+          // Estatus 1 = Pendiente
+          await updateSolicitudEstatus(id, 1, JSON.stringify(reporteValidacion));
+          setModalAbierto(false);
+          Swal.fire({
+            title: '¡Progreso guardado!',
+            text: 'Se ha guardado el estado de los documentos.',
+            icon: 'success'
+          }).then(() => loadSolicitudes(true));
+        } catch (error) {
+          Swal.fire('Error', 'No se pudo guardar el progreso.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+      return;
+    }
 
     const { isConfirmed } = await Swal.fire({
       title: tieneRechazos ? 'Solicitud con Observaciones' : 'Aprobar solicitud',
