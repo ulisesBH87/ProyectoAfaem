@@ -415,7 +415,13 @@ function PreRegistroPresidente() {
             initAsignacion[seg.id] = 0;
           }
         });
-        setAsignacionSeguros(initAsignacion);
+        setAsignacionSeguros(prev => {
+          const hasLoadedData = Object.values(prev).some(val => Number(val) > 0);
+          if (hasLoadedData) {
+            return { ...initAsignacion, ...prev };
+          }
+          return initAsignacion;
+        });
       } catch (err) {
         console.warn('No se pudo cargar seguros:', err);
         setCatalogoSeguros([]);
@@ -494,13 +500,14 @@ function PreRegistroPresidente() {
   }, []);
 
   useEffect(() => {
+    if (ordenPendienteId) return;
     if (catalogoSeguros && catalogoSeguros.length > 0 && segurosPresidente.length > 0) {
       const selectedPresSeguro = segurosPresidente.find(seg => Number(asignacionSeguros[seg.id] || 0) > 0);
       if (selectedPresSeguro) {
         setTipoAfiliacion(selectedPresSeguro.nombre.toUpperCase().trim());
       }
     }
-  }, [asignacionSeguros, catalogoSeguros, segurosPresidente]);
+  }, [asignacionSeguros, catalogoSeguros, segurosPresidente, ordenPendienteId]);
 
   /* ─── Catálogos para Selectores ─── */
   const CATALOGO_ROLES = [
@@ -1544,6 +1551,9 @@ function PreRegistroPresidente() {
         const telLimpio = (ocrResults.telefono || '').replace(/\D/g, '');
         if (telLimpio) {
           queryParams.append('telefono', codigoPais + telLimpio);
+        }
+        if (ocrResults.nacionalidad) {
+          queryParams.append('lugar_nacimiento', ocrResults.nacionalidad.trim());
         }
 
         const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?${queryParams.toString()}`, {

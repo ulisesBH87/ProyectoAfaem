@@ -1432,13 +1432,12 @@ export default function ConfigurarEquipo() {
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
       safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
       safeSetField(form, 'Asociación', 'AFAEM');
-      safeSetField(form, 'fill_24', 'AFAEM');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(selectedSeguroId));
       if (seguroSel?.nombre) {
         try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
-        try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
+        try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
       safeSetField(form, 'Liga', (equipo?.Liga || '').split('(')[0].trim());
@@ -1614,6 +1613,21 @@ export default function ConfigurarEquipo() {
 
     // Nota: A diferencia del administrador, para el presidente los archivos (Acta, INE, Foto) son OPCIONALES.
     // Por lo tanto, no se valida su presencia obligatoria en este panel.
+    // Validar documentos obligatorios
+    const missingDocs = [];
+    if (!documents.acta) missingDocs.push('Acta de Nacimiento');
+    if (!documents.foto) missingDocs.push('Fotografía del Jugador');
+    if (esMenorDeEdad) {
+      if (!documents.ineTutor) missingDocs.push('INE de Padre o Tutor');
+      if (!documents.identificacionMenor) missingDocs.push('Identificación de Menor');
+    } else {
+      if (!documents.ine) missingDocs.push('Identificación Oficial (INE)');
+    }
+
+    if (missingDocs.length > 0) {
+      Swal.fire('Atención', `Es necesario cargar los siguientes documentos obligatorios: ${missingDocs.join(', ')}.`, 'warning');
+      return;
+    }
 
     if (extractedData.fechaNacimiento) {
       const fechaDate = new Date(extractedData.fechaNacimiento);
@@ -1769,7 +1783,7 @@ export default function ConfigurarEquipo() {
       <style>{hoverStyles}</style>
 
       {/* HEADER */}
-      <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <div className="config-page-header">
         <button
           onClick={() => {
             const tieneDatos = Object.values(documents).some(d => d !== null) || extractedData.nombreJugador;
@@ -1807,46 +1821,39 @@ export default function ConfigurarEquipo() {
 
       {/* WIZARD STEPS */}
       {(!equipoId || !equipoTemporalId) && isAdmin && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '30px',
-          marginBottom: '35px',
-          background: '#f8fafc',
-          padding: '15px 25px',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          maxWidth: '1000px',
-          margin: '0 auto 30px auto'
-        }}>
-          {steps.map((s, idx) => {
-            const isActive = activeStep === s.step;
-            const isDone = activeStep > s.step;
-            return (
-              <React.Fragment key={s.step}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: isActive || isDone ? 1 : 0.5 }}>
-                  <StepBadge number={idx + 1} isActive={isActive} isDone={isDone} />
-                  <span style={{
-                    fontWeight: isActive ? '800' : '600',
-                    color: isActive ? '#0b4ea6' : '#64748b',
-                    fontSize: '14px'
-                  }}>
-                    {s.label}
-                  </span>
-                </div>
-                {idx < steps.length - 1 && (
-                  <div style={{
-                    height: '2px',
-                    width: '40px',
-                    backgroundColor: isDone ? '#10b981' : '#e2e8f0',
-                    transition: 'all 0.3s'
-                  }} />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
+        <>
+          <div className="wizard-steps-container">
+            {steps.map((s, idx) => {
+              const isActive = activeStep === s.step;
+              const isDone = activeStep > s.step;
+              return (
+                <React.Fragment key={s.step}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: isActive || isDone ? 1 : 0.5 }}>
+                    <StepBadge number={idx + 1} isActive={isActive} isDone={isDone} />
+                    <span style={{
+                      fontWeight: isActive ? '800' : '600',
+                      color: isActive ? '#0b4ea6' : '#64748b',
+                      fontSize: '14px'
+                    }}>
+                      {s.label}
+                    </span>
+                  </div>
+                  {idx < steps.length - 1 && (
+                    <div style={{
+                      height: '2px',
+                      width: '40px',
+                      backgroundColor: isDone ? '#10b981' : '#e2e8f0',
+                      transition: 'all 0.3s'
+                    }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+          <div className="mobile-step-indicator">
+            Paso {activeStep + 1} de {steps.length}: {steps[activeStep]?.label}
+          </div>
+        </>
       )}
 
       {/* PASO 0: SELECTOR DE PRESIDENTE */}
@@ -2285,20 +2292,7 @@ export default function ConfigurarEquipo() {
         <>
           {/* DETALLES DEL EQUIPO */}
           {equipo && (
-            <div className="premium-card fade-in" style={{
-              maxWidth: '1000px',
-              margin: '0 auto 30px auto',
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              color: 'white',
-              borderRadius: '20px',
-              padding: '25px 35px',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '20px'
-            }}>
+            <div className="team-selected-header-card">
               <div>
                 <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
                 <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>🛡️ {equipo.NombreEquipo}</h1>
@@ -2309,7 +2303,7 @@ export default function ConfigurarEquipo() {
                 </div>
               </div>
 
-              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+              <div className="slots-counter-badge">
                 <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Cupos Disponibles</span>
                 <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
                   {slotsData?.slots_disponibles || 0} cupo(s)
@@ -2370,7 +2364,7 @@ export default function ConfigurarEquipo() {
                     <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
                       Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                    <div className="insurance-grid">
                       {slotsData?.seguros_disponibles?.map((seg) => {
                         const matchedSeguro = catalogs?.seguros?.find(s => s.id === seg.SeguroId);
                         const isSelected = String(selectedSeguroId) === String(seg.SeguroId);
@@ -2378,27 +2372,23 @@ export default function ConfigurarEquipo() {
                           <div
                             key={`seguro-card-${seg.SeguroId}`}
                             onClick={() => setSelectedSeguroId(String(seg.SeguroId))}
+                            className="insurance-card-custom"
                             style={{
-                              padding: '16px',
-                              borderRadius: '12px',
                               border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                              backgroundColor: isSelected ? '#eff6ff' : 'white',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '6px'
+                              backgroundColor: isSelected ? '#eff6ff' : 'white'
                             }}
                           >
-                            <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
-                              🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
-                            </span>
-                            {matchedSeguro?.precio !== undefined && (
-                              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
-                                Precio: ${matchedSeguro.precio} MXN
+                            <div className="insurance-info-wrapper">
+                              <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                                🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
                               </span>
-                            )}
-                            <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                              {matchedSeguro?.precio !== undefined && (
+                                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                                  Precio: ${matchedSeguro.precio} MXN
+                                </span>
+                              )}
+                            </div>
+                            <div className="insurance-badge-wrapper" style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
                               {seg.Cantidad} disponibles
                             </div>
                           </div>
@@ -2414,11 +2404,11 @@ export default function ConfigurarEquipo() {
                 <section className="fade-in" style={{ marginBottom: '45px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                     <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación (Opcional)</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
                   </div>
 
                   <div style={{
-                    background: '#f0f9ff',
+                    background: '#d5eeffff',
                     border: '1px solid #bae6fd',
                     borderRadius: '12px',
                     padding: '12px 18px',
@@ -2434,24 +2424,24 @@ export default function ConfigurarEquipo() {
                     Puedes subir los documentos ahora para auto-llenar los campos del formulario
                   </div>
 
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: '20px'
-                  }}>
+                  <div className="document-upload-grid">
                     {documentCards.map((doc) => (
                       <div
                         key={doc.key}
-                        className="document-card"
+                        className="document-card-custom"
                         style={{
-                          backgroundColor: 'white',
-                          borderRadius: '20px',
                           border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                          padding: '15px',
-                          textAlign: 'center',
-                          transition: 'all 0.3s',
+                          backgroundImage: (documents[doc.key] && documents[doc.key].type !== 'application/pdf' && previews[doc.key]) ? `linear-gradient(rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.8)), url(${previews[doc.key]})` : 'none',
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          cursor: 'pointer',
                           position: 'relative',
-                          overflow: 'hidden'
+                          color: documents[doc.key] ? '#ffffff' : 'inherit'
+                        }}
+                        onClick={() => {
+                          if (!documents[doc.key]) {
+                            document.getElementById(`file-${doc.key}`).click();
+                          }
                         }}
                       >
                         {/* Indicador de Menor para tutor/credencial */}
@@ -2459,124 +2449,91 @@ export default function ConfigurarEquipo() {
                           <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                         )}
 
-                        <div style={{
-                          height: '140px',
-                          width: '100%',
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '12px',
-                          marginBottom: '10px',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid #f1f5f9'
-                        }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            handleFileUpload(doc.key, e.dataTransfer.files[0]);
-                          }}
-                        >
-                          {previews[doc.key] ? (
-                            <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                              {documents[doc.key]?.type === 'application/pdf' ? (
-                                <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                  <FaFilePdf />
-                                  <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
-                                </div>
+                        <div className="doc-card-body-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                          <div className="doc-info-wrapper" style={{ width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                              {!documents[doc.key] ? (
+                                <FaUpload style={{ color: '#3b82f6', flexShrink: 0 }} />
+                              ) : documents[doc.key].type === 'application/pdf' ? (
+                                <FaFilePdf style={{ color: '#ef4444', flexShrink: 0 }} />
                               ) : (
-                                <img
-                                  src={previews[doc.key]}
-                                  alt="Preview"
-                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
+                                <span style={{ color: '#10b981', flexShrink: 0 }}>📷</span>
                               )}
+                              <h4 className="doc-title-text" style={{ fontSize: '13px', fontWeight: '800', margin: 0, color: documents[doc.key] ? '#ffffff' : '#1e293b' }}>
+                                {doc.title}
+                              </h4>
+                            </div>
+                            <p className="doc-subtitle-text" style={{ margin: '0 0 6px', fontSize: '10px', color: documents[doc.key] ? '#cbd5e1' : '#64748b', lineHeight: 1.4 }}>
+                              {doc.subtitle}
+                            </p>
+                          </div>
 
-                              {/* OVERLAY ACTIONS */}
-                              <div className="overlay-actions" style={{
-                                position: 'absolute',
-                                top: 0, left: 0, right: 0, bottom: 0,
-                                backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                                display: 'flex',
+                          <div className="doc-status-wrapper" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                            {documents[doc.key] ? (
+                              <>
+                                <div style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '4px 10px',
+                                  borderRadius: '20px',
+                                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                  color: '#34d399',
+                                  fontSize: '10px',
+                                  fontWeight: '800'
+                                }}>
+                                  <FaCheckCircle /> Listo
+                                </div>
+                                <div className="doc-actions-overlay" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const isPdf = documents[doc.key]?.type === 'application/pdf';
+                                      setPreviewDoc({
+                                        open: true,
+                                        url: previews[doc.key],
+                                        type: isPdf ? 'pdf' : 'image',
+                                        title: doc.title
+                                      });
+                                    }}
+                                    className="doc-action-btn zoom"
+                                    title="Ver previsualización"
+                                  >
+                                    <FaSearchPlus />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      document.getElementById(`file-${doc.key}`).click();
+                                    }}
+                                    className="doc-action-btn change"
+                                    title="Cambiar archivo"
+                                  >
+                                    <FaSyncAlt />
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <div style={{
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '12px',
-                                opacity: 0,
-                                transition: 'opacity 0.2s ease',
-                                backdropFilter: 'blur(2px)'
+                                gap: '6px',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                backgroundColor: '#f1f5f9',
+                                color: '#64748b',
+                                fontSize: '10px',
+                                fontWeight: '800'
                               }}>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const isPdf = documents[doc.key]?.type === 'application/pdf';
-                                    setPreviewDoc({
-                                      open: true,
-                                      url: previews[doc.key],
-                                      type: isPdf ? 'pdf' : 'image',
-                                      title: doc.title
-                                    });
-                                  }}
-                                  className="btn-zoom"
-                                  style={{
-                                    width: '36px', height: '36px', borderRadius: '50%',
-                                    backgroundColor: '#fff', color: '#1e293b', border: 'none',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                                  }}
-                                >
-                                  <FaSearchPlus />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    document.getElementById(`file-${doc.key}`).click();
-                                  }}
-                                  className="btn-change"
-                                  style={{
-                                    width: '36px', height: '36px', borderRadius: '50%',
-                                    backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
-                                  }}
-                                >
-                                  <FaSyncAlt />
-                                </button>
+                                Pendiente
                               </div>
-                            </div>
-                          ) : (
-                            /* ESTADO VACÍO */
-                            <div
-                              onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                              style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
-                            >
-                              <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                              <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
-                            </div>
-                          )}
-                        </div>
-
-                        <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                        <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
-                        <div style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '4px 12px',
-                          borderRadius: '20px',
-                          backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9',
-                          color: documents[doc.key] ? '#166534' : '#64748b',
-                          fontSize: '10px',
-                          fontWeight: '800'
-                        }}>
-                          {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                            )}
+                          </div>
                         </div>
 
                         {/* Botón de validación fallida y bypass para fotografía */}
                         {doc.key === 'foto' && !documents.foto && failedPhoto && (
-                          <div style={{ marginTop: '8px' }}>
+                          <div style={{ marginTop: '8px', width: '100%' }} onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={forceLoadFailedPhoto}
@@ -2674,9 +2631,9 @@ export default function ConfigurarEquipo() {
                   )}
 
                   {/* CAMPOS DEL FORMULARIO */}
-                  <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+                  <div className="dashboard-card" style={{ border: '1px solid #e2e8f0', marginBottom: '30px' }}>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
+                    <div className="form-inputs-grid-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
                         <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -2691,7 +2648,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
+                    <div className="form-inputs-grid-2">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                         <input
@@ -2765,7 +2722,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
+                    <div className="form-inputs-grid-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
                         <input
@@ -2817,7 +2774,7 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px', width: '100%' }}>
+                    <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
                         <input type="email" maxLength={30} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
@@ -2918,7 +2875,9 @@ export default function ConfigurarEquipo() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            flex: '1 1 auto',
+                            justifyContent: 'center'
                           }}
                         >
                           🇲🇽 Mexicano
@@ -2943,7 +2902,9 @@ export default function ConfigurarEquipo() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            flex: '1 1 auto',
+                            justifyContent: 'center'
                           }}
                         >
                           🌎 Extranjero
@@ -2952,7 +2913,7 @@ export default function ConfigurarEquipo() {
                     </div>
 
                     {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                    <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
+                    <div className="international-info-card">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
                         <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
                           <FaGlobeAmericas />
@@ -2962,7 +2923,7 @@ export default function ConfigurarEquipo() {
 
                       {extractedData.esForaneo ? (
                         <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                          <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del jugador"
                               valor={extractedData.nacionalidadJugador}
@@ -2977,7 +2938,7 @@ export default function ConfigurarEquipo() {
                             />
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
+                          <div className="form-inputs-grid-2" style={{ alignItems: 'end', width: '100%' }}>
                             <EntradaSeleccion
                               etiqueta="¿El jugador ha vivido en el extranjero?"
                               valor={extractedData.haVividoExtranjero ? '1' : '0'}
@@ -3000,7 +2961,7 @@ export default function ConfigurarEquipo() {
                             )}
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                          <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                             <EntradaFormulario
                               etiqueta="Nacionalidad del padre"
                               valor={extractedData.nacionalidadPadre}
@@ -3024,7 +2985,7 @@ export default function ConfigurarEquipo() {
                             obligatorio={true}
                           />
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
                             <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
                             <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />
@@ -3043,7 +3004,7 @@ export default function ConfigurarEquipo() {
                       ) : (
                         <div style={{ textAlign: 'center', padding: '20px' }}>
                           <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                            Si el jugador es extranjero, habilite esta option para completar los antecedentes internacionales.
+                            Si el jugador es extranjero, habilite esta opción para completar los antecedentes internacionales.
                           </p>
                         </div>
                       )}
@@ -3051,11 +3012,11 @@ export default function ConfigurarEquipo() {
                   </div>
 
                   {/* ACCIONES FINALES */}
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+                  <div className="form-actions-wrapper">
                     <BotonSecundario
                       etiqueta="Cancelar y volver"
                       alHacerClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos')}
-                      estilo={{ minWidth: '200px' }}
+                      clasesPersonalizadas="w-100-mobile"
                     />
                     <BotonPrimario
                       etiqueta={submitting ? "Procesando..." : "Descargar formato y continuar"}
