@@ -2173,12 +2173,15 @@ function PreRegistroPresidente() {
                     <div className="input-group" style={{ flexDirection: 'column', gap: '6px' }}>
                       <label className="input-label" style={{ textAlign: 'center', fontSize: '13px' }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength="2"
                         className="input-number"
                         value={numPersonas}
                         onChange={(e) => {
-                          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                          setNumPersonas(val);
+                          const val = e.target.value.replace(/\D/g, '');
+                          setNumPersonas(val === '' ? '' : parseInt(val, 10));
                           setError(null);
                         }}
                         style={{ marginTop: '3px' }}
@@ -2242,13 +2245,15 @@ function PreRegistroPresidente() {
 
                                     {/* Input directo en la tarjeta */}
                                     <input
-                                      type="number"
-                                      min="0"
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      maxLength="2"
                                       className={`insurance-input ${totalAsignados > segurosRequeridos && cantAsignada > 0 ? 'error-state' : ''}`}
                                       value={asignacionSeguros[seg.id] ?? ''}
                                       onChange={(e) => {
-                                        const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
-                                        setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val }));
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
                                         setError(null);
                                       }}
                                     />
@@ -3237,6 +3242,8 @@ function PreRegistroPresidente() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
                 background: 'linear-gradient(90deg, #1e293b, #0f172a)'
               }}>
                 <div>
@@ -3257,7 +3264,7 @@ function PreRegistroPresidente() {
 
               {/* Content */}
               <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
@@ -3279,7 +3286,7 @@ function PreRegistroPresidente() {
                       <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
                         Detalles de la Póliza
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
                           <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
                           <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
@@ -3325,8 +3332,8 @@ function PreRegistroPresidente() {
                     <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
                       Montos de Cobertura
                     </h4>
-                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                         <thead>
                           <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                             <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
@@ -3355,6 +3362,8 @@ function PreRegistroPresidente() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '20px',
                 borderBottomLeftRadius: '24px',
                 borderBottomRightRadius: '24px'
               }}>
@@ -3364,7 +3373,7 @@ function PreRegistroPresidente() {
                       Este seguro se asignará a tu cuenta de Presidente de Equipo.
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600' }}>
                         Selecciona la cantidad:
                       </span>
@@ -3375,10 +3384,15 @@ function PreRegistroPresidente() {
                           style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(255,255,255,0.06)', color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >-</button>
                         <input
-                          type="number"
-                          min="0"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength="2"
                           value={cantidadModal}
-                          onChange={(e) => setCantidadModal(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setCantidadModal(val === '' ? 0 : parseInt(val, 10));
+                          }}
                           style={{ width: '60px', border: 'none', background: 'transparent', color: '#ffffff', textAlign: 'center', fontWeight: '900', fontSize: '16px' }}
                         />
                         <button
@@ -3439,7 +3453,7 @@ function PreRegistroPresidente() {
                       transition: 'all 0.2s'
                     }}
                   >
-                    {esPresidente ? 'Seleccionar Seguro ✓' : 'Confirmar Cantidad ✓'}
+                    {esPresidente ? 'Seleccionar Seguro' : 'Confirmar Cantidad'}
                   </button>
                 </div>
               </div>
