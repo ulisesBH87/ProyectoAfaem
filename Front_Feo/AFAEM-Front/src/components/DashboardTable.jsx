@@ -14,7 +14,9 @@ const DashboardTable = ({
   currentPage = 1,
   onPageChange = null
 }) => {
-  if (isLoading) {
+  const showFullLoader = isLoading && data.length === 0;
+
+  if (showFullLoader) {
     return (
       <div className="table-container" style={{ minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Loader inline text="Cargando información de la tabla..." />
@@ -47,13 +49,31 @@ const DashboardTable = ({
   }
 
   return (
-    <div className="table-container">
-      <div className="table-wrapper">
+    <div className="table-container" style={{ position: 'relative' }}>
+      {isLoading && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(255, 255, 255, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 5,
+          borderRadius: '12px',
+          backdropFilter: 'blur(2px)'
+        }}>
+          <Loader inline text="Actualizando información..." />
+        </div>
+      )}
+      <div className="table-wrapper" style={{ opacity: isLoading ? 0.6 : 1, transition: 'opacity 0.25s ease' }}>
         <table className="dashboard-table">
           <thead>
             <tr>
               {columns.map((col, idx) => (
-                <th key={idx} style={col.width ? { width: col.width } : {}}>{col.label}</th>
+                <th key={idx} style={col.width ? { width: col.width, minWidth: col.width } : {}}>{col.label}</th>
               ))}
             </tr>
           </thead>
@@ -66,7 +86,7 @@ const DashboardTable = ({
                   style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                 >
                   {columns.map((col, colIdx) => (
-                    <td key={colIdx} style={col.width ? { width: col.width } : {}}>
+                    <td key={colIdx} style={col.width ? { width: col.width, minWidth: col.width } : {}}>
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>
                   ))}

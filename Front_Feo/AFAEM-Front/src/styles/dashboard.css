@@ -1734,4 +1734,60 @@
     width: 100% !important;
     min-width: 0 !important;
   }
-}
+}
+
+/* Admin Dashboard Responsiveness */
+.admin-dashboard-header {
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.admin-dashboard-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -1px;
+  margin: 0;
+}
+
+.chart-filter-wrapper {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 350px;
+}
+
+.chart-inner-value {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  .admin-dashboard-title {
+    font-size: 20px;
+  }
+
+  .chart-filter-wrapper {
+    justify-content: flex-start;
+    max-width: 100%;
+    margin-top: 10px;
+  }
+
+  .chart-inner-value {
+    font-size: 28px;
+  }
+}
+
