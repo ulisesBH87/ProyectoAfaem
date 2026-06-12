@@ -669,13 +669,21 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             EquiposJugando.CantidadJugadores.label("NumeroJugadores"),
             Equipos.Estatus,
             EquipoTemporal.SolicitudId,
-            func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados")
+            func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados"),
+            func.trim(
+                func.concat(
+                    Personas.Nombre, ' ',
+                    Personas.PrimerApellido, ' ',
+                    func.coalesce(Personas.SegundoApellido, '')
+                )
+            ).label("PresidenteNombreCompleto")
         ).join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
          .join(Ligas, EquiposJugando.LigaId == Ligas.LigaId)\
          .join(CatalogoCategorias, Ligas.CategoriaId == CatalogoCategorias.CategoriaId)\
          .join(CatalogoModalidad, Ligas.ModalidadId == CatalogoModalidad.ModalidadId)\
          .join(CatalogoRamas, Ligas.RamaId == CatalogoRamas.RamaId)\
          .join(PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+         .join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
          .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)\
          .outerjoin(slots_subquery, Equipos.EquipoId == slots_subquery.c.EquipoId)
@@ -704,7 +712,8 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
                "Estatus": bool(r.Estatus),
                "RutaLogo": r.RutaLogo,
                "SolicitudId": r.SolicitudId,
-               "SlotsComprados": int(r.SlotsComprados or 0)
+               "SlotsComprados": int(r.SlotsComprados or 0),
+               "PresidenteNombreCompleto": r.PresidenteNombreCompleto or ''
            } for r in resultados
         ]
     except Exception as e:

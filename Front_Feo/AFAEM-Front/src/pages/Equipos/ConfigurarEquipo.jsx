@@ -411,14 +411,26 @@ export default function ConfigurarEquipo() {
         // 3. Verificar slots disponibles y borradores
         const slotsResponse = await teamsService.getAvailableSlots(equipoTemporalId);
 
+        const segurosPresidenteIds = new Set(
+          (catalogsData.seguros || [])
+            .filter(seguro => {
+              const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
+              const tipoPersonaId = Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
+              return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+            })
+            .map(seguro => String(seguro.id))
+        );
+
         // Mapear los slotsResponse al formato esperado por el frontend
         const mappedSlotsData = {
           hay_slots: slotsResponse.jugadores_restantes > 0,
           slots_disponibles: slotsResponse.jugadores_restantes,
-          seguros_disponibles: slotsResponse.seguros.filter(s => s.disponibles > 0).map(s => ({
-            SeguroId: s.seguro_id,
-            Cantidad: s.disponibles
-          })),
+          seguros_disponibles: slotsResponse.seguros
+            .filter(s => s.disponibles > 0 && !segurosPresidenteIds.has(String(s.seguro_id)))
+            .map(s => ({
+              SeguroId: s.seguro_id,
+              Cantidad: s.disponibles
+            })),
           rawSlots: slotsResponse.slots
         };
 
@@ -1735,7 +1747,7 @@ export default function ConfigurarEquipo() {
       Swal.fire({
         icon: 'success',
         title: 'Jugador Inscrito Correctamente',
-        text: 'El slot se ha completado y los documentos se guardaron en el servidor.'
+        text: 'El espacio se ha completado y los documentos se guardaron correctamente.'
       }).then(() => {
         navigate('/presidente-equipo/equipos');
       });
@@ -2300,6 +2312,8 @@ export default function ConfigurarEquipo() {
                   <span><strong>Liga:</strong> {equipo.Liga || 'N/A'}</span>
                   <span>•</span>
                   <span><strong>Categoría:</strong> {equipo.Categoria || 'LIBRE'} ({equipo.Rama || 'N/A'})</span>
+                  <span>•</span>
+                  <span><strong>Presidente:</strong> {equipo.PresidenteNombreCompleto || 'Sin Presidente'}</span>
                 </div>
               </div>
 
@@ -2777,7 +2791,7 @@ export default function ConfigurarEquipo() {
                     <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input type="email" maxLength={30} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
+                        <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
