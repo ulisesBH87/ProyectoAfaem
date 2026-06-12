@@ -102,6 +102,7 @@ class DirectorioEquipoResponse(BaseModel):
     NumeroJugadoresRegistrados: int
     FechaCreacion: datetime
     Estatus: bool
+    SlotsComprados: Optional[int] = 0
 
     class Config:
         from_attributes = True
