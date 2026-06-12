@@ -5,7 +5,7 @@ export const ERROR_DICTIONARY = {
   "AUTH_TOKEN_EXPIRED": "Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.",
   "AUTH_TOKEN_INVALID": "La sesión es inválida. Inicia sesión nuevamente.",
   "AUTH_PERMISSION_DENIED": "No tienes permiso para realizar esta acción.",
-  
+
   // === ERRORES DE REGISTRO E INFORMACIÓN (BACKEND) ===
   "USUARIO_NO_ENCONTRADO": "El usuario no existe. Revisa tus datos o regístrate.",
   "CREDENCIALES_INVALIDAS": "El correo o la contraseña son incorrectos. Por favor, inténtalo de nuevo.",
@@ -37,7 +37,7 @@ export const ERROR_DICTIONARY = {
   "TEAM_NOT_FOUND": "El equipo especificado no existe o no se encontró.",
   "TEAM_LIMIT_REACHED": "Has alcanzado el límite de jugadores para este equipo.",
   "PLAYER_NOT_FOUND": "El jugador especificado no existe o no se encontró.",
-  
+
   // === ERRORES DE REPOSITORIO Y GENERALES ===
   "SYS_INTERNAL_ERROR": "Ha ocurrido un error interno en el servidor. Intenta más tarde.",
   "SYS_VALIDATION_ERROR": "Se ha producido un error validando la información enviada.",
@@ -56,8 +56,22 @@ export const ERROR_DICTIONARY = {
  * @returns {String} Mensaje de error para mostrar al usuario.
  */
 export const getErrorMessage = (error, fallbackMessage = 'Ha ocurrido un error al procesar tu solicitud.') => {
-  // Si no hay respuesta del servidor (errores de red, cors, timeout)
+  // Si el servidor responde con 500 (Internal Server Error)
+  if (error.response && error.response.status === 500) {
+    return "Ocurrió un problema. Por favor, intenta de nuevo más tarde.";
+  }
+
+  // Si no hay respuesta del servidor (errores de red, cors, timeout) o no hay data
   if (!error.response || !error.response.data) {
+    if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
+      return "Ocurrió un error. Por favor, revisa tu conexión de internet e inténtalo de nuevo.";
+    }
+    if (error.message === 'Network Error') {
+      return "Error de red. Verifica tu conexión a internet o intenta más tarde.";
+    }
+    if (error.message && error.message.includes('status code 500')) {
+      return "Ocurrió un problema. Por favor, intenta de nuevo más tarde.";
+    }
     return error.message || fallbackMessage;
   }
 
@@ -72,7 +86,7 @@ export const getErrorMessage = (error, fallbackMessage = 'Ha ocurrido un error a
   // mostramos el 'code' específico para diagnóstico rápido y el fallback message (que para el usuario usualmente es log).
   // Nota: El requerimiento dice usar 'message' COMO FALLBACK a nivel usuario si no se reconoce el 'code'.
   if (message) {
-      return message;
+    return message;
   }
 
   // Soporte retrocompatible por si algunos endpoints aún usan el esquema viejo de FastAPI 'detail'
@@ -94,19 +108,19 @@ export const applyErrorInterceptor = (api) => {
     (response) => response,
     (error) => {
       const customMessage = getErrorMessage(error);
-      
+
       // Sobrescribimos error.message para componentes que hacen `err.message`
       error.message = customMessage;
-      
+
       // Asegurar que el mensaje esté disponible donde los componentes suelen buscarlo (err.response.data.detail)
       if (!error.response) {
         error.response = { data: {} };
       } else if (!error.response.data) {
         error.response.data = {};
       }
-      
+
       error.response.data.detail = customMessage;
-      
+
       return Promise.reject(error);
     }
   );
