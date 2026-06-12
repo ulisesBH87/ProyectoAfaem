@@ -15,6 +15,7 @@ export default function AdminSolicitudes() {
   const navigate = useNavigate();
   const [solicitudes, setSolicitudes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
@@ -35,7 +36,7 @@ export default function AdminSolicitudes() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const loadSolicitudes = async (forceRefresh = false) => {
+  const loadSolicitudes = async (forceRefresh = false, isTableOnly = false) => {
     try {
       const email = localStorage.getItem('email');
       const token = localStorage.getItem('token');
@@ -46,7 +47,11 @@ export default function AdminSolicitudes() {
         return;
       }
 
-      setLoading(true);
+      if (isTableOnly) {
+        setTableLoading(true);
+      } else {
+        setLoading(true);
+      }
 
       const response = await getSolicitudes(forceRefresh);
 
@@ -82,6 +87,7 @@ export default function AdminSolicitudes() {
       }
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
@@ -455,7 +461,7 @@ export default function AdminSolicitudes() {
       label: 'Acciones',
       width: '25%',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap', minWidth: 'max-content' }}>
           <button
             onClick={() => handleVerDetalles(row.SolicitudId)}
             style={{
@@ -526,7 +532,7 @@ export default function AdminSolicitudes() {
   ];
 
 
-  if (loading) {
+  if (loading && solicitudes.length === 0) {
     return <Loader text="Cargando solicitudes..." />;
   }
 
@@ -582,23 +588,11 @@ export default function AdminSolicitudes() {
         </div>
       )}
 
-      <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="admin-dashboard-header">
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Validación de Solicitudes</h2>
+          <h2 className="admin-dashboard-title" style={{ margin: 0 }}>Validación de Solicitudes</h2>
           <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro de presidente de equipo</p>
         </div>
-        <button
-          onClick={() => loadSolicitudes(true)}
-          title="Actualizar"
-          style={{
-            padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px',
-            background: 'white', color: '#334155',
-            border: '1.5px solid #e2e8f0', borderRadius: '12px',
-            cursor: 'pointer', fontWeight: '700', fontSize: '14px'
-          }}
-        >
-          <FaSyncAlt />
-        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '30px' }}>
@@ -686,7 +680,7 @@ export default function AdminSolicitudes() {
                 {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
               </button>
 
-              <button onClick={() => loadSolicitudes(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px', flex: '1 1 auto', justifyContent: 'center' }}>
+              <button onClick={() => loadSolicitudes(true, true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px', flex: '1 1 auto', justifyContent: 'center' }}>
                 <FaSyncAlt />
               </button>
             </div>
@@ -705,7 +699,7 @@ export default function AdminSolicitudes() {
           <DashboardTable
             columns={columns}
             data={paginatedSolicitudes}
-            isLoading={loading}
+            isLoading={loading || tableLoading}
             totalItems={filteredSolicitudes.length}
             itemsPerPage={itemsPerPage}
             currentPage={currentPage}

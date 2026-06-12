@@ -12,6 +12,7 @@ import {
 import { getSolicitudes } from '../../services/solicitud';
 import { getPagosGenerales, getJugadoresDirectorio } from '../../services/admin';
 import Loader from '../../components/Loader';
+import '../../styles/dashboard.css';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -106,9 +107,9 @@ const AdminDashboard = () => {
   return (
     <div className="fade-in-up" style={{ padding: '20px 0' }}>
       {/* HEADER SECTION */}
-      <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <header className="admin-dashboard-header">
         <div>
-          <h2 className="heading-outfit" style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-1px', margin: 0 }}>
+          <h2 className="admin-dashboard-title">
             Panel de Control AFAEM
           </h2>
           <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '15px', margin: '6px 0 0' }}>
@@ -118,7 +119,7 @@ const AdminDashboard = () => {
         <button
           onClick={() => window.location.reload()}
           className="glass"
-          style={{ padding: '10px 20px', backgroundColor: 'white', color: 'var(--text-main)', border: '1.5px solid var(--border-light)', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+          style={{ padding: '10px 20px', backgroundColor: 'white', color: 'var(--text-main)', border: '1.5px solid var(--border-light)', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s', flexShrink: 0 }}
         >
           <FaSyncAlt /> Actualizar
         </button>
@@ -153,11 +154,11 @@ const AdminDashboard = () => {
         <div className="card glass" style={{ gridColumn: 'span 2', gridRow: 'span 2', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', background: 'radial-gradient(circle, var(--primary) 0%, transparent 60%)', opacity: 0.05, borderRadius: '50%', pointerEvents: 'none' }}></div>
 
-          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1, flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <h3 className="heading-outfit" style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Ingresos del Mes</h3>
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '350px' }}>
+            <div className="chart-filter-wrapper">
               {meses.map(m => (
                 <button
                   key={m}
@@ -187,8 +188,8 @@ const AdminDashboard = () => {
                   ]}
                   cx="50%"
                   cy="50%"
-                  innerRadius={90}
-                  outerRadius={120}
+                  innerRadius="65%"
+                  outerRadius="85%"
                   startAngle={90}
                   endAngle={-270}
                   dataKey="value"
@@ -205,7 +206,7 @@ const AdminDashboard = () => {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px' }}>
                 {mesFiltro}
               </div>
-              <div className="data-fira" style={{ fontSize: '40px', fontWeight: '800', color: 'var(--primary)', lineHeight: '1', textShadow: '0 4px 12px rgba(11, 78, 166, 0.15)' }}>
+              <div className="chart-inner-value data-fira" style={{ textShadow: '0 4px 12px rgba(11, 78, 166, 0.15)' }}>
                 ${(mesSeleccionadoData?.ingresos || 0).toLocaleString()}
               </div>
             </div>

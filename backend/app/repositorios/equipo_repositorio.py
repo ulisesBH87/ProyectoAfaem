@@ -810,10 +810,16 @@ def obtener_directorio_equipos_repo(db):
     from app.modelos.presidente_equipo_modelo import PresidenteEquipo
     from app.modelos.usuario_modelo import Usuario
 
+    slots_subquery = db.query(
+        EquipoTemporal.EquipoId.label("EquipoId"),
+        func.count(EquipoTemporalJugador.EquipoTemporalJugadorId).label("SlotsComprados")
+    ).join(EquipoTemporalJugador, EquipoTemporal.EquipoTemporalId == EquipoTemporalJugador.EquipoTemporalId).group_by(EquipoTemporal.EquipoId).subquery()
+
     resultados = db.query(
         EquiposJugando, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoCategorias.NombreCategoria,
         CatalogoModalidad.NombreModalidad, CatalogoRamas.Nombre,
-        Personas.Nombre, Personas.PrimerApellido, Usuario.Correo
+        Personas.Nombre, Personas.PrimerApellido, Usuario.Correo,
+        func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados")
     ).join(
         Equipos, EquiposJugando.EquipoId == Equipos.EquipoId
     ).join(
@@ -830,10 +836,12 @@ def obtener_directorio_equipos_repo(db):
         Personas, PresidenteEquipo.PersonaId == Personas.PersonaId
     ).outerjoin(
         Usuario, Personas.PersonaId == Usuario.PersonaId
+    ).outerjoin(
+        slots_subquery, Equipos.EquipoId == slots_subquery.c.EquipoId
     ).all()
 
     equipos_response = []
-    for (ej, eq_nombre, liga, categoria, modalidad, rama, p_nombre, p_apellido, email) in resultados:
+    for (ej, eq_nombre, liga, categoria, modalidad, rama, p_nombre, p_apellido, email, slots_comprados) in resultados:
         equipos_response.append({
             "EquipoId": ej.EquipoId,
             "NombreEquipo": eq_nombre,
@@ -850,7 +858,8 @@ def obtener_directorio_equipos_repo(db):
             "PresidenteEmail": email or "Sin correo",
             "NumeroJugadoresRegistrados": ej.CantidadJugadores,
             "FechaCreacion": ej.EquipoRelacion.FechaCreacion,
-            "Estatus": ej.EquipoRelacion.Estatus
+            "Estatus": ej.EquipoRelacion.Estatus,
+            "SlotsComprados": int(slots_comprados or 0)
         })
 
     return equipos_response

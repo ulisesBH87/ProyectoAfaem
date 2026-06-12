@@ -15,6 +15,7 @@ export default function AdminEquipos() {
 
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Estados para filtros, búsqueda y paginación
@@ -56,9 +57,13 @@ export default function AdminEquipos() {
     }
   }, [searchParams, equipos]);
 
-  const loadEquipos = async (forceRefresh = false) => {
+  const loadEquipos = async (forceRefresh = false, isTableOnly = false) => {
     try {
-      setLoading(true);
+      if (isTableOnly) {
+        setTableLoading(true);
+      } else {
+        setLoading(true);
+      }
       const data = await getEquiposDirectorio(forceRefresh);
       setEquipos(data);
       setError(null);
@@ -67,6 +72,7 @@ export default function AdminEquipos() {
       setError("Error al cargar el directorio de equipos.");
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
@@ -369,7 +375,11 @@ export default function AdminEquipos() {
         ⚠️ SIN PRESIDENTE
       </div>
     ),
-    NumeroJugadoresRegistrados: <span style={{ fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '4px 10px', borderRadius: '20px' }}>{eq.NumeroJugadoresRegistrados}</span>,
+    NumeroJugadoresRegistrados: (
+      <span style={{ fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '4px 10px', borderRadius: '20px' }}>
+        {eq.NumeroJugadoresRegistrados || 0}/{eq.SlotsComprados || 0}
+      </span>
+    ),
     Estatus: eq.Estatus ?
       <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>ACTIVO</span> :
       <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>INACTIVO</span>,
@@ -438,7 +448,7 @@ export default function AdminEquipos() {
   }));
 
 
-  if (loading) {
+  if (loading && equipos.length === 0) {
     return <Loader text="Cargando directorio de equipos..." />;
   }
 
@@ -460,13 +470,6 @@ export default function AdminEquipos() {
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
-            className="btn btn-primary"
-            onClick={() => loadEquipos(true)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FaSyncAlt />
-          </button>
-          <button
             className="btn btn-premium"
             onClick={() => navigate('/admin/equipos/crear')}
             style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
@@ -476,7 +479,7 @@ export default function AdminEquipos() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         {/* TARJETA TOTAL */}
         <div
           onClick={() => setFiltroEstatus('todos')}
@@ -554,6 +557,10 @@ export default function AdminEquipos() {
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ANT' : 'REC'}
             </button>
 
+            <button onClick={() => loadEquipos(true, true)} className="btn-premium" style={{ padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaSyncAlt />
+            </button>
+
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
               {['todos', 'activos', 'inactivos'].map((val) => (
                 <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
@@ -567,7 +574,7 @@ export default function AdminEquipos() {
         <DashboardTable
           columns={columns}
           data={dataTransformada}
-          isLoading={loading}
+          isLoading={loading || tableLoading}
           totalItems={filteredEquipos.length}
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
