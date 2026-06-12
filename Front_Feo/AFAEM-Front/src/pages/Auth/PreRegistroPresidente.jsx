@@ -632,10 +632,7 @@ function PreRegistroPresidente() {
 
 
   const totalAsignados = segurosJugadores.reduce((acc, seg) => acc + Number(asignacionSeguros[seg.id] || 0), 0);
-  const precioPresidente = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0;
-  const precioJugador = catalogoAfiliaciones.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0;
-  const costoAfiliaciones = precioPresidente + (Number(numPersonas || 0) * precioJugador);
-  const totalPagar = costoAfiliaciones + catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
+  const totalPagar = catalogoSeguros.reduce((acc, seg) => acc + (Number(asignacionSeguros[seg.id] || 0)) * seg.precio, 0);
   const totalMostrado = ordenPendienteId ? totalOrdenPendiente : totalPagar;
   const nombreAfiliacion = (tipoAfiliacionId) => {
     const afiliacion = catalogoAfiliaciones.find(a => String(a.TipoAfiliacionId) === String(tipoAfiliacionId));
@@ -800,10 +797,6 @@ function PreRegistroPresidente() {
         const segurosPayload = [];
         for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
           if (cant > 0) {
-            const seguroObj = catalogoSeguros.find(s => String(s.id) === String(idStr));
-            if (seguroObj && ['TIPO G', 'SIN SEGURO'].includes(seguroObj.nombre.toUpperCase().trim())) {
-              continue;
-            }
             segurosPayload.push({
               SeguroId: parseInt(idStr, 10),
               Cantidad: cant
@@ -934,10 +927,6 @@ function PreRegistroPresidente() {
           const segurosPayload = [];
           for (const [idStr, cant] of Object.entries(asignacionSeguros)) {
             if (cant > 0) {
-              const seguroObj = catalogoSeguros.find(s => String(s.id) === String(idStr));
-              if (seguroObj && ['TIPO G', 'SIN SEGURO'].includes(seguroObj.nombre.toUpperCase().trim())) {
-                continue;
-              }
               segurosPayload.push({
                 SeguroId: parseInt(idStr, 10),
                 Cantidad: cant
