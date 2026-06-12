@@ -2170,8 +2170,8 @@ function PreRegistroPresidente() {
                   </div>
                 ) : (
                   <div className="pago-card">
-                    <div className="input-group" style={{ flexDirection: 'column', gap: '6px' }}>
-                      <label className="input-label" style={{ textAlign: 'center', fontSize: '13px' }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
+                    <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                      <label className="input-label" style={{ textAlign: 'left', fontSize: '13px', margin: 0, flex: 1 }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -2184,7 +2184,7 @@ function PreRegistroPresidente() {
                           setNumPersonas(val === '' ? '' : parseInt(val, 10));
                           setError(null);
                         }}
-                        style={{ marginTop: '3px' }}
+                        style={{ marginTop: '0', width: '80px', textAlign: 'center' }}
                       />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 12px' }}>
@@ -2206,7 +2206,7 @@ function PreRegistroPresidente() {
                       <div className="insurance-grid">
                         <div className="insurance-section">
                           <div className="insurance-col-title">Seguros Jugadores.</div>
-                          <div className="insurance-card-list">
+                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                             {segurosJugadores.map(seg => {
                               const cantAsignada = Number(asignacionSeguros[seg.id] || 0);
                               return (
@@ -2294,7 +2294,7 @@ function PreRegistroPresidente() {
                           <div className="insurance-col-title">
                             Seguros Presidente.
                           </div>
-                          <div className="insurance-card-list">
+                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
                             {segurosPresidente.map(seg => {
                               const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
 
