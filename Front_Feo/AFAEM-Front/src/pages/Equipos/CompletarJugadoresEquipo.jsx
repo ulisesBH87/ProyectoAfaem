@@ -948,7 +948,7 @@ export default function CompletarJugadoresEquipo() {
       Swal.fire({
         icon: 'success',
         title: 'Jugador Inscrito Correctamente',
-        text: 'El slot se ha completado y los documentos se guardaron en el servidor.'
+        text: 'El espacio se ha completado y los documentos se guardaron correctamente.'
       }).then(() => {
         navigate('/admin/equipos');
       });
