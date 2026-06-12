@@ -78,24 +78,7 @@ export default function DetalleSolicitudModal({
   };
 
   const confirmarCerrar = () => {
-    if (revisados > 0) {
-      Swal.fire({
-        title: '¿Salir sin guardar?',
-        text: 'Has realizado cambios en la validación que se perderán si cierras ahora.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, salir',
-        cancelButtonText: 'Seguir revisando',
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#64748b'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          alCerrar();
-        }
-      });
-    } else {
-      alCerrar();
-    }
+    alCerrar();
   };
 
   const totalDocs = Object.keys(validaciones).length;
