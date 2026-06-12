@@ -2736,7 +2736,7 @@ export default function RegistroJugadores() {
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
                           <input
                             type="email"
-                            maxLength={30}
+                            maxLength={60}
                             value={currentDatos.correo}
                             onChange={e => {
                               handleFieldChange('correo', e.target.value);
