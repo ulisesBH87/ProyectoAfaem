@@ -1674,7 +1674,7 @@ export default function RegistroJugadores() {
               margin: '0 auto 36px',
             }}
           >
-            El enlace que intentas utilizar ya no es válido, ha expirado o no existe.
+            Has registrado a todos tus jugadores. Este link ya no es válido.
           </p>
 
           <button
