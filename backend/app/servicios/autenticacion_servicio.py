@@ -107,14 +107,11 @@ class AutenticacionServicio:
 
 
     # == CAMBIAR CONTRASEÑA ==
-    def cambiar_contrasena(self, usuario_id, contrasena_actual, nueva_contrasena):
+    def cambiar_contrasena(self, correo: str, nueva_contrasena: str):
 
-        usuario = autenticacion_repositorio.obtener_usuario_por_id(self.db, usuario_id)
+        usuario = usuario_repositorio.obtener_por_correo(self.db, correo)
         if not usuario:
             raise usuario_excepciones.UsuarioNoEncontradoError()
-
-        if not seguridad.verificar_contrasena(contrasena_actual, usuario.Contrasena, usuario.Salt):
-            raise usuario_excepciones.CredencialesInvalidasError()
 
         try:
 

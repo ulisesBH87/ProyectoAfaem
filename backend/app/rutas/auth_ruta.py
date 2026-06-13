@@ -76,9 +76,9 @@ def login(data: InicioSesion, service: AutenticacionServicio = Depends(get_auten
 
 # == CAMBIAR CONTRASEÑA ==
 @router.post("/cambiar-contrasena")
-def cambiar_contrasena(data: CambiarContrasena, service: AutenticacionServicio = Depends(get_autenticacion_servicio), usuario = Depends(seguridad.obtener_usuario_actual)):
+def cambiar_contrasena(data: CambiarContrasena, service: AutenticacionServicio = Depends(get_autenticacion_servicio)):
     
-    service.cambiar_contrasena(usuario.UsuarioId, data.ContrasenaActual, data.NuevaContrasena)
+    service.cambiar_contrasena(data.Correo, data.NuevaContrasena)
     
     return {"message": "Contraseña cambiada correctamente"}
 
