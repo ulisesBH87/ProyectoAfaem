@@ -11,6 +11,7 @@ import Modal from '../../components/partials/Forms/Modal';
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [filtroEstatus, setFiltroEstatus] = useState('2'); // Pendientes por defecto
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
@@ -42,8 +43,12 @@ const AdminPagos = () => {
     cargarCatalogos();
   }, []);
 
-  const fetchPagos = async (forceRefresh = false) => {
-    setLoading(true);
+  const fetchPagos = async (forceRefresh = false, isTableOnly = false) => {
+    if (isTableOnly) {
+      setTableLoading(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const data = await getPagosGenerales(forceRefresh);
       setPagos(data);
@@ -51,6 +56,7 @@ const AdminPagos = () => {
       console.error('Error fetching pagos:', error);
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
@@ -257,6 +263,7 @@ const AdminPagos = () => {
     {
       key: 'FechaEnvio',
       label: 'Fecha envío',
+      width: '180px',
       render: (val) => (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{formatDate(val)}</span>
       )
@@ -286,7 +293,7 @@ const AdminPagos = () => {
       key: 'Acciones',
       label: 'Acciones',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'nowrap', minWidth: 'max-content' }}>
           <button
             onClick={() => handleVerVoucher(row.RutaVoucher, row.OrdenPagoId)}
             style={{
@@ -351,7 +358,7 @@ const AdminPagos = () => {
     }
   ];
 
-  if (loading) {
+  if (loading && pagos.length === 0) {
     return <Loader text="Cargando historial de pagos..." />;
   }
 
@@ -418,7 +425,7 @@ const AdminPagos = () => {
                 {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DESC'}
               </button>
 
-              <button onClick={() => fetchPagos(true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px', flex: '1 1 auto', justifyContent: 'center' }}>
+              <button onClick={() => fetchPagos(true, true)} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px', flex: '1 1 auto', justifyContent: 'center' }}>
                 <FaSyncAlt />
               </button>
             </div>
@@ -434,7 +441,7 @@ const AdminPagos = () => {
         </div>
 
         <div style={{ overflowX: 'auto', width: '100%' }}>
-          <DashboardTable columns={columns} data={paginatedPagos} isLoading={loading} totalItems={filteredPagos.length} itemsPerPage={itemsPerPage} currentPage={currentPage} onPageChange={setCurrentPage} emptyMessage="No hay órdenes de pago registradas." />
+          <DashboardTable columns={columns} data={paginatedPagos} isLoading={loading || tableLoading} totalItems={filteredPagos.length} itemsPerPage={itemsPerPage} currentPage={currentPage} onPageChange={setCurrentPage} emptyMessage="No hay órdenes de pago registradas." />
         </div>
       </div>
 
