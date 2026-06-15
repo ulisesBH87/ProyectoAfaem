@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import DashboardTable from '../../components/DashboardTable';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
+import Swal from 'sweetalert2';
+import { API_BASE } from '../../config/config';
 import '../../styles/dashboard.css';
 import { 
   FaUser, 
@@ -14,7 +15,8 @@ import {
   FaExclamationCircle, 
   FaUsers, 
   FaUserInjured, 
-  FaUserPlus 
+  FaUserPlus,
+  FaShieldAlt
 } from 'react-icons/fa';
 
 // Componente de avatar de jugador para manejar fallback de imagen si falla la carga o no existe
@@ -26,7 +28,7 @@ function PlayerAvatar({ rutaFoto, nombre, fallbackIcon }) {
     const src = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
     return (
       <img
-        src={src}
+        src={src.startsWith('http') ? src : `${API_BASE}${src}`}
         alt={nombre}
         onError={() => setHasError(true)}
         style={{
@@ -39,40 +41,79 @@ function PlayerAvatar({ rutaFoto, nombre, fallbackIcon }) {
     );
   }
 
-  return <>{nombre ? nombre.charAt(0).toUpperCase() : fallbackIcon}</>;
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '24px',
+      fontWeight: 'bold',
+      color: '#94a3b8',
+      background: '#f1f5f9',
+      borderRadius: '12px'
+    }}>
+      {nombre ? nombre.charAt(0).toUpperCase() : fallbackIcon}
+    </div>
+  );
 }
 
 export default function PresidenteEquipoMisJugadores() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const equipoFilter = searchParams.get('equipo');
+
+  // Helper para normalizar la ruta del logo del equipo
+  const obtenerRutaLogo = (rutaLogo) => {
+    if (!rutaLogo) return '';
+    if (rutaLogo.startsWith('http')) return rutaLogo;
+    let cleanPath = rutaLogo.replace(/\\/g, '/');
+    if (!cleanPath.startsWith('uploads/') && !cleanPath.startsWith('/uploads/')) {
+      cleanPath = `uploads/${cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath}`;
+    }
+    return `${API_BASE}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
+  };
   
   // ESTADOS
   const [players, setPlayers] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
 
-  const loadPlayers = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await teamsService.getUserPlayersReal();
-      setPlayers(data || []);
+      const [playersData, teamsData] = await Promise.all([
+        teamsService.getUserPlayersReal(),
+        teamsService.getUserTeamsReal()
+      ]);
+      setPlayers(playersData || []);
+      setTeams(teamsData || []);
     } catch (err) {
-      console.error('Error cargando jugadores:', err);
+      console.error('Error cargando datos:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadPlayers();
+    loadData();
   }, []);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filtroEstatus, searchTerm, sortOrder]);
+  }, [filtroEstatus, searchTerm, sortOrder, equipoFilter]);
+
+  // Obtener información del equipo filtrado
+  const selectedTeamInfo = React.useMemo(() => {
+    if (!equipoFilter) return null;
+    return teams.find(t => t.NombreEquipo === equipoFilter);
+  }, [teams, equipoFilter]);
 
   // MÉTRICAS
   const totalJugadores = players.length;
@@ -83,6 +124,11 @@ export default function PresidenteEquipoMisJugadores() {
   // LÓGICA DE FILTRADO, BÚSQUEDA Y ORDENAMIENTO
   const filteredPlayers = React.useMemo(() => {
     let result = [...players];
+
+    // Filtro por equipo desde URL
+    if (equipoFilter) {
+      result = result.filter(p => p.Equipo === equipoFilter);
+    }
     
     // Filtro por estatus
     if (filtroEstatus !== 'todos') {
@@ -109,67 +155,34 @@ export default function PresidenteEquipoMisJugadores() {
     });
     
     return result;
-  }, [players, filtroEstatus, searchTerm, sortOrder]);
+  }, [players, filtroEstatus, searchTerm, sortOrder, equipoFilter]);
 
   const paginatedPlayers = React.useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredPlayers.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredPlayers, currentPage]);
 
-  const columns = [
-    { 
-      key: 'NombreCompleto', 
-      label: 'Jugador',
-      render: (val, row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="team-logo-table">
-            <PlayerAvatar rutaFoto={row.RutaFoto} nombre={val} fallbackIcon={<FaUser />} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div className="team-name-table">{val}</div>
-            <div className="team-subname-table">{row.Rol || 'Miembro Registrado'}</div>
-          </div>
+  const handleVerDetalles = (player) => {
+    Swal.fire({
+      title: 'Ficha del Jugador',
+      html: `
+        <div style="text-align: left; font-size: 14px; line-height: 1.8; padding: 10px;">
+          <p style="margin-bottom: 8px;"><strong>Nombre Completo:</strong> ${player.NombreCompleto}</p>
+          <p style="margin-bottom: 8px;"><strong>Equipo Vinculado:</strong> ${player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}</p>
+          <p style="margin-bottom: 8px;"><strong>Posición / Rol:</strong> ${player.Rol || 'Miembro Registrado'}</p>
+          <p style="margin-bottom: 8px;"><strong>Fecha de Registro:</strong> ${player.FechaIngreso ? new Date(player.FechaIngreso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
+          <p style="margin-bottom: 8px;"><strong>Dorsal / Camiseta:</strong> ${player.NumeroCamiseta || 'No asignado'}</p>
+          <p style="margin-bottom: 8px;"><strong>Estado de Registro:</strong> ${player.Estatus ? 'Activo / Aprobado' : 'Inactivo / Pendiente'}</p>
         </div>
-      )
-    },
-    { 
-      key: 'Equipo', 
-      label: 'Equipo vinculado',
-      render: (val) => (
-        <div className="linked-team-badge-table">
-          {val ? val.toUpperCase() : 'SIN EQUIPO'}
-        </div>
-      )
-    },
-    { 
-      key: 'FechaIngreso',
-      label: 'Fecha alta',
-      render: (val) => (
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500' }}>
-          {val ? new Date(val).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-        </div>
-      )
-    },
-    { 
-      key: 'Estatus',
-      label: 'Estado oficial',
-      render: (status) => {
-        return (
-          <span 
-            className="status-badge-table"
-            style={{ 
-              background: status ? '#dcfce7' : '#fee2e2', 
-              color: status ? '#166534' : '#991b1b',
-              border: status ? '1px solid #bbf7d0' : '1px solid #fecaca'
-            }}
-          >
-            {status ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
-            {status ? 'ACTIVO' : 'INACTIVO'}
-          </span>
-        );
+      `,
+      icon: 'info',
+      confirmButtonText: 'Cerrar',
+      confirmButtonColor: 'var(--primary)',
+      customClass: {
+        popup: 'swal2-popup-custom'
       }
-    }
-  ];
+    });
+  };
 
   if (loading && players.length === 0) {
     return <Loader text="Cargando tu directorio de jugadores..." />;
@@ -214,10 +227,48 @@ export default function PresidenteEquipoMisJugadores() {
         ))}
       </div>
 
-      {/* SECCIÓN DE TABLA ESTILO ADMIN/PAGOS */}
-      <div className="dashboard-card">
-        <div className="table-header-actions">
-          <h3 className="table-header-title">Listado oficial de la plantilla</h3>
+      {/* CABECERA DE PERFIL DE EQUIPO DESTACADO (SI FILTRO DE URL EXISTE) */}
+      {equipoFilter && (
+        <div className="team-profile-header-card fade-in">
+          <div className="team-profile-header-left">
+            <div className="team-profile-header-logo">
+              {selectedTeamInfo && selectedTeamInfo.RutaLogo ? (
+                <img
+                  src={obtenerRutaLogo(selectedTeamInfo.RutaLogo)}
+                  alt={equipoFilter}
+                />
+              ) : (
+                <FaShieldAlt />
+              )}
+            </div>
+            <div>
+              <h2 className="team-profile-header-title">{equipoFilter.toUpperCase()}</h2>
+              <div className="team-profile-header-meta">
+                {selectedTeamInfo ? (
+                  <>
+                    Categoría: {selectedTeamInfo.Categoria || 'LIBRE'} • Liga: {selectedTeamInfo.Liga || 'Liga local'} • {selectedTeamInfo.Rama || 'Rama mixta'}
+                  </>
+                ) : (
+                  <>Filtro de equipo activo</>
+                )}
+              </div>
+            </div>
+          </div>
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => setSearchParams({})}
+          >
+            Ver todos los jugadores
+          </button>
+        </div>
+      )}
+
+      {/* SECCIÓN DE CUADRÍCULA DE JUGADORES */}
+      <div className="dashboard-card" style={{ padding: '24px' }}>
+        <div className="table-header-actions" style={{ marginBottom: '20px' }}>
+          <h3 className="table-header-title">
+            {equipoFilter ? `Plantilla de ${equipoFilter}` : 'Listado oficial de la plantilla'}
+          </h3>
           
           <div className="table-actions-group">
             <div className="search-wrapper-responsive">
@@ -261,7 +312,7 @@ export default function PresidenteEquipoMisJugadores() {
             </div>
 
             <button 
-              onClick={loadPlayers} 
+              onClick={loadData} 
               className="btn-premium reload-btn-responsive"
             >
               <FaSyncAlt />
@@ -269,16 +320,89 @@ export default function PresidenteEquipoMisJugadores() {
           </div>
         </div>
 
-        <DashboardTable 
-          columns={columns} 
-          data={paginatedPlayers} 
-          isLoading={loading} 
-          totalItems={filteredPlayers.length} 
-          itemsPerPage={itemsPerPage} 
-          currentPage={currentPage} 
-          onPageChange={setCurrentPage} 
-          emptyMessage="No se encontraron jugadores que coincidan con tu búsqueda." 
-        />
+        {filteredPlayers.length === 0 ? (
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
+            <FaUser style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }} />
+            <p style={{ fontWeight: '700' }}>No se encontraron jugadores que coincidan con tu búsqueda.</p>
+          </div>
+        ) : (
+          <>
+            <div className="players-card-grid">
+              {paginatedPlayers.map((player) => (
+                <div key={player.MiembroEquipoId || player.id} className="player-card-refined">
+                  <div className="player-card-photo-wrapper">
+                    <PlayerAvatar 
+                      rutaFoto={player.RutaFoto} 
+                      nombre={player.NombreCompleto} 
+                      fallbackIcon={<FaUser />} 
+                    />
+                  </div>
+                  <h4 className="player-card-name" title={player.NombreCompleto}>
+                    {player.NombreCompleto}
+                  </h4>
+                  <div className="player-card-meta">
+                    {player.Rol || 'Miembro Registrado'}
+                  </div>
+                  {!equipoFilter && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '8px', textTransform: 'uppercase' }}>
+                      {player.Equipo || 'SIN EQUIPO'}
+                    </div>
+                  )}
+                  <span 
+                    className="status-badge-table player-card-status-badge"
+                    style={{ 
+                      background: player.Estatus ? '#dcfce7' : '#fee2e2', 
+                      color: player.Estatus ? '#166534' : '#991b1b',
+                      border: player.Estatus ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                      marginBottom: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {player.Estatus ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
+                    {player.Estatus ? 'ACTIVO' : 'INACTIVO'}
+                  </span>
+                  
+                  <div className="player-card-actions">
+                    <button
+                      onClick={() => handleVerDetalles(player)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '11px', fontWeight: '800', width: '100%', borderRadius: '10px' }}
+                    >
+                      Ver Detalle
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CONTROL DE PAGINACIÓN */}
+            {filteredPlayers.length > itemsPerPage && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px', gap: '8px', alignItems: 'center' }}>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className="btn btn-secondary btn-sm"
+                  style={{ minWidth: '80px' }}
+                >
+                  Anterior
+                </button>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                  Página {currentPage} de {Math.ceil(filteredPlayers.length / itemsPerPage)}
+                </span>
+                <button
+                  disabled={currentPage === Math.ceil(filteredPlayers.length / itemsPerPage)}
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredPlayers.length / itemsPerPage), prev + 1))}
+                  className="btn btn-secondary btn-sm"
+                  style={{ minWidth: '80px' }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
