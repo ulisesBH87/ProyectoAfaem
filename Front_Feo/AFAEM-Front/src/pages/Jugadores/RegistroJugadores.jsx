@@ -181,6 +181,10 @@ export default function RegistroJugadores() {
       width: 100%;
       min-width: 0;
     }
+    .phone-input-row select {
+      width: 110px;
+      flex-shrink: 0;
+    }
     .phone-input-row > * {
       min-width: 0;
     }
@@ -202,6 +206,7 @@ export default function RegistroJugadores() {
     
     input, select {
       min-height: 44px;
+      box-sizing: border-box;
     }
 
     @media (max-width: 1024px) {
@@ -218,6 +223,9 @@ export default function RegistroJugadores() {
       }
       .phone-input-row {
         flex-direction: column;
+      }
+      .phone-input-row select {
+        width: 100%;
       }
       .btn-container-responsive {
         flex-direction: column;
@@ -1481,7 +1489,7 @@ export default function RegistroJugadores() {
     setUploading(true);
     Swal.fire({
       title: 'Registrando Jugador',
-      text: 'Consumiendo espacio y subiendo documentos al servidor...',
+      text: 'Consumiendo espacio y subiendo documentos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -2562,7 +2570,7 @@ export default function RegistroJugadores() {
                     {/* Loader temporal OCR */}
                     {currentDocuments.acta && !currentDatos.fechaNacimiento && (
                       <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                        ⏳ Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
+                        Analizando el Acta de Nacimiento... Los campos se rellenarán automáticamente en breve. Si no es así, puedes completarlos manualmente.
                       </div>
                     )}
                   </section>
@@ -2772,6 +2780,8 @@ export default function RegistroJugadores() {
                             onBlur={handleBlur}
                             placeholder="correo@ejemplo.com"
                             style={{
+                              width: '100%',
+                              boxSizing: 'border-box',
                               padding: '10px',
                               borderRadius: '8px',
                               border: `1.5px solid ${validationErrors.correo ? '#ef4444' : '#cbd5e1'}`,
@@ -2783,7 +2793,7 @@ export default function RegistroJugadores() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div className="phone-input-row">
                             <select
                               value={currentDatos.codigoPais || '+52'}
                               onChange={e => handleFieldChange('codigoPais', e.target.value)}
@@ -2794,8 +2804,7 @@ export default function RegistroJugadores() {
                                 border: '1px solid #cbd5e1',
                                 fontSize: '14px',
                                 backgroundColor: 'white',
-                                width: '110px',
-                                flexShrink: 0
+                                boxSizing: 'border-box'
                               }}
                             >
                               <option value="+52">México +52</option>
@@ -2832,7 +2841,8 @@ export default function RegistroJugadores() {
                                 border: `1.5px solid ${validationErrors.telefono ? '#ef4444' : '#cbd5e1'}`,
                                 fontSize: '14px',
                                 flexGrow: 1,
-                                outline: 'none'
+                                outline: 'none',
+                                boxSizing: 'border-box'
                               }}
                             />
                           </div>
