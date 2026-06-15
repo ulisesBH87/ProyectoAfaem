@@ -8,6 +8,7 @@ import { getSolicitudDetalle, getSolicitudDocumentos, updateSolicitudEstatus } f
 import Swal from 'sweetalert2';
 import DetalleSolicitudModal from '../../components/Admin/DetalleSolicitudModal';
 import SearchBar from '../../components/Common/SearchBar';
+import AdminTabs from '../../components/Admin/AdminTabs';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaHourglassHalf, FaClipboardList, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import Loader from '../../components/Loader';
 
@@ -587,6 +588,8 @@ export default function AdminSolicitudes() {
           </div>
         </div>
       )}
+
+      <AdminTabs />
 
       <div className="admin-dashboard-header">
         <div>

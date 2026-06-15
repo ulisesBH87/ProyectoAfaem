@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import DashboardSidebar from '../components/DashboardSidebar';
 import DashboardHeader from '../components/DashboardHeader';
+import MobileBottomNav from '../components/MobileBottomNav';
 import { useRBAC } from '../hooks/useRBAC';
 
 const MainLayout = ({ userEmail }) => {
@@ -50,27 +51,16 @@ const MainLayout = ({ userEmail }) => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
-      {/* Backdrop oscuro en móvil */}
-      {mobileMenuOpen && (
-        <div
-          onClick={() => setMobileMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1099,
-            transition: 'opacity 0.3s ease',
-          }}
+      {/* Backdrop oscuro en móvil se elimina ya que usaremos BottomNav y no sidebar móvil */}
+
+      {!isMobile && (
+        <DashboardSidebar
+          userEmail={userEmail}
+          collapsed={sidebarCollapsed}
+          mobileOpen={mobileMenuOpen}
+          isMobile={isMobile}
         />
       )}
-
-      <DashboardSidebar
-        userEmail={userEmail}
-        collapsed={sidebarCollapsed}
-        mobileOpen={mobileMenuOpen}
-        isMobile={isMobile}
-      //onMobileClose={() => setMobileMenuOpen(false)}
-      />
 
       <div
         className="main-content-wrapper"
@@ -99,11 +89,13 @@ const MainLayout = ({ userEmail }) => {
         />
         <main className="fade-in" style={{
           padding: '24px 30px',
+          paddingBottom: isMobile ? 'calc(85px + env(safe-area-inset-bottom, 0px))' : '24px',
           flex: 1
         }}>
           <Outlet />
         </main>
       </div>
+      {isMobile && <MobileBottomNav />}
     </div>
   );
 };

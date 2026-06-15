@@ -7,6 +7,7 @@ import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWallet, FaCheckCircle, FaTimesCircle, FaClock, FaFileInvoice, FaFileAlt } from 'react-icons/fa';
 import Modal from '../../components/partials/Forms/Modal';
+import AdminTabs from '../../components/Admin/AdminTabs';
 
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
@@ -364,6 +365,7 @@ const AdminPagos = () => {
 
   return (
     <div className="fade-in">
+      <AdminTabs />
       <div style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px', margin: 0 }}>Validación de Pagos</h2>
         <p style={{ color: 'var(--text-muted)', fontWeight: '500', marginTop: '6px' }}>Gestiona y verifica los comprobantes de pago recibidos.</p>
