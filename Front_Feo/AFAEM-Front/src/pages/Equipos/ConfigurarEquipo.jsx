@@ -769,7 +769,7 @@ export default function ConfigurarEquipo() {
       Swal.fire({
         title: 'Orden generada',
         text: isAdmin
-          ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediatamente o esperar a que el presidente realice el pago.'
+          ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediatamente o enviarsela al presidente para que realice el pago.'
           : 'Se descargó tu ficha de pago en PDF. Realiza el pago y sube el comprobante.',
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
@@ -816,8 +816,8 @@ export default function ConfigurarEquipo() {
       setComprobantePagoEquipo(null);
 
       Swal.fire({
-        title: 'Comprobante recibido',
-        text: 'Un administrador debe aprobar el pago antes de configurar el equipo.',
+        title: 'Comprobante guardado',
+        text: 'Dirigete al panel de  "Validación de Pagos" para aprobar el pago y guardarlo.',
         icon: 'success',
         confirmButtonColor: '#0b4ea6'
       });
@@ -929,8 +929,8 @@ export default function ConfigurarEquipo() {
           <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
             Favor de aprobar la orden #{pagoEquipo.ordenId}. directamente desde el panel de Validación de Pagos.
           </p>
-          <button onClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
-            Volver al panel
+          <button onClick={() => navigate(isAdmin ? '/admin/pagos' : '/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
+            Dirigete al panel de "Validación de Pagos"
           </button>
         </div>
       );
@@ -946,14 +946,14 @@ export default function ConfigurarEquipo() {
           <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: '0 12px 24px rgba(11,78,166,0.22)' }}>
             <FaMoneyBillWave />
           </div>
-          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Pago previo para nuevo equipo</h2>
-          <p style={{ color: '#64748b', margin: 0 }}>
+          <h2 style={{ fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Generar un pago previo para nuevo equipo</h2>
+          <p style={{ color: '#64748b', margin: 0, fontSize: 'clamp(13px, 3.5vw, 15px)' }}>
             {isAdmin
               ? 'Genera la orden de pago con el número de jugadores y tipos de seguros'
               : 'Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.'
             }
           </p>
-          <p style={{ color: '#ff0000', margin: 0 }}>
+          <p style={{ color: '#ff0000', margin: 0, fontSize: 'clamp(11px, 3vw, 13px)' }}>
             {isAdmin
               ? '*Registro de equipo como administrador*'
               : '*Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*'}
@@ -973,8 +973,8 @@ export default function ConfigurarEquipo() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: '22px' }}>
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+        <div className="responsive-pago-grid">
+          <div className="pago-card">
             {!ordenCreada ? (
               <>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
@@ -988,7 +988,7 @@ export default function ConfigurarEquipo() {
 
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', background: 'white' }}>
                   <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase' }}>Seguros para jugador</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
                     {segurosJugador.map(seguro => {
                       const id = String(seguro.id);
                       return (
@@ -1032,7 +1032,7 @@ export default function ConfigurarEquipo() {
                 {isAdmin && pagoEquipo.estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE && (
                   <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '18px', marginBottom: '18px' }}>
                     <p style={{ color: '#92400e', fontWeight: '800', fontSize: '14px', margin: '0 0 12px' }}>
-                      ⚠️ El presidente aún no ha subido el comprobante. Puedes aprobar la orden directamente o esperar.
+                      Puedes aprobar la orden directamente o esperar a que se ponga en contacto contigo el presidente.
                     </p>
                     <button
                       disabled={procesandoPago}
@@ -1060,9 +1060,9 @@ export default function ConfigurarEquipo() {
                   </div>
                 )}
 
-                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
+                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube el comprobante de pago</h3>
                 <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
-                  Adjunta un PDF o imagen del comprobante. La configuracion se habilitara cuando el administrador apruebe esta orden.
+                  Se recomienda adjuntar un PDF o imagen del comprobante para tener mas control sobre el pago.
                 </p>
                 <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
                   <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
@@ -1084,7 +1084,7 @@ export default function ConfigurarEquipo() {
             )}
           </div>
 
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
+          <div className="pago-card">
             <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
 
             {catalogs.seguros ? catalogs.seguros.filter(seguro => Number(asignacionSeguros[String(seguro.id)] || 0) > 0).map(seguro => {

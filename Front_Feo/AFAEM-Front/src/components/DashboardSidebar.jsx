@@ -13,7 +13,7 @@ import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
 import AfaemLogo from '../assets/afaem-logo@4x.png';
 
-const DashboardSidebar = ({ collapsed, mobileOpen }) => {
+const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
@@ -21,8 +21,8 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
 
   // DEFINICIÓN DE TEMAS (Glassmorphism)
   const isAdmin = hasRole('Admin') || hasRole('Administrador');
-  const isMobile = window.innerWidth <= 768;
-  const isExpanded = !collapsed || (isHovered && !isMobile);
+  const isMobile = isMobileProp !== undefined ? isMobileProp : (window.innerWidth <= 768);
+  const isExpanded = isMobile || !collapsed || isHovered;
 
   const handleLogoClick = () => {
     if (isAdmin) {
@@ -66,6 +66,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
           : (isExpanded ? '260px' : '80px'),
         height: '100vh',
         maxHeight: '100vh',
+        overflowX: 'hidden',
         overflowY: 'auto',
         position: 'fixed',
         left: 0,
@@ -91,7 +92,9 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
         alignItems: 'center',
         justifyContent: 'flex-start',
         gap: '10px',
-        borderBottom: `1px solid ${theme.border}`
+        borderBottom: `1px solid ${theme.border}`,
+        overflow: 'hidden',
+        whiteSpace: 'nowrap'
       }}>
         <img
           src={AfaemLogo}
@@ -107,24 +110,29 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
             transition: 'all 0.3s'
           }}
         />
-        {isExpanded && (
-          <div style={{ animation: 'fadeIn 0.3s ease' }}>
-            <h1
-              onClick={handleLogoClick}
-              style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px', cursor: 'pointer' }}>
-              AFAEM
-            </h1>
-            <p
-              onClick={handleLogoClick}
-              style={{ fontSize: '7.5px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase', cursor: 'pointer' }}>
-              Sistema de gestión
-            </p>
-          </div>
-        )}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          overflow: 'hidden', 
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+          maxWidth: isExpanded ? '150px' : '0px', 
+          opacity: isExpanded ? 1 : 0 
+        }}>
+          <h1
+            onClick={handleLogoClick}
+            style={{ fontSize: '15px', fontWeight: '800', margin: 0, color: isAdmin ? '#ffffff' : 'var(--primary)', letterSpacing: '-0.5px', cursor: 'pointer' }}>
+            AFAEM
+          </h1>
+          <p
+            onClick={handleLogoClick}
+            style={{ fontSize: '7.5px', fontWeight: '700', margin: 0, color: theme.textMuted, textTransform: 'uppercase', cursor: 'pointer' }}>
+            Sistema de gestión
+          </p>
+        </div>
       </div>
 
       {/* MENU ITEMS */}
-      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
+      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto', overflowX: 'hidden' }}>
         {menus
           .filter(item => {
             // Seguridad: Si es una ruta de admin, solo mostrar si es admin
@@ -160,7 +168,10 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
             return (
               <React.Fragment key={idx}>
                 <div
-                  onClick={() => item.Ruta && navigate(item.Ruta)}
+                  onClick={() => {
+                    const targetRoute = item.Ruta || (item.SubMenus && item.SubMenus.length > 0 ? item.SubMenus[0].Ruta : null);
+                    if (targetRoute) navigate(targetRoute);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -171,8 +182,10 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                     backgroundColor: isActive ? theme.activeBg : 'transparent',
                     color: isActive ? theme.activeText : theme.text,
                     boxShadow: isActive ? (isAdmin ? '0 4px 12px rgba(37, 99, 235, 0.4)' : '0 4px 8px rgba(11, 78, 166, 0.3)') : 'none',
-                    padding: isExpanded ? '8px 12px' : '12px 0',
-                    justifyContent: isExpanded ? 'flex-start' : 'center',
+                    padding: isExpanded ? '8px 12px' : '12px 18px',
+                    justifyContent: 'flex-start',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap'
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
@@ -187,26 +200,34 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                     }
                   }}
                 >
-                  <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', flexShrink: 0, width: '24px', justifyContent: 'center' }}>
                     {getIcon(item.Icono)}
                   </span>
-                  {isExpanded && (
-                    <span
-                      style={{
-                        marginLeft: '12px',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        whiteSpace: 'nowrap',
-                        animation: 'fadeIn 0.2s ease'
-                      }}
-                    >
-                      {item.Nombre}
-                    </span>
-                  )}
+                  <span
+                    style={{
+                      marginLeft: isExpanded ? '12px' : '0px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      whiteSpace: 'nowrap',
+                      opacity: isExpanded ? 1 : 0,
+                      maxWidth: isExpanded ? '200px' : '0px',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'inline-block',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {item.Nombre}
+                  </span>
                 </div>
 
                 {/* Submenus if present */}
-                {isExpanded && hasChildren && filteredSubMenus.map((child, cIdx) => {
+                <div style={{ 
+                  maxHeight: (isExpanded && hasChildren) ? '500px' : '0px', 
+                  opacity: (isExpanded && hasChildren) ? 1 : 0, 
+                  overflow: 'hidden', 
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+                }}>
+                  {hasChildren && filteredSubMenus.map((child, cIdx) => {
                   const isChildActive = location.pathname === child.Ruta;
                   return (
                     <div
@@ -223,13 +244,16 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                         backgroundColor: isChildActive ? (isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.08)') : 'transparent',
                         color: isChildActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.textMuted,
                         fontSize: '12px',
-                        fontWeight: '500'
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden'
                       }}
                     >
                       {child.Nombre}
                     </div>
                   );
                 })}
+                </div>
               </React.Fragment>
             );
           })}
@@ -259,14 +283,16 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '10px 12px',
+                padding: isExpanded ? '10px 12px' : '10px 18px',
                 margin: '2px 0',
                 borderRadius: '10px',
                 cursor: 'pointer',
                 color: isActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.text,
                 backgroundColor: isActive ? theme.hoverBg : 'transparent',
-                transition: 'all 0.2s',
-                justifyContent: isExpanded ? 'flex-start' : 'center',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                justifyContent: 'flex-start',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
               }}
               onMouseEnter={(e) => {
                 if (!isActive) e.currentTarget.style.backgroundColor = theme.hoverBg;
@@ -275,12 +301,21 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                 if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              {icon}
-              {isExpanded && (
-                <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
-                  {label}
-                </span>
-              )}
+              <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', flexShrink: 0, width: '24px', justifyContent: 'center' }}>
+                {icon}
+              </span>
+              <span style={{ 
+                marginLeft: isExpanded ? '12px' : '0px', 
+                fontSize: '13px', 
+                fontWeight: '700',
+                opacity: isExpanded ? 1 : 0,
+                maxWidth: isExpanded ? '200px' : '0px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'inline-block',
+                overflow: 'hidden'
+              }}>
+                {label}
+              </span>
             </div>
           );
         })}
@@ -292,23 +327,34 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '10px 12px',
+            padding: isExpanded ? '10px 12px' : '10px 18px',
             margin: '2px 0',
             borderRadius: '10px',
             cursor: 'pointer',
             color: 'var(--danger)',
-            transition: 'all 0.2s',
-            justifyContent: isExpanded ? 'flex-start' : 'center',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            justifyContent: 'flex-start',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
           }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
-          <FaSignOutAlt style={{ fontSize: '18px' }} />
-          {isExpanded && (
-            <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
-              Cerrar Sesión
-            </span>
-          )}
+          <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', flexShrink: 0, width: '24px', justifyContent: 'center' }}>
+            <FaSignOutAlt />
+          </span>
+          <span style={{ 
+            marginLeft: isExpanded ? '12px' : '0px', 
+            fontSize: '13px', 
+            fontWeight: '700',
+            opacity: isExpanded ? 1 : 0,
+            maxWidth: isExpanded ? '200px' : '0px',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            display: 'inline-block',
+            overflow: 'hidden'
+          }}>
+            Cerrar Sesión
+          </span>
         </div>
 
       </div>
