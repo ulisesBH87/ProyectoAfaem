@@ -472,6 +472,221 @@ async def registrar_jugador(
     
     return await registrar_jugador_servicio(db, equipo_temporal_id, persona, documento_afiliacion_ids, archivos, seguro_id, slot_id, extra_data)
 
+class RegistrarGrupoPayload(BaseModel):
+    equipo_temporal_id: int
+
+@router.post("/registrar-grupo")
+async def registrar_grupo(
+    payload: RegistrarGrupoPayload,
+    db: Session = Depends(get_db)
+):
+    equipo_temporal_id = payload.equipo_temporal_id
+    
+    # 1. Obtener el equipo temporal
+    equipo_tem = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoTemporalId == equipo_temporal_id).first()
+    if not equipo_tem:
+        raise HTTPException(status_code=404, detail="Equipo temporal no encontrado")
+        
+    # 2. Obtener todos los slots
+    slots = db.query(EquipoTemporalJugador).filter(
+        EquipoTemporalJugador.EquipoTemporalId == equipo_temporal_id
+    ).all()
+    
+    pending_slots = [s for s in slots if not s.Completo]
+    if not pending_slots:
+        return {"mensaje": "Todos los jugadores ya están registrados", "registrados": 0}
+        
+    # 3. Validar borradores de todos los slots pendientes
+    import json
+    import base64
+    
+    def is_minor(fecha_nacimiento_str: str) -> bool:
+        try:
+            parts = [int(p) for p in fecha_nacimiento_str.split('-')]
+            from datetime import date
+            birth = date(parts[0], parts[1], parts[2])
+            today = date.today()
+            age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+            return age < 18
+        except Exception:
+            return False
+            
+    # Validar primero todos los slots antes de hacer cualquier cambio en la BD
+    for slot in pending_slots:
+        if not slot.DatosBorrador:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El jugador {slot.EquipoTemporalJugadorId} no tiene información capturada."
+            )
+        try:
+            datos = json.loads(slot.DatosBorrador)
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error al decodificar los datos del jugador {slot.EquipoTemporalJugadorId}."
+            )
+            
+        nombre_completo = f"{datos.get('nombreJugador', '')} {datos.get('apellidoPaterno', '')}".strip() or f"Jugador {slot.EquipoTemporalJugadorId}"
+        
+        # Validar campos obligatorios
+        if not datos.get("nombreJugador", "").strip():
+            raise HTTPException(status_code=400, detail=f"El nombre de {nombre_completo} es obligatorio.")
+        if not datos.get("apellidoPaterno", "").strip():
+            raise HTTPException(status_code=400, detail=f"El apellido paterno de {nombre_completo} es obligatorio.")
+        if not datos.get("apellidoMaterno", "").strip():
+            raise HTTPException(status_code=400, detail=f"El apellido materno de {nombre_completo} es obligatorio.")
+        curp = datos.get("curp", "").strip().upper()
+        if not curp:
+            raise HTTPException(status_code=400, detail=f"El CURP de {nombre_completo} es obligatorio.")
+        if len(curp) != 18:
+            raise HTTPException(status_code=400, detail=f"El CURP de {nombre_completo} debe medir exactamente 18 caracteres.")
+        if not datos.get("fechaNacimiento"):
+            raise HTTPException(status_code=400, detail=f"La fecha de nacimiento de {nombre_completo} es obligatoria.")
+        if not datos.get("lugarNacimiento", "").strip():
+            raise HTTPException(status_code=400, detail=f"El lugar de nacimiento de {nombre_completo} es obligatorio.")
+        if not datos.get("genero"):
+            raise HTTPException(status_code=400, detail=f"El sexo de {nombre_completo} es obligatorio.")
+        if not datos.get("correo", "").strip():
+            raise HTTPException(status_code=400, detail=f"El correo electrónico de {nombre_completo} es obligatorio.")
+        if not datos.get("telefono", "").strip():
+            raise HTTPException(status_code=400, detail=f"El teléfono de {nombre_completo} es obligatorio.")
+        if not datos.get("posicion"):
+            raise HTTPException(status_code=400, detail=f"La posición en el campo de {nombre_completo} es obligatoria.")
+        if not datos.get("numCamiseta") or str(datos.get("numCamiseta")).strip() == "":
+            raise HTTPException(status_code=400, detail=f"El número de camiseta de {nombre_completo} es obligatorio.")
+            
+        # Validar documentos obligatorios
+        docs = datos.get("documentosBorrador", {})
+        if not docs.get("acta"):
+            raise HTTPException(status_code=400, detail=f"El acta de nacimiento de {nombre_completo} es obligatoria.")
+        if not docs.get("foto"):
+            raise HTTPException(status_code=400, detail=f"La fotografía de {nombre_completo} es obligatoria.")
+            
+        es_menor = is_minor(datos.get("fechaNacimiento"))
+        if es_menor:
+            if not docs.get("ineTutor"):
+                raise HTTPException(status_code=400, detail=f"La identificación del tutor de {nombre_completo} es obligatoria por ser menor de edad.")
+            if not docs.get("identificacionMenor"):
+                raise HTTPException(status_code=400, detail=f"La identificación del menor de {nombre_completo} es obligatoria.")
+        else:
+            if not docs.get("ine"):
+                raise HTTPException(status_code=400, detail=f"La identificación (INE) de {nombre_completo} es obligatoria.")
+
+    # 4. Registrar de forma grupal con control transaccional
+    class MockUploadFile:
+        def __init__(self, filename: str, content: bytes):
+            self.filename = filename
+            self.content = content
+            
+        async def read(self) -> bytes:
+            return self.content
+            
+    # Sobrescribir db.commit temporalmente a db.flush para posponer la confirmación
+    original_commit = db.commit
+    db.commit = db.flush
+    
+    try:
+        for slot in pending_slots:
+            datos = json.loads(slot.DatosBorrador)
+            
+            persona = JugadorPersona(
+                nombre=datos.get("nombreJugador", "").strip(),
+                primer_apellido=datos.get("apellidoPaterno", "").strip(),
+                segundo_apellido=datos.get("apellidoMaterno", "").strip(),
+                curp=datos.get("curp", "").strip().upper(),
+                sexo_id=int(datos.get("genero")),
+                fecha_nacimiento=datos.get("fechaNacimiento"),
+                nui=datos.get("nui", "").strip().upper() if datos.get("nui") else None,
+                lugar_nacimiento=datos.get("lugarNacimiento", "MÉXICO").strip(),
+                correo=datos.get("correo", "").strip().lower(),
+                telefono=str(datos.get("codigoPais", "+52")) + str(datos.get("telefono", "")).strip()
+            )
+            
+            extra_data = {
+                "posicion": datos.get("posicion"),
+                "num_camiseta": datos.get("numCamiseta"),
+                "es_foraneo": datos.get("esForaneo"),
+                "nacionalidad_jugador": datos.get("nacionalidadJugador"),
+                "pais_resid_actual": datos.get("paisResidencia"),
+                "nacionalidad_padre": datos.get("nacionalidadPadre"),
+                "nacionalidad_madre": datos.get("nacionalidadMadre"),
+                "nac_abuelo_paterno": datos.get("nacAbueloPaterno"),
+                "nac_abuela_paterna": datos.get("nacAbuelaPaterna"),
+                "nac_abuelo_materno": datos.get("nacAbueloMaterno"),
+                "nac_abuela_materna": datos.get("nacAbuelaMaterna"),
+                "registro_asociacion_extranjera": datos.get("registro_asociacion_extranjera"),
+                "juego_club_extranjero": datos.get("juegoClubExtranjero")
+            }
+            
+            documento_afiliacion_ids = []
+            archivos = []
+            
+            docs_borrador = datos.get("documentosBorrador", {})
+            es_menor = is_minor(datos.get("fechaNacimiento"))
+            
+            keys_to_process = [("acta", 22), ("foto", 25)]
+            if es_menor:
+                keys_to_process.extend([("ineTutor", 33), ("identificacionMenor", 36)])
+            else:
+                keys_to_process.append(("ine", 26))
+                
+            for key, doc_id in keys_to_process:
+                doc_file = docs_borrador.get(key)
+                if doc_file and doc_file.get("data") and doc_file.get("name"):
+                    filename = doc_file["name"]
+                    base64_data = doc_file["data"]
+                    if "," in base64_data:
+                        base64_data = base64_data.split(",")[1]
+                    file_bytes = base64.b64decode(base64_data)
+                    
+                    mock_file = MockUploadFile(filename=filename, content=file_bytes)
+                    documento_afiliacion_ids.append(doc_id)
+                    archivos.append(mock_file)
+                    
+            if docs_borrador.get("formatoFirmado"):
+                ff = docs_borrador["formatoFirmado"]
+                if ff.get("data") and ff.get("name"):
+                    filename = ff["name"]
+                    base64_data = ff["data"]
+                    if "," in base64_data:
+                        base64_data = base64_data.split(",")[1]
+                    file_bytes = base64.b64decode(base64_data)
+                    
+                    mock_file = MockUploadFile(filename=filename, content=file_bytes)
+                    documento_afiliacion_ids.append(28)
+                    archivos.append(mock_file)
+                    
+            seguro_id = slot.SeguroId or int(datos.get("seguroId") or 0)
+            if not seguro_id:
+                raise HTTPException(status_code=400, detail=f"No hay seguro asignado para el jugador {persona.nombre} {persona.primer_apellido}")
+                
+            await registrar_jugador_servicio(
+                db=db,
+                equipo_temporal_id=equipo_temporal_id,
+                persona=persona,
+                documentos_afiliacion_ids=documento_afiliacion_ids,
+                archivos=archivos,
+                seguro_id=seguro_id,
+                slot_id=slot.EquipoTemporalJugadorId,
+                extra_data=extra_data
+            )
+            
+        # Desactivar el equipo temporal ya que todos los slots están completos
+        equipo_tem.Activo = False
+        
+        # Restaurar original_commit y confirmar todo en la base de datos real
+        db.commit = original_commit
+        db.commit()
+        
+    except Exception as e:
+        db.rollback()
+        db.commit = original_commit
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Error en el registro grupal: {str(e)} | {tb}")
+        
+    return {"mensaje": "Todos los jugadores se registraron correctamente", "registrados": len(pending_slots)}
+
 class BorradorJugadorPayload(BaseModel):
     slot_id: int
     datos: dict
