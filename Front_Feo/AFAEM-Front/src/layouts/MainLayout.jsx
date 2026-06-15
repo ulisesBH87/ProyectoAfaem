@@ -40,17 +40,17 @@ const MainLayout = ({ userEmail }) => {
 
   // Bloquear scroll del body cuando el menú móvil está abierto
   //useEffect(() => {
-   // if (mobileMenuOpen) {
-     // document.body.style.overflow = 'hidden';
-    //} else {
-      //document.body.style.overflow = '';
-    //}
-    //return () => { document.body.style.overflow = ''; };
+  // if (mobileMenuOpen) {
+  // document.body.style.overflow = 'hidden';
+  //} else {
+  //document.body.style.overflow = '';
+  //}
+  //return () => { document.body.style.overflow = ''; };
   //}, [mobileMenuOpen]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
-      {/* Backdrop oscuro en móvil */}  
+      {/* Backdrop oscuro en móvil */}
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
@@ -68,16 +68,16 @@ const MainLayout = ({ userEmail }) => {
         userEmail={userEmail}
         collapsed={sidebarCollapsed}
         mobileOpen={mobileMenuOpen}
-        //onMobileClose={() => setMobileMenuOpen(false)}
+      //onMobileClose={() => setMobileMenuOpen(false)}
       />
-      
+
       <div
         className="main-content-wrapper"
-        style={{ 
-          flex: 1, 
+        style={{
+          flex: 1,
           marginLeft: isMobile
             ? '0'
-            : (sidebarCollapsed ? '80px' : '260px'), 
+            : (sidebarCollapsed ? '80px' : '260px'),
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           display: 'flex',
           flexDirection: 'column',
@@ -86,18 +86,18 @@ const MainLayout = ({ userEmail }) => {
           overflowX: 'auto'
         }}
       >
-      <DashboardHeader
-        userEmail={userEmail}
-        onMenuToggle={() => {
-          if (isMobile) {
-            setMobileMenuOpen(prev => !prev);
-          } else {
-            setSidebarCollapsed(prev => !prev);
-          }
-        }}
-      />
-        <main className="fade-in" style={{ 
-          padding: '24px 30px', 
+        <DashboardHeader
+          userEmail={userEmail}
+          onMenuToggle={() => {
+            if (isMobile) {
+              setMobileMenuOpen(prev => !prev);
+            } else {
+              setSidebarCollapsed(prev => !prev);
+            }
+          }}
+        />
+        <main className="fade-in" style={{
+          padding: '24px 30px',
           flex: 1
         }}>
           <Outlet />
