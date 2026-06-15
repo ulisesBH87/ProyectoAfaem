@@ -59,17 +59,52 @@ class WhatsAppService:
         if not link_invitacion:
             raise HTTPException(status_code=400, detail="No se pudo construir el link de invitación.")
 
-        mensaje = self._construir_mensaje(nombre_presidente, link_invitacion)
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": telefono,
-            "type": "text",
-            "text": {
-                "preview_url": True,
-                "body": mensaje,
-            },
-        }
+        if self.config.WHATSAPP_SEND_AS_TEMPLATE:
+            # Construir el payload usando la plantilla configurada en Meta Business
+            # con las dos variables nombradas: {{nombre}} y {{url}}
+            payload = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": telefono,
+                "type": "template",
+                "template": {
+                    "name": self.config.WHATSAPP_TEMPLATE_NAME,
+                    "language": {
+                        "code": self.config.WHATSAPP_TEMPLATE_LANGUAGE,
+                    },
+                    "components": [
+                        {
+                            "type": "body",
+                            "parameters": [
+                                {
+                                    "type": "text",
+                                    "parameter_name": "nombre",
+                                    "text": nombre_presidente,
+                                },
+                                {
+                                    "type": "text",
+                                    "parameter_name": "url",
+                                    "text": link_invitacion,
+                                },
+                            ],
+                        }
+                    ],
+                },
+            }
+        else:
+            # Envío como mensaje de texto plano tradicional
+            mensaje = self._construir_mensaje(nombre_presidente, link_invitacion)
+            payload = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": telefono,
+                "type": "text",
+                "text": {
+                    "preview_url": True,
+                    "body": mensaje,
+                },
+            }
+
         headers = {
             "Authorization": f"Bearer {self.config.WHATSAPP_ACCESS_TOKEN}",
             "Content-Type": "application/json",
