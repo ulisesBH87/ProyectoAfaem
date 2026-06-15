@@ -885,6 +885,8 @@ export default function RegistroJugadores() {
         return;
       }
 
+      let nextTeamId = teamId;
+
       try {
         setLoadingSlots(true);
         const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
@@ -897,7 +899,8 @@ export default function RegistroJugadores() {
           setSlotsData(null);
         } else if (!teamId) {
           if (equiposPendientes.length === 1) {
-            setTeamId(equiposPendientes[0].equipo_temporal_id);
+            nextTeamId = equiposPendientes[0].equipo_temporal_id;
+            setTeamId(nextTeamId);
           } else {
             setTeamId(null);
             setLoadingSlots(false);
@@ -907,7 +910,7 @@ export default function RegistroJugadores() {
         console.error('Error al obtener info de la invitación:', err);
         setLinkError(true);
       } finally {
-        if (!teamId) setLoadingSlots(false);
+        if (!nextTeamId) setLoadingSlots(false);
       }
     };
 
@@ -920,8 +923,15 @@ export default function RegistroJugadores() {
 
     // Esperar a tener un teamId si estamos en flujo público y no ha habido error ni está vacío
     if (!effectiveTeamId) {
-      if (isPublicFlow && !linkError && !noPendingTeams) {
-        setLoadingSlots(false);
+      if (isPublicFlow) {
+        if (linkError || noPendingTeams) {
+          setLoadingSlots(false);
+          return;
+        }
+        // Solo quitar el loader si ya cargamos la invitación y tenemos múltiples equipos
+        if (invitationTeams.length > 1) {
+          setLoadingSlots(false);
+        }
         return;
       }
       if (!isPublicFlow) {
@@ -1045,7 +1055,7 @@ export default function RegistroJugadores() {
     } finally {
       setLoadingSlots(false);
     }
-  }, [teamId, isPublicFlow, location.state?.teamId, tokenIdentificador, tokenSecreto, selectedInvitationTeam, linkError, noPendingTeams, navigate]);
+  }, [teamId, isPublicFlow, location.state?.teamId, tokenIdentificador, tokenSecreto, selectedInvitationTeam, linkError, noPendingTeams, navigate, invitationTeams]);
 
   // EFECTO 2: CARGAR SLOTS Y DATOS DEL EQUIPO (Corre cuando cambia teamId o la info de invitación)
   useEffect(() => {
@@ -1862,6 +1872,7 @@ export default function RegistroJugadores() {
                 key={team.equipo_temporal_id}
                 onClick={() => {
                   setCurrentPlayerIndex(0);
+                  setLoadingSlots(true);
                   setTeamId(team.equipo_temporal_id);
                 }}
                 style={{
