@@ -242,9 +242,9 @@ export default function RegistroJugadores() {
       .premium-card h1 {
         font-size: 20px !important;
       }
-      .premium-card div:last-child {
+      .espacios-disponibles-card {
         text-align: left !important;
-        width: 100%;
+        width: 100% !important;
       }
     }
 
@@ -2165,7 +2165,7 @@ export default function RegistroJugadores() {
           </div>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+        <div className="espacios-disponibles-card" style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
           <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Espacios Disponibles</span>
           <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
             {slotsInfo.disponibles} / {slotsInfo.total} Cupos
@@ -2484,7 +2484,16 @@ export default function RegistroJugadores() {
                               /* ESTADO VACÍO */
                               <div
                                 onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                                style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '100%',
+                                  textAlign: 'center',
+                                  color: '#94a3b8',
+                                  cursor: 'pointer'
+                                }}
                               >
                                 <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                                 <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>

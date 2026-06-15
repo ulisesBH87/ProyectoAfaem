@@ -715,8 +715,7 @@ export default function CompletarJugadoresEquipo() {
       'correo',
       'telefono',
       'numCamiseta',
-      'posicion',
-      'nui'
+      'posicion'
     ];
 
     const faltaCampo = camposRequeridos.some(f => {
@@ -784,8 +783,7 @@ export default function CompletarJugadoresEquipo() {
       { name: 'correo', label: 'Correo electrónico' },
       { name: 'telefono', label: 'Teléfono' },
       { name: 'numCamiseta', label: '# Camiseta' },
-      { name: 'posicion', label: 'Posición en el campo' },
-      { name: 'nui', label: 'NUI' }
+      { name: 'posicion', label: 'Posición en el campo' }
     ];
 
     const missingFields = requiredFields.filter(f => {
@@ -1572,7 +1570,7 @@ export default function CompletarJugadoresEquipo() {
               {/* Loader temporal OCR */}
               {documents.acta && !extractedData.fechaNacimiento && (
                 <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                  Analizando el Acta de Nacimiento... Los documentos adicionales y campos se rellenarán automáticamente en breve.
+                  Analizando el Acta de Nacimiento... Los campos se rellenarán automáticamente en breve. Si no es así, puedes completarlos manualmente.
                 </div>
               )}
 
@@ -1646,7 +1644,7 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
                     <input type="text" maxLength={3} value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
@@ -1659,10 +1657,6 @@ export default function CompletarJugadoresEquipo() {
                         <option key={r.id} value={r.id}>{r.nombre}</option>
                       ))}
                     </select>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>NUI <span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.nui || ''} onChange={e => handleFieldChange('nui', e.target.value)} placeholder="Ej. 123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
                   </div>
                 </div>
 
