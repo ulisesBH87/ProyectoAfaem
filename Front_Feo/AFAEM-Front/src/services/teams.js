@@ -440,6 +440,24 @@ export const checkTeamSlots = async (equipoId) => {
   }
 };
 
+export const registrarGrupoJugadores = async (equipoTemporalId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await api.post('/equipo-temporal/registrar-grupo', {
+      equipo_temporal_id: equipoTemporalId
+    }, { headers });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   getUserTeams,
@@ -451,6 +469,7 @@ export default {
   getCatalogs,
   certifyUser,
   registrarJugadorTemporal,
+  registrarGrupoJugadores,
   getAvailableSlots,
   getInvitationInfo,
   getEquipoTemporalInfo,
