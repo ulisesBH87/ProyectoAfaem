@@ -1,10 +1,11 @@
 import { jsPDF } from 'jspdf';
 
 export const DEFAULT_BANK_INFO = {
-  banco: 'BBVA Mexico',
-  titular: 'Asociacion Deportiva Estatal AC',
-  cuenta: '0123456789 01',
-  clabe: '012 180 0001234567 89',
+  banco: 'SANTANDER',
+  titular: 'AFAEM ASOCIACIÓN DE FÚTBOL AMATEUR DEL ESTADO AC',
+  cuenta: '65 50917824-5',
+  clabe: '0145 4065 5091 7824 58',
+  tarjeta: '5579 0890 0364 2694',
   referencia: 'RHX-CL26-001'
 };
 
@@ -70,7 +71,12 @@ export const generarPDFCuota = ({
   doc.text(`Cuenta: ${bankInfo.cuenta}`, margin, yPosition);
   yPosition += 6;
   doc.text(`CLABE: ${bankInfo.clabe}`, margin, yPosition);
-  yPosition += 8;
+  yPosition += 6;
+  if (bankInfo.tarjeta) {
+    doc.text(`Tarjeta: ${bankInfo.tarjeta}`, margin, yPosition);
+    yPosition += 6;
+  }
+  yPosition += 2;
   doc.setFontSize(11);
   doc.setTextColor(220, 38, 38);
   doc.text(`Referencia obligatoria: ${bankInfo.referencia}`, margin, yPosition, { maxWidth: contentWidth });

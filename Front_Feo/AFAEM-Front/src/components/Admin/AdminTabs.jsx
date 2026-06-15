@@ -13,15 +13,23 @@ const AdminTabs = () => {
   ];
 
   return (
-    <div style={{
-      display: 'flex',
-      gap: '8px',
-      marginBottom: '24px',
-      borderBottom: '1px solid var(--border-light)',
-      paddingBottom: '8px',
-      overflowX: 'auto',
-      whiteSpace: 'nowrap'
-    }}>
+    <>
+      <style>{`
+        @media (min-width: 769px) {
+          .admin-tabs-container {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <div className="admin-tabs-container" style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '24px',
+        borderBottom: '1px solid var(--border-light)',
+        paddingBottom: '8px',
+        overflowX: 'auto',
+        whiteSpace: 'nowrap'
+      }}>
       {tabs.map((tab, idx) => {
         const isActive = location.pathname === tab.path;
         return (
@@ -49,6 +57,7 @@ const AdminTabs = () => {
         );
       })}
     </div>
+    </>
   );
 };
 
