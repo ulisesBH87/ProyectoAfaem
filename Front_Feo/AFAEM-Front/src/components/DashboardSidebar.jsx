@@ -17,9 +17,12 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
+  const [isHovered, setIsHovered] = useState(false);
 
   // DEFINICIÓN DE TEMAS (Glassmorphism)
   const isAdmin = hasRole('Admin') || hasRole('Administrador');
+  const isMobile = window.innerWidth <= 768;
+  const isExpanded = !collapsed || (isHovered && !isMobile);
 
   const handleLogoClick = () => {
     if (isAdmin) {
@@ -48,10 +51,11 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
     hoverBg: isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.05)',
     shadow: isAdmin ? '0 8px 32px 0 rgba(0, 0, 0, 0.8)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
   };
-  const isMobile = window.innerWidth <= 768;
   return (
     <aside
-      className={`dashboard-sidebar${mobileOpen ? ' mobile-open' : ''}`}
+      className={`dashboard-sidebar${mobileOpen ? ' mobile-open' : ''}${isHovered && collapsed ? ' hovering' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         transform: isMobile
           ? (mobileOpen ? 'translateX(0)' : 'translateX(-100%)')
@@ -59,7 +63,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
 
         width: isMobile
           ? '260px'
-          : (collapsed ? '80px' : '260px'),
+          : (isExpanded ? '260px' : '80px'),
         height: '100vh',
         maxHeight: '100vh',
         overflowY: 'auto',
@@ -74,7 +78,9 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
         backdropFilter: 'blur(15px)',
         WebkitBackdropFilter: 'blur(15px)',
         borderRight: `1px solid ${theme.border}`,
-        boxShadow: theme.shadow,
+        boxShadow: (isHovered && collapsed)
+          ? (isAdmin ? '0 12px 40px 0 rgba(0, 0, 0, 0.9)' : '0 12px 40px 0 rgba(31, 38, 135, 0.3)')
+          : theme.shadow,
         color: theme.text
       }}
     >
@@ -101,7 +107,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
             transition: 'all 0.3s'
           }}
         />
-        {!collapsed && (
+        {isExpanded && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <h1
               onClick={handleLogoClick}
@@ -165,8 +171,8 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                     backgroundColor: isActive ? theme.activeBg : 'transparent',
                     color: isActive ? theme.activeText : theme.text,
                     boxShadow: isActive ? (isAdmin ? '0 4px 12px rgba(37, 99, 235, 0.4)' : '0 4px 8px rgba(11, 78, 166, 0.3)') : 'none',
-                    padding: collapsed ? '12px 0' : '8px 12px',
-                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    padding: isExpanded ? '8px 12px' : '12px 0',
+                    justifyContent: isExpanded ? 'flex-start' : 'center',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
@@ -184,7 +190,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                   <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center' }}>
                     {getIcon(item.Icono)}
                   </span>
-                  {!collapsed && (
+                  {isExpanded && (
                     <span
                       style={{
                         marginLeft: '12px',
@@ -200,7 +206,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                 </div>
 
                 {/* Submenus if present */}
-                {!collapsed && hasChildren && filteredSubMenus.map((child, cIdx) => {
+                {isExpanded && hasChildren && filteredSubMenus.map((child, cIdx) => {
                   const isChildActive = location.pathname === child.Ruta;
                   return (
                     <div
@@ -260,7 +266,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
                 color: isActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.text,
                 backgroundColor: isActive ? theme.hoverBg : 'transparent',
                 transition: 'all 0.2s',
-                justifyContent: collapsed ? 'center' : 'flex-start',
+                justifyContent: isExpanded ? 'flex-start' : 'center',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) e.currentTarget.style.backgroundColor = theme.hoverBg;
@@ -270,7 +276,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
               }}
             >
               {icon}
-              {!collapsed && (
+              {isExpanded && (
                 <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
                   {label}
                 </span>
@@ -292,13 +298,13 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
             cursor: 'pointer',
             color: 'var(--danger)',
             transition: 'all 0.2s',
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            justifyContent: isExpanded ? 'flex-start' : 'center',
           }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <FaSignOutAlt style={{ fontSize: '18px' }} />
-          {!collapsed && (
+          {isExpanded && (
             <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '700' }}>
               Cerrar Sesión
             </span>
