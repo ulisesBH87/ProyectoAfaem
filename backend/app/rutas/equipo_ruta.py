@@ -829,6 +829,24 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
 
         resultados = query.all()
 
+        # Obtener todos los equipos jugando con sus presidentes
+        equipos_jugando = db.query(
+            EquiposJugando.PresidenteEquipoId,
+            Equipos.EquipoId,
+            Equipos.NombreEquipo
+        ).join(Equipos, Equipos.EquipoId == EquiposJugando.EquipoId)\
+         .filter(EquiposJugando.PresidenteEquipoId != None).all()
+        
+        # Mapear de PresidenteEquipoId a lista de equipos
+        equipos_por_presidente = {}
+        for ej in equipos_jugando:
+            if ej.PresidenteEquipoId not in equipos_por_presidente:
+                equipos_por_presidente[ej.PresidenteEquipoId] = []
+            equipos_por_presidente[ej.PresidenteEquipoId].append({
+                "id": ej.EquipoId,
+                "nombre": ej.NombreEquipo
+            })
+
         return [
             {
                 "id":             r.PresidenteEquipoId,
@@ -844,7 +862,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "usuarioId":      r.UsuarioId,
                 "RutaFoto":       r.RutaFoto,
                 "equipo":         r.NombreEquipo,
-                "equipoId":       r.EquipoId
+                "equipoId":       r.EquipoId,
+                "equipos":        equipos_por_presidente.get(r.PresidenteEquipoId, [])
             } for r in resultados
         ]
     except Exception as e:
