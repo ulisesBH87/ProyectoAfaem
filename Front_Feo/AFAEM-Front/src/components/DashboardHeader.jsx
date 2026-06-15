@@ -82,6 +82,9 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
             padding: 0 16px;
             gap: 12px;
           }
+          .header-hamburger-btn {
+            display: none !important; /* Ocultar hamburguesa ya que se usa Bottom Navigation */
+          }
           .header-title-text {
             display: none; /* Ocultar título en móvil */
           }

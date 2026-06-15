@@ -168,7 +168,10 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
             return (
               <React.Fragment key={idx}>
                 <div
-                  onClick={() => item.Ruta && navigate(item.Ruta)}
+                  onClick={() => {
+                    const targetRoute = item.Ruta || (item.SubMenus && item.SubMenus.length > 0 ? item.SubMenus[0].Ruta : null);
+                    if (targetRoute) navigate(targetRoute);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
