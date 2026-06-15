@@ -957,7 +957,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             Equipos.NombreEquipo.label("Equipo"),
             MiembrosEquipo.FechaIngreso,
             MiembrosEquipo.Estatus,
-            foto_subquery.label("RutaFoto")
+            foto_subquery.label("RutaFoto"),
+            MiembrosEquipo.NumeroCamiseta
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
          .join(Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId)\
@@ -982,7 +983,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "Equipo": r.Equipo,
                 "FechaIngreso": r.FechaIngreso,
                 "Estatus": bool(r.Estatus),
-                "RutaFoto": r.RutaFoto
+                "RutaFoto": r.RutaFoto,
+                "NumeroCamiseta": r.NumeroCamiseta
             } for r in resultados
         ]
     except Exception as e:
