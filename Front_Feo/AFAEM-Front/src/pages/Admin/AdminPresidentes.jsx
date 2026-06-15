@@ -1231,25 +1231,25 @@ export default function AdminPresidentes() {
                 {datosEditables.curp || 'CURP NO REGISTRADA'} • <strong>Equipos a cargo:</strong>{' '}
                 {presidenteEnEdicion?.equipos && presidenteEnEdicion.equipos.length > 0
                   ? presidenteEnEdicion.equipos.map((eq, idx) => (
-                      <span key={eq.id || idx}>
-                        {idx > 0 && ', '}
-                        <span
-                          style={{ cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
-                          onClick={() => {
-                            setModalEdicion(false);
-                            if (esNavegacionCruzada) {
-                              setEsNavegacionCruzada(false);
-                              searchParams.delete('abrirDetalle');
-                              setSearchParams(searchParams, { replace: true });
-                            }
-                            navigate(`/admin/equipos?abrirDetalle=${eq.id}`);
-                          }}
-                          title="Ver detalle del equipo"
-                        >
-                          {eq.nombre || eq.NombreEquipo || eq.nombreEquipo}
-                        </span>
+                    <span key={eq.id || idx}>
+                      {idx > 0 && ', '}
+                      <span
+                        style={{ cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
+                        onClick={() => {
+                          setModalEdicion(false);
+                          if (esNavegacionCruzada) {
+                            setEsNavegacionCruzada(false);
+                            searchParams.delete('abrirDetalle');
+                            setSearchParams(searchParams, { replace: true });
+                          }
+                          navigate(`/admin/equipos?abrirDetalle=${eq.id}`);
+                        }}
+                        title="Ver detalle del equipo"
+                      >
+                        {eq.nombre || eq.NombreEquipo || eq.nombreEquipo}
                       </span>
-                    ))
+                    </span>
+                  ))
                   : 'Sin equipos asignados'}
               </p>
               {(() => {
