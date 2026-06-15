@@ -14,7 +14,30 @@ const MobileBottomNav = () => {
 
   const isAdmin = hasRole('Admin') || hasRole('Administrador');
 
-  const allValidMenus = menus.filter(item => {
+  const theme = {
+    bg: isAdmin ? 'rgba(15, 23, 42, 0.95)' : '#ffffff',
+    text: isAdmin ? '#94a3b8' : '#64748b',
+    activeText: isAdmin ? '#ffffff' : 'var(--primary)',
+    borderTop: isAdmin ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e2e8f0',
+    sheetBg: isAdmin ? '#0f172a' : '#ffffff',
+    sheetTitle: isAdmin ? '#f8fafc' : '#1e293b',
+    sheetSubtitle: isAdmin ? '#64748b' : '#94a3b8',
+    sheetItemBg: isAdmin ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+    sheetItemActiveBg: isAdmin ? 'var(--primary)' : 'rgba(37, 99, 235, 0.08)',
+    sheetItemText: isAdmin ? '#e2e8f0' : '#1e293b',
+    sheetItemActiveText: isAdmin ? '#ffffff' : 'var(--primary)',
+  };
+
+  let flattenedMenus = [];
+  menus.forEach(item => {
+    if (item.Nombre === 'Mi Equipo' && !isAdmin && item.SubMenus && item.SubMenus.length > 0) {
+      flattenedMenus.push(...item.SubMenus);
+    } else {
+      flattenedMenus.push(item);
+    }
+  });
+
+  const allValidMenus = flattenedMenus.filter(item => {
     if (item.Ruta && item.Ruta.startsWith('/admin') && !isAdmin) return false;
     if ((item.Nombre === 'Catálogos' || item.Nombre === 'Equipos' || item.Nombre === 'Catálogo Equipos' || item.Nombre === 'Catálogo Jugadores') && !isAdmin) {
       if (item.Ruta !== '/presidente-equipo/equipos' && item.Ruta !== '/presidente-equipo/mis-jugadores') return false;
@@ -41,14 +64,16 @@ const MobileBottomNav = () => {
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
+        backgroundColor: theme.bg,
+        backdropFilter: 'blur(15px)',
+        WebkitBackdropFilter: 'blur(15px)',
+        borderTop: theme.borderTop,
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         zIndex: 1100,
-        boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.05)',
+        boxShadow: isAdmin ? '0 -8px 32px 0 rgba(0, 0, 0, 0.8)' : '0 -4px 6px -1px rgba(0, 0, 0, 0.05)',
         height: '65px'
       }}>
         {mainMenus.map((item, idx) => {
@@ -68,7 +93,7 @@ const MobileBottomNav = () => {
                 justifyContent: 'center',
                 flex: 1,
                 height: '100%',
-                color: isActive ? 'var(--primary)' : '#64748b',
+                color: isActive ? theme.activeText : theme.text,
                 cursor: 'pointer',
                 transition: 'color 0.2s'
               }}
@@ -92,7 +117,7 @@ const MobileBottomNav = () => {
             justifyContent: 'center',
             flex: 1,
             height: '100%',
-            color: showMoreMenu ? 'var(--primary)' : '#64748b',
+            color: showMoreMenu ? theme.activeText : theme.text,
             cursor: 'pointer',
             transition: 'color 0.2s'
           }}
@@ -118,26 +143,26 @@ const MobileBottomNav = () => {
             bottom: '65px',
             left: 0,
             right: 0,
-            backgroundColor: '#ffffff',
+            backgroundColor: theme.sheetBg,
             borderTopLeftRadius: '20px',
             borderTopRightRadius: '20px',
             padding: '20px',
             zIndex: 1099,
-            boxShadow: '0 -10px 20px rgba(0,0,0,0.1)',
+            boxShadow: isAdmin ? '0 -10px 40px rgba(0,0,0,0.6)' : '0 -10px 20px rgba(0,0,0,0.1)',
             paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
             animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             maxHeight: '70vh',
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>Más opciones</h3>
-              <FaTimes onClick={() => setShowMoreMenu(false)} style={{ color: '#64748b', cursor: 'pointer', fontSize: '20px' }} />
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: theme.sheetTitle }}>Más opciones</h3>
+              <FaTimes onClick={() => setShowMoreMenu(false)} style={{ color: theme.text, cursor: 'pointer', fontSize: '20px' }} />
             </div>
 
             {/* Render extra menus that didn't fit in main 4 */}
             {extraMenus.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px' }}>Módulos</h4>
+                <h4 style={{ fontSize: '12px', fontWeight: '700', color: theme.sheetSubtitle, textTransform: 'uppercase', marginBottom: '8px' }}>Módulos</h4>
                 {extraMenus.map((item, idx) => {
                   const isActive = location.pathname === item.Ruta || (item.SubMenus && item.SubMenus.some(sub => location.pathname === sub.Ruta));
                   return (
@@ -154,13 +179,13 @@ const MobileBottomNav = () => {
                         padding: '16px 12px',
                         margin: '8px 0',
                         borderRadius: '12px',
-                        backgroundColor: isActive ? 'rgba(37, 99, 235, 0.08)' : '#f8fafc',
-                        color: isActive ? 'var(--primary)' : '#1e293b',
+                        backgroundColor: isActive ? theme.sheetItemActiveBg : theme.sheetItemBg,
+                        color: isActive ? theme.sheetItemActiveText : theme.sheetItemText,
                         cursor: 'pointer',
                         transition: 'background-color 0.2s'
                       }}
                     >
-                      <span style={{ fontSize: '18px', marginRight: '16px', color: isActive ? 'var(--primary)' : '#64748b' }}>
+                      <span style={{ fontSize: '18px', marginRight: '16px', color: isActive ? theme.sheetItemActiveText : theme.text }}>
                         {getIcon(item.Icono)}
                       </span>
                       <span style={{ fontSize: '14px', fontWeight: '600' }}>
@@ -173,7 +198,7 @@ const MobileBottomNav = () => {
             )}
 
             <div>
-              <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px', marginTop: extraMenus.length > 0 ? '16px' : '0' }}>Información Legal</h4>
+              <h4 style={{ fontSize: '12px', fontWeight: '700', color: theme.sheetSubtitle, textTransform: 'uppercase', marginBottom: '8px', marginTop: extraMenus.length > 0 ? '16px' : '0' }}>Información Legal</h4>
               {legalLinks.map((link, idx) => {
                 const isLinkActive = location.pathname === link.path;
                 return (
@@ -189,13 +214,13 @@ const MobileBottomNav = () => {
                       padding: '16px 12px',
                       margin: '8px 0',
                       borderRadius: '12px',
-                      backgroundColor: isLinkActive ? 'rgba(37, 99, 235, 0.08)' : '#f8fafc',
-                      color: isLinkActive ? 'var(--primary)' : '#1e293b',
+                      backgroundColor: isLinkActive ? theme.sheetItemActiveBg : theme.sheetItemBg,
+                      color: isLinkActive ? theme.sheetItemActiveText : theme.sheetItemText,
                       cursor: 'pointer',
                       transition: 'background-color 0.2s'
                     }}
                   >
-                    <span style={{ fontSize: '18px', marginRight: '16px', color: isLinkActive ? 'var(--primary)' : '#64748b' }}>
+                    <span style={{ fontSize: '18px', marginRight: '16px', color: isLinkActive ? theme.sheetItemActiveText : theme.text }}>
                       {link.icon}
                     </span>
                     <span style={{ fontSize: '14px', fontWeight: '600' }}>

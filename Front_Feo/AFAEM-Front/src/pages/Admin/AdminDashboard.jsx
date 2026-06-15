@@ -12,6 +12,7 @@ import {
 import { getSolicitudes } from '../../services/solicitud';
 import { getPagosGenerales, getJugadoresDirectorio } from '../../services/admin';
 import Loader from '../../components/Loader';
+import AdminTabs from '../../components/Admin/AdminTabs';
 import '../../styles/dashboard.css';
 
 const AdminDashboard = () => {
@@ -106,6 +107,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="fade-in-up" style={{ padding: '20px 0' }}>
+      <AdminTabs />
       {/* HEADER SECTION */}
       <header className="admin-dashboard-header">
         <div>
