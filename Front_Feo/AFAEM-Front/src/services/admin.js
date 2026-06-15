@@ -263,7 +263,10 @@ export const getCatalogosRegistro = async () => {
  */
 export const updateJugador = async (miembroEquipoId, data) => {
   // Mapear string de sexo a SexoId numérico
-  const sexoMap = { 'Masculino': 1, 'Femenino': 2, 'No Binario': 3 };
+  const sexoMap = {
+    'Masculino': 1, 'Femenino': 2, 'No Binario': 3,
+    'Hombre': 1, 'Mujer': 2
+  };
   const sexoId = data.sexo ? (sexoMap[data.sexo] ?? null) : null;
 
   const response = await api.patch(`/equipo-temporal/update-jugador/${miembroEquipoId}`, {
