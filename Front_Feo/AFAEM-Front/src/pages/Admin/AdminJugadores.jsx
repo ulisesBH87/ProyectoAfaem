@@ -905,7 +905,7 @@ export default function AdminJugadores() {
       segundoApellido: jugador.SegundoApellido || '',
       curp: jugador.CURP || '',
       email: jugador.Email || '',
-      sexo: jugador.Sexo || '',
+      sexo: jugador.Sexo === 'Hombre' ? 'Masculino' : (jugador.Sexo === 'Mujer' ? 'Femenino' : (jugador.Sexo || '')),
       fechaNacimiento: jugador.FechaNacimiento ? jugador.FechaNacimiento.split('T')[0] : '',
       NUI: jugador.NUI || '',
       estatus: jugador.Estatus ? '1' : '0'

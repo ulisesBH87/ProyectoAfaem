@@ -39,7 +39,7 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
           background: transparent;
           cursor: pointer;
           font-size: 20px;
-          display: flex !important; /* Siempre visible como se solicitó */
+          display: none !important; /* Ocultar en PC */
           align-items: center;
           color: var(--primary);
         }
@@ -78,6 +78,9 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
 
         /* Mobile (< 768px) */
         @media (max-width: 767px) {
+          .header-hamburger-btn {
+            display: flex !important; /* Mostrar en móvil */
+          }
           .dashboard-header-container {
             padding: 0 16px;
             gap: 12px;

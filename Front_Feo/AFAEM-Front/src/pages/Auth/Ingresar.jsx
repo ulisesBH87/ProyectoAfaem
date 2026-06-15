@@ -112,11 +112,11 @@ export default function Ingresar() {
       <div className="auth-overlay"></div>
 
       <div className="auth-content fade-in-up">
-        <div className="glass-dark auth-card-refined">
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <img src={AfaemLogo} alt="AFAEM" style={{ height: '84px', marginBottom: '24px', filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.3))' }} />
-            <h1 className="heading-outfit" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px', color: 'white' }}>Inicia Sesión</h1>
-            <p className="glass-subtitle" style={{ fontWeight: '500', color: 'rgba(255,255,255,0.7)' }}>Bienvenido a la plataforma AFAEM</p>
+        <div className="glass-dark auth-card-refined" style={{ padding: 'clamp(24px, 6vh, 48px) clamp(16px, 5vw, 40px)' }}>
+          <div style={{ textAlign: 'center', marginBottom: 'clamp(20px, 5vh, 40px)' }}>
+            <img src={AfaemLogo} alt="AFAEM" style={{ height: 'clamp(60px, 12vh, 84px)', marginBottom: 'clamp(12px, 3vh, 24px)', filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.3))' }} />
+            <h1 className="heading-outfit" style={{ fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: '800', marginBottom: '8px', color: 'white' }}>Inicia Sesión</h1>
+            <p className="glass-subtitle" style={{ fontWeight: '500', color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(12px, 3.5vw, 15px)' }}>Bienvenido a la plataforma AFAEM</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -133,8 +133,8 @@ export default function Ingresar() {
               </div>
             )}
 
-            <div style={{ marginBottom: '24px' }}>
-              <label className="auth-label">Correo electrónico</label>
+            <div style={{ marginBottom: '20px' }}>
+              <label className="auth-label" style={{ fontSize: 'clamp(11px, 3vw, 13px)' }}>Correo electrónico</label>
               <input
                 type="email"
                 className="auth-input"
@@ -143,11 +143,12 @@ export default function Ingresar() {
                 onChange={(e) => setEmail(e.target.value.toLowerCase())}
                 disabled={loading}
                 required
+                style={{ padding: 'clamp(10px, 2.2vh, 14px) 16px' }}
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label className="auth-label">Contraseña</label>
+            <div style={{ marginBottom: '16px' }}>
+              <label className="auth-label" style={{ fontSize: 'clamp(11px, 3vw, 13px)' }}>Contraseña</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -157,6 +158,7 @@ export default function Ingresar() {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   required
+                  style={{ padding: 'clamp(10px, 2.2vh, 14px) 16px' }}
                 />
                 <button
                   type="button"
@@ -169,44 +171,37 @@ export default function Ingresar() {
                   }}
                 >
                   {showPassword ? (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
                   )}
                 </button>
               </div>
-              {/* Restaurar cuando esté listo el servicio de recuperación de contraseña 
-              <div style={{ textAlign: 'right', marginTop: '12px' }}>
-                <Link to="/olvide-contrasena" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: '12px', fontWeight: '600' }}>
-                  ¿Olvidó su contraseña?
-                </Link>
-              </div>
-              */}
             </div>
 
             <button
               type="submit"
               className="btn-premium"
               disabled={loading}
-              style={{ width: '100%', marginTop: '20px', padding: '16px' }}
+              style={{ width: '100%', marginTop: '16px', padding: 'clamp(12px, 2.5vh, 16px)' }}
             >
               {loading ? 'Validando acceso...' : 'Ingresar al sistema'}
             </button>
           </form>
 
-          <div style={{ marginTop: '32px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
+          <div style={{ marginTop: 'clamp(16px, 4vh, 32px)', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(12px, 3.5vw, 14px)' }}>
             ¿No tienes cuenta? <Link to="/registrarse-cuenta" style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Regístrate ahora</Link>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '32px', opacity: 0.6 }}>
-            <img src={FmfLogo} alt="FMF" style={{ height: '24px', objectFit: 'contain' }} />
-            <img src={AmateurLogo} alt="Sector Amateur" style={{ height: '24px', objectFit: 'contain' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: 'clamp(16px, 4vh, 32px)', opacity: 0.6 }}>
+            <img src={FmfLogo} alt="FMF" style={{ height: 'clamp(16px, 3vh, 24px)', objectFit: 'contain' }} />
+            <img src={AmateurLogo} alt="Sector Amateur" style={{ height: 'clamp(16px, 3vh, 24px)', objectFit: 'contain' }} />
           </div>
         </div>
       </div>

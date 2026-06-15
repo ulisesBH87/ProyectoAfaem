@@ -132,7 +132,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
       </div>
 
       {/* MENU ITEMS */}
-      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
+      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto', overflowX: 'hidden' }}>
         {menus
           .filter(item => {
             // Seguridad: Si es una ruta de admin, solo mostrar si es admin
@@ -244,7 +244,9 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
                         backgroundColor: isChildActive ? (isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.08)') : 'transparent',
                         color: isChildActive ? (isAdmin ? '#ffffff' : 'var(--primary)') : theme.textMuted,
                         fontSize: '12px',
-                        fontWeight: '500'
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden'
                       }}
                     >
                       {child.Nombre}

@@ -107,16 +107,16 @@ export default function AdminLayoutJugadores() {
 
   return (
     <div className="dashboard-content">
-      <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div className="admin-dashboard-header" style={{ marginBottom: '28px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+          <h2 style={{ fontSize: 'clamp(20px, 5vw, 24px)', fontWeight: '800', color: '#1e293b', margin: 0 }}>
             Layout de Jugadores
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 'clamp(12px, 3.5vw, 14px)', color: '#64748b' }}>
             Haz clic en cualquier dato para copiarlo al portapapeles.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={() => fetchData(true)}
             style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: '#334155' }}
