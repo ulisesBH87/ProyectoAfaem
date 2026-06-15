@@ -13,7 +13,7 @@ import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
 import AfaemLogo from '../assets/afaem-logo@4x.png';
 
-const DashboardSidebar = ({ collapsed, mobileOpen }) => {
+const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { menus, isLoading, hasRole } = useRBAC();
@@ -21,8 +21,8 @@ const DashboardSidebar = ({ collapsed, mobileOpen }) => {
 
   // DEFINICIÓN DE TEMAS (Glassmorphism)
   const isAdmin = hasRole('Admin') || hasRole('Administrador');
-  const isMobile = window.innerWidth <= 768;
-  const isExpanded = !collapsed || (isHovered && !isMobile);
+  const isMobile = isMobileProp !== undefined ? isMobileProp : (window.innerWidth <= 768);
+  const isExpanded = isMobile || !collapsed || isHovered;
 
   const handleLogoClick = () => {
     if (isAdmin) {

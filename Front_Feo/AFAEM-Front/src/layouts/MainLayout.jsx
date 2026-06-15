@@ -68,6 +68,7 @@ const MainLayout = ({ userEmail }) => {
         userEmail={userEmail}
         collapsed={sidebarCollapsed}
         mobileOpen={mobileMenuOpen}
+        isMobile={isMobile}
       //onMobileClose={() => setMobileMenuOpen(false)}
       />
 
