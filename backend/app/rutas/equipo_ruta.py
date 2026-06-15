@@ -829,6 +829,24 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
 
         resultados = query.all()
 
+        # Obtener todos los equipos jugando con sus presidentes
+        equipos_jugando = db.query(
+            EquiposJugando.PresidenteEquipoId,
+            Equipos.EquipoId,
+            Equipos.NombreEquipo
+        ).join(Equipos, Equipos.EquipoId == EquiposJugando.EquipoId)\
+         .filter(EquiposJugando.PresidenteEquipoId != None).all()
+        
+        # Mapear de PresidenteEquipoId a lista de equipos
+        equipos_por_presidente = {}
+        for ej in equipos_jugando:
+            if ej.PresidenteEquipoId not in equipos_por_presidente:
+                equipos_por_presidente[ej.PresidenteEquipoId] = []
+            equipos_por_presidente[ej.PresidenteEquipoId].append({
+                "id": ej.EquipoId,
+                "nombre": ej.NombreEquipo
+            })
+
         return [
             {
                 "id":             r.PresidenteEquipoId,
@@ -844,7 +862,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "usuarioId":      r.UsuarioId,
                 "RutaFoto":       r.RutaFoto,
                 "equipo":         r.NombreEquipo,
-                "equipoId":       r.EquipoId
+                "equipoId":       r.EquipoId,
+                "equipos":        equipos_por_presidente.get(r.PresidenteEquipoId, [])
             } for r in resultados
         ]
     except Exception as e:
@@ -1279,9 +1298,7 @@ async def registrar_presidente_admin(
         # Fetch costs for inscriptions
         from app.modelos.catalogo_tipo_afiliacion import CatalogoTiposAfiliacion
         pres_af = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 2).first()
-        jug_af = db.query(CatalogoTiposAfiliacion).filter(CatalogoTiposAfiliacion.TipoAfiliacionId == 4).first()
         precio_pres = pres_af.CostoActual if pres_af else 0
-        precio_jug = jug_af.CostoActual if jug_af else 0
 
         # Add President Inscription
         detalles.append({
@@ -1293,19 +1310,6 @@ async def registrar_presidente_admin(
             "subtotal": precio_pres
         })
         total += precio_pres
-
-        # Add Player Inscriptions
-        if numPersonas > 0:
-            subtotal_jug = precio_jug * numPersonas
-            detalles.append({
-                "tipo_concepto": 2, # INSCRIPCION
-                "tipo_afiliacion_id": 4, # JUGADOR
-                "seguro_id": None,
-                "cantidad": numPersonas,
-                "precio": precio_jug,
-                "subtotal": subtotal_jug
-            })
-            total += subtotal_jug
             
         if segurosAsignados:
             try:
@@ -1335,14 +1339,6 @@ async def registrar_presidente_admin(
             "tipo_afiliacion_id": 2,     # TIPO_AFILIACION_PRESIDENTE
             "seguro_id": None,
             "cantidad": 1,
-            "precio": 0.0,
-            "subtotal": 0.0
-        })
-        detalles.append({
-            "tipo_concepto": 2,          # INSCRIPCION
-            "tipo_afiliacion_id": 4,     # TIPO_AFILIACION_JUGADOR
-            "seguro_id": None,
-            "cantidad": numPersonas,
             "precio": 0.0,
             "subtotal": 0.0
         })

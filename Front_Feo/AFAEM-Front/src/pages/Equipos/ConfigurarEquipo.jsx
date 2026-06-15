@@ -186,13 +186,11 @@ export default function ConfigurarEquipo() {
   const tieneSegurosJugadorValidos = totalAsignadosPagoJugador === segurosRequeridosPagoJugador;
   const canGeneratePagoEquipo = Number(numJugadoresPago) >= 1 && tieneSegurosJugadorValidos;
   const costoAfiliacionPresidente = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 2)?.CostoActual || 0);
-  const costoAfiliacionJugador = Number(catalogoAfiliacionesPago.find(a => a.TipoAfiliacionId === 4)?.CostoActual || 0);
   const totalPagoEstimado = (
-    (costoAfiliacionJugador * Number(numJugadoresPago || 0)) +
-    ((catalogs.seguros || []).reduce((sum, seguro) => {
+    (catalogs.seguros || []).reduce((sum, seguro) => {
       const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
       return sum + (Number(seguro.precio || 0) * cantidad);
-    }, 0))
+    }, 0)
   );
   const totalPagoMostrado = pagoEquipo.total || totalPagoEstimado;
 
@@ -491,20 +489,18 @@ export default function ConfigurarEquipo() {
         setPagoEquipo(prev => ({ ...prev, estado: estatusOrden }));
       }
 
-      let cantidadJugadores = null;
+      let cantidadJugadores = 0;
       const seguros = {};
 
       detalles.forEach(detalle => {
-        if (Number(detalle.TipoAfiliacionId) === 4) {
-          cantidadJugadores = Number(detalle.Cantidad || 0);
-        }
         if (detalle.SeguroId) {
           const id = String(detalle.SeguroId);
           seguros[id] = Number(detalle.Cantidad || 0);
+          cantidadJugadores += Number(detalle.Cantidad || 0);
         }
       });
 
-      if (cantidadJugadores !== null && !Number.isNaN(cantidadJugadores)) {
+      if (cantidadJugadores > 0) {
         setNumJugadoresPago(cantidadJugadores);
         setPagoEquipo(prev => ({ ...prev, cantidadJugadores }));
       }
@@ -1050,7 +1046,7 @@ export default function ConfigurarEquipo() {
                             icon: 'success',
                             confirmButtonColor: '#0b4ea6'
                           });
-                          await cargarEstadoPagoEquipo({ presidenteId: selectedPresidente?.id });
+                          await cargarEstadoPagoEquipo({ presidenteId: selectedPresidentId });
                         } catch (error) {
                           setPagoEquipo(prev => ({ ...prev, loading: false }));
                           setPagoError(error.message);
@@ -1090,10 +1086,7 @@ export default function ConfigurarEquipo() {
 
           <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '26px', boxShadow: '0 6px 18px rgba(15,23,42,0.05)' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
-              <span>Afiliacion jugadores x{Number(numJugadoresPago || 0)}</span>
-              <strong style={{ color: '#1e293b' }}>${(costoAfiliacionJugador * Number(numJugadoresPago || 0)).toFixed(2)}</strong>
-            </div>
+
             {catalogs.seguros ? catalogs.seguros.filter(seguro => Number(asignacionSeguros[String(seguro.id)] || 0) > 0).map(seguro => {
               const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
               return (

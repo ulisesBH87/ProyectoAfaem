@@ -1169,12 +1169,6 @@ export default function CompletarJugadoresEquipo() {
                     {/* Resumen */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                       <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>Resumen de Costos</h4>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: '#64748b' }}>
-                        <span>Afiliación de jugador x{numJugadoresAmpliacion}</span>
-                        <span style={{ fontWeight: '700', color: '#1e293b' }}>
-                          ${(Number(afiliacionesCatalogo.find(a => a.Tipo === 'JUGADOR')?.Costo || 0) * numJugadoresAmpliacion).toFixed(2)}
-                        </span>
-                      </div>
 
                       {segurosJugador.map(seg => {
                         const cant = asignacionSegurosAmpliacion[seg.id] || 0;
@@ -1191,7 +1185,6 @@ export default function CompletarJugadoresEquipo() {
                         <span style={{ fontWeight: '800', color: '#1e293b' }}>TOTAL A PAGAR</span>
                         <span style={{ fontWeight: '900', color: '#0b4ea6', fontSize: '18px' }}>
                           ${(
-                            (Number(afiliacionesCatalogo.find(a => a.Tipo === 'JUGADOR')?.Costo || 0) * numJugadoresAmpliacion) +
                             Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
                               const s = segurosJugador.find(x => String(x.id) === String(id));
                               if (s) {
