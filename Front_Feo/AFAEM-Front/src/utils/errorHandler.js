@@ -61,6 +61,11 @@ export const getErrorMessage = (error, fallbackMessage = 'Ha ocurrido un error a
     return "Ocurrió un problema. Por favor, intenta de nuevo más tarde.";
   }
 
+  // Si el servidor responde con 404 (Not Found)
+  if (error.response && error.response.status === 404) {
+    return "El servicio no está disponible temporalmente. Por favor, intenta de nuevo más tarde.";
+  }
+
   // Si no hay respuesta del servidor (errores de red, cors, timeout) o no hay data
   if (!error.response || !error.response.data) {
     if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
@@ -71,6 +76,9 @@ export const getErrorMessage = (error, fallbackMessage = 'Ha ocurrido un error a
     }
     if (error.message && error.message.includes('status code 500')) {
       return "Ocurrió un problema. Por favor, intenta de nuevo más tarde.";
+    }
+    if (error.message && error.message.includes('status code 404')) {
+      return "El servicio no está disponible temporalmente. Por favor, intenta de nuevo más tarde.";
     }
     return error.message || fallbackMessage;
   }

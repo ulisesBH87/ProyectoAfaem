@@ -344,14 +344,14 @@ class PagosServicio:
             cantidad_jugadores = 0
             seguros = []
             for detalle in orden.OrdenPagoDetalleRelacion:
-                if detalle.TipoAfiliacionId == self.TIPO_AFILIACION_JUGADOR:
-                    cantidad_jugadores = detalle.Cantidad
-      
                 if detalle.SeguroId:
                     seguros.append({
                         "SeguroId": detalle.SeguroId,
                         "Cantidad": detalle.Cantidad
                     })
+                    seguro = pagos_repositorio.obtener_seguro_repo(self.db, detalle.SeguroId)
+                    if seguro and int(seguro.TipoPersonaId or 0) != 2:
+                        cantidad_jugadores += detalle.Cantidad
 
             return {
                 "estado": EstadoEquipo.LISTO_PARA_CREAR_EQUIPO,

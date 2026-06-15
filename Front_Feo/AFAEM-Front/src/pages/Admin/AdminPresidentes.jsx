@@ -154,9 +154,9 @@ export default function AdminPresidentes() {
       console.error("Error al cargar presidentes:", err);
       // Fallback para desarrollo si el back falla
       setPresidentes([
-        { id: 1, nombre: 'Carlos Ruiz', correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true, equipo: 'Rayados', equipoId: 101 },
-        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com', telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true, equipo: 'Tigres', equipoId: 102 },
-        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com', telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null },
+        { id: 1, nombre: 'Carlos Ruiz', correo: 'carlos.ruiz@hotmail.com', telefono: '55 1234 5678', curp: 'RUZC890102HDFLL4', estatus: true, equipo: 'Rayados', equipoId: 101, equipos: [{ id: 101, nombre: 'Rayados' }] },
+        { id: 2, nombre: 'Ana Gónzalez', correo: 'ana.g@gmail.com', telefono: '55 9876 5432', curp: 'GOZA920311MDFXX2', estatus: true, equipo: 'Tigres', equipoId: 102, equipos: [{ id: 102, nombre: 'Tigres' }] },
+        { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com', telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null, equipos: [] },
       ]);
     } finally {
       setCargando(false);
@@ -1228,26 +1228,29 @@ export default function AdminPresidentes() {
                 {datosEditables.primerNombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
               </h3>
               <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                {datosEditables.curp || 'CURP NO REGISTRADA'} •{' '}
-                {presidenteEnEdicion?.equipoId || presidenteEnEdicion?.EquipoId ? (
-                  <span
-                    style={{ cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
-                    onClick={() => {
-                      setModalEdicion(false);
-                      if (esNavegacionCruzada) {
-                        setEsNavegacionCruzada(false);
-                        searchParams.delete('abrirDetalle');
-                        setSearchParams(searchParams, { replace: true });
-                      }
-                      navigate(`/admin/equipos?abrirDetalle=${presidenteEnEdicion.equipoId || presidenteEnEdicion.EquipoId}`);
-                    }}
-                    title="Ver detalle del equipo"
-                  >
-                    {presidenteEnEdicion.equipo || presidenteEnEdicion.NombreEquipo}
-                  </span>
-                ) : (
-                  presidenteEnEdicion?.equipo || presidenteEnEdicion?.NombreEquipo || 'Sin Equipo'
-                )}
+                {datosEditables.curp || 'CURP NO REGISTRADA'} • <strong>Equipos a cargo:</strong>{' '}
+                {presidenteEnEdicion?.equipos && presidenteEnEdicion.equipos.length > 0
+                  ? presidenteEnEdicion.equipos.map((eq, idx) => (
+                      <span key={eq.id || idx}>
+                        {idx > 0 && ', '}
+                        <span
+                          style={{ cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
+                          onClick={() => {
+                            setModalEdicion(false);
+                            if (esNavegacionCruzada) {
+                              setEsNavegacionCruzada(false);
+                              searchParams.delete('abrirDetalle');
+                              setSearchParams(searchParams, { replace: true });
+                            }
+                            navigate(`/admin/equipos?abrirDetalle=${eq.id}`);
+                          }}
+                          title="Ver detalle del equipo"
+                        >
+                          {eq.nombre || eq.NombreEquipo || eq.nombreEquipo}
+                        </span>
+                      </span>
+                    ))
+                  : 'Sin equipos asignados'}
               </p>
               {(() => {
                 const statusCfg = ESTATUS_CATALOGO.find(e => e.id === Number(datosEditables.estatusId));
