@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos, getPresidentesDirectorio, getCatalogosRegistro } from '../../services/admin';
+import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos, getPresidentesDirectorio, getCatalogosRegistro, getJugadoresEquipo } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -41,6 +41,12 @@ export default function AdminEquipos() {
   const [catSeleccionada, setCatSeleccionada] = useState({ ligaId: null, modalidadId: null, categoriaId: null, ramaId: null });
   const [loadingExtras, setLoadingExtras] = useState(false);
   const [collapsePresidente, setCollapsePresidente] = useState(false);
+
+  // Estados para descarga de documentos por equipo
+  const [modalDescargaDocs, setModalDescargaDocs] = useState(false);
+  const [equipoDescarga, setEquipoDescarga] = useState(null);
+  const [jugadoresDescarga, setJugadoresDescarga] = useState([]);
+  const [cargandoJugadoresDescarga, setCargandoJugadoresDescarga] = useState(false);
 
   useEffect(() => {
     loadEquipos();
@@ -311,6 +317,29 @@ export default function AdminEquipos() {
     }
   };
 
+  const handleMostrarDescargaDocs = async (equipo) => {
+    setEquipoDescarga(equipo);
+    setJugadoresDescarga([]);
+    setModalDescargaDocs(true);
+    setCargandoJugadoresDescarga(true);
+    try {
+      const jugadores = await getJugadoresEquipo(equipo.EquipoId);
+      setJugadoresDescarga(jugadores || []);
+    } catch (err) {
+      console.error('Error cargando jugadores para descarga:', err);
+      Swal.fire('Error', 'No se pudieron cargar los jugadores del equipo.', 'error');
+    } finally {
+      setCargandoJugadoresDescarga(false);
+    }
+  };
+
+  const handleConfirmarDescarga = async () => {
+    setModalDescargaDocs(false);
+    if (equipoDescarga) {
+      await handleExportarEquipo(equipoDescarga);
+    }
+  };
+
   const handleRowClick = (row) => {
     if (row && row._original) {
       navigate(`/admin/equipos/completar-jugadores/${row._original.EquipoId}`);
@@ -406,9 +435,26 @@ export default function AdminEquipos() {
         {/* Descargar Docs */}
         <button
           className="btn btn-sm"
-          style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', background: 'white', color: '#059669', border: '1.5px solid #86efac', whiteSpace: 'nowrap' }}
-          onClick={(e) => { e.stopPropagation(); handleExportarEquipo(eq); }}
-          title="Descargar documentos de todos los jugadores del equipo"
+          style={{
+            padding: '6px 10px',
+            fontSize: '12px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontWeight: '700',
+            background: 'white',
+            color: (eq.NumeroJugadoresRegistrados || 0) === 0 ? '#94a3b8' : '#059669',
+            border: (eq.NumeroJugadoresRegistrados || 0) === 0 ? '1.5px solid #cbd5e1' : '1.5px solid #86efac',
+            whiteSpace: 'nowrap',
+            cursor: (eq.NumeroJugadoresRegistrados || 0) === 0 ? 'not-allowed' : 'pointer'
+          }}
+          disabled={(eq.NumeroJugadoresRegistrados || 0) === 0}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMostrarDescargaDocs(eq);
+          }}
+          title={(eq.NumeroJugadoresRegistrados || 0) === 0 ? "No hay ningún jugador en el equipo" : "Descargar documentos de todos los jugadores del equipo"}
         >
           <FaFileArchive /> Docs
         </button>
@@ -987,6 +1033,82 @@ export default function AdminEquipos() {
                 );
               })()}
 
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* MODAL DE CONFIRMACIÓN DE DESCARGA DE DOCUMENTOS */}
+      <Modal
+        estaAbierto={modalDescargaDocs}
+        alCerrar={() => setModalDescargaDocs(false)}
+        titulo="Confirmar Descarga de Documentos"
+        tamanio="medio"
+        pie={
+          <>
+            <BotonSecundario etiqueta="Cancelar" onClick={() => setModalDescargaDocs(false)} />
+            <BotonPrimario
+              etiqueta="Descargar"
+              onClick={handleConfirmarDescarga}
+              deshabilitado={cargandoJugadoresDescarga || jugadoresDescarga.length === 0}
+              icono={<FaFileArchive />}
+            />
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
+            Se descargarán los documentos del presidente: <span style={{ color: '#0b4ea6' }}>{equipoDescarga?.PresidenteNombreCompleto || 'Sin presidente asignado'}</span>
+          </p>
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
+            Se descargarán los documentos de los siguientes jugadores:
+          </p>
+          
+          {cargandoJugadoresDescarga ? (
+            <div style={{ padding: '20px 0', textAlign: 'center', color: '#64748b' }}>
+              Cargando jugadores...
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gap: '8px',
+              maxHeight: '180px',
+              overflowY: 'auto',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '12px',
+              background: '#f8fafc'
+            }}>
+              {jugadoresDescarga.length > 0 ? (
+                jugadoresDescarga.map((jugador, idx) => (
+                  <div
+                    key={jugador.MiembroEquipoId || jugador.PersonaId || idx}
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      color: '#334155',
+                      padding: '8px 12px',
+                      background: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    title={jugador.NombreCompleto}
+                  >
+                    <span style={{ color: '#0b4ea6' }}>👤</span> {jugador.NombreCompleto}
+                  </div>
+                ))
+              ) : (
+                <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
+                  No hay ningún jugador registrado en este equipo.
+                </p>
+              )}
             </div>
           )}
         </div>

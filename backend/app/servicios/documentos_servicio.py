@@ -319,8 +319,16 @@ def eliminar_acentos(texto: str) -> str:
 
 def generar_zip_documentos_equipo(db, equipo_id):
     """
-    Genera un ZIP con los documentos de todos los jugadores del equipo y el logo del equipo.
-    Cada jugador tendrá su propia carpeta dentro de la carpeta del equipo en el ZIP.
+    Genera un ZIP con los documentos de todos los jugadores del equipo, el presidente, y el logo del equipo.
+    Estructura en ZIP:
+      - NombreEquipo/
+        - logo.png (si existe)
+        - Jugadores/
+          - NombreJugador/
+            - documentos...
+        - Presidente/
+          - NombrePresidente/
+            - documentos...
     """
     from datetime import datetime as dt
     
@@ -350,7 +358,7 @@ def generar_zip_documentos_equipo(db, equipo_id):
                 nombre_logo_ascii = eliminar_acentos(nombre_logo)
                 zipf.write(ruta_logo_abs, arcname=f"{nombre_equipo_zip_sin_espacios}/{nombre_logo_ascii}")
 
-        # 2. Agregar los documentos de los jugadores
+        # 2. Agregar los documentos de los jugadores (dentro de "Jugadores")
         if miembros:
             for miembro in miembros:
                 persona_id = miembro["PersonaId"]
@@ -373,10 +381,41 @@ def generar_zip_documentos_equipo(db, equipo_id):
                     nombre_archivo = os.path.basename(ruta_absoluta)
                     nombre_archivo_ascii = eliminar_acentos(nombre_archivo)
                     
-                    # Ruta dentro del ZIP: NombreEquipo/NombreJugador/NombreArchivo
-                    arcname = f"{nombre_equipo_zip_sin_espacios}/{nombre_jugador_carpeta}/{nombre_archivo_ascii}"
+                    # Ruta dentro del ZIP: NombreEquipo/Jugadores/NombreJugador/NombreArchivo
+                    arcname = f"{nombre_equipo_zip_sin_espacios}/Jugadores/{nombre_jugador_carpeta}/{nombre_archivo_ascii}"
 
                     zipf.write(ruta_absoluta, arcname=arcname)
+
+        # 3. Agregar los documentos del presidente (dentro de "Presidente")
+        from app.modelos.equipo_modelo import EquiposJugando
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        from app.modelos.persona_modelo import Personas
+
+        ej = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
+        if ej and ej.PresidenteEquipoId:
+            presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == ej.PresidenteEquipoId).first()
+            if presidente:
+                pres_persona = db.query(Personas).filter(Personas.PersonaId == presidente.PersonaId).first()
+                if pres_persona:
+                    nombre_pres = f"{pres_persona.Nombre} {pres_persona.PrimerApellido} {pres_persona.SegundoApellido or ''}".strip()
+                    nombre_pres_carpeta = eliminar_acentos(nombre_pres).replace(' ', '_')
+                    
+                    # Obtener documentos del presidente
+                    docs_pres = equipo_repositorio.obtener_documentos_jugador_repo(db, pres_persona.PersonaId)
+                    if docs_pres:
+                        for doc in docs_pres:
+                            ruta_db = doc["RutaArchivo"]
+                            ruta_absoluta = resolver_ruta_absoluta(ruta_db)
+                            
+                            if not ruta_absoluta or not os.path.exists(ruta_absoluta):
+                                continue
+
+                            nombre_archivo = os.path.basename(ruta_absoluta)
+                            nombre_archivo_ascii = eliminar_acentos(nombre_archivo)
+                            
+                            # Ruta dentro del ZIP: NombreEquipo/Presidente/NombrePresidente/NombreArchivo
+                            arcname = f"{nombre_equipo_zip_sin_espacios}/Presidente/{nombre_pres_carpeta}/{nombre_archivo_ascii}"
+                            zipf.write(ruta_absoluta, arcname=arcname)
 
     zip_buffer.seek(0)
 

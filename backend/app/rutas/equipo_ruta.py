@@ -975,6 +975,18 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
+@router.get("/equipo/{equipo_id}/jugadores")
+def get_jugadores_equipo(equipo_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        from app.repositorios.equipo_repositorio import obtener_miembros_equipo_por_id_repo
+        return obtener_miembros_equipo_por_id_repo(db, equipo_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener jugadores del equipo: {str(e)}")
+
 
 # == DOCUMENTOS DE JUGADOR ==
 class ActualizarDocumentoEstadoPayload(BaseModel):
