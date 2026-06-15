@@ -282,6 +282,14 @@ export const updateJugador = async (miembroEquipoId, data) => {
 };
 
 /**
+ * OBTIENE LOS JUGADORES DE UN EQUIPO ESPECÍFICO
+ */
+export const getJugadoresEquipo = async (equipoId) => {
+  const response = await api.get(`/equipo-temporal/equipo/${equipoId}/jugadores`);
+  return response.data;
+};
+
+/**
  * OBTIENE EL DIRECTORIO DE PRESIDENTES
  */
 export const getPresidentesDirectorio = async (forceRefresh = false) => {
@@ -436,5 +444,6 @@ export default {
   guardarBorradorPresidente,
   obtenerBorradorPresidente,
   getCatalogosRegistro,
-  checkOrdenAmpliacionAdmin
+  checkOrdenAmpliacionAdmin,
+  getJugadoresEquipo
 };
