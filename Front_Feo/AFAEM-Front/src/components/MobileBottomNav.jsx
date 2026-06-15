@@ -71,10 +71,10 @@ const MobileBottomNav = () => {
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingTop: '12px',
+        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
         zIndex: 1100,
         boxShadow: isAdmin ? '0 -8px 32px 0 rgba(0, 0, 0, 0.8)' : '0 -4px 6px -1px rgba(0, 0, 0, 0.05)',
-        height: '65px'
       }}>
         {mainMenus.map((item, idx) => {
           const isActive = location.pathname === item.Ruta || (item.SubMenus && item.SubMenus.some(sub => location.pathname === sub.Ruta));
@@ -91,17 +91,17 @@ const MobileBottomNav = () => {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flex: 1,
-                height: '100%',
+                flex: '1 1 0',
+                minWidth: 0,
                 color: isActive ? theme.activeText : theme.text,
                 cursor: 'pointer',
                 transition: 'color 0.2s'
               }}
             >
-              <span style={{ fontSize: '20px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '20px', marginBottom: '4px', flexShrink: 0 }}>
                 {getIcon(item.Icono)}
               </span>
-              <span style={{ fontSize: '10px', fontWeight: isActive ? '700' : '500', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', padding: '0 4px' }}>
+              <span style={{ fontSize: '10px', fontWeight: isActive ? '700' : '500', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', padding: '0 2px' }}>
                 {item.Nombre}
               </span>
             </div>
@@ -115,17 +115,17 @@ const MobileBottomNav = () => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            flex: 1,
-            height: '100%',
+            flex: '1 1 0',
+            minWidth: 0,
             color: showMoreMenu ? theme.activeText : theme.text,
             cursor: 'pointer',
             transition: 'color 0.2s'
           }}
         >
-          <span style={{ fontSize: '20px', marginBottom: '4px' }}>
+          <span style={{ fontSize: '20px', marginBottom: '4px', flexShrink: 0 }}>
             <FaEllipsisH />
           </span>
-          <span style={{ fontSize: '10px', fontWeight: showMoreMenu ? '700' : '500' }}>
+          <span style={{ fontSize: '10px', fontWeight: showMoreMenu ? '700' : '500', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', padding: '0 2px' }}>
             Más
           </span>
         </div>
