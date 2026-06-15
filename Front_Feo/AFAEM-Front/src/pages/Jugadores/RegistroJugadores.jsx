@@ -181,6 +181,10 @@ export default function RegistroJugadores() {
       width: 100%;
       min-width: 0;
     }
+    .phone-input-row select {
+      width: 110px;
+      flex-shrink: 0;
+    }
     .phone-input-row > * {
       min-width: 0;
     }
@@ -202,6 +206,7 @@ export default function RegistroJugadores() {
     
     input, select {
       min-height: 44px;
+      box-sizing: border-box;
     }
 
     @media (max-width: 1024px) {
@@ -218,6 +223,9 @@ export default function RegistroJugadores() {
       }
       .phone-input-row {
         flex-direction: column;
+      }
+      .phone-input-row select {
+        width: 100%;
       }
       .btn-container-responsive {
         flex-direction: column;
@@ -242,9 +250,9 @@ export default function RegistroJugadores() {
       .premium-card h1 {
         font-size: 20px !important;
       }
-      .premium-card div:last-child {
+      .espacios-disponibles-card {
         text-align: left !important;
-        width: 100%;
+        width: 100% !important;
       }
     }
 
@@ -1481,7 +1489,7 @@ export default function RegistroJugadores() {
     setUploading(true);
     Swal.fire({
       title: 'Registrando Jugador',
-      text: 'Consumiendo espacio y subiendo documentos al servidor...',
+      text: 'Consumiendo espacio y subiendo documentos...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
@@ -1559,6 +1567,55 @@ export default function RegistroJugadores() {
     } catch (err) {
       console.error("Error al registrar jugador:", err);
       Swal.fire('Error', err.response?.data?.detail || err.message || 'Error interno del servidor', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRegistrarGrupoClick = () => {
+    Swal.fire({
+      title: '¿Confirmar registro grupal?',
+      text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, registrar todos',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        ejecutarRegistroGrupal();
+      }
+    });
+  };
+
+  const ejecutarRegistroGrupal = async () => {
+    setUploading(true);
+    Swal.fire({
+      title: 'Registrando Jugadores',
+      text: 'Procesando expedientes y confirmando registros...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      await teamsService.registrarGrupoJugadores(parseInt(teamId, 10));
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Registro Completado',
+        text: 'Todos los jugadores han sido registrados con éxito. Espera indicaciones de la administración de AFAEM.',
+        confirmButtonColor: '#10b981'
+      }).then(() => {
+        fetchTeamInfo();
+      });
+    } catch (err) {
+      console.error("Error al registrar grupo:", err);
+      Swal.fire(
+        'Error de Registro',
+        err.response?.data?.detail || err.message || 'Ocurrió un error al procesar el registro grupal. No se ha registrado ningún jugador.',
+        'error'
+      );
     } finally {
       setUploading(false);
     }
@@ -1891,7 +1948,7 @@ export default function RegistroJugadores() {
                   }}>
                     <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>Progreso de Registro</span>
                     <span style={{ fontSize: '16px', fontWeight: '900', color: estaCompletado ? '#10b981' : '#1e293b' }}>
-                      {registrados} / {total} slots
+                      {registrados} / {total} cupos
                     </span>
                   </div>
 
@@ -2165,7 +2222,7 @@ export default function RegistroJugadores() {
           </div>
         </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
+        <div className="espacios-disponibles-card" style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
           <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Espacios Disponibles</span>
           <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
             {slotsInfo.disponibles} / {slotsInfo.total} Cupos
@@ -2484,7 +2541,16 @@ export default function RegistroJugadores() {
                               /* ESTADO VACÍO */
                               <div
                                 onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                                style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '100%',
+                                  textAlign: 'center',
+                                  color: '#94a3b8',
+                                  cursor: 'pointer'
+                                }}
                               >
                                 <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                                 <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
@@ -2553,7 +2619,7 @@ export default function RegistroJugadores() {
                     {/* Loader temporal OCR */}
                     {currentDocuments.acta && !currentDatos.fechaNacimiento && (
                       <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                        ⏳ Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
+                        Analizando el Acta de Nacimiento... Los campos se rellenarán automáticamente en breve. Si no es así, puedes completarlos manualmente.
                       </div>
                     )}
                   </section>
@@ -2763,6 +2829,8 @@ export default function RegistroJugadores() {
                             onBlur={handleBlur}
                             placeholder="correo@ejemplo.com"
                             style={{
+                              width: '100%',
+                              boxSizing: 'border-box',
                               padding: '10px',
                               borderRadius: '8px',
                               border: `1.5px solid ${validationErrors.correo ? '#ef4444' : '#cbd5e1'}`,
@@ -2774,7 +2842,7 @@ export default function RegistroJugadores() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div className="phone-input-row">
                             <select
                               value={currentDatos.codigoPais || '+52'}
                               onChange={e => handleFieldChange('codigoPais', e.target.value)}
@@ -2785,8 +2853,7 @@ export default function RegistroJugadores() {
                                 border: '1px solid #cbd5e1',
                                 fontSize: '14px',
                                 backgroundColor: 'white',
-                                width: '110px',
-                                flexShrink: 0
+                                boxSizing: 'border-box'
                               }}
                             >
                               <option value="+52">México +52</option>
@@ -2823,7 +2890,8 @@ export default function RegistroJugadores() {
                                 border: `1.5px solid ${validationErrors.telefono ? '#ef4444' : '#cbd5e1'}`,
                                 fontSize: '14px',
                                 flexGrow: 1,
-                                outline: 'none'
+                                outline: 'none',
+                                boxSizing: 'border-box'
                               }}
                             />
                           </div>
@@ -3331,35 +3399,75 @@ export default function RegistroJugadores() {
                       Siguiente <FaArrowRight />
                     </button>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleInscribirClick}
-                      disabled={uploading}
-                      style={{
-                        padding: '12px 32px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: '#10b981',
-                        color: 'white',
-                        fontWeight: '800',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
-                        transition: 'all 0.2s',
-                        opacity: uploading ? 0.7 : 1
-                      }}
-                    >
-                      {uploading ? "Procesando..." : "Finalizar e Inscribir"} <FaSave />
-                    </button>
+                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', fontStyle: 'italic' }}>
+                      * Envío grupal al final de la página
+                    </span>
                   )}
                 </div>
 
               </>
             )}
           </div>
+
+          {/* REGISTRO GRUPAL BANNER */}
+          {(() => {
+            const pendingPlayers = jugadores.filter(p => !p.completo);
+            const mostrarBotonGrupal = pendingPlayers.length > 0 && pendingPlayers.every(p => getPlayerStatus(p) === 'LISTO');
+            if (!mostrarBotonGrupal) return null;
+            return (
+              <div
+                className="fade-in"
+                style={{
+                  background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                  border: '2px solid #10b981',
+                  borderRadius: '24px',
+                  padding: '30px',
+                  textAlign: 'center',
+                  marginTop: '30px',
+                  boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.15)',
+                  maxWidth: '1000px',
+                  margin: '30px auto 0 auto'
+                }}
+              >
+                <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#166534', margin: '0 0 10px 0' }}>
+                  Todos los datos de tus jugadores están listos
+                </h3>
+                <p style={{ fontSize: '14px', color: '#15803d', margin: '0 0 20px 0', fontWeight: '600' }}>
+                  ¿Deseas realizar el registro o modificar alguno?
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRegistrarGrupoClick}
+                  disabled={uploading}
+                  style={{
+                    padding: '14px 40px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: 'white',
+                    fontWeight: '900',
+                    fontSize: '15px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.2s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 12px -2px rgba(16, 185, 129, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(16, 185, 129, 0.3)';
+                  }}
+                >
+                  {uploading ? 'Registrando grupo...' : 'Registrar todos los jugadores'} <FaSave />
+                </button>
+              </div>
+            );
+          })()}
 
           {/* DUP SLOT NAVIGATION CONTROL AT BOTTOM */}
           {jugadores.length > 0 && (() => {
