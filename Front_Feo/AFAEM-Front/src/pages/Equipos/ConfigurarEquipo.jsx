@@ -1882,7 +1882,7 @@ export default function ConfigurarEquipo() {
               Seleccionar Presidente del Club
             </h3>
             <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '25px' }}>
-              Busca y selecciona al presidente al que se le asignará el nuevo equipo. Si el presidente no cuenta con un pago de slots aprobado, podrás generarlo y aprobarlo aquí mismo.
+              Busca y selecciona al presidente al que se le asignará el nuevo equipo. Si el presidente no cuenta con un pago de cupos aprobado, podrás generarlo y aprobarlo aquí mismo.
             </p>
 
             {/* Buscador */}
