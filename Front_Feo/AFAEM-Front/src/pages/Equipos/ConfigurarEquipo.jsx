@@ -1046,7 +1046,7 @@ export default function ConfigurarEquipo() {
                             icon: 'success',
                             confirmButtonColor: '#0b4ea6'
                           });
-                          await cargarEstadoPagoEquipo({ presidenteId: selectedPresidente?.id });
+                          await cargarEstadoPagoEquipo({ presidenteId: selectedPresidentId });
                         } catch (error) {
                           setPagoEquipo(prev => ({ ...prev, loading: false }));
                           setPagoError(error.message);
