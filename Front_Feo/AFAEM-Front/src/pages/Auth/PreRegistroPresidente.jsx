@@ -714,10 +714,6 @@ function PreRegistroPresidente() {
       doc.text(`Cuenta: ${bankInfo.cuenta}`, margin, yPosition);
       yPosition += 6;
       doc.text(`CLABE: ${bankInfo.clabe}`, margin, yPosition);
-      yPosition += 8;
-      doc.setFontSize(11);
-      doc.setTextColor(220, 38, 38);
-      doc.text(`Referencia obligatoria: ${bankInfo.referencia}`, margin, yPosition, { maxWidth: contentWidth });
       yPosition += 12;
 
       // Desglose de Cuota
