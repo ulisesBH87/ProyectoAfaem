@@ -722,11 +722,30 @@ class BorradorJugadorPayload(BaseModel):
 @router.post("/borrador-jugador")
 def guardar_borrador_jugador(
     payload: BorradorJugadorPayload,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    auth_info = Depends(obtener_usuario_o_sesion_temporal)
 ):
     slot = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalJugadorId == payload.slot_id).first()
     if not slot:
         raise HTTPException(status_code=404, detail="Slot de jugador temporal no encontrado")
+        
+    from app.modelos.equipo_temporal_modelo import EquipoTemporal
+    equipo_tem = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoTemporalId == slot.EquipoTemporalId).first()
+    if not equipo_tem:
+        raise HTTPException(status_code=404, detail="Equipo temporal asociado al slot no encontrado")
+        
+    if auth_info["type"] == "access":
+        usuario = auth_info["usuario"]
+        rol_id = getattr(usuario, 'RolId', None)
+        if rol_id in [1, '1']:
+            pass
+        else:
+            if equipo_tem.UsuarioId != usuario.UsuarioId:
+                raise HTTPException(status_code=403, detail="Acceso denegado: el slot no pertenece a tu equipo")
+    elif auth_info["type"] == "temp_invitation_session":
+        usuario_id = auth_info["usuario_id"]
+        if equipo_tem.UsuarioId != usuario_id:
+            raise HTTPException(status_code=403, detail="Acceso denegado: el slot no pertenece a esta invitación")
     
     slot.DatosBorrador = json.dumps(payload.datos, ensure_ascii=False)
     

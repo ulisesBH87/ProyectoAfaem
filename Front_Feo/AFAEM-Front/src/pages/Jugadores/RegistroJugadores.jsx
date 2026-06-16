@@ -774,11 +774,16 @@ export default function RegistroJugadores() {
   const guardarBorradorEnBD = async (slotId, newData) => {
     if (!slotId) return;
     try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({
           slot_id: slotId,
           datos: newData
