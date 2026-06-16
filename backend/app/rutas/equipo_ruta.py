@@ -467,8 +467,36 @@ async def registrar_jugador(
     registro_asociacion_extranjera: Optional[str] = Form(None),
     juego_club_extranjero: Optional[str] = Form(None),
     
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    auth_info = Depends(obtener_usuario_o_sesion_temporal)
 ):
+    # 1. Validar pertenencia del equipo temporal
+    from app.modelos.equipo_temporal_modelo import EquipoTemporal
+    equipo_tem = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoTemporalId == equipo_temporal_id).first()
+    if not equipo_tem:
+        raise HTTPException(status_code=404, detail="Equipo temporal no encontrado")
+        
+    if auth_info["type"] == "access":
+        usuario = auth_info["usuario"]
+        rol_id = getattr(usuario, 'RolId', None)
+        if rol_id in [1, '1']:
+            pass
+        else:
+            if equipo_tem.UsuarioId != usuario.UsuarioId:
+                raise HTTPException(status_code=403, detail="Acceso denegado: el equipo no pertenece al usuario")
+    elif auth_info["type"] == "temp_invitation_session":
+        usuario_id = auth_info["usuario_id"]
+        if equipo_tem.UsuarioId != usuario_id:
+            raise HTTPException(status_code=403, detail="Acceso denegado: el equipo no pertenece a esta invitación")
+
+    # 2. Validar pertenencia del slot si se especifica
+    if slot_id is not None:
+        slot = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.EquipoTemporalJugadorId == slot_id).first()
+        if not slot:
+            raise HTTPException(status_code=404, detail="Slot de jugador temporal no encontrado")
+        if slot.EquipoTemporalId != equipo_temporal_id:
+            raise HTTPException(status_code=403, detail="Acceso denegado: el slot no pertenece a este equipo")
+
     persona = JugadorPersona(
         nombre=nombre,
         primer_apellido=primer_apellido,

@@ -179,7 +179,10 @@ export const certifyUser = async (email) => {
  */
 export const registrarJugadorTemporal = async (data) => {
   try {
-    const token = localStorage.getItem('token');
+    let token = localStorage.getItem('token');
+    if (!token) {
+      token = sessionStorage.getItem('temp_token');
+    }
     const headers = {
       'Content-Type': 'multipart/form-data'
     };
