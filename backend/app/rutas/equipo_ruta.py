@@ -11,7 +11,7 @@ import json
 import os
 from datetime import datetime
 from urllib.parse import urlsplit
-from app.core.seguridad import obtener_usuario_actual, generar_salt, generar_hash
+from app.core.seguridad import obtener_usuario_actual, generar_salt, generar_hash, obtener_usuario_o_sesion_temporal, crear_token_sesion_temporal
 
 from app.servicios.equipo_servicio import registrar_jugador_servicio, obtener_equipo_temporal_servicio, obtener_equipos_temporales_por_usuario_servicio, crear_equipo_completo_servicio
 from app.esquemas.equipo_esquema import JugadorPersona, EquipoResponse, MiembroResponse, CatalogosRegistroResponse, CatalogoItem, EquipoUpdate, EquipoUpdateCompleto, JugadorUpdate, PresidenteAdminCreate
@@ -63,7 +63,29 @@ def obtener_equipos_temporales_por_usuario(db: Session = Depends(get_db), usuari
     return equipos
 
 @router.get("/slots")
-async def obtener_slots(equipo_temporal_id: int,db: Session = Depends(get_db)):
+async def obtener_slots(
+    equipo_temporal_id: int,
+    db: Session = Depends(get_db),
+    auth_info = Depends(obtener_usuario_o_sesion_temporal)
+):
+    from app.modelos.equipo_temporal_modelo import EquipoTemporal
+    equipo_tem = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoTemporalId == equipo_temporal_id).first()
+    if not equipo_tem:
+        raise HTTPException(status_code=404, detail="Equipo temporal no encontrado")
+        
+    if auth_info["type"] == "access":
+        usuario = auth_info["usuario"]
+        rol_id = getattr(usuario, 'RolId', None)
+        if rol_id in [1, '1']:
+            pass
+        else:
+            if equipo_tem.UsuarioId != usuario.UsuarioId:
+                raise HTTPException(status_code=403, detail="Acceso denegado: el equipo no pertenece al usuario")
+    elif auth_info["type"] == "temp_invitation_session":
+        usuario_id = auth_info["usuario_id"]
+        if equipo_tem.UsuarioId != usuario_id:
+            raise HTTPException(status_code=403, detail="Acceso denegado: el equipo no pertenece a esta invitación")
+            
     slots = obtener_equipo_temporal_servicio(db, equipo_temporal_id)
     return slots
 
@@ -88,9 +110,15 @@ async def validar_invitacion_presidente(request: Request, token_identificador: s
 
     db.commit()
 
+    token_temporal = crear_token_sesion_temporal(
+        usuario_id=invitacion.UsuarioId,
+        invitacion_id=invitacion.PresidenteInvitacionId
+    )
+
     return {
         "usuario_id": invitacion.UsuarioId,
-        "equipos_temporales": equipos_pendientes
+        "equipos_temporales": equipos_pendientes,
+        "token_temporal": token_temporal
     }
 
 # == REGISTROS ==

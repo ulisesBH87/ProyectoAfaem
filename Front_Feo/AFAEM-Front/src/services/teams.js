@@ -198,7 +198,10 @@ export const registrarJugadorTemporal = async (data) => {
  */
 export const getAvailableSlots = async (equipoTemporalId, invitation = null) => {
   try {
-    const token = localStorage.getItem('token');
+    let token = localStorage.getItem('token');
+    if (!token) {
+      token = sessionStorage.getItem('temp_token');
+    }
     const headers = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;

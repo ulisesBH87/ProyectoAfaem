@@ -890,6 +890,9 @@ export default function RegistroJugadores() {
       try {
         setLoadingSlots(true);
         const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        if (inviteData?.token_temporal) {
+          sessionStorage.setItem('temp_token', inviteData.token_temporal);
+        }
         const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
         setInvitationTeams(equiposPendientes);
 
