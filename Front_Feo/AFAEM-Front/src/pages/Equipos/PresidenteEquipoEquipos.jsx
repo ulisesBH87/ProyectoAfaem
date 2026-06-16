@@ -23,6 +23,17 @@ import {
 export default function PresidenteEquipoEquipos() {
   const navigate = useNavigate();
 
+  // Helper para normalizar la ruta del logo del equipo
+  const obtenerRutaLogo = (rutaLogo) => {
+    if (!rutaLogo) return '';
+    if (rutaLogo.startsWith('http')) return rutaLogo;
+    let cleanPath = rutaLogo.replace(/\\/g, '/');
+    if (!cleanPath.startsWith('uploads/') && !cleanPath.startsWith('/uploads/')) {
+      cleanPath = `uploads/${cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath}`;
+    }
+    return `${API_BASE}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
+  };
+
   // ESTADOS
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +194,7 @@ export default function PresidenteEquipoEquipos() {
           <div className="team-logo-table">
             {row.RutaLogo ? (
               <img
-                src={row.RutaLogo.startsWith('http') ? row.RutaLogo : `${API_BASE}${row.RutaLogo.replace(/\\/g, '/').startsWith('/') ? '' : '/'}${row.RutaLogo.replace(/\\/g, '/')}`}
+                src={obtenerRutaLogo(row.RutaLogo)}
                 alt={val}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -324,9 +335,9 @@ export default function PresidenteEquipoEquipos() {
         ))}
       </div>
 
-      {/* SECCIÓN DE TABLA ESTILO PREMIUM */}
-      <div className="dashboard-card">
-        <div className="table-header-actions">
+      {/* SECCIÓN DE EQUIPOS EN TARJETAS RESPONSIVAS */}
+      <div className="dashboard-card" style={{ padding: '24px' }}>
+        <div className="table-header-actions" style={{ marginBottom: '20px' }}>
           <h3 className="table-header-title">Listado oficial de equipos</h3>
 
           <div className="table-actions-group">
@@ -379,16 +390,119 @@ export default function PresidenteEquipoEquipos() {
           </div>
         </div>
 
-        <DashboardTable
-          columns={columns}
-          data={paginatedTeams}
-          isLoading={loading}
-          totalItems={filteredTeams.length}
-          itemsPerPage={itemsPerPage}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          emptyMessage="No se encontraron equipos en la búsqueda."
-        />
+        {filteredTeams.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontWeight: '700' }}>
+            No se encontraron equipos en la búsqueda.
+          </div>
+        ) : (
+          <>
+            <div className="teams-card-grid">
+              {paginatedTeams.map((team) => (
+                <div key={team.EquipoId} className="team-card-refined">
+                  <div className="team-card-logo-wrapper">
+                    {team.RutaLogo ? (
+                      <img
+                        src={obtenerRutaLogo(team.RutaLogo)}
+                        alt={team.NombreEquipo}
+                      />
+                    ) : (
+                      <FaShieldAlt />
+                    )}
+                  </div>
+                  <div className="team-card-info">
+                    <h4 className="team-card-name" title={team.NombreEquipo}>{team.NombreEquipo}</h4>
+                    <div className="team-card-detail-item">
+                      <strong>Categoría:</strong> {team.Categoria || 'LIBRE'}
+                    </div>
+                    <div className="team-card-detail-item">
+                      <strong>Liga:</strong> {team.Liga || 'Liga local'} • {team.Rama}
+                    </div>
+                    <div className="team-card-detail-item">
+                      <strong>Jugadores:</strong>
+                      <div className="players-badge-table" style={{ margin: 0 }}>
+                        <FaUsers size={14} style={{ color: 'var(--primary)' }} />
+                        <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>
+                          {team.NumeroJugadores || 0}/{team.SlotsComprados || 0}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="team-card-detail-item">
+                      <strong>Estado:</strong>
+                      <span 
+                        className="status-badge-table"
+                        style={{
+                          background: team.Estatus ? '#dcfce7' : '#fee2e2',
+                          color: team.Estatus ? '#166534' : '#991b1b',
+                          border: team.Estatus ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                          margin: 0
+                        }}
+                      >
+                        {team.Estatus ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
+                        {team.Estatus ? 'ACTIVO' : 'INACTIVO'}
+                      </span>
+                    </div>
+                    <div className="team-card-actions">
+                      <button
+                        onClick={() => navigate(`/presidente-equipo/mis-jugadores?equipo=${encodeURIComponent(team.NombreEquipo)}`)}
+                        className="btn btn-primary btn-sm"
+                        style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        Administrar
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const slots = await teamsService.checkTeamSlots(team.EquipoId);
+                            if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
+                              navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&equipoId=${team.EquipoId}&agregarJugador=true`);
+                              return;
+                            }
+                            const estadoPago = await verificarEstadoPagoJugador(team.EquipoId);
+                            const navegacion = determinarRutaPago(estadoPago.accion, estadoPago, team.EquipoId);
+                            navigate(navegacion.path, { state: navegacion.state });
+                          } catch (err) {
+                            console.error('Error al verificar slots:', err);
+                            Swal.fire('Error', 'No se pudo verificar el estado de pago del equipo', 'error');
+                          }
+                        }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Agregar Jugador"
+                      >
+                        <FaUserPlus />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CONTROL DE PAGINACIÓN */}
+            {filteredTeams.length > itemsPerPage && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px', gap: '8px', alignItems: 'center' }}>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className="btn btn-secondary btn-sm"
+                  style={{ minWidth: '80px' }}
+                >
+                  Anterior
+                </button>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                  Página {currentPage} de {Math.ceil(filteredTeams.length / itemsPerPage)}
+                </span>
+                <button
+                  disabled={currentPage === Math.ceil(filteredTeams.length / itemsPerPage)}
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredTeams.length / itemsPerPage), prev + 1))}
+                  className="btn btn-secondary btn-sm"
+                  style={{ minWidth: '80px' }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

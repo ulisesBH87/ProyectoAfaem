@@ -89,7 +89,7 @@ const MainLayout = ({ userEmail }) => {
         />
         <main className="fade-in" style={{
           padding: '24px 30px',
-          paddingBottom: isMobile ? 'calc(85px + env(safe-area-inset-bottom, 0px))' : '24px',
+          paddingBottom: isMobile ? 'calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px))' : '24px',
           flex: 1
         }}>
           <Outlet />
