@@ -147,23 +147,30 @@ async def custom_docs():
     content = response.body.decode("utf-8").replace("</head>", f"{dark_css}</head>")
     
     return HTMLResponse(content=content)
+from app.core.config import obtener_configuracion
+config_cors = obtener_configuracion()
+cors_origins = [
+    # Desarrollo local
+    "http://localhost:3000",
+    "http://192.168.0.172:3000",
+    "http://localhost:5173",
+    "http://192.168.0.172:5173",
+    "http://localhost:5174",
+    "http://192.168.0.172:5174",
+    # Producción
+    "http://201.131.21.213",
+    "http://201.131.21.213:80",
+    "http://afaem.scholatek.com",
+    "https://afaem.scholatek.com",
+]
+if config_cors.CORS_ALLOWED_ORIGINS:
+    env_origins = [o.strip() for o in config_cors.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
+    cors_origins.extend(env_origins)
+    cors_origins = list(set(cors_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-
-        # Desarrollo local
-        "http://localhost:3000",
-        "http://192.168.0.172:3000",
-        "http://localhost:5173",
-        "http://192.168.0.172:5173",
-        "http://localhost:5174",
-        "http://192.168.0.172:5174",
-        # Producción
-        "http://201.131.21.213",
-        "http://201.131.21.213:80",
-        "http://afaem.scholatek.com",
-        "https://afaem.scholatek.com",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

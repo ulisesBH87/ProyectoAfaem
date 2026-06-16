@@ -10,7 +10,13 @@ from datetime import datetime
 import fitz
 import unicodedata
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "afaem-487315-9fef755ac1dc.json"
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "afaem-487315-9fef755ac1dc.json")
 
 app = Flask(__name__)
 
@@ -21,8 +27,12 @@ def validar_verificamex(curp):
         return {"verificado": False, "mensaje": "Sin CURP para verificar"}
         
     url = "https://api.verificamex.com/identity/v1/scraping/renapo"
-    token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiNjg4YjQ5OThjNzM5YjQ4YTY4ZTM1ZmExYTlhOTI2YTFiZWUzMzM1MzVhMjZmNTFhNjVlOTM1OTkwYmI0ZmQzMDU2OTNlMTlmYWEzZDE0NzIiLCJpYXQiOjE3NzI3MjY5NTkuNzc3Nzg1LCJuYmYiOjE3NzI3MjY5NTkuNzc3ODEsImV4cCI6MTgwNDI2Mjk1OS43NjQzMzQsInN1YiI6Ijk1ODkiLCJzY29wZXMiOltdfQ.TF4rnhKYrnPvAzS8w4kHsEoWVcTuLmsPq36RNwkWfCW8uZBDE9R-w1MHecFkHK5BZg_umXUrokKcqeScakJPq2lgsBWEWTNQxqFNteakGbh-XEt9CyWsx8_vHfxRaFalaDesSArFwIYUznYq7TxWLoejxAunXTcTqlczkfZkb76Atj0fMXiGpO-OkkWlXHpKKYoVen_yr0WfAzGILU5SHI8W_XO6hzXShqgvd9_y1SHBMmqTH2nUUx4tbEseZG-KkRt93bDCoxUsawNarNArZG33JA02K2M9zt1UJqJXDENByg6F0KTtTfeA0qdsHU7R41opJX5ARuv5o2oN5EK6J-wJnL5VO-qeu0Ynn9Yq2a74sLEFefIlp0E7NSdHZGiZ_lKtYN9QqRsvwKQ_cmdyfO-XBNGJqtSCL3FsStq8kCDwoVJB0mywB6De3hOS7xvEzKdnAGcc1D7c1vdwomlVAgaKYvmtvFuJj9rGBSoY9cSB9BfhW6f72nh8oELlRDdZqvA3fmGkpQhDVtQAqKcEIUL51vqbiV-NUe3MYJHadn4-HLH3w15Y0G1bqJxEnSZmN6xWyRmP2niafvl8zou2kcdIbtMEX0Ycz28rfZoa1naqWi5yVP-GsMnWNwrn83juIVqbVgVGYkvpK6b_08WynjrSGV0VpSNeXq9ZJtpvrWQ"
+    token = os.getenv("VERIFICAMEX_API_TOKEN")
     
+    if not token or token == "TU_TOKEN_DE_VERIFICAMEX_AQUI":
+        print("[WARNING] VERIFICAMEX_API_TOKEN no configurado en variables de entorno. Ejecutando en modo Simulación.")
+        return {"verificado": True, "mensaje": "CURP Validada en RENAPO (Simulación)"}
+        
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -31,9 +41,6 @@ def validar_verificamex(curp):
     payload = {"curp": curp}
     
     try:
-        if token == "TU_TOKEN_DE_VERIFICAMEX_AQUI":
-            return {"verificado": True, "mensaje": "CURP Validada en RENAPO (Simulación)"}
-            
         respuesta = requests.post(url, json=payload, headers=headers)
         
         if respuesta.status_code == 200:
@@ -42,7 +49,8 @@ def validar_verificamex(curp):
                 return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO"}
             
         return {"verificado": False, "mensaje": "CURP Rechazada o No Encontrada"}
-    except:
+    except Exception as e:
+        print(f"[ERROR] Error de conexión con la API de Verificamex: {str(e)}")
         return {"verificado": False, "mensaje": "Error de conexión con la API"}
 
 def calcular_datos_curp(curp):
@@ -436,4 +444,7 @@ def index():
     return render_template('index.html', datos=datos)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    ocr_host = os.getenv("OCR_HOST", "127.0.0.1")
+    ocr_port = int(os.getenv("OCR_PORT", "5001"))
+    ocr_debug = os.getenv("OCR_DEBUG", "False").lower() in ("true", "1", "t")
+    app.run(host=ocr_host, port=ocr_port, debug=ocr_debug)
