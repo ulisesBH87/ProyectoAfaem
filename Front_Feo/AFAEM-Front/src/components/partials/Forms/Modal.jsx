@@ -24,6 +24,10 @@ export default function Modal({
   React.useEffect(() => {
     if (!estaAbierto) return;
 
+    // BLOQUEAR SCROLL DE FONDO
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const manejarTecla = (e) => {
       if (e.key === 'Escape') {
         if (!bloquearCierreFondo && alCerrar) {
@@ -33,7 +37,10 @@ export default function Modal({
     };
 
     window.addEventListener('keydown', manejarTecla);
-    return () => window.removeEventListener('keydown', manejarTecla);
+    return () => {
+      window.removeEventListener('keydown', manejarTecla);
+      document.body.style.overflow = originalOverflow || 'unset';
+    };
   }, [estaAbierto, bloquearCierreFondo, alCerrar]);
 
   if (!estaAbierto) return null;
@@ -52,6 +59,7 @@ export default function Modal({
       {/* CAPA DE FONDO */}
       <div
         onClick={bloquearCierreFondo ? undefined : alCerrar}
+        className="modal-overlay-responsive"
         style={{
           position: 'fixed',
           top: 0,
@@ -69,7 +77,7 @@ export default function Modal({
         {/* MODAL */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className={clasesPersonalizadas}
+          className={`modal-container-responsive ${clasesPersonalizadas}`}
           style={{
             backgroundColor: 'white',
             borderRadius: '12px',
