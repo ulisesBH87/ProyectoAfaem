@@ -15,6 +15,7 @@ export const C = {
   greenDim: 'rgba(74,222,128,0.15)',
   text: 'rgba(255,255,255,0.87)',
   textMid: 'rgba(255, 255, 255, 1)',
+  textArrow: 'rgba(0, 0, 0, 1)',
   textDim: 'rgba(255, 255, 255, 1)',
   inputBg: 'rgba(255, 255, 255, 0.04)',
   inputBorder: 'rgba(255,255,255,0.1)',
