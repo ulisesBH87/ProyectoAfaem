@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&family=Fira+Sans:wght@400;500;600&display=swap');
 
 :root {
-  /* Layout Constants */
   --header-height: 72px;
   --sidebar-width: 280px;
   --main-padding: 30px;
+  --mobile-nav-height: 62px;
 
   --primary: #2563eb;
   --primary-dark: #1e40af;
@@ -612,10 +612,11 @@ h4 {
     font-size: 16px !important;
   }
 
-  /* Main content con padding reducido */
+  /* Main content con padding reducido y espacio para el bottom nav */
   .dashboard-content,
   .fade-in {
     padding: 16px !important;
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* Bento grid responsive */
