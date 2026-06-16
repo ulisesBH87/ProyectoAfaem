@@ -16,6 +16,7 @@ class Configuracion(BaseSettings):
     WHATSAPP_TEMPLATE_NAME: str = ""
     WHATSAPP_TEMPLATE_LANGUAGE: str = "es"
     WHATSAPP_VERIFY_TOKEN: str = ""
+    UPLOADS_DIR: str = r"C:\inetpub\wwwroot\AFAEM\Servidor\uploads"
 
     model_config = SettingsConfigDict(
         env_file=".env",
