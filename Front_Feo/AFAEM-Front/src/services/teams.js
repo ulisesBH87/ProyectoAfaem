@@ -448,7 +448,10 @@ export const checkTeamSlots = async (equipoId) => {
 
 export const registrarGrupoJugadores = async (equipoTemporalId) => {
   try {
-    const token = localStorage.getItem('token');
+    let token = localStorage.getItem('token');
+    if (!token) {
+      token = sessionStorage.getItem('temp_token');
+    }
     const headers = {
       'Content-Type': 'application/json'
     };

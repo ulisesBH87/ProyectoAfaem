@@ -534,7 +534,8 @@ class RegistrarGrupoPayload(BaseModel):
 @router.post("/registrar-grupo")
 async def registrar_grupo(
     payload: RegistrarGrupoPayload,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    auth_info = Depends(obtener_usuario_o_sesion_temporal)
 ):
     equipo_temporal_id = payload.equipo_temporal_id
     
@@ -542,6 +543,19 @@ async def registrar_grupo(
     equipo_tem = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoTemporalId == equipo_temporal_id).first()
     if not equipo_tem:
         raise HTTPException(status_code=404, detail="Equipo temporal no encontrado")
+        
+    if auth_info["type"] == "access":
+        usuario = auth_info["usuario"]
+        rol_id = getattr(usuario, 'RolId', None)
+        if rol_id in [1, '1']:
+            pass
+        else:
+            if equipo_tem.UsuarioId != usuario.UsuarioId:
+                raise HTTPException(status_code=403, detail="Acceso denegado: el equipo no pertenece al usuario")
+    elif auth_info["type"] == "temp_invitation_session":
+        usuario_id = auth_info["usuario_id"]
+        if equipo_tem.UsuarioId != usuario_id:
+            raise HTTPException(status_code=403, detail="Acceso denegado: el equipo no pertenece a esta invitación")
         
     # 2. Obtener todos los slots
     slots = db.query(EquipoTemporalJugador).filter(
