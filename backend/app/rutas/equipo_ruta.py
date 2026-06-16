@@ -432,7 +432,7 @@ async def agregar_jugador_equipo_existente(
         tb = traceback.format_exc()
         error_msg = str(e)
         #print("ERROR EN AGREGAR JUGADOR:", tb)
-        raise HTTPException(status_code=500, detail=f"Error interno: {error_msg} | Traceback: {tb}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.post("/registrar-jugador")
 async def registrar_jugador(
@@ -1023,7 +1023,7 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
     except Exception as e:
         #print(f"Error en get_user_real_teams: {str(e)}")
         #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno SQL")
 
 @router.get("/mis-jugadores-reales", response_model=List[MiembroResponse])
 def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -1079,7 +1079,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
     except Exception as e:
         #print(f"Error en get_mis_jugadores_reales: {str(e)}")
         #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno SQL: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno SQL")
 
 
 # --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
@@ -1275,7 +1275,7 @@ def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obte
         return obtener_directorio_equipos_repo(db)
     except Exception as e:
         #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.get("/directorio-jugadores", response_model=List[DirectorioJugadorResponse])
 def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -1288,7 +1288,7 @@ def get_directorio_jugadores(db: Session = Depends(get_db), usuario = Depends(ob
         return obtener_directorio_jugadores_repo(db)
     except Exception as e:
         #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 
 @router.get("/equipo/{equipo_id}/jugadores")
@@ -1334,7 +1334,7 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
         return docs
     except Exception as e:
         #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.patch("/documento/{documento_id}/estado")
 def actualizar_estado_documento(documento_id: int, payload: ActualizarDocumentoEstadoPayload, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -1453,7 +1453,7 @@ def update_equipo(equipo_id: int, equipo_data: EquipoUpdateCompleto, db: Session
         raise
     except Exception as e:
         #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.patch("/update-jugador/{miembro_equipo_id}")
 def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -1483,7 +1483,7 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
         raise
     except Exception as e:
         #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.post("/registrar-presidente-admin")
 async def registrar_presidente_admin(
@@ -1809,7 +1809,7 @@ async def registrar_presidente_admin(
         raise e
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 
 @router.post("/presidentes/{usuario_id}/enviar-link-registro-whatsapp", response_model=EnvioWhatsAppResponse)
