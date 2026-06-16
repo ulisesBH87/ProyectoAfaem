@@ -1,5 +1,4 @@
 import React from 'react';
-import HeaderSearch from './Dashboard/HeaderSearch';
 // NotificationBell oculto hasta que el backend soporte notificaciones reales
 // import NotificationBell from './Dashboard/NotificationBell';
 import UserMenu from './Dashboard/UserMenu';
@@ -89,7 +88,8 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
             display: none !important; /* Ocultar hamburguesa ya que se usa Bottom Navigation */
           }
           .header-title-text {
-            display: none; /* Ocultar título en móvil */
+            display: block; /* Mantener visible el título en móvil */
+            font-size: 16px; /* Ajustar tamaño para móviles */
           }
           .header-right-section {
             gap: 12px;
@@ -139,9 +139,6 @@ const DashboardHeader = ({ userEmail, pageTitle = 'Panel de Control AFAEM', onMe
         </div>
 
         <div className="header-right-section">
-          <div className="header-search-wrapper">
-            <HeaderSearch />
-          </div>
           <UserMenu userEmail={userEmail} />
         </div>
       </header>
