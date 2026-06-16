@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
 import teamsService from '../../services/teams';
-import { generarPDFOrdenPagoJugador } from '../../utils/paymentPdf';
+import { generarPDFOrdenPagoJugador, DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 
 const ESTATUS_PAGO = {
   NO_ENVIADO: 1,
@@ -399,6 +399,16 @@ export default function PagoPrevioJugador() {
         <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
         <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${totalResumen.toFixed(2)}</span>
       </div>
+
+      <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '2px solid #e2e8f0' }}>
+        <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#0b4ea6', marginBottom: '12px', textTransform: 'uppercase' }}>Datos de Transferencia</h4>
+        <div style={{ display: 'grid', gap: '8px', fontSize: '12px', color: '#64748b' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Banco:</span> <strong style={{ color: '#1e293b' }}>{DEFAULT_BANK_INFO.banco}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Titular:</span> <strong style={{ color: '#1e293b', textAlign: 'right', maxWidth: '65%' }}>{DEFAULT_BANK_INFO.titular}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cuenta:</span> <strong style={{ color: '#1e293b' }}>{DEFAULT_BANK_INFO.cuenta}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>CLABE:</span> <strong style={{ color: '#1e293b' }}>{DEFAULT_BANK_INFO.clabe}</strong></div>
+        </div>
+      </div>
     </div>
   );
 
@@ -536,6 +546,16 @@ export default function PagoPrevioJugador() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
               <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
               <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${Number(totalPagoMostradoJugador || 0).toFixed(2)}</span>
+            </div>
+
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '2px solid #e2e8f0' }}>
+              <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#0b4ea6', marginBottom: '12px', textTransform: 'uppercase' }}>Datos de Transferencia</h4>
+              <div style={{ display: 'grid', gap: '8px', fontSize: '12px', color: '#64748b' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Banco:</span> <strong style={{ color: '#1e293b' }}>{DEFAULT_BANK_INFO.banco}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Titular:</span> <strong style={{ color: '#1e293b', textAlign: 'right', maxWidth: '65%' }}>{DEFAULT_BANK_INFO.titular}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cuenta:</span> <strong style={{ color: '#1e293b' }}>{DEFAULT_BANK_INFO.cuenta}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>CLABE:</span> <strong style={{ color: '#1e293b' }}>{DEFAULT_BANK_INFO.clabe}</strong></div>
+              </div>
             </div>
 
             <button
