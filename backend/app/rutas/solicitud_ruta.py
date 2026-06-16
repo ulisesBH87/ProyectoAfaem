@@ -89,9 +89,19 @@ async def descargar_formato(
     equipo: str = Query("")
 ):
     try:
-        # Ruta del template original (Ajustada para ser multiplataforma)
+        # Ruta del template original (Ajustada para ser configurable y multiplataforma)
+        from app.core.config import obtener_configuracion
+        config_pdf = obtener_configuracion()
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        template_path = os.path.join(base_dir, "..", "Front_Feo", "Formato de afiliación - Presidente - v2026.pdf")
+
+        if os.path.isabs(config_pdf.PDF_TEMPLATE_PATH):
+            template_path = config_pdf.PDF_TEMPLATE_PATH
+        else:
+            local_path = os.path.join(base_dir, config_pdf.PDF_TEMPLATE_PATH)
+            if os.path.exists(local_path):
+                template_path = local_path
+            else:
+                template_path = os.path.join(base_dir, "..", "Front_Feo", "Formato de afiliación - Presidente - v2026.pdf")
 
         if not os.path.exists(template_path):
             raise HTTPException(status_code=404, detail=f"No se encontró el archivo de plantilla en {template_path}")

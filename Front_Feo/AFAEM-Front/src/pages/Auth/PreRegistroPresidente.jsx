@@ -1083,7 +1083,7 @@ function PreRegistroPresidente() {
       formData.append('file_id', file);
 
       // Usamos el proxy configurado en vite.config.js
-      const response = await fetch('ocr-api', {
+      const response = await fetch('/ocr-api', {
         method: 'POST',
         body: formData
       });
