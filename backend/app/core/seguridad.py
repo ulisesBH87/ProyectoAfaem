@@ -7,7 +7,7 @@ from app.db.sesion import get_db
 from sqlalchemy.orm import Session
 from app.modelos.usuario_modelo import Usuario
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from datetime import datetime, timedelta, timezone
 from app.repositorios.usuario_repositorio import obtener_usuario_por_id
 
@@ -167,3 +167,59 @@ def obtener_usuario_desde_token(token: str, db: Session):
         )
 
     return usuario
+
+
+def crear_token_sesion_temporal(usuario_id: int, invitacion_id: int = None) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(hours=24)
+    payload = {
+        "sub": str(usuario_id),
+        "invitacion_id": invitacion_id,
+        "type": "temp_invitation_session",
+        "exp": expire
+    }
+    token = jwt.encode(
+        payload,
+        config.SECRET_KEY,
+        algorithm=config.ALGORITHM
+    )
+    return token
+
+
+async def obtener_usuario_o_sesion_temporal(request: Request, db: Session = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales de autenticación ausentes"
+        )
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(
+            token,
+            config.SECRET_KEY,
+            algorithms=[config.ALGORITHM]
+        )
+        token_type = payload.get("type")
+        
+        if token_type == "access":
+            usuario_id = payload.get("sub")
+            if not usuario_id:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de acceso inválido")
+            usuario = obtener_usuario_por_id(db, int(usuario_id))
+            if not usuario:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
+            return {"type": "access", "usuario": usuario}
+            
+        elif token_type == "temp_invitation_session":
+            usuario_id = payload.get("sub")
+            if not usuario_id:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token temporal inválido")
+            return {
+                "type": "temp_invitation_session",
+                "usuario_id": int(usuario_id),
+                "invitacion_id": payload.get("invitacion_id")
+            }
+        else:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Tipo de token no soportado")
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado")
