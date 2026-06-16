@@ -12,8 +12,17 @@ class Configuracion(BaseSettings):
     WHATSAPP_PHONE_NUMBER_ID: str = ""
     WHATSAPP_ACCESS_TOKEN: str = ""
     WHATSAPP_ENABLED: bool = True
+    WHATSAPP_TEMPLATE_NAME: str = ""
+    WHATSAPP_TEMPLATE_LANGUAGE: str = ""
+    WHATSAPP_TEMPLATE_CON_PARAMETROS: bool = True
+    WHATSAPP_SEND_AS_TEMPLATE: bool = True
+    FRONTEND_BASE_URL: str = ""
+    UPLOADS_DIR: str = r"C:\inetpub\wwwroot\AFAEM\Servidor\uploads"
+    CORS_ALLOWED_ORIGINS: str = ""
+    PDF_TEMPLATE_PATH: str = "Formato de afiliación - Presidente - v2026.pdf"
     model_config = SettingsConfigDict(
-        env_file=".env"
+        env_file=".env",
+        extra="ignore"
     )
 
 @lru_cache()
@@ -21,7 +30,8 @@ def obtener_configuracion():
     return Configuracion()
 
 def obtener_uploads_dir():
-    target_dir = r"C:\inetpub\wwwroot\AFAEM\Servidor\uploads"
+    config = obtener_configuracion()
+    target_dir = config.UPLOADS_DIR
     try:
         os.makedirs(target_dir, exist_ok=True)
         return target_dir
