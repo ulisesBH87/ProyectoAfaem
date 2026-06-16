@@ -2129,4 +2129,25 @@
   }
 }
 
+/* Responsive Modal Overrides */
+.modal-overlay-responsive {
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+.modal-container-responsive {
+  max-height: calc(100vh - 140px) !important; /* Exclude top and bottom navigation bars */
+  margin-bottom: 70px !important; /* Leave space for bottom navigation bar on mobile */
+  margin-left: 12px !important;
+  margin-right: 12px !important;
+}
+
+@media (min-width: 768px) {
+  .modal-container-responsive {
+    max-height: 90vh !important;
+    margin-bottom: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
 
