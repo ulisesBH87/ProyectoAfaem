@@ -145,8 +145,8 @@ export default function AdminPresidentes() {
   );
 
   /* ─── Carga inicial ─── */
-  const cargarPresidentes = async (forceRefresh = false) => {
-    setCargando(true);
+  const cargarPresidentes = async (forceRefresh = false, esBackground = false) => {
+    if (!esBackground) setCargando(true);
     try {
       const data = await getPresidentesDirectorio(forceRefresh);
       setPresidentes(Array.isArray(data) ? data : []);
@@ -159,13 +159,22 @@ export default function AdminPresidentes() {
         { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com', telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null, equipos: [] },
       ]);
     } finally {
-      setCargando(false);
+      if (!esBackground) setCargando(false);
     }
   };
 
   useEffect(() => {
     cargarPresidentes();
     cargarSeguros();
+  }, []);
+
+  // Polling automático en segundo plano para actualizar estados de WhatsApp en tiempo real (cada 8 segundos)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      cargarPresidentes(true, true);
+    }, 8000);
+
+    return () => clearInterval(interval);
   }, []);
 
   /* ─── Apertura por navegación cruzada ─── */
@@ -683,12 +692,13 @@ export default function AdminPresidentes() {
       Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
       const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
       if (res.success) {
+        // Recargar el directorio de presidentes para reflejar el estado actual inmediatamente
+        await cargarPresidentes(true);
         Swal.fire({
           title: '¡Enviado!',
-          text: 'La invitación ha sido reenviada por WhatsApp exitosamente.',
+          text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
           icon: 'success',
-          timer: 2500,
-          showConfirmButton: false
+          confirmButtonColor: '#0b4ea6'
         });
       } else {
         throw new Error();
@@ -776,58 +786,109 @@ export default function AdminPresidentes() {
       })(),
 
       invitacion: (
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-          <button
-            disabled={esBorrador}
-            onClick={() => handleCopiarEnlace(p)}
-            style={{
-              background: esBorrador ? '#f1f5f9' : '#f0fdf4',
-              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
-              color: esBorrador ? '#94a3b8' : '#16a34a',
-              cursor: esBorrador ? 'not-allowed' : 'pointer',
-              padding: '8px',
-              borderRadius: 8,
-              fontSize: 14,
-              transition: 'all 0.2s'
-            }}
-            title={esBorrador ? "No disponible para borradores (Incompleto)" : "Copiar Enlace de Invitación"}
-          >
-            <FaCopy />
-          </button>
-          <button
-            disabled={esBorrador}
-            onClick={() => handleReenviarWhatsApp(p)}
-            style={{
-              background: esBorrador ? '#f1f5f9' : '#f0fdf4',
-              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
-              color: esBorrador ? '#94a3b8' : '#25d366',
-              cursor: esBorrador ? 'not-allowed' : 'pointer',
-              padding: '8px',
-              borderRadius: 8,
-              fontSize: 14,
-              transition: 'all 0.2s'
-            }}
-            title={esBorrador ? "No disponible para borradores (Incompleto)" : "Reenviar Invitación por WhatsApp"}
-          >
-            <FaWhatsapp />
-          </button>
-          <button
-            disabled={esBorrador}
-            onClick={() => handleRegenerarInvitacion(p)}
-            style={{
-              background: esBorrador ? '#f1f5f9' : '#fef3c7',
-              border: esBorrador ? '1px solid #cbd5e1' : '1px solid #fde68a',
-              color: esBorrador ? '#94a3b8' : '#d97706',
-              cursor: esBorrador ? 'not-allowed' : 'pointer',
-              padding: '8px',
-              borderRadius: 8,
-              fontSize: 14,
-              transition: 'all 0.2s'
-            }}
-            title={esBorrador ? "No disponible para borradores (Incompleto)" : "Regenerar Invitación"}
-          >
-            <FaLink />
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            <button
+              disabled={esBorrador}
+              onClick={() => handleCopiarEnlace(p)}
+              style={{
+                background: esBorrador ? '#f1f5f9' : '#f0fdf4',
+                border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
+                color: esBorrador ? '#94a3b8' : '#16a34a',
+                cursor: esBorrador ? 'not-allowed' : 'pointer',
+                padding: '8px',
+                borderRadius: 8,
+                fontSize: 14,
+                transition: 'all 0.2s'
+              }}
+              title={esBorrador ? "No disponible para borradores (Incompleto)" : "Copiar Enlace de Invitación"}
+            >
+              <FaCopy />
+            </button>
+            <button
+              disabled={esBorrador}
+              onClick={() => handleReenviarWhatsApp(p)}
+              style={{
+                background: esBorrador ? '#f1f5f9' : '#f0fdf4',
+                border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
+                color: esBorrador ? '#94a3b8' : '#25d366',
+                cursor: esBorrador ? 'not-allowed' : 'pointer',
+                padding: '8px',
+                borderRadius: 8,
+                fontSize: 14,
+                transition: 'all 0.2s'
+              }}
+              title={esBorrador ? "No disponible para borradores (Incompleto)" : "Reenviar Invitación por WhatsApp"}
+            >
+              <FaWhatsapp />
+            </button>
+            <button
+              disabled={esBorrador}
+              onClick={() => handleRegenerarInvitacion(p)}
+              style={{
+                background: esBorrador ? '#f1f5f9' : '#fef3c7',
+                border: esBorrador ? '1px solid #cbd5e1' : '1px solid #fde68a',
+                color: esBorrador ? '#94a3b8' : '#d97706',
+                cursor: esBorrador ? 'not-allowed' : 'pointer',
+                padding: '8px',
+                borderRadius: 8,
+                fontSize: 14,
+                transition: 'all 0.2s'
+              }}
+              title={esBorrador ? "No disponible para borradores (Incompleto)" : "Regenerar Invitación"}
+            >
+              <FaLink />
+            </button>
+          </div>
+
+          {/* Badge de estado del mensaje de WhatsApp */}
+          {!esBorrador && (() => {
+            const status = p.whatsappStatus ? String(p.whatsappStatus).toLowerCase().trim() : '';
+            let label = 'No enviado';
+            let bg = '#f8fafc';
+            let color = '#94a3b8';
+            let icon = '';
+
+            if (status === 'read') {
+              label = 'Leído';
+              bg = '#e0f2fe';
+              color = '#0369a1';
+              icon = '✓✓';
+            } else if (status === 'delivered') {
+              label = 'Entregado';
+              bg = '#f1f5f9';
+              color = '#475569';
+              icon = '✓✓';
+            } else if (status === 'failed') {
+              label = 'Fallido';
+              bg = '#fee2e2';
+              color = '#b91c1c';
+              icon = '✗';
+            } else if (status === 'sent') {
+              label = 'Enviado';
+              bg = '#f1f5f9';
+              color = '#475569';
+              icon = '✓';
+            }
+
+            return (
+              <span style={{
+                background: bg,
+                color: color,
+                padding: '2px 8px',
+                borderRadius: 12,
+                fontSize: 10,
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: icon ? 4 : 0,
+                border: status ? 'none' : '1px dashed #cbd5e1',
+                opacity: status ? 1 : 0.75
+              }}>
+                {icon && <span style={{ fontSize: 9 }}>{icon}</span>} {label}
+              </span>
+            );
+          })()}
         </div>
       ),
 

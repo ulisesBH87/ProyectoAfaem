@@ -2,8 +2,21 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles # Importación necesaria
-from app.rutas import auth_ruta, solicitud_ruta, pagos_ruta, foto_ruta, documentos_ruta, equipo_ruta, permisos_ruta, gestion_ruta, personas_ruta, auditoria_ruta, catalogos_ruta
+from fastapi.staticfiles import StaticFiles
+from app.rutas import (
+    auth_ruta,
+    solicitud_ruta,
+    pagos_ruta,
+    foto_ruta,
+    documentos_ruta,
+    equipo_ruta,
+    permisos_ruta,
+    gestion_ruta,
+    personas_ruta,
+    auditoria_ruta,
+    catalogos_ruta,
+    whatsapp_webhook_ruta,
+)
 from app.utilidades.context import usuario_actual_id, ip_actual
 from app.db.sesion import SessionLocal
 from app.core.seguridad import obtener_usuario_desde_token
@@ -12,8 +25,8 @@ from app.excepciones.base import AppError
 
 app = FastAPI(
     docs_url=None,
-    title = "BackendAFAEM",
-    version = "0.3.0"
+    title="BackendAFAEM",
+    version="0.3.0"
 )
 
 # Servir archivos estáticos (Documentos, Vouchers) con ruta absoluta
@@ -33,7 +46,6 @@ async def custom_docs():
     )
     
     # 2. "Hackeamos" el contenido para meterle el estilo oscuro manualmente
-    # Esto evita el TypeError y fuerza el modo oscuro aunque el CDN falle
     dark_css = """
     <style>
         /* Fondo general y textos principales */
@@ -147,39 +159,31 @@ async def custom_docs():
     content = response.body.decode("utf-8").replace("</head>", f"{dark_css}</head>")
     
     return HTMLResponse(content=content)
-from app.core.config import obtener_configuracion
-config_cors = obtener_configuracion()
-cors_origins = [
-    # Desarrollo local
-    "http://localhost:3000",
-    "http://192.168.0.172:3000",
-    "http://localhost:5173",
-    "http://192.168.0.172:5173",
-    "http://localhost:5174",
-    "http://192.168.0.172:5174",
-    # Producción
-    "http://201.131.21.213",
-    "http://201.131.21.213:80",
-    "http://afaem.scholatek.com",
-    "https://afaem.scholatek.com",
-]
-if config_cors.CORS_ALLOWED_ORIGINS:
-    env_origins = [o.strip() for o in config_cors.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
-    cors_origins.extend(env_origins)
-    cors_origins = list(set(cors_origins))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=[
+        # Desarrollo local
+        "http://localhost:3000",
+        "http://192.168.0.172:3000",
+        "http://localhost:5173",
+        "http://192.168.0.172:5173",
+        "http://localhost:5174",
+        "http://192.168.0.172:5174",
+        # Producción
+        "http://201.131.21.213",
+        "http://201.131.21.213:80",
+        "http://afaem.scholatek.com",
+        "https://afaem.scholatek.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-#middleware para auditoría
+# middleware para auditoría
 @app.middleware("http")
 async def auditoria_contexto_middleware(request: Request, call_next):
-
     ip = request.client.host if request.client else None
     ip_actual.set(ip)
 
@@ -188,18 +192,13 @@ async def auditoria_contexto_middleware(request: Request, call_next):
 
     try:
         auth_header = request.headers.get("authorization")
-
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
-
             user = obtener_usuario_desde_token(token, db)
-
             if user:
                 user_id = user.UsuarioId
-
-    except Exception as e:
+    except Exception:
         user_id = None
-
     finally:
         db.close()
 
@@ -218,9 +217,7 @@ async def agregar_cabeceras_seguridad(request: Request, call_next):
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     return response
 
-#importación de rutas
-
-
+# importación de rutas
 app.include_router(auth_ruta.router)
 app.include_router(solicitud_ruta.router)
 app.include_router(documentos_ruta.router)
@@ -232,11 +229,11 @@ app.include_router(gestion_ruta.router)
 app.include_router(personas_ruta.router)
 app.include_router(auditoria_ruta.router)
 app.include_router(catalogos_ruta.router)
+app.include_router(whatsapp_webhook_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):
-    
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -247,10 +244,9 @@ async def app_error_handler(request: Request, exc: AppError):
         }
     )
 
-#Errores no controlados
+# Errores no controlados
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    
     return JSONResponse(
         status_code=500,
         content={

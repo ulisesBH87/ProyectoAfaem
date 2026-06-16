@@ -54,4 +54,14 @@ class PresidenteInvitacion(Base):
     TokenSecreto = Column(
         String(255),
         nullable=True
+    )
+
+    WhatsAppMessageId = Column(
+        String(255),
+        nullable=True
+    )
+
+    WhatsAppStatus = Column(
+        String(50),
+        nullable=True
     )
