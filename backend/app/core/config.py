@@ -12,14 +12,11 @@ class Configuracion(BaseSettings):
     WHATSAPP_PHONE_NUMBER_ID: str = ""
     WHATSAPP_ACCESS_TOKEN: str = ""
     WHATSAPP_ENABLED: bool = True
+    WHATSAPP_SEND_AS_TEMPLATE: bool = False
     WHATSAPP_TEMPLATE_NAME: str = ""
-    WHATSAPP_TEMPLATE_LANGUAGE: str = ""
-    WHATSAPP_TEMPLATE_CON_PARAMETROS: bool = True
-    WHATSAPP_SEND_AS_TEMPLATE: bool = True
-    FRONTEND_BASE_URL: str = ""
-    UPLOADS_DIR: str = r"C:\inetpub\wwwroot\AFAEM\Servidor\uploads"
-    CORS_ALLOWED_ORIGINS: str = ""
-    PDF_TEMPLATE_PATH: str = "Formato de afiliación - Presidente - v2026.pdf"
+    WHATSAPP_TEMPLATE_LANGUAGE: str = "es"
+    WHATSAPP_VERIFY_TOKEN: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"

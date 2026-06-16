@@ -1882,6 +1882,20 @@ async def enviar_link_registro_whatsapp(
         usuario_id=usuario_db.UsuarioId,
     )
 
+    # Registrar el ID del mensaje enviado y su estado inicial
+    if resultado.get("ok"):
+        meta_resp = resultado.get("meta_response", {})
+        messages = meta_resp.get("messages", [])
+        if messages:
+            wamid = messages[0].get("id")
+            invitacion_db = db.query(PresidenteInvitacion).filter(
+                PresidenteInvitacion.PresidenteInvitacionId == int(inv_id)
+            ).first()
+            if invitacion_db:
+                invitacion_db.WhatsAppMessageId = wamid
+                invitacion_db.WhatsAppStatus = "sent"
+                db.flush()
+
     # Registrar auditoría
     from app.modelos.auditoria import Auditoria
     from app.core.auditoria.auditoria_servicio import obtener_nombre_usuario
