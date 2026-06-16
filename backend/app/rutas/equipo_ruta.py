@@ -1093,12 +1093,20 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
         from app.modelos.usuario_modelo import Usuario
         from app.modelos.catalogo_estatus_presidente import EstatusPresidente
         from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
+        from app.modelos.presidente_invitacion_modelo import PresidenteInvitacion
 
         foto_subquery = db.query(DocumentosEntregados.RutaArchivo)\
             .join(DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId)\
             .filter(DocumentosEntregados.PersonaId == Personas.PersonaId)\
             .filter(DocumentoAfiliacion.DocumentoId == 4)\
             .order_by(DocumentosEntregados.FechaEntrega.desc())\
+            .limit(1)\
+            .scalar_subquery()
+
+        whatsapp_status_subquery = db.query(PresidenteInvitacion.WhatsAppStatus)\
+            .filter(PresidenteInvitacion.UsuarioId == Usuario.UsuarioId)\
+            .filter(PresidenteInvitacion.Activo == True)\
+            .order_by(PresidenteInvitacion.FechaCreacion.desc())\
             .limit(1)\
             .scalar_subquery()
 
@@ -1128,7 +1136,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             Usuario.UsuarioId.label('UsuarioId'),
             foto_subquery.label("RutaFoto"),
             equipo_name_subquery.label("NombreEquipo"),
-            equipo_id_subquery.label("EquipoId")
+            equipo_id_subquery.label("EquipoId"),
+            whatsapp_status_subquery.label("WhatsAppStatus")
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
          .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
@@ -1169,7 +1178,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "RutaFoto":       r.RutaFoto,
                 "equipo":         r.NombreEquipo,
                 "equipoId":       r.EquipoId,
-                "equipos":        equipos_por_presidente.get(r.PresidenteEquipoId, [])
+                "equipos":        equipos_por_presidente.get(r.PresidenteEquipoId, []),
+                "whatsappStatus": r.WhatsAppStatus
             } for r in resultados
         ]
     except Exception as e:
@@ -1881,6 +1891,20 @@ async def enviar_link_registro_whatsapp(
         link_invitacion=link_invitacion,
         usuario_id=usuario_db.UsuarioId,
     )
+
+    # Registrar el ID del mensaje enviado y su estado inicial
+    if resultado.get("ok"):
+        meta_resp = resultado.get("meta_response", {})
+        messages = meta_resp.get("messages", [])
+        if messages:
+            wamid = messages[0].get("id")
+            invitacion_db = db.query(PresidenteInvitacion).filter(
+                PresidenteInvitacion.PresidenteInvitacionId == int(inv_id)
+            ).first()
+            if invitacion_db:
+                invitacion_db.WhatsAppMessageId = wamid
+                invitacion_db.WhatsAppStatus = "sent"
+                db.flush()
 
     # Registrar auditoría
     from app.modelos.auditoria import Auditoria
