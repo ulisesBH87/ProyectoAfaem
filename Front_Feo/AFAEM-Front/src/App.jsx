@@ -7,11 +7,6 @@ import Loader from './components/Loader';
 const Ingresar = lazy(() => import('./pages/Auth/Ingresar'));
 const Registrarse = lazy(() => import('./pages/Auth/Registrarse'));
 const RegistrarseCuenta = lazy(() => import('./components/RegistrarseCuenta'));
-const PresidenteEquipo = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipo'));
-const PresidenteEquipoJugadores = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoJugadores'));
-const PresidenteEquipoSolicitudes = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoSolicitudes'));
-const PresidenteEquipoReportes = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoReportes'));
-const PresidenteEquipoConfiguracion = lazy(() => import('./pages/PresidenteEquipo/PresidenteEquipoConfiguracion'));
 const PresidenteEquipoEquipos = lazy(() => import('./pages/Equipos/PresidenteEquipoEquipos'));
 const PresidenteEquipoMisJugadores = lazy(() => import('./pages/Jugadores/PresidenteEquipoMisJugadores'));
 const AdminEquipo = lazy(() => import('./pages/Equipos/AdminEquipo'));
@@ -129,11 +124,6 @@ function App() {
 
           {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT AND GENERALGUARD */}
           <Route element={<GeneralGuard><MainLayout userEmail={userEmail} /></GeneralGuard>}>
-            <Route path="/presidente-equipo" element={<PresidenteGuard><PresidenteEquipo /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/jugadores" element={<PresidenteGuard><PresidenteEquipoJugadores /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/reportes" element={<PresidenteGuard><PresidenteEquipoReportes /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/configuracion" element={<PresidenteGuard><PresidenteEquipoConfiguracion /></PresidenteGuard>} />
             <Route path="/presidente-equipo/registro-jugadores" element={<PresidenteGuard><RegistroJugadores /></PresidenteGuard>} />
             <Route path="/presidente-equipo/equipos" element={<PresidenteGuard><PresidenteEquipoEquipos /></PresidenteGuard>} />
             <Route path="/presidente-equipo/mis-jugadores" element={<PresidenteGuard><PresidenteEquipoMisJugadores /></PresidenteGuard>} />
@@ -144,7 +134,6 @@ function App() {
             <Route path="/presidente-equipo/pago-jugador/subir-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
             <Route path="/presidente-equipo/pago-jugador/en-revision" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
             <Route path="/presidente-equipo/pago-jugador/reenviar-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
 
             <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
             <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
