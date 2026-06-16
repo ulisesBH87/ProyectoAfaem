@@ -320,7 +320,6 @@ function Registrarse() {
 		e.preventDefault();
 		if (codigoUsuario.trim() === verificationCode) {
 			setVerified(true);
-			alert('Correo verificado. Ahora presiona "GENERAR JSON Y ENVIAR" para completar el registro.');
 		} else alert('Código incorrecto. Verifica el correo e inténtalo de nuevo.');
 	};
 

@@ -774,11 +774,16 @@ export default function RegistroJugadores() {
   const guardarBorradorEnBD = async (slotId, newData) => {
     if (!slotId) return;
     try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({
           slot_id: slotId,
           datos: newData
@@ -890,6 +895,9 @@ export default function RegistroJugadores() {
       try {
         setLoadingSlots(true);
         const inviteData = await teamsService.getInvitationInfo(tokenIdentificador, tokenSecreto);
+        if (inviteData?.token_temporal) {
+          sessionStorage.setItem('temp_token', inviteData.token_temporal);
+        }
         const equiposPendientes = Array.isArray(inviteData?.equipos_temporales) ? inviteData.equipos_temporales : [];
         setInvitationTeams(equiposPendientes);
 
