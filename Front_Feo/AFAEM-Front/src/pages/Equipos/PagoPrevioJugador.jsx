@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
 import teamsService from '../../services/teams';
+import { generarPDFOrdenPagoJugador } from '../../utils/paymentPdf';
 
 const ESTATUS_PAGO = {
   NO_ENVIADO: 1,
@@ -303,6 +304,33 @@ export default function PagoPrevioJugador() {
         orden_id: data.orden_pago_id || data.OrdenPagoId || data.id,
         total: Number(data.total || totalPagoEstimadoJugador || 0)
       });
+
+      // Intentar generar el PDF automáticamente
+      try {
+        generarPDFOrdenPagoJugador({
+          ordenId: data.orden_pago_id || data.OrdenPagoId || data.id,
+          cantidadJugadores: Number(numJugadoresAgregar),
+          catalogoSeguros: catalogs.seguros,
+          asignacionSeguros: asignacionSegurosAgregar,
+          total: Number(data.total || totalPagoEstimadoJugador || 0),
+          estado: 'NO ENVIADO'
+        });
+        Swal.fire({
+          icon: 'success',
+          title: 'Orden creada',
+          text: 'Se ha generado tu orden de pago y descargado el PDF correctamente.',
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } catch (pdfError) {
+        console.error('Error generando PDF:', pdfError);
+        Swal.fire({
+          icon: 'warning',
+          title: 'Orden creada',
+          text: 'La orden fue generada, pero hubo un problema al crear el PDF. Puedes continuar con el proceso.'
+        });
+      }
+
     } catch (error) {
       console.error('Error creando orden de pago de jugador:', error);
       setPagoErrorJugador(error.message || 'No se pudo crear la orden de pago');
