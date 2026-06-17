@@ -700,24 +700,39 @@ export default function AdminPresidentes() {
       Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
       return;
     }
-    try {
-      Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-      const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
-      if (res.success) {
-        // Recargar el directorio de presidentes para reflejar el estado actual inmediatamente
-        await cargarPresidentes(true);
-        Swal.fire({
-          title: '¡Enviado!',
-          text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
-          icon: 'success',
-          confirmButtonColor: '#0b4ea6'
-        });
-      } else {
-        throw new Error();
+    const telefono = pres.telefono || pres.Telefono || 'número no registrado';
+
+    Swal.fire({
+      title: '¿Enviar invitación por WhatsApp?',
+      text: `¿Quieres enviar la invitación a ${telefono}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0b4ea6',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'No, cerrar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
+          if (res.success) {
+            // Recargar el directorio de presidentes para reflejar el estado actual inmediatamente
+            await cargarPresidentes(true);
+            Swal.fire({
+              title: '¡Enviado!',
+              text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
+              icon: 'success',
+              confirmButtonColor: '#0b4ea6'
+            });
+          } else {
+            throw new Error();
+          }
+        } catch (err) {
+          Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
+        }
       }
-    } catch (err) {
-      Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
-    }
+    });
   };
 
   const handleRegenerarInvitacion = async (pres) => {
