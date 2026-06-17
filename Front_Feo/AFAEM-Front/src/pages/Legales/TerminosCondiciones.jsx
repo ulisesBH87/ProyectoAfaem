@@ -262,48 +262,6 @@ const TerminosCondiciones = () => {
       </div>
 
       {/* ── BLOQUE DE CONTACTO (variante azul) ── */}
-      <div className="legal-contacto legal-contacto--tc">
-        <div className="legal-contacto-inner">
-          <div className="legal-contacto-texto">
-            <div
-              className="legal-contacto-icono-wrap"
-              style={{ color: '#38bdf8' }}
-            >
-              <FaFileContract />
-            </div>
-            <div>
-              <h3 className="legal-contacto-titulo">¿Dudas sobre estos términos?</h3>
-              <p className="legal-contacto-desc">
-                Si tienes preguntas sobre el uso de la plataforma o sobre alguna cláusula
-                específica, comunícate con nosotros. Respondemos en menos de{' '}
-                <strong>48 horas hábiles</strong> y trabajamos para resolver cualquier
-                situación de manera <strong>justa y transparente</strong>.
-              </p>
-            </div>
-          </div>
-
-          <div className="legal-contacto-datos">
-            <a
-              href="mailto:contacto@afaem.mx"
-              className="legal-contacto-item"
-            >
-              <FaEnvelope />
-              contacto@afaem.mx
-            </a>
-            <a
-              href="tel:+527221234567"
-              className="legal-contacto-item"
-            >
-              <FaPhoneAlt />
-              +52 (722) 123-4567
-            </a>
-            <span className="legal-contacto-item">
-              <FaMapMarkerAlt />
-              Toluca de Lerdo, Edo. Méx.
-            </span>
-          </div>
-        </div>
-      </div>
 
     </div>
   );

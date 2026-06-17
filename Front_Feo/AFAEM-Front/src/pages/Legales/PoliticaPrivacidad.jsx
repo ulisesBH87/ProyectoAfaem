@@ -237,46 +237,6 @@ const PoliticaPrivacidad = () => {
       </div>
 
       {/* ── BLOQUE DE CONTACTO ── */}
-      <div className="legal-contacto">
-        <div className="legal-contacto-inner">
-          <div className="legal-contacto-texto">
-            <div className="legal-contacto-icono-wrap" style={{ color: '#34d399' }}>
-              <FaShieldAlt />
-            </div>
-            <div>
-              <h3 className="legal-contacto-titulo">¿Tienes dudas sobre tu privacidad?</h3>
-              <p className="legal-contacto-desc">
-                Nuestro equipo está disponible para atender cualquier consulta sobre el
-                tratamiento de tus datos. Escríbenos a{' '}
-                <strong>contacto@afaem.mx</strong> y te responderemos en menos de{' '}
-                <strong>48 horas hábiles</strong>.
-              </p>
-            </div>
-          </div>
-
-          <div className="legal-contacto-datos">
-            <a
-              href="mailto:contacto@afaem.mx"
-              className="legal-contacto-item"
-            >
-              <FaEnvelope />
-              contacto@afaem.mx
-            </a>
-            <a
-              href="tel:+527221234567"
-              className="legal-contacto-item"
-            >
-              <FaPhoneAlt />
-              +52 (722) 123-4567
-            </a>
-            <span className="legal-contacto-item">
-              <FaMapMarkerAlt />
-              Toluca de Lerdo, Edo. Méx.
-            </span>
-          </div>
-        </div>
-      </div>
-
     </div>
   );
 };
