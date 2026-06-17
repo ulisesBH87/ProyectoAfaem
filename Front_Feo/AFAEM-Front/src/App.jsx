@@ -215,7 +215,7 @@ function App() {
             <Route path={ROUTES.ADMIN.LAYOUT_JUGADORES} element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.USUARIOS_ROLES} element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.CONFIGURACION} element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
-            
+
             {/* SECCIÓN LEGAL */}
             <Route path={ROUTES.LEGAL.REGLAMENTOS} element={<Reglamentos />} />
             <Route path={ROUTES.ADMIN.REGLAMENTOS} element={<Reglamentos />} />
