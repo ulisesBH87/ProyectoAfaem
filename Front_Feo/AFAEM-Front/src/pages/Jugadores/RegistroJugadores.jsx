@@ -408,6 +408,7 @@ export default function RegistroJugadores() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
   const changeStep = (stepOrUpdater) => {
+    document.activeElement?.blur();
     setCurrentStep(prev => {
       const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
 
@@ -415,7 +416,18 @@ export default function RegistroJugadores() {
         const next = [...jPrev];
         const currentPlayerState = next[currentPlayerIndex];
         if (currentPlayerState && currentPlayerState.slotId) {
-          const newDatos = { ...currentPlayerState.datos, currentStep: newStep };
+          const datos = { ...currentPlayerState.datos };
+          if (datos.numCamiseta) {
+            const duplicate = next.find(p => 
+              p.numero !== currentPlayerState.numero && 
+              p.datos?.numCamiseta && 
+              parseInt(p.datos.numCamiseta, 10) === parseInt(datos.numCamiseta, 10)
+            );
+            if (duplicate) {
+              datos.numCamiseta = '';
+            }
+          }
+          const newDatos = { ...datos, currentStep: newStep };
           next[currentPlayerIndex] = {
             ...currentPlayerState,
             datos: newDatos
@@ -433,6 +445,16 @@ export default function RegistroJugadores() {
   // Estados y refs para autoguardado toast
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimeoutRef = useRef(null);
+
+  const obtenerDuplicadoCamiseta = (numeroCamiseta, playerNumero) => {
+    if (!numeroCamiseta || String(numeroCamiseta).trim() === '') return null;
+    const camisetaVal = parseInt(numeroCamiseta, 10);
+    return jugadores.find(p => 
+      p.numero !== playerNumero && 
+      p.datos?.numCamiseta && 
+      parseInt(p.datos.numCamiseta, 10) === camisetaVal
+    );
+  };
 
   // Función que verifica requisitos sin lanzar alertas ni modificar estado
   const verificarRequisitosPaso = (step, targetPlayer = null) => {
@@ -474,7 +496,14 @@ export default function RegistroJugadores() {
         errors.telefono = 'El teléfono debe tener 10 dígitos.';
       }
     } else if (step === 3) {
-      if (!datos.numCamiseta || String(datos.numCamiseta).trim() === '') errors.numCamiseta = 'El número de camiseta es obligatorio.';
+      if (!datos.numCamiseta || String(datos.numCamiseta).trim() === '') {
+        errors.numCamiseta = 'El número de camiseta es obligatorio.';
+      } else {
+        const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta, player.numero);
+        if (duplicate) {
+          errors.numCamiseta = `El número de camiseta #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}.`;
+        }
+      }
       if (!datos.posicion) errors.posicion = 'La posición es obligatoria.';
     } else if (step === 4) {
       if (datos.esForaneo) {
@@ -887,6 +916,19 @@ export default function RegistroJugadores() {
       cleanValue = value.replace(/\D/g, '').slice(0, 10);
     } else if (field === 'numCamiseta') {
       cleanValue = value.replace(/\D/g, '').slice(0, 3);
+      if (cleanValue !== '') {
+        const duplicate = obtenerDuplicadoCamiseta(cleanValue, jugadores[currentPlayerIndex]?.numero);
+        if (duplicate) {
+          setValidationErrors(prev => ({
+            ...prev,
+            numCamiseta: `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.numero}.`
+          }));
+        } else {
+          setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+        }
+      } else {
+        setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+      }
     }
 
     updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
@@ -896,6 +938,21 @@ export default function RegistroJugadores() {
     const player = jugadores[currentPlayerIndex];
     if (player) {
       const datos = { ...player.datos };
+
+      if (datos.numCamiseta) {
+        const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta, player.numero);
+        if (duplicate) {
+          Swal.fire({
+            title: 'Número de camiseta duplicado',
+            text: `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`,
+            icon: 'warning',
+            confirmButtonColor: '#0b4ea6'
+          });
+          datos.numCamiseta = '';
+          setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+        }
+      }
+
       const fieldsToUppercase = [
         'nombreJugador', 'apellidoPaterno', 'apellidoMaterno', 'lugarNacimiento', 'curp', 'nui',
         'nacionalidadJugador', 'paisResidencia', 'dondeVividoExtranjero',
@@ -2139,7 +2196,10 @@ export default function RegistroJugadores() {
             <button
               type="button"
               disabled={currentPlayerIndex === 0}
-              onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
+              onClick={() => {
+                document.activeElement?.blur();
+                setCurrentPlayerIndex(currentPlayerIndex - 1);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -2219,7 +2279,10 @@ export default function RegistroJugadores() {
             <button
               type="button"
               disabled={currentPlayerIndex === jugadores.length - 1}
-              onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
+              onClick={() => {
+                document.activeElement?.blur();
+                setCurrentPlayerIndex(currentPlayerIndex + 1);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -3587,7 +3650,10 @@ export default function RegistroJugadores() {
                 <button
                   type="button"
                   disabled={currentPlayerIndex === 0}
-                  onClick={() => setCurrentPlayerIndex(currentPlayerIndex - 1)}
+                  onClick={() => {
+                    document.activeElement?.blur();
+                    setCurrentPlayerIndex(currentPlayerIndex - 1);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -3659,7 +3725,10 @@ export default function RegistroJugadores() {
                 <button
                   type="button"
                   disabled={currentPlayerIndex === jugadores.length - 1}
-                  onClick={() => setCurrentPlayerIndex(currentPlayerIndex + 1)}
+                  onClick={() => {
+                    document.activeElement?.blur();
+                    setCurrentPlayerIndex(currentPlayerIndex + 1);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
