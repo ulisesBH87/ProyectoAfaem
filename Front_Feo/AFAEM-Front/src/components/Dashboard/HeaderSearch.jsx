@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaKeyboard, FaShieldAlt, FaUsers, FaArrowRight } from 'react-icons/fa';
 import SearchBar from '../Common/SearchBar';
 import { getEquiposDirectorio, getJugadoresDirectorio } from '../../services/admin';
+import { ROUTES } from '../../routes/paths';
 
 const HeaderSearch = () => {
   const navigate = useNavigate();
@@ -13,13 +14,13 @@ const HeaderSearch = () => {
   const [filteredResults, setFilteredResults] = useState({ actions: [], teams: [], players: [] });
 
   const quickActions = [
-    { label: 'Administrar equipos', route: '/admin/equipos', keywords: 'crear nuevo club equipos directorio' },
-    { label: 'Directorio de jugadores', route: '/admin/jugadores', keywords: 'editar buscar jugadores personas' },
-    { label: 'Alta rápida (Jugador)', route: '/admin/jugadores/crear', keywords: 'inscribir nuevo alta rapida' },
-    { label: 'Validación de pagos', route: '/admin/pagos', keywords: 'voucher validar ordenes dinero' },
-    { label: 'Gestión de solicitudes', route: '/admin/solicitudes', keywords: 'tramites pendientes autorizar' },
-    { label: 'Dashboard general', route: '/admin/dashboard', keywords: 'inicio home resumen resúmen' },
-    { label: 'Configuración y Roles', route: '/admin/usuarios-roles', keywords: 'administradores seguridad permisos' }
+    { label: 'Administrar equipos', route: ROUTES.ADMIN.EQUIPOS, keywords: 'crear nuevo club equipos directorio' },
+    { label: 'Directorio de jugadores', route: ROUTES.ADMIN.JUGADORES, keywords: 'editar buscar jugadores personas' },
+    { label: 'Alta rápida (Jugador)', route: ROUTES.ADMIN.JUGADORES_CREAR, keywords: 'inscribir nuevo alta rapida' },
+    { label: 'Validación de pagos', route: ROUTES.ADMIN.PAGOS, keywords: 'voucher validar ordenes dinero' },
+    { label: 'Gestión de solicitudes', route: ROUTES.ADMIN.SOLICITUDES, keywords: 'tramites pendientes autorizar' },
+    { label: 'Dashboard general', route: ROUTES.ADMIN.DASHBOARD, keywords: 'inicio home resumen resúmen' },
+    { label: 'Configuración y Roles', route: ROUTES.ADMIN.USUARIOS_ROLES, keywords: 'administradores seguridad permisos' }
   ];
 
   useEffect(() => {
@@ -71,8 +72,8 @@ const HeaderSearch = () => {
     setSearchQuery('');
     setShowResults(false);
     if (type === 'action') navigate(item.route);
-    else if (type === 'team') navigate(`/presidente-equipo/admin-equipo/${item.EquipoId}`);
-    else if (type === 'player') navigate('/admin/jugadores', { state: { editPlayerId: item.MiembroEquipoId } });
+    else if (type === 'team') navigate(ROUTES.PRESIDENTE.ADMIN_EQUIPO.replace(':equipoId', item.EquipoId));
+    else if (type === 'player') navigate(ROUTES.ADMIN.JUGADORES, { state: { editPlayerId: item.MiembroEquipoId } });
   };
 
   return (

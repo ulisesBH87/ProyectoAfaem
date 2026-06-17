@@ -4,6 +4,7 @@ import DashboardSidebar from '../components/DashboardSidebar';
 import DashboardHeader from '../components/DashboardHeader';
 import MobileBottomNav from '../components/MobileBottomNav';
 import { useRBAC } from '../hooks/useRBAC';
+import { ROUTES } from '../routes/paths';
 
 const MainLayout = ({ userEmail }) => {
   const { estatusId, hasRole, isLoading } = useRBAC();
@@ -29,7 +30,7 @@ const MainLayout = ({ userEmail }) => {
     // Si ya cargaron los permisos y es un presidente con estatus no autorizado (<5)
     if (!isLoading && hasRole('PRESIDENTE') && estatusId && parseInt(estatusId) < 5) {
       console.warn('Acceso revocado en tiempo real. Redirigiendo...');
-      navigate('/pre-registro-presidente');
+      navigate(ROUTES.PRE_REGISTRO_PRESIDENTE);
     }
   }, [estatusId, isLoading, hasRole, navigate]);
 

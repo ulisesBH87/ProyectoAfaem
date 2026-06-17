@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
@@ -387,7 +388,7 @@ export default function ConfigurarEquipo() {
         }
 
         Swal.fire('Error', 'Parámetros del equipo no provistos.', 'error');
-        navigate('/presidente-equipo/equipos');
+        navigate(ROUTES.PRESIDENTE.EQUIPOS);
         return;
       }
 
@@ -896,7 +897,7 @@ export default function ConfigurarEquipo() {
         title: 'Equipo Creado',
         text: `El equipo "${teamFormData.teamName}" ha sido registrado exitosamente.`
       }).then(() => {
-        navigate('/admin/equipos');
+        navigate(ROUTES.ADMIN.EQUIPOS);
       });
     } catch (err) {
       console.error("Error al guardar equipo:", err);
@@ -929,7 +930,7 @@ export default function ConfigurarEquipo() {
           <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
             Favor de aprobar la orden #{pagoEquipo.ordenId}. directamente desde el panel de Validación de Pagos.
           </p>
-          <button onClick={() => navigate(isAdmin ? '/admin/pagos' : '/presidente-equipo')} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
+          <button onClick={() => navigate(isAdmin ? ROUTES.ADMIN.PAGOS : ROUTES.PRESIDENTE.DASHBOARD)} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
             Dirigete al panel de "Validación de Pagos"
           </button>
         </div>
@@ -1742,7 +1743,7 @@ export default function ConfigurarEquipo() {
         title: 'Jugador Inscrito Correctamente',
         text: 'El espacio se ha completado y los documentos se guardaron correctamente.'
       }).then(() => {
-        navigate('/presidente-equipo/equipos');
+        navigate(ROUTES.PRESIDENTE.EQUIPOS);
       });
     } catch (err) {
       console.error("Error al registrar jugador en equipo existente:", err);
@@ -1803,10 +1804,10 @@ export default function ConfigurarEquipo() {
                 confirmButtonText: 'Sí, salir',
                 cancelButtonText: 'Continuar registro'
               }).then((result) => {
-                if (result.isConfirmed) navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos');
+                if (result.isConfirmed) navigate(isAdmin ? ROUTES.ADMIN.EQUIPOS : ROUTES.PRESIDENTE.EQUIPOS);
               });
             } else {
-              navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos');
+              navigate(isAdmin ? ROUTES.ADMIN.EQUIPOS : ROUTES.PRESIDENTE.EQUIPOS);
             }
           }}
           className="btn btn-outline-secondary"
@@ -2339,7 +2340,7 @@ export default function ConfigurarEquipo() {
               </p>
               <BotonSecundario
                 etiqueta="Volver a mis equipos"
-                alHacerClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos')}
+                alHacerClick={() => navigate(isAdmin ? ROUTES.ADMIN.EQUIPOS : ROUTES.PRESIDENTE.EQUIPOS)}
               />
             </div>
           ) : (
@@ -3022,7 +3023,7 @@ export default function ConfigurarEquipo() {
                   <div className="form-actions-wrapper">
                     <BotonSecundario
                       etiqueta="Cancelar y volver"
-                      alHacerClick={() => navigate(isAdmin ? '/admin/equipos' : '/presidente-equipo/equipos')}
+                      alHacerClick={() => navigate(isAdmin ? ROUTES.ADMIN.EQUIPOS : ROUTES.PRESIDENTE.EQUIPOS)}
                       clasesPersonalizadas="w-100-mobile"
                     />
                     <BotonPrimario

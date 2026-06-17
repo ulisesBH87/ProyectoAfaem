@@ -1030,7 +1030,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
     try:
         # 1. Subconsulta escalar para obtener la fotografía más reciente del jugador (DocumentoId 4 en el catálogo)
         from app.modelos.documento_afiliacion_modelo import DocumentoAfiliacion
-        foto_subquery = db.query(DocumentosEntregados.RutaArchivo)\
+        foto_subquery = db.query(DocumentosEntregados.DocumentosSolicitudId)\
             .join(DocumentoAfiliacion, DocumentosEntregados.DocumentoAfiliacionId == DocumentoAfiliacion.DocumentoAfiliacionId)\
             .filter(DocumentosEntregados.PersonaId == Personas.PersonaId)\
             .filter(DocumentoAfiliacion.DocumentoId == 4)\
@@ -1072,7 +1072,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "Equipo": r.Equipo,
                 "FechaIngreso": r.FechaIngreso,
                 "Estatus": bool(r.Estatus),
-                "RutaFoto": r.RutaFoto,
+                "RutaFoto": f"/documentos/{r.RutaFoto}" if r.RutaFoto else None,
                 "NumeroCamiseta": r.NumeroCamiseta
             } for r in resultados
         ]
@@ -1327,10 +1327,11 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
     try:
         from app.repositorios.equipo_repositorio import obtener_documentos_jugador_repo
         docs = obtener_documentos_jugador_repo(db, persona_id)
-        # Formatear la URL completa si RutaArchivo es relativa
+        # Formatear la URL completa apuntando al endpoint seguro de documentos
         for doc in docs:
-            ruta = doc.get("RutaArchivo") or ""
-            doc["url"] = ruta if ruta.startswith("http") else f"/{ruta.lstrip('/')}" if ruta else None
+            doc_id = doc.get("DocumentosSolicitudId")
+            doc["url"] = f"/documentos/{doc_id}" if doc_id else None
+            doc["RutaArchivo"] = None
         return docs
     except Exception as e:
         #print(traceback.format_exc())

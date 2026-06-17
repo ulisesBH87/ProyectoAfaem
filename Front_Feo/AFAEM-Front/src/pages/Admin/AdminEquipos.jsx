@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { getEquiposDirectorio, updateEquipo, exportarEquipoDocumentos, getPresidentesDirectorio, getCatalogosRegistro, getJugadoresEquipo } from '../../services/admin';
 import Swal from 'sweetalert2';
 import DashboardTable from '../../components/DashboardTable';
@@ -342,7 +343,7 @@ export default function AdminEquipos() {
 
   const handleRowClick = (row) => {
     if (row && row._original) {
-      navigate(`/admin/equipos/completar-jugadores/${row._original.EquipoId}`);
+      navigate(ROUTES.ADMIN.EQUIPOS_COMPLETAR.replace(':equipoId', row._original.EquipoId));
     }
   };
 
@@ -375,7 +376,7 @@ export default function AdminEquipos() {
             style={{ fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/admin/presidentes?abrirDetalle=${eq.PresidenteEquipoId}`);
+              navigate(`${ROUTES.ADMIN.PRESIDENTES}?abrirDetalle=${eq.PresidenteEquipoId}`);
             }}
             title="Ver detalle del presidente"
           >
@@ -427,7 +428,7 @@ export default function AdminEquipos() {
         <button
           className="btn btn-sm btn-primary"
           style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', whiteSpace: 'nowrap' }}
-          onClick={(e) => { e.stopPropagation(); navigate(`/admin/layout-jugadores?equipo=${encodeURIComponent(eq.NombreEquipo)}`); }}
+          onClick={(e) => { e.stopPropagation(); navigate(`${ROUTES.ADMIN.LAYOUT_JUGADORES}?equipo=${encodeURIComponent(eq.NombreEquipo)}`); }}
           title="Ver jugadores del equipo"
         >
           <FaTable /> Jugadores
@@ -462,7 +463,7 @@ export default function AdminEquipos() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/admin/equipos/completar-jugadores/${eq.EquipoId}`);
+            navigate(ROUTES.ADMIN.EQUIPOS_COMPLETAR.replace(':equipoId', eq.EquipoId));
           }}
           style={{
             padding: '6px 10px',
@@ -517,7 +518,7 @@ export default function AdminEquipos() {
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
             className="btn btn-premium"
-            onClick={() => navigate('/admin/equipos/crear')}
+            onClick={() => navigate(ROUTES.ADMIN.EQUIPOS_CREAR)}
             style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <FaPlus /> Crear equipo
@@ -737,7 +738,7 @@ export default function AdminEquipos() {
                         searchParams.delete('abrirDetalle');
                         setSearchParams(searchParams, { replace: true });
                       }
-                      navigate(`/admin/jugadores?equipo=${encodeURIComponent(equipoEdicion.NombreEquipo)}`, {
+                      navigate(`${ROUTES.ADMIN.JUGADORES}?equipo=${encodeURIComponent(equipoEdicion.NombreEquipo)}`, {
                         state: { filtroEquipo: equipoEdicion.NombreEquipo }
                       });
                     };
@@ -816,7 +817,7 @@ export default function AdminEquipos() {
                                   searchParams.delete('abrirDetalle');
                                   setSearchParams(searchParams, { replace: true });
                                 }
-                                navigate(`/admin/presidentes?abrirDetalle=${pid}`);
+                                navigate(`${ROUTES.ADMIN.PRESIDENTES}?abrirDetalle=${pid}`);
                               };
 
                               if (haCambiado) {

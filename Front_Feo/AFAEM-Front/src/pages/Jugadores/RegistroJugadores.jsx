@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
@@ -254,6 +255,45 @@ export default function RegistroJugadores() {
         text-align: left !important;
         width: 100% !important;
       }
+      .stepper-container {
+        padding: 16px 12px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+      }
+      .stepper-label {
+        display: none;
+      }
+      .stepper-item {
+        min-width: auto;
+      }
+      .stepper-bubble {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+        border-width: 2px;
+      }
+      .stepper-line {
+        left: 20px;
+        right: 20px;
+      }
+      .mobile-step-indicator {
+        display: block;
+        text-align: center;
+        font-weight: 800;
+        font-size: 12px;
+        color: #0b4ea6;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 25px;
+        background: #eff6ff;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px dashed rgba(11, 78, 166, 0.25);
+      }
+    }
+
+    .mobile-step-indicator {
+      display: none;
     }
 
     /* Estilos del Wizard (Stepper) */
@@ -944,7 +984,7 @@ export default function RegistroJugadores() {
       }
       if (!isPublicFlow) {
         Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
-        navigate('/presidente-equipo/dashboard');
+        navigate(ROUTES.PRESIDENTE.DASHBOARD);
       } else {
         setLinkError(true);
       }
@@ -2337,6 +2377,17 @@ export default function RegistroJugadores() {
                   })}
                 </div>
 
+                <div className="mobile-step-indicator">
+                  Paso {currentStep} de 6: {
+                    currentStep === 1 ? 'Documentos' :
+                      currentStep === 2 ? 'Personales' :
+                        currentStep === 3 ? 'Deportivos' :
+                          currentStep === 4 ? 'Procedencia' :
+                            currentStep === 5 ? 'Seguro' :
+                              'Resumen'
+                  }
+                </div>
+
                 {/* PASO 5: SELECCION DE SEGURO / SLOT A CONSUMIR */}
                 {currentStep === 5 && (
                   <section className="wizard-step-container">
@@ -2350,14 +2401,38 @@ export default function RegistroJugadores() {
                         <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
                           Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
                         </label>
+                        <label className="form-label" style={{ fontWeight: '700', fontSize: '10px', marginBottom: '12px', display: 'block' }}>
+                          Vuelve a tocar para deseleccionar el seguro
+                        </label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                           {slotsData?.seguros?.map((seg) => {
                             const isSelected = String(currentSeguroId) === String(seg.seguro_id);
-                            const noDisponible = seg.disponibles <= 0 && !isSelected;
+
+                            // Calcular disponibilidad dinámicamente en el frontend
+                            const totalComprados = Number(seg.pagados ?? seg.total_slots ?? 0);
+                            const usadosPorOtros = jugadores.reduce((acc, player, idx) => {
+                              if (idx === currentPlayerIndex) return acc;
+                              if (String(player.seguroId) === String(seg.seguro_id)) {
+                                return acc + 1;
+                              }
+                              return acc;
+                            }, 0);
+
+                            const disponiblesLocales = Math.max(0, totalComprados - usadosPorOtros);
+                            const noDisponible = disponiblesLocales <= 0 && !isSelected;
+
                             return (
                               <div
                                 key={`seguro-card-${seg.seguro_id}`}
                                 onClick={() => {
+                                  if (isSelected) {
+                                    updatePlayerSeguro(currentPlayerIndex, '');
+                                    const updated = { ...currentDatos };
+                                    if (currentPlayer?.slotId) {
+                                      guardarBorradorEnBD(currentPlayer.slotId, updated);
+                                    }
+                                    return;
+                                  }
                                   if (noDisponible) {
                                     Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
                                     return;
@@ -2375,7 +2450,7 @@ export default function RegistroJugadores() {
                                   border: isSelected
                                     ? '2.5px solid #0b4ea6'
                                     : noDisponible
-                                      ? '1px solid #e2e8f0'
+                                      ? '1.5px dashed #cbd5e1'
                                       : '1px solid #cbd5e1',
                                   backgroundColor: isSelected
                                     ? '#eff6ff'
@@ -2399,12 +2474,12 @@ export default function RegistroJugadores() {
                                   alignSelf: 'start',
                                   padding: '2px 8px',
                                   borderRadius: '20px',
-                                  background: noDisponible ? '#e2e8f0' : '#dcfce7',
-                                  color: noDisponible ? '#64748b' : '#15803d',
+                                  background: noDisponible ? '#fee2e2' : '#dcfce7',
+                                  color: noDisponible ? '#ef4444' : '#15803d',
                                   fontSize: '11px',
                                   fontWeight: '800'
                                 }}>
-                                  {seg.disponibles} disponibles
+                                  {noDisponible ? '🚫 SIN ESPACIOS' : `${disponiblesLocales} disponibles`}
                                 </div>
                               </div>
                             );

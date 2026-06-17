@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { FaFutbol, FaCog } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../styles/dashboard.css';
@@ -59,7 +60,7 @@ export default function AdminEquipo() {
         const currentTeam = teams.find(t => t.id == teamId);
 
         if (!currentTeam) {
-          navigate('/presidente-equipo/equipos');
+          navigate(ROUTES.PRESIDENTE.EQUIPOS);
           return;
         }
 
@@ -212,7 +213,7 @@ export default function AdminEquipo() {
       {/* MIGAS DE PAN */}
             <MigasDePan
               elementos={[
-                { etiqueta: 'Mis equipos', ruta: '/presidente-equipo/equipos' },
+                { etiqueta: 'Mis equipos', ruta: ROUTES.PRESIDENTE.EQUIPOS },
                 { etiqueta: team?.name || 'Equipo', ruta: null }
               ]}
             />
@@ -361,7 +362,7 @@ export default function AdminEquipo() {
                       )}
                       <BotonPrimario 
                         etiqueta="🏆 Inscribir equipo a liga"
-                        alHacerClick={() => navigate(`/inscribir-equipo-liga/${teamId}`)}
+                        alHacerClick={() => navigate(ROUTES.PRESIDENTE.INSCRIBIR_EQUIPO.replace(':equipoId', teamId))}
                         tamanio="medio"
                       />
                       <BotonSecundario
@@ -453,7 +454,7 @@ export default function AdminEquipo() {
                         </span>
                         <BotonPrimario
                           etiqueta="+ Agregar"
-                          alHacerClick={() => navigate('/presidente-equipo/registro-jugadores', { state: { teamId } })}
+                          alHacerClick={() => navigate(ROUTES.PRESIDENTE.REGISTRO_JUGADORES, { state: { teamId } })}
                           tamanio="pequeno"
                           estilo={{ marginLeft: '8px' }}
                         />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
@@ -643,7 +644,7 @@ export default function AdminCrearJugador() {
         title: 'Jugador Inscrito Correctamente',
         text: 'El expediente se ha completado con el formato firmado.'
       }).then(() => {
-        navigate('/admin/jugadores');
+        navigate(ROUTES.ADMIN.JUGADORES);
       });
     } catch (err) {
       console.error("Error:", err);
@@ -674,10 +675,10 @@ export default function AdminCrearJugador() {
                   confirmButtonText: 'Sí, salir',
                   cancelButtonText: 'Continuar registro'
                 }).then((result) => {
-                  if (result.isConfirmed) navigate('/admin/jugadores');
+                  if (result.isConfirmed) navigate(ROUTES.ADMIN.JUGADORES);
                 });
               } else {
-                navigate('/admin/jugadores');
+                navigate(ROUTES.ADMIN.JUGADORES);
               }
             }}
             className="btn btn-outline-secondary"
@@ -1447,7 +1448,7 @@ export default function AdminCrearJugador() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
               <BotonSecundario
                 etiqueta="Cancelar y volver"
-                alHacerClick={() => navigate('/admin/jugadores')}
+                alHacerClick={() => navigate(ROUTES.ADMIN.JUGADORES)}
                 estilo={{ minWidth: '200px' }}
               />
               <BotonPrimario

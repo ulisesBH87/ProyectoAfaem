@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import DashboardTable from '../../components/DashboardTable';
 import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
@@ -159,27 +160,27 @@ export default function PresidenteEquipoEquipos() {
     switch (accion) {
       case 'CREAR_ORDEN':
         return {
-          path: '/presidente-equipo/pago-jugador/crear-orden',
+          path: ROUTES.PRESIDENTE.PAGO_CREAR_ORDEN,
           state: baseParams
         };
       case 'SUBIR_COMPROBANTE':
         return {
-          path: '/presidente-equipo/pago-jugador/subir-comprobante',
+          path: ROUTES.PRESIDENTE.PAGO_SUBIR_COMPROBANTE,
           state: baseParams
         };
       case 'EN_REVISION':
         return {
-          path: '/presidente-equipo/pago-jugador/en-revision',
+          path: ROUTES.PRESIDENTE.PAGO_EN_REVISION,
           state: baseParams
         };
       case 'REENVIAR_COMPROBANTE':
         return {
-          path: '/presidente-equipo/pago-jugador/reenviar-comprobante',
+          path: ROUTES.PRESIDENTE.PAGO_REENVIAR_COMPROBANTE,
           state: baseParams
         };
       default:
         return {
-          path: '/presidente-equipo/pago-jugador/crear-orden',
+          path: ROUTES.PRESIDENTE.PAGO_CREAR_ORDEN,
           state: baseParams
         };
     }
@@ -259,7 +260,7 @@ export default function PresidenteEquipoEquipos() {
               const slots = await teamsService.checkTeamSlots(row.EquipoId);
 
               if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
-                navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&equipoId=${row.EquipoId}&agregarJugador=true`);
+                navigate(`${ROUTES.PRESIDENTE.CONFIGURAR_EQUIPO}?equipoTemporalId=${slots.equipo_temporal_id}&equipoId=${row.EquipoId}&agregarJugador=true`);
                 return;
               }
 
@@ -443,7 +444,7 @@ export default function PresidenteEquipoEquipos() {
                     </div>
                     <div className="team-card-actions">
                       <button
-                        onClick={() => navigate(`/presidente-equipo/mis-jugadores?equipo=${encodeURIComponent(team.NombreEquipo)}`)}
+                        onClick={() => navigate(`${ROUTES.PRESIDENTE.MIS_JUGADORES}?equipo=${encodeURIComponent(team.NombreEquipo)}`)}
                         className="btn btn-primary btn-sm"
                         style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
@@ -453,10 +454,10 @@ export default function PresidenteEquipoEquipos() {
                         onClick={async () => {
                           try {
                             const slots = await teamsService.checkTeamSlots(team.EquipoId);
-                            if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
-                              navigate(`/presidente-equipo/configurar-equipo?equipoTemporalId=${slots.equipo_temporal_id}&equipoId=${team.EquipoId}&agregarJugador=true`);
-                              return;
-                            }
+                             if (slots?.equipo_temporal_activo && slots.slots_disponibles > 0) {
+                               navigate(`${ROUTES.PRESIDENTE.CONFIGURAR_EQUIPO}?equipoTemporalId=${slots.equipo_temporal_id}&equipoId=${team.EquipoId}&agregarJugador=true`);
+                               return;
+                             }
                             const estadoPago = await verificarEstadoPagoJugador(team.EquipoId);
                             const navegacion = determinarRutaPago(estadoPago.accion, estadoPago, team.EquipoId);
                             navigate(navegacion.path, { state: navegacion.state });

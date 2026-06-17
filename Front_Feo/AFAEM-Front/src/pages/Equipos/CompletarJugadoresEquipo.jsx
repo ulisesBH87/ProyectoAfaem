@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
@@ -16,6 +17,7 @@ import { validarFotografia } from '../../services/foto';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { openSecurePath } from '../../utils/secureFetch';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -948,7 +950,7 @@ export default function CompletarJugadoresEquipo() {
         title: 'Jugador Inscrito Correctamente',
         text: 'El espacio se ha completado y los documentos se guardaron correctamente.'
       }).then(() => {
-        navigate('/admin/equipos');
+        navigate(ROUTES.ADMIN.EQUIPOS);
       });
     } catch (err) {
       console.error("Error al registrar jugador en equipo existente:", err);
@@ -1042,11 +1044,11 @@ export default function CompletarJugadoresEquipo() {
                 confirmButtonText: 'Sí, salir',
                 cancelButtonText: 'Continuar registro'
               }).then((result) => {
-                if (result.isConfirmed) navigate('/admin/equipos');
-              });
-            } else {
-              navigate('/admin/equipos');
-            }
+                 if (result.isConfirmed) navigate(ROUTES.ADMIN.EQUIPOS);
+               });
+             } else {
+               navigate(ROUTES.ADMIN.EQUIPOS);
+             }
           }}
           className="btn btn-outline-secondary"
           style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
@@ -1213,7 +1215,7 @@ export default function CompletarJugadoresEquipo() {
                   <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                     <BotonSecundario
                       etiqueta="Cancelar"
-                      alHacerClick={() => navigate('/admin/equipos')}
+                      alHacerClick={() => navigate(ROUTES.ADMIN.EQUIPOS)}
                     />
                     <BotonPrimario
                       etiqueta={procesandoAmpliacionAdmin ? "Procesando..." : "Generar Ampliación"}
@@ -1232,7 +1234,7 @@ export default function CompletarJugadoresEquipo() {
                   <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                     <BotonSecundario
                       etiqueta="Volver al Directorio"
-                      alHacerClick={() => navigate('/admin/equipos')}
+                      alHacerClick={() => navigate(ROUTES.ADMIN.EQUIPOS)}
                     />
                     <button
                       className="btn-premium"
@@ -1252,10 +1254,10 @@ export default function CompletarJugadoresEquipo() {
                   <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
                     <BotonSecundario
                       etiqueta="Volver al Directorio"
-                      alHacerClick={() => navigate('/admin/equipos')}
+                      alHacerClick={() => navigate(ROUTES.ADMIN.EQUIPOS)}
                     />
                     <button
-                      onClick={() => window.open(`/${ordenAmpliacion.ruta_voucher}`, '_blank')}
+                      onClick={() => openSecurePath(ordenAmpliacion.ruta_voucher)}
                       style={{
                         padding: '12px 24px',
                         background: 'white',
@@ -1285,7 +1287,7 @@ export default function CompletarJugadoresEquipo() {
                   </p>
                   <BotonSecundario
                     etiqueta="Volver al Directorio de Equipos"
-                    alHacerClick={() => navigate('/admin/equipos')}
+                    alHacerClick={() => navigate(ROUTES.ADMIN.EQUIPOS)}
                   />
                 </>
               ) : null}
@@ -1939,7 +1941,7 @@ export default function CompletarJugadoresEquipo() {
               <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
                 <BotonSecundario
                   etiqueta="Cancelar y volver"
-                  alHacerClick={() => navigate('/admin/equipos')}
+                  alHacerClick={() => navigate(ROUTES.ADMIN.EQUIPOS)}
                   estilo={{ minWidth: '200px' }}
                 />
                 <BotonPrimario

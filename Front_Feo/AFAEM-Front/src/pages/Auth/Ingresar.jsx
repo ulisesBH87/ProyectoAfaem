@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StadiumBg from '../../assets/stadium.jpg';
 import { Link, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { login, setAuthToken, pingBackend, parseJwt } from '../../services/auth';
 import { useRBAC } from '../../hooks/useRBAC';
 import Swal from 'sweetalert2';
@@ -76,7 +77,7 @@ export default function Ingresar() {
 
       // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---
       if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
-        navigate('/admin/dashboard');
+        navigate(ROUTES.ADMIN.DASHBOARD);
       } else if (role === 'ENTRENADOR') {
         Swal.fire({
           icon: 'info',
@@ -86,18 +87,18 @@ export default function Ingresar() {
           timer: 4000,
           showConfirmButton: true,
         });
-        navigate('/ingresar');
+        navigate(ROUTES.LOGIN);
       } else if (role.includes('PRESIDENTE') || role === 'INVITADO') {
         // Solo entra al dashboard si ya está aprobado/activo o en revisión (Estatus 4, 5, 6 o 7)
         // Pero si es INVITADO, siempre va a pre-registro
         if (role !== 'INVITADO' && currentEstatusId && parseInt(currentEstatusId) >= 5) {
-          navigate('/presidente-equipo/equipos');
+          navigate(ROUTES.PRESIDENTE.EQUIPOS);
         } else {
-          navigate('/pre-registro-presidente');
+          navigate(ROUTES.PRE_REGISTRO_PRESIDENTE);
         }
       } else {
         // En cualquier otro caso, al home
-        navigate('/');
+        navigate(ROUTES.HOME);
       }
     } catch (error) {
       const msg = (error && (error.detail || error.message || error.error || error.msg)) || String(error);
@@ -196,7 +197,7 @@ export default function Ingresar() {
           </form>
 
           <div style={{ marginTop: 'clamp(16px, 4vh, 32px)', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(12px, 3.5vw, 14px)' }}>
-            ¿No tienes cuenta? <Link to="/registrarse-cuenta" style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Regístrate ahora</Link>
+            ¿No tienes cuenta? <Link to={ROUTES.REGISTRARSE_CUENTA} style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Regístrate ahora</Link>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: 'clamp(16px, 4vh, 32px)', opacity: 0.6 }}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import * as bootstrap from 'bootstrap';
 import {
   getJugadoresDirectorio,
@@ -18,6 +19,8 @@ import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, 
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
+import { useSecureBlob } from '../../hooks/useSecureBlob';
+import { openSecurePath } from '../../utils/secureFetch';
 
 /**
  * Tipos requeridos para jugadores. El campo `id` coincide con DocumentoAfiliacionId
@@ -62,10 +65,10 @@ const documentoCoincideConTipo = (doc, tipoId) => {
 
 const obtenerUrlDocumento = (doc) => {
   if (!doc) return null;
-  if (doc.url) return doc.url;
-  const ruta = doc.RutaArchivo;
-  if (!ruta) return null;
-  return ruta.startsWith('http') ? ruta : `/${String(ruta).replace(/^\/+/, '')}`;
+  let url = doc.url || doc.RutaArchivo;
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return url.startsWith('/') ? url : `/${url}`;
 };
 
 const formatearFechaSubida = (fecha) =>
@@ -481,6 +484,16 @@ export default function AdminJugadores() {
   // OCR dentro del modal
   const [ocrCargando, setOcrCargando] = useState(false);
 
+  // Hook para cargar la foto del jugador en edición de forma segura
+  const { blobUrl: avatarBlobUrl, error: avatarError } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [fotoJugadorEdicion, jugadorEdicion?.RutaFoto]);
+
+  const mostrarFallback = !(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) || avatarError || imgError;
+
   const loadJugadores = async (forceRefresh = false) => {
     try {
       setLoading(true);
@@ -781,6 +794,32 @@ export default function AdminJugadores() {
 
     document.body.appendChild(modalEl);
     const bsModal = new bootstrap.Modal(modalEl);
+
+    // Interceptar clics en los enlaces de documentos para cargarlos de forma segura
+    modalEl.addEventListener('click', async (e) => {
+      const enlace = e.target.closest('a');
+      if (enlace && enlace.getAttribute('href')) {
+        const href = enlace.getAttribute('href');
+        // Si es un path relativo que apunta a /documentos o /uploads
+        if (href !== '#' && !href.startsWith('http') && !href.startsWith('blob:') && !href.startsWith('data:')) {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            Swal.fire({
+              title: 'Cargando documento...',
+              allowOutsideClick: false,
+              didOpen: () => {
+                Swal.showLoading();
+              }
+            });
+            await openSecurePath(href);
+            Swal.close();
+          } catch (error) {
+            Swal.fire('Error', 'No se pudo abrir el documento.', 'error');
+          }
+        }
+      }
+    });
 
     // Botón: Añadir documento faltante
     modalEl.querySelectorAll('[data-add-doc]').forEach((boton) => {
@@ -1109,7 +1148,7 @@ export default function AdminJugadores() {
             }}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/admin/equipos?abrirDetalle=${j.EquipoId}`);
+              navigate(`${ROUTES.ADMIN.EQUIPOS}?abrirDetalle=${j.EquipoId}`);
             }}
             title="Ver detalle del equipo"
           >
@@ -1219,14 +1258,14 @@ export default function AdminJugadores() {
           </button>
           <button
             className="btn btn-primary"
-            onClick={() => navigate('/admin/layout-jugadores')}
+            onClick={() => navigate(ROUTES.ADMIN.LAYOUT_JUGADORES)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaTable /> Tabla de jugadores
           </button>
           {/*<button
             className="btn btn-premium"
-            onClick={() => navigate('/admin/jugadores/crear')}
+            onClick={() => navigate(ROUTES.ADMIN.JUGADORES_CREAR)}
             style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <FaPlus /> Registrar jugador
@@ -1430,22 +1469,19 @@ export default function AdminJugadores() {
           {/* FOTO DEL JUGADOR Y CABECERA */}
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
+              {!mostrarFallback ? (
                 <img
-                  src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`}
+                  src={avatarBlobUrl}
                   alt="Foto del jugador"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const sib = e.target.parentNode.querySelector('.fallback-icon');
-                    if (sib) sib.style.display = 'block';
-                  }}
+                  onError={() => setImgError(true)}
                 />
-              ) : null}
-              <FaUser
-                className="fallback-icon"
-                style={{ display: (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }}
-              />
+              ) : (
+                <FaUser
+                  className="fallback-icon"
+                  style={{ fontSize: '40px', color: '#cbd5e1' }}
+                />
+              )}
             </div>
             <div>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
@@ -1460,7 +1496,7 @@ export default function AdminJugadores() {
                     title="Ver detalle del equipo"
                     onClick={() => {
                       setModalEdicion(false);
-                      navigate(`/admin/equipos?abrirDetalle=${jugadorEdicion.EquipoId}`);
+                      navigate(`${ROUTES.ADMIN.EQUIPOS}?abrirDetalle=${jugadorEdicion.EquipoId}`);
                     }}
                   >
                     {jugadorEdicion.EquipoNombre}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { FaPlus, FaCheck, FaTimes, FaUserTie, FaUser, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -9,6 +10,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
+import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin, obtenerLinkInvitacion, regenerarInvitacion, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
 
 /* ─── Catálogos ─── */
@@ -120,6 +122,16 @@ export default function AdminPresidentes() {
   const [datosEditables, setDatosEditables] = useState({
     primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', curp: '', estatusId: 6
   });
+
+  // Hook para cargar de forma segura la foto del presidente
+  const { blobUrl: avatarBlobUrl, error: avatarError } = useSecureBlob(presidenteEnEdicion?.RutaFoto);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [presidenteEnEdicion?.RutaFoto]);
+
+  const mostrarFallback = !presidenteEnEdicion?.RutaFoto || avatarError || imgError;
 
 
   /* ── Reasignación ── */
@@ -688,24 +700,39 @@ export default function AdminPresidentes() {
       Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
       return;
     }
-    try {
-      Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-      const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
-      if (res.success) {
-        // Recargar el directorio de presidentes para reflejar el estado actual inmediatamente
-        await cargarPresidentes(true);
-        Swal.fire({
-          title: '¡Enviado!',
-          text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
-          icon: 'success',
-          confirmButtonColor: '#0b4ea6'
-        });
-      } else {
-        throw new Error();
+    const telefono = pres.telefono || pres.Telefono || 'número no registrado';
+
+    Swal.fire({
+      title: '¿Enviar invitación por WhatsApp?',
+      text: `¿Quieres enviar la invitación a ${telefono}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0b4ea6',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'No, cerrar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
+          if (res.success) {
+            // Recargar el directorio de presidentes para reflejar el estado actual inmediatamente
+            await cargarPresidentes(true);
+            Swal.fire({
+              title: '¡Enviado!',
+              text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
+              icon: 'success',
+              confirmButtonColor: '#0b4ea6'
+            });
+          } else {
+            throw new Error();
+          }
+        } catch (err) {
+          Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
+        }
       }
-    } catch (err) {
-      Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
-    }
+    });
   };
 
   const handleRegenerarInvitacion = async (pres) => {
@@ -896,7 +923,7 @@ export default function AdminPresidentes() {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
           {esBorrador ? (
             <button
-              onClick={() => navigate(`/admin/registrar-presidente?borradorId=${p.id}`)}
+              onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}`)}
               style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
               title="Continuar Registro"
             >
@@ -1145,7 +1172,7 @@ export default function AdminPresidentes() {
           >
             <FaSyncAlt />
           </button>
-          <button onClick={() => navigate('/admin/registrar-presidente')}
+          <button onClick={() => navigate(ROUTES.ADMIN.REGISTRAR_PRESIDENTE)}
             style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
           </button>
@@ -1270,19 +1297,16 @@ export default function AdminPresidentes() {
           {/* FOTO DEL PRESIDENTE Y CABECERA */}
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: 'white', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {presidenteEnEdicion?.RutaFoto ? (
+              {!mostrarFallback ? (
                 <img
-                  src={presidenteEnEdicion.RutaFoto.startsWith('http') ? presidenteEnEdicion.RutaFoto : `${API_BASE}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/').startsWith('/') ? '' : '/'}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/')}`}
+                  src={avatarBlobUrl}
                   alt="Foto del presidente"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const sib = e.target.parentNode.querySelector('.fallback-icon');
-                    if (sib) sib.style.display = 'block';
-                  }}
+                  onError={() => setImgError(true)}
                 />
-              ) : null}
-              <FaUser className="fallback-icon" style={{ display: presidenteEnEdicion?.RutaFoto ? 'none' : 'block', fontSize: '32px', color: '#cbd5e1' }} />
+              ) : (
+                <FaUser className="fallback-icon" style={{ fontSize: '32px', color: '#cbd5e1' }} />
+              )}
             </div>
             <div>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
@@ -1303,7 +1327,7 @@ export default function AdminPresidentes() {
                             searchParams.delete('abrirDetalle');
                             setSearchParams(searchParams, { replace: true });
                           }
-                          navigate(`/admin/equipos?abrirDetalle=${eq.id}`);
+                          navigate(`${ROUTES.ADMIN.EQUIPOS}?abrirDetalle=${eq.id}`);
                         }}
                         title="Ver detalle del equipo"
                       >

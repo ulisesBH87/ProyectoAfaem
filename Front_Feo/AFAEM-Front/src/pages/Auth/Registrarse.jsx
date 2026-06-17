@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
+import { ROUTES } from '../../routes/paths';
 import { API_BASE } from '../../config/config';
 import { hashPassword } from '../../utils/hash';
 
@@ -812,7 +813,7 @@ function Registrarse() {
 
 						<div className="form-field col-span-4" style={{ textAlign: 'center', marginTop: 8 }}>
 							<p style={{ margin: 0, fontSize: '14px' }}>
-								¿Ya tienes cuenta? <Link to="/ingresar" style={{ color: '#0b4ea6', fontWeight: 700, textDecoration: 'none' }}>Inicia sesión</Link>
+								¿Ya tienes cuenta? <Link to={ROUTES.LOGIN} style={{ color: '#0b4ea6', fontWeight: 700, textDecoration: 'none' }}>Inicia sesión</Link>
 							</p>
 						</div>
 
@@ -869,7 +870,7 @@ function Registrarse() {
 					<div className="json-result fade-in" style={{ marginTop: '30px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '25px', borderRadius: '12px' }}>
 						<h3 style={{ color: '#10b981', margin: '0 0 10px' }}>✓ ¡Registro Generado!</h3>
 						<p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>Tu solicitud ha sido procesada. Puedes proceder a iniciar sesión.</p>
-						<button className="btn-premium" style={{ marginTop: '15px', background: 'var(--secondary)' }} onClick={() => _navigate('/ingresar')}>Ir al Login</button>
+						<button className="btn-premium" style={{ marginTop: '15px', background: 'var(--secondary)' }} onClick={() => _navigate(ROUTES.LOGIN)}>Ir al Login</button>
 					</div>
 				)}
 			</div>

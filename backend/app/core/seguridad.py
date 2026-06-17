@@ -190,7 +190,7 @@ async def obtener_usuario_o_sesion_temporal(request: Request, db: Session = Depe
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales de autenticación ausentes"
+            detail="Credenciales inválidas"
         )
     token = auth_header.split(" ")[1]
     try:

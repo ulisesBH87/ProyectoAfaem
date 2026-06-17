@@ -1,15 +1,16 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaHome, FaClipboardList, FaMoneyBillWave } from 'react-icons/fa';
+import { ROUTES } from '../../routes/paths';
 
 const AdminTabs = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const tabs = [
-    { label: 'Tablero Principal', path: '/admin/dashboard', icon: <FaHome /> },
-    { label: 'Validar Solicitudes', path: '/admin/solicitudes', icon: <FaClipboardList /> },
-    { label: 'Validación de Pagos', path: '/admin/pagos', icon: <FaMoneyBillWave /> },
+    { label: 'Tablero Principal', path: ROUTES.ADMIN.DASHBOARD, icon: <FaHome /> },
+    { label: 'Validar Solicitudes', path: ROUTES.ADMIN.SOLICITUDES, icon: <FaClipboardList /> },
+    { label: 'Validación de Pagos', path: ROUTES.ADMIN.PAGOS, icon: <FaMoneyBillWave /> },
   ];
 
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/auth';
 import { RBACContext } from './RBACContextObject';
+import { ROUTES, mapOldToNewPath } from '../routes/paths';
 
 const PERMISSIONS_REFRESH_MS = 30 * 60 * 1000;
 
@@ -30,7 +31,18 @@ export const RBACProvider = ({ children }) => {
       });
       const data = response.data || {};
       const finalRoles = data.Roles || [];
-      const finalMenus = data.Menus ? [...data.Menus] : [];
+      const rawMenus = data.Menus ? [...data.Menus] : [];
+      const finalMenus = rawMenus.map(m => {
+        const mappedSubMenus = m.SubMenus ? m.SubMenus.map(sm => ({
+          ...sm,
+          Ruta: mapOldToNewPath(sm.Ruta)
+        })) : [];
+        return {
+          ...m,
+          Ruta: mapOldToNewPath(m.Ruta),
+          SubMenus: mappedSubMenus
+        };
+      });
       
       const isAdmin = finalRoles.map(r => r.toUpperCase()).includes('ADMINISTRADOR') || finalRoles.map(r => r.toUpperCase()).includes('ADMIN');
       
@@ -39,21 +51,21 @@ export const RBACProvider = ({ children }) => {
           finalMenus.push({
             Nombre: 'Catálogos',
             Icono: 'FaListAlt',
-            Ruta: '/admin/catalogos'
+            Ruta: ROUTES.ADMIN.CATALOGOS
           });
         }
         if (!finalMenus.find(m => m.Nombre === 'Presidentes')) {
           finalMenus.push({
             Nombre: 'Presidentes',
             Icono: 'FaUserTie',
-            Ruta: '/admin/presidentes'
+            Ruta: ROUTES.ADMIN.PRESIDENTES
           });
         }
         if (!finalMenus.find(m => m.Nombre === 'Auditorías')) {
           finalMenus.push({
             Nombre: 'Auditorías',
             Icono: 'FaHistory',
-            Ruta: '/admin/auditorias'
+            Ruta: ROUTES.ADMIN.AUDITORIAS
           });
         }
       }
