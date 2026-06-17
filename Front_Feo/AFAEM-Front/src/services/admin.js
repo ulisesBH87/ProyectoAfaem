@@ -383,8 +383,11 @@ export const registrarPresidenteAdmin = async (formData) => {
   }
 };
 
-export const enviarLinkRegistroPresidenteWhatsApp = async (usuarioId) => {
-  const response = await api.post(`/equipo-temporal/presidentes/${usuarioId}/enviar-link-registro-whatsapp`);
+export const enviarLinkRegistroPresidenteWhatsApp = async (usuarioId, telefonoDestino = null) => {
+  const url = telefonoDestino 
+    ? `/equipo-temporal/presidentes/${usuarioId}/enviar-link-registro-whatsapp?telefono_destino=${encodeURIComponent(telefonoDestino)}`
+    : `/equipo-temporal/presidentes/${usuarioId}/enviar-link-registro-whatsapp`;
+  const response = await api.post(url);
   return response.data;
 };
 
