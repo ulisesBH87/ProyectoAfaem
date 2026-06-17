@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
 import { FaEllipsisH, FaGavel, FaShieldAlt, FaFileContract, FaTimes } from 'react-icons/fa';
+import { ROUTES } from '../routes/paths';
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
@@ -38,9 +39,9 @@ const MobileBottomNav = () => {
   });
 
   const allValidMenus = flattenedMenus.filter(item => {
-    if (item.Ruta && item.Ruta.startsWith('/admin') && !isAdmin) return false;
+    if (item.Ruta && item.Ruta.startsWith('/ad') && !isAdmin) return false;
     if ((item.Nombre === 'Catálogos' || item.Nombre === 'Equipos' || item.Nombre === 'Catálogo Equipos' || item.Nombre === 'Catálogo Jugadores') && !isAdmin) {
-      if (item.Ruta !== '/presidente-equipo/equipos' && item.Ruta !== '/presidente-equipo/mis-jugadores') return false;
+      if (item.Ruta !== ROUTES.PRESIDENTE.EQUIPOS && item.Ruta !== ROUTES.PRESIDENTE.MIS_JUGADORES) return false;
     }
     if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
     if (item.Nombre === 'Auditorías') return false;
@@ -52,9 +53,9 @@ const MobileBottomNav = () => {
   const extraMenus = allValidMenus.filter(item => !mainMenus.includes(item));
 
   const legalLinks = [
-    { label: 'Reglamentos', icon: <FaGavel />, path: isAdmin ? '/admin/reglamentos' : '/presidente-equipo/reglamentos' },
-    { label: 'Privacidad', icon: <FaShieldAlt />, path: isAdmin ? '/admin/politica-privacidad' : '/presidente-equipo/politica-privacidad' },
-    { label: 'Términos', icon: <FaFileContract />, path: isAdmin ? '/admin/terminos-condiciones' : '/presidente-equipo/terminos-condiciones' },
+    { label: 'Reglamentos', icon: <FaGavel />, path: isAdmin ? ROUTES.ADMIN.REGLAMENTOS : ROUTES.PRESIDENTE.REGLAMENTOS },
+    { label: 'Privacidad', icon: <FaShieldAlt />, path: isAdmin ? ROUTES.ADMIN.POLITICA_PRIVACIDAD : ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD },
+    { label: 'Términos', icon: <FaFileContract />, path: isAdmin ? ROUTES.ADMIN.TERMINOS_CONDICIONES : ROUTES.PRESIDENTE.TERMINOS_CONDICIONES },
   ];
 
   return (

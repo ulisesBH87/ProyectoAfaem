@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import * as bootstrap from 'bootstrap';
 import {
   getJugadoresDirectorio,
@@ -1140,7 +1141,7 @@ export default function AdminJugadores() {
             }}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/admin/equipos?abrirDetalle=${j.EquipoId}`);
+              navigate(`${ROUTES.ADMIN.EQUIPOS}?abrirDetalle=${j.EquipoId}`);
             }}
             title="Ver detalle del equipo"
           >
@@ -1250,14 +1251,14 @@ export default function AdminJugadores() {
           </button>
           <button
             className="btn btn-primary"
-            onClick={() => navigate('/admin/layout-jugadores')}
+            onClick={() => navigate(ROUTES.ADMIN.LAYOUT_JUGADORES)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaTable /> Tabla de jugadores
           </button>
           {/*<button
             className="btn btn-premium"
-            onClick={() => navigate('/admin/jugadores/crear')}
+            onClick={() => navigate(ROUTES.ADMIN.JUGADORES_CREAR)}
             style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <FaPlus /> Registrar jugador
@@ -1491,7 +1492,7 @@ export default function AdminJugadores() {
                     title="Ver detalle del equipo"
                     onClick={() => {
                       setModalEdicion(false);
-                      navigate(`/admin/equipos?abrirDetalle=${jugadorEdicion.EquipoId}`);
+                      navigate(`${ROUTES.ADMIN.EQUIPOS}?abrirDetalle=${jugadorEdicion.EquipoId}`);
                     }}
                   >
                     {jugadorEdicion.EquipoNombre}

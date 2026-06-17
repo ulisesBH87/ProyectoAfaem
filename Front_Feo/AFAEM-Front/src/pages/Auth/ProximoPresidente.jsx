@@ -4,6 +4,7 @@ import AmateurLogo from '../../assets/amateur-logo.png';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { postJSON } from '../../services/api';
+import { ROUTES } from '../../routes/paths';
 
 export default function ProximoPresidente() {
   const navigate = useNavigate();
@@ -141,7 +142,7 @@ export default function ProximoPresidente() {
       auth.isCertified = true;
       localStorage.setItem('auth', JSON.stringify(auth));
       localStorage.setItem('user', JSON.stringify(auth));
-      navigate('/presidente-equipo');
+      navigate(ROUTES.PRESIDENTE.DASHBOARD);
     } catch {
       setMessage('No se pudo activar la certificación.');
     }
@@ -406,7 +407,7 @@ export default function ProximoPresidente() {
 
             <button
               type="button"
-              onClick={() => navigate('/presidente-equipo')}
+              onClick={() => navigate(ROUTES.PRESIDENTE.DASHBOARD)}
               style={{
                 padding: '16px 30px',
                 borderRadius: '12px',

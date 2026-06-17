@@ -12,6 +12,7 @@ import {
 import { useRBAC } from '../hooks/useRBAC';
 import { getIcon } from '../utils/IconMapper.jsx';
 import AfaemLogo from '../assets/afaem-logo@4x.png';
+import { ROUTES } from '../routes/paths';
 
 const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => {
   const navigate = useNavigate();
@@ -26,15 +27,15 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
 
   const handleLogoClick = () => {
     if (isAdmin) {
-      navigate('/admin/dashboard');
+      navigate(ROUTES.ADMIN.DASHBOARD);
     } else {
-      navigate('/presidente-equipo/equipos');
+      navigate(ROUTES.PRESIDENTE.EQUIPOS);
     }
   };
 
   const handleLogout = () => {
     localStorage.clear();
-    navigate('/ingresar');
+    navigate(ROUTES.LOGIN);
   };
 
   if (isLoading) return null;
@@ -136,11 +137,11 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
         {menus
           .filter(item => {
             // Seguridad: Si es una ruta de admin, solo mostrar si es admin
-            if (item.Ruta && item.Ruta.startsWith('/admin') && !isAdmin) return false;
+            if (item.Ruta && item.Ruta.startsWith('/ad') && !isAdmin) return false;
             // Si es Catálogos o Directorio de Equipos y no es Admin, ocultar
             if ((item.Nombre === 'Catálogos' || item.Nombre === 'Equipos') && !isAdmin) {
               // A menos que sea un "Ver Mi Equipo" específico para presidentes (otra ruta)
-              if (item.Ruta !== '/presidente-equipo/equipos') return false;
+              if (item.Ruta !== ROUTES.PRESIDENTE.EQUIPOS) return false;
             }
             // Si es 'Mi Equipo' y es Admin, ocultar (porque pertenece a la vista de presidente)
             if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
@@ -265,15 +266,15 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
         {[{
           label: 'Reglamentos',
           icon: <FaGavel style={{ fontSize: '18px' }} />,
-          path: isAdmin ? '/admin/reglamentos' : '/presidente-equipo/reglamentos',
+          path: isAdmin ? ROUTES.ADMIN.REGLAMENTOS : ROUTES.PRESIDENTE.REGLAMENTOS,
         }, {
           label: 'Política de Privacidad',
           icon: <FaShieldAlt style={{ fontSize: '18px' }} />,
-          path: isAdmin ? '/admin/politica-privacidad' : '/presidente-equipo/politica-privacidad',
+          path: isAdmin ? ROUTES.ADMIN.POLITICA_PRIVACIDAD : ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD,
         }, {
           label: 'Términos y Condiciones',
           icon: <FaFileContract style={{ fontSize: '18px' }} />,
-          path: isAdmin ? '/admin/terminos-condiciones' : '/presidente-equipo/terminos-condiciones',
+          path: isAdmin ? ROUTES.ADMIN.TERMINOS_CONDICIONES : ROUTES.PRESIDENTE.TERMINOS_CONDICIONES,
         }].map(({ label, icon, path }) => {
           const isActive = location.pathname === path;
           return (

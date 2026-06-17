@@ -1,8 +1,9 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import MainLayout from './layouts/MainLayout';
 import Loader from './components/Loader';
+import { ROUTES } from './routes/paths';
 
 const Ingresar = lazy(() => import('./pages/Auth/Ingresar'));
 const Registrarse = lazy(() => import('./pages/Auth/Registrarse'));
@@ -65,6 +66,22 @@ function getJwtPayload(token) {
   }
 }
 
+// Componentes auxiliares para redirecciones con parámetros dinámicos
+function RedirectCompletar() {
+  const { equipoId } = useParams();
+  return <Navigate to={ROUTES.ADMIN.EQUIPOS_COMPLETAR.replace(':equipoId', equipoId)} replace />;
+}
+
+function RedirectAdminEquipo() {
+  const { equipoId } = useParams();
+  return <Navigate to={ROUTES.PRESIDENTE.ADMIN_EQUIPO.replace(':equipoId', equipoId)} replace />;
+}
+
+function RedirectInscribirEquipo() {
+  const { equipoId } = useParams();
+  return <Navigate to={ROUTES.PRESIDENTE.INSCRIBIR_EQUIPO.replace(':equipoId', equipoId)} replace />;
+}
+
 function App() {
   const [cargandoApp, setCargandoApp] = useState(true);
   const [estaSaliendo, setEstaSaliendo] = useState(false);
@@ -83,7 +100,7 @@ function App() {
 
       if (jwtExpMs && ahora >= jwtExpMs) {
         localStorage.clear();
-        window.location.href = '/ingresar?motivo=sesion_expirada';
+        window.location.href = `${ROUTES.LOGIN}?motivo=sesion_expirada`;
         return;
       }
 
@@ -92,7 +109,7 @@ function App() {
 
         if (tiempoTranscurrido > FIVE_HOURS_MS) {
           localStorage.clear();
-          window.location.href = '/ingresar?motivo=sesion_expirada';
+          window.location.href = `${ROUTES.LOGIN}?motivo=sesion_expirada`;
         }
       }
     };
@@ -117,66 +134,108 @@ function App() {
       {cargandoApp && <SplashScreen isExiting={estaSaliendo} />}
       <Suspense fallback={<Loader text="AFAEM DIGITAL" />}>
         <Routes>
-          <Route path="/" element={<Ingresar />} />
-          <Route path="/ingresar" element={<Ingresar />} />
-          <Route path="/registrarse-cuenta" element={<RegistrarseCuenta />} />
-          <Route path="/proximo-presidente" element={<ProximoPresidente />} />
-          <Route path="/pre-registro-presidente" element={<PreRegistroPresidente />} />
-          <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
-          <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
-          <Route path="/suspendido" element={<Suspended />} />
-          <Route path="/i/:tokenIdentificador/:tokenSecreto" element={<RegistroJugadores />} />
+          <Route path={ROUTES.HOME} element={<Ingresar />} />
+          <Route path={ROUTES.LOGIN} element={<Ingresar />} />
+          <Route path={ROUTES.REGISTRARSE_CUENTA} element={<RegistrarseCuenta />} />
+          <Route path={ROUTES.PROXIMO_PRESIDENTE} element={<ProximoPresidente />} />
+          <Route path={ROUTES.PRE_REGISTRO_PRESIDENTE} element={<PreRegistroPresidente />} />
+          <Route path={ROUTES.OLVIDE_CONTRASENA} element={<OlvideContrasena />} />
+          <Route path={ROUTES.RESTABLECER_CONTRASENA} element={<RestablecerContrasena />} />
+          <Route path={ROUTES.SUSPENDIDO} element={<Suspended />} />
+          <Route path={ROUTES.INVITACION} element={<RegistroJugadores />} />
+
+          {/* REDIRECCIONES DE COMPATIBILIDAD PARA PRESIDENTE */}
+          <Route path="/presidente-equipo" element={<Navigate to={ROUTES.PRESIDENTE.DASHBOARD} replace />} />
+          <Route path="/presidente-equipo/jugadores" element={<Navigate to={ROUTES.PRESIDENTE.JUGADORES} replace />} />
+          <Route path="/presidente-equipo/solicitudes" element={<Navigate to={ROUTES.PRESIDENTE.SOLICITUDES} replace />} />
+          <Route path="/presidente-equipo/reportes" element={<Navigate to={ROUTES.PRESIDENTE.REPORTES} replace />} />
+          <Route path="/presidente-equipo/configuracion" element={<Navigate to={ROUTES.PRESIDENTE.CONFIGURACION} replace />} />
+          <Route path="/presidente-equipo/registro-jugadores" element={<Navigate to={ROUTES.PRESIDENTE.REGISTRO_JUGADORES} replace />} />
+          <Route path="/presidente-equipo/equipos" element={<Navigate to={ROUTES.PRESIDENTE.EQUIPOS} replace />} />
+          <Route path="/presidente-equipo/mis-jugadores" element={<Navigate to={ROUTES.PRESIDENTE.MIS_JUGADORES} replace />} />
+          <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<RedirectAdminEquipo />} />
+          <Route path="/inscribir-equipo-liga/:equipoId" element={<RedirectInscribirEquipo />} />
+          <Route path="/presidente-equipo/configurar-equipo" element={<Navigate to={ROUTES.PRESIDENTE.CONFIGURAR_EQUIPO} replace />} />
+          <Route path="/presidente-equipo/pago-jugador/crear-orden" element={<Navigate to={ROUTES.PRESIDENTE.PAGO_CREAR_ORDEN} replace />} />
+          <Route path="/presidente-equipo/pago-jugador/subir-comprobante" element={<Navigate to={ROUTES.PRESIDENTE.PAGO_SUBIR_COMPROBANTE} replace />} />
+          <Route path="/presidente-equipo/pago-jugador/en-revision" element={<Navigate to={ROUTES.PRESIDENTE.PAGO_EN_REVISION} replace />} />
+          <Route path="/presidente-equipo/pago-jugador/reenviar-comprobante" element={<Navigate to={ROUTES.PRESIDENTE.PAGO_REENVIAR_COMPROBANTE} replace />} />
+          <Route path="/presidente-equipo/admin-solicitudes" element={<Navigate to={ROUTES.PRESIDENTE.SOLICITUDES} replace />} />
+
+          {/* REDIRECCIONES DE COMPATIBILIDAD PARA ADMIN */}
+          <Route path="/admin/dashboard" element={<Navigate to={ROUTES.ADMIN.DASHBOARD} replace />} />
+          <Route path="/admin/solicitudes" element={<Navigate to={ROUTES.ADMIN.SOLICITUDES} replace />} />
+          <Route path="/admin/pagos" element={<Navigate to={ROUTES.ADMIN.PAGOS} replace />} />
+          <Route path="/admin/equipos" element={<Navigate to={ROUTES.ADMIN.EQUIPOS} replace />} />
+          <Route path="/admin/equipos/crear" element={<Navigate to={ROUTES.ADMIN.EQUIPOS_CREAR} replace />} />
+          <Route path="/admin/equipos/completar-jugadores/:equipoId" element={<RedirectCompletar />} />
+          <Route path="/admin/jugadores" element={<Navigate to={ROUTES.ADMIN.JUGADORES} replace />} />
+          <Route path="/admin/jugadores/crear" element={<Navigate to={ROUTES.ADMIN.JUGADORES_CREAR} replace />} />
+          <Route path="/admin/catalogos" element={<Navigate to={ROUTES.ADMIN.CATALOGOS} replace />} />
+          <Route path="/admin/presidentes" element={<Navigate to={ROUTES.ADMIN.PRESIDENTES} replace />} />
+          <Route path="/admin/registrar-presidente" element={<Navigate to={ROUTES.ADMIN.REGISTRAR_PRESIDENTE} replace />} />
+          <Route path="/admin/auditorias" element={<Navigate to={ROUTES.ADMIN.AUDITORIAS} replace />} />
+          <Route path="/admin/layout-jugadores" element={<Navigate to={ROUTES.ADMIN.LAYOUT_JUGADORES} replace />} />
+          <Route path="/admin/usuarios-roles" element={<Navigate to={ROUTES.ADMIN.USUARIOS_ROLES} replace />} />
+          <Route path="/admin/configuracion" element={<Navigate to={ROUTES.ADMIN.CONFIGURACION} replace />} />
+
+          {/* REDIRECCIONES DE COMPATIBILIDAD PARA LEGAL */}
+          <Route path="/admin/reglamentos" element={<Navigate to={ROUTES.ADMIN.REGLAMENTOS} replace />} />
+          <Route path="/presidente-equipo/reglamentos" element={<Navigate to={ROUTES.PRESIDENTE.REGLAMENTOS} replace />} />
+          <Route path="/admin/politica-privacidad" element={<Navigate to={ROUTES.ADMIN.POLITICA_PRIVACIDAD} replace />} />
+          <Route path="/presidente-equipo/politica-privacidad" element={<Navigate to={ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD} replace />} />
+          <Route path="/admin/terminos-condiciones" element={<Navigate to={ROUTES.ADMIN.TERMINOS_CONDICIONES} replace />} />
+          <Route path="/presidente-equipo/terminos-condiciones" element={<Navigate to={ROUTES.PRESIDENTE.TERMINOS_CONDICIONES} replace />} />
 
           {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT AND GENERALGUARD */}
           <Route element={<GeneralGuard><MainLayout userEmail={userEmail} /></GeneralGuard>}>
-            <Route path="/presidente-equipo" element={<PresidenteGuard><PresidenteEquipo /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/jugadores" element={<PresidenteGuard><PresidenteEquipoJugadores /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/reportes" element={<PresidenteGuard><PresidenteEquipoReportes /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/configuracion" element={<PresidenteGuard><PresidenteEquipoConfiguracion /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/registro-jugadores" element={<PresidenteGuard><RegistroJugadores /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/equipos" element={<PresidenteGuard><PresidenteEquipoEquipos /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/mis-jugadores" element={<PresidenteGuard><PresidenteEquipoMisJugadores /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/admin-equipo/:equipoId" element={<PresidenteGuard><AdminEquipo /></PresidenteGuard>} />
-            <Route path="/inscribir-equipo-liga/:equipoId" element={<PresidenteGuard><InscribirEquipoALiga /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/configurar-equipo" element={<PresidenteGuard><ConfigurarEquipo /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/pago-jugador/crear-orden" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/pago-jugador/subir-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/pago-jugador/en-revision" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/pago-jugador/reenviar-comprobante" element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
-            <Route path="/presidente-equipo/admin-solicitudes" element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.DASHBOARD} element={<PresidenteGuard><PresidenteEquipo /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.JUGADORES} element={<PresidenteGuard><PresidenteEquipoJugadores /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.SOLICITUDES} element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.REPORTES} element={<PresidenteGuard><PresidenteEquipoReportes /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.CONFIGURACION} element={<PresidenteGuard><PresidenteEquipoConfiguracion /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.REGISTRO_JUGADORES} element={<PresidenteGuard><RegistroJugadores /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.EQUIPOS} element={<PresidenteGuard><PresidenteEquipoEquipos /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.MIS_JUGADORES} element={<PresidenteGuard><PresidenteEquipoMisJugadores /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.ADMIN_EQUIPO} element={<PresidenteGuard><AdminEquipo /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.INSCRIBIR_EQUIPO} element={<PresidenteGuard><InscribirEquipoALiga /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.CONFIGURAR_EQUIPO} element={<PresidenteGuard><ConfigurarEquipo /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.PAGO_CREAR_ORDEN} element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.PAGO_SUBIR_COMPROBANTE} element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.PAGO_EN_REVISION} element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.PAGO_REENVIAR_COMPROBANTE} element={<PresidenteGuard><PagoPrevioJugador /></PresidenteGuard>} />
 
-            <Route path="/admin/dashboard" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
-            <Route path="/admin/solicitudes" element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
-            <Route path="/admin/pagos" element={<AdminGuard><AdminPagos /></AdminGuard>} />
-            <Route path="/admin/equipos" element={<AdminGuard><AdminEquipos /></AdminGuard>} />
-            <Route path="/admin/equipos/crear" element={<AdminGuard><ConfigurarEquipo /></AdminGuard>} />
-            <Route path="/admin/equipos/completar-jugadores/:equipoId" element={<AdminGuard><CompletarJugadoresEquipo /></AdminGuard>} />
-            <Route path="/admin/jugadores" element={<AdminGuard><AdminJugadores /></AdminGuard>} />
-            <Route path="/admin/jugadores/crear" element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
-            <Route path="/admin/catalogos" element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
-            <Route path="/admin/presidentes" element={<AdminGuard><AdminPresidentes /></AdminGuard>} />
-            <Route path="/admin/registrar-presidente" element={<AdminGuard><RegistrarPresidente /></AdminGuard>} />
-            <Route path="/admin/auditorias" element={<AdminGuard><AdminAuditorias /></AdminGuard>} />
-            <Route path="/admin/layout-jugadores" element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
-            <Route path="/admin/usuarios-roles" element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
-            <Route path="/admin/configuracion" element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.SOLICITUDES} element={<AdminGuard><AdminSolicitudes /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.PAGOS} element={<AdminGuard><AdminPagos /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.EQUIPOS} element={<AdminGuard><AdminEquipos /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.EQUIPOS_CREAR} element={<AdminGuard><ConfigurarEquipo /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.EQUIPOS_COMPLETAR} element={<AdminGuard><CompletarJugadoresEquipo /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.JUGADORES} element={<AdminGuard><AdminJugadores /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.JUGADORES_CREAR} element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.CATALOGOS} element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.PRESIDENTES} element={<AdminGuard><AdminPresidentes /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.REGISTRAR_PRESIDENTE} element={<AdminGuard><RegistrarPresidente /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.AUDITORIAS} element={<AdminGuard><AdminAuditorias /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.LAYOUT_JUGADORES} element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.USUARIOS_ROLES} element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.CONFIGURACION} element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
             
             {/* SECCIÓN LEGAL */}
-            <Route path="/reglamentos" element={<Reglamentos />} />
-            <Route path="/admin/reglamentos" element={<Reglamentos />} />
-            <Route path="/presidente-equipo/reglamentos" element={<Reglamentos />} />
+            <Route path={ROUTES.LEGAL.REGLAMENTOS} element={<Reglamentos />} />
+            <Route path={ROUTES.ADMIN.REGLAMENTOS} element={<Reglamentos />} />
+            <Route path={ROUTES.PRESIDENTE.REGLAMENTOS} element={<Reglamentos />} />
             {/* Política de Privacidad */}
-            <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
-            <Route path="/admin/politica-privacidad" element={<PoliticaPrivacidad />} />
-            <Route path="/presidente-equipo/politica-privacidad" element={<PoliticaPrivacidad />} />
+            <Route path={ROUTES.LEGAL.POLITICA_PRIVACIDAD} element={<PoliticaPrivacidad />} />
+            <Route path={ROUTES.ADMIN.POLITICA_PRIVACIDAD} element={<PoliticaPrivacidad />} />
+            <Route path={ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD} element={<PoliticaPrivacidad />} />
             {/* Términos y Condiciones */}
-            <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
-            <Route path="/admin/terminos-condiciones" element={<TerminosCondiciones />} />
-            <Route path="/presidente-equipo/terminos-condiciones" element={<TerminosCondiciones />} />
+            <Route path={ROUTES.LEGAL.TERMINOS_CONDICIONES} element={<TerminosCondiciones />} />
+            <Route path={ROUTES.ADMIN.TERMINOS_CONDICIONES} element={<TerminosCondiciones />} />
+            <Route path={ROUTES.PRESIDENTE.TERMINOS_CONDICIONES} element={<TerminosCondiciones />} />
           </Route>
 
-          <Route path="/registrar-admin" element={<RegistrarAdmin />} />
+          <Route path={ROUTES.REGISTRAR_ADMIN} element={<RegistrarAdmin />} />
 
           {/* Catch-all: Página 404 */}
           <Route path="*" element={<NotFound />} />

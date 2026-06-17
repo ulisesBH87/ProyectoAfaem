@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import StadiumBg from '../../assets/stadium.jpg';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { resetPassword } from '../../services/auth';
+import { ROUTES } from '../../routes/paths';
 
 export default function RestablecerContrasena() {
   const [searchParams] = useSearchParams();
@@ -59,7 +60,7 @@ export default function RestablecerContrasena() {
       await resetPassword(email, token, password);
       setSuccess('Contraseña actualizada correctamente');
       setTimeout(() => {
-        navigate('/ingresar');
+        navigate(ROUTES.LOGIN);
       }, 2000);
     } catch (err) {
       setError(err?.response?.data?.detail || err?.message || 'No se pudo resetear la contraseña');
@@ -84,7 +85,7 @@ export default function RestablecerContrasena() {
           <div style={{ background: '#f8d7da', color: '#721c24', padding: 12, borderRadius: 6, marginBottom: 12 }}>
             {error}
           </div>
-          <button className="btn-primary" style={{ width: '100%' }} onClick={() => navigate('/olvide-contrasena')}>
+          <button className="btn-primary" style={{ width: '100%' }} onClick={() => navigate(ROUTES.OLVIDE_CONTRASENA)}>
             Solicitar nuevo enlace
           </button>
         </div>
@@ -181,7 +182,7 @@ export default function RestablecerContrasena() {
                 {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
               </button>
             </form>
-            <button className="btn-secondary" style={{ width: '100%', marginTop: 12 }} onClick={() => navigate('/ingresar')}>
+            <button className="btn-secondary" style={{ width: '100%', marginTop: 12 }} onClick={() => navigate(ROUTES.LOGIN)}>
               Volver al inicio
             </button>
           </>

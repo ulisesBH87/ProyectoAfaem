@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { API_BASE } from '../../config/config';
 import axios from 'axios';
 
@@ -119,7 +120,7 @@ export default function PresidenteEquipoConfiguracion() {
           </p>
           <button
             className="btn-premium"
-            onClick={() => navigate('/presidente-equipo/registro-jugadores')}
+            onClick={() => navigate(ROUTES.PRESIDENTE.REGISTRO_JUGADORES)}
             style={{ padding: '14px 32px', fontSize: '15px', display: 'inline-flex', alignItems: 'center', gap: '10px' }}
           >
             <FaUserPlus /> Registrar mi equipo
@@ -325,9 +326,9 @@ export default function PresidenteEquipoConfiguracion() {
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
               {[
-                { icon: <FaUserPlus />, label: 'Registrar nuevo jugador', ruta: '/presidente-equipo/registro-jugadores', color: 'var(--primary)' },
-                { icon: <FaUsers />, label: 'Ver directorio de jugadores', ruta: '/presidente-equipo/mis-jugadores', color: 'var(--secondary)' },
-                { icon: <FaShieldAlt />, label: 'Ver mis equipos', ruta: '/presidente-equipo/equipos', color: '#6366f1' },
+                { icon: <FaUserPlus />, label: 'Registrar nuevo jugador', ruta: ROUTES.PRESIDENTE.REGISTRO_JUGADORES, color: 'var(--primary)' },
+                { icon: <FaUsers />, label: 'Ver directorio de jugadores', ruta: ROUTES.PRESIDENTE.MIS_JUGADORES, color: 'var(--secondary)' },
+                { icon: <FaShieldAlt />, label: 'Ver mis equipos', ruta: ROUTES.PRESIDENTE.EQUIPOS, color: '#6366f1' },
               ].map((accion, i) => (
                 <button
                   key={i}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { FaPlus, FaCheck, FaTimes, FaUserTie, FaUser, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -900,7 +901,7 @@ export default function AdminPresidentes() {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
           {esBorrador ? (
             <button
-              onClick={() => navigate(`/admin/registrar-presidente?borradorId=${p.id}`)}
+              onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}`)}
               style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
               title="Continuar Registro"
             >
@@ -1149,7 +1150,7 @@ export default function AdminPresidentes() {
           >
             <FaSyncAlt />
           </button>
-          <button onClick={() => navigate('/admin/registrar-presidente')}
+          <button onClick={() => navigate(ROUTES.ADMIN.REGISTRAR_PRESIDENTE)}
             style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
           </button>
@@ -1307,7 +1308,7 @@ export default function AdminPresidentes() {
                             searchParams.delete('abrirDetalle');
                             setSearchParams(searchParams, { replace: true });
                           }
-                          navigate(`/admin/equipos?abrirDetalle=${eq.id}`);
+                          navigate(`${ROUTES.ADMIN.EQUIPOS}?abrirDetalle=${eq.id}`);
                         }}
                         title="Ver detalle del equipo"
                       >

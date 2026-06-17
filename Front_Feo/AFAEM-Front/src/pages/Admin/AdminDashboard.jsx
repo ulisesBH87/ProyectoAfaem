@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import {
   FaRegFileAlt, FaShieldAlt, FaHistory, FaChartLine,
   FaTrophy, FaBolt, FaCheckCircle, FaUsers, FaSyncAlt,
@@ -137,7 +138,7 @@ const AdminDashboard = () => {
           color="var(--primary)"
           label="Solicitudes Pendientes"
           val={statsData.solicitudesPendientes}
-          ruta="/admin/solicitudes"
+          ruta={ROUTES.ADMIN.SOLICITUDES}
           badge={{ text: 'Revisar', color: 'var(--primary)', bg: 'rgba(37,99,235,0.08)' }}
         />
 
@@ -148,7 +149,7 @@ const AdminDashboard = () => {
           color="var(--warning)"
           label="Pagos Pendientes"
           val={statsData.pagosPendientes}
-          ruta="/admin/pagos"
+          ruta={ROUTES.ADMIN.PAGOS}
           badge={{ text: 'Validar', color: 'var(--warning)', bg: 'rgba(245,158,11,0.08)' }}
         />
 
@@ -222,7 +223,7 @@ const AdminDashboard = () => {
           color="var(--secondary)"
           label="Equipos Aprobados"
           val={statsData.equipos}
-          ruta="/admin/equipos"
+          ruta={ROUTES.ADMIN.EQUIPOS}
         />
 
         {/* STAT 4: JUGADORES ACTIVOS */}
@@ -232,7 +233,7 @@ const AdminDashboard = () => {
           color="#8b5cf6"
           label="Jugadores Activos"
           val={statsData.jugadoresActivos ?? 'N/D'}
-          ruta="/admin/jugadores"
+          ruta={ROUTES.ADMIN.JUGADORES}
         />
 
 

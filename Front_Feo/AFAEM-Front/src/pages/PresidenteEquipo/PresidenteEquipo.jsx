@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import {
   FaUsers, FaClipboardList,
   FaCheckCircle, FaClock, FaTimesCircle, FaUserPlus,
@@ -174,7 +175,7 @@ export default function PresidenteEquipo() {
           color="var(--primary)"
           label="Mis Equipos"
           value={stats.totalEquipos}
-          ruta="/presidente-equipo/equipos"
+          ruta={ROUTES.PRESIDENTE.EQUIPOS}
         />
         <StatCard
           icon={<FaUsers />}
@@ -182,7 +183,7 @@ export default function PresidenteEquipo() {
           color="var(--secondary)"
           label="Total Jugadores"
           value={stats.totalJugadores}
-          ruta="/presidente-equipo/mis-jugadores"
+          ruta={ROUTES.PRESIDENTE.MIS_JUGADORES}
         />
         <StatCard
           icon={<FaClipboardList />}
@@ -190,7 +191,7 @@ export default function PresidenteEquipo() {
           color="var(--warning)"
           label="Total Solicitudes"
           value={stats.totalSolicitudes}
-          ruta="/presidente-equipo/solicitudes"
+          ruta={ROUTES.PRESIDENTE.SOLICITUDES}
         />
       </div>
 
@@ -209,7 +210,7 @@ export default function PresidenteEquipo() {
               </p>
             </div>
             <button
-              onClick={() => navigate('/presidente-equipo/solicitudes')}
+              onClick={() => navigate(ROUTES.PRESIDENTE.SOLICITUDES)}
               style={{
                 padding: '8px 16px', background: 'rgba(37,99,235,0.06)',
                 color: 'var(--primary)', border: '1.5px solid rgba(37,99,235,0.2)',
@@ -242,7 +243,7 @@ export default function PresidenteEquipo() {
           {/* Banner si hay solicitudes pendientes */}
           {!loading && stats.solicitudesPendientes > 0 && (
             <div
-              onClick={() => navigate('/presidente-equipo/solicitudes')}
+              onClick={() => navigate(ROUTES.PRESIDENTE.SOLICITUDES)}
               style={{
                 marginTop: '20px', padding: '14px 18px',
                 background: 'rgba(245, 158, 11, 0.07)', border: '1px solid rgba(245, 158, 11, 0.3)',
@@ -266,11 +267,11 @@ export default function PresidenteEquipo() {
           <h3 className="heading-outfit" style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 4px' }}>
             Acciones rápidas
           </h3>
-          <AccionRapida icon={<FaUserPlus />} label="Registrar nuevo jugador" ruta="/presidente-equipo/registro-jugadores" color="var(--primary)" />
-          <AccionRapida icon={<FaShieldAlt />} label="Ver mis equipos" ruta="/presidente-equipo/equipos" color="var(--secondary)" />
-          <AccionRapida icon={<FaUsers />} label="Mi directorio de jugadores" ruta="/presidente-equipo/mis-jugadores" color="#6366f1" />
-          <AccionRapida icon={<FaClipboardList />} label="Mis solicitudes" ruta="/presidente-equipo/solicitudes" color="var(--warning)" />
-          <AccionRapida icon={<FaTrophy />} label="Configuración del equipo" ruta="/presidente-equipo/configuracion" color="#ec4899" />
+          <AccionRapida icon={<FaUserPlus />} label="Registrar nuevo jugador" ruta={ROUTES.PRESIDENTE.REGISTRO_JUGADORES} color="var(--primary)" />
+          <AccionRapida icon={<FaShieldAlt />} label="Ver mis equipos" ruta={ROUTES.PRESIDENTE.EQUIPOS} color="var(--secondary)" />
+          <AccionRapida icon={<FaUsers />} label="Mi directorio de jugadores" ruta={ROUTES.PRESIDENTE.MIS_JUGADORES} color="#6366f1" />
+          <AccionRapida icon={<FaClipboardList />} label="Mis solicitudes" ruta={ROUTES.PRESIDENTE.SOLICITUDES} color="var(--warning)" />
+          <AccionRapida icon={<FaTrophy />} label="Configuración del equipo" ruta={ROUTES.PRESIDENTE.CONFIGURACION} color="#ec4899" />
         </div>
       </div>
     </div>

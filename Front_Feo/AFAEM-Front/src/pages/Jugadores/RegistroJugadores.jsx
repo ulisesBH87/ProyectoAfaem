@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
@@ -944,7 +945,7 @@ export default function RegistroJugadores() {
       }
       if (!isPublicFlow) {
         Swal.fire('Error', 'No se especificó un equipo para el registro.', 'error');
-        navigate('/presidente-equipo/dashboard');
+        navigate(ROUTES.PRESIDENTE.DASHBOARD);
       } else {
         setLinkError(true);
       }

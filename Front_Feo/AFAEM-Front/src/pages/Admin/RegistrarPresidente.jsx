@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { useRegistrarPresidente } from '../../hooks/useRegistrarPresidente';
 import { C, PASOS } from './RegistrarPresidente/constants';
 import PageHeader from './RegistrarPresidente/PageHeader';
@@ -229,7 +230,7 @@ export default function RegistrarPresidente() {
         }
       `}</style>
       {/* Header de página */}
-      <PageHeader onBack={() => navigate('/admin/presidentes')} />
+      <PageHeader onBack={() => navigate(ROUTES.ADMIN.PRESIDENTES)} />
 
       {/* Contenedor principal con decoración */}
       <div className="rp-container" style={{
@@ -319,7 +320,7 @@ export default function RegistrarPresidente() {
         {/* ── Footer de navegación ── */}
         <div className="rp-wizard-footer">
           <button
-            onClick={() => paso > 1 ? setPaso(p => p - 1) : navigate('/admin/presidentes')}
+            onClick={() => paso > 1 ? setPaso(p => p - 1) : navigate(ROUTES.ADMIN.PRESIDENTES)}
             style={{
               padding: '10px 22px', borderRadius: 10,
               border: `1px solid ${C.inputBorder}`, background: 'rgba(255,255,255,0.03)',

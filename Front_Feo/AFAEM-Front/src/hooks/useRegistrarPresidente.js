@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../routes/paths';
 import Swal from 'sweetalert2';
 import {
   registrarPresidenteAdmin,
@@ -406,7 +407,7 @@ export function useRegistrarPresidente() {
         await Swal.fire({ title: 'WhatsApp enviado', text: envio?.mensaje || 'El mensaje fue enviado correctamente al presidente.', icon: 'success', confirmButtonColor: C.amberDark });
       }
 
-      navigate('/admin/presidentes');
+      navigate(ROUTES.ADMIN.PRESIDENTES);
     } catch (err) {
       const detail = err.response?.data?.detail;
       const errorMessage = typeof detail === 'string'

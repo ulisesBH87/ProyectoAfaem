@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getJugadoresDirectorio, getEquiposDirectorio } from '../../services/admin';
 import { FaSyncAlt, FaCopy, FaCheck, FaFilter, FaUsers } from 'react-icons/fa';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import SearchBar from '../../components/Common/SearchBar';
 import Loader from '../../components/Loader';
 
@@ -124,7 +125,7 @@ export default function AdminLayoutJugadores() {
             <FaSyncAlt />
           </button>
           <button
-            onClick={() => navigate('/admin/jugadores')}
+            onClick={() => navigate(ROUTES.ADMIN.JUGADORES)}
             style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaUsers /> Catálogo de jugadores
