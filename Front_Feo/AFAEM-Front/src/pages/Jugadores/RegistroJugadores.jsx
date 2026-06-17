@@ -2380,11 +2380,11 @@ export default function RegistroJugadores() {
                 <div className="mobile-step-indicator">
                   Paso {currentStep} de 6: {
                     currentStep === 1 ? 'Documentos' :
-                    currentStep === 2 ? 'Personales' :
-                    currentStep === 3 ? 'Deportivos' :
-                    currentStep === 4 ? 'Procedencia' :
-                    currentStep === 5 ? 'Seguro' :
-                    'Resumen'
+                      currentStep === 2 ? 'Personales' :
+                        currentStep === 3 ? 'Deportivos' :
+                          currentStep === 4 ? 'Procedencia' :
+                            currentStep === 5 ? 'Seguro' :
+                              'Resumen'
                   }
                 </div>
 
@@ -2401,14 +2401,38 @@ export default function RegistroJugadores() {
                         <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
                           Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
                         </label>
+                        <label className="form-label" style={{ fontWeight: '700', fontSize: '10px', marginBottom: '12px', display: 'block' }}>
+                          Vuelve a tocar para deseleccionar el seguro
+                        </label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                           {slotsData?.seguros?.map((seg) => {
                             const isSelected = String(currentSeguroId) === String(seg.seguro_id);
-                            const noDisponible = seg.disponibles <= 0 && !isSelected;
+
+                            // Calcular disponibilidad dinámicamente en el frontend
+                            const totalComprados = Number(seg.pagados ?? seg.total_slots ?? 0);
+                            const usadosPorOtros = jugadores.reduce((acc, player, idx) => {
+                              if (idx === currentPlayerIndex) return acc;
+                              if (String(player.seguroId) === String(seg.seguro_id)) {
+                                return acc + 1;
+                              }
+                              return acc;
+                            }, 0);
+
+                            const disponiblesLocales = Math.max(0, totalComprados - usadosPorOtros);
+                            const noDisponible = disponiblesLocales <= 0 && !isSelected;
+
                             return (
                               <div
                                 key={`seguro-card-${seg.seguro_id}`}
                                 onClick={() => {
+                                  if (isSelected) {
+                                    updatePlayerSeguro(currentPlayerIndex, '');
+                                    const updated = { ...currentDatos };
+                                    if (currentPlayer?.slotId) {
+                                      guardarBorradorEnBD(currentPlayer.slotId, updated);
+                                    }
+                                    return;
+                                  }
                                   if (noDisponible) {
                                     Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
                                     return;
@@ -2426,7 +2450,7 @@ export default function RegistroJugadores() {
                                   border: isSelected
                                     ? '2.5px solid #0b4ea6'
                                     : noDisponible
-                                      ? '1px solid #e2e8f0'
+                                      ? '1.5px dashed #cbd5e1'
                                       : '1px solid #cbd5e1',
                                   backgroundColor: isSelected
                                     ? '#eff6ff'
@@ -2450,12 +2474,12 @@ export default function RegistroJugadores() {
                                   alignSelf: 'start',
                                   padding: '2px 8px',
                                   borderRadius: '20px',
-                                  background: noDisponible ? '#e2e8f0' : '#dcfce7',
-                                  color: noDisponible ? '#64748b' : '#15803d',
+                                  background: noDisponible ? '#fee2e2' : '#dcfce7',
+                                  color: noDisponible ? '#ef4444' : '#15803d',
                                   fontSize: '11px',
                                   fontWeight: '800'
                                 }}>
-                                  {seg.disponibles} disponibles
+                                  {noDisponible ? '🚫 SIN ESPACIOS' : `${disponiblesLocales} disponibles`}
                                 </div>
                               </div>
                             );
