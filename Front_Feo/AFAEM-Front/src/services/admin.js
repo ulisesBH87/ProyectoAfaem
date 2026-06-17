@@ -309,6 +309,7 @@ export const updatePresidente = async (presidenteId, data) => {
     segundoApellido: data.segundoApellido,
     correo: data.correo,
     telefono: data.telefono,
+    telefonoOpcional: data.telefonoOpcional,
     curp: data.curp,
     estatusId: Number(data.estatusId)
   });

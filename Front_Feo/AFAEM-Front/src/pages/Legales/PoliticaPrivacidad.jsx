@@ -91,7 +91,7 @@ const seccionesPrivacidad = [
   {
     icono: <FaUserShield />,
     titulo: 'I. Identidad y domicilio del Responsable',
-    contenido: `La Asociación de Fútbol Amateur del Estado de México (AFAEM) es la entidad responsable del tratamiento de sus datos personales, con domicilio en: Toluca de Lerdo, Estado de México, México.
+    contenido: `La Asociación de Fútbol Amateur del Estado de Morelos (AFAEM) es la entidad responsable del tratamiento de sus datos personales, con domicilio en: Morelos, México.
 
 Para cualquier asunto relacionado con sus datos personales, puede contactarnos directamente a través de los canales indicados en la sección de contacto al final de este aviso.
 

@@ -5,8 +5,16 @@ def validar_y_normalizar_telefono(telefono: str | None) -> str | None:
     if not telefono:
         return None
     
-    tel_clean = telefono.strip()
+    # Limpiar caracteres especiales: mantener solo números y '+'
+    tel_clean = re.sub(r"[^0-9+]", "", telefono.strip())
     
+    # Asegurar que el '+' solo esté al inicio
+    if "+" in tel_clean:
+        has_plus_at_start = tel_clean.startswith("+")
+        tel_clean = tel_clean.replace("+", "")
+        if has_plus_at_start:
+            tel_clean = "+" + tel_clean
+            
     # Si viene como 10 dígitos sin prefijo, auto-completar con México (+52)
     if re.match(r"^\d{10}$", tel_clean):
         tel_clean = f"+52{tel_clean}"

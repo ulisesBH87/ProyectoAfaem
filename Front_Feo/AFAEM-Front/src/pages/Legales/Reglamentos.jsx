@@ -28,7 +28,7 @@ const articulosReglamento = [
     numero: 'Artículo 1',
     titulo: 'Objeto y Ámbito de Aplicación',
     icono: <FaFutbol />,
-    contenido: `El presente Reglamento rige la organización y desarrollo de todas las competencias de fútbol aficionado organizadas por la Asociación de Fútbol Aficionado del Estado de México (AFAEM), en su carácter de asociación integrante del Sector Amateur de la Federación Mexicana de Fútbol (FMF).
+    contenido: `El presente Reglamento rige la organización y desarrollo de todas las competencias de fútbol aficionado organizadas por la Asociación de Fútbol Aficionado del Estado de Morelos (AFAEM), en su carácter de asociación integrante del Sector Amateur de la Federación Mexicana de Fútbol (FMF).
 
 Toda liga, torneo o competencia que se celebre bajo el auspicio o reconocimiento de AFAEM deberá observar el presente instrumento, así como las disposiciones del Estatuto Social de la FMF, el Reglamento General de Competencia y el Reglamento del Sector Amateur (SAM).`,
   },
@@ -98,7 +98,7 @@ Procedimiento: Las sanciones se notificarán oficialmente a través de la plataf
 3. Comité de Apelaciones: Resuelve los recursos interpuestos contra las decisiones de la Comisión Disciplinaria. Su resolución es definitiva y vinculante dentro del ámbito de AFAEM.
 4. Sector Amateur – FMF: Instancia superior a la que se puede acudir una vez agotadas las instancias internas de AFAEM. Sus decisiones prevalecen sobre las de AFAEM en todo momento.
 
-Las controversias de naturaleza civil o mercantil entre AFAEM y sus afiliados se someterán a los tribunales competentes del Estado de México, con renuncia expresa a cualquier otro fuero.`,
+Las controversias de naturaleza civil o mercantil entre AFAEM y sus afiliados se someterán a los tribunales competentes del Estado de Morelos, con renuncia expresa a cualquier otro fuero.`,
   },
 ];
 
@@ -111,14 +111,14 @@ const terminosSecciones = [
     titulo: '1. Aceptación de los Términos',
     contenido: `Al acceder, registrarse o usar la plataforma digital de AFAEM (en adelante "la Plataforma"), el usuario acepta de forma expresa e irrevocable los presentes Términos y Condiciones, así como el Aviso de Privacidad vigente. Si no está de acuerdo con alguno de los términos, deberá abstenerse de usar la Plataforma.
 
-La Plataforma es operada por la Asociación de Fútbol Aficionado del Estado de México (AFAEM). Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios serán comunicados mediante la propia Plataforma y entrarán en vigor a los 5 días naturales de su publicación.`,
+La Plataforma es operada por la Asociación de Fútbol Amateur del Estado de Morelos (AFAEM). Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios serán comunicados mediante la propia Plataforma y entrarán en vigor a los 5 días naturales de su publicación.`,
   },
   {
     id: 'tc2',
     titulo: '2. Descripción del Servicio',
     contenido: `La Plataforma AFAEM es un sistema de gestión deportiva que permite a sus usuarios:
 
-• Registrar y gestionar equipos de fútbol aficionado en el Estado de México.
+• Registrar y gestionar equipos de fútbol amateur en el Estado de Morelos.
 • Inscribir jugadores a ligas y torneos oficiales de AFAEM.
 • Consultar estadísticas, calendarios y resultados de competencias.
 • Gestionar pagos de cuotas de inscripción y afiliación.
@@ -193,7 +193,7 @@ const privacidadSecciones = [
   {
     id: 'pv1',
     titulo: 'I. Identidad y Domicilio del Responsable',
-    contenido: `La Asociación de Fútbol Aficionado del Estado de México (AFAEM), con domicilio en el Estado de México, México, es la entidad responsable del tratamiento de sus datos personales de conformidad con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) y su Reglamento.
+    contenido: `La Asociación de Fútbol Amateur del Estado de Morelos (AFAEM), con domicilio en el Estado de Morelos, México, es la entidad responsable del tratamiento de sus datos personales de conformidad con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) y su Reglamento.
 
 Para cualquier consulta relacionada con el tratamiento de sus datos personales, puede contactar a nuestro Departamento de Protección de Datos a través de los medios indicados al final del presente aviso.`,
   },
@@ -358,8 +358,8 @@ const Reglamentos = () => {
         <div className="reglamentos-cabecera-texto">
           <h1 className="reglamentos-titulo">Reglamentos y Legal</h1>
           <p className="reglamentos-subtitulo">
-            Consulta los documentos oficiales, términos de uso y políticas de privacidad de la
-            Asociación de Fútbol Aficionado del Estado de México.
+            Consulta los términos de uso y políticas de privacidad de la
+            Asociación de Fútbol Amateur del Estado de Morelos.
           </p>
         </div>
         <div className="reglamentos-badge-fmf">

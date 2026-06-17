@@ -151,11 +151,11 @@ const Suspended = () => {
         <div className="logo-container">
           <img src={AfaemLogo} alt="AFAEM" />
         </div>
-        
+
         <FaExclamationTriangle className="icon-warning" />
-        
+
         <h1 className="suspended-title">Acceso Restringido</h1>
-        
+
         <p className="suspended-text">
           Has sido suspendido temporalmente. Por favor, ponte en contacto con un administrador de AFAEM para verificar tu estatus y resolver cualquier inconveniente pendiente.
         </p>
@@ -164,14 +164,14 @@ const Suspended = () => {
           <button className="btn-contact" onClick={() => window.location.href = 'mailto:soporte@afaem.com'}>
             <FaHeadset /> Contactar Soporte
           </button>
-          
+
           <button className="btn-logout" onClick={handleLogout}>
             <FaSignOutAlt /> Cerrar Sesión
           </button>
         </div>
 
         <div className="footer-note">
-          Asociación de Fútbol Americano del Estado de México
+          Asociación de Fútbol Amateur del Estado de Morelos
         </div>
       </div>
     </div>

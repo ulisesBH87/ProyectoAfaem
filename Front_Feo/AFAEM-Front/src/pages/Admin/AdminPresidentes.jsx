@@ -197,6 +197,9 @@ export default function AdminPresidentes() {
       if (p) {
         setEsNavegacionCruzada(true);
         handleEditarPresidente(p);
+        const params = new URLSearchParams(searchParams);
+        params.delete('abrirDetalle');
+        setSearchParams(params, { replace: true });
       }
     }
   }, [searchParams, presidentes]);
@@ -572,7 +575,19 @@ export default function AdminPresidentes() {
 
   const manejarCambioInput = (e) => {
     const { name, value } = e.target;
-    setDatosEditables(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+    if (name === 'telefono' || name === 'telefonoOpcional') {
+      let clean = value.replace(/[^0-9+]/g, '');
+      if (clean.includes('+')) {
+        const hasPlusAtStart = clean.startsWith('+');
+        clean = clean.replace(/\+/g, '');
+        if (hasPlusAtStart) {
+          clean = '+' + clean;
+        }
+      }
+      finalValue = clean;
+    }
+    setDatosEditables(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const guardarEdicion = async () => {

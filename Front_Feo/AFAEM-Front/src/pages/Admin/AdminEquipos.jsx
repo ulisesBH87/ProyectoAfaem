@@ -60,6 +60,9 @@ export default function AdminEquipos() {
       if (eq) {
         setEsNavegacionCruzada(true);
         handleEditarEquipo(eq);
+        const params = new URLSearchParams(searchParams);
+        params.delete('abrirDetalle');
+        setSearchParams(params, { replace: true });
       }
     }
   }, [searchParams, equipos]);
