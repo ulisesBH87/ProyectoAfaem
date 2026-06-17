@@ -53,12 +53,14 @@ class AutenticacionServicio:
         hashed_password = seguridad.generar_hash(salt, data.Contrasena)
 
         telefono_normalizado = validar_y_normalizar_telefono(data.NumeroTelefono)
+        telefono_opcional_normalizado = validar_y_normalizar_telefono(data.NumeroTelefonoOpcional) if data.NumeroTelefonoOpcional else None
 
         datos_persona = Personas(
             Nombre=data.Nombre,
             PrimerApellido=data.PrimerApellido,
             SegundoApellido=data.SegundoApellido,
-            NumeroTelefono=telefono_normalizado
+            NumeroTelefono=telefono_normalizado,
+            NumeroTelefonoOpcional=telefono_opcional_normalizado
         )
 
         datos_usuario = Usuario(

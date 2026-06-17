@@ -26,6 +26,7 @@ export default function RegistrarPresidente() {
     toastVisible, cargandoBorrador,
     // Paso 1
     cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
+    codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta,
     // Paso 2
     numPersonas, setNumPersonas, voucher, setVoucher,
     segurosPresidente, segurosJugadores, asignacion, setAsignacion,
@@ -274,6 +275,8 @@ export default function RegistrarPresidente() {
             cuentaErrors={cuentaErrors}
             codigoPaisCuenta={codigoPaisCuenta}
             setCodigoPaisCuenta={setCodigoPaisCuenta}
+            codigoPaisOpcionalCuenta={codigoPaisOpcionalCuenta}
+            setCodigoPaisOpcionalCuenta={setCodigoPaisOpcionalCuenta}
           />
         )}
 

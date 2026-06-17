@@ -16,7 +16,7 @@ import { REQUISITOS, C } from '../pages/Admin/RegistrarPresidente/constants';
 
 const CUENTA_INICIAL = {
   nombre: '', primerApellido: '', segundoApellido: '',
-  correo: '', telefono: '', curp: '',
+  correo: '', telefono: '', telefonoOpcional: '', curp: '',
   sexoId: '', fechaNacimiento: '', nacionalidad: '',
   contrasena: '', confirmarContrasena: '',
 };
@@ -63,6 +63,7 @@ export function useRegistrarPresidente() {
   // ── Paso 1: Cuenta ───────────────────────────────────────────────────────
   const [cuenta, setCuenta] = useState(CUENTA_INICIAL);
   const [codigoPaisCuenta, setCodigoPaisCuenta] = useState('+52');
+  const [codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta] = useState('+52');
   const [cuentaErrors, setCuentaErrors] = useState({});
 
   const setCuentaField = (field, val) =>
@@ -142,6 +143,7 @@ export function useRegistrarPresidente() {
           if (d.paso) setPaso(d.paso);
           if (d.cuenta) setCuenta(prev => ({ ...prev, ...d.cuenta }));
           if (d.codigoPaisCuenta) setCodigoPaisCuenta(d.codigoPaisCuenta);
+          if (d.codigoPaisOpcionalCuenta) setCodigoPaisOpcionalCuenta(d.codigoPaisOpcionalCuenta);
           if (d.numPersonas) setNumPersonas(d.numPersonas);
           if (d.asignacion) setAsignacion(d.asignacion);
           if (d.equipo) setEquipo(d.equipo);
@@ -224,6 +226,7 @@ export function useRegistrarPresidente() {
             paso,
             cuenta,
             codigoPaisCuenta,
+            codigoPaisOpcionalCuenta,
             numPersonas,
             asignacion,
             equipo,
@@ -352,6 +355,9 @@ export function useRegistrarPresidente() {
       const telLocal = ocrResults.telefono || cuenta.telefono || '';
       const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : codigoPaisCuenta;
       fd.append('telefono', codPais + telLocal);
+      if (cuenta.telefonoOpcional) {
+        fd.append('telefonoOpcional', codigoPaisOpcionalCuenta + cuenta.telefonoOpcional);
+      }
       fd.append('curp', ocrResults.curp || cuenta.curp || '');
       fd.append('sexoId', cuenta.sexoId || '');
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
@@ -428,6 +434,7 @@ export function useRegistrarPresidente() {
     borradorId, toastVisible, cargandoBorrador,
     // Paso 1
     cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
+    codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta,
     // Paso 2
     numPersonas, setNumPersonas, voucher, setVoucher,
     seguros, segurosPresidente, segurosJugadores, asignacion, setAsignacion,

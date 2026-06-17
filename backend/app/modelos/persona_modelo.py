@@ -29,6 +29,7 @@ class Personas(Base):
     CorreoElectronico = Column(String(100), nullable=True, unique=True)
 
     NumeroTelefono = Column(String(20), nullable=True)
+    NumeroTelefonoOpcional = Column(String(20), nullable=True)
 
     Direccion = Column(String(200), nullable=True)
 
