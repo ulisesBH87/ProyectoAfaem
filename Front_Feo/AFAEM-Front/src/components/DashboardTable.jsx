@@ -81,7 +81,24 @@ const DashboardTable = ({
             {data.length > 0 ? (
               data.map((row, rowIdx) => (
                 <tr 
-                  key={row?.EquipoId ?? row?.id ?? row?.equipo_id ?? rowIdx} 
+                  key={(() => {
+                    const keys = ['EquipoId', 'id', 'equipo_id', 'MiembroEquipoId', 'OrdenPagoId', 'SolicitudId', 'UsuarioId', 'RolId', 'PersonaId'];
+                    for (const k of keys) {
+                      const val = row?.[k];
+                      if (val !== undefined && val !== null && (typeof val === 'string' || typeof val === 'number')) {
+                        return val;
+                      }
+                    }
+                    if (row?._original) {
+                      for (const k of keys) {
+                        const val = row._original[k];
+                        if (val !== undefined && val !== null && (typeof val === 'string' || typeof val === 'number')) {
+                          return val;
+                        }
+                      }
+                    }
+                    return rowIdx;
+                  })()} 
                   onClick={() => onRowClick && onRowClick(row)}
                   style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                 >

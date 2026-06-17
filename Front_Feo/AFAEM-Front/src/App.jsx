@@ -184,11 +184,11 @@ function App() {
 
           {/* DASHBOARD ROUTES WRAPPED IN MAINLAYOUT AND GENERALGUARD */}
           <Route element={<GeneralGuard><MainLayout userEmail={userEmail} /></GeneralGuard>}>
-            <Route path={ROUTES.PRESIDENTE.DASHBOARD} element={<PresidenteGuard><PresidenteEquipo /></PresidenteGuard>} />
-            <Route path={ROUTES.PRESIDENTE.JUGADORES} element={<PresidenteGuard><PresidenteEquipoJugadores /></PresidenteGuard>} />
-            <Route path={ROUTES.PRESIDENTE.SOLICITUDES} element={<PresidenteGuard><PresidenteEquipoSolicitudes /></PresidenteGuard>} />
-            <Route path={ROUTES.PRESIDENTE.REPORTES} element={<PresidenteGuard><PresidenteEquipoReportes /></PresidenteGuard>} />
-            <Route path={ROUTES.PRESIDENTE.CONFIGURACION} element={<PresidenteGuard><PresidenteEquipoConfiguracion /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.DASHBOARD} element={<Navigate to={ROUTES.PRESIDENTE.EQUIPOS} replace />} />
+            <Route path={ROUTES.PRESIDENTE.JUGADORES} element={<Navigate to={ROUTES.PRESIDENTE.MIS_JUGADORES} replace />} />
+            <Route path={ROUTES.PRESIDENTE.SOLICITUDES} element={<Navigate to={ROUTES.PRESIDENTE.EQUIPOS} replace />} />
+            <Route path={ROUTES.PRESIDENTE.REPORTES} element={<Navigate to={ROUTES.PRESIDENTE.EQUIPOS} replace />} />
+            <Route path={ROUTES.PRESIDENTE.CONFIGURACION} element={<Navigate to={ROUTES.PRESIDENTE.EQUIPOS} replace />} />
             <Route path={ROUTES.PRESIDENTE.REGISTRO_JUGADORES} element={<PresidenteGuard><RegistroJugadores /></PresidenteGuard>} />
             <Route path={ROUTES.PRESIDENTE.EQUIPOS} element={<PresidenteGuard><PresidenteEquipoEquipos /></PresidenteGuard>} />
             <Route path={ROUTES.PRESIDENTE.MIS_JUGADORES} element={<PresidenteGuard><PresidenteEquipoMisJugadores /></PresidenteGuard>} />
@@ -215,7 +215,7 @@ function App() {
             <Route path={ROUTES.ADMIN.LAYOUT_JUGADORES} element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.USUARIOS_ROLES} element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.CONFIGURACION} element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
-            
+
             {/* SECCIÓN LEGAL */}
             <Route path={ROUTES.LEGAL.REGLAMENTOS} element={<Reglamentos />} />
             <Route path={ROUTES.ADMIN.REGLAMENTOS} element={<Reglamentos />} />
