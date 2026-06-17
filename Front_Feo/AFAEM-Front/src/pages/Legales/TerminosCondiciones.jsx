@@ -98,7 +98,7 @@ const seccionesTC = [
   {
     icono: <FaCheckCircle />,
     titulo: '1. Aceptación de los Términos',
-    contenido: `Al registrarte y utilizar la plataforma digital de AFAEM (Asociación de Fútbol Amateur del Estado de México), aceptas de manera expresa e irrevocable los presentes Términos y Condiciones de Uso.
+    contenido: `Al registrarte y utilizar la plataforma digital de AFAEM (Asociación de Fútbol Amateur del Estado de Morelos), aceptas de manera expresa e irrevocable los presentes Términos y Condiciones de Uso.
 
 Si no estás de acuerdo con alguna de las condiciones aquí establecidas, deberás abstenerte de usar la plataforma.
 
