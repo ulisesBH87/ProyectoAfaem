@@ -412,42 +412,6 @@ const Reglamentos = () => {
       </div>
 
       {/* BLOQUE CONTACTO */}
-      <div className="reglamentos-contacto">
-        <div className="reglamentos-contacto-inner">
-          <div className="reglamentos-contacto-texto">
-            <FaLock style={{ fontSize: '28px', color: '#60a5fa' }} />
-            <div>
-              <h2 className="reglamentos-contacto-titulo">¿Tienes preguntas legales o sobre privacidad?</h2>
-              <p className="reglamentos-contacto-desc">
-                Nuestro equipo puede orientarte sobre el reglamento vigente, procesos disciplinarios o el ejercicio de tus Derechos ARCO.
-              </p>
-            </div>
-          </div>
-          <div className="reglamentos-contacto-datos">
-            <a href="mailto:contacto@afaem.mx" className="reglamentos-contacto-item">
-              <FaEnvelope />
-              <span>contacto@afaem.mx</span>
-            </a>
-            <a href="tel:+527221234567" className="reglamentos-contacto-item">
-              <FaPhoneAlt />
-              <span>(722) 123 4567</span>
-            </a>
-            <span className="reglamentos-contacto-item">
-              <FaMapMarkerAlt />
-              <span>Estado de México, México</span>
-            </span>
-            <a
-              href="https://www.fmf.mx/reglamentos"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="reglamentos-contacto-item reglamentos-contacto-link"
-            >
-              <FaExternalLinkAlt />
-              <span>Reglamentos FMF</span>
-            </a>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
