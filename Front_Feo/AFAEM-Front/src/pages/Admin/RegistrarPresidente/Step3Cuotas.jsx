@@ -1,7 +1,179 @@
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { C, fieldStyles, CATALOGO_ROLES, CATALOGO_LIGAS_DEFAULT } from './constants';
 import PasoHeader from './PasoHeader';
 import SeguroRow from './SeguroRow';
 import VoucherUpload from './VoucherUpload';
+
+const normalizarNombreSeguro = (nombre) => {
+  if (!nombre) return '';
+  return nombre.toUpperCase().replace(/["']/g, '').trim();
+};
+
+const DETALLES_SEGUROS = {
+  'TIPO A': {
+    nombre: 'TIPO "A"',
+    precio: 240,
+    poliza: '2922500000281',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$50,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$25,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO B': {
+    nombre: 'TIPO "B"',
+    precio: 350,
+    poliza: '2922500000283',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO F': {
+    nombre: 'TIPO "F"',
+    precio: 670,
+    poliza: '2922500000282',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO H': {
+    nombre: 'TIPO "H"',
+    precio: 475,
+    poliza: '2922500000286',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO G': {
+    nombre: 'TIPO "G"',
+    precio: 350,
+    poliza: '2922500000280',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se amparan los traslados de su casa a las ligas, asociaciones y viceversa, y traslados a otras ligas, se cubre dentro de las instalaciones de sus ligas y asociaciones. Se amparan traslados de estado a estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'BASICA': {
+    nombre: 'TIPO "BASICA"',
+    precio: 155,
+    poliza: 'N/A',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Esta afiliación no incluye póliza de seguro de gastos médicos por accidente. Solo cubre derechos de participación básica.',
+    beneficios: [
+      'Participación en Torneos Estatales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Regionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Campeonatos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Federados (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur'
+    ],
+    coberturas: []
+  },
+  'SIN SEGURO': {
+    nombre: 'SIN SEGURO (CON RESPONSABILIDAD DE LIGA)',
+    precio: 0,
+    poliza: 'N/A',
+    vigencia: 'N/A',
+    alcance: 'Esta opción deslinda a la asociación de cualquier cobertura médica. La liga asume la total responsabilidad médica por accidentes de sus afiliados.',
+    beneficios: [
+      'Participación en Torneos Locales autorizados por la Liga',
+      'Expediente deportivo en la base de datos de la Liga'
+    ],
+    coberturas: []
+  }
+};
 
 /**
  * Step3Cuotas
@@ -16,6 +188,29 @@ export default function Step3Cuotas({
   voucher, setVoucher,
   equipo, setEquipo, tipoAfiliacion, asociacion, liga, setLiga, ligasCatalogo
 }) {
+  const [seguroDetalle, setSeguroDetalle] = useState(null);
+  const [cantidadModal, setCantidadModal] = useState(0);
+
+  useEffect(() => {
+    if (seguroDetalle) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [seguroDetalle]);
+
+  const abrirModalDetalle = (seguro) => {
+    setSeguroDetalle(seguro);
+    const normalizedName = normalizarNombreSeguro(seguro.nombre);
+    const esPres = ['TIPO G', 'SIN SEGURO'].includes(normalizedName);
+    if (!esPres) {
+      setCantidadModal(Number(asignacion[seguro.id] || 0));
+    }
+  };
+
   const handleSelectPres = (seg, lista) => {
     setAsignacion(prev => {
       const next = { ...prev };
@@ -112,7 +307,7 @@ export default function Step3Cuotas({
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
                 <input
-                  type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={numPersonas}
+                   type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={numPersonas}
                   onChange={e => {
                     const rawVal = e.target.value.replace(/\D/g, '').slice(0, 2);
                     setNumPersonas(rawVal === '' ? '' : parseInt(rawVal, 10));
@@ -151,6 +346,7 @@ export default function Step3Cuotas({
                       asignacion={asignacion}
                       onSelectPres={() => handleSelectPres(seg, lista)}
                       onChangeNumero={e => handleChangeNumero(seg, e.target.value)}
+                      onVerDetalles={abrirModalDetalle}
                     />
                   ))}
                 </div>
@@ -181,6 +377,279 @@ export default function Step3Cuotas({
           </div>
         </div>
       </div>
+
+      {/* MODAL DE DETALLE DE SEGUROS */}
+      {seguroDetalle && (() => {
+        const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
+        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
+          nombre: seguroDetalle.nombre,
+          precio: seguroDetalle.precio,
+          poliza: 'N/A',
+          vigencia: 'N/A',
+          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
+          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
+          coberturas: []
+        };
+        const esPresidente = ['TIPO G', 'SIN SEGURO'].includes(segNombreNormalizado);
+        const jugadoresRestantes = Math.max(0, segurosRequeridos - totalAsignados);
+
+        return createPortal(
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{
+              backgroundColor: '#1e293b',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '850px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              color: 'white'
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: '25px 30px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
+                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
+              }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {esPresidente ? 'Seguro Presidente' : 'Seguro Jugador'}
+                  </h3>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                    {info.nombre}
+                  </h2>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
+                  {/* Left Column - Benefits */}
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      Beneficios Incluidos
+                    </h4>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {info.beneficios.map((ben, idx) => (
+                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,0.85)' }}>
+                          <span style={{ color: '#34d399', fontWeight: '900', fontSize: '15px' }}>✓</span>
+                          <span>{ben}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Right Column - Policy & Scope */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                        Detalles de la Póliza
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.vigencia}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                        Alcance y Cobertura
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.7)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '12px', padding: '14px' }}>
+                        {info.alcance.includes('traslados dentro del mismo estado') ? (
+                          <>
+                            {info.alcance.replace('traslados dentro del mismo estado.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados dentro del mismo estado.</strong>
+                          </>
+                        ) : info.alcance.includes('traslados de estado a estado') ? (
+                          <>
+                            {info.alcance.replace('traslados de estado a estado.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados de estado a estado.</strong>
+                          </>
+                        ) : info.alcance.includes('traslados entre estados') ? (
+                          <>
+                            {info.alcance.replace('traslados entre estados.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados entre estados.</strong>
+                          </>
+                        ) : (
+                          info.alcance
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coverages Table (if applicable) */}
+                {info.coberturas && info.coberturas.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      Montos de Cobertura
+                    </h4>
+                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)', textAlign: 'right' }}>Monto Máximo Amparado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {info.coberturas.map((cob, idx) => (
+                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', backgroundColor: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                              <td style={{ padding: '12px 20px', fontWeight: '700', color: '#ffffff' }}>{cob.cobertura}</td>
+                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? '#ef4444' : '#34d399', textAlign: 'right' }}>{cob.monto}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Footer */}
+              <div style={{
+                padding: '20px 30px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '20px',
+                borderBottomLeftRadius: '24px',
+                borderBottomRightRadius: '24px'
+              }}>
+                <div>
+                  {esPresidente ? (
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      Este seguro se asignará a tu cuenta de Presidente de Equipo.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600' }}>
+                        Selecciona la cantidad:
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '3px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setCantidadModal(prev => Math.max(0, prev - 1))}
+                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(255,255,255,0.06)', color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >-</button>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength="2"
+                          value={cantidadModal}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setCantidadModal(val === '' ? 0 : parseInt(val, 10));
+                          }}
+                          style={{ width: '60px', border: 'none', background: 'transparent', color: '#ffffff', textAlign: 'center', fontWeight: '900', fontSize: '16px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCantidadModal(prev => prev + 1)}
+                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(255,255,255,0.06)', color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >+</button>
+                      </div>
+                      <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
+                        (Faltan {jugadoresRestantes} por asignar)
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSeguroDetalle(null)}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.7)',
+                      padding: '10px 24px',
+                      borderRadius: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (esPresidente) {
+                        setAsignacion(prev => {
+                          const next = { ...prev };
+                          segurosPresidente.forEach(item => {
+                            next[item.id] = item.id === seguroDetalle.id ? 1 : 0;
+                          });
+                          return next;
+                        });
+                      } else {
+                        setAsignacion(prev => ({ ...prev, [seguroDetalle.id]: cantidadModal }));
+                      }
+                      setSeguroDetalle(null);
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      padding: '10px 28px',
+                      borderRadius: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 }

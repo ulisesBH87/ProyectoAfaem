@@ -145,7 +145,7 @@ function RegistrarseCuenta() {
 
 									<div style={{ gridColumn: 'span 1' }}>
 										<label className="auth-label">Segundo Apellido</label>
-										<input name="SegundoApellido" value={formData.SegundoApellido} onChange={handleChange} className="auth-input" placeholder="Apellido materno (opcional)" />
+										<input name="SegundoApellido" value={formData.SegundoApellido} onChange={handleChange} className="auth-input" placeholder="Apellido materno" />
 									</div>
 
 									<div style={{ gridColumn: 'span 1' }}>
