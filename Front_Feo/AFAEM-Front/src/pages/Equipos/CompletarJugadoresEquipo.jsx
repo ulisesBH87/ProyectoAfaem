@@ -16,6 +16,7 @@ import { validarFotografia } from '../../services/foto';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { openSecurePath } from '../../utils/secureFetch';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -1255,7 +1256,7 @@ export default function CompletarJugadoresEquipo() {
                       alHacerClick={() => navigate('/admin/equipos')}
                     />
                     <button
-                      onClick={() => window.open(`/${ordenAmpliacion.ruta_voucher}`, '_blank')}
+                      onClick={() => openSecurePath(ordenAmpliacion.ruta_voucher)}
                       style={{
                         padding: '12px 24px',
                         background: 'white',

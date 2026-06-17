@@ -18,6 +18,8 @@ import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, 
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
+import { useSecureBlob } from '../../hooks/useSecureBlob';
+import { openSecurePath } from '../../utils/secureFetch';
 
 /**
  * Tipos requeridos para jugadores. El campo `id` coincide con DocumentoAfiliacionId
@@ -62,10 +64,10 @@ const documentoCoincideConTipo = (doc, tipoId) => {
 
 const obtenerUrlDocumento = (doc) => {
   if (!doc) return null;
-  if (doc.url) return doc.url;
-  const ruta = doc.RutaArchivo;
-  if (!ruta) return null;
-  return ruta.startsWith('http') ? ruta : `/${String(ruta).replace(/^\/+/, '')}`;
+  let url = doc.url || doc.RutaArchivo;
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return url.startsWith('/') ? url : `/${url}`;
 };
 
 const formatearFechaSubida = (fecha) =>
@@ -481,6 +483,9 @@ export default function AdminJugadores() {
   // OCR dentro del modal
   const [ocrCargando, setOcrCargando] = useState(false);
 
+  // Hook para cargar la foto del jugador en edición de forma segura
+  const { blobUrl: avatarBlobUrl } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
+
   const loadJugadores = async (forceRefresh = false) => {
     try {
       setLoading(true);
@@ -781,6 +786,32 @@ export default function AdminJugadores() {
 
     document.body.appendChild(modalEl);
     const bsModal = new bootstrap.Modal(modalEl);
+
+    // Interceptar clics en los enlaces de documentos para cargarlos de forma segura
+    modalEl.addEventListener('click', async (e) => {
+      const enlace = e.target.closest('a');
+      if (enlace && enlace.getAttribute('href')) {
+        const href = enlace.getAttribute('href');
+        // Si es un path relativo que apunta a /documentos o /uploads
+        if (href !== '#' && !href.startsWith('http') && !href.startsWith('blob:') && !href.startsWith('data:')) {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            Swal.fire({
+              title: 'Cargando documento...',
+              allowOutsideClick: false,
+              didOpen: () => {
+                Swal.showLoading();
+              }
+            });
+            await openSecurePath(href);
+            Swal.close();
+          } catch (error) {
+            Swal.fire('Error', 'No se pudo abrir el documento.', 'error');
+          }
+        }
+      }
+    });
 
     // Botón: Añadir documento faltante
     modalEl.querySelectorAll('[data-add-doc]').forEach((boton) => {
@@ -1432,7 +1463,7 @@ export default function AdminJugadores() {
             <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
                 <img
-                  src={(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).startsWith('http') ? (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) : `${API_BASE}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/').startsWith('/') ? '' : '/'}${(fotoJugadorEdicion || jugadorEdicion?.RutaFoto).replace(/\\/g, '/')}`}
+                  src={avatarBlobUrl}
                   alt="Foto del jugador"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => {

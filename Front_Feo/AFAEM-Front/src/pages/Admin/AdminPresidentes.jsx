@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
+import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin, obtenerLinkInvitacion, regenerarInvitacion, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
 
 /* ─── Catálogos ─── */
@@ -120,6 +121,9 @@ export default function AdminPresidentes() {
   const [datosEditables, setDatosEditables] = useState({
     primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', curp: '', estatusId: 6
   });
+
+  // Hook para cargar de forma segura la foto del presidente
+  const { blobUrl: avatarBlobUrl } = useSecureBlob(presidenteEnEdicion?.RutaFoto);
 
 
   /* ── Reasignación ── */
@@ -1272,7 +1276,7 @@ export default function AdminPresidentes() {
             <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {presidenteEnEdicion?.RutaFoto ? (
                 <img
-                  src={presidenteEnEdicion.RutaFoto.startsWith('http') ? presidenteEnEdicion.RutaFoto : `${API_BASE}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/').startsWith('/') ? '' : '/'}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/')}`}
+                  src={avatarBlobUrl}
                   alt="Foto del presidente"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => {

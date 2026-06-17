@@ -1,6 +1,8 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List, Union
+import os
 from app.db.sesion import get_db
 from app.servicios.documentos_servicio import subir_documento_servicio2, proceso_presidente, presidente_solicitud
 from app.core.seguridad import obtener_usuario_actual
@@ -42,3 +44,128 @@ async def subir_documento(
             sid = presidente_solicitud(db, usuario)
 
     return await subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, archivo, sid)
+
+
+@router.get("/{documento_id}")
+async def obtener_documento(
+    documento_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    # 1. Obtener token (cabecera únicamente)
+    token_a_usar = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token_a_usar = auth_header.split(" ")[1]
+
+    if not token_a_usar:
+        raise HTTPException(status_code=401, detail="No autenticado")
+
+    # 2. Decodificar y validar token
+    from jose import jwt, JWTError
+    from app.core.seguridad import config as sec_config, obtener_usuario_por_id
+    
+    try:
+        payload = jwt.decode(token_a_usar, sec_config.SECRET_KEY, algorithms=[sec_config.ALGORITHM])
+        token_type = payload.get("type")
+        if token_type == "access":
+            usuario_id = payload.get("sub")
+            usuario = obtener_usuario_por_id(db, int(usuario_id))
+            if not usuario:
+                raise HTTPException(status_code=401, detail="Usuario no encontrado")
+            auth_info = {"type": "access", "usuario": usuario}
+        elif token_type == "temp_invitation_session":
+            usuario_id = payload.get("sub")
+            auth_info = {
+                "type": "temp_invitation_session",
+                "usuario_id": int(usuario_id),
+                "invitacion_id": payload.get("invitacion_id")
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Tipo de token inválido")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+
+    # 3. Buscar documento en la BD
+    from app.modelos.documentos_entregados_modelo import DocumentosEntregados
+    documento = db.query(DocumentosEntregados).filter(
+        DocumentosEntregados.DocumentosSolicitudId == documento_id
+    ).first()
+    
+    if not documento:
+        raise HTTPException(status_code=404, detail="Documento no encontrado en BD")
+
+    # 4. Validar permisos
+    permitido = False
+    if auth_info["type"] == "access":
+        usuario_db = auth_info["usuario"]
+        rol_id = getattr(usuario_db, "RolId", None)
+        
+        # Admin puede todo
+        if rol_id == 1:
+            permitido = True
+        # Propietario del documento
+        elif documento.PersonaId == usuario_db.PersonaId:
+            permitido = True
+        # Presidente de equipo
+        elif rol_id == 3:
+            from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+            from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+            from app.modelos.equipo_modelo import EquiposJugando
+            from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
+            from app.modelos.equipo_temporal_modelo import EquipoTemporal
+
+            presidente = db.query(PresidenteEquipo).filter(
+                PresidenteEquipo.PersonaId == usuario_db.PersonaId
+            ).first()
+            
+            if presidente:
+                is_member = db.query(MiembrosEquipo).join(
+                    EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
+                ).filter(
+                    MiembrosEquipo.PersonaId == documento.PersonaId,
+                    MiembrosEquipo.Eliminado == False,
+                    EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+                ).first() is not None
+
+                is_temp_member = db.query(EquipoTemporalJugador).join(
+                    EquipoTemporal, EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId
+                ).filter(
+                    EquipoTemporal.UsuarioId == usuario_db.UsuarioId,
+                    EquipoTemporalJugador.PersonaId == documento.PersonaId
+                ).first() is not None
+
+                permitido = is_member or is_temp_member
+        else:
+            permitido = (documento.PersonaId == usuario_db.PersonaId)
+
+    elif auth_info["type"] == "temp_invitation_session":
+        usuario_id = auth_info["usuario_id"]
+        from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
+        from app.modelos.equipo_temporal_modelo import EquipoTemporal
+        from app.modelos.usuario_modelo import Usuario
+
+        candidate_user = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+        if candidate_user and documento.PersonaId == candidate_user.PersonaId:
+            permitido = True
+        else:
+            is_temp_member = db.query(EquipoTemporalJugador).join(
+                EquipoTemporal, EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId
+            ).filter(
+                EquipoTemporal.UsuarioId == usuario_id,
+                EquipoTemporalJugador.PersonaId == documento.PersonaId
+            ).first() is not None
+            permitido = is_temp_member
+
+    if not permitido:
+        raise HTTPException(status_code=403, detail="No tienes autorización para ver este documento")
+
+    # 5. Resolver la ruta física del archivo
+    from app.servicios.documentos_servicio import resolver_ruta_absoluta
+    ruta_absoluta = resolver_ruta_absoluta(documento.RutaArchivo)
+    
+    if not os.path.exists(ruta_absoluta):
+        raise HTTPException(status_code=404, detail="El archivo físico no existe en el servidor")
+
+    return FileResponse(ruta_absoluta)
+

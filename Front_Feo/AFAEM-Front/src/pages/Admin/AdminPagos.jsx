@@ -9,10 +9,13 @@ import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWall
 import Modal from '../../components/partials/Forms/Modal';
 import AdminTabs from '../../components/Admin/AdminTabs';
 
+import { useSecureBlob } from '../../hooks/useSecureBlob';
+
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
+
   const [filtroEstatus, setFiltroEstatus] = useState('2'); // Pendientes por defecto
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
@@ -26,6 +29,9 @@ const AdminPagos = () => {
   const [catalogoSeguros, setCatalogoSeguros] = useState([]);
   const [catalogoAfiliaciones, setCatalogoAfiliaciones] = useState([]);
   const [voucherDisponible, setVoucherDisponible] = useState(true);
+
+  // Hook para cargar el voucher de forma segura
+  const { blobUrl: voucherBlobUrl } = useSecureBlob(pagoDetalle?.RutaVoucher);
 
   // Fetch catalogs on mount for display mapping
   useEffect(() => {
@@ -173,7 +179,15 @@ const AdminPagos = () => {
 
       if (data.RutaVoucher) {
         try {
-          const checkRes = await fetch(`/${data.RutaVoucher}`, { method: 'HEAD' });
+          const cleanPath = data.RutaVoucher.replace(/\\/g, '/');
+          const pathWithSlash = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+          const fullUrl = `${API_BASE}${pathWithSlash}`;
+          const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+          const headers = {};
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          const checkRes = await fetch(fullUrl, { method: 'HEAD', headers });
           if (checkRes.ok) {
             setVoucherDisponible(true);
           } else {
@@ -570,7 +584,7 @@ const AdminPagos = () => {
                 <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0 }}>Comprobante de Pago</h4>
                 {voucherDisponible && pagoDetalle.RutaVoucher && (
                   <a
-                    href={`/${pagoDetalle.RutaVoucher}`}
+                    href={voucherBlobUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -588,7 +602,7 @@ const AdminPagos = () => {
                 </div>
               ) : pagoDetalle.RutaVoucher.toLowerCase().includes('.pdf') ? (
                 <object
-                  data={`/${pagoDetalle.RutaVoucher}`}
+                  data={voucherBlobUrl}
                   type="application/pdf"
                   style={{ width: '100%', height: '400px', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}
                 >
@@ -596,7 +610,7 @@ const AdminPagos = () => {
                     <FaFileAlt style={{ fontSize: '32px', marginBottom: '8px' }} />
                     <span style={{ fontSize: '13px', fontWeight: '500' }}>No se puede previsualizar el PDF directamente.</span>
                     <a
-                      href={`/${pagoDetalle.RutaVoucher}`}
+                      href={voucherBlobUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ marginTop: '12px', padding: '8px 16px', background: '#2563eb', color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}
@@ -608,7 +622,7 @@ const AdminPagos = () => {
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', height: '400px', padding: '8px' }}>
                   <img
-                    src={`/${pagoDetalle.RutaVoucher}`}
+                    src={voucherBlobUrl}
                     alt="Voucher"
                     style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                   />
