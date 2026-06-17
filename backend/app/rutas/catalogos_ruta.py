@@ -114,7 +114,7 @@ def crear_catalogo(tipo: str, data: CatalogoCreate, db: Session = Depends(get_db
     except Exception as e:
         db.rollback()
         #print(f"Error al crear catálogo {tipo}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.put("/{tipo}/{item_id}", response_model=CatalogoResponse)
 def actualizar_catalogo(tipo: str, item_id: int, data: CatalogoUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -158,7 +158,7 @@ def actualizar_catalogo(tipo: str, item_id: int, data: CatalogoUpdate, db: Sessi
     except Exception as e:
         db.rollback()
         #print(f"Error al actualizar catálogo {tipo}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.delete("/{tipo}/{item_id}")
 def eliminar_catalogo(tipo: str, item_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
@@ -186,5 +186,5 @@ def eliminar_catalogo(tipo: str, item_id: int, db: Session = Depends(get_db), us
         #print(f"Error al eliminar catálogo {tipo}: {error_str}")
         if "FK_" in error_str or "REFERENCE constraint" in error_str:
              raise HTTPException(status_code=400, detail="No se puede eliminar el registro porque está siendo utilizado en otras tablas (equipos, jugadores, etc).")
-        raise HTTPException(status_code=500, detail=f"Error interno al eliminar: {error_str}")
+        raise HTTPException(status_code=500, detail=f"Error interno al eliminar")
 

@@ -21,5 +21,5 @@ def asignar_nui_repo(db: Session, persona_id: int, nui: str):
     
     except Exception as e:
         db.rollback()
-        raise gestion_excepciones.NUIExcepcion("Error interno del servidor: " + str(e))
+        raise gestion_excepciones.NUIExcepcion("Error interno del servidor")
     

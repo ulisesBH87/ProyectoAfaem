@@ -83,6 +83,7 @@ const MobileBottomNav = () => {
             <div
               key={idx}
               onClick={() => {
+                if (item.Nombre === 'Mi Equipo') return;
                 setShowMoreMenu(false);
                 const targetRoute = item.Ruta || (item.SubMenus && item.SubMenus.length > 0 ? item.SubMenus[0].Ruta : null);
                 if (targetRoute) navigate(targetRoute);
@@ -170,6 +171,7 @@ const MobileBottomNav = () => {
                     <div
                       key={idx}
                       onClick={() => {
+                        if (item.Nombre === 'Mi Equipo') return;
                         setShowMoreMenu(false);
                         const targetRoute = item.Ruta || (item.SubMenus && item.SubMenus.length > 0 ? item.SubMenus[0].Ruta : null);
                         if (targetRoute) navigate(targetRoute);

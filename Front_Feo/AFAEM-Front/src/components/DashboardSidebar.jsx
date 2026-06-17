@@ -170,6 +170,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
               <React.Fragment key={idx}>
                 <div
                   onClick={() => {
+                    if (item.Nombre === 'Mi Equipo') return;
                     const targetRoute = item.Ruta || (item.SubMenus && item.SubMenus.length > 0 ? item.SubMenus[0].Ruta : null);
                     if (targetRoute) navigate(targetRoute);
                   }}
@@ -178,7 +179,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
                     alignItems: 'center',
                     margin: '6px 0',
                     borderRadius: '10px',
-                    cursor: item.Ruta ? 'pointer' : 'default',
+                    cursor: (item.Ruta && item.Nombre !== 'Mi Equipo') ? 'pointer' : 'default',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     backgroundColor: isActive ? theme.activeBg : 'transparent',
                     color: isActive ? theme.activeText : theme.text,
@@ -189,13 +190,13 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
                     whiteSpace: 'nowrap'
                   }}
                   onMouseEnter={(e) => {
-                    if (!isActive) {
+                    if (!isActive && item.Nombre !== 'Mi Equipo') {
                       e.currentTarget.style.backgroundColor = theme.hoverBg;
                       e.currentTarget.style.color = isAdmin ? '#ffffff' : 'var(--primary)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isActive) {
+                    if (!isActive && item.Nombre !== 'Mi Equipo') {
                       e.currentTarget.style.backgroundColor = 'transparent';
                       e.currentTarget.style.color = theme.text;
                     }
