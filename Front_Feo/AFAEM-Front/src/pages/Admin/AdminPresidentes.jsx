@@ -109,7 +109,7 @@ export default function AdminPresidentes() {
 
   /* Paso 2 – Datos de afiliación (nombre/CURP vienen del OCR) */
   const [infoPersonal, setInfoPersonal] = useState({
-    correo: '', telefono: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '',
+    correo: '', telefono: '', telefonoOpcional: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '',
   });
   const [documents, setDocuments] = useState({});
   const [ocrResults, setOcrResults] = useState({});
@@ -120,7 +120,7 @@ export default function AdminPresidentes() {
   const [modalEdicion, setModalEdicion] = useState(false);
   const [presidenteEnEdicion, setPresidenteEnEdicion] = useState(null);
   const [datosEditables, setDatosEditables] = useState({
-    primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', curp: '', estatusId: 6
+    primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', telefonoOpcional: '', curp: '', estatusId: 6
   });
 
   // Hook para cargar de forma segura la foto del presidente
@@ -253,7 +253,7 @@ export default function AdminPresidentes() {
       emptyAsignacion[seg.id] = 0;
     });
     setAsignacionSeguros(emptyAsignacion);
-    setInfoPersonal({ correo: '', telefono: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '' });
+    setInfoPersonal({ correo: '', telefono: '', telefonoOpcional: '', tipoAfiliacion: '', asociacion: '', liga: '', equipo: '' });
     setDocuments({});
     setOcrResults({});
     setDetailsOpen({});
@@ -563,6 +563,7 @@ export default function AdminPresidentes() {
       segundoApellido: pres.segundoApellido || '',
       correo: esEmailTemporal ? '' : emailVal,
       telefono: pres.telefono || '',
+      telefonoOpcional: pres.telefonoOpcional || '',
       curp: pres.curp || '',
       estatusId: pres.estatus || 6,
     });
@@ -700,39 +701,72 @@ export default function AdminPresidentes() {
       Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
       return;
     }
-    const telefono = pres.telefono || pres.Telefono || 'número no registrado';
+    
+    const telPrincipal = (pres.telefono || pres.Telefono || '').trim();
+    const telOpcional = (pres.telefonoOpcional || pres.TelefonoOpcional || '').trim();
 
-    Swal.fire({
-      title: '¿Enviar invitación por WhatsApp?',
-      text: `¿Quieres enviar la invitación a ${telefono}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#0b4ea6',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, enviar',
-      cancelButtonText: 'No, cerrar'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-          const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
-          if (res.success) {
-            // Recargar el directorio de presidentes para reflejar el estado actual inmediatamente
-            await cargarPresidentes(true);
-            Swal.fire({
-              title: '¡Enviado!',
-              text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
-              icon: 'success',
-              confirmButtonColor: '#0b4ea6'
-            });
-          } else {
-            throw new Error();
-          }
-        } catch (err) {
-          Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
+    const realizarEnvio = async (numDestino) => {
+      try {
+        Swal.fire({ title: 'Enviando invitación...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await enviarLinkRegistroPresidenteWhatsApp(usuarioId, numDestino);
+        if (res.success) {
+          // Recargar el directorio de presidentes para reflejar el estado actual inmediatamente
+          await cargarPresidentes(true);
+          Swal.fire({
+            title: '¡Enviado!',
+            text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
+            icon: 'success',
+            confirmButtonColor: '#0b4ea6'
+          });
+        } else {
+          throw new Error();
         }
+      } catch (err) {
+        Swal.fire('Error', err.response?.data?.detail || 'No se pudo enviar la invitación por WhatsApp.', 'error');
       }
-    });
+    };
+
+    if (telPrincipal && telOpcional) {
+      Swal.fire({
+        title: '¿A qué número deseas enviar la invitación?',
+        input: 'radio',
+        inputOptions: {
+          [telPrincipal]: `Principal: ${telPrincipal}`,
+          [telOpcional]: `Opcional: ${telOpcional}`
+        },
+        inputValue: telPrincipal,
+        showCancelButton: true,
+        confirmButtonColor: '#0b4ea6',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Enviar',
+        cancelButtonText: 'Cancelar',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Debes seleccionar un número de teléfono';
+          }
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          realizarEnvio(result.value);
+        }
+      });
+    } else {
+      const unicoTelefono = telPrincipal || telOpcional || 'número no registrado';
+      Swal.fire({
+        title: '¿Enviar invitación por WhatsApp?',
+        text: `¿Quieres enviar la invitación a ${unicoTelefono}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0b4ea6',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, enviar',
+        cancelButtonText: 'No, cerrar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          realizarEnvio(unicoTelefono !== 'número no registrado' ? unicoTelefono : null);
+        }
+      });
+    }
   };
 
   const handleRegenerarInvitacion = async (pres) => {
@@ -1399,6 +1433,13 @@ export default function AdminPresidentes() {
                 etiqueta="Teléfono"
                 nombre="telefono"
                 valor={datosEditables.telefono}
+                onChange={manejarCambioInput}
+                placeholder="55 0000 0000"
+              />
+              <EntradaFormulario
+                etiqueta="Teléfono Opcional"
+                nombre="telefonoOpcional"
+                valor={datosEditables.telefonoOpcional}
                 onChange={manejarCambioInput}
                 placeholder="55 0000 0000"
               />

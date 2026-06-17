@@ -828,6 +828,7 @@ def crear_o_actualizar_borrador_presidente(
     primer_apellido = (cuenta.get("primerApellido") or "").strip()
     segundo_apellido = (cuenta.get("segundoApellido") or "").strip()
     telefono = (cuenta.get("telefono") or "").strip()
+    telefono_opcional = (cuenta.get("telefonoOpcional") or "").strip()
     curp = (cuenta.get("curp") or "").strip()
 
     # Check if we are updating an existing draft
@@ -863,13 +864,15 @@ def crear_o_actualizar_borrador_presidente(
     if not presidente:
         from app.core.telefono_utils import validar_y_normalizar_telefono
         telefono_normalizado = validar_y_normalizar_telefono(telefono) if telefono else None
+        telefono_opcional_normalizado = validar_y_normalizar_telefono(telefono_opcional) if telefono_opcional else None
 
         persona = Personas(
             Nombre=nombre,
             PrimerApellido=primer_apellido,
             SegundoApellido=segundo_apellido or None,
             CURP=curp or None,
-            NumeroTelefono=telefono_normalizado
+            NumeroTelefono=telefono_normalizado,
+            NumeroTelefonoOpcional=telefono_opcional_normalizado
         )
         db.add(persona)
         db.flush()
@@ -909,6 +912,9 @@ def crear_o_actualizar_borrador_presidente(
     if telefono:
         from app.core.telefono_utils import validar_y_normalizar_telefono
         persona.NumeroTelefono = validar_y_normalizar_telefono(telefono)
+    if telefono_opcional is not None:
+        from app.core.telefono_utils import validar_y_normalizar_telefono
+        persona.NumeroTelefonoOpcional = validar_y_normalizar_telefono(telefono_opcional) if telefono_opcional else None
     
     if contrasena:
         from app.core.seguridad import generar_salt, generar_hash
@@ -1130,6 +1136,7 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             Personas.SegundoApellido,
             Personas.CURP,
             Personas.NumeroTelefono,
+            Personas.NumeroTelefonoOpcional,
             PresidenteEquipo.EstatusId,
             EstatusPresidente.Nombre.label('EstatusNombre'),
             Usuario.Correo.label('CorreoLogin'),
@@ -1171,6 +1178,7 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "segundoApellido":r.SegundoApellido  or '',
                 "curp":           r.CURP,
                 "telefono":       r.NumeroTelefono   or '',
+                "telefonoOpcional": r.NumeroTelefonoOpcional or '',
                 "estatus":        r.EstatusId,
                 "estatusNombre":  r.EstatusNombre    or '',
                 "correo":         r.CorreoLogin      or '',
@@ -1223,6 +1231,13 @@ def update_presidente(presidente_id: int, data: dict, db: Session = Depends(get_
         if 'telefono' in data and data['telefono'] is not None:
             from app.core.telefono_utils import validar_y_normalizar_telefono
             persona.NumeroTelefono = validar_y_normalizar_telefono(data['telefono'])
+
+        if 'telefonoOpcional' in data:
+            if data['telefonoOpcional'] is not None and data['telefonoOpcional'].strip():
+                from app.core.telefono_utils import validar_y_normalizar_telefono
+                persona.NumeroTelefonoOpcional = validar_y_normalizar_telefono(data['telefonoOpcional'])
+            else:
+                persona.NumeroTelefonoOpcional = None
 
 
         # --- Actualizar Usuarios (correo de login) ---
@@ -1493,6 +1508,7 @@ async def registrar_presidente_admin(
     segundoApellido: Optional[str] = Form(None),
     correo: str = Form(...),
     telefono: Optional[str] = Form(None),
+    telefonoOpcional: Optional[str] = Form(None),
     curp: str = Form(...),
     rfc: Optional[str] = Form(None),
     sexoId: Optional[int] = Form(None),
@@ -1520,6 +1536,7 @@ async def registrar_presidente_admin(
     try:
         from app.core.telefono_utils import validar_y_normalizar_telefono
         telefono_normalizado = validar_y_normalizar_telefono(telefono) if telefono else None
+        telefono_opcional_normalizado = validar_y_normalizar_telefono(telefonoOpcional) if telefonoOpcional else None
 
         if borradorId:
             # Load the existing draft records
@@ -1542,6 +1559,7 @@ async def registrar_presidente_admin(
             nueva_persona.CURP = curp
             nueva_persona.RFC = rfc.strip().upper() if rfc and rfc.strip() else None
             nueva_persona.NumeroTelefono = telefono_normalizado
+            nueva_persona.NumeroTelefonoOpcional = telefono_opcional_normalizado
             nueva_persona.SexoId = sexoId if sexoId else None
             nueva_persona.FechaNacimiento = fechaNacimiento if fechaNacimiento else None
 
@@ -1575,6 +1593,7 @@ async def registrar_presidente_admin(
                 CURP=curp,
                 RFC=rfc.strip().upper() if rfc and rfc.strip() else None,
                 NumeroTelefono=telefono_normalizado,
+                NumeroTelefonoOpcional=telefono_opcional_normalizado,
                 SexoId=sexoId if sexoId else None,
                 FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
             )
@@ -1817,6 +1836,7 @@ async def registrar_presidente_admin(
 async def enviar_link_registro_whatsapp(
     usuario_id: int,
     request: Request,
+    telefono_destino: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual),
 ):
@@ -1834,7 +1854,10 @@ async def enviar_link_registro_whatsapp(
 
     from app.core.telefono_utils import validar_y_normalizar_telefono
 
-    telefono = validar_y_normalizar_telefono(persona.NumeroTelefono)
+    if telefono_destino:
+        telefono = validar_y_normalizar_telefono(telefono_destino)
+    else:
+        telefono = validar_y_normalizar_telefono(persona.NumeroTelefono)
     nombre_presidente = " ".join(
         part.strip()
         for part in [

@@ -20,6 +20,7 @@ function RegistrarseCuenta() {
 		SegundoApellido: '',
 		Correo: '',
 		NumeroTelefono: '',
+		NumeroTelefonoOpcional: '',
 		Contrasena: '',
 		confirmarContrasena: '',
 		aceptaPoliticas: false,
@@ -29,6 +30,7 @@ function RegistrarseCuenta() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 	const [codigoPais, setCodigoPais] = useState('+52');
+	const [codigoPaisOpcional, setCodigoPaisOpcional] = useState('+52');
 
 	// ESTADO DE ERRORES Y MENSAJES
 	const [errors, setErrors] = useState({});
@@ -47,7 +49,7 @@ function RegistrarseCuenta() {
 		const { name, value, type, checked } = e.target;
 		let finalValue = name === 'Correo' ? value.toLowerCase() : value;
 
-		if (name === 'NumeroTelefono') {
+		if (name === 'NumeroTelefono' || name === 'NumeroTelefonoOpcional') {
 			finalValue = value.replace(/\D/g, '').slice(0, 10);
 		}
 
@@ -78,7 +80,7 @@ function RegistrarseCuenta() {
 
 		const newErrors = {};
 		Object.keys(formData).forEach((field) => {
-			if (field !== 'SegundoApellido') {
+			if (field !== 'SegundoApellido' && field !== 'NumeroTelefonoOpcional') {
 				newErrors[field] = validateField(field, formData[field], formData);
 			}
 		});
@@ -95,6 +97,7 @@ function RegistrarseCuenta() {
 				Correo: formData.Correo.toLowerCase(),
 				Contrasena: formData.Contrasena,
 				NumeroTelefono: codigoPais + formData.NumeroTelefono,
+				NumeroTelefonoOpcional: formData.NumeroTelefonoOpcional ? (codigoPaisOpcional + formData.NumeroTelefonoOpcional) : null,
 				Rol: 'responsable'
 			};
 			const res = await apiRegister(payload);
@@ -210,6 +213,57 @@ function RegistrarseCuenta() {
 											/>
 										</div>
 										{errors.NumeroTelefono && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px' }}>{errors.NumeroTelefono}</div>}
+									</div>
+
+									<div style={{ gridColumn: 'span 1' }}>
+										<label className="auth-label">Segundo Teléfono (Opcional)</label>
+										<div style={{ display: 'flex', gap: '8px' }}>
+											<select
+												value={codigoPaisOpcional}
+												onChange={(e) => setCodigoPaisOpcional(e.target.value)}
+												style={{
+													width: '120px',
+													flexShrink: 0,
+													padding: '14px 12px',
+													background: '#181c27',
+													border: '1px solid rgba(255, 255, 255, 0.2)',
+													borderRadius: '12px',
+													color: 'white',
+													fontSize: '15px',
+													outline: 'none',
+													cursor: 'pointer',
+													backdropFilter: 'blur(5px)'
+												}}
+											>
+												<option value="+52">México +52</option>
+												<option value="+1">EE.UU./Canadá +1</option>
+												<option value="+34">España +34</option>
+												<option value="+54">Argentina +54</option>
+												<option value="+55">Brasil +55</option>
+												<option value="+56">Chile +56</option>
+												<option value="+57">Colombia +57</option>
+												<option value="+506">Costa Rica +506</option>
+												<option value="+593">Ecuador +593</option>
+												<option value="+503">El Salvador +503</option>
+												<option value="+502">Guatemala +502</option>
+												<option value="+504">Honduras +504</option>
+												<option value="+505">Nicaragua +505</option>
+												<option value="+507">Panamá +507</option>
+												<option value="+595">Paraguay +595</option>
+												<option value="+51">Perú +51</option>
+												<option value="+598">Uruguay +598</option>
+												<option value="+58">Venezuela +58</option>
+											</select>
+											<input
+												name="NumeroTelefonoOpcional"
+												value={formData.NumeroTelefonoOpcional}
+												onChange={handleChange}
+												className="auth-input"
+												placeholder="10 dígitos"
+												maxLength={10}
+												style={{ flexGrow: 1 }}
+											/>
+										</div>
 									</div>
 
 									<div style={{ gridColumn: 'span 1' }}>

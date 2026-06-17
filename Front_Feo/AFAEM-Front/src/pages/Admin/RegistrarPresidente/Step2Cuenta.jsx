@@ -8,7 +8,8 @@ import PasswordField from './PasswordField';
  * Paso 1 del wizard: datos de cuenta del nuevo presidente.
  */
 export default function Step2Cuenta({
-  cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta
+  cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
+  codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta
 }) {
   return (
     <div>
@@ -83,6 +84,23 @@ export default function Step2Cuenta({
           </div>
           {cuentaErrors.telefono && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.telefono}</span>}
         </div>
+      </div>
+
+      {/* Teléfono opcional */}
+      <div className="rp-grid-2cols">
+        <div>
+          <label style={fieldStyles.label}>Segundo Teléfono (Opcional)</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <PaisSelect value={codigoPaisOpcionalCuenta} onChange={e => setCodigoPaisOpcionalCuenta(e.target.value)} withEmoji={false} />
+            <input
+              style={{ ...fieldStyles.input }}
+              type="tel" placeholder="5512345678" maxLength={10}
+              value={cuenta.telefonoOpcional || ''}
+              onChange={e => setCuentaField('telefonoOpcional', e.target.value.replace(/\D/g, '').slice(0, 10))}
+            />
+          </div>
+        </div>
+        <div></div>
       </div>
 
       {/* CURP y sexo */}
