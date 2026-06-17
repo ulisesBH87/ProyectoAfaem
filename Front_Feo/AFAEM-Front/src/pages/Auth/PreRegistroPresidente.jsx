@@ -255,6 +255,17 @@ function PreRegistroPresidente() {
   const [seguroDetalle, setSeguroDetalle] = useState(null);
   const [cantidadModal, setCantidadModal] = useState(0);
 
+  useEffect(() => {
+    if (seguroDetalle) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [seguroDetalle]);
+
   const abrirModalDetalle = (seguro) => {
     setSeguroDetalle(seguro);
     const normalizedName = normalizarNombreSeguro(seguro.nombre);
