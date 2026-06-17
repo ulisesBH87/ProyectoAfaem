@@ -390,7 +390,7 @@ export default function CompletarJugadoresEquipo() {
         formDataOcr.append('file_id', file);
 
         const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+        if (!response.ok) throw new Error('Error al obtener la información.');
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -1044,11 +1044,11 @@ export default function CompletarJugadoresEquipo() {
                 confirmButtonText: 'Sí, salir',
                 cancelButtonText: 'Continuar registro'
               }).then((result) => {
-                 if (result.isConfirmed) navigate(ROUTES.ADMIN.EQUIPOS);
-               });
-             } else {
-               navigate(ROUTES.ADMIN.EQUIPOS);
-             }
+                if (result.isConfirmed) navigate(ROUTES.ADMIN.EQUIPOS);
+              });
+            } else {
+              navigate(ROUTES.ADMIN.EQUIPOS);
+            }
           }}
           className="btn btn-outline-secondary"
           style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
@@ -1616,7 +1616,7 @@ export default function CompletarJugadoresEquipo() {
                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
                       {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                         extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                        'Discrepancia detectada' : 'Datos validados con OCR'}
+                        'Discrepancia detectada' : 'Datos validados'}
                     </h4>
                     <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
                       {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||

@@ -2626,7 +2626,7 @@ export default function ConfigurarEquipo() {
                         <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
                           {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                             extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                            'Discrepancia detectada' : 'Datos validados con OCR'}
+                            'Discrepancia detectada' : 'Datos validados'}
                         </h4>
                         <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
                           {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
