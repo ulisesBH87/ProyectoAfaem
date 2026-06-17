@@ -485,7 +485,14 @@ export default function AdminJugadores() {
   const [ocrCargando, setOcrCargando] = useState(false);
 
   // Hook para cargar la foto del jugador en edición de forma segura
-  const { blobUrl: avatarBlobUrl } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
+  const { blobUrl: avatarBlobUrl, error: avatarError } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [fotoJugadorEdicion, jugadorEdicion?.RutaFoto]);
+
+  const mostrarFallback = !(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) || avatarError || imgError;
 
   const loadJugadores = async (forceRefresh = false) => {
     try {
@@ -975,7 +982,7 @@ export default function AdminJugadores() {
       const formDataOcr = new FormData();
       formDataOcr.append('file_id', file);
       const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-      if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+      if (!response.ok) throw new Error('Error al conectar');
 
       const htmlText = await response.text();
       const parser = new DOMParser();
@@ -1462,22 +1469,19 @@ export default function AdminJugadores() {
           {/* FOTO DEL JUGADOR Y CABECERA */}
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
+              {!mostrarFallback ? (
                 <img
                   src={avatarBlobUrl}
                   alt="Foto del jugador"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const sib = e.target.parentNode.querySelector('.fallback-icon');
-                    if (sib) sib.style.display = 'block';
-                  }}
+                  onError={() => setImgError(true)}
                 />
-              ) : null}
-              <FaUser
-                className="fallback-icon"
-                style={{ display: (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }}
-              />
+              ) : (
+                <FaUser
+                  className="fallback-icon"
+                  style={{ fontSize: '40px', color: '#cbd5e1' }}
+                />
+              )}
             </div>
             <div>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
@@ -1553,10 +1557,10 @@ export default function AdminJugadores() {
           <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Datos del Jugador</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: '16px', rowGap: '0', alignItems: 'start' }}>
-              <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
-              <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
-              <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza con OCR" deshabilitado={true} />
-              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza con OCR" deshabilitado={true} />
+              <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
+              <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
+              <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza automáticamente" deshabilitado={true} />
+              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
 
               <EntradaFormulario etiqueta="Fecha de nacimiento" valor={datosEditables.fechaNacimiento} onChange={manejarCambioInput} nombre="fechaNacimiento" tipo="date" />
               <EntradaSeleccion etiqueta="Sexo" valor={datosEditables.sexo} onChange={manejarCambioInput} nombre="sexo" opciones={[{ valor: 'Masculino', etiqueta: 'Masculino' }, { valor: 'Femenino', etiqueta: 'Femenino' }, { valor: 'No Binario', etiqueta: 'Otro' }]} />

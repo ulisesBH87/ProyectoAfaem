@@ -5,7 +5,7 @@ import { C } from './constants';
  * Fila individual dentro del grid de seguros del Paso 2.
  * Soporta dos modos: radio (seguros de presidente) y number input (seguros de jugadores).
  */
-export default function SeguroRow({ seg, isPres, isChecked, asignacion, onSelectPres, onChangeNumero }) {
+export default function SeguroRow({ seg, isPres, isChecked, asignacion, onSelectPres, onChangeNumero, onVerDetalles }) {
   return (
     <div
       onClick={isPres ? onSelectPres : undefined}
@@ -30,8 +30,31 @@ export default function SeguroRow({ seg, isPres, isChecked, asignacion, onSelect
         }
       } : undefined}
     >
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700 }}>{seg.nombre}</div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700 }}>{seg.nombre}</div>
+          {onVerDetalles && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onVerDetalles(seg);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: C.amber,
+                cursor: 'pointer',
+                fontSize: '11px',
+                textDecoration: 'underline',
+                padding: 0,
+                fontWeight: '600'
+              }}
+            >
+              (Ver info)
+            </button>
+          )}
+        </div>
         <div style={{ fontSize: 11, color: C.textDim }}>${seg.precio} c/u</div>
       </div>
 
