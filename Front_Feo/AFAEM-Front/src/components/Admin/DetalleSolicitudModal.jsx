@@ -3,6 +3,7 @@ import { Modal, BotonPrimario, BotonSecundario, Insignia } from '../partials';
 import { FaUser, FaFileAlt, FaEye, FaCheck, FaTimes, FaInfoCircle, FaChevronRight } from 'react-icons/fa';
 import Loader from '../Loader';
 import Swal from 'sweetalert2';
+import { openSecurePath } from '../../utils/secureFetch';
 
 /**
  * CENTRO DE REVISIÓN DE DOCUMENTOS AFAEM
@@ -23,6 +24,24 @@ export default function DetalleSolicitudModal({
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [motivoTextoLibre, setMotivoTextoLibre] = useState('');
   const validacionesInicialesRef = useRef({});
+
+  const handleVerDocumento = async (e, path) => {
+    e.preventDefault();
+    if (!path) return;
+    try {
+      Swal.fire({
+        title: 'Cargando documento...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      await openSecurePath(path);
+      Swal.close();
+    } catch (error) {
+      Swal.fire('Error', 'No se pudo abrir el documento.', 'error');
+    }
+  };
 
   // Motivos predefinidos para el dropdown
   const motivosComunes = [
@@ -357,9 +376,8 @@ export default function DetalleSolicitudModal({
                             </div>
 
                             <a
-                              href={doc.Url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              href="#"
+                              onClick={(e) => handleVerDocumento(e, doc.Url)}
                               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '10px', textDecoration: 'none' }}
                               title="Ver documento en pestaña nueva"
                             >

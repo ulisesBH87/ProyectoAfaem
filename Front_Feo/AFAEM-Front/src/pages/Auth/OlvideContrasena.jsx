@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import StadiumBg from '../../assets/stadium.jpg';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -38,7 +39,7 @@ export default function OlvideContrasena() {
   const handleGoToReset = () => {
     // USAR EL TOKEN RECIBIDO DEL BACK COMO FALLBACK
     const token = resetToken || 'demo-token';
-    navigate(`/restablecer-contrasena?email=${encodeURIComponent(email)}&token=${token}`);
+    navigate(`${ROUTES.RESTABLECER_CONTRASENA}?email=${encodeURIComponent(email)}&token=${token}`);
   };
 
   return (
@@ -315,7 +316,7 @@ export default function OlvideContrasena() {
                 <button type="button" className="submit-btn" onClick={handleGoToReset}>
                   Continuar a restablecer contraseña
                 </button>
-                <button type="button" className="btn-outline" onClick={() => navigate('/ingresar')}>
+                <button type="button" className="btn-outline" onClick={() => navigate(ROUTES.LOGIN)}>
                   Volver al inicio
                 </button>
               </div>
@@ -352,7 +353,7 @@ export default function OlvideContrasena() {
             
             {!success && (
               <div className="back-link">
-                ¿Recordaste tu contraseña? <Link to="/ingresar">Inicia Sesión</Link>
+                ¿Recordaste tu contraseña? <Link to={ROUTES.LOGIN}>Inicia Sesión</Link>
               </div>
             )}
           </div>

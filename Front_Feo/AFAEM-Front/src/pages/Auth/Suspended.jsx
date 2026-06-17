@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import StadiumBg from '../../assets/stadium.jpg';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { FaExclamationTriangle, FaHeadset, FaSignOutAlt } from 'react-icons/fa';
+import { ROUTES } from '../../routes/paths';
 
 const Suspended = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.clear();
-    navigate('/ingresar');
+    navigate(ROUTES.LOGIN);
   };
 
   return (

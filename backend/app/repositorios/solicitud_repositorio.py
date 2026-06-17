@@ -278,9 +278,6 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
     if not solicitud:
         return None
     
-    # Base URL para archivos estáticos (Ajustar si el puerto cambia)
-    BASE_URL = "http://localhost:8000"
-    
     # 1. Obtener el solicitante (Presidente)
     usuario_solicitante = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
     persona_solicitante = usuario_solicitante.PersonaRelacion if usuario_solicitante else None
@@ -317,17 +314,9 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
 
         docs_list = []
         for d, da, cdp, cd in documentos:
-            # Construir URL absoluta de forma dinámica
-            ruta_normalizada = d.RutaArchivo.replace("\\", "/")
-            if "uploads/" in ruta_normalizada:
-                partes = ruta_normalizada.split("uploads/", 1)
-                url_path = f"uploads/{partes[1]}"
-            else:
-                url_path = f"uploads/documentos/{ruta_normalizada.split('/')[-1]}"
-                
             docs_list.append({
                 "Tipo": cd.NombreDocumento,
-                "Url": f"{BASE_URL}/{url_path}",
+                "Url": f"/documentos/{d.DocumentosSolicitudId}",
                 "Estado": "entregado",
                 "EstadoValidacionId": d.EstadoValidacionId
             })

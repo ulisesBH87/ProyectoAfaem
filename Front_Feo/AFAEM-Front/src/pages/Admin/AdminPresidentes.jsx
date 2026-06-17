@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { FaPlus, FaCheck, FaTimes, FaUserTie, FaUser, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import SearchBar from '../../components/Common/SearchBar';
@@ -9,6 +10,7 @@ import Swal from 'sweetalert2';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
+import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin, obtenerLinkInvitacion, regenerarInvitacion, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
 
 /* ─── Catálogos ─── */
@@ -120,6 +122,9 @@ export default function AdminPresidentes() {
   const [datosEditables, setDatosEditables] = useState({
     primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', curp: '', estatusId: 6
   });
+
+  // Hook para cargar de forma segura la foto del presidente
+  const { blobUrl: avatarBlobUrl } = useSecureBlob(presidenteEnEdicion?.RutaFoto);
 
 
   /* ── Reasignación ── */
@@ -896,7 +901,7 @@ export default function AdminPresidentes() {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
           {esBorrador ? (
             <button
-              onClick={() => navigate(`/admin/registrar-presidente?borradorId=${p.id}`)}
+              onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}`)}
               style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
               title="Continuar Registro"
             >
@@ -1145,7 +1150,7 @@ export default function AdminPresidentes() {
           >
             <FaSyncAlt />
           </button>
-          <button onClick={() => navigate('/admin/registrar-presidente')}
+          <button onClick={() => navigate(ROUTES.ADMIN.REGISTRAR_PRESIDENTE)}
             style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
           </button>
@@ -1272,7 +1277,7 @@ export default function AdminPresidentes() {
             <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {presidenteEnEdicion?.RutaFoto ? (
                 <img
-                  src={presidenteEnEdicion.RutaFoto.startsWith('http') ? presidenteEnEdicion.RutaFoto : `${API_BASE}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/').startsWith('/') ? '' : '/'}${presidenteEnEdicion.RutaFoto.replace(/\\/g, '/')}`}
+                  src={avatarBlobUrl}
                   alt="Foto del presidente"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => {
@@ -1303,7 +1308,7 @@ export default function AdminPresidentes() {
                             searchParams.delete('abrirDetalle');
                             setSearchParams(searchParams, { replace: true });
                           }
-                          navigate(`/admin/equipos?abrirDetalle=${eq.id}`);
+                          navigate(`${ROUTES.ADMIN.EQUIPOS}?abrirDetalle=${eq.id}`);
                         }}
                         title="Ver detalle del equipo"
                       >

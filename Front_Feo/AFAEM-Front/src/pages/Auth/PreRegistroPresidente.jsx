@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -457,7 +458,7 @@ function PreRegistroPresidente() {
     if (estatusId) {
       if (estatusId >= 5) {
         // Ya está aprobado completamente
-        navigate('/presidente-equipo');
+        navigate(ROUTES.PRESIDENTE.DASHBOARD);
       } else if (estatusId === 4) {
         // Documentos personales en revisión por el admin
         setEstadoPago(3); // Para que sepa que el pago ya fue validado
@@ -1434,7 +1435,7 @@ function PreRegistroPresidente() {
     localStorage.removeItem('UsuarioId');
     localStorage.removeItem('email');
     localStorage.removeItem('nombre_usuario');
-    navigate('/');
+    navigate(ROUTES.HOME);
   };
 
   const handleSolicitarRegistro = async () => {

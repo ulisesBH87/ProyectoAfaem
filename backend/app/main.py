@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from app.rutas import (
     auth_ruta,
     solicitud_ruta,
@@ -21,6 +20,7 @@ from app.utilidades.context import usuario_actual_id, ip_actual
 from app.db.sesion import SessionLocal
 from app.core.seguridad import obtener_usuario_desde_token
 import os
+from typing import Optional
 from app.excepciones.base import AppError
 
 app = FastAPI(
@@ -29,10 +29,156 @@ app = FastAPI(
     version="0.3.0"
 )
 
-# Servir archivos estáticos (Documentos, Vouchers) con ruta absoluta
+# Servir archivos estáticos (Documentos, Vouchers) de manera protegida
 from app.core.config import obtener_uploads_dir
 UPLOADS_DIR = obtener_uploads_dir()
-app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
+@app.get("/uploads/{path:path}")
+async def servir_archivo_uploads(
+    path: str,
+    request: Request
+):
+    # 1. Normalizar ruta y validar que exista
+    filepath = os.path.normpath(os.path.join(UPLOADS_DIR, path))
+    
+    # Prevenir Directory Traversal
+    if not filepath.startswith(os.path.normpath(UPLOADS_DIR)):
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+        
+    if not os.path.exists(filepath) or os.path.isdir(filepath):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+    # 2. Permitir logos de equipo públicamente sin autenticación
+    parts = path.replace("\\", "/").strip("/").split("/")
+    if len(parts) == 3 and parts[0] == "equipos" and parts[2].startswith("logo."):
+        return FileResponse(filepath)
+        
+    # 3. Para archivos sensibles (INE, actas, fotos, vouchers) requerir autenticación
+    db = SessionLocal()
+    try:
+        token_a_usar = None
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token_a_usar = auth_header.split(" ")[1]
+                
+        if not token_a_usar:
+            raise HTTPException(status_code=401, detail="No autenticado")
+            
+        from jose import jwt, JWTError
+        from app.core.seguridad import config as sec_config, obtener_usuario_por_id
+        
+        try:
+            payload = jwt.decode(token_a_usar, sec_config.SECRET_KEY, algorithms=[sec_config.ALGORITHM])
+            token_type = payload.get("type")
+            if token_type == "access":
+                usuario_id = payload.get("sub")
+                usuario_db = obtener_usuario_por_id(db, int(usuario_id))
+                if not usuario_db:
+                    raise HTTPException(status_code=401, detail="Usuario no encontrado")
+                auth_info = {"type": "access", "usuario": usuario_db}
+            elif token_type == "temp_invitation_session":
+                usuario_id = payload.get("sub")
+                auth_info = {
+                    "type": "temp_invitation_session",
+                    "usuario_id": int(usuario_id),
+                    "invitacion_id": payload.get("invitacion_id")
+                }
+            else:
+                raise HTTPException(status_code=401, detail="Tipo de token inválido")
+        except JWTError:
+            raise HTTPException(status_code=401, detail="Token inválido o expirado")
+            
+        # 4. Validar permisos para la ruta del archivo
+        clean_path = path.replace("\\", "/")
+        
+        from app.modelos.documentos_entregados_modelo import DocumentosEntregados
+        from app.modelos.ordenes_pago_modelo import OrdenPago
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+        from app.modelos.equipo_modelo import EquiposJugando
+        from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
+        from app.modelos.equipo_temporal_modelo import EquipoTemporal
+        from app.modelos.usuario_modelo import Usuario
+        
+        # Buscar en DocumentosEntregados
+        doc = db.query(DocumentosEntregados).filter(
+            (DocumentosEntregados.RutaArchivo == clean_path) |
+            (DocumentosEntregados.RutaArchivo == f"uploads/{clean_path}") |
+            (DocumentosEntregados.RutaArchivo == f"/uploads/{clean_path}")
+        ).first()
+        
+        permitido = False
+        if doc:
+            if auth_info["type"] == "access":
+                usuario_act = auth_info["usuario"]
+                rol_id = getattr(usuario_act, "RolId", None)
+                if rol_id == 1:
+                    permitido = True
+                elif doc.PersonaId == usuario_act.PersonaId:
+                    permitido = True
+                elif rol_id == 3:
+                    presidente = db.query(PresidenteEquipo).filter(
+                        PresidenteEquipo.PersonaId == usuario_act.PersonaId
+                    ).first()
+                    if presidente:
+                        is_member = db.query(MiembrosEquipo).join(
+                            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
+                        ).filter(
+                            MiembrosEquipo.PersonaId == doc.PersonaId,
+                            MiembrosEquipo.Eliminado == False,
+                            EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+                        ).first() is not None
+                        
+                        is_temp_member = db.query(EquipoTemporalJugador).join(
+                            EquipoTemporal, EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId
+                        ).filter(
+                            EquipoTemporal.UsuarioId == usuario_act.UsuarioId,
+                            EquipoTemporalJugador.PersonaId == doc.PersonaId
+                        ).first() is not None
+                        
+                        permitido = is_member or is_temp_member
+                else:
+                    permitido = (doc.PersonaId == usuario_act.PersonaId)
+            elif auth_info["type"] == "temp_invitation_session":
+                usuario_id = auth_info["usuario_id"]
+                candidate_user = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+                if candidate_user and doc.PersonaId == candidate_user.PersonaId:
+                    permitido = True
+                else:
+                    is_temp_member = db.query(EquipoTemporalJugador).join(
+                        EquipoTemporal, EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId
+                    ).filter(
+                        EquipoTemporal.UsuarioId == usuario_id,
+                        EquipoTemporalJugador.PersonaId == doc.PersonaId
+                    ).first() is not None
+                    permitido = is_temp_member
+        else:
+            # Buscar en OrdenPago (vouchers)
+            orden = db.query(OrdenPago).filter(
+                (OrdenPago.RutaVoucher == clean_path) |
+                (OrdenPago.RutaVoucher == f"uploads/{clean_path}") |
+                (OrdenPago.RutaVoucher == f"/uploads/{clean_path}")
+            ).first()
+            
+            if orden:
+                if auth_info["type"] == "access":
+                    usuario_act = auth_info["usuario"]
+                    rol_id = getattr(usuario_act, "RolId", None)
+                    if rol_id == 1:
+                        permitido = True
+                    else:
+                        permitido = (orden.UsuarioId == usuario_act.UsuarioId)
+                elif auth_info["type"] == "temp_invitation_session":
+                    usuario_id = auth_info["usuario_id"]
+                    permitido = (orden.UsuarioId == usuario_id)
+                    
+        if not permitido:
+            raise HTTPException(status_code=403, detail="No tienes autorización para acceder a este archivo")
+            
+        return FileResponse(filepath)
+    finally:
+        db.close()
+
 
 @app.get("/docs", include_in_schema=False)
 async def custom_docs():

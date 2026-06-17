@@ -5,6 +5,7 @@ import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
+import { useSecureBlob } from '../../hooks/useSecureBlob';
 import '../../styles/dashboard.css';
 import { 
   FaUser, 
@@ -22,13 +23,12 @@ import {
 // Componente de avatar de jugador para manejar fallback de imagen si falla la carga o no existe
 function PlayerAvatar({ rutaFoto, nombre, fallbackIcon }) {
   const [hasError, setHasError] = useState(false);
+  const { blobUrl, loading } = useSecureBlob(rutaFoto);
 
-  if (rutaFoto && !hasError) {
-    const cleanPath = rutaFoto.replace(/\\/g, '/');
-    const src = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+  if (rutaFoto && !hasError && !loading && blobUrl) {
     return (
       <img
-        src={src.startsWith('http') ? src : `${API_BASE}${src}`}
+        src={blobUrl}
         alt={nombre}
         onError={() => setHasError(true)}
         style={{

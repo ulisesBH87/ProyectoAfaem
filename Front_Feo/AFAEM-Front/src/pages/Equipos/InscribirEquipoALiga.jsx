@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
 import teamsService from '../../services/teams';
 import '../../styles/dashboard.css';
@@ -220,7 +221,7 @@ export default function InscribirEquipoALiga() {
                       confirmButtonText: 'Genial',
                       confirmButtonColor: '#0b4ea6'
                     }).then(() => {
-                      navigate(`/presidente-equipo/admin-equipo/${teamId}`);
+                      navigate(ROUTES.PRESIDENTE.ADMIN_EQUIPO.replace(':equipoId', teamId));
                     });
                   }}
                   style={{
@@ -247,7 +248,7 @@ export default function InscribirEquipoALiga() {
                   Inscribirse
                 </button>
                 <button
-                  onClick={() => navigate(teamId ? `/presidente-equipo/admin-equipo/${teamId}` : '/presidente-equipo/equipos')}
+                   onClick={() => navigate(teamId ? ROUTES.PRESIDENTE.ADMIN_EQUIPO.replace(':equipoId', teamId) : ROUTES.PRESIDENTE.EQUIPOS)}
                   style={{
                     padding: '12px 32px',
                     backgroundColor: '#f1f5f9',

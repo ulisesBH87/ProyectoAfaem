@@ -9,10 +9,13 @@ import { FaSearch, FaSyncAlt, FaFilter, FaSortAmountDown, FaSortAmountUp, FaWall
 import Modal from '../../components/partials/Forms/Modal';
 import AdminTabs from '../../components/Admin/AdminTabs';
 
+import { useSecureBlob } from '../../hooks/useSecureBlob';
+
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
+
   const [filtroEstatus, setFiltroEstatus] = useState('2'); // Pendientes por defecto
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
@@ -25,7 +28,10 @@ const AdminPagos = () => {
   const [pagoDetalle, setPagoDetalle] = useState(null);
   const [catalogoSeguros, setCatalogoSeguros] = useState([]);
   const [catalogoAfiliaciones, setCatalogoAfiliaciones] = useState([]);
-  const [voucherDisponible, setVoucherDisponible] = useState(true);
+
+  // Hook para cargar el voucher de forma segura
+  const { blobUrl: voucherBlobUrl, loading: voucherLoading, error: voucherError } = useSecureBlob(pagoDetalle?.RutaVoucher);
+  const isVoucherVisible = pagoDetalle?.RutaVoucher && !voucherError;
 
   // Fetch catalogs on mount for display mapping
   useEffect(() => {
@@ -165,26 +171,10 @@ const AdminPagos = () => {
     setLoadingDetalle(true);
     setModalOpen(true);
     setPagoDetalle(null);
-    setVoucherDisponible(true);
 
     try {
       const data = await getPagoIndividual(ordenId);
       setPagoDetalle(data);
-
-      if (data.RutaVoucher) {
-        try {
-          const checkRes = await fetch(`/${data.RutaVoucher}`, { method: 'HEAD' });
-          if (checkRes.ok) {
-            setVoucherDisponible(true);
-          } else {
-            setVoucherDisponible(false);
-          }
-        } catch (e) {
-          setVoucherDisponible(false);
-        }
-      } else {
-        setVoucherDisponible(false);
-      }
     } catch (error) {
       console.error('Error al cargar detalle del pago:', error);
       Swal.fire({
@@ -568,9 +558,9 @@ const AdminPagos = () => {
             <div style={{ flex: '1 1 350px', minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0 }}>Comprobante de Pago</h4>
-                {voucherDisponible && pagoDetalle.RutaVoucher && (
+                {isVoucherVisible && !voucherLoading && (
                   <a
-                    href={`/${pagoDetalle.RutaVoucher}`}
+                    href={voucherBlobUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -580,7 +570,12 @@ const AdminPagos = () => {
                 )}
               </div>
 
-              {!voucherDisponible || !pagoDetalle.RutaVoucher ? (
+              {voucherLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed #e2e8f0', borderRadius: '12px', height: '400px', background: '#f8fafc' }}>
+                  <Loader />
+                  <span style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>Cargando comprobante...</span>
+                </div>
+              ) : !isVoucherVisible ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', borderRadius: '12px', height: '400px', padding: '24px', background: '#f8fafc', color: '#64748b', textAlign: 'center' }}>
                   <FaFileAlt style={{ fontSize: '48px', color: '#94a3b8', marginBottom: '16px' }} />
                   <h5 style={{ fontSize: '14px', fontWeight: '800', color: '#475569', margin: '0 0 8px 0' }}>El comprobante no se encuentra disponible.</h5>
@@ -588,7 +583,7 @@ const AdminPagos = () => {
                 </div>
               ) : pagoDetalle.RutaVoucher.toLowerCase().includes('.pdf') ? (
                 <object
-                  data={`/${pagoDetalle.RutaVoucher}`}
+                  data={voucherBlobUrl}
                   type="application/pdf"
                   style={{ width: '100%', height: '400px', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}
                 >
@@ -596,7 +591,7 @@ const AdminPagos = () => {
                     <FaFileAlt style={{ fontSize: '32px', marginBottom: '8px' }} />
                     <span style={{ fontSize: '13px', fontWeight: '500' }}>No se puede previsualizar el PDF directamente.</span>
                     <a
-                      href={`/${pagoDetalle.RutaVoucher}`}
+                      href={voucherBlobUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ marginTop: '12px', padding: '8px 16px', background: '#2563eb', color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}
@@ -608,7 +603,7 @@ const AdminPagos = () => {
               ) : (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', height: '400px', padding: '8px' }}>
                   <img
-                    src={`/${pagoDetalle.RutaVoucher}`}
+                    src={voucherBlobUrl}
                     alt="Voucher"
                     style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                   />

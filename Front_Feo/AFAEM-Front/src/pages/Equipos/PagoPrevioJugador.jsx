@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import { FaArrowLeft, FaCheckCircle, FaClock, FaFileUpload, FaMoneyBillWave, FaTimesCircle, FaUpload } from 'react-icons/fa';
 import '../../styles/dashboard.css';
 import Swal from 'sweetalert2';
@@ -78,7 +79,7 @@ export default function PagoPrevioJugador() {
     const cargarEstadoPago = async () => {
       if (!equipoId) {
         Swal.fire('Error', 'No se especificó equipo', 'error');
-        navigate('/presidente-equipo/equipos');
+        navigate(ROUTES.PRESIDENTE.EQUIPOS);
         return;
       }
 
@@ -236,7 +237,7 @@ export default function PagoPrevioJugador() {
           text: 'El comprobante fue enviado correctamente. Será revisado por administración.',
           timer: 5000
         });
-        setTimeout(() => navigate('/presidente-equipo/equipos'), 2000);
+        setTimeout(() => navigate(ROUTES.PRESIDENTE.EQUIPOS), 2000);
       } else {
         const error = await res.json();
         setComprobante(null);
@@ -576,7 +577,7 @@ export default function PagoPrevioJugador() {
     return (
       <div className="fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
         <button
-          onClick={() => navigate('/presidente-equipo/equipos')}
+          onClick={() => navigate(ROUTES.PRESIDENTE.EQUIPOS)}
           style={{
             background: 'none',
             border: 'none',
@@ -635,7 +636,7 @@ export default function PagoPrevioJugador() {
           </div>
 
           <button
-            onClick={() => navigate('/presidente-equipo/configurar-equipo', {
+            onClick={() => navigate(ROUTES.PRESIDENTE.CONFIGURAR_EQUIPO, {
               state: { equipoId, agregarJugador: true, requirePago: true }
             })}
             style={{
@@ -665,7 +666,7 @@ export default function PagoPrevioJugador() {
     return (
       <div className="fade-in" style={{ maxWidth: '980px', margin: '0 auto' }}>
         <button
-          onClick={() => navigate('/presidente-equipo/equipos')}
+          onClick={() => navigate(ROUTES.PRESIDENTE.EQUIPOS)}
           style={{
             background: 'none',
             border: 'none',
@@ -740,7 +741,7 @@ export default function PagoPrevioJugador() {
     return (
       <div className="fade-in" style={{ maxWidth: '980px', margin: '0 auto' }}>
         <button
-          onClick={() => navigate('/presidente-equipo/equipos')}
+          onClick={() => navigate(ROUTES.PRESIDENTE.EQUIPOS)}
           style={{
             background: 'none',
             border: 'none',
@@ -810,7 +811,7 @@ export default function PagoPrevioJugador() {
           </div>
 
           <button
-            onClick={() => navigate('/presidente-equipo/equipos')}
+            onClick={() => navigate(ROUTES.PRESIDENTE.EQUIPOS)}
             style={{
               width: '100%',
               padding: '14px 24px',
@@ -838,7 +839,7 @@ export default function PagoPrevioJugador() {
     return (
       <div className="fade-in" style={{ maxWidth: '980px', margin: '0 auto' }}>
         <button
-          onClick={() => navigate('/presidente-equipo/equipos')}
+          onClick={() => navigate(ROUTES.PRESIDENTE.EQUIPOS)}
           style={{
             background: 'none',
             border: 'none',
