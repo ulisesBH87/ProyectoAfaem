@@ -71,7 +71,7 @@ export default function Modal({
           alignItems: 'flex-start',
           justifyContent: 'center',
           paddingTop: '50px',
-          zIndex: 1000,
+          zIndex: 10500,
         }}
       >
         {/* MODAL */}

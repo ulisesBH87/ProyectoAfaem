@@ -4,9 +4,14 @@ import { apiRegister } from '../services/api';
 import { computePasswordRequirements, validateField } from '../utils/formUtils';
 import AuthHeader from './Auth/AuthHeader';
 import RegistrationSuccess from './Auth/RegistrationSuccess';
+import { Modal } from './partials';
+import PoliticaPrivacidad from '../pages/Legales/PoliticaPrivacidad';
+import TerminosCondiciones from '../pages/Legales/TerminosCondiciones';
 
 function RegistrarseCuenta() {
 	const navigate = useNavigate();
+	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+	const [showTermsModal, setShowTermsModal] = useState(false);
 
 	// ESTADO DEL FORMULARIO
 	const [formData, setFormData] = useState({
@@ -308,7 +313,7 @@ function RegistrarseCuenta() {
 										<div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
 											<input id="aceptaPoliticas" type="checkbox" name="aceptaPoliticas" checked={formData.aceptaPoliticas} onChange={handleChange} style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: 'var(--primary)' }} required />
 											<label htmlFor="aceptaPoliticas" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4' }}>
-												He leído y acepto la <Link to="/privacidad" style={{ color: 'white' }}>Política de Privacidad</Link> y los <Link to="/terminos" style={{ color: 'white' }}>Términos y Condiciones</Link>
+												He leído y acepto la <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivacyModal(true); }} style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }}>Política de Privacidad</span> y los <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowTermsModal(true); }} style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }}>Términos y Condiciones</span>
 											</label>
 										</div>
 									</div>
@@ -330,6 +335,24 @@ function RegistrarseCuenta() {
 					)}
 				</div>
 			</div>
+
+			<Modal
+				estaAbierto={showPrivacyModal}
+				titulo="Política de Privacidad"
+				alCerrar={() => setShowPrivacyModal(false)}
+				tamanio="grande"
+			>
+				<PoliticaPrivacidad />
+			</Modal>
+
+			<Modal
+				estaAbierto={showTermsModal}
+				titulo="Términos y Condiciones"
+				alCerrar={() => setShowTermsModal(false)}
+				tamanio="grande"
+			>
+				<TerminosCondiciones />
+			</Modal>
 		</div>
 	);
 }
