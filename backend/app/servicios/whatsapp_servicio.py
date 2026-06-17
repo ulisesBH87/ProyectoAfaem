@@ -60,8 +60,15 @@ class WhatsAppService:
             raise HTTPException(status_code=400, detail="No se pudo construir el link de invitación.")
 
         if self.config.WHATSAPP_SEND_AS_TEMPLATE:
+            # Extraer la parte relativa del token de la URL de invitación
+            # Por ejemplo, si es: https://misitio.com/i/token_id/token_sec
+            # se extraerá: token_id/token_sec
+            token_ruta = ""
+            if "/i/" in link_invitacion:
+                token_ruta = link_invitacion.split("/i/")[-1]
+
             # Construir el payload usando la plantilla configurada en Meta Business
-            # con las dos variables nombradas: {{nombre}} y {{url}}
+            # con el parámetro 'nombre' en el cuerpo y el token de la URL dinámica en el botón.
             payload = {
                 "messaging_product": "whatsapp",
                 "recipient_type": "individual",
@@ -86,6 +93,17 @@ class WhatsAppService:
                                     "parameter_name": "url",
                                     "text": link_invitacion,
                                 },
+                            ],
+                        },
+                        {
+                            "type": "button",
+                            "sub_type": "url",
+                            "index": "0",
+                            "parameters": [
+                                {
+                                    "type": "text",
+                                    "text": token_ruta,
+                                }
                             ],
                         }
                     ],
