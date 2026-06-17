@@ -543,8 +543,8 @@ export default function RegistroJugadores() {
       }
       return docsRequeridos.every(key => !!docs[key]);
     } else if (step === 6) {
-      // Resumen completo si todos los anteriores están completos
-      return [1, 2, 3, 4, 5].every(s => esPasoCompleto(s, player));
+      // Resumen completo si todos los anteriores están completos y se subió el formato firmado
+      return [1, 2, 3, 4, 5].every(s => esPasoCompleto(s, player)) && !!player.signedForm;
     } else {
       const errores = verificarRequisitosPaso(step, player);
       return Object.keys(errores).length === 0;
@@ -674,7 +674,7 @@ export default function RegistroJugadores() {
     if (!player) return 'VACIO';
     if (player.completo) return 'INSCRITO';
 
-    const isReady = [1, 2, 3, 4, 5].every(s => esPasoCompleto(s, player));
+    const isReady = [1, 2, 3, 4, 5, 6].every(s => esPasoCompleto(s, player));
 
     const datos = player.datos || {};
     const docs = player.documentos || {};
@@ -824,6 +824,10 @@ export default function RegistroJugadores() {
   const esMenorDeEdad = React.useMemo(() => {
     return isPlayerMinor(currentDatos.fechaNacimiento);
   }, [currentDatos.fechaNacimiento]);
+
+  const pasos1a5Completos = React.useMemo(() => {
+    return [1, 2, 3, 4, 5].every(s => esPasoCompleto(s, currentPlayer));
+  }, [currentPlayer, jugadores]);
 
   // Documentos requeridos según minoría de edad
   const documentCards = [
@@ -3412,7 +3416,7 @@ export default function RegistroJugadores() {
                         <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
                       </p>
 
-                      {!esPasoCompleto(6) && (
+                      {!pasos1a5Completos && (
                         <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px auto', textAlign: 'center' }}>
                           <span style={{ color: '#ef4444', fontSize: '13px', fontWeight: '700' }}>
                             Debe completar todos los campos obligatorios de los pasos anteriores para descargar y subir el formato.
@@ -3424,24 +3428,24 @@ export default function RegistroJugadores() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (esPasoCompleto(6)) {
+                            if (pasos1a5Completos) {
                               handleDownloadFormato();
                             }
                           }}
-                          disabled={!esPasoCompleto(6)}
+                          disabled={!pasos1a5Completos}
                           style={{
                             padding: '12px 28px',
                             borderRadius: '12px',
                             border: 'none',
-                            background: esPasoCompleto(6) ? 'linear-gradient(135deg, #0b4ea6, #063f82)' : '#cbd5e1',
+                            background: pasos1a5Completos ? 'linear-gradient(135deg, #0b4ea6, #063f82)' : '#cbd5e1',
                             color: 'white',
                             fontWeight: '800',
                             fontSize: '14px',
-                            cursor: esPasoCompleto(6) ? 'pointer' : 'not-allowed',
+                            cursor: pasos1a5Completos ? 'pointer' : 'not-allowed',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            boxShadow: esPasoCompleto(6) ? '0 4px 6px -1px rgba(11, 78, 166, 0.2)' : 'none'
+                            boxShadow: pasos1a5Completos ? '0 4px 6px -1px rgba(11, 78, 166, 0.2)' : 'none'
                           }}
                         >
                           📥 Descargar Formato Prellenado
@@ -3450,21 +3454,21 @@ export default function RegistroJugadores() {
 
                       <div
                         onClick={() => {
-                          if (esPasoCompleto(6)) {
+                          if (pasos1a5Completos) {
                             document.getElementById('final-signed-form').click();
                           }
                         }}
                         style={{
-                          border: currentPlayer?.signedForm ? '2px solid #10b981' : (esPasoCompleto(6) ? '2px dashed #0ea5e9' : '2px dashed #cbd5e1'),
+                          border: currentPlayer?.signedForm ? '2px solid #10b981' : (pasos1a5Completos ? '2px dashed #0ea5e9' : '2px dashed #cbd5e1'),
                           borderRadius: '20px',
                           padding: '35px 20px',
-                          backgroundColor: currentPlayer?.signedForm ? '#f0fdf4' : (esPasoCompleto(6) ? '#f8fafc' : '#f1f5f9'),
-                          cursor: esPasoCompleto(6) ? 'pointer' : 'not-allowed',
+                          backgroundColor: currentPlayer?.signedForm ? '#f0fdf4' : (pasos1a5Completos ? '#f8fafc' : '#f1f5f9'),
+                          cursor: pasos1a5Completos ? 'pointer' : 'not-allowed',
                           transition: 'all 0.3s',
                           textAlign: 'center',
                           maxWidth: '600px',
                           margin: '0 auto',
-                          opacity: esPasoCompleto(6) ? 1 : 0.6
+                          opacity: pasos1a5Completos ? 1 : 0.6
                         }}
                       >
                         {currentPlayer?.signedForm ? (
@@ -3474,7 +3478,7 @@ export default function RegistroJugadores() {
                             <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
                           </div>
                         ) : (
-                          <div style={{ color: esPasoCompleto(6) ? '#0ea5e9' : '#94a3b8' }}>
+                          <div style={{ color: pasos1a5Completos ? '#0ea5e9' : '#94a3b8' }}>
                             <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
                             <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado</p>
                             <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b' }}>Solo se permiten archivos PDF</p>
@@ -3486,7 +3490,7 @@ export default function RegistroJugadores() {
                           style={{ display: 'none' }}
                           accept=".pdf"
                           onChange={(e) => {
-                            if (esPasoCompleto(6) && e.target.files[0]) {
+                            if (pasos1a5Completos && e.target.files[0]) {
                               updatePlayerSignedForm(currentPlayerIndex, e.target.files[0]);
                             }
                           }}
