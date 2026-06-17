@@ -255,6 +255,45 @@ export default function RegistroJugadores() {
         text-align: left !important;
         width: 100% !important;
       }
+      .stepper-container {
+        padding: 16px 12px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+      }
+      .stepper-label {
+        display: none;
+      }
+      .stepper-item {
+        min-width: auto;
+      }
+      .stepper-bubble {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+        border-width: 2px;
+      }
+      .stepper-line {
+        left: 20px;
+        right: 20px;
+      }
+      .mobile-step-indicator {
+        display: block;
+        text-align: center;
+        font-weight: 800;
+        font-size: 12px;
+        color: #0b4ea6;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 25px;
+        background: #eff6ff;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px dashed rgba(11, 78, 166, 0.25);
+      }
+    }
+
+    .mobile-step-indicator {
+      display: none;
     }
 
     /* Estilos del Wizard (Stepper) */
@@ -2336,6 +2375,17 @@ export default function RegistroJugadores() {
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="mobile-step-indicator">
+                  Paso {currentStep} de 6: {
+                    currentStep === 1 ? 'Documentos' :
+                    currentStep === 2 ? 'Personales' :
+                    currentStep === 3 ? 'Deportivos' :
+                    currentStep === 4 ? 'Procedencia' :
+                    currentStep === 5 ? 'Seguro' :
+                    'Resumen'
+                  }
                 </div>
 
                 {/* PASO 5: SELECCION DE SEGURO / SLOT A CONSUMIR */}
