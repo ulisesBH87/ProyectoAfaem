@@ -485,7 +485,14 @@ export default function AdminJugadores() {
   const [ocrCargando, setOcrCargando] = useState(false);
 
   // Hook para cargar la foto del jugador en edición de forma segura
-  const { blobUrl: avatarBlobUrl } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
+  const { blobUrl: avatarBlobUrl, error: avatarError } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [fotoJugadorEdicion, jugadorEdicion?.RutaFoto]);
+
+  const mostrarFallback = !(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) || avatarError || imgError;
 
   const loadJugadores = async (forceRefresh = false) => {
     try {
@@ -1462,22 +1469,19 @@ export default function AdminJugadores() {
           {/* FOTO DEL JUGADOR Y CABECERA */}
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? (
+              {!mostrarFallback ? (
                 <img
                   src={avatarBlobUrl}
                   alt="Foto del jugador"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const sib = e.target.parentNode.querySelector('.fallback-icon');
-                    if (sib) sib.style.display = 'block';
-                  }}
+                  onError={() => setImgError(true)}
                 />
-              ) : null}
-              <FaUser
-                className="fallback-icon"
-                style={{ display: (fotoJugadorEdicion || jugadorEdicion?.RutaFoto) ? 'none' : 'block', fontSize: '40px', color: '#cbd5e1' }}
-              />
+              ) : (
+                <FaUser
+                  className="fallback-icon"
+                  style={{ fontSize: '40px', color: '#cbd5e1' }}
+                />
+              )}
             </div>
             <div>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
