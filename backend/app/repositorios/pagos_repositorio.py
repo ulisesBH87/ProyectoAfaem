@@ -4,6 +4,8 @@ from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.modelos.orden_pago_detalle_modelo import OrdenPagoDetalle
 from app.esquemas.pago_esquema import VerComprobantes
 from datetime import datetime
+import random
+import string
 from app.esquemas.pago_esquema import SeguroBase
 from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
@@ -84,13 +86,23 @@ def buscar_orden_pago_repo(db, tipo_solicitud, usuario_id, equipo_id: Optional[i
     return orden
 
 
-def crear_orden_pago_repo(db, usuario_id, total, solicitud_id):
+def generar_referencia_unica(db):
+    chars = string.ascii_letters + "123456789"  # A-Z, a-z, 1-9 (no 0)
+    while True:
+        ref = "".join(random.choice(chars) for _ in range(8))
+        exists = db.query(OrdenPago).filter(OrdenPago.ReferenciaPago == ref).first()
+        if not exists:
+            return ref
 
+
+def crear_orden_pago_repo(db, usuario_id, total, solicitud_id):
+    referencia = generar_referencia_unica(db)
     orden = OrdenPago(
         UsuarioId=usuario_id,
         TotalPagar=total,
         EstatusPagoId=EstatusValidacionPago.NOENVIADO,
-        SolicitudId=solicitud_id
+        SolicitudId=solicitud_id,
+        ReferenciaPago=referencia
     )
 
     db.add(orden)

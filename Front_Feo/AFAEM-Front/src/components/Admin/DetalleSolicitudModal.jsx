@@ -45,12 +45,12 @@ export default function DetalleSolicitudModal({
 
   // Motivos predefinidos para el dropdown
   const motivosComunes = [
-    "Ilegible",
+    "Ilegible o borroso",
     "Documento incorrecto",
     "Fecha de vigencia expirada",
     "Falta firma",
     "Información no coincide con registro",
-    "Otro (especificar abajo)"
+    "Otro"
   ];
 
   useEffect(() => {
@@ -75,16 +75,16 @@ export default function DetalleSolicitudModal({
       datos.Jugadores.forEach(j => {
         j.Documentos.forEach(d => {
           const key = `${j.Id}-${d.Tipo}`;
-          
+
           let dbEstado = 'pendiente';
-          if (d.EstadoValidacionId === 1) {
+          if (d.EstadoValidacionId === 2) {
             dbEstado = 'aprobado';
           } else if (d.EstadoValidacionId === 3) {
             dbEstado = 'rechazado';
           }
 
           if (guardadas && guardadas[key]) {
-            const finalEstado = (d.EstadoValidacionId === 1 || d.EstadoValidacionId === 3)
+            const finalEstado = (d.EstadoValidacionId === 2 || d.EstadoValidacionId === 3)
               ? dbEstado
               : (guardadas[key].estado || dbEstado);
 
@@ -148,7 +148,7 @@ export default function DetalleSolicitudModal({
 
   const confirmarCerrar = async () => {
     const esSolicitudAprobada = datos?.EstatusValidacion === 2;
-    if (esSolicitudAprobada) {
+    if (esSolicitudAprobada && !hayCambiosSinGuardar()) {
       alCerrar();
       return;
     }
@@ -282,7 +282,7 @@ export default function DetalleSolicitudModal({
                 etiqueta="Finalizar Revisión"
                 alHacerClick={() => {
                   const esSolicitudAprobada = datos?.EstatusValidacion === 2;
-                  if (esSolicitudAprobada) {
+                  if (esSolicitudAprobada && !hayCambiosSinGuardar()) {
                     alCerrar();
                     return;
                   }

@@ -1688,7 +1688,7 @@
     grid-template-columns: 1fr;
     gap: 15px;
   }
-  
+
   .form-inputs-grid-2 {
     grid-template-columns: 1fr;
     gap: 15px;
@@ -1727,10 +1727,10 @@
     gap: 12px;
     margin-top: 30px;
   }
-  
+
   .form-actions-wrapper button,
-  .form-actions-wrapper > div,
-  .form-actions-wrapper > button {
+  .form-actions-wrapper>div,
+  .form-actions-wrapper>button {
     width: 100% !important;
     min-width: 0 !important;
   }
@@ -2112,17 +2112,21 @@
     padding: 16px !important;
     border-radius: 16px !important;
   }
+
   .swal2-popup.swal2-popup-custom .swal2-title {
     font-size: 18px !important;
     margin-top: 8px !important;
   }
+
   .swal2-popup.swal2-popup-custom .swal2-html-container {
     font-size: 12px !important;
     margin: 8px 0 !important;
   }
+
   .swal2-popup.swal2-popup-custom .swal2-actions {
     margin-top: 12px !important;
   }
+
   .swal2-popup.swal2-popup-custom .swal2-confirm {
     padding: 8px 24px !important;
     font-size: 13px !important;
@@ -2135,8 +2139,10 @@
 }
 
 .modal-container-responsive {
-  max-height: calc(100vh - 140px) !important; /* Exclude top and bottom navigation bars */
-  margin-bottom: 70px !important; /* Leave space for bottom navigation bar on mobile */
+  max-height: calc(100vh - 140px) !important;
+  /* Exclude top and bottom navigation bars */
+  margin-bottom: 70px !important;
+  /* Leave space for bottom navigation bar on mobile */
   margin-left: 12px !important;
   margin-right: 12px !important;
 }
@@ -2150,4 +2156,7 @@
   }
 }
 
-
+/* SweetAlert container z-index adjustment */
+.swal2-container {
+  z-index: 20000 !important;
+}

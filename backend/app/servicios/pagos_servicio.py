@@ -137,7 +137,8 @@ class PagosServicio:
 
             return {
                 "orden_pago_id": orden_pago.OrdenPagoId,
-                "total": total
+                "total": total,
+                "ReferenciaPago": orden_pago.ReferenciaPago
             }
                     
         except Exception as e:
@@ -243,7 +244,8 @@ class PagosServicio:
                 "FechaEnvio": pago.FechaEnvio,
                 "RutaVoucher": pago.RutaVoucher,
                 "EstatusPagoId": pago.EstatusPagoId,
-                "TotalPagar": pago.TotalPagar
+                "TotalPagar": pago.TotalPagar,
+                "ReferenciaPago": pago.ReferenciaPago
             }
             result.append(ListaPagos(**data))
         return result
@@ -279,6 +281,7 @@ class PagosServicio:
             "TotalPagar": orden.TotalPagar,
             "Correo": correo,
             "NombreCompleto": nombre_completo,
+            "ReferenciaPago": orden.ReferenciaPago,
             "OrdenPagoDetalleRelacion": [
                 {
                     "OrdenPagoDetalleId": d.OrdenPagoDetalleId,
@@ -326,7 +329,8 @@ class PagosServicio:
                 "estatus": solicitud.EstatusValidacion,
                 "observaciones": solicitud.ObservacionesSolicitud
             } if solicitud else None,
-            "total": float(orden.TotalPagar) if orden.TotalPagar else 0
+            "total": float(orden.TotalPagar) if orden.TotalPagar else 0,
+            "referencia_pago": orden.ReferenciaPago
         }
 
 
