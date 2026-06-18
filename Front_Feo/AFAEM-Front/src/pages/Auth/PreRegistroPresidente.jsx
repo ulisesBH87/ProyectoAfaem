@@ -2954,7 +2954,7 @@ function PreRegistroPresidente() {
                       <option value="">Selecciona...</option>
                       <option value="MASCULINO">Masculino</option>
                       <option value="FEMENINO">Femenino</option>
-                      <option value="NO BINARIO">No binario</option>
+                      <option value="NO BINARIO">OTRO</option>
                     </select>
                   </div>
                   <div className="premium-input-group">

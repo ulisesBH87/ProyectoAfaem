@@ -264,7 +264,7 @@ export const getCatalogosRegistro = async () => {
 export const updateJugador = async (miembroEquipoId, data) => {
   // Mapear string de sexo a SexoId numérico
   const sexoMap = {
-    'Masculino': 1, 'Femenino': 2, 'No Binario': 3,
+    'Masculino': 1, 'Femenino': 2, 'OTRO': 3,
     'Hombre': 1, 'Mujer': 2
   };
   const sexoId = data.sexo ? (sexoMap[data.sexo] ?? null) : null;
@@ -279,6 +279,8 @@ export const updateJugador = async (miembroEquipoId, data) => {
     SexoId: sexoId,
     FechaNacimiento: data.fechaNacimiento || null,
     NUI: data.NUI || null,
+    NumeroCamiseta: data.numeroCamiseta !== undefined && data.numeroCamiseta !== null && data.numeroCamiseta !== '' ? Number(data.numeroCamiseta) : null,
+    RolEnEquipo: data.rolEnEquipo !== undefined && data.rolEnEquipo !== null && data.rolEnEquipo !== '' ? Number(data.rolEnEquipo) : null,
   });
   serviceCache.clear('/equipo-temporal/directorio-jugadores');
   return response.data;
@@ -385,7 +387,7 @@ export const registrarPresidenteAdmin = async (formData) => {
 };
 
 export const enviarLinkRegistroPresidenteWhatsApp = async (usuarioId, telefonoDestino = null) => {
-  const url = telefonoDestino 
+  const url = telefonoDestino
     ? `/equipo-temporal/presidentes/${usuarioId}/enviar-link-registro-whatsapp?telefono_destino=${encodeURIComponent(telefonoDestino)}`
     : `/equipo-temporal/presidentes/${usuarioId}/enviar-link-registro-whatsapp`;
   const response = await api.post(url);

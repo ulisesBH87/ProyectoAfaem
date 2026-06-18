@@ -324,7 +324,7 @@ def procesar_texto(texto):
     if curp != "No detectado":
         edad, fecha_nac = calcular_datos_curp(curp)
         letra_sexo = curp[10]
-        sexo = "MASCULINO" if letra_sexo == 'H' else "FEMENINO" if letra_sexo == 'M' else "NO BINARIO"
+        sexo = "MASCULINO" if letra_sexo == 'H' else "FEMENINO" if letra_sexo == 'M' else "OTRO"
 
     # Ubicaciones y Estado
     lugar_nac, lugar_res = extraer_ubicaciones(texto, tipo_doc)

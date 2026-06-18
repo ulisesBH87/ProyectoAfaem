@@ -418,9 +418,9 @@ export default function RegistroJugadores() {
         if (currentPlayerState && currentPlayerState.slotId) {
           const datos = { ...currentPlayerState.datos };
           if (datos.numCamiseta) {
-            const duplicate = next.find(p => 
-              p.numero !== currentPlayerState.numero && 
-              p.datos?.numCamiseta && 
+            const duplicate = next.find(p =>
+              p.numero !== currentPlayerState.numero &&
+              p.datos?.numCamiseta &&
               parseInt(p.datos.numCamiseta, 10) === parseInt(datos.numCamiseta, 10)
             );
             if (duplicate) {
@@ -449,9 +449,9 @@ export default function RegistroJugadores() {
   const obtenerDuplicadoCamiseta = (numeroCamiseta, playerNumero) => {
     if (!numeroCamiseta || String(numeroCamiseta).trim() === '') return null;
     const camisetaVal = parseInt(numeroCamiseta, 10);
-    return jugadores.find(p => 
-      p.numero !== playerNumero && 
-      p.datos?.numCamiseta && 
+    return jugadores.find(p =>
+      p.numero !== playerNumero &&
+      p.datos?.numCamiseta &&
       parseInt(p.datos.numCamiseta, 10) === camisetaVal
     );
   };
@@ -1142,7 +1142,7 @@ export default function RegistroJugadores() {
           datos: mergedDatos,
           documentos: restoredDocs,
           signedForm: restoredSignedForm,
-          seguroId: String(slot.seguro_id || firstSeguroId),
+          seguroId: String(slot.seguro_id || ''),
           fillManually: !!slot.datos_borrador,
           completo: slot.completo
         };
@@ -2971,6 +2971,7 @@ export default function RegistroJugadores() {
                             <option value="">Seleccione...</option>
                             <option value="1">MASCULINO</option>
                             <option value="2">FEMENINO</option>
+                            <option value="3">OTRO</option>
                           </select>
                           {validationErrors.genero && <span className="field-error-msg">❌ {validationErrors.genero}</span>}
                         </div>

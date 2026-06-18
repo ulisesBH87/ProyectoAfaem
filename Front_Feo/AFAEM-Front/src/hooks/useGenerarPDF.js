@@ -113,7 +113,7 @@ export function useGenerarPDF() {
       let sexoTexto = '';
       if (cuenta.sexoId === '1' || cuenta.sexoId === 1) sexoTexto = 'MASCULINO';
       else if (cuenta.sexoId === '2' || cuenta.sexoId === 2) sexoTexto = 'FEMENINO';
-      else if (cuenta.sexoId === '3' || cuenta.sexoId === 3) sexoTexto = 'NO BINARIO';
+      else if (cuenta.sexoId === '3' || cuenta.sexoId === 3) sexoTexto = 'OTRO';
       else if (curp?.length >= 11) {
         const sx = curp.charAt(10).toUpperCase();
         sexoTexto = sx === 'H' ? 'MASCULINO' : sx === 'M' ? 'FEMENINO' : '';
