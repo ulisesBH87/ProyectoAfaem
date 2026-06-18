@@ -1257,6 +1257,9 @@ export default function AdminJugadores() {
   return (
     <div className="dashboard-content">
       <style>{`
+        .swal2-container {
+          z-index: 11000 !important;
+        }
         .aj-ocr-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
