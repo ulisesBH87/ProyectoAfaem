@@ -717,7 +717,7 @@ export default function AdminPresidentes() {
       Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
       return;
     }
-    
+
     const telPrincipal = (pres.telefono || pres.Telefono || '').trim();
     const telOpcional = (pres.telefonoOpcional || pres.TelefonoOpcional || '').trim();
 
@@ -826,7 +826,8 @@ export default function AdminPresidentes() {
   };
 
   const columns = [
-    { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Presidente' },
+    { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Directivo' },
+    { key: 'tipoDirectivo', label: 'Cargo' },
     { key: 'contacto', label: 'Contacto' }, { key: 'curp', label: 'CURP' },
     { key: 'estatus', label: 'Estatus' },
     { key: 'invitacion', label: 'Invitación', style: { textAlign: 'center' } },
@@ -839,6 +840,21 @@ export default function AdminPresidentes() {
     return {
       id: <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
       presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
+      tipoDirectivo: (
+        <span style={{
+          background: p.esEntrenador ? '#f0fdf4' : '#eff6ff',
+          color: p.esEntrenador ? '#166534' : '#1e40af',
+          border: p.esEntrenador ? '1px solid #bbf7d0' : '1px solid #bfdbfe',
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '11px',
+          fontWeight: '700',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap'
+        }}>
+          {p.esEntrenador ? 'Entrenador' : 'Presidente'}
+        </span>
+      ),
       contacto: (() => {
         const emailVal = p.correo || p.Email || '';
         const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
@@ -1212,7 +1228,7 @@ export default function AdminPresidentes() {
 
       <div className="pres-page-header" style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Directorio de Presidentes</h2>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Lista de directivos</h2>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
@@ -1271,7 +1287,7 @@ export default function AdminPresidentes() {
       <div className="card pres-card-table" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
         <div className="pres-table-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de directivos</h3>
           </div>
 
           <div className="pres-filters-row" style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
