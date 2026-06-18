@@ -1063,6 +1063,16 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             .limit(1)\
             .scalar_subquery()
 
+        # Subconsulta escalar para obtener el nombre del seguro del jugador
+        from app.modelos.catalogo_seguros import Seguro
+        seguro_subquery = db.query(
+            Seguro.Nombre
+        ).join(
+            EquipoTemporalJugador, Seguro.SeguroId == EquipoTemporalJugador.SeguroId
+        ).filter(
+            EquipoTemporalJugador.PersonaId == Personas.PersonaId
+        ).limit(1).scalar_subquery()
+
         # 2. Base query with joins
         query = db.query(
             MiembrosEquipo.MiembroEquipoId,
@@ -1076,7 +1086,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             MiembrosEquipo.FechaIngreso,
             MiembrosEquipo.Estatus,
             foto_subquery.label("RutaFoto"),
-            MiembrosEquipo.NumeroCamiseta
+            MiembrosEquipo.NumeroCamiseta,
+            seguro_subquery.label("SeguroNombre")
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
          .join(Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId)\
@@ -1144,7 +1155,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "Estatus": bool(r.Estatus),
                 "RutaFoto": f"/documentos/{r.RutaFoto}" if r.RutaFoto else None,
                 "NumeroCamiseta": r.NumeroCamiseta,
-                "EstatusDocumentos": estatus_docs
+                "EstatusDocumentos": estatus_docs,
+                "SeguroNombre": r.SeguroNombre or "Sin seguro asignado"
             })
 
         return formatted_results

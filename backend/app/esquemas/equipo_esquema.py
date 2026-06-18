@@ -44,6 +44,7 @@ class MiembroResponse(BaseModel):
     RutaFoto: Optional[str] = None
     NumeroCamiseta: Optional[int] = None
     EstatusDocumentos: Optional[str] = "Pendiente"
+    SeguroNombre: Optional[str] = None
 
     class Config:
         from_attributes = True
