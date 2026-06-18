@@ -1210,7 +1210,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             foto_subquery.label("RutaFoto"),
             equipo_name_subquery.label("NombreEquipo"),
             equipo_id_subquery.label("EquipoId"),
-            whatsapp_status_subquery.label("WhatsAppStatus")
+            whatsapp_status_subquery.label("WhatsAppStatus"),
+            PresidenteEquipo.Afiliacion
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
          .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
@@ -1253,7 +1254,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "equipo":         r.NombreEquipo,
                 "equipoId":       r.EquipoId,
                 "equipos":        equipos_por_presidente.get(r.PresidenteEquipoId, []),
-                "whatsappStatus": r.WhatsAppStatus
+                "whatsappStatus": r.WhatsAppStatus,
+                "seguroNombre":   r.Afiliacion or "Sin seguro asignado"
             } for r in resultados
         ]
     except Exception as e:

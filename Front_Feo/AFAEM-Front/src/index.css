@@ -647,3 +647,8 @@ h4 {
     grid-column: span 1 !important;
   }
 }
+
+/* SweetAlert2 container override to show on top of custom Modals (which have z-index 10500) */
+.swal2-container {
+  z-index: 11000 !important;
+}
