@@ -27,6 +27,7 @@ export default function RegistrarPresidente() {
     // Paso 1
     cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
     codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta,
+    isCheckingCurp,
     // Paso 2
     numPersonas, setNumPersonas, voucher, setVoucher,
     segurosPresidente, segurosJugadores, asignacion, setAsignacion,
@@ -72,6 +73,7 @@ export default function RegistrarPresidente() {
     /^\d{10}$/.test(cuenta.telefono) &&
     !!cuenta.curp?.trim() &&
     cuenta.curp.length === 18 &&
+    !cuenta.isCurpDuplicated &&
     !!cuenta.contrasena &&
     cuenta.contrasena.length >= 6 &&
     cuenta.contrasena === cuenta.confirmarContrasena &&
@@ -277,6 +279,7 @@ export default function RegistrarPresidente() {
             setCodigoPaisCuenta={setCodigoPaisCuenta}
             codigoPaisOpcionalCuenta={codigoPaisOpcionalCuenta}
             setCodigoPaisOpcionalCuenta={setCodigoPaisOpcionalCuenta}
+            isCheckingCurp={isCheckingCurp}
           />
         )}
 

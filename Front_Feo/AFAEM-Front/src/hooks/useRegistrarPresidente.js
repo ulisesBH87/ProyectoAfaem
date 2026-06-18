@@ -65,14 +65,28 @@ export function useRegistrarPresidente() {
   const [codigoPaisCuenta, setCodigoPaisCuenta] = useState('+52');
   const [codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta] = useState('+52');
   const [cuentaErrors, setCuentaErrors] = useState({});
+  const [isCheckingCurp, setIsCheckingCurp] = useState(false);
 
   const setCuentaField = (field, val) =>
-    setCuenta(prev => ({
-      ...prev,
-      [field]: (field === 'contrasena' || field === 'confirmarContrasena')
-        ? val
-        : (typeof val === 'string' ? val.toUpperCase() : val),
-    }));
+    setCuenta(prev => {
+      const next = {
+        ...prev,
+        [field]: (field === 'contrasena' || field === 'confirmarContrasena')
+          ? val
+          : (typeof val === 'string' ? val.toUpperCase() : val),
+      };
+      if (field === 'curp') {
+        next.isCurpDuplicated = false;
+        setCuentaErrors(errs => {
+          if (errs.curp === 'Esta CURP ya se encuentra registrada.') {
+            const { curp, ...rest } = errs;
+            return rest;
+          }
+          return errs;
+        });
+      }
+      return next;
+    });
 
   const validarPaso1 = () => {
     const errs = {};
@@ -84,6 +98,7 @@ export function useRegistrarPresidente() {
     if (!/^\d{10}$/.test(cuenta.telefono)) errs.telefono = '10 dígitos requeridos';
     if (!cuenta.curp.trim()) errs.curp = 'Obligatorio';
     if (cuenta.curp.length !== 18) errs.curp = '18 caracteres';
+    if (cuenta.isCurpDuplicated) errs.curp = 'Esta CURP ya se encuentra registrada.';
     if (!cuenta.contrasena) errs.contrasena = 'Obligatorio';
     if (cuenta.contrasena.length < 6) errs.contrasena = 'Mínimo 6 caracteres';
     if (!cuenta.confirmarContrasena) errs.confirmarContrasena = 'Obligatorio';
@@ -211,7 +226,12 @@ export function useRegistrarPresidente() {
 
     const delayDebounceFn = setTimeout(() => {
       const save = async () => {
+        let isChecking = false;
         try {
+          if (cuenta.curp && cuenta.curp.length === 18) {
+            setIsCheckingCurp(true);
+            isChecking = true;
+          }
           const docsB64 = {};
           for (const key of Object.keys(documents)) {
             if (documents[key]) {
@@ -241,9 +261,28 @@ export function useRegistrarPresidente() {
             const newUrl = `${window.location.pathname}?borradorId=${resData.presidente_id}`;
             window.history.pushState({ path: newUrl }, '', newUrl);
           }
+
+          if (resData && resData.curp_duplicada) {
+            setCuenta(prev => ({ ...prev, isCurpDuplicated: true }));
+            setCuentaErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
+          } else {
+            setCuenta(prev => ({ ...prev, isCurpDuplicated: false }));
+            setCuentaErrors(prev => {
+              if (prev.curp === 'Esta CURP ya se encuentra registrada.') {
+                const { curp, ...rest } = prev;
+                return rest;
+              }
+              return prev;
+            });
+          }
+
           triggerToast();
         } catch (err) {
           console.warn('Error al guardar el borrador del presidente:', err);
+        } finally {
+          if (isChecking) {
+            setIsCheckingCurp(false);
+          }
         }
       };
 
@@ -446,6 +485,7 @@ export function useRegistrarPresidente() {
     previewDoc, setPreviewDoc,
     // OCR
     ocrResults,
+    isCheckingCurp,
     // Foto
     fotoError, fotoFallida, fotoArchivo, forzarFoto,
     // Handlers
