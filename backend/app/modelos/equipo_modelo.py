@@ -25,8 +25,10 @@ class EquiposJugando(Base):
     LigaId = Column(Integer, ForeignKey("Ligas.LigaId"), nullable=False)
     EquipoId = Column(Integer, ForeignKey("Equipos.EquipoId"), nullable=True)
     PresidenteEquipoId = Column(Integer, ForeignKey("PresidentesDeEquipo.PresidenteEquipoId"), nullable=True)
+    EntrenadorEquipoId = Column(Integer, ForeignKey("PresidentesDeEquipo.PresidenteEquipoId"), nullable=True)
     CantidadJugadores = Column(Integer, nullable=True)
 
     LigaRelacion = relationship("Ligas", back_populates="EquiposJugandoRelacion")
     EquipoRelacion = relationship("Equipos", back_populates="EquiposJugandoRelacion")
-    PresidenteRelacion = relationship("PresidenteEquipo", back_populates="EquiposJugandoRelacion")
+    PresidenteRelacion = relationship("PresidenteEquipo", foreign_keys=[PresidenteEquipoId], back_populates="EquiposJugandoRelacion")
+    EntrenadorRelacion = relationship("PresidenteEquipo", foreign_keys=[EntrenadorEquipoId], back_populates="EquiposEntrenadosRelacion")

@@ -422,6 +422,25 @@ export const checkOrdenAmpliacionAdmin = async (equipoId) => {
   return response.data;
 };
 
+export const registrarEntrenadorAdmin = async (formData) => {
+  try {
+    const response = await api.post('/equipo-temporal/registrar-entrenador-admin', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    serviceCache.clear('/equipo-temporal/directorio-presidentes-activos');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getEquiposSinEntrenador = async () => {
+  const response = await api.get('/equipo-temporal/equipos-sin-entrenador');
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -447,6 +466,8 @@ export default {
   getAuditorias,
   agregarJugadorEquipoExistente,
   registrarPresidenteAdmin,
+  registrarEntrenadorAdmin,
+  getEquiposSinEntrenador,
   enviarLinkRegistroPresidenteWhatsApp,
   obtenerLinkInvitacion,
   regenerarInvitacion,

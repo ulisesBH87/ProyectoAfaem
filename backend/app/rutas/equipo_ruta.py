@@ -908,6 +908,7 @@ def crear_o_actualizar_borrador_presidente(
         presidente = PresidenteEquipo(
             PersonaId=persona.PersonaId,
             EstatusId=8, # BORRADOR
+            TipoDirectivoId=2 if datos.get("esEntrenador") else 1
         )
         db.add(presidente)
         db.flush()
@@ -947,6 +948,7 @@ def crear_o_actualizar_borrador_presidente(
             curp_duplicada = True
 
     # Update JSON data draft column
+    presidente.TipoDirectivoId = 2 if datos.get("esEntrenador") else 1
     presidente.DatosBorrador = json.dumps(datos, ensure_ascii=False)
     db.commit()
 
@@ -1223,7 +1225,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             equipo_name_subquery.label("NombreEquipo"),
             equipo_id_subquery.label("EquipoId"),
             whatsapp_status_subquery.label("WhatsAppStatus"),
-            PresidenteEquipo.Afiliacion
+            PresidenteEquipo.Afiliacion,
+            PresidenteEquipo.TipoDirectivoId
         ).join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(EstatusPresidente, PresidenteEquipo.EstatusId == EstatusPresidente.EstatusPresidenteId)\
          .outerjoin(Usuario, Usuario.PersonaId == Personas.PersonaId)
@@ -1267,7 +1270,8 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "equipoId":       r.EquipoId,
                 "equipos":        equipos_por_presidente.get(r.PresidenteEquipoId, []),
                 "whatsappStatus": r.WhatsAppStatus,
-                "seguroNombre":   r.Afiliacion or "Sin seguro asignado"
+                "seguroNombre":   r.Afiliacion or "Sin seguro asignado",
+                "esEntrenador":   r.TipoDirectivoId == 2
             } for r in resultados
         ]
     except Exception as e:
@@ -2004,6 +2008,297 @@ async def registrar_presidente_admin(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno")
+
+
+@router.get("/equipos-sin-entrenador")
+def get_equipos_sin_entrenador(
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    results = (
+        db.query(Equipos.EquipoId, Equipos.NombreEquipo, Ligas.LigaId, Ligas.Nombreliga)
+        .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)
+        .join(Ligas, EquiposJugando.LigaId == Ligas.LigaId)
+        .filter(Equipos.Estatus == True)
+        .filter(EquiposJugando.EntrenadorEquipoId == None)
+        .all()
+    )
+    
+    return [
+        {
+            "EquipoId": r.EquipoId,
+            "NombreEquipo": r.NombreEquipo,
+            "LigaId": r.LigaId,
+            "NombreLiga": r.Nombreliga
+        }
+        for r in results
+    ]
+
+
+@router.post("/registrar-entrenador-admin")
+async def registrar_entrenador_admin(
+    nombre: str = Form(...),
+    primerApellido: Optional[str] = Form(None),
+    segundoApellido: Optional[str] = Form(None),
+    correo: str = Form(...),
+    telefono: Optional[str] = Form(None),
+    telefonoOpcional: Optional[str] = Form(None),
+    curp: str = Form(...),
+    rfc: Optional[str] = Form(None),
+    sexoId: Optional[int] = Form(None),
+    fechaNacimiento: Optional[str] = Form(None),
+    contrasena: Optional[str] = Form(None),
+    equipoId: int = Form(...),
+    ligaId: int = Form(...),
+    afiliacion: Optional[str] = Form(None),
+    voucher: Optional[UploadFile] = File(None),
+    actaNacimiento: Optional[UploadFile] = File(None),
+    identificacion: Optional[UploadFile] = File(None),
+    fotografia: Optional[UploadFile] = File(None),
+    formatoAfiliacion: Optional[UploadFile] = File(None),
+    borradorId: Optional[int] = Form(None),
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    rol_id = getattr(usuario, 'RolId', None)
+    if rol_id != 1:
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    
+    try:
+        # 1. Validar equipo
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipoId).first()
+        if not eq_jugando:
+            raise HTTPException(status_code=404, detail="El equipo seleccionado no existe en el registro real de la liga.")
+        if eq_jugando.EntrenadorEquipoId is not None:
+            raise HTTPException(status_code=400, detail="El equipo seleccionado ya tiene un entrenador asignado.")
+            
+        # 2. Check CURP uniqueness
+        if curp:
+            curp_cleaned = curp.strip().upper()
+            query_curp = db.query(Personas).filter(Personas.CURP == curp_cleaned)
+            if borradorId:
+                nuevo_directivo = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == borradorId).first()
+                if nuevo_directivo:
+                    query_curp = query_curp.filter(Personas.PersonaId != nuevo_directivo.PersonaId)
+            existing_curp = query_curp.first()
+            if existing_curp:
+                raise HTTPException(status_code=400, detail="La CURP ingresada ya se encuentra registrada.")
+
+        from app.core.telefono_utils import validar_y_normalizar_telefono
+        telefono_normalizado = validar_y_normalizar_telefono(telefono) if telefono else None
+        telefono_opcional_normalizado = validar_y_normalizar_telefono(telefonoOpcional) if telefonoOpcional else None
+
+        from app.core.seguridad import generar_salt, generar_hash
+
+        if borradorId:
+            nuevo_directivo = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == borradorId).first()
+            if not nuevo_directivo:
+                raise HTTPException(status_code=404, detail="Borrador de entrenador no encontrado")
+            
+            nueva_persona = db.query(Personas).filter(Personas.PersonaId == nuevo_directivo.PersonaId).first()
+            nuevo_usuario = db.query(Usuario).filter(Usuario.PersonaId == nuevo_directivo.PersonaId).first()
+
+            usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.PersonaId != nueva_persona.PersonaId, Usuario.Eliminado == False).first()
+            if usuario_existente:
+                raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+
+            # Update Persona
+            nueva_persona.Nombre = nombre
+            nueva_persona.PrimerApellido = primerApellido or ""
+            nueva_persona.SegundoApellido = segundoApellido or None
+            nueva_persona.CURP = curp
+            nueva_persona.RFC = rfc.strip().upper() if rfc and rfc.strip() else None
+            nueva_persona.NumeroTelefono = telefono_normalizado
+            nueva_persona.NumeroTelefonoOpcional = telefono_opcional_normalizado
+            nueva_persona.SexoId = sexoId if sexoId else None
+            nueva_persona.FechaNacimiento = fechaNacimiento if fechaNacimiento else None
+
+            if contrasena:
+                password_to_use = contrasena
+                salt = generar_salt()
+                hash_pass = generar_hash(salt, password_to_use)
+                nuevo_usuario.Contrasena = hash_pass
+                nuevo_usuario.Salt = salt
+            
+            nuevo_usuario.Correo = correo
+            nuevo_usuario.Estatus = True
+
+            nuevo_directivo.EstatusId = 7 # ACTIVO
+            nuevo_directivo.TipoDirectivoId = 2 # ENTRENADOR
+            nuevo_directivo.Afiliacion = afiliacion
+            nuevo_directivo.DatosBorrador = None # Clear draft data
+        else:
+            usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.Eliminado == False).first()
+            if usuario_existente:
+                raise HTTPException(status_code=400, detail="El correo ya está registrado.")
+
+            nueva_persona = Personas(
+                Nombre=nombre,
+                PrimerApellido=primerApellido or "",
+                SegundoApellido=segundoApellido or "",
+                CURP=curp,
+                RFC=rfc.strip().upper() if rfc and rfc.strip() else None,
+                NumeroTelefono=telefono_normalizado,
+                NumeroTelefonoOpcional=telefono_opcional_normalizado,
+                SexoId=sexoId if sexoId else None,
+                FechaNacimiento=fechaNacimiento if fechaNacimiento else None,
+            )
+            db.add(nueva_persona)
+            db.flush()
+
+            password_to_use = contrasena if contrasena else "Hola1234?"
+            salt = generar_salt()
+            hash_pass = generar_hash(salt, password_to_use)
+
+            nuevo_usuario = Usuario(
+                PersonaId=nueva_persona.PersonaId,
+                Correo=correo,
+                Contrasena=hash_pass,
+                Salt=salt,
+                RolId=3, # Directivo
+                Estatus=True
+            )
+            db.add(nuevo_usuario)
+            db.flush()
+
+            nuevo_directivo = PresidenteEquipo(
+                PersonaId=nueva_persona.PersonaId,
+                EstatusId=7, # Activo
+                TipoDirectivoId=2, # ENTRENADOR
+                Afiliacion=afiliacion
+            )
+            db.add(nuevo_directivo)
+            db.flush()
+
+        # Vincular al equipo en EquiposJugando
+        eq_jugando.EntrenadorEquipoId = nuevo_directivo.PresidenteEquipoId
+
+        # Crear Solicitud
+        from app.modelos.solicitud_modelo import Solicitud
+        nueva_solicitud = Solicitud(
+            UsuarioId=nuevo_usuario.UsuarioId,
+            TipoSolicitudId=1, # PRESIDENTE_EQUIPO
+            EstatusValidacion=2, # ACEPTADO
+            FechaSolicitud=datetime.now(),
+            ObservacionesSolicitud="Registro directo por administrador (Entrenador)",
+            Afiliacion=afiliacion,
+            EquipoId=equipoId
+        )
+        db.add(nueva_solicitud)
+        db.flush()
+
+        # Calcular OrdenPago
+        total = 0.0
+        detalles = []
+
+        if afiliacion:
+            name_clean = afiliacion.strip().upper()
+            seguro = db.query(Seguro).filter(func.upper(Seguro.Nombre) == name_clean).first()
+            if seguro and seguro.Precio > 0:
+                detalles.append({
+                    "tipo_concepto": 1, # SEGURO
+                    "tipo_afiliacion_id": None,
+                    "seguro_id": seguro.SeguroId,
+                    "cantidad": 1,
+                    "precio": float(seguro.Precio),
+                    "subtotal": float(seguro.Precio)
+                })
+                total = float(seguro.Precio)
+
+        nueva_orden = OrdenPago(
+            UsuarioId=nuevo_usuario.UsuarioId,
+            EstatusPagoId=3, # Aprobado
+            FechaEnvio=datetime.now(),
+            FechaDePago=datetime.now(),
+            TotalPagar=total,
+            SolicitudId=nueva_solicitud.SolicitudId
+        )
+        db.add(nueva_orden)
+        db.flush()
+
+        for d in detalles:
+            registro_detalle = OrdenPagoDetalle(
+                OrdenPagoId=nueva_orden.OrdenPagoId,
+                TipoConceptoId=d["tipo_concepto"],
+                TipoAfiliacionId=d["tipo_afiliacion_id"],
+                SeguroId=d["seguro_id"],
+                Cantidad=d["cantidad"],
+                PrecioUnitarioCobrado=d["precio"],
+                Subtotal=d["subtotal"]
+            )
+            db.add(registro_detalle)
+        db.flush()
+
+        # Subir voucher si existe
+        if voucher:
+            from app.servicios.pagos_servicio import PagosServicio
+            pagos_service = PagosServicio(db)
+            await pagos_service.subir_comprobante(nueva_orden.OrdenPagoId, voucher)
+
+        # Subir documentos
+        from app.servicios.documentos_servicio import subir_documento_servicio2
+        doc_ids = []
+        doc_files = []
+        if actaNacimiento:
+            doc_ids.append(8)
+            doc_files.append(actaNacimiento)
+        if identificacion:
+            doc_ids.append(38)
+            doc_files.append(identificacion)
+        if fotografia:
+            doc_ids.append(37)
+            doc_files.append(fotografia)
+        if formatoAfiliacion:
+            doc_ids.append(10)
+            doc_files.append(formatoAfiliacion)
+
+        if doc_files:
+            await subir_documento_servicio2(
+                db=db,
+                persona_id=nueva_persona.PersonaId,
+                documento_afiliacion_ids=doc_ids,
+                archivos=doc_files,
+                solicitud_id=nueva_solicitud.SolicitudId
+            )
+
+            # Forzar estatus de documentos a ACEPTADO (1)
+            docs_entregados = db.query(DocumentosEntregados).filter(DocumentosEntregados.PersonaId == nueva_persona.PersonaId).all()
+            for doc in docs_entregados:
+                from app.enums.documentos_estatus_enum import DocumentoEstatus
+                doc.EstadoValidacionId = int(DocumentoEstatus.ACEPTADO)
+                doc.FechaValidacion = datetime.now()
+
+        # Forzar estatus de PresidenteEquipo a activo (7)
+        nuevo_directivo.EstatusId = 7
+
+        db.commit()
+
+        print(f"[COACH_REGISTRATION] Successfully registered coach user_id={nuevo_usuario.UsuarioId}, team_id={equipoId}, total_paid={total}")
+
+        return {
+            "success": True,
+            "mensaje": "Entrenador creado y vinculado correctamente",
+            "entrenador": {
+                "usuario_id": nuevo_usuario.UsuarioId,
+                "persona_id": nueva_persona.PersonaId,
+                "presidente_equipo_id": nuevo_directivo.PresidenteEquipoId,
+                "nombre": nueva_persona.Nombre,
+                "correo": nuevo_usuario.Correo,
+                "telefono": nueva_persona.NumeroTelefono
+            }
+        }
+    except HTTPException as e:
+        db.rollback()
+        raise e
+    except Exception as e:
+        db.rollback()
+        print(f"[COACH_REGISTRATION_ERROR] Error: {str(e)}")
+        # print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Error interno")
 
 
 @router.post("/presidentes/{usuario_id}/enviar-link-registro-whatsapp", response_model=EnvioWhatsAppResponse)

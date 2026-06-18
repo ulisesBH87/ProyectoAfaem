@@ -6,7 +6,9 @@ import {
   registrarPresidenteAdmin,
   enviarLinkRegistroPresidenteWhatsApp,
   guardarBorradorPresidente,
-  obtenerBorradorPresidente
+  obtenerBorradorPresidente,
+  registrarEntrenadorAdmin,
+  getEquiposSinEntrenador
 } from '../services/admin';
 import { useSeguros } from './useSeguros';
 import { useOCR } from './useOCR';
@@ -67,6 +69,37 @@ export function useRegistrarPresidente() {
   const [cuentaErrors, setCuentaErrors] = useState({});
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
   const [isCurpDuplicated, setIsCurpDuplicated] = useState(false);
+
+  // ── Estado Entrenador ────────────────────────────────────────────────────
+  const esEntrenador = new URLSearchParams(window.location.search).get('esEntrenador') === 'true';
+  const [equiposSinEntrenador, setEquiposSinEntrenador] = useState([]);
+  const [selectedEquipoId, setSelectedEquipoId] = useState('');
+
+  useEffect(() => {
+    if (esEntrenador) {
+      (async () => {
+        try {
+          const data = await getEquiposSinEntrenador();
+          setEquiposSinEntrenador(data || []);
+        } catch (err) {
+          console.error('Error fetching equipos sin entrenador:', err);
+        }
+      })();
+    }
+  }, [esEntrenador]);
+
+  const handleEquipoSelectChange = (e) => {
+    const eqId = e.target.value;
+    setSelectedEquipoId(eqId);
+    const eq = equiposSinEntrenador.find(item => String(item.EquipoId) === String(eqId));
+    if (eq) {
+      setEquipo(eq.NombreEquipo);
+      setLiga(String(eq.LigaId));
+    } else {
+      setEquipo('');
+      setLiga('');
+    }
+  };
 
   const setCuentaField = (field, val) =>
     setCuenta(prev => {
@@ -147,13 +180,14 @@ export function useRegistrarPresidente() {
   // Cargar borrador al montar si borradorId está en la URL
   useEffect(() => {
     const fetchBorrador = async () => {
-      if (!borradorId) {
+      const initialBorradorId = new URLSearchParams(window.location.search).get('borradorId');
+      if (!initialBorradorId) {
         hasLoadedRef.current = true;
         return;
       }
       try {
         setCargandoBorrador(true);
-        const data = await obtenerBorradorPresidente(borradorId);
+        const data = await obtenerBorradorPresidente(initialBorradorId);
         if (data && data.datos) {
           const d = data.datos;
           if (d.paso) setPaso(d.paso);
@@ -166,6 +200,7 @@ export function useRegistrarPresidente() {
           if (d.tipoAfiliacion) setTipoAfiliacion(d.tipoAfiliacion);
           if (d.liga) setLiga(d.liga);
           if (d.ocrResults) setOcrResults(prev => ({ ...prev, ...d.ocrResults }));
+          if (d.selectedEquipoId) setSelectedEquipoId(d.selectedEquipoId);
 
           if (d.documentosBorrador) {
             const restoredDocs = {};
@@ -205,7 +240,8 @@ export function useRegistrarPresidente() {
       }
     };
     fetchBorrador();
-  }, [borradorId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Guardar borrador automáticamente al cambiar los datos (con debounce)
   useEffect(() => {
@@ -254,12 +290,16 @@ export function useRegistrarPresidente() {
             tipoAfiliacion,
             liga,
             ocrResults,
-            documentosBorrador: docsB64
+            documentosBorrador: docsB64,
+            selectedEquipoId,
+            esEntrenador
           };
           const resData = await guardarBorradorPresidente(payloadDatos, borradorId);
           if (resData && resData.presidente_id && !borradorId) {
             setBorradorId(resData.presidente_id);
-            const newUrl = `${window.location.pathname}?borradorId=${resData.presidente_id}`;
+            const params = new URLSearchParams(window.location.search);
+            params.set('borradorId', resData.presidente_id);
+            const newUrl = `${window.location.pathname}?${params.toString()}`;
             window.history.pushState({ path: newUrl }, '', newUrl);
           }
 
@@ -294,7 +334,7 @@ export function useRegistrarPresidente() {
   }, [
     paso, cuenta, codigoPaisCuenta, numPersonas, asignacion,
     equipo, tipoAfiliacion, liga, ocrResults,
-    documents, borradorId, cargandoBorrador
+    documents, borradorId, cargandoBorrador, selectedEquipoId
   ]);
 
   // Cleanup del toast al desmontar
@@ -353,18 +393,33 @@ export function useRegistrarPresidente() {
       setPaso(2);
       return;
     }
-    if (Number(numPersonas) <= 0) {
-      Swal.fire('Atención', 'Ingresa el número de jugadores en Cuotas (Paso 3).', 'warning');
-      setPaso(3);
-      return;
-    }
-    if (totalAsignados !== segurosRequeridos) {
-      const msg = totalAsignados > segurosRequeridos
-        ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
-        : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar en Cuotas (Paso 3).`;
-      Swal.fire('Atención', msg, 'warning');
-      setPaso(3);
-      return;
+
+    if (esEntrenador) {
+      if (!selectedEquipoId) {
+        Swal.fire('Atención', 'El Equipo es obligatorio en Datos del Expediente.', 'warning');
+        setPaso(3);
+        return;
+      }
+      const selectedPresCount = segurosPresidente.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
+      if (selectedPresCount !== 1) {
+        Swal.fire('Atención', 'Selecciona exactamente un seguro para el entrenador.', 'warning');
+        setPaso(3);
+        return;
+      }
+    } else {
+      if (Number(numPersonas) <= 0) {
+        Swal.fire('Atención', 'Ingresa el número de jugadores en Cuotas (Paso 3).', 'warning');
+        setPaso(3);
+        return;
+      }
+      if (totalAsignados !== segurosRequeridos) {
+        const msg = totalAsignados > segurosRequeridos
+          ? `Has asignado más seguros de los permitidos (límite: ${segurosRequeridos}).`
+          : `Faltan ${segurosRequeridos - totalAsignados} seguros por asignar en Cuotas (Paso 3).`;
+        Swal.fire('Atención', msg, 'warning');
+        setPaso(3);
+        return;
+      }
     }
 
     const correoFinal = cuenta.correo;
@@ -384,7 +439,7 @@ export function useRegistrarPresidente() {
 
     try {
       setLoading(true);
-      Swal.fire({ title: 'Registrando presidente…', text: 'Procesando con aprobación automática.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      Swal.fire({ title: esEntrenador ? 'Registrando entrenador…' : 'Registrando presidente…', text: 'Procesando con aprobación automática.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
       const fd = new FormData();
       fd.append('nombre', cuenta.nombre);
@@ -402,21 +457,9 @@ export function useRegistrarPresidente() {
       fd.append('sexoId', cuenta.sexoId || '');
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
       fd.append('contrasena', cuenta.contrasena);
-      fd.append('numPersonas', String(numPersonas));
       if (borradorId) {
         fd.append('borradorId', String(borradorId));
       }
-
-      // Filtrar seguros de presidente (solo se envían los de jugadores)
-      const segFiltrados = {};
-      Object.entries(asignacion).forEach(([k, v]) => {
-        if (Number(v) > 0) {
-          const segObj = seguros.find(s => String(s.id) === String(k));
-          if (segObj && ['TIPO G', 'SIN SEGURO'].includes(segObj.nombre.toUpperCase().trim())) return;
-          segFiltrados[k] = Number(v);
-        }
-      });
-      fd.append('segurosAsignados', JSON.stringify(segFiltrados));
 
       if (voucher) fd.append('voucher', voucher);
       if (documents.actaNacimiento) fd.append('actaNacimiento', documents.actaNacimiento);
@@ -424,33 +467,64 @@ export function useRegistrarPresidente() {
       if (documents.fotografia) fd.append('fotografia', documents.fotografia);
       if (documents.formatoAfiliacion) fd.append('formatoAfiliacion', documents.formatoAfiliacion);
 
-      if (liga) {
-        const ligaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
-        if (ligaObj) fd.append('ligaId', String(ligaObj.id));
-        else fd.append('ligaNombre', liga);
-      }
-      if (equipo) fd.append('nombreEquipo', equipo.trim());
       if (tipoAfiliacion) fd.append('afiliacion', tipoAfiliacion);
 
-      const response = await registrarPresidenteAdmin(fd);
+      let response;
+      if (esEntrenador) {
+        fd.append('equipoId', String(selectedEquipoId));
+        const ligaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
+        fd.append('ligaId', String(ligaObj ? ligaObj.id : liga));
 
-      const result = await Swal.fire({
-        title: 'Cuenta creada correctamente, ¿Enviar mensaje al presidente?',
-        text: '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
-        icon: 'success',
-        showCancelButton: true,
-        confirmButtonText: 'Enviar WhatsApp',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: C.amberDark,
-        cancelButtonColor: '#64748b',
-      });
+        response = await registrarEntrenadorAdmin(fd);
+      } else {
+        fd.append('numPersonas', String(numPersonas));
+        // Filtrar seguros de presidente (solo se envían los de jugadores)
+        const segFiltrados = {};
+        Object.entries(asignacion).forEach(([k, v]) => {
+          if (Number(v) > 0) {
+            const segObj = seguros.find(s => String(s.id) === String(k));
+            if (segObj && ['TIPO G', 'SIN SEGURO'].includes(segObj.nombre.toUpperCase().trim())) return;
+            segFiltrados[k] = Number(v);
+          }
+        });
+        fd.append('segurosAsignados', JSON.stringify(segFiltrados));
 
-      if (result.isConfirmed) {
-        const usuarioId = response?.presidente?.usuario_id;
-        if (!usuarioId) throw new Error('No se recibió el identificador del presidente para enviar el mensaje.');
-        Swal.fire({ title: 'Enviando WhatsApp…', text: 'Enviando mensaje al presidente de equipo.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        const envio = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
-        await Swal.fire({ title: 'WhatsApp enviado', text: envio?.mensaje || 'El mensaje fue enviado correctamente al presidente.', icon: 'success', confirmButtonColor: C.amberDark });
+        if (liga) {
+          const ligaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
+          if (ligaObj) fd.append('ligaId', String(ligaObj.id));
+          else fd.append('ligaNombre', liga);
+        }
+        if (equipo) fd.append('nombreEquipo', equipo.trim());
+
+        response = await registrarPresidenteAdmin(fd);
+      }
+
+      if (esEntrenador) {
+        await Swal.fire({
+          title: 'Entrenador registrado correctamente',
+          text: 'El entrenador se ha registrado y vinculado al equipo.',
+          icon: 'success',
+          confirmButtonColor: C.amberDark,
+        });
+      } else {
+        const result = await Swal.fire({
+          title: 'Cuenta creada correctamente, ¿Enviar mensaje al presidente?',
+          text: '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonText: 'Enviar WhatsApp',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: C.amberDark,
+          cancelButtonColor: '#64748b',
+        });
+
+        if (result.isConfirmed) {
+          const usuarioId = response?.presidente?.usuario_id;
+          if (!usuarioId) throw new Error('No se recibió el identificador del presidente para enviar el mensaje.');
+          Swal.fire({ title: 'Enviando WhatsApp…', text: 'Enviando mensaje al presidente de equipo.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+          const envio = await enviarLinkRegistroPresidenteWhatsApp(usuarioId);
+          await Swal.fire({ title: 'WhatsApp enviado', text: envio?.mensaje || 'El mensaje fue enviado correctamente al presidente.', icon: 'success', confirmButtonColor: C.amberDark });
+        }
       }
 
       navigate(ROUTES.ADMIN.PRESIDENTES);
@@ -492,5 +566,10 @@ export function useRegistrarPresidente() {
     fotoError, fotoFallida, fotoArchivo, forzarFoto,
     // Handlers
     handleFileUpload, handleDescargarFormato,
+    // Entrenador
+    esEntrenador,
+    equiposSinEntrenador,
+    selectedEquipoId,
+    handleEquipoSelectChange,
   };
 }

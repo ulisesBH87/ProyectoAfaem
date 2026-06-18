@@ -973,7 +973,7 @@ export default function AdminPresidentes() {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
           {esBorrador ? (
             <button
-              onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}`)}
+              onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}${p.esEntrenador ? '&esEntrenador=true' : ''}`)}
               style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
               title="Continuar Registro"
             >
@@ -1225,6 +1225,10 @@ export default function AdminPresidentes() {
           <button onClick={() => navigate(ROUTES.ADMIN.REGISTRAR_PRESIDENTE)}
             style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
+          </button>
+          <button onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?esEntrenador=true`)}
+            style={{ background: 'linear-gradient(135deg, #d97706, #ea580c)', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <FaPlus /> Registrar Entrenador
           </button>
         </div>
       </div>
