@@ -47,6 +47,16 @@ export default function MiCuenta() {
     }
   }, []);
 
+  // Reglas individuales de la nueva contraseña
+  const passwordRules = {
+    length:    nuevaContrasena.length >= 8,
+    uppercase: /[A-Z]/.test(nuevaContrasena),
+    lowercase: /[a-z]/.test(nuevaContrasena),
+    number:    /[0-9]/.test(nuevaContrasena),
+    special:   /[^A-Za-z0-9]/.test(nuevaContrasena),
+  };
+  const passwordRulesOk = Object.values(passwordRules).every(Boolean);
+
   // Validaciones en tiempo real
   const getValidationErrors = () => {
     const errors = {};
@@ -57,15 +67,12 @@ export default function MiCuenta() {
 
     if (!nuevaContrasena) {
       errors.nuevaContrasena = 'La nueva contraseña es obligatoria.';
-    } else {
-      if (nuevaContrasena.length < 8) {
-        errors.nuevaContrasena = 'La nueva contraseña debe tener al menos 8 caracteres.';
-      } else if (nuevaContrasena.length > 50) {
-        errors.nuevaContrasena = 'La nueva contraseña no puede exceder los 50 caracteres.';
-      }
-      if (nuevaContrasena === contrasenaActual && contrasenaActual) {
-        errors.nuevaContrasena = 'La nueva contraseña no puede ser igual a la contraseña actual.';
-      }
+    } else if (!passwordRulesOk) {
+      errors.nuevaContrasena = 'La nueva contraseña no cumple los requisitos de seguridad.';
+    } else if (nuevaContrasena.length > 50) {
+      errors.nuevaContrasena = 'La nueva contraseña no puede exceder los 50 caracteres.';
+    } else if (nuevaContrasena === contrasenaActual && contrasenaActual) {
+      errors.nuevaContrasena = 'La nueva contraseña no puede ser igual a la contraseña actual.';
     }
 
     if (!confirmarContrasena) {
@@ -121,10 +128,14 @@ export default function MiCuenta() {
       });
     } catch (err) {
       console.error(err);
-      const detailMsg = err?.response?.data?.detail || err?.message || 'No se pudo cambiar la contraseña.';
+      // Si el backend devuelve CREDENCIALES_INVALIDAS, mostrar mensaje específico del contexto
+      const errorCode = err?.response?.data?.code;
+      const errorMsg = errorCode === 'CREDENCIALES_INVALIDAS'
+        ? 'La contraseña actual es incorrecta.'
+        : (err?.response?.data?.detail || err?.message || 'No se pudo cambiar la contraseña.');
       Swal.fire({
         title: 'Error',
-        text: detailMsg,
+        text: errorMsg,
         icon: 'error',
         confirmButtonColor: '#ef4444'
       });
@@ -242,7 +253,7 @@ export default function MiCuenta() {
                 <input
                   type={showActual ? 'text' : 'password'}
                   value={contrasenaActual}
-                  onChange={(e) => setContrasenaActual(e.target.value)}
+                  onChange={(e) => { setContrasenaActual(e.target.value); setTouched(prev => ({ ...prev, contrasenaActual: true })); }}
                   onBlur={() => handleBlur('contrasenaActual')}
                   placeholder="Ingresa tu contraseña actual"
                   disabled={cargando}
@@ -279,7 +290,7 @@ export default function MiCuenta() {
                 <input
                   type={showNueva ? 'text' : 'password'}
                   value={nuevaContrasena}
-                  onChange={(e) => setNuevaContrasena(e.target.value)}
+                  onChange={(e) => { setNuevaContrasena(e.target.value); setTouched(prev => ({ ...prev, nuevaContrasena: true })); }}
                   onBlur={() => handleBlur('nuevaContrasena')}
                   placeholder="Mínimo 8 caracteres"
                   disabled={cargando}
@@ -297,7 +308,42 @@ export default function MiCuenta() {
                   {showNueva ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
-              {touched.nuevaContrasena && errores.nuevaContrasena && (
+
+              {/* INDICADOR DE REQUISITOS */}
+              {touched.nuevaContrasena && (
+                <div style={{
+                  marginTop: '10px', padding: '12px 14px', borderRadius: '10px',
+                  background: 'rgba(248, 250, 252, 0.9)', border: '1px solid #e2e8f0',
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px'
+                }}>
+                  {[
+                    { ok: passwordRules.length,    label: 'Mínimo 8 caracteres' },
+                    { ok: passwordRules.uppercase,  label: 'Una mayúscula (A-Z)' },
+                    { ok: passwordRules.lowercase,  label: 'Una minúscula (a-z)' },
+                    { ok: passwordRules.number,     label: 'Un número (0-9)' },
+                    { ok: passwordRules.special,    label: 'Un carácter especial (!@#...)' },
+                  ].map(({ ok, label }) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{
+                        fontSize: '12px', fontWeight: '800',
+                        color: ok ? '#16a34a' : '#dc3545'
+                      }}>
+                        {ok ? '✓' : '×'}
+                      </span>
+                      <span style={{ fontSize: '12px', color: ok ? '#16a34a' : '#64748b', fontWeight: ok ? '700' : '500' }}>
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {touched.nuevaContrasena && errores.nuevaContrasena && nuevaContrasena && !passwordRulesOk && (
+                <span style={{ display: 'block', fontSize: '12px', color: '#dc3545', marginTop: '6px', fontWeight: '600' }}>
+                  ❌ Completa todos los requisitos de seguridad.
+                </span>
+              )}
+              {touched.nuevaContrasena && errores.nuevaContrasena && nuevaContrasena && passwordRulesOk && (
                 <span style={{ display: 'block', fontSize: '12px', color: '#dc3545', marginTop: '6px', fontWeight: '600' }}>
                   ❌ {errores.nuevaContrasena}
                 </span>
@@ -316,7 +362,7 @@ export default function MiCuenta() {
                 <input
                   type={showConfirmar ? 'text' : 'password'}
                   value={confirmarContrasena}
-                  onChange={(e) => setConfirmarContrasena(e.target.value)}
+                  onChange={(e) => { setConfirmarContrasena(e.target.value); setTouched(prev => ({ ...prev, confirmarContrasena: true })); }}
                   onBlur={() => handleBlur('confirmarContrasena')}
                   placeholder="Repite la nueva contraseña"
                   disabled={cargando}

@@ -127,7 +127,12 @@ export const applyErrorInterceptor = (api) => {
         error.response.data = {};
       }
 
+      // Preservar el code original del backend para que los componentes puedan detectar errores específicos
+      const originalCode = error.response.data?.code;
       error.response.data.detail = customMessage;
+      if (originalCode) {
+        error.response.data.code = originalCode;
+      }
 
       return Promise.reject(error);
     }
