@@ -275,7 +275,7 @@ export default function AdminPresidentes() {
   const filteredPresidentes = useMemo(() => {
     let result = [...presidentes];
 
-    // Filtrado por estatus
+    // Filtrado por estatus/rol
     if (filtroEstatus !== 'todos') {
       if (filtroEstatus === 'activos') {
         result = result.filter(esPresidenteActivo);
@@ -283,6 +283,10 @@ export default function AdminPresidentes() {
         result = result.filter(p => !esPresidenteActivo(p) && p.estatus !== 8 && (p.estatusNombre || '').toUpperCase().trim() !== 'BORRADOR');
       } else if (filtroEstatus === 'pendientes') {
         result = result.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR');
+      } else if (filtroEstatus === 'solo_presidentes') {
+        result = result.filter(p => !p.esEntrenador);
+      } else if (filtroEstatus === 'solo_entrenadores') {
+        result = result.filter(p => !!p.esEntrenador);
       }
     }
 
@@ -327,11 +331,15 @@ export default function AdminPresidentes() {
   const stats = useMemo(() => {
     const activosCount = presidentes.filter(esPresidenteActivo).length;
     const pendientesCount = presidentes.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR').length;
+    const presidentesCount = presidentes.filter(p => !p.esEntrenador).length;
+    const entrenadoresCount = presidentes.filter(p => !!p.esEntrenador).length;
     return {
       total: presidentes.length,
       activos: activosCount,
       inactivos: presidentes.length - activosCount - pendientesCount,
-      pendientes: pendientesCount
+      pendientes: pendientesCount,
+      presidentes: presidentesCount,
+      entrenadores: entrenadoresCount
     };
   }, [presidentes]);
   const cerrarModal = () => { setModalAbierto(false); resetModal(); };
@@ -1256,6 +1264,8 @@ export default function AdminPresidentes() {
           { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
           { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
           { icon: <FaTimes />, bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
+          { icon: <FaUser />, bg: '#eff6ff', color: '#1e40af', label: 'PRESIDENTES', val: stats.presidentes, key: 'solo_presidentes' },
+          { icon: <FaShieldAlt />, bg: '#f0fdf4', color: '#15803d', label: 'ENTRENADORES', val: stats.entrenadores, key: 'solo_entrenadores' },
         ].map(({ icon, bg, color, label, val, key }) => (
           <div
             key={label}
@@ -1306,7 +1316,7 @@ export default function AdminPresidentes() {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
-              {['pendientes', 'todos', 'activos', 'inactivos'].map((val) => (
+              {['pendientes', 'todos', 'activos', 'inactivos', 'solo_presidentes', 'solo_entrenadores'].map((val) => (
                 <button
                   key={val}
                   onClick={() => setFiltroEstatus(val)}
@@ -1323,7 +1333,14 @@ export default function AdminPresidentes() {
                     cursor: 'pointer'
                   }}
                 >
-                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : (val === 'inactivos' ? 'Inactivos' : 'Pendientes'))}
+                  {{
+                    todos: 'Todos',
+                    activos: 'Activos',
+                    inactivos: 'Inactivos',
+                    pendientes: 'Pendientes',
+                    solo_presidentes: 'Presidentes',
+                    solo_entrenadores: 'Entrenadores'
+                  }[val]}
                 </button>
               ))}
             </div>
