@@ -40,6 +40,7 @@ export const ROUTES = {
     REGISTRO_JUGADORES: "/pe/reg-jug",
     EQUIPOS: "/pe/eq",
     MIS_JUGADORES: "/pe/mis-jug",
+    JUGADOR_DOCUMENTOS: "/pe/j/:miembroEquipoId/docs",
     ADMIN_EQUIPO: "/pe/ae/:equipoId",
     INSCRIBIR_EQUIPO: "/pe/ie/:equipoId",
     CONFIGURAR_EQUIPO: "/pe/ce",
@@ -128,6 +129,9 @@ export function mapOldToNewPath(oldPath) {
   } else if (cleanPath.startsWith('/inscribir-equipo-liga/')) {
     const id = cleanPath.substring('/inscribir-equipo-liga/'.length);
     cleanPath = ROUTES.PRESIDENTE.INSCRIBIR_EQUIPO.replace(':equipoId', id);
+  } else if (cleanPath.startsWith('/presidente-equipo/mis-jugadores/') && cleanPath.endsWith('/documentos')) {
+    const id = cleanPath.substring('/presidente-equipo/mis-jugadores/'.length, cleanPath.length - '/documentos'.length);
+    cleanPath = ROUTES.PRESIDENTE.JUGADOR_DOCUMENTOS.replace(':miembroEquipoId', id);
   } else if (cleanPath.startsWith('/admin/equipos/completar-jugadores/')) {
     const id = cleanPath.substring('/admin/equipos/completar-jugadores/'.length);
     cleanPath = ROUTES.ADMIN.EQUIPOS_COMPLETAR.replace(':equipoId', id);

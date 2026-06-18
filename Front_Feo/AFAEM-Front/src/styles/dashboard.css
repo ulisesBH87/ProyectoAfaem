@@ -1950,9 +1950,9 @@
   color: var(--text-primary);
   margin: 0 0 6px 0;
   width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .player-card-meta {

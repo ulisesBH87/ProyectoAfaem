@@ -1054,7 +1054,7 @@ export default function AdminEquipos() {
             <BotonPrimario
               etiqueta="Descargar"
               onClick={handleConfirmarDescarga}
-              deshabilitado={cargandoJugadoresDescarga || jugadoresDescarga.length === 0}
+              deshabilitado={cargandoJugadoresDescarga || jugadoresDescarga.length === 0 || jugadoresDescarga.some(j => !j.DocumentosAprobados)}
               icono={<FaFileArchive />}
             />
           </>
@@ -1073,47 +1073,65 @@ export default function AdminEquipos() {
               Cargando jugadores...
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-              gap: '8px',
-              maxHeight: '180px',
-              overflowY: 'auto',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '12px',
-              background: '#f8fafc'
-            }}>
-              {jugadoresDescarga.length > 0 ? (
-                jugadoresDescarga.map((jugador, idx) => (
-                  <div
-                    key={jugador.MiembroEquipoId || jugador.PersonaId || idx}
-                    style={{
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      color: '#334155',
-                      padding: '8px 12px',
-                      background: 'white',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                    title={jugador.NombreCompleto}
-                  >
-                    <span style={{ color: '#0b4ea6' }}>👤</span> {jugador.NombreCompleto}
-                  </div>
-                ))
-              ) : (
-                <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
-                  No hay ningún jugador registrado en este equipo.
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '8px',
+                maxHeight: '180px',
+                overflowY: 'auto',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '12px',
+                background: '#f8fafc'
+              }}>
+                {jugadoresDescarga.length > 0 ? (
+                  jugadoresDescarga.map((jugador, idx) => (
+                    <div
+                      key={jugador.MiembroEquipoId || jugador.PersonaId || idx}
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#334155',
+                        padding: '8px 12px',
+                        background: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '6px'
+                      }}
+                      title={jugador.NombreCompleto}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ color: '#0b4ea6' }}>👤</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{jugador.NombreCompleto}</span>
+                      </div>
+                      <span style={{ flexShrink: 0 }}>
+                        {jugador.DocumentosAprobados ? (
+                          <span style={{ color: '#16a34a', fontWeight: 'bold' }} title="Documentos aprobados">✔️</span>
+                        ) : (
+                          <span style={{ color: '#dc2626', fontWeight: 'bold' }} title="Documentos pendientes de aprobación">⚠️</span>
+                        )}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
+                    No hay ningún jugador registrado en este equipo.
+                  </p>
+                )}
+              </div>
+              {jugadoresDescarga.some(j => !j.DocumentosAprobados) && (
+                <p style={{ margin: 0, fontSize: '13px', color: '#dc2626', fontWeight: '700', textAlign: 'center', background: '#fef2f2', border: '1px solid #fecaca', padding: '8px', borderRadius: '8px' }}>
+                  ⚠️ Todos los jugadores deben tener sus documentos aprobados para poder exportar el equipo.
                 </p>
               )}
-            </div>
+            </>
           )}
         </div>
       </Modal>

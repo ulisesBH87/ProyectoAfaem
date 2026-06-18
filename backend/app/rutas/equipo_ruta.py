@@ -1047,7 +1047,11 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
         # 2. Base query with joins
         query = db.query(
             MiembrosEquipo.MiembroEquipoId,
-            (Personas.Nombre + " " + Personas.PrimerApellido).label("NombreCompleto"),
+            Personas.PersonaId,
+            Personas.FechaNacimiento,
+            Personas.Nombre,
+            Personas.PrimerApellido,
+            Personas.SegundoApellido,
             RolesDeEquipo.NombreRol.label("Rol"),
             Equipos.NombreEquipo.label("Equipo"),
             MiembrosEquipo.FechaIngreso,
@@ -1069,23 +1073,66 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             query = query.filter(EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId).distinct()
 
         resultados = query.all()
+        from datetime import date
 
-        return [
-            {
+        formatted_results = []
+        for r in resultados:
+            es_menor = False
+            if r.FechaNacimiento:
+                try:
+                    hoy = date.today()
+                    nacimiento = r.FechaNacimiento
+                    edad = hoy.year - nacimiento.year - ((hoy.month, hoy.day) < (nacimiento.month, nacimiento.day))
+                    es_menor = edad < 18
+                except Exception:
+                    pass
+            docs_requeridos = 5 if es_menor else 4
+            required_docs_ids = [22, 33, 36, 25, 28] if es_menor else [22, 26, 25, 28]
+
+            approved_count = db.query(DocumentosEntregados.DocumentoAfiliacionId).filter(
+                DocumentosEntregados.PersonaId == r.PersonaId,
+                DocumentosEntregados.DocumentoAfiliacionId.in_(required_docs_ids),
+                DocumentosEntregados.EstadoValidacionId == 1
+            ).distinct().count()
+
+            rejected_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
+                DocumentosEntregados.PersonaId == r.PersonaId,
+                DocumentosEntregados.EstadoValidacionId == 3
+            ).count()
+
+            pending_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
+                DocumentosEntregados.PersonaId == r.PersonaId,
+                DocumentosEntregados.EstadoValidacionId == 2
+            ).count()
+
+            if rejected_count > 0:
+                estatus_docs = "Rechazado"
+            elif approved_count >= docs_requeridos:
+                estatus_docs = "Aprobado"
+            elif pending_count > 0:
+                estatus_docs = "En espera"
+            else:
+                estatus_docs = "Pendiente"
+
+            nombre_completo = f"{r.Nombre} {r.PrimerApellido} {r.SegundoApellido or ''}".strip().upper()
+
+            formatted_results.append({
                 "MiembroEquipoId": r.MiembroEquipoId,
-                "NombreCompleto": r.NombreCompleto,
+                "NombreCompleto": nombre_completo,
                 "Rol": r.Rol,
                 "Equipo": r.Equipo,
                 "FechaIngreso": r.FechaIngreso,
                 "Estatus": bool(r.Estatus),
                 "RutaFoto": f"/documentos/{r.RutaFoto}" if r.RutaFoto else None,
-                "NumeroCamiseta": r.NumeroCamiseta
-            } for r in resultados
-        ]
+                "NumeroCamiseta": r.NumeroCamiseta,
+                "EstatusDocumentos": estatus_docs
+            })
+
+        return formatted_results
     except Exception as e:
-        #print(f"Error en get_mis_jugadores_reales: {str(e)}")
-        #print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error interno SQL")
+        print(f"Error en get_mis_jugadores_reales: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Error interno SQL")
 
 
 # --- ENDPOINTS PARA DIRECTORIO GLOBAL ADMIN ---
@@ -1327,8 +1374,6 @@ class ActualizarDocumentoEstadoPayload(BaseModel):
 @router.get("/jugador/{miembro_id}/documentos")
 def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     rol_id = getattr(usuario, 'RolId', None)
-    if rol_id != 1:
-        raise HTTPException(status_code=403, detail="Acceso denegado")
     
     miembro = db.query(MiembrosEquipo).filter(
         MiembrosEquipo.MiembroEquipoId == miembro_id
@@ -1336,10 +1381,58 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
 
     if not miembro:
         raise HTTPException(404, "Jugador no encontrado")
+
+    if rol_id != 1:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        presidente = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PersonaId == usuario.PersonaId
+        ).first()
+
+        if not presidente:
+            raise HTTPException(status_code=403, detail="Acceso denegado")
+
+        from app.modelos.equipo_modelo import EquiposJugando
+        is_member = db.query(MiembrosEquipo).join(
+            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
+        ).filter(
+            MiembrosEquipo.PersonaId == miembro.PersonaId,
+            MiembrosEquipo.Eliminado == False,
+            EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+        ).first() is not None
+
+        from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
+        from app.modelos.equipo_temporal_modelo import EquipoTemporal
+        is_temp_member = db.query(EquipoTemporalJugador).join(
+            EquipoTemporal, EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId
+        ).filter(
+            EquipoTemporal.UsuarioId == usuario.UsuarioId,
+            EquipoTemporalJugador.PersonaId == miembro.PersonaId
+        ).first() is not None
+
+        if not (is_member or is_temp_member):
+            raise HTTPException(status_code=403, detail="No tienes autorización para ver los documentos de este jugador")
     
     persona_id = miembro.PersonaId
     
     try:
+        from app.modelos.persona_modelo import Personas
+        from datetime import date
+        persona = db.query(Personas).filter(Personas.PersonaId == persona_id).first()
+        es_menor = False
+        nombre_completo = ""
+        fecha_nacimiento = None
+        if persona:
+            nombre_completo = f"{persona.Nombre} {persona.PrimerApellido} {persona.SegundoApellido or ''}".strip().upper()
+            if persona.FechaNacimiento:
+                fecha_nacimiento = persona.FechaNacimiento.isoformat() if hasattr(persona.FechaNacimiento, "isoformat") else str(persona.FechaNacimiento)
+                try:
+                    hoy = date.today()
+                    nacimiento = persona.FechaNacimiento
+                    edad = hoy.year - nacimiento.year - ((hoy.month, hoy.day) < (nacimiento.month, nacimiento.day))
+                    es_menor = edad < 18
+                except Exception:
+                    pass
+
         from app.repositorios.equipo_repositorio import obtener_documentos_jugador_repo
         docs = obtener_documentos_jugador_repo(db, persona_id)
         # Formatear la URL completa apuntando al endpoint seguro de documentos
@@ -1347,7 +1440,13 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
             doc_id = doc.get("DocumentosSolicitudId")
             doc["url"] = f"/documentos/{doc_id}" if doc_id else None
             doc["RutaArchivo"] = None
-        return docs
+        return {
+            "es_menor": es_menor,
+            "nombre_completo": nombre_completo,
+            "fecha_nacimiento": fecha_nacimiento,
+            "persona_id": persona_id,
+            "documentos": docs
+        }
     except Exception as e:
         #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno")
@@ -1393,14 +1492,42 @@ def get_solicitud_documento_jugador(
     usuario=Depends(obtener_usuario_actual),
 ):
     rol_id = getattr(usuario, 'RolId', None)
-    if rol_id != 1:
-        raise HTTPException(status_code=403, detail="Acceso denegado")
-
+    
     miembro = db.query(MiembrosEquipo).filter(
         MiembrosEquipo.MiembroEquipoId == miembro_id
     ).first()
     if not miembro:
         raise HTTPException(404, "Jugador no encontrado")
+
+    if rol_id != 1:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        presidente = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PersonaId == usuario.PersonaId
+        ).first()
+
+        if not presidente:
+            raise HTTPException(status_code=403, detail="Acceso denegado")
+
+        from app.modelos.equipo_modelo import EquiposJugando
+        is_member = db.query(MiembrosEquipo).join(
+            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
+        ).filter(
+            MiembrosEquipo.PersonaId == miembro.PersonaId,
+            MiembrosEquipo.Eliminado == False,
+            EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+        ).first() is not None
+
+        from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
+        from app.modelos.equipo_temporal_modelo import EquipoTemporal
+        is_temp_member = db.query(EquipoTemporalJugador).join(
+            EquipoTemporal, EquipoTemporalJugador.EquipoTemporalId == EquipoTemporal.EquipoTemporalId
+        ).filter(
+            EquipoTemporal.UsuarioId == usuario.UsuarioId,
+            EquipoTemporalJugador.PersonaId == miembro.PersonaId
+        ).first() is not None
+
+        if not (is_member or is_temp_member):
+            raise HTTPException(status_code=403, detail="No tienes autorización para consultar la solicitud de este jugador")
 
     from app.repositorios.equipo_repositorio import obtener_solicitud_id_para_persona
     solicitud_id = obtener_solicitud_id_para_persona(db, miembro.PersonaId, usuario.UsuarioId)
@@ -1490,7 +1617,9 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
             email=jugador_data.Email,
             sexo_id=jugador_data.SexoId,
             fecha_nacimiento=jugador_data.FechaNacimiento,
-            nui=jugador_data.NUI
+            nui=jugador_data.NUI,
+            numero_camiseta=jugador_data.NumeroCamiseta,
+            rol_en_equipo=jugador_data.RolEnEquipo
         )
         if not miembro:
             raise HTTPException(status_code=404, detail="Jugador no encontrado")

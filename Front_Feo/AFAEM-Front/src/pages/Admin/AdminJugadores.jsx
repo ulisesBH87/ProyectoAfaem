@@ -10,6 +10,7 @@ import {
   updateDocumentoEstado,
   updateJugador,
   subirDocumentoJugador,
+  getCatalogosRegistro,
 } from '../../services/admin';
 import Swal from 'sweetalert2';
 import { validarFotografia } from '../../services/foto';
@@ -95,19 +96,19 @@ const getDocumentoEstatusInfo = (estadoId) => {
   switch (Number(estadoId)) {
     case 1:
       return {
-        texto: 'Espera',
-        color: '#d97706', // Amber-600
-        bg: '#fffbeb', // Amber-50
-        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
-        border: '#f59e0b', // Amber-500
-      };
-    case 2:
-      return {
         texto: 'Aceptado',
         color: '#16a34a', // Green-600
         bg: '#f0fdf4', // Green-50
         cardBg: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
         border: '#10b981', // Green-500
+      };
+    case 2:
+      return {
+        texto: 'Espera',
+        color: '#d97706', // Amber-600
+        bg: '#fffbeb', // Amber-50
+        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
+        border: '#f59e0b', // Amber-500
       };
     case 3:
       return {
@@ -125,9 +126,9 @@ const getDocumentoEstatusInfo = (estadoId) => {
 const mapActionKeyToEstadoId = (actionKey) => {
   switch (actionKey) {
     case 'espera':
-      return 1;
-    case 'aceptar':
       return 2;
+    case 'aceptar':
+      return 1;
     case 'rechazar':
       return 3;
     default:
@@ -141,10 +142,10 @@ const getDocumentActionButtons = (documento, tipoId) => {
   const estado = Number(documento.EstadoValidacionId);
   const acciones = [];
   if (estado === 1) {
-    acciones.push({ key: 'aceptar', label: 'Aceptar' });
+    acciones.push({ key: 'espera', label: 'Espera' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
   } else if (estado === 2) {
-    acciones.push({ key: 'espera', label: 'Espera' });
+    acciones.push({ key: 'aceptar', label: 'Aceptar' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
   } else if (estado === 3) {
     acciones.push({ key: 'espera', label: 'Espera' });
@@ -227,7 +228,7 @@ const attachActionButtonListeners = (root = document) => {
       const actionText = boton.getAttribute('data-action-text') || actionKey;
       const documentoId = boton.getAttribute('data-doc-id');
       const tipoId = boton.getAttribute('data-tipo-id');
-      const popup = Swal.getPopup();
+      const popup = Swal.getPopup() || boton.closest('.modal-content') || document.body;
       if (!documentoId || !popup) return;
 
       const nuevoEstado = mapActionKeyToEstadoId(actionKey);
@@ -483,6 +484,7 @@ export default function AdminJugadores() {
   const [guardando, setGuardando] = useState(false);
   // OCR dentro del modal
   const [ocrCargando, setOcrCargando] = useState(false);
+  const [rolesEquipo, setRolesEquipo] = useState([]);
 
   // Hook para cargar la foto del jugador en edición de forma segura
   const { blobUrl: avatarBlobUrl, error: avatarError } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
@@ -508,8 +510,27 @@ export default function AdminJugadores() {
     }
   };
 
+  const loadJugadoresSilencioso = async () => {
+    try {
+      const data = await getJugadoresDirectorio(true);
+      setJugadores(data);
+    } catch (err) {
+      console.error("Error al recargar jugadores silenciosamente:", err);
+    }
+  };
+
+  const cargarRoles = async () => {
+    try {
+      const data = await getCatalogosRegistro();
+      setRolesEquipo(data.roles_equipo || []);
+    } catch (err) {
+      console.error("Error al cargar roles de equipo:", err);
+    }
+  };
+
   useEffect(() => {
     loadJugadores();
+    cargarRoles();
   }, [navigate]);
 
   // EFECTO PARA LEER FILTRO DE EQUIPO DESDE NAVEGACIÓN
@@ -723,7 +744,7 @@ export default function AdminJugadores() {
   };
 
   const mostrarModalDocumentos = (jugador, documentos, solicitudId) => {
-    const listaDocumentos = Array.isArray(documentos) ? documentos : [];
+    const listaDocumentos = Array.isArray(documentos) ? documentos : (documentos?.documentos || []);
     const htmlCardsRequeridos = TIPOS_DOCUMENTO_JUGADOR_REQUERIDOS.map((tipo) => {
       const documento = obtenerDocumentoMasRecientePorTipo(listaDocumentos, tipo.id);
       return construirCardDocumentoHtml(tipo, documento);
@@ -777,6 +798,9 @@ export default function AdminJugadores() {
               }
               .doc-card-container::-webkit-scrollbar-thumb:hover {
                 background: #94a3b8;
+              }
+              body, .main-header-fixed {
+                padding-right: 0 !important;
               }
             </style>
             <div class="doc-card-container">
@@ -869,13 +893,24 @@ export default function AdminJugadores() {
 
     modalEl.addEventListener('hidden.bs.modal', () => {
       modalEl.remove();
+      // Limpieza manual de los efectos secundarios de Bootstrap en el DOM
+      document.body.style.paddingRight = '';
+      document.body.classList.remove('modal-open');
+      const fixedEls = document.querySelectorAll('.main-header-fixed, .fixed-top, .sticky-top');
+      fixedEls.forEach(el => {
+        el.style.paddingRight = '';
+      });
+      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+      loadJugadoresSilencioso();
     });
 
     bsModal.show();
   };
 
   const handleDescargarDocs = async (jugador) => {
+    const originalOverflow = document.body.style.overflow;
     try {
+      document.body.style.overflow = 'hidden';
       Swal.fire({
         title: 'Cargando documentos...',
         text: 'Buscando archivos en el sistema',
@@ -887,9 +922,11 @@ export default function AdminJugadores() {
         getJugadorDocumentos(jugador.MiembroEquipoId),
         getJugadorSolicitudDocumento(jugador.MiembroEquipoId),
       ]);
+      document.body.style.overflow = originalOverflow;
       Swal.close();
       mostrarModalDocumentos(jugador, docs, solicitudId);
     } catch (err) {
+      document.body.style.overflow = originalOverflow;
       console.error(err);
       Swal.fire('Error', 'No se pudieron obtener los documentos del jugador.', 'error');
     }
@@ -947,7 +984,9 @@ export default function AdminJugadores() {
       sexo: jugador.Sexo === 'Hombre' ? 'Masculino' : (jugador.Sexo === 'Mujer' ? 'Femenino' : (jugador.Sexo || '')),
       fechaNacimiento: jugador.FechaNacimiento ? jugador.FechaNacimiento.split('T')[0] : '',
       NUI: jugador.NUI || '',
-      estatus: jugador.Estatus ? '1' : '0'
+      estatus: jugador.Estatus ? '1' : '0',
+      numeroCamiseta: jugador.NumeroCamiseta !== undefined && jugador.NumeroCamiseta !== null ? jugador.NumeroCamiseta : '',
+      rolEnEquipo: jugador.RolEnEquipo !== undefined && jugador.RolEnEquipo !== null ? jugador.RolEnEquipo : ''
     });
     setHaCambiado(false);
     setOcrCargando(false);
@@ -955,7 +994,8 @@ export default function AdminJugadores() {
 
     // Obtener documentos del jugador en background para extraer su fotografía si existe
     getJugadorDocumentos(jugador.MiembroEquipoId)
-      .then((docs) => {
+      .then((res) => {
+        const docs = Array.isArray(res) ? res : (res?.documentos || []);
         const docFoto = obtenerDocumentoMasRecientePorTipo(docs, 25);
         if (docFoto) {
           const urlFoto = obtenerUrlDocumento(docFoto);
@@ -973,7 +1013,7 @@ export default function AdminJugadores() {
     setOcrCargando(true);
     Swal.fire({
       title: 'Analizando documento...',
-      html: 'Extrayendo información vía OCR. Por favor espere.',
+      html: 'Extrayendo información. Por favor espere.',
       allowOutsideClick: false,
       allowEscapeKey: false,
       didOpen: () => Swal.showLoading()
@@ -1039,7 +1079,7 @@ export default function AdminJugadores() {
         throw new Error('No se detectaron datos legibles en este documento.');
       }
     } catch (err) {
-      console.error('Error OCR modal:', err);
+      console.error('Error al leer el documento:', err);
       Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Ingresa los datos manualmente una vez que el OCR los actualice.', 'info');
     } finally {
       setOcrCargando(false);
@@ -1095,7 +1135,9 @@ export default function AdminJugadores() {
         sexo: datosEditables.sexo,
         fechaNacimiento: datosEditables.fechaNacimiento,
         NUI: datosEditables.NUI,
-        estatus: datosEditables.estatus
+        estatus: datosEditables.estatus,
+        numeroCamiseta: datosEditables.numeroCamiseta,
+        rolEnEquipo: datosEditables.rolEnEquipo
       });
 
       Swal.fire('¡Éxito!', 'Información del jugador actualizada correctamente.', 'success');
@@ -1176,9 +1218,22 @@ export default function AdminJugadores() {
         </button>
         <button
           className="btn btn-sm"
-          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#eff6ff', color: '#2563eb', border: 'none', fontWeight: '700' }}
+          style={{
+            padding: '8px 14px',
+            fontSize: '12px',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: j.DocumentosAprobados ? '#eff6ff' : '#f1f5f9',
+            color: j.DocumentosAprobados ? '#2563eb' : '#94a3b8',
+            border: 'none',
+            fontWeight: '700',
+            cursor: j.DocumentosAprobados ? 'pointer' : 'not-allowed'
+          }}
+          disabled={!j.DocumentosAprobados}
           onClick={() => handleExportar(j)}
-          title="Exportar como ZIP"
+          title={j.DocumentosAprobados ? "Exportar como ZIP" : "Todos los documentos deben estar aprobados para poder exportar"}
         >
           <FaFileArchive /> Exportar
         </button>
@@ -1566,6 +1621,8 @@ export default function AdminJugadores() {
               <EntradaSeleccion etiqueta="Sexo" valor={datosEditables.sexo} onChange={manejarCambioInput} nombre="sexo" opciones={[{ valor: 'Masculino', etiqueta: 'Masculino' }, { valor: 'Femenino', etiqueta: 'Femenino' }, { valor: 'No Binario', etiqueta: 'Otro' }]} />
               <EntradaFormulario etiqueta="Correo electrónico" valor={datosEditables.email} onChange={manejarCambioInput} nombre="email" tipo="email" placeholder="correo@ejemplo.com" />
               <EntradaFormulario etiqueta="NUI" valor={datosEditables.NUI} onChange={manejarCambioInput} nombre="NUI" />
+              <EntradaFormulario etiqueta="Número de camiseta" valor={datosEditables.numeroCamiseta} onChange={manejarCambioInput} nombre="numeroCamiseta" tipo="number" placeholder="Ej. 10" />
+              <EntradaSeleccion etiqueta="Rol en equipo" valor={String(datosEditables.rolEnEquipo ?? '')} onChange={manejarCambioInput} nombre="rolEnEquipo" opciones={[{ valor: '', etiqueta: 'Selecciona un rol...' }, ...rolesEquipo.map(r => ({ valor: String(r.id), etiqueta: r.nombre }))]} />
               <EntradaSeleccion etiqueta="Estatus del jugador" valor={datosEditables.estatus} onChange={manejarCambioInput} nombre="estatus" opciones={[{ valor: '1', etiqueta: 'Activo' }, { valor: '0', etiqueta: 'Baja' }]} />
             </div>
           </div>

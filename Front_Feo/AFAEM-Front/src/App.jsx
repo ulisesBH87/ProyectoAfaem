@@ -10,6 +10,7 @@ const Registrarse = lazy(() => import('./pages/Auth/Registrarse'));
 const RegistrarseCuenta = lazy(() => import('./components/RegistrarseCuenta'));
 const PresidenteEquipoEquipos = lazy(() => import('./pages/Equipos/PresidenteEquipoEquipos'));
 const PresidenteEquipoMisJugadores = lazy(() => import('./pages/Jugadores/PresidenteEquipoMisJugadores'));
+const PresidenteJugadorDocumentos = lazy(() => import('./pages/Jugadores/PresidenteJugadorDocumentos'));
 const AdminEquipo = lazy(() => import('./pages/Equipos/AdminEquipo'));
 const InscribirEquipoALiga = lazy(() => import('./pages/Equipos/InscribirEquipoALiga'));
 const AdminSolicitudes = lazy(() => import('./pages/Admin/AdminSolicitudes'));
@@ -192,6 +193,7 @@ function App() {
             <Route path={ROUTES.PRESIDENTE.REGISTRO_JUGADORES} element={<PresidenteGuard><RegistroJugadores /></PresidenteGuard>} />
             <Route path={ROUTES.PRESIDENTE.EQUIPOS} element={<PresidenteGuard><PresidenteEquipoEquipos /></PresidenteGuard>} />
             <Route path={ROUTES.PRESIDENTE.MIS_JUGADORES} element={<PresidenteGuard><PresidenteEquipoMisJugadores /></PresidenteGuard>} />
+            <Route path={ROUTES.PRESIDENTE.JUGADOR_DOCUMENTOS} element={<PresidenteGuard><PresidenteJugadorDocumentos /></PresidenteGuard>} />
             <Route path={ROUTES.PRESIDENTE.ADMIN_EQUIPO} element={<PresidenteGuard><AdminEquipo /></PresidenteGuard>} />
             <Route path={ROUTES.PRESIDENTE.INSCRIBIR_EQUIPO} element={<PresidenteGuard><InscribirEquipoALiga /></PresidenteGuard>} />
             <Route path={ROUTES.PRESIDENTE.CONFIGURAR_EQUIPO} element={<PresidenteGuard><ConfigurarEquipo /></PresidenteGuard>} />

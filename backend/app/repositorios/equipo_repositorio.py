@@ -252,7 +252,10 @@ def obtener_equipo_temporal_pagado_activo(db, usuario_id):
         .join(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
         .filter(EquipoTemporal.UsuarioId == usuario_id)
         .filter(EquipoTemporal.Activo == True)
-        .filter(OrdenPago.EstatusPagoId == int(EstatusValidacionPago.ACTIVO.value))
+        .filter(OrdenPago.EstatusPagoId.in_([
+            int(EstatusValidacionPago.ACTIVO.value),
+            int(EstatusValidacionPago.ESPERA.value)
+        ]))
         .order_by(EquipoTemporal.EquipoTemporalId.desc())
         .first()
     )
@@ -328,7 +331,10 @@ def obtener_equipos_temporales_pendientes_por_usuario_repo(db, usuario_id):
         .join(OrdenPago, EquipoTemporal.OrdenPagoId == OrdenPago.OrdenPagoId)
         .filter(EquipoTemporal.UsuarioId == usuario_id)
         .filter(EquipoTemporal.Activo == True)
-        .filter(OrdenPago.EstatusPagoId == int(EstatusValidacionPago.ACTIVO.value))
+        .filter(OrdenPago.EstatusPagoId.in_([
+            int(EstatusValidacionPago.ACTIVO.value),
+            int(EstatusValidacionPago.ESPERA.value)
+        ]))
         .order_by(EquipoTemporal.EquipoTemporalId.desc())
         .all()
     )
@@ -352,6 +358,7 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
         DocumentosEntregados.RutaArchivo,
         DocumentosEntregados.FechaEntrega,
         DocumentosEntregados.EstadoValidacionId,
+        DocumentosEntregados.ObservacionesDocumento,
         CatalogoDocumentos.DocumentoId,
         CatalogoDocumentos.NombreDocumento,
         CatalogoRolesPersonas.Nombre.label("RolNombre"),
@@ -380,7 +387,8 @@ def obtener_documentos_jugador_repo(db, persona_id: int):
             "obligatorio": d.Obligatorio,
             "RutaArchivo": d.RutaArchivo,
             "FechaEntrega": d.FechaEntrega,
-            "EstadoValidacionId": d.EstadoValidacionId
+            "EstadoValidacionId": d.EstadoValidacionId,
+            "ObservacionesDocumento": d.ObservacionesDocumento
         }
         for d in docs
     ]
@@ -761,7 +769,8 @@ def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
 
 def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apellido: str,
                             segundo_apellido: str, curp: str, estatus: bool,
-                            email: str = None, sexo_id: int = None, fecha_nacimiento=None, nui: str = None):
+                            email: str = None, sexo_id: int = None, fecha_nacimiento=None, nui: str = None,
+                            numero_camiseta: int = None, rol_en_equipo: int = None):
     from app.modelos.miembro_equipo_modelo import MiembrosEquipo
     from app.modelos.persona_modelo import Personas
     
@@ -792,6 +801,10 @@ def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apel
         
     if estatus is not None:
         miembro.Estatus = estatus
+    if numero_camiseta is not None:
+        miembro.NumeroCamiseta = numero_camiseta
+    if rol_en_equipo is not None:
+        miembro.RolEnEquipo = rol_en_equipo
         
     db.commit()
     db.refresh(persona)
@@ -864,6 +877,19 @@ def obtener_directorio_equipos_repo(db):
 
     return equipos_response
 
+def verificar_documentos_aprobados_repo(db, persona_id: int, fecha_nacimiento) -> bool:
+    from app.modelos.documentos_entregados_modelo import DocumentosEntregados
+    es_menor = es_menor_de_edad(fecha_nacimiento)
+    required_docs_ids = [22, 33, 36, 25, 28] if es_menor else [22, 26, 25, 28]
+
+    approved_count = db.query(DocumentosEntregados.DocumentoAfiliacionId).filter(
+        DocumentosEntregados.PersonaId == persona_id,
+        DocumentosEntregados.DocumentoAfiliacionId.in_(required_docs_ids),
+        DocumentosEntregados.EstadoValidacionId == 1  # 1 es Aprobado/Aceptado en BD
+    ).distinct().count()
+
+    return approved_count >= len(required_docs_ids)
+
 def obtener_directorio_jugadores_repo(db):
     from app.modelos.miembro_equipo_modelo import MiembrosEquipo
     from app.modelos.persona_modelo import Personas
@@ -889,6 +915,7 @@ def obtener_directorio_jugadores_repo(db):
 
     jugadores_response = []
     for (miembro, persona, equipo_nombre, liga, sexo_nombre) in resultados:
+        docs_aprobados = verificar_documentos_aprobados_repo(db, persona.PersonaId, persona.FechaNacimiento)
         # El rol del jugador debería de ser algo que identifique que es jugador, pero asumimos todos por ahora
         jugadores_response.append({
             "MiembroEquipoId": miembro.MiembroEquipoId,
@@ -906,7 +933,10 @@ def obtener_directorio_jugadores_repo(db):
             "Estatus": miembro.Estatus,
             "Email": persona.CorreoElectronico or "N/A",
             "FechaNacimiento": persona.FechaNacimiento,
-            "NUI": persona.NUI or "N/A"
+            "NUI": persona.NUI or "N/A",
+            "DocumentosAprobados": docs_aprobados,
+            "NumeroCamiseta": miembro.NumeroCamiseta,
+            "RolEnEquipo": miembro.RolEnEquipo
         })
 
     return jugadores_response
@@ -924,7 +954,8 @@ def obtener_miembros_equipo_por_id_repo(db, equipo_id):
         MiembrosEquipo.PersonaId,
         Personas.Nombre,
         Personas.PrimerApellido,
-        Personas.SegundoApellido
+        Personas.SegundoApellido,
+        Personas.FechaNacimiento
     ).join(
         Personas, MiembrosEquipo.PersonaId == Personas.PersonaId
     ).filter(
@@ -935,10 +966,12 @@ def obtener_miembros_equipo_por_id_repo(db, equipo_id):
     miembros = []
     for miembro in resultados:
         nombre_completo = f"{miembro.Nombre} {miembro.PrimerApellido} {miembro.SegundoApellido or ''}".strip()
+        docs_aprobados = verificar_documentos_aprobados_repo(db, miembro.PersonaId, miembro.FechaNacimiento)
         miembros.append({
             "MiembroEquipoId": miembro.MiembroEquipoId,
             "PersonaId": miembro.PersonaId,
-            "NombreCompleto": nombre_completo
+            "NombreCompleto": nombre_completo,
+            "DocumentosAprobados": docs_aprobados
         })
     
     return miembros
