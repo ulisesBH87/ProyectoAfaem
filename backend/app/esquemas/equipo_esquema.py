@@ -43,6 +43,7 @@ class MiembroResponse(BaseModel):
     Estatus: bool
     RutaFoto: Optional[str] = None
     NumeroCamiseta: Optional[int] = None
+    EstatusDocumentos: Optional[str] = "Pendiente"
 
     class Config:
         from_attributes = True
@@ -125,6 +126,9 @@ class DirectorioJugadorResponse(BaseModel):
     Email: Optional[str] = None
     FechaNacimiento: Optional[date] = None
     NUI: Optional[str] = None
+    NumeroCamiseta: Optional[int] = None
+    RolEnEquipo: Optional[int] = None
+    DocumentosAprobados: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -153,6 +157,8 @@ class JugadorUpdate(BaseModel):
     SexoId: Optional[int] = None        # 1=Masculino, 2=Femenino, 3=No Binario
     FechaNacimiento: Optional[date] = None
     NUI: Optional[str] = None
+    NumeroCamiseta: Optional[int] = None
+    RolEnEquipo: Optional[int] = None
 
 class PresidenteAdminCreate(BaseModel):
     nombre: str

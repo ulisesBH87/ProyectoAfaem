@@ -47,7 +47,7 @@ export function useOCR() {
   const procesarOCR = async (docKey, file) => {
     Swal.fire({
       title: 'Analizando documento…',
-      html: 'Extrayendo información vía OCR. <b>Por favor espere.</b>',
+      html: 'Extrayendo información. <b>Por favor espere.</b>',
       allowOutsideClick: false,
       allowEscapeKey: false,
       didOpen: () => Swal.showLoading(),
@@ -90,7 +90,7 @@ export function useOCR() {
       });
     } catch {
       Swal.fire({
-        title: 'Error OCR',
+        title: 'Error al leer el documento',
         text: 'No se pudo leer el documento automáticamente. Puedes continuar manualmente.',
         icon: 'warning',
       });

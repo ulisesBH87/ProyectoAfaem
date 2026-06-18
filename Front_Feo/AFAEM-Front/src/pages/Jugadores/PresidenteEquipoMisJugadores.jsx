@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ROUTES } from '../../routes/paths';
 import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
@@ -7,15 +8,15 @@ import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import '../../styles/dashboard.css';
-import { 
-  FaUser, 
-  FaSyncAlt, 
-  FaSortAmountDown, 
-  FaSortAmountUp, 
-  FaCheckCircle, 
-  FaExclamationCircle, 
-  FaUsers, 
-  FaUserInjured, 
+import {
+  FaUser,
+  FaSyncAlt,
+  FaSortAmountDown,
+  FaSortAmountUp,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaUsers,
+  FaUserInjured,
   FaUserPlus,
   FaShieldAlt
 } from 'react-icons/fa';
@@ -74,7 +75,7 @@ export default function PresidenteEquipoMisJugadores() {
     }
     return `${API_BASE}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
   };
-  
+
   // ESTADOS
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -129,23 +130,23 @@ export default function PresidenteEquipoMisJugadores() {
     if (equipoFilter) {
       result = result.filter(p => p.Equipo === equipoFilter);
     }
-    
+
     // Filtro por estatus
     if (filtroEstatus !== 'todos') {
       const boolFiltro = filtroEstatus === 'activos';
       result = result.filter(p => !!p.Estatus === boolFiltro);
     }
-    
+
     // Búsqueda en tiempo real
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(p => 
+      result = result.filter(p =>
         (p.NombreCompleto && p.NombreCompleto.toLowerCase().includes(query)) ||
         (p.Rol && p.Rol.toLowerCase().includes(query)) ||
         (p.Equipo && p.Equipo.toLowerCase().includes(query))
       );
     }
-    
+
     // Ordenamiento por Nombre o ID (simulado)
     result.sort((a, b) => {
       const nameA = a.NombreCompleto || '';
@@ -153,7 +154,7 @@ export default function PresidenteEquipoMisJugadores() {
       if (sortOrder === 'asc') return nameA.localeCompare(nameB);
       return nameB.localeCompare(nameA);
     });
-    
+
     return result;
   }, [players, filtroEstatus, searchTerm, sortOrder, equipoFilter]);
 
@@ -164,7 +165,7 @@ export default function PresidenteEquipoMisJugadores() {
 
   const handleVerDetalles = (player) => {
     Swal.fire({
-      title: 'Ficha del Jugador',
+      title: 'Información del Jugador',
       html: `
         <div style="text-align: left; font-size: 14px; line-height: 1.8; padding: 10px;">
           <p style="margin-bottom: 8px;"><strong>Nombre Completo:</strong> ${player.NombreCompleto}</p>
@@ -177,7 +178,7 @@ export default function PresidenteEquipoMisJugadores() {
       `,
       icon: 'info',
       confirmButtonText: 'Cerrar',
-      confirmButtonColor: 'var(--primary)',
+      confirmButtonColor: '#cbd5e1',
       customClass: {
         popup: 'swal2-popup-custom'
       }
@@ -206,11 +207,11 @@ export default function PresidenteEquipoMisJugadores() {
           { label: 'Inactivos / Bajas', value: inactivos, filter: 'inactivos', color: 'var(--danger)', icon: <FaUserInjured /> },
           { label: 'Equipos a cargo', value: equiposUnicos, color: '#6366f1', icon: <FaUsers />, isMetricOnly: true }
         ].map((stat, i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             onClick={() => stat.filter && setFiltroEstatus(stat.filter)}
             className={`metric-card ${filtroEstatus === stat.filter ? 'active' : ''}`}
-            style={{ 
+            style={{
               cursor: stat.isMetricOnly ? 'default' : 'pointer',
               border: filtroEstatus === stat.filter ? `2px solid ${stat.color}` : '1.5px solid var(--border-light)',
               boxShadow: filtroEstatus === stat.filter ? `0 12px 20px ${stat.color}15` : 'none'
@@ -254,7 +255,7 @@ export default function PresidenteEquipoMisJugadores() {
               </div>
             </div>
           </div>
-          <button 
+          <button
             className="btn btn-secondary btn-sm"
             onClick={() => setSearchParams({})}
           >
@@ -267,12 +268,12 @@ export default function PresidenteEquipoMisJugadores() {
       <div className="dashboard-card" style={{ padding: '24px' }}>
         <div className="table-header-actions" style={{ marginBottom: '20px' }}>
           <h3 className="table-header-title">
-            {equipoFilter ? `Plantilla de ${equipoFilter}` : 'Listado oficial de la plantilla'}
+            {equipoFilter ? `Plantilla de ${equipoFilter}` : 'Lista de jugadores'}
           </h3>
-          
+
           <div className="table-actions-group">
             <div className="search-wrapper-responsive">
-              <SearchBar 
+              <SearchBar
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por nombre o equipo..."
@@ -281,8 +282,8 @@ export default function PresidenteEquipoMisJugadores() {
               />
             </div>
 
-            <button 
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} 
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
               className="sort-btn-responsive"
             >
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
@@ -294,14 +295,14 @@ export default function PresidenteEquipoMisJugadores() {
                 { val: 'activos', label: 'Activos' },
                 { val: 'inactivos', label: 'Inactivos' }
               ].map((item) => (
-                <button 
-                  key={item.val} 
-                  onClick={() => setFiltroEstatus(item.val)} 
-                  style={{ 
-                    padding: '8px 16px', borderRadius: '10px', border: 'none', 
-                    background: filtroEstatus === item.val ? 'white' : 'transparent', 
-                    color: filtroEstatus === item.val ? 'var(--primary)' : 'var(--text-muted)', 
-                    boxShadow: filtroEstatus === item.val ? 'var(--shadow-sm)' : 'none', 
+                <button
+                  key={item.val}
+                  onClick={() => setFiltroEstatus(item.val)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '10px', border: 'none',
+                    background: filtroEstatus === item.val ? 'white' : 'transparent',
+                    color: filtroEstatus === item.val ? 'var(--primary)' : 'var(--text-muted)',
+                    boxShadow: filtroEstatus === item.val ? 'var(--shadow-sm)' : 'none',
                     fontSize: '11px', fontWeight: '800', textTransform: 'uppercase',
                     cursor: 'pointer', transition: 'all 0.2s'
                   }}
@@ -311,8 +312,8 @@ export default function PresidenteEquipoMisJugadores() {
               ))}
             </div>
 
-            <button 
-              onClick={loadData} 
+            <button
+              onClick={loadData}
               className="btn-premium reload-btn-responsive"
             >
               <FaSyncAlt />
@@ -331,10 +332,10 @@ export default function PresidenteEquipoMisJugadores() {
               {paginatedPlayers.map((player) => (
                 <div key={player.MiembroEquipoId || player.id} className="player-card-refined">
                   <div className="player-card-photo-wrapper">
-                    <PlayerAvatar 
-                      rutaFoto={player.RutaFoto} 
-                      nombre={player.NombreCompleto} 
-                      fallbackIcon={<FaUser />} 
+                    <PlayerAvatar
+                      rutaFoto={player.RutaFoto}
+                      nombre={player.NombreCompleto}
+                      fallbackIcon={<FaUser />}
                     />
                   </div>
                   <h4 className="player-card-name" title={player.NombreCompleto}>
@@ -348,29 +349,68 @@ export default function PresidenteEquipoMisJugadores() {
                       {player.Equipo || 'SIN EQUIPO'}
                     </div>
                   )}
-                  <span 
-                    className="status-badge-table player-card-status-badge"
-                    style={{ 
-                      background: player.Estatus ? '#dcfce7' : '#fee2e2', 
-                      color: player.Estatus ? '#166534' : '#991b1b',
-                      border: player.Estatus ? '1px solid #bbf7d0' : '1px solid #fecaca',
-                      marginBottom: '12px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {player.Estatus ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
-                    {player.Estatus ? 'ACTIVO' : 'INACTIVO'}
-                  </span>
-                  
-                  <div className="player-card-actions">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center', marginBottom: '12px' }}>
+                    <span
+                      className="status-badge-table player-card-status-badge"
+                      style={{
+                        background: player.Estatus ? '#dcfce7' : '#fee2e2',
+                        color: player.Estatus ? '#166534' : '#991b1b',
+                        border: player.Estatus ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        margin: 0
+                      }}
+                    >
+                      {player.Estatus ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
+                      {player.Estatus ? 'ACTIVO' : 'INACTIVO'}
+                    </span>
+
+                    {player.EstatusDocumentos && (
+                      <span
+                        className="status-badge-table player-card-status-badge"
+                        style={{
+                          background:
+                            player.EstatusDocumentos === 'Aprobado' ? '#f0fdf4' :
+                              player.EstatusDocumentos === 'Rechazado' ? '#fef2f2' :
+                                player.EstatusDocumentos === 'En espera' ? '#fffbeb' : '#f8fafc',
+                          color:
+                            player.EstatusDocumentos === 'Aprobado' ? '#16a34a' :
+                              player.EstatusDocumentos === 'Rechazado' ? '#dc2626' :
+                                player.EstatusDocumentos === 'En espera' ? '#d97706' : '#64748b',
+                          border:
+                            player.EstatusDocumentos === 'Aprobado' ? '1px solid #bbf7d0' :
+                              player.EstatusDocumentos === 'Rechazado' ? '1px solid #fecaca' :
+                                player.EstatusDocumentos === 'En espera' ? '1px solid #fde68a' : '1px solid #cbd5e1',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          margin: 0
+                        }}
+                      >
+                        {player.EstatusDocumentos === 'Aprobado' && <FaCheckCircle size={10} />}
+                        {player.EstatusDocumentos === 'Rechazado' && <FaExclamationCircle size={10} />}
+                        {player.EstatusDocumentos === 'En espera' && <FaExclamationCircle size={10} style={{ color: '#d97706' }} />}
+                        {player.EstatusDocumentos === 'Pendiente' && <FaUser size={10} style={{ color: '#64748b' }} />}
+                        DOCS: {player.EstatusDocumentos.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="player-card-actions" style={{ display: 'flex', gap: '8px', width: '100%' }}>
                     <button
                       onClick={() => handleVerDetalles(player)}
                       className="btn btn-secondary btn-sm"
-                      style={{ fontSize: '11px', fontWeight: '800', width: '100%', borderRadius: '10px' }}
+                      style={{ fontSize: '11px', fontWeight: '800', flex: 1, borderRadius: '10px' }}
                     >
-                      Ver Detalle
+                      Detalle
+                    </button>
+                    <button
+                      onClick={() => navigate(ROUTES.PRESIDENTE.JUGADOR_DOCUMENTOS.replace(':miembroEquipoId', player.MiembroEquipoId))}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '11px', fontWeight: '800', flex: 1, borderRadius: '10px', background: '#0b4ea6', border: 'none', color: 'white' }}
+                    >
+                      Docs
                     </button>
                   </div>
                 </div>

@@ -23,9 +23,32 @@ def subir_documento_repo(db, persona_id, documento_afiliacion_id, ruta):
     return doc
 
 def subir_documento_repo2(db, persona_id, documento_afiliacion_id, ruta, solicitud_id):
+    import os
 
     if not solicitud_id:
         raise ValueError("solicitud_id es obligatorio para registrar el documento")
+
+    existing = db.query(DocumentosEntregados).filter(
+        DocumentosEntregados.PersonaId == persona_id,
+        DocumentosEntregados.DocumentoAfiliacionId == documento_afiliacion_id,
+        DocumentosEntregados.SolicitudId == solicitud_id
+    ).first()
+
+    if existing:
+        try:
+            from app.servicios.documentos_servicio import resolver_ruta_absoluta
+            old_path = resolver_ruta_absoluta(existing.RutaArchivo)
+            if old_path and os.path.exists(old_path):
+                os.remove(old_path)
+        except Exception as e:
+            print(f"Error removing old file on re-upload: {e}")
+
+        existing.RutaArchivo = ruta
+        existing.FechaEntrega = datetime.now()
+        existing.EstadoValidacionId = 2  # PENDIENTE / Espera (valida de nuevo)
+        existing.ObservacionesDocumento = None
+        existing.FechaValidacion = None
+        return existing
 
     doc = DocumentosEntregados(
         PersonaId=persona_id,

@@ -315,7 +315,7 @@ export default function AdminCrearJugador() {
     if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
       Swal.fire({
         title: 'Analizando Documento...',
-        html: 'Extrayendo información vía OCR. Por favor espere.',
+        html: 'Extrayendo información. Por favor espere.',
         allowOutsideClick: false,
         allowEscapeKey: false,
         didOpen: () => { Swal.showLoading(); }
@@ -400,7 +400,7 @@ export default function AdminCrearJugador() {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
       } catch (err) {
-        console.error("Error OCR:", err);
+        console.error("Error al leer el documento:", err);
         Swal.fire('Aviso', 'No se pudo extraer la información automáticamente. Por favor ingrésala de forma manual.', 'info');
       }
     }

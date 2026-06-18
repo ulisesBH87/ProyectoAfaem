@@ -77,14 +77,14 @@ export default function DetalleSolicitudModal({
           const key = `${j.Id}-${d.Tipo}`;
           
           let dbEstado = 'pendiente';
-          if (d.EstadoValidacionId === 2) {
+          if (d.EstadoValidacionId === 1) {
             dbEstado = 'aprobado';
           } else if (d.EstadoValidacionId === 3) {
             dbEstado = 'rechazado';
           }
 
           if (guardadas && guardadas[key]) {
-            const finalEstado = (d.EstadoValidacionId === 2 || d.EstadoValidacionId === 3)
+            const finalEstado = (d.EstadoValidacionId === 1 || d.EstadoValidacionId === 3)
               ? dbEstado
               : (guardadas[key].estado || dbEstado);
 
