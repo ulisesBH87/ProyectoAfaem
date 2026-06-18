@@ -15,7 +15,7 @@ def subir_documento_repo(db, persona_id, documento_afiliacion_id, ruta):
         DocumentoAfiliacionId=documento_afiliacion_id,
         RutaArchivo=ruta,
         FechaEntrega=datetime.now(),
-        EstadoValidacionId=DocumentoEstatus.PENDIENTE   
+        EstadoValidacionId=DocumentoEstatus.ESPERA   
     )
     #print("PERSONA USADA PARA DOCS REPO 1:", persona_id)
     db.add(doc)
@@ -33,7 +33,7 @@ def subir_documento_repo2(db, persona_id, documento_afiliacion_id, ruta, solicit
         DocumentoAfiliacionId=documento_afiliacion_id,
         RutaArchivo=ruta,
         FechaEntrega=datetime.now(),
-        EstadoValidacionId=DocumentoEstatus.PENDIENTE
+        EstadoValidacionId=DocumentoEstatus.ESPERA
     )
     #print("🚀🚀🚀🚀VPERSONA USADA PARA DOCS🚀🚀🚀🚀:", persona_id)
     db.add(doc)

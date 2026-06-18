@@ -155,8 +155,7 @@ export default function CompletarJugadoresEquipo() {
     nacAbuelaPaterna: '',
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
-    juegoClubExtranjero: '',
-    nui: ''
+    juegoClubExtranjero: ''
   });
 
   // Detección de minoría de edad
@@ -909,7 +908,6 @@ export default function CompletarJugadoresEquipo() {
       formData.append('rol_en_equipo', extractedData.posicion || '3');
       formData.append('numero_camiseta', extractedData.numCamiseta || '0');
       formData.append('seguro_id', parseInt(selectedSeguroId, 10));
-      formData.append('nui', (extractedData.nui || '').toString().trim());
 
       if (extractedData.esForaneo) {
         formData.append('extranjero', '1');

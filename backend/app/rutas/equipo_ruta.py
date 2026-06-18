@@ -431,7 +431,7 @@ async def agregar_jugador_equipo_existente(
         exc_type, exc_obj, exc_tb = sys.exc_info()
         tb = traceback.format_exc()
         error_msg = str(e)
-        #print("ERROR EN AGREGAR JUGADOR:", tb)
+        print("ERROR EN AGREGAR JUGADOR:", tb, file=sys.stderr)
         raise HTTPException(status_code=500, detail=f"Error interno")
 
 @router.post("/registrar-jugador")
@@ -1801,7 +1801,7 @@ async def registrar_presidente_admin(
         if doc_files:
             docs_entregados = db.query(DocumentosEntregados).filter(DocumentosEntregados.PersonaId == nueva_persona.PersonaId).all()
             for doc in docs_entregados:
-                doc.EstadoValidacionId = int(DocumentoEstatus.APROBADO)
+                doc.EstadoValidacionId = int(DocumentoEstatus.ACEPTADO)
                 doc.FechaValidacion = datetime.now()
                 
         # Force EstatusId of PresidenteEquipo to 7 (Activo)
