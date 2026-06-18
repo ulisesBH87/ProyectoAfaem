@@ -227,18 +227,36 @@ export default function AdminSolicitudes() {
       const tieneNoAprobados = Object.values(reporteValidacion).some(v => v.estado !== 'aprobado');
 
       if (tieneNoAprobados) {
-        const { isConfirmed } = await Swal.fire({
-          title: 'Documentos pendientes',
-          text: 'La solicitud solo se aprobará cuando todos los documentos estén aprobados. Existen documentos sin aprobar. ¿Deseas guardar el progreso o continuar revisando documentos?',
+        const result = await Swal.fire({
+          title: 'Documentos pendientes / rechazados',
+          text: 'Existen documentos que no han sido aprobados. ¿Deseas rechazar formalmente la solicitud para que el presidente pueda corregir sus archivos, o solo deseas guardar el progreso para continuar después?',
           icon: 'warning',
           showCancelButton: true,
-          confirmButtonText: 'Guardar progreso',
-          cancelButtonText: 'Seguir revisando documentos',
-          confirmButtonColor: '#0b4ea6',
+          showDenyButton: true,
+          confirmButtonText: 'Rechazar solicitud',
+          denyButtonText: 'Guardar progreso',
+          cancelButtonText: 'Seguir revisando',
+          confirmButtonColor: '#ef4444',
+          denyButtonColor: '#0b4ea6',
           cancelButtonColor: '#94a3b8'
         });
 
-        if (isConfirmed) {
+        if (result.isConfirmed) {
+          try {
+            setLoading(true);
+            await updateSolicitudEstatus(id, 3, JSON.stringify(reporteValidacion));
+            setModalAbierto(false);
+            Swal.fire({
+              title: 'Solicitud rechazada',
+              text: 'La solicitud ha sido rechazada y se le ha notificado al presidente para que corrija sus documentos.',
+              icon: 'info'
+            }).then(() => loadSolicitudes(true));
+          } catch (error) {
+            Swal.fire('Error', 'No se pudo rechazar la solicitud.', 'error');
+          } finally {
+            setLoading(false);
+          }
+        } else if (result.isDenied) {
           await handleGuardarProgreso(id, reporteValidacion);
         }
         return;

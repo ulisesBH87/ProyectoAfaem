@@ -13,8 +13,9 @@ import { jsPDF } from 'jspdf';
 import { API_BASE } from '../../config/config';
 import { parseJwt, verificarCurp } from '../../services/auth';
 import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
-
+import Modal from '../../components/partials/Forms/Modal';
 import { useRBAC } from '../../hooks/useRBAC';
+import { openSecurePath } from '../../utils/secureFetch';
 
 const convertToDDMMYYYY = (dateStr) => {
   if (!dateStr) return '';
@@ -242,6 +243,21 @@ function PreRegistroPresidente() {
   const [mensajeRechazoSolicitud, setMensajeRechazoSolicitud] = useState('');
   const [curpExistente, setCurpExistente] = useState(false);
   const [tieneEstadoBackend, setTieneEstadoBackend] = useState(false);
+  const [referenciaPago, setReferenciaPago] = useState('');
+  const [previewDoc, setPreviewDoc] = useState(null); // { file: File, title: string }
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  useEffect(() => {
+    if (previewDoc?.file) {
+      const url = URL.createObjectURL(previewDoc.file);
+      setPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setPreviewUrl('');
+    }
+  }, [previewDoc]);
 
   // PASO 1: Pago y Seguros
   const [numPersonas, setNumPersonas] = useState('');
@@ -279,6 +295,7 @@ function PreRegistroPresidente() {
 
   // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
+  const [documentosGuardados, setDocumentosGuardados] = useState([]);
   const [ocrResults, setOcrResults] = useState(() => {
     try {
       const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -334,6 +351,7 @@ function PreRegistroPresidente() {
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
   const [asociacion, setAsociacion] = useState('AFAEM');
   const [liga, setLiga] = useState('');
+  const [cargoSeleccionado, setCargoSeleccionado] = useState('Presidente Equipo');
   const [ligasCatalogo, setLigasCatalogo] = useState([]);
 
   // Estados para validación fallida de fotografía y captura manual de OCR
@@ -473,7 +491,7 @@ function PreRegistroPresidente() {
       } else if (estatusId === 4) {
         // Documentos personales en revisión por el admin
         setEstadoPago(3); // Para que sepa que el pago ya fue validado
-        setPasoActual(4); // Nuevo paso: Revisión de documentos
+        setPasoActual(5); // Nuevo paso: Validación de documentos
       } else if (estatusId === 3) {
         // Ya pagó, falta subir los documentos personales (INE, Acta, etc)
         setEstadoPago(3); // Asegurar estado aprobado en UI local
@@ -534,6 +552,62 @@ function PreRegistroPresidente() {
     return fallback;
   };
 
+  const formatearMensajeRechazo = (observaciones) => {
+    if (!observaciones) return 'Tu solicitud fue rechazada.';
+    if (typeof observaciones !== 'string') return observaciones;
+    const obsTrimmed = observaciones.trim();
+    if (!obsTrimmed.startsWith('{')) return observaciones;
+    try {
+      const parsed = JSON.parse(obsTrimmed);
+      if (parsed && typeof parsed === 'object') {
+        const keysMap = {
+          'ACTA_NACIMIENTO': 'Acta de nacimiento',
+          'INE': 'Identificación oficial',
+          'FOTOGRAFIA': 'Fotografía',
+          'FORMATO_DIRECTIVO': 'Formato de afiliación'
+        };
+
+        const lines = [];
+        Object.entries(parsed).forEach(([key, val]) => {
+          if (val && (val.estado === 'rechazado' || val.estado === 'Rechazado')) {
+            const docKey = key.replace(/^\d+-/, '');
+            const docLabel = keysMap[docKey] || docKey.replace(/_/g, ' ');
+            const motivo = val.motivo || '';
+            const detalle = val.detalle ? `: ${val.detalle}` : '';
+
+            if (motivo || detalle) {
+              lines.push(`• ${docLabel}: ${motivo}${detalle}`);
+            } else {
+              lines.push(`• ${docLabel}: Documento rechazado`);
+            }
+          }
+        });
+        if (lines.length > 0) {
+          return lines.join('\n');
+        }
+      }
+    } catch (e) {
+      console.warn("Error parsing observations JSON:", e);
+    }
+    return observaciones;
+  };
+
+  const validarArchivoPermitido = (file) => {
+    if (!file) return false;
+    const extensionesPermitidas = ['pdf', 'png', 'jpg', 'jpeg'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!extensionesPermitidas.includes(ext)) {
+      Swal.fire({
+        title: 'Formato de archivo no válido',
+        text: 'Solo se permiten documentos en formato PDF o imágenes (PNG, JPG, JPEG).',
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return false;
+    }
+    return true;
+  };
+
   const resolverFlujoBackend = async (data, token) => {
     setTieneEstadoBackend(true);
 
@@ -555,18 +629,24 @@ function PreRegistroPresidente() {
       data.observaciones || localStorage.getItem(`motivo_rechazo_${ordenId}`) || solicitud?.observaciones,
       'El comprobante de pago no fue aceptado.'
     );
-    const observacionesSolicitud = obtenerMensajeObservaciones(
-      solicitud?.observaciones,
-      'Tu solicitud fue rechazada.'
+    const observacionesSolicitud = formatearMensajeRechazo(
+      obtenerMensajeObservaciones(
+        solicitud?.observaciones,
+        'Tu solicitud fue rechazada.'
+      )
     );
 
     setOrdenPendienteId(ordenId);
     setEstadoPago(estatusOrden);
     setEstadoSolicitud(estatusSolicitud);
     setSolicitudActualId(solicitudId);
+    if (solicitudId) {
+      await cargarDocumentosSolicitud(solicitudId);
+    }
     setMensajeRechazoPago(observacionesPago);
     setMensajeRechazoSolicitud(observacionesSolicitud);
     setTotalOrdenPendiente(Number(data.total || data.TotalPagar || 0));
+    setReferenciaPago(data.referencia_pago || data.ReferenciaPago || '');
 
     if (data.afiliacion) {
       setTipoAfiliacion(data.afiliacion);
@@ -604,15 +684,16 @@ function PreRegistroPresidente() {
       }
 
       if (estatusSolicitud === 1) {
-        setPasoActual(4);
+        setPasoActual(5); // Paso 3: Validación
         return;
       }
 
       if (estatusSolicitud === 3) {
-        setPasoActual(3);
+        setPasoActual(5); // Paso 3: Validación
         await Swal.fire({
-          title: 'Tu solicitud fue rechazada',
-          text: `Motivo: ${observacionesSolicitud} Vuelve a subir tus documentos.`,
+          title: 'Tu solicitud tiene observaciones',
+          //text: `Motivo general: ${observacionesSolicitud}. Por favor, revisa el estado de tus documentos y reemplaza los que fueron rechazados.`,
+          text: `Por favor, revisa el estado de tus documentos y reemplaza los que fueron rechazados.`,
           icon: 'warning',
           confirmButtonColor: '#0b4ea6'
         });
@@ -630,6 +711,7 @@ function PreRegistroPresidente() {
       const data = await res.json();
 
       setTotalOrdenPendiente(Number(data.TotalPagar || data.total || 0));
+      setReferenciaPago(data.ReferenciaPago || data.referencia_pago || '');
 
       const detalles = data.OrdenPagoDetalleRelacion || data.detalles || [];
       const segurosOrden = {};
@@ -646,6 +728,63 @@ function PreRegistroPresidente() {
       setDetalleInscripciones(inscripcionesOrden);
     } catch (err) {
       console.warn('No se pudo cargar detalle de la orden:', err);
+    }
+  };
+
+  const cargarDocumentosSolicitud = async (solId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !solId) return;
+
+      const res = await fetch(`${API_BASE}/solicitud/${solId}/documentos`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const docs = data.Jugadores?.[0]?.Documentos || [];
+        setDocumentosGuardados(docs);
+      }
+    } catch (err) {
+      console.warn("No se pudieron cargar los documentos guardados:", err);
+    }
+  };
+
+  const handleReemplazarDocumento = async (docAfiliacionId, archivo) => {
+    if (!solicitudActualId) {
+      Swal.fire('Error', 'No se pudo asociar la solicitud para subir el documento.', 'error');
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Subiendo documento...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('documento_afiliacion_ids', docAfiliacionId);
+      formData.append('archivo', archivo);
+      formData.append('solicitud_id', solicitudActualId);
+
+      const res = await fetch(`${API_BASE}/documentos/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Error al subir el documento.');
+      }
+
+      Swal.close();
+      await Swal.fire('¡Éxito!', 'El documento ha sido subido y enviado a revisión.', 'success');
+      await cargarDocumentosSolicitud(solicitudActualId);
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', err.message || 'No se pudo subir el documento.', 'error');
     }
   };
 
@@ -671,7 +810,7 @@ function PreRegistroPresidente() {
   ];
 
   // ================== FUNCIÓN PARA GENERAR PDF DE CUOTA ==================
-  const generarPDFCuota = (ordenId) => {
+  const generarPDFCuota = (ordenId, refDirecta = null) => {
     try {
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -726,6 +865,9 @@ function PreRegistroPresidente() {
       doc.text(`Cuenta: ${bankInfo.cuenta}`, margin, yPosition);
       yPosition += 6;
       doc.text(`CLABE: ${bankInfo.clabe}`, margin, yPosition);
+      yPosition += 6;
+      const refFinal = refDirecta || referenciaPago || 'N/A';
+      doc.text(`Referencia Obligatoria: ${refFinal}`, margin, yPosition);
       yPosition += 12;
 
       // Desglose de Cuota
@@ -770,7 +912,7 @@ function PreRegistroPresidente() {
       doc.setFont(undefined, 'normal');
       doc.text('Por favor, incluye la referencia obligatoria en tu transferencia bancaria.', margin, yPosition, { maxWidth: contentWidth });
       yPosition += 6;
-      doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro.', margin, yPosition, { maxWidth: contentWidth });
+      doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro. Recuerda que el comprobante de pago debe tener la referencia obligatoria impresa para que sea aceptado.', margin, yPosition, { maxWidth: contentWidth });
 
       // Descargar PDF
       const nombreArchivo = `Cuota_AFAEM_${ordenId}_${today.replace(/\//g, '-')}.pdf`;
@@ -978,7 +1120,7 @@ function PreRegistroPresidente() {
 
           // Generar PDF de cuota
           setTimeout(() => {
-            generarPDFCuota(newOrdenId);
+            generarPDFCuota(newOrdenId, ordenData.ReferenciaPago || ordenData.referencia_pago);
           }, 500);
 
           Swal.fire({
@@ -1005,6 +1147,17 @@ function PreRegistroPresidente() {
   const handleFileUpload = (documentKey, file) => {
     if (!file) return;
     setError(null); // Clear previous errors
+
+    try {
+      const metadata = JSON.parse(localStorage.getItem('afaem_doc_metadata') || '{}');
+      metadata[documentKey] = {
+        name: file.name,
+        size: file.size
+      };
+      localStorage.setItem('afaem_doc_metadata', JSON.stringify(metadata));
+    } catch (e) {
+      console.warn("Error storing file metadata:", e);
+    }
 
     if (documentKey === "fotografia") {
       setFotoPreview(null);
@@ -1168,7 +1321,7 @@ function PreRegistroPresidente() {
     } catch (err) {
       Swal.fire({
         title: 'Error',
-        text: 'No se pudo leer el documento de forma automática. Podrás continuar.',
+        text: 'No se pudo leer el documento de forma automática pero podrás continuar de forma manual.',
         icon: 'warning'
       });
     }
@@ -1312,8 +1465,10 @@ function PreRegistroPresidente() {
       safeSetField(form, 'de', mes);
       safeSetField(form, 'del 20', anio);
 
-      // Cargo: Presidente
-      safeSetField(form, 'Cargo', 'PRESIDENTE');
+      // Cargo: dinámico de acuerdo a la selección y tamaño de letra ajustado
+      const cargoValor = (cargoSeleccionado || 'Presidente Equipo').toUpperCase();
+      const cargoFontSize = cargoValor.length > 10 ? 8 : 10;
+      safeSetField(form, 'Cargo', cargoValor, cargoFontSize);
 
       // Generar bytes del PDF
       const pdfBytes = await pdfDoc.save();
@@ -1479,11 +1634,24 @@ function PreRegistroPresidente() {
         throw new Error('No se encontró el ID del usuario en la sesión.');
       }
 
-      // Verify all 4 documents are present
+      // Verify all 4 documents are present either locally or on the server
       const requiredDocs = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
+      const docIdMap = {
+        actaNacimiento: 8,
+        identificacion: 38,
+        fotografia: 37,
+        formatoAfiliacion: 10
+      };
       for (const docKey of requiredDocs) {
-        if (!documents[docKey]) {
+        const docAfiliacionId = docIdMap[docKey];
+        const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId));
+
+        if (!documents[docKey] && !docGuardado) {
           throw new Error(`Falta subir el documento: ${requisitos.find(r => r.documento === docKey)?.nombre}`);
+        }
+
+        if (docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3 && !documents[docKey]) {
+          throw new Error(`Debes reemplazar el documento rechazado: ${requisitos.find(r => r.documento === docKey)?.nombre}`);
         }
       }
 
@@ -1499,12 +1667,7 @@ function PreRegistroPresidente() {
         throw new Error('No se encontró la solicitud relacionada con tu orden de pago.');
       }
 
-      // ── SUBIDA REAL DE LOS 4 DOCUMENTOS DEL PRESIDENTE ──────────────
-      // IDs de DocumentoAfiliacion confirmados en base de datos:
-      //   actaNacimiento   → 8  (ACTA_NACIMIENTO, Presidente de Equipo)
-      //   identificacion   → 38 (INE, Presidente de Equipo)
-      //   fotografia       → 37 (FOTOGRAFIA, Presidente de Equipo)
-      //   formatoAfiliacion→ 10 (FORMATO_DIRECTIVO, Presidente de Equipo)
+      // ── SUBIDA REAL DE LOS DOCUMENTOS NUEVOS O MODIFICADOS DEL PRESIDENTE ──────────────
       const docMapping = [
         { key: 'actaNacimiento', docAfiliacionId: 8 },
         { key: 'identificacion', docAfiliacionId: 38 },
@@ -1513,23 +1676,29 @@ function PreRegistroPresidente() {
       ];
 
       const formDataDocs = new FormData();
+      let filesToUploadCount = 0;
       for (const { key, docAfiliacionId } of docMapping) {
-        formDataDocs.append('documento_afiliacion_ids', docAfiliacionId);
-        formDataDocs.append('archivo', documents[key]);
+        if (documents[key]) {
+          formDataDocs.append('documento_afiliacion_ids', docAfiliacionId);
+          formDataDocs.append('archivo', documents[key]);
+          filesToUploadCount++;
+        }
       }
       if (solicitudActualId) {
         formDataDocs.append('solicitud_id', solicitudActualId);
       }
 
-      const resUpload = await fetch(`${API_BASE}/documentos/`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formDataDocs
-      });
+      if (filesToUploadCount > 0) {
+        const resUpload = await fetch(`${API_BASE}/documentos/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formDataDocs
+        });
 
-      if (!resUpload.ok) {
-        const errData = await resUpload.json().catch(() => ({}));
-        throw new Error(`Error al subir documentos: ${errData.detail || resUpload.statusText}`);
+        if (!resUpload.ok) {
+          const errData = await resUpload.json().catch(() => ({}));
+          throw new Error(`Error al subir documentos: ${errData.detail || resUpload.statusText}`);
+        }
       }
 
       // ── MARCAR SOLICITUD COMO ENVIADA (Status 1 = ESPERA) ─────────
@@ -1604,6 +1773,109 @@ function PreRegistroPresidente() {
       Swal.fire({
         title: 'Error',
         text: err.message || 'No se pudieron subir los documentos.',
+        icon: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinalizarCorreccion = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Verify all 4 documents are approved (2) or en espera (1), none rejected (3)
+      const docIdMap = {
+        actaNacimiento: 8,
+        identificacion: 38,
+        fotografia: 37,
+        formatoAfiliacion: 10
+      };
+      const requiredDocs = ['actaNacimiento', 'identificacion', 'fotografia', 'formatoAfiliacion'];
+      for (const docKey of requiredDocs) {
+        const docAfiliacionId = docIdMap[docKey];
+        const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId));
+        if (!docGuardado) {
+          throw new Error(`Falta subir el documento: ${requisitos.find(r => r.documento === docKey)?.nombre}`);
+        }
+        if (Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3) {
+          throw new Error(`Debes reemplazar el documento rechazado: ${requisitos.find(r => r.documento === docKey)?.nombre}`);
+        }
+      }
+
+      Swal.fire({
+        title: 'Finalizando corrección...',
+        html: 'Enviando a revisión. <b>Por favor espere.</b>',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const token = localStorage.getItem('token');
+      if (!solicitudActualId) {
+        throw new Error('No se encontró la solicitud.');
+      }
+
+      // We call the complete registration endpoint so that the status is updated back to 1 (ESPERA)
+      let sexoIdVal = null;
+      if (ocrResults.sexo === 'MASCULINO') sexoIdVal = 1;
+      else if (ocrResults.sexo === 'FEMENINO') sexoIdVal = 2;
+      else if (ocrResults.sexo === 'NO BINARIO') sexoIdVal = 3;
+
+      const queryParams = new URLSearchParams({
+        solicitud_id: solicitudActualId
+      });
+      if (ocrResults.curp) queryParams.append('curp', ocrResults.curp);
+      if (sexoIdVal) queryParams.append('sexo_id', sexoIdVal);
+      if (ocrResults.fecha_nac) {
+        queryParams.append('fecha_nacimiento', convertToYYYYMMDD(ocrResults.fecha_nac));
+      }
+      if (liga) {
+        queryParams.append('liga_id', liga);
+      }
+      if (ocrResults.equipo) {
+        queryParams.append('nombre_equipo', ocrResults.equipo.trim());
+      }
+      if (tipoAfiliacion) {
+        queryParams.append('afiliacion', tipoAfiliacion);
+      }
+      const telLimpio = (ocrResults.telefono || '').replace(/\D/g, '');
+      if (telLimpio) {
+        queryParams.append('telefono', codigoPais + telLimpio);
+      }
+      if (ocrResults.nacionalidad) {
+        queryParams.append('lugar_nacimiento', ocrResults.nacionalidad.trim());
+      }
+
+      const resCompleta = await fetch(`${API_BASE}/solicitud/solicitud-completa?${queryParams.toString()}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!resCompleta.ok) {
+        const errData = await resCompleta.json().catch(() => ({}));
+        throw new Error(errData.detail || 'No se pudo cambiar el estado de la solicitud a ESPERA.');
+      }
+
+      // Refresh RBAC
+      if (refreshAccess) await refreshAccess();
+
+      Swal.fire({
+        title: '¡Corrección Enviada!',
+        text: 'Tus documentos corregidos han sido enviados al administrador para su revisión.',
+        icon: 'success',
+        confirmButtonColor: '#0b4ea6'
+      }).then(() => {
+        setEstadoSolicitud(1);
+        setPasoActual(4); // Pantalla de revisión
+      });
+
+    } catch (err) {
+      console.error("Error en finalizar corrección:", err);
+      setError(err.message || 'Error al finalizar la corrección.');
+      Swal.fire({
+        title: 'Error',
+        text: err.message || 'No se pudo finalizar la corrección.',
         icon: 'error'
       });
     } finally {
@@ -1787,17 +2059,17 @@ function PreRegistroPresidente() {
         .prereg-dark-page .input-label { color: rgba(255,255,255,0.6); }
         .prereg-dark-page .section-title-small { color: rgba(255,255,255,0.88); }
         .prereg-dark-page .input-number {
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.1);
+          border: 1.5px solid rgba(255,255,255,0.35);
           color: white;
           border-radius: 12px;
           padding: 10px 14px;
           transition: all 0.2s ease;
         }
         .prereg-dark-page .input-number:focus {
-          background: rgba(93,135,229,0.1);
+          background: rgba(93,135,229,0.15);
           border-color: #5d87e5;
-          box-shadow: 0 0 0 3px rgba(93,135,229,0.15);
+          box-shadow: 0 0 0 3px rgba(93,135,229,0.25);
           outline: none;
         }
         .prereg-dark-page .insurance-input {
@@ -2068,8 +2340,8 @@ function PreRegistroPresidente() {
           </div>
         )}
 
-        {/* ===== GLASS STEPPER HEADER (PASO 1 Y 3) ===== */}
-        {(pasoActual === 1 || pasoActual === 3) && (
+        {/* ===== GLASS STEPPER HEADER (PASO 1, 2 Y 3) ===== */}
+        {(pasoActual === 1 || pasoActual === 3 || pasoActual === 5) && (
           <div style={{
             padding: '18px 30px 14px',
             borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -2090,19 +2362,19 @@ function PreRegistroPresidente() {
                   boxShadow: pasoActual === 1 ? '0 8px 20px rgba(11,78,166,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
                 }}>
-                  {pasoActual === 3 ? <span style={{ color: '#34d399', fontSize: '16px' }}>✓</span> : <FaMoneyBillWave style={{ color: 'white' }} />}
+                  {pasoActual > 1 ? <span style={{ color: '#34d399', fontSize: '16px' }}>✓</span> : <FaMoneyBillWave style={{ color: 'white' }} />}
                 </div>
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 1 ? '#5d87e5' : 'rgba(52,211,153,0.8)' }}>
                   Paso 1: Cuotas
                 </span>
               </div>
 
-              {/* Connector */}
-              <div style={{ position: 'relative', width: '100px', height: '2px', margin: '0 10px', marginBottom: '20px' }}>
+              {/* Connector 1 */}
+              <div style={{ position: 'relative', width: '80px', height: '2px', margin: '0 10px', marginBottom: '20px' }}>
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }} />
                 <div style={{
                   position: 'absolute', top: 0, left: 0, height: '100%',
-                  width: pasoActual === 3 ? '100%' : '0%',
+                  width: pasoActual > 1 ? '100%' : '0%',
                   background: 'linear-gradient(90deg, #10b981, #34d399)',
                   borderRadius: '2px', transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
                   boxShadow: '0 0 8px rgba(16,185,129,0.5)',
@@ -2113,16 +2385,48 @@ function PreRegistroPresidente() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '12px',
-                  background: pasoActual === 3 ? 'linear-gradient(135deg, #0b4ea6, #1e40af)' : 'rgba(255,255,255,0.04)',
-                  border: pasoActual === 3 ? '1px solid rgba(93,135,229,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                  background: pasoActual === 3 ? 'linear-gradient(135deg, #0b4ea6, #1e40af)' : (pasoActual > 3 ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)'),
+                  border: pasoActual === 3 ? '1px solid rgba(93,135,229,0.5)' : (pasoActual > 3 ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)'),
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 3 ? '0 8px 20px rgba(11,78,166,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
                 }}>
-                  <FaFileAlt style={{ color: pasoActual === 3 ? 'white' : 'rgba(255,255,255,0.25)' }} />
+                  {pasoActual > 3 ? <span style={{ color: '#34d399', fontSize: '16px' }}>✓</span> : <FaFileAlt style={{ color: pasoActual === 3 ? 'white' : 'rgba(255,255,255,0.25)' }} />}
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 3 ? '#5d87e5' : 'rgba(255,255,255,0.25)' }}>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 3 ? '#5d87e5' : (pasoActual > 3 ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.25)') }}>
                   Paso 2: Documentos
+                </span>
+              </div>
+
+              {/* Connector 2 */}
+              <div style={{ position: 'relative', width: '80px', height: '2px', margin: '0 10px', marginBottom: '20px' }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }} />
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, height: '100%',
+                  width: pasoActual > 3 ? '100%' : '0%',
+                  background: 'linear-gradient(90deg, #10b981, #34d399)',
+                  borderRadius: '2px', transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
+                  boxShadow: '0 0 8px rgba(16,185,129,0.5)',
+                }} />
+              </div>
+
+              {/* STEP 3 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '12px',
+                  background: pasoActual === 5 ? 'linear-gradient(135deg, #0b4ea6, #1e40af)' : 'rgba(255,255,255,0.04)',
+                  border: pasoActual === 5 ? '1px solid rgba(93,135,229,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
+                  boxShadow: pasoActual === 5 ? '0 8px 20px rgba(11,78,166,0.4),inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
+                  transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                }}>
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="18" width="18" xmlns="http://www.w3.org/2000/svg" style={{ color: pasoActual === 5 ? 'white' : 'rgba(255,255,255,0.25)' }}>
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 5 ? '#5d87e5' : 'rgba(255,255,255,0.25)' }}>
+                  Paso 3: Validación
                 </span>
               </div>
             </div>
@@ -2199,8 +2503,8 @@ function PreRegistroPresidente() {
                   </div>
                 ) : (
                   <div className="pago-card">
-                    <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
-                      <label className="input-label" style={{ textAlign: 'left', fontSize: '13px', margin: 0, flex: 1 }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
+                    <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '15px' }}>
+                      <label className="input-label" style={{ textAlign: 'left', fontSize: '13px', margin: 0, color: 'rgba(255,255,255,0.9)' }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -2221,7 +2525,7 @@ function PreRegistroPresidente() {
                       <p style={{ fontSize: '12px', fontWeight: '800', color: 'rgba(255,255,255,0.85)', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
                         DISTRIBUCIÓN DE SEGUROS
                       </p>
-                      <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
+                      <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239, 68, 68, 0.25)', color: '#ff8a8a', border: '1.5px solid #ef4444', borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
                     </div>
 
                     {cargandoSeguros ? (
@@ -2242,7 +2546,8 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${cantAsignada > 0 ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '15px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '15px', cursor: 'pointer' }}
+                                  onClick={() => abrirModalDetalle(seg)}
                                 >
                                   {cantAsignada > 0 && (
                                     <div style={{
@@ -2266,26 +2571,28 @@ function PreRegistroPresidente() {
                                       {cantAsignada}
                                     </div>
                                   )}
-                                  <div style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                    <div className="insurance-player-content" style={{ flex: 1, textAlign: 'left', paddingRight: '10px' }}>
-                                      <p className="insurance-player-name" style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800' }}>{seg.nombre}</p>
-                                      <span className="insurance-player-price" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>${seg.precio} c/u</span>
-                                    </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginBottom: '12px', textAlign: 'left' }}>
+                                    <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
+                                    <span className="insurance-player-price" style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>${seg.precio} c/u</span>
 
-                                    {/* Input directo en la tarjeta */}
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      pattern="[0-9]*"
-                                      maxLength="2"
-                                      className={`insurance-input ${totalAsignados > segurosRequeridos && cantAsignada > 0 ? 'error-state' : ''}`}
-                                      value={asignacionSeguros[seg.id] ?? ''}
-                                      onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
-                                        setError(null);
-                                      }}
-                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }} onClick={(e) => e.stopPropagation()}>
+                                      <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: '600' }}>Cantidad:</span>
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength="2"
+                                        className={`insurance-input ${totalAsignados > segurosRequeridos && cantAsignada > 0 ? 'error-state' : ''}`}
+                                        value={asignacionSeguros[seg.id] ?? ''}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onChange={(e) => {
+                                          const val = e.target.value.replace(/\D/g, '');
+                                          setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
+                                          setError(null);
+                                        }}
+                                        style={{ width: '55px', height: '32px', textAlign: 'center', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.15)', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'white', fontWeight: 'bold' }}
+                                      />
+                                    </div>
                                   </div>
 
                                   <button
@@ -2319,6 +2626,8 @@ function PreRegistroPresidente() {
                             })}
                           </div>
                         </div>
+
+
                         <div className="insurance-section">
                           <div className="insurance-col-title">
                             Seguros Presidente.
@@ -2331,7 +2640,8 @@ function PreRegistroPresidente() {
                                 <div
                                   key={seg.id}
                                   className={`insurance-card insurance-player-card ${checked ? 'active-insurance' : ''}`}
-                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '15px' }}
+                                  style={{ margin: 0, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '15px', cursor: 'pointer' }}
+                                  onClick={() => abrirModalDetalle(seg)}
                                 >
                                   {checked && (
                                     <div style={{
@@ -2357,7 +2667,8 @@ function PreRegistroPresidente() {
                                   )}
 
                                   <div
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation(); // Avoid opening modal
                                       const next = { ...asignacionSeguros };
                                       segurosPresidente.forEach(item => {
                                         next[item.id] = item.id === seg.id ? 1 : 0;
@@ -2365,20 +2676,21 @@ function PreRegistroPresidente() {
                                       setAsignacionSeguros(next);
                                       setError(null);
                                     }}
-                                    style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', cursor: 'pointer' }}
+                                    style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginBottom: '12px', cursor: 'pointer', textAlign: 'left' }}
                                   >
-                                    <div className="insurance-player-content" style={{ flex: 1, textAlign: 'left', paddingRight: '10px' }}>
-                                      <p className="insurance-player-name" style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800' }}>{seg.nombre}</p>
-                                      <span className="insurance-player-price" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>${seg.precio} c/u</span>
-                                    </div>
+                                    <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
+                                    <span className="insurance-player-price" style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>${seg.precio} c/u</span>
 
-                                    <input
-                                      type="radio"
-                                      name="seguroPresidenteRadioCard"
-                                      checked={checked}
-                                      onChange={() => { }} // click en fila maneja el cambio
-                                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3d79ff' }}
-                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                      <input
+                                        type="radio"
+                                        name="seguroPresidenteRadioCard"
+                                        checked={checked}
+                                        onChange={() => { }} // click en fila maneja el cambio
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3d79ff', margin: 0 }}
+                                      />
+                                      <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: '600' }}>Seleccionar</span>
+                                    </div>
                                   </div>
 
                                   <button
@@ -2489,12 +2801,20 @@ function PreRegistroPresidente() {
                 <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                   Adjunta el comprobante (PDF o imagen) para procesar tu registro.
                 </p>
-                <div className="file-input-custom">
+                <div className="file-input-custom" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <input
                     type="file"
                     id="comprobante"
                     style={{ display: 'none' }}
-                    onChange={(e) => setComprobantePago(e.target.files[0])}
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file && validarArchivoPermitido(file)) {
+                        setComprobantePago(file);
+                      } else {
+                        e.target.value = '';
+                      }
+                    }}
                   />
                   <button
                     className="btn-outline"
@@ -2503,6 +2823,16 @@ function PreRegistroPresidente() {
                   >
                     {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
                   </button>
+                  {ordenPendienteId && (
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={() => generarPDFCuota(ordenPendienteId)}
+                      style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#60a5fa', borderColor: 'rgba(96, 165, 250, 0.4)' }}
+                    >
+                      <FaFileAlt /> Descargar Orden de Pago
+                    </button>
+                  )}
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
                   </span>
@@ -2747,7 +3077,7 @@ function PreRegistroPresidente() {
                 <h4 style={{ margin: '0 0 8px', color: 'var(--danger)', fontSize: '15px', fontWeight: '800' }}>
                   Tu solicitud fue rechazada por el siguiente motivo:
                 </h4>
-                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
                   {mensajeRechazoSolicitud || 'Vuelve a subir tus documentos para continuar con tu solicitud.'}
                 </p>
               </div>
@@ -2797,6 +3127,18 @@ function PreRegistroPresidente() {
                   >
                     <option value="">Selecciona...</option>
                     {ligasCatalogo.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Cargo de afiliación *</label>
+                  <select
+                    value={cargoSeleccionado}
+                    onChange={(e) => setCargoSeleccionado(e.target.value)}
+                    className="premium-input"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="Presidente Equipo">Presidente Equipo</option>
+                    <option value="Entrenador">Entrenador</option>
                   </select>
                 </div>
                 <div className="premium-input-group">
@@ -3036,22 +3378,57 @@ function PreRegistroPresidente() {
               return (
                 <div className="doc-cards-grid">
                   {requisitos.map((doc, idx) => {
-                    const isUploaded = !!documents[doc.documento];
+                    const docIdMap = {
+                      actaNacimiento: 8,
+                      identificacion: 38,
+                      fotografia: 37,
+                      formatoAfiliacion: 10
+                    };
+                    const docAfiliacionId = docIdMap[doc.documento];
+                    const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId));
+
+                    const hasLocalFile = !!documents[doc.documento];
+                    const isUploaded = hasLocalFile || !!docGuardado;
                     const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
                     const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
                     const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
 
                     let statusLabel, statusColor, statusDotColor, statusBg;
-                    if (ocrProcessed) {
-                      statusLabel = 'Procesado'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
-                    } else if (isUploaded) {
+                    if (docGuardado) {
+                      const estId = Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId);
+                      if (estId === 2) {
+                        statusLabel = 'Aprobado'; statusColor = '#10b981'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                      } else if (estId === 3) {
+                        statusLabel = 'Rechazado'; statusColor = '#ef4444'; statusDotColor = '#ef4444'; statusBg = 'rgba(239,68,68,0.12)';
+                      } else {
+                        statusLabel = 'En espera'; statusColor = '#f59e0b'; statusDotColor = '#f59e0b'; statusBg = 'rgba(245,158,11,0.12)';
+                      }
+                    } else if (hasLocalFile) {
                       statusLabel = 'Listo'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                    } else if (ocrProcessed) {
+                      statusLabel = 'Procesado'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
                     } else {
                       statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDotColor = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
                     }
 
+                    const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
+                    const isRejected = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3;
+
                     return (
-                      <div key={idx} className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}>
+                      <div
+                        key={idx}
+                        className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
+                        onClick={() => {
+                          if (isApproved) return;
+                          if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                            return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                          }
+                          document.getElementById(`file-${doc.documento}`).click();
+                        }}
+                        style={{
+                          cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer')
+                        }}
+                      >
                         {/* Top sheen */}
                         <div className="top-sheen" style={{ background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)' }} />
                         {/* Status pill */}
@@ -3072,18 +3449,27 @@ function PreRegistroPresidente() {
                         </h4>
                         {/* Filename */}
                         <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
-                          {isUploaded ? `📎 ${documents[doc.documento].name}` : 'Sin archivo seleccionado'}
+                          {hasLocalFile ? `📎 ${documents[doc.documento].name}` : (docGuardado ? '📎 Archivo enviado' : 'Sin archivo seleccionado')}
                         </p>
+                        {/* Rejection reason display */}
+                        {isRejected && docGuardado.ObservacionesDocumento && (
+                          <div style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', padding: '10px 14px', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', fontSize: '11px', fontWeight: '700', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                            Motivo de rechazo: {docGuardado.ObservacionesDocumento}
+                          </div>
+                        )}
                         {/* Photo error */}
                         {error && doc.documento === 'fotografia' && (
-                          <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }}>
+                          <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                             ⚠️ {error}
                           </div>
                         )}
                         {/* Photo validation bypass button */}
                         {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
                           <button
-                            onClick={handleForzarSubidaFoto}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleForzarSubidaFoto(e);
+                            }}
                             className="doc-action-btn"
                             style={{
                               border: '1px solid rgba(245,158,11,0.5)',
@@ -3099,10 +3485,11 @@ function PreRegistroPresidente() {
                           </button>
                         )}
                         {/* Action buttons */}
-                        <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                          {doc.hasDownload && (
+                        <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
+                          {doc.hasDownload && !isApproved && (
                             <button
                               onClick={(e) => {
+                                e.stopPropagation();
                                 if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
                                   e.preventDefault();
                                   return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
@@ -3113,29 +3500,95 @@ function PreRegistroPresidente() {
                               style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                             >⬇ Descargar</button>
                           )}
-                          <button
-                            onClick={() => {
-                              if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
-                                return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                          {!isApproved && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                                  return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                                }
+                                document.getElementById(`file-${doc.documento}`).click();
+                              }}
+                              className="doc-action-btn"
+                              style={{
+                                border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                                background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                                color: isUploaded ? '#34d399' : 'var(--text-muted)',
+                                opacity: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 0.5 : 1,
+                                cursor: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer',
+                                flex: 1
+                              }}
+                            >
+                              {hasLocalFile ? '🔄 Cambiar' : (docGuardado ? '🔄 Reemplazar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir'))}
+                            </button>
+                          )}
+                          {hasLocalFile && documents[doc.documento] && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
+                              }}
+                              className="doc-action-btn"
+                              style={{
+                                border: '1px solid rgba(96, 165, 250, 0.4)',
+                                background: 'rgba(96, 165, 250, 0.1)',
+                                color: '#60a5fa',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                flex: 1
+                              }}
+                            >
+                              👁 Ver
+                            </button>
+                          )}
+                          {!hasLocalFile && docGuardado && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openSecurePath(docGuardado.Url || docGuardado.url);
+                              }}
+                              className="doc-action-btn"
+                              style={{
+                                border: '1px solid rgba(96, 165, 250, 0.4)',
+                                background: 'rgba(96, 165, 250, 0.1)',
+                                color: '#60a5fa',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                flex: 1
+                              }}
+                            >
+                              👁 Ver
+                            </button>
+                          )}
+                          <input
+                            type="file"
+                            id={`file-${doc.documento}`}
+                            style={{ display: 'none' }}
+                            accept=".pdf,.png,.jpg,.jpeg"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (!file) return;
+                              if (!validarArchivoPermitido(file)) {
+                                e.target.value = '';
+                                return;
                               }
-                              document.getElementById(`file-${doc.documento}`).click();
+                              if (docGuardado) {
+                                handleReemplazarDocumento(docAfiliacionId, file);
+                                setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                              } else {
+                                handleFileUpload(doc.documento, file);
+                              }
                             }}
-                            className="doc-action-btn"
-                            style={{
-                              border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                              background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
-                              color: isUploaded ? '#34d399' : 'var(--text-muted)',
-                              opacity: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 0.5 : 1,
-                              cursor: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'
-                            }}
-                          >
-                            {isUploaded ? '🔄 Cambiar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir')}
-                          </button>
-                          <input type="file" id={`file-${doc.documento}`} style={{ display: 'none' }} onChange={(e) => handleFileUpload(doc.documento, e.target.files[0])} />
+                          />
                         </div>
                         {/* OCR toggle */}
                         <button
-                          onClick={() => setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }))}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }));
+                          }}
                           style={{ marginTop: '12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
                         >
                           {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
@@ -3196,6 +3649,237 @@ function PreRegistroPresidente() {
                 style={{ padding: '12px 50px', opacity: loading ? 0.7 : 1 }}
               >
                 {loading ? 'Enviando...' : 'Finalizar Registro ✓'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 5: VALIDACIÓN DE DOCUMENTOS (Paso 3) */}
+        {pasoActual === 5 && (
+          <div className="content-body" style={{ padding: '40px' }}>
+            {estadoSolicitud === 3 && (
+              <div style={{
+                marginBottom: '24px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.28)',
+                borderRadius: '18px',
+                padding: '18px 20px',
+                color: 'var(--text-main)'
+              }}>
+                <h4 style={{ margin: '0 0 8px', color: 'var(--danger)', fontSize: '15px', fontWeight: '800' }}>
+                  Tu solicitud tiene observaciones por el siguiente motivo general:
+                </h4>
+                <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
+                  {mensajeRechazoSolicitud || 'Por favor, revisa tus documentos y reemplaza los que fueron rechazados.'}
+                </p>
+              </div>
+            )}
+
+            {/* HEADER DE SECCIÓN */}
+            <div style={{ textAlign: 'center', marginBottom: '35px' }}>
+              <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-main)', margin: '0 0 8px' }}>
+                Validación de documentos
+              </h3>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+                Revisa el estado de tus documentos. Reemplaza cualquier documento que haya sido rechazado.
+              </p>
+            </div>
+
+            {/* TARJETAS DE DOCUMENTOS */}
+            <div className="doc-cards-grid">
+              {requisitos.map((doc, idx) => {
+                const docIdMap = {
+                  actaNacimiento: 8,
+                  identificacion: 38,
+                  fotografia: 37,
+                  formatoAfiliacion: 10
+                };
+                const docAfiliacionId = docIdMap[doc.documento];
+                const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId));
+
+                const hasLocalFile = !!documents[doc.documento];
+                const isUploaded = hasLocalFile || !!docGuardado;
+                const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
+
+                let statusLabel, statusColor, statusDotColor, statusBg;
+                if (docGuardado) {
+                  const estId = Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId);
+                  if (estId === 2) {
+                    statusLabel = 'Aprobado'; statusColor = '#10b981'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                  } else if (estId === 3) {
+                    statusLabel = 'Rechazado'; statusColor = '#ef4444'; statusDotColor = '#ef4444'; statusBg = 'rgba(239,68,68,0.12)';
+                  } else {
+                    statusLabel = 'En espera'; statusColor = '#f59e0b'; statusDotColor = '#f59e0b'; statusBg = 'rgba(245,158,11,0.12)';
+                  }
+                } else if (hasLocalFile) {
+                  statusLabel = 'Listo'; statusColor = '#34d399'; statusDotColor = '#10b981'; statusBg = 'rgba(16,185,129,0.12)';
+                } else {
+                  statusLabel = 'Pendiente'; statusColor = '#f59e0b'; statusDotColor = '#d97706'; statusBg = 'rgba(245,158,11,0.12)';
+                }
+
+                const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
+                const isRejected = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
+                    onClick={() => {
+                      if (isApproved) return;
+                      document.getElementById(`file-val-${doc.documento}`).click();
+                    }}
+                    style={{
+                      cursor: isApproved ? 'default' : 'pointer'
+                    }}
+                  >
+                    {/* Top sheen */}
+                    <div className="top-sheen" style={{ background: isUploaded ? 'linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent)' : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)' }} />
+                    {/* Status pill */}
+                    <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
+                      <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
+                      {statusLabel}
+                    </div>
+                    {/* Icon */}
+                    <div className="doc-glass-icon" style={{
+                      background: isUploaded ? 'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.08))' : 'linear-gradient(135deg,rgba(11,78,166,0.1),rgba(30,27,75,0.08))',
+                      border: isUploaded ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(93,135,229,0.12)',
+                    }}>
+                      <span>{icons[doc.documento]}</span>
+                    </div>
+                    {/* Title */}
+                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
+                      {doc.nombre}
+                    </h4>
+                    {/* Filename */}
+                    <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+                      {hasLocalFile ? `📎 ${documents[doc.documento].name}` : (docGuardado ? '📎 Archivo enviado' : 'Sin archivo seleccionado')}
+                    </p>
+                    {/* Rejection reason display */}
+                    {isRejected && docGuardado.ObservacionesDocumento && (
+                      <div style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', padding: '10px 14px', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', fontSize: '11px', fontWeight: '700', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        Motivo de rechazo: {docGuardado.ObservacionesDocumento}
+                      </div>
+                    )}
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
+                      {!isApproved && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            document.getElementById(`file-val-${doc.documento}`).click();
+                          }}
+                          className="doc-action-btn"
+                          style={{
+                            border: isUploaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                            background: isUploaded ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                            color: isUploaded ? '#34d399' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                            flex: 1
+                          }}
+                        >
+                          {hasLocalFile ? '🔄 Cambiar' : (docGuardado ? '🔄 Reemplazar' : '⬆ Subir')}
+                        </button>
+                      )}
+                      {hasLocalFile && documents[doc.documento] && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
+                          }}
+                          className="doc-action-btn"
+                          style={{
+                            border: '1px solid rgba(96, 165, 250, 0.4)',
+                            background: 'rgba(96, 165, 250, 0.1)',
+                            color: '#60a5fa',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            flex: 1
+                          }}
+                        >
+                          👁 Ver
+                        </button>
+                      )}
+                      {!hasLocalFile && docGuardado && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSecurePath(docGuardado.Url || docGuardado.url);
+                          }}
+                          className="doc-action-btn"
+                          style={{
+                            border: '1px solid rgba(96, 165, 250, 0.4)',
+                            background: 'rgba(96, 165, 250, 0.1)',
+                            color: '#60a5fa',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            flex: 1
+                          }}
+                        >
+                          👁 Ver
+                        </button>
+                      )}
+                      <input
+                        type="file"
+                        id={`file-val-${doc.documento}`}
+                        style={{ display: 'none' }}
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+
+                          if (!validarArchivoPermitido(file)) {
+                            e.target.value = '';
+                            return;
+                          }
+
+                          try {
+                            const metadata = JSON.parse(localStorage.getItem('afaem_doc_metadata') || '{}');
+                            const previousFile = metadata[doc.documento];
+                            if (previousFile && previousFile.size === file.size) {
+                              const result = await Swal.fire({
+                                title: '¿Subir el mismo archivo?',
+                                text: 'Parece que estás intentando subir exactamente el mismo archivo que subiste anteriormente. Por favor, asegúrate de subir el documento con las correcciones correspondientes. ¿Deseas continuar de todos modos?',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Sí, subir',
+                                cancelButtonText: 'Cancelar',
+                                confirmButtonColor: '#0b4ea6',
+                                cancelButtonColor: '#94a3b8'
+                              });
+                              if (!result.isConfirmed) {
+                                e.target.value = '';
+                                return;
+                              }
+                            }
+                          } catch (err) {
+                            console.warn("Error verifying file metadata duplicate:", err);
+                          }
+
+                          if (docGuardado) {
+                            handleReemplazarDocumento(docAfiliacionId, file);
+                            setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                          } else {
+                            handleFileUpload(doc.documento, file);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* BOTONES DE NAVEGACIÓN */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button
+                className="btn-premium"
+                onClick={handleFinalizarCorreccion}
+                disabled={loading}
+                style={{ padding: '12px 50px', opacity: loading ? 0.7 : 1 }}
+              >
+                {loading ? 'Enviando...' : 'Finalizar Corrección ✓'}
               </button>
             </div>
           </div>
@@ -3495,6 +4179,51 @@ function PreRegistroPresidente() {
           document.body
         );
       })()}
+      {previewDoc && (
+        <Modal
+          estaAbierto={!!previewDoc}
+          titulo={`Vista previa: ${previewDoc.title}`}
+          alCerrar={() => setPreviewDoc(null)}
+          tamanio="grande"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            {previewDoc.file.type.startsWith('image/') ? (
+              <img
+                src={previewUrl}
+                alt={previewDoc.title}
+                style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              />
+            ) : previewDoc.file.type === 'application/pdf' ? (
+              <iframe
+                src={previewUrl}
+                title={previewDoc.title}
+                style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
+              />
+            ) : (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                <p style={{ fontSize: '16px', fontWeight: 'bold' }}>No se puede previsualizar este tipo de archivo directamente.</p>
+                <p style={{ fontSize: '14px' }}>Archivo: {previewDoc.file.name}</p>
+                <a
+                  href={previewUrl}
+                  download={previewDoc.file.name}
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '15px',
+                    padding: '10px 20px',
+                    backgroundColor: '#0b4ea6',
+                    color: 'white',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Descargar archivo
+                </a>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

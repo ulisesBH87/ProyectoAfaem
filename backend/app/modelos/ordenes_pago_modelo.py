@@ -22,3 +22,4 @@ class OrdenPago(Base):
     EquipoTemporalRelacion = relationship("EquipoTemporal", back_populates="OrdenPagoRelacion")
 
     SolicitudId = Column(Integer, ForeignKey("Solicitudes.SolicitudId"), nullable=False)
+    ReferenciaPago = Column(String(8), unique=True, nullable=True)
