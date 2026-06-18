@@ -1202,16 +1202,27 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
             .limit(1)\
             .scalar_subquery()
 
-        # Subconsultas para obtener el equipo del presidente
+        # Subconsultas para obtener el equipo del presidente o del entrenador
+        from sqlalchemy import or_
         equipo_name_subquery = db.query(Equipos.NombreEquipo)\
             .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
-            .filter(EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+            .filter(
+                or_(
+                    EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId,
+                    EquiposJugando.EntrenadorEquipoId == PresidenteEquipo.PresidenteEquipoId
+                )
+            )\
             .limit(1)\
             .scalar_subquery()
 
         equipo_id_subquery = db.query(Equipos.EquipoId)\
             .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)\
-            .filter(EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
+            .filter(
+                or_(
+                    EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId,
+                    EquiposJugando.EntrenadorEquipoId == PresidenteEquipo.PresidenteEquipoId
+                )
+            )\
             .limit(1)\
             .scalar_subquery()
 
@@ -1239,23 +1250,31 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
 
         resultados = query.all()
 
-        # Obtener todos los equipos jugando con sus presidentes
+        # Obtener todos los equipos jugando con sus directivos (tanto presidentes como entrenadores)
         equipos_jugando = db.query(
             EquiposJugando.PresidenteEquipoId,
+            EquiposJugando.EntrenadorEquipoId,
             Equipos.EquipoId,
             Equipos.NombreEquipo
-        ).join(Equipos, Equipos.EquipoId == EquiposJugando.EquipoId)\
-         .filter(EquiposJugando.PresidenteEquipoId != None).all()
+        ).join(Equipos, Equipos.EquipoId == EquiposJugando.EquipoId).all()
         
-        # Mapear de PresidenteEquipoId a lista de equipos
-        equipos_por_presidente = {}
+        # Mapear de directivo ID (PresidenteEquipoId) a lista de equipos
+        equipos_por_directivo = {}
         for ej in equipos_jugando:
-            if ej.PresidenteEquipoId not in equipos_por_presidente:
-                equipos_por_presidente[ej.PresidenteEquipoId] = []
-            equipos_por_presidente[ej.PresidenteEquipoId].append({
-                "id": ej.EquipoId,
-                "nombre": ej.NombreEquipo
-            })
+            if ej.PresidenteEquipoId is not None:
+                if ej.PresidenteEquipoId not in equipos_por_directivo:
+                    equipos_por_directivo[ej.PresidenteEquipoId] = []
+                equipos_por_directivo[ej.PresidenteEquipoId].append({
+                    "id": ej.EquipoId,
+                    "nombre": ej.NombreEquipo
+                })
+            if ej.EntrenadorEquipoId is not None:
+                if ej.EntrenadorEquipoId not in equipos_por_directivo:
+                    equipos_por_directivo[ej.EntrenadorEquipoId] = []
+                equipos_por_directivo[ej.EntrenadorEquipoId].append({
+                    "id": ej.EquipoId,
+                    "nombre": ej.NombreEquipo
+                })
 
         return [
             {
@@ -1274,7 +1293,7 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 "RutaFoto":       r.RutaFoto,
                 "equipo":         r.NombreEquipo,
                 "equipoId":       r.EquipoId,
-                "equipos":        equipos_por_presidente.get(r.PresidenteEquipoId, []),
+                "equipos":        equipos_por_directivo.get(r.PresidenteEquipoId, []),
                 "whatsappStatus": r.WhatsAppStatus,
                 "seguroNombre":   r.Afiliacion or "Sin seguro asignado",
                 "esEntrenador":   r.TipoDirectivoId == 2

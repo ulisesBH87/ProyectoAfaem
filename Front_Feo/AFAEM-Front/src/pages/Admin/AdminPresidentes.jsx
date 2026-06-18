@@ -1365,7 +1365,7 @@ export default function AdminPresidentes() {
       <Modal
         estaAbierto={modalEdicion}
         alCerrar={handleCerrarModalEdicion}
-        titulo="Detalle del Presidente"
+        titulo="Detalle del Directivo"
         tamanio="grande"
         bloquearCierreFondo={true}
         pie={
