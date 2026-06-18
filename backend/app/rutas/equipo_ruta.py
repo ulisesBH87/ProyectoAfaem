@@ -282,21 +282,16 @@ async def agregar_jugador_equipo_existente(
 
         # 3. Crear Persona
         try:
-            fn = None
-            if p_data.get("fecha_nacimiento"):
-                fecha_str = str(p_data["fecha_nacimiento"])
-                try:
-                    if "-" in fecha_str:
-                        fn = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-                    else:
-                        fn = datetime.strptime(fecha_str, "%d/%m/%Y").date()
-                except (ValueError, TypeError):
-                    pass # Dejar como None si el formato es inválido
-
             # Validar campos obligatorios antes de insertar
-            for field in ["nombre", "primer_apellido", "curp"]:
+            for field in ["nombre", "primer_apellido", "curp", "fecha_nacimiento"]:
                 if not p_data.get(field):
                     raise HTTPException(status_code=400, detail=f"El campo '{field}' es obligatorio.")
+
+            from app.utilidades.validaciones import validacion_fecha
+            try:
+                fn = validacion_fecha(p_data["fecha_nacimiento"])
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
 
             s_id = safe_int(p_data.get("sexo_id"), 1)
 
@@ -497,13 +492,19 @@ async def registrar_jugador(
         if slot.EquipoTemporalId != equipo_temporal_id:
             raise HTTPException(status_code=403, detail="Acceso denegado: el slot no pertenece a este equipo")
 
+    from app.utilidades.validaciones import validacion_fecha
+    try:
+        validated_dob = validacion_fecha(fecha_nacimiento)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     persona = JugadorPersona(
         nombre=nombre,
         primer_apellido=primer_apellido,
         segundo_apellido=segundo_apellido,
         curp=CURP,
         sexo_id=sexo_id,
-        fecha_nacimiento=fecha_nacimiento,
+        fecha_nacimiento=validated_dob,
         nui=nui,
         lugar_nacimiento=lugar_nacimiento,
         correo=correo,
@@ -612,6 +613,11 @@ async def registrar_grupo(
             raise HTTPException(status_code=400, detail=f"El CURP de {nombre_completo} debe medir exactamente 18 caracteres.")
         if not datos.get("fechaNacimiento"):
             raise HTTPException(status_code=400, detail=f"La fecha de nacimiento de {nombre_completo} es obligatoria.")
+        from app.utilidades.validaciones import validacion_fecha
+        try:
+            validacion_fecha(datos.get("fechaNacimiento"))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Error en {nombre_completo}")
         if not datos.get("lugarNacimiento", "").strip():
             raise HTTPException(status_code=400, detail=f"El lugar de nacimiento de {nombre_completo} es obligatorio.")
         if not datos.get("genero"):
@@ -659,13 +665,16 @@ async def registrar_grupo(
         for slot in pending_slots:
             datos = json.loads(slot.DatosBorrador)
             
+            from app.utilidades.validaciones import validacion_fecha
+            validated_dob = validacion_fecha(datos.get("fechaNacimiento"))
+
             persona = JugadorPersona(
                 nombre=datos.get("nombreJugador", "").strip(),
                 primer_apellido=datos.get("apellidoPaterno", "").strip(),
                 segundo_apellido=datos.get("apellidoMaterno", "").strip(),
                 curp=datos.get("curp", "").strip().upper(),
                 sexo_id=int(datos.get("genero")),
-                fecha_nacimiento=datos.get("fechaNacimiento"),
+                fecha_nacimiento=validated_dob,
                 nui=datos.get("nui", "").strip().upper() if datos.get("nui") else None,
                 lugar_nacimiento=datos.get("lugarNacimiento", "MÉXICO").strip(),
                 correo=datos.get("correo", "").strip().lower(),

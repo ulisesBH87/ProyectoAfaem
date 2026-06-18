@@ -591,13 +591,12 @@ def doc_type_to_id_jugador(es_menor: bool) -> dict:
 async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     try:
         #Validar fecha de nacimiento
+        fecha_nacimiento = None
         if p_data.get("fecha_nacimiento"):
-            fecha_nacimiento = parse_fecha(p_data["fecha_nacimiento"])
-
             try:
-                validaciones.validacion_fecha(fecha_nacimiento)
-            except ValueError:
-                raise HTTPException(status_code=400)
+                fecha_nacimiento = validaciones.validacion_fecha(p_data["fecha_nacimiento"])
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
             
         #si nacional
         #Verificar curp
@@ -611,8 +610,7 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
             CURP=p_data["curp"],
             NUI=p_data.get("nui"),
             SexoId=p_data["sexo_id"],
-            FechaNacimiento=parse_fecha(p_data["fecha_nacimiento"])
-            if p_data.get("fecha_nacimiento") else None,
+            FechaNacimiento=fecha_nacimiento,
             LugarNacimiento=p_data.get("lugar_nacimiento"),
             CorreoElectronico=p_data.get("correo"),
             NumeroTelefono=p_data.get("telefono")
