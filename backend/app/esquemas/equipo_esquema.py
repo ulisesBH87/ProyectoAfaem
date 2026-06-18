@@ -129,6 +129,7 @@ class DirectorioJugadorResponse(BaseModel):
     NumeroCamiseta: Optional[int] = None
     RolEnEquipo: Optional[int] = None
     DocumentosAprobados: Optional[bool] = False
+    SeguroNombre: Optional[str] = None
 
     class Config:
         from_attributes = True
