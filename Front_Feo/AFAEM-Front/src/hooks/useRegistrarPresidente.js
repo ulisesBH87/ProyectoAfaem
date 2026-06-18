@@ -66,6 +66,7 @@ export function useRegistrarPresidente() {
   const [codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta] = useState('+52');
   const [cuentaErrors, setCuentaErrors] = useState({});
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+  const [isCurpDuplicated, setIsCurpDuplicated] = useState(false);
 
   const setCuentaField = (field, val) =>
     setCuenta(prev => {
@@ -76,7 +77,7 @@ export function useRegistrarPresidente() {
           : (typeof val === 'string' ? val.toUpperCase() : val),
       };
       if (field === 'curp') {
-        next.isCurpDuplicated = false;
+        setIsCurpDuplicated(false);
         setCuentaErrors(errs => {
           if (errs.curp === 'Esta CURP ya se encuentra registrada.') {
             const { curp, ...rest } = errs;
@@ -98,7 +99,7 @@ export function useRegistrarPresidente() {
     if (!/^\d{10}$/.test(cuenta.telefono)) errs.telefono = '10 dígitos requeridos';
     if (!cuenta.curp.trim()) errs.curp = 'Obligatorio';
     if (cuenta.curp.length !== 18) errs.curp = '18 caracteres';
-    if (cuenta.isCurpDuplicated) errs.curp = 'Esta CURP ya se encuentra registrada.';
+    if (isCurpDuplicated) errs.curp = 'Esta CURP ya se encuentra registrada.';
     if (!cuenta.contrasena) errs.contrasena = 'Obligatorio';
     if (cuenta.contrasena.length < 6) errs.contrasena = 'Mínimo 6 caracteres';
     if (!cuenta.confirmarContrasena) errs.confirmarContrasena = 'Obligatorio';
@@ -263,10 +264,10 @@ export function useRegistrarPresidente() {
           }
 
           if (resData && resData.curp_duplicada) {
-            setCuenta(prev => ({ ...prev, isCurpDuplicated: true }));
+            setIsCurpDuplicated(true);
             setCuentaErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
           } else {
-            setCuenta(prev => ({ ...prev, isCurpDuplicated: false }));
+            setIsCurpDuplicated(false);
             setCuentaErrors(prev => {
               if (prev.curp === 'Esta CURP ya se encuentra registrada.') {
                 const { curp, ...rest } = prev;
@@ -486,6 +487,7 @@ export function useRegistrarPresidente() {
     // OCR
     ocrResults,
     isCheckingCurp,
+    isCurpDuplicated,
     // Foto
     fotoError, fotoFallida, fotoArchivo, forzarFoto,
     // Handlers
