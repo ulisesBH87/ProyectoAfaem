@@ -116,17 +116,19 @@ async def servir_archivo_uploads(
                     permitido = True
                 elif doc.PersonaId == usuario_act.PersonaId:
                     permitido = True
-                elif rol_id == 3:
+                elif rol_id in (3, 4):
                     presidente = db.query(PresidenteEquipo).filter(
                         PresidenteEquipo.PersonaId == usuario_act.PersonaId
                     ).first()
                     if presidente:
+                        filter_cond = EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId if presidente.TipoDirectivoId == 2 else EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+                        
                         is_member = db.query(MiembrosEquipo).join(
                             EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
                         ).filter(
                             MiembrosEquipo.PersonaId == doc.PersonaId,
                             MiembrosEquipo.Eliminado == False,
-                            EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+                            filter_cond
                         ).first() is not None
                         
                         is_temp_member = db.query(EquipoTemporalJugador).join(

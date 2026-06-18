@@ -275,7 +275,7 @@ export default function AdminPresidentes() {
   const filteredPresidentes = useMemo(() => {
     let result = [...presidentes];
 
-    // Filtrado por estatus
+    // Filtrado por estatus/rol
     if (filtroEstatus !== 'todos') {
       if (filtroEstatus === 'activos') {
         result = result.filter(esPresidenteActivo);
@@ -283,6 +283,10 @@ export default function AdminPresidentes() {
         result = result.filter(p => !esPresidenteActivo(p) && p.estatus !== 8 && (p.estatusNombre || '').toUpperCase().trim() !== 'BORRADOR');
       } else if (filtroEstatus === 'pendientes') {
         result = result.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR');
+      } else if (filtroEstatus === 'solo_presidentes') {
+        result = result.filter(p => !p.esEntrenador);
+      } else if (filtroEstatus === 'solo_entrenadores') {
+        result = result.filter(p => !!p.esEntrenador);
       }
     }
 
@@ -327,11 +331,15 @@ export default function AdminPresidentes() {
   const stats = useMemo(() => {
     const activosCount = presidentes.filter(esPresidenteActivo).length;
     const pendientesCount = presidentes.filter(p => p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR').length;
+    const presidentesCount = presidentes.filter(p => !p.esEntrenador).length;
+    const entrenadoresCount = presidentes.filter(p => !!p.esEntrenador).length;
     return {
       total: presidentes.length,
       activos: activosCount,
       inactivos: presidentes.length - activosCount - pendientesCount,
-      pendientes: pendientesCount
+      pendientes: pendientesCount,
+      presidentes: presidentesCount,
+      entrenadores: entrenadoresCount
     };
   }, [presidentes]);
   const cerrarModal = () => { setModalAbierto(false); resetModal(); };
@@ -717,7 +725,7 @@ export default function AdminPresidentes() {
       Swal.fire('Error', 'El presidente no tiene un usuario asociado para generar invitaciones.', 'error');
       return;
     }
-    
+
     const telPrincipal = (pres.telefono || pres.Telefono || '').trim();
     const telOpcional = (pres.telefonoOpcional || pres.TelefonoOpcional || '').trim();
 
@@ -826,7 +834,8 @@ export default function AdminPresidentes() {
   };
 
   const columns = [
-    { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Presidente' },
+    { key: 'id', label: 'Folio' }, { key: 'presidente', label: 'Directivo' },
+    { key: 'tipoDirectivo', label: 'Cargo' },
     { key: 'contacto', label: 'Contacto' }, { key: 'curp', label: 'CURP' },
     { key: 'estatus', label: 'Estatus' },
     { key: 'invitacion', label: 'Invitación', style: { textAlign: 'center' } },
@@ -839,6 +848,21 @@ export default function AdminPresidentes() {
     return {
       id: <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
       presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
+      tipoDirectivo: (
+        <span style={{
+          background: p.esEntrenador ? '#f0fdf4' : '#eff6ff',
+          color: p.esEntrenador ? '#166534' : '#1e40af',
+          border: p.esEntrenador ? '1px solid #bbf7d0' : '1px solid #bfdbfe',
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '11px',
+          fontWeight: '700',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap'
+        }}>
+          {p.esEntrenador ? 'Entrenador' : 'Presidente'}
+        </span>
+      ),
       contacto: (() => {
         const emailVal = p.correo || p.Email || '';
         const esEmailTemporal = emailVal && (emailVal.includes('@temporary.afaem.com') || emailVal.startsWith('draft_'));
@@ -973,7 +997,7 @@ export default function AdminPresidentes() {
         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
           {esBorrador ? (
             <button
-              onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}`)}
+              onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}${p.esEntrenador ? '&esEntrenador=true' : ''}`)}
               style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
               title="Continuar Registro"
             >
@@ -1212,7 +1236,7 @@ export default function AdminPresidentes() {
 
       <div className="pres-page-header" style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Directorio de Presidentes</h2>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Lista de directivos</h2>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
@@ -1226,6 +1250,10 @@ export default function AdminPresidentes() {
             style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
           </button>
+          <button onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?esEntrenador=true`)}
+            style={{ background: 'linear-gradient(135deg, #d97706, #ea580c)', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <FaPlus /> Registrar Entrenador
+          </button>
         </div>
       </div>
 
@@ -1236,6 +1264,8 @@ export default function AdminPresidentes() {
           { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
           { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
           { icon: <FaTimes />, bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
+          { icon: <FaUser />, bg: '#eff6ff', color: '#1e40af', label: 'PRESIDENTES', val: stats.presidentes, key: 'solo_presidentes' },
+          { icon: <FaShieldAlt />, bg: '#f0fdf4', color: '#15803d', label: 'ENTRENADORES', val: stats.entrenadores, key: 'solo_entrenadores' },
         ].map(({ icon, bg, color, label, val, key }) => (
           <div
             key={label}
@@ -1267,7 +1297,7 @@ export default function AdminPresidentes() {
       <div className="card pres-card-table" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
         <div className="pres-table-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de presidentes</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de directivos</h3>
           </div>
 
           <div className="pres-filters-row" style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
@@ -1286,7 +1316,7 @@ export default function AdminPresidentes() {
             </button>
 
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
-              {['pendientes', 'todos', 'activos', 'inactivos'].map((val) => (
+              {['pendientes', 'todos', 'activos', 'inactivos', 'solo_presidentes', 'solo_entrenadores'].map((val) => (
                 <button
                   key={val}
                   onClick={() => setFiltroEstatus(val)}
@@ -1303,7 +1333,14 @@ export default function AdminPresidentes() {
                     cursor: 'pointer'
                   }}
                 >
-                  {val === 'todos' ? 'Todos' : (val === 'activos' ? 'Activos' : (val === 'inactivos' ? 'Inactivos' : 'Pendientes'))}
+                  {{
+                    todos: 'Todos',
+                    activos: 'Activos',
+                    inactivos: 'Inactivos',
+                    pendientes: 'Pendientes',
+                    solo_presidentes: 'Presidentes',
+                    solo_entrenadores: 'Entrenadores'
+                  }[val]}
                 </button>
               ))}
             </div>
@@ -1328,7 +1365,7 @@ export default function AdminPresidentes() {
       <Modal
         estaAbierto={modalEdicion}
         alCerrar={handleCerrarModalEdicion}
-        titulo="Detalle del Presidente"
+        titulo="Detalle del Directivo"
         tamanio="grande"
         bloquearCierreFondo={true}
         pie={

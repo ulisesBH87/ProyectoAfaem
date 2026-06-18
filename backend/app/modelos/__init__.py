@@ -19,6 +19,7 @@ from .ordenes_pago_modelo import OrdenPago
 from .orden_pago_detalle_modelo import OrdenPagoDetalle
 from .catalogo_estatus_presidente import EstatusPresidente
 from .presidente_equipo_modelo import PresidenteEquipo
+from .roles_directivos_modelo import RolesDirectivos
 from .presidente_invitacion_modelo import PresidenteInvitacion
 from .catalogo_tipo_proceso import CatalogoTipoProceso
 from .equipo_temporal_modelo import EquipoTemporal

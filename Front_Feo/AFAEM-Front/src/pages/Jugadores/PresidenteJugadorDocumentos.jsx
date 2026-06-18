@@ -306,13 +306,19 @@ export default function PresidenteJugadorDocumentos() {
                     <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
                     <input
                       type="file"
-                      accept=".pdf,image/*"
+                      accept=".pdf,.jpg,.jpeg,.png"
                       style={{ display: 'none' }}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          handleSubirDocumento(item.tipoId, file);
+                        if (!file) return;
+                        const ext = '.' + file.name.split('.').pop().toLowerCase();
+                        const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                        const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                        if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                          Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                          return;
                         }
+                        handleSubirDocumento(item.tipoId, file);
                       }}
                     />
                   </label>

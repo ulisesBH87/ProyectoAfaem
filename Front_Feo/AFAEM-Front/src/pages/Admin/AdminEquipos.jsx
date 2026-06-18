@@ -33,15 +33,19 @@ export default function AdminEquipos() {
   const [haCambiado, setHaCambiado] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  // ESTADO PARA PRESIDENTE Y CATÁLOGOS
+  // ESTADO PARA PRESIDENTE, ENTRENADOR Y CATÁLOGOS
   const [presidentes, setPresidentes] = useState([]);
+  const [entrenadores, setEntrenadores] = useState([]);
   const [searchPresidente, setSearchPresidente] = useState('');
+  const [searchEntrenador, setSearchEntrenador] = useState('');
   const [presidenteSeleccionado, setPresidenteSeleccionado] = useState(null);
+  const [entrenadorSeleccionado, setEntrenadorSeleccionado] = useState(null);
   const [catalogos, setCatalogos] = useState({ ligas: [], modalidades: [], categorias: [], ramas: [] });
   const [collapseOpen, setCollapseOpen] = useState({ liga: false, modalidad: false, categoria: false, rama: false });
   const [catSeleccionada, setCatSeleccionada] = useState({ ligaId: null, modalidadId: null, categoriaId: null, ramaId: null });
   const [loadingExtras, setLoadingExtras] = useState(false);
   const [collapsePresidente, setCollapsePresidente] = useState(false);
+  const [collapseEntrenador, setCollapseEntrenador] = useState(false);
 
   // Estados para descarga de documentos por equipo
   const [modalDescargaDocs, setModalDescargaDocs] = useState(false);
@@ -155,6 +159,7 @@ export default function AdminEquipos() {
           <p><strong>Nombre:</strong> ${equipo.NombreEquipo}</p>
           <p><strong>Presidente:</strong> ${equipo.PresidenteNombreCompleto || 'Sin presidente'}</p>
           <p><strong>Email:</strong> ${displayEmail}</p>
+          <p><strong>Entrenador:</strong> ${equipo.EntrenadorNombreCompleto || 'Sin entrenador asignado'}</p>
           <p><strong>Liga:</strong> ${equipo.Liga}</p>
           <p><strong>Categoría:</strong> ${equipo.Categoria} - ${equipo.Rama}</p>
           <p><strong>Jugadores Registrados:</strong> ${equipo.NumeroJugadoresRegistrados}</p>
@@ -172,8 +177,9 @@ export default function AdminEquipos() {
       nombre: equipo.NombreEquipo || '',
       estatus: equipo.Estatus ? '1' : '0'
     });
-    // Pre-seleccionar presidente y categorías actuales
+    // Pre-seleccionar presidente, entrenador y categorías actuales
     setPresidenteSeleccionado(equipo.PresidenteEquipoId || null);
+    setEntrenadorSeleccionado(equipo.EntrenadorEquipoId || null);
     setCatSeleccionada({
       ligaId: equipo.LigaId || null,
       modalidadId: equipo.ModalidadId || null,
@@ -181,7 +187,10 @@ export default function AdminEquipos() {
       ramaId: equipo.RamaId || null
     });
     setSearchPresidente('');
+    setSearchEntrenador('');
     setCollapseOpen({ liga: false, modalidad: false, categoria: false, rama: false });
+    setCollapsePresidente(false);
+    setCollapseEntrenador(false);
     setHaCambiado(false);
     setModalEdicion(true);
 
@@ -192,11 +201,11 @@ export default function AdminEquipos() {
         getPresidentesDirectorio(),
         getCatalogosRegistro()
       ]);
-      setPresidentes(
-        Array.isArray(presData)
-          ? presData.filter(p => p.estatus === 7 || p.estatusNombre === 'ACTIVO')
-          : []
-      );
+      const activeDirectivos = Array.isArray(presData)
+        ? presData.filter(p => p.estatus === 7 || p.estatusNombre === 'ACTIVO')
+        : [];
+      setPresidentes(activeDirectivos.filter(p => !p.esEntrenador));
+      setEntrenadores(activeDirectivos.filter(p => p.esEntrenador));
       setCatalogos({
         ligas: catData?.ligas || [],
         modalidades: catData?.modalidades || [],
@@ -204,7 +213,7 @@ export default function AdminEquipos() {
         ramas: catData?.ramas || []
       });
     } catch (err) {
-      console.error('Error cargando catálogos/presidentes:', err);
+      console.error('Error cargando catálogos/presidentes/entrenadores:', err);
     } finally {
       setLoadingExtras(false);
     }
@@ -233,12 +242,14 @@ export default function AdminEquipos() {
         if (result.isConfirmed) {
           setModalEdicion(false);
           setSearchPresidente('');
+          setSearchEntrenador('');
           limpiarParams();
         }
       });
     } else {
       setModalEdicion(false);
       setSearchPresidente('');
+      setSearchEntrenador('');
       limpiarParams();
     }
   };
@@ -263,6 +274,7 @@ export default function AdminEquipos() {
         datosEditables.estatus,
         {
           presidenteEquipoId: presidenteSeleccionado,
+          entrenadorEquipoId: entrenadorSeleccionado,
           ligaId: catSeleccionada.ligaId,
           modalidadId: catSeleccionada.modalidadId,
           categoriaId: catSeleccionada.categoriaId,
@@ -926,6 +938,170 @@ export default function AdminEquipos() {
                               {presidenteSeleccionado === p.id && <span style={{ color: '#0b4ea6', fontWeight: '800' }}>✓</span>}
                             </div>
                           ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── SECCIÓN: ENTRENADOR RESPONSABLE ── */}
+              <div style={{ marginBottom: '16px', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <FaUser style={{ color: '#15803d', fontSize: '16px' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#15803d' }}>Entrenador responsable</div>
+                    <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '1px' }}>
+                      {(() => {
+                        const eid = entrenadorSeleccionado || equipoEdicion.EntrenadorEquipoId;
+                        const eName = entrenadorSeleccionado
+                          ? (() => { const e = entrenadores.find(x => x.id === entrenadorSeleccionado); return e ? e.nombre : equipoEdicion.EntrenadorNombreCompleto; })()
+                          : equipoEdicion.EntrenadorNombreCompleto;
+
+                        return eid && eName && eName !== 'Sin entrenador asignado' ? (
+                          <span
+                            style={{ cursor: 'pointer', color: '#15803d', textDecoration: 'underline' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const irAlEntrenador = () => {
+                                setModalEdicion(false);
+                                if (esNavegacionCruzada) {
+                                  setEsNavegacionCruzada(false);
+                                  searchParams.delete('abrirDetalle');
+                                  setSearchParams(searchParams, { replace: true });
+                                }
+                                navigate(`${ROUTES.ADMIN.PRESIDENTES}?abrirDetalle=${eid}`);
+                              };
+
+                              if (haCambiado) {
+                                Swal.fire({
+                                  title: '¿Estás seguro de salir?',
+                                  text: "Tienes cambios sin guardar que se perderán.",
+                                  icon: 'warning',
+                                  showCancelButton: true,
+                                  confirmButtonColor: '#ef4444',
+                                  cancelButtonColor: '#64748b',
+                                  confirmButtonText: 'Sí, salir sin guardar',
+                                  cancelButtonText: 'Cancelar navegación'
+                                }).then((result) => {
+                                  if (result.isConfirmed) {
+                                    setSearchEntrenador('');
+                                    irAlEntrenador();
+                                  }
+                                });
+                              } else {
+                                setSearchEntrenador('');
+                                irAlEntrenador();
+                              }
+                            }}
+                            title="Ver detalle del entrenador"
+                          >
+                            {eName}
+                          </span>
+                        ) : (
+                          eName || 'Sin entrenador asignado'
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Sincronizando...</span>}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCollapseEntrenador(!collapseEntrenador)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 20px',
+                    background: collapseEntrenador ? '#f8fafc' : 'white',
+                    border: 'none',
+                    borderTop: '1px solid #e2e8f0',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#15803d', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Cambiar entrenador
+                  </span>
+                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    {collapseEntrenador ? '▲' : '▼'}
+                  </span>
+                </button>
+
+                {collapseEntrenador && (
+                  <div style={{ padding: '16px 20px', background: 'white', borderTop: '1px solid #f1f5f9' }}>
+                    <input
+                      type="text"
+                      placeholder="Buscar entrenador por nombre..."
+                      value={searchEntrenador}
+                      onChange={e => setSearchEntrenador(e.target.value)}
+                      style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dcfce7', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                        Solo entrenadores con estatus Activo
+                      </span>
+                    </div>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
+                      {loadingExtras ? (
+                        <Loader inline text="Cargando entrenadores..." />
+                      ) : (
+                        <>
+                          {entrenadores.length > 0 && (
+                            <div
+                              onClick={() => { setEntrenadorSeleccionado(null); setHaCambiado(true); }}
+                              style={{
+                                padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                                borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
+                                backgroundColor: entrenadorSeleccionado === null ? '#f0fdf4' : 'white'
+                              }}
+                            >
+                              <div style={{
+                                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                                background: entrenadorSeleccionado === null ? '#15803d' : '#f1f5f9',
+                                color: entrenadorSeleccionado === null ? 'white' : '#64748b',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '14px', fontWeight: '800'
+                              }}>
+                                ∅
+                              </div>
+                              <span style={{ fontSize: '13px', fontWeight: entrenadorSeleccionado === null ? '700' : '500', color: '#dc2626', flex: 1 }}>Sin entrenador (desasignar)</span>
+                              {entrenadorSeleccionado === null && <span style={{ color: '#15803d', fontWeight: '800' }}>✓</span>}
+                            </div>
+                          )}
+
+                          {entrenadores.filter(p => !searchEntrenador || p.nombre.toLowerCase().includes(searchEntrenador.toLowerCase())).length === 0 ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No se encontraron entrenadores</div>
+                          ) : (
+                            entrenadores
+                              .filter(p => !searchEntrenador || p.nombre.toLowerCase().includes(searchEntrenador.toLowerCase()))
+                              .map(p => (
+                                <div
+                                  key={p.id}
+                                  onClick={() => { setEntrenadorSeleccionado(p.id); setHaCambiado(true); }}
+                                  style={{
+                                    padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                                    borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
+                                    backgroundColor: entrenadorSeleccionado === p.id ? '#f0fdf4' : 'white'
+                                  }}
+                                >
+                                  <div style={{
+                                    width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                                    background: entrenadorSeleccionado === p.id ? '#15803d' : '#f1f5f9',
+                                    color: entrenadorSeleccionado === p.id ? 'white' : '#64748b',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '11px', fontWeight: '800'
+                                  }}>
+                                    {p.nombre.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span style={{ fontSize: '13px', fontWeight: entrenadorSeleccionado === p.id ? '700' : '500', color: '#1e293b', flex: 1 }}>{p.nombre}</span>
+                                  {entrenadorSeleccionado === p.id && <span style={{ color: '#15803d', fontWeight: '800' }}>✓</span>}
+                                </div>
+                              ))
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

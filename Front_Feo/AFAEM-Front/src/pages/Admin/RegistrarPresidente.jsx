@@ -44,13 +44,18 @@ export default function RegistrarPresidente() {
     fotoError, fotoFallida, fotoArchivo, forzarFoto,
     // Handlers
     handleFileUpload, handleDescargarFormato,
+    // Entrenador
+    esEntrenador,
+    equiposSinEntrenador,
+    selectedEquipoId,
+    handleEquipoSelectChange
   } = useRegistrarPresidente();
 
   if (cargandoBorrador) {
     return <Loader text="Cargando borrador..." />;
   }
 
-  const isPaso1Ready = 
+  const isPaso1Ready =
     !!documents.actaNacimiento &&
     !!documents.identificacion &&
     !!documents.fotografia;
@@ -65,7 +70,7 @@ export default function RegistrarPresidente() {
     return fechaDate <= limitDate;
   })();
 
-  const isPaso2Ready = 
+  const isPaso2Ready =
     !!cuenta.nombre?.trim() &&
     !!cuenta.primerApellido?.trim() &&
     !!cuenta.correo?.trim() &&
@@ -78,13 +83,13 @@ export default function RegistrarPresidente() {
     !!cuenta.contrasena &&
     cuenta.contrasena.length >= 6 &&
     cuenta.contrasena === cuenta.confirmarContrasena &&
-    !!equipo?.trim() && 
-    !!liga?.trim() &&
+    (esEntrenador ? true : (!!equipo?.trim() && !!liga?.trim())) &&
     esFechaPresidenteValida;
 
-  const isPaso3Ready = 
-    Number(numPersonas) > 0 && 
-    totalAsignados === segurosRequeridos;
+  const selectedPresCount = segurosPresidente.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
+  const isPaso3Ready = esEntrenador
+    ? (!!selectedEquipoId && !!liga && selectedPresCount === 1)
+    : (Number(numPersonas) > 0 && totalAsignados === segurosRequeridos);
 
   const isPaso4Ready = !!documents.formatoAfiliacion;
 
@@ -234,7 +239,7 @@ export default function RegistrarPresidente() {
         }
       `}</style>
       {/* Header de página */}
-      <PageHeader onBack={() => navigate(ROUTES.ADMIN.PRESIDENTES)} />
+      <PageHeader onBack={() => navigate(ROUTES.ADMIN.PRESIDENTES)} esEntrenador={esEntrenador} />
 
       {/* Contenedor principal con decoración */}
       <div className="rp-container" style={{
@@ -306,6 +311,10 @@ export default function RegistrarPresidente() {
             liga={liga}
             setLiga={setLiga}
             ligasCatalogo={ligasCatalogo}
+            esEntrenador={esEntrenador}
+            equiposSinEntrenador={equiposSinEntrenador}
+            selectedEquipoId={selectedEquipoId}
+            handleEquipoSelectChange={handleEquipoSelectChange}
           />
         )}
 

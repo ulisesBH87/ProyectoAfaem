@@ -107,8 +107,8 @@ async def obtener_documento(
         # Propietario del documento
         elif documento.PersonaId == usuario_db.PersonaId:
             permitido = True
-        # Presidente de equipo
-        elif rol_id == 3:
+        # Presidente de equipo o Entrenador
+        elif rol_id in (3, 4):
             from app.modelos.presidente_equipo_modelo import PresidenteEquipo
             from app.modelos.miembro_equipo_modelo import MiembrosEquipo
             from app.modelos.equipo_modelo import EquiposJugando
@@ -120,12 +120,14 @@ async def obtener_documento(
             ).first()
             
             if presidente:
+                filter_cond = EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId if presidente.TipoDirectivoId == 2 else EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+                
                 is_member = db.query(MiembrosEquipo).join(
                     EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
                 ).filter(
                     MiembrosEquipo.PersonaId == documento.PersonaId,
                     MiembrosEquipo.Eliminado == False,
-                    EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+                    filter_cond
                 ).first() is not None
 
                 is_temp_member = db.query(EquipoTemporalJugador).join(
