@@ -894,9 +894,19 @@ def obtener_directorio_jugadores_repo(db):
     from app.modelos.equipo_modelo import Equipos, EquiposJugando
     from app.modelos.catalogos_liga_modelo import Ligas
     from app.modelos.sexo_c_modelo import CatalogoSexo
+    from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
+    from app.modelos.catalogo_seguros import Seguro
+
+    seguro_subquery = db.query(
+        Seguro.Nombre
+    ).join(
+        EquipoTemporalJugador, Seguro.SeguroId == EquipoTemporalJugador.SeguroId
+    ).filter(
+        EquipoTemporalJugador.PersonaId == Personas.PersonaId
+    ).limit(1).scalar_subquery()
 
     resultados = db.query(
-        MiembrosEquipo, Personas, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoSexo.Nombre
+        MiembrosEquipo, Personas, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoSexo.Nombre, seguro_subquery.label("SeguroNombre")
     ).join(
         Personas, MiembrosEquipo.PersonaId == Personas.PersonaId
     ).join(
@@ -912,7 +922,7 @@ def obtener_directorio_jugadores_repo(db):
     ).all()
 
     jugadores_response = []
-    for (miembro, persona, equipo_nombre, liga, sexo_nombre) in resultados:
+    for (miembro, persona, equipo_nombre, liga, sexo_nombre, seguro_nombre) in resultados:
         docs_aprobados = verificar_documentos_aprobados_repo(db, persona.PersonaId, persona.FechaNacimiento)
         # El rol del jugador debería de ser algo que identifique que es jugador, pero asumimos todos por ahora
         jugadores_response.append({
@@ -934,7 +944,8 @@ def obtener_directorio_jugadores_repo(db):
             "NUI": persona.NUI or "N/A",
             "DocumentosAprobados": docs_aprobados,
             "NumeroCamiseta": miembro.NumeroCamiseta,
-            "RolEnEquipo": miembro.RolEnEquipo
+            "RolEnEquipo": miembro.RolEnEquipo,
+            "SeguroNombre": seguro_nombre or "Sin seguro asignado"
         })
 
     return jugadores_response

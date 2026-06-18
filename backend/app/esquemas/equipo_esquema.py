@@ -44,6 +44,7 @@ class MiembroResponse(BaseModel):
     RutaFoto: Optional[str] = None
     NumeroCamiseta: Optional[int] = None
     EstatusDocumentos: Optional[str] = "Pendiente"
+    SeguroNombre: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -129,6 +130,7 @@ class DirectorioJugadorResponse(BaseModel):
     NumeroCamiseta: Optional[int] = None
     RolEnEquipo: Optional[int] = None
     DocumentosAprobados: Optional[bool] = False
+    SeguroNombre: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -120,7 +120,7 @@ export default function AdminPresidentes() {
   const [modalEdicion, setModalEdicion] = useState(false);
   const [presidenteEnEdicion, setPresidenteEnEdicion] = useState(null);
   const [datosEditables, setDatosEditables] = useState({
-    primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', telefonoOpcional: '', curp: '', estatusId: 6
+    primerNombre: '', primerApellido: '', segundoApellido: '', correo: '', telefono: '', telefonoOpcional: '', curp: '', estatusId: 6, seguroNombre: ''
   });
 
   // Hook para cargar de forma segura la foto del presidente
@@ -569,6 +569,7 @@ export default function AdminPresidentes() {
       telefonoOpcional: pres.telefonoOpcional || '',
       curp: pres.curp || '',
       estatusId: pres.estatus || 6,
+      seguroNombre: pres.seguroNombre || 'Sin seguro asignado'
     });
     setModalEdicion(true);
   };
@@ -1471,6 +1472,11 @@ export default function AdminPresidentes() {
                 valor={String(datosEditables.estatusId || '')}
                 onChange={manejarCambioInput}
                 opciones={ESTATUS_CATALOGO.filter(e => e.id !== 8).map(e => ({ valor: String(e.id), etiqueta: e.label }))}
+              />
+              <EntradaFormulario
+                etiqueta="Seguro asignado"
+                valor={datosEditables.seguroNombre || 'Sin seguro asignado'}
+                deshabilitado={true}
               />
             </div>
           </div>

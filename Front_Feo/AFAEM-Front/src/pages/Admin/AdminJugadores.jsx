@@ -986,7 +986,8 @@ export default function AdminJugadores() {
       NUI: jugador.NUI || '',
       estatus: jugador.Estatus ? '1' : '0',
       numeroCamiseta: jugador.NumeroCamiseta !== undefined && jugador.NumeroCamiseta !== null ? jugador.NumeroCamiseta : '',
-      rolEnEquipo: jugador.RolEnEquipo !== undefined && jugador.RolEnEquipo !== null ? jugador.RolEnEquipo : ''
+      rolEnEquipo: jugador.RolEnEquipo !== undefined && jugador.RolEnEquipo !== null ? jugador.RolEnEquipo : '',
+      seguroNombre: jugador.SeguroNombre || 'Sin seguro asignado'
     });
     setHaCambiado(false);
     setOcrCargando(false);
@@ -1256,6 +1257,9 @@ export default function AdminJugadores() {
   return (
     <div className="dashboard-content">
       <style>{`
+        .swal2-container {
+          z-index: 11000 !important;
+        }
         .aj-ocr-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -1624,6 +1628,7 @@ export default function AdminJugadores() {
               <EntradaFormulario etiqueta="Número de camiseta" valor={datosEditables.numeroCamiseta} onChange={manejarCambioInput} nombre="numeroCamiseta" tipo="number" placeholder="Ej. 10" />
               <EntradaSeleccion etiqueta="Rol en equipo" valor={String(datosEditables.rolEnEquipo ?? '')} onChange={manejarCambioInput} nombre="rolEnEquipo" opciones={[{ valor: '', etiqueta: 'Selecciona un rol...' }, ...rolesEquipo.map(r => ({ valor: String(r.id), etiqueta: r.nombre }))]} />
               <EntradaSeleccion etiqueta="Estatus del jugador" valor={datosEditables.estatus} onChange={manejarCambioInput} nombre="estatus" opciones={[{ valor: '1', etiqueta: 'Activo' }, { valor: '0', etiqueta: 'Baja' }]} />
+              <EntradaFormulario etiqueta="Seguro asignado" valor={datosEditables.seguroNombre} deshabilitado={true} />
             </div>
           </div>
         </div>
