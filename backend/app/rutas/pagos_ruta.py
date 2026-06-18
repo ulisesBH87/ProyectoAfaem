@@ -34,6 +34,12 @@ def admin_hay_orden_ampliacion(equipo_id: int, service: PagosServicio = Depends(
     orden_pago = service.buscar_orden_ampliacion_admin(equipo_id)
     return orden_pago
 
+@router.get("/jugador/estado/{equipo_id}")
+def obtener_estado_pago_jugador(equipo_id: int, service: PagosServicio = Depends(get_pagos_servicio), db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    # Verifica el estado de la orden de pago para solicitud de tipo JUGADOR (tipo 3) para el usuario autenticado
+    orden_pago = service.buscar_orden_pago(TiposSolicitudEnum.JUGADOR.value, equipo_id, usuario)
+    return orden_pago
+
 
 # NUEVO. Requiere el tipo de Solicitud (presidente/equipo/jugador)
 @router.post("/")

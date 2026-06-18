@@ -57,6 +57,8 @@ class PagosServicio:
             "accion": accion,
             "orden_id": orden_pago.OrdenPagoId,
             "estatus_pago_id": orden_pago.EstatusPagoId,
+            "estatus": orden_pago.EstatusPagoId,
+            "estado": orden_pago.EstatusPagoId,
             "total": float(orden_pago.TotalPagar)
         }
 
