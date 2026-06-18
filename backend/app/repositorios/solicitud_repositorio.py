@@ -318,7 +318,9 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
                 "Tipo": cd.NombreDocumento,
                 "Url": f"/documentos/{d.DocumentosSolicitudId}",
                 "Estado": "entregado",
-                "EstadoValidacionId": d.EstadoValidacionId
+                "EstadoValidacionId": d.EstadoValidacionId,
+                "ObservacionesDocumento": d.ObservacionesDocumento,
+                "DocumentoAfiliacionId": d.DocumentoAfiliacionId
             })
             
         resultado.append({
@@ -381,7 +383,12 @@ def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus
                         if doc_entregado:
                             doc_entregado.EstadoValidacionId = estado_val_id
                             if estado == "rechazado":
-                                doc_entregado.ObservacionesDocumento = val.get("motivo") or val.get("detalle") or ""
+                                motivo = val.get("motivo") or ""
+                                detalle = val.get("detalle") or ""
+                                if motivo and detalle:
+                                    doc_entregado.ObservacionesDocumento = f"{motivo}: {detalle}"
+                                else:
+                                    doc_entregado.ObservacionesDocumento = motivo or detalle or ""
                             else:
                                 doc_entregado.ObservacionesDocumento = None
             except Exception as e:
@@ -456,10 +463,32 @@ def activar_presidente_solicitud_repo(db: Session, solicitud_id: int):
     #print("🚀 Proceso de activación completado exitosamente.")
     return True
 
+def rechazar_presidente_solicitud_repo(db: Session, solicitud_id: int):
+    """
+    Busca al presidente vinculado a la solicitud y cambia su estatus a 3 (DOCUMENTOS_PENDIENTES)
+    """
+    solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
+    if not solicitud:
+        return False
+        
+    usuario = db.query(Usuario).filter(Usuario.UsuarioId == solicitud.UsuarioId).first()
+    if not usuario:
+        return False
+        
+    from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+    persona_id = usuario.PersonaId
+    if persona_id:
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == persona_id).first()
+        if presidente:
+            presidente.EstatusId = 3 # DOCUMENTOS_PENDIENTES
+            
+    return True
+
 def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):
     solicitud = db.query(Solicitud).filter(Solicitud.SolicitudId == solicitud_id).first()
     if solicitud:
         solicitud.EstatusValidacion = 1 # ESPERA
+        solicitud.FechaSolicitud = datetime.now()
         db.commit()
         return solicitud
     return None

@@ -136,9 +136,9 @@ const MobileBottomNav = () => {
       {/* Menú Más (Bottom Sheet) */}
       {showMoreMenu && (
         <>
-          <div 
+          <div
             onClick={() => setShowMoreMenu(false)}
-            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1098 }} 
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1098 }}
           />
           <div style={{
             position: 'fixed',

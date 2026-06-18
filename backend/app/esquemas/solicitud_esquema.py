@@ -143,6 +143,8 @@ class DocumentoInfo(BaseModel):
     Url: str
     Estado: str = "entregado"
     EstadoValidacionId: Optional[int] = None
+    ObservacionesDocumento: Optional[str] = None
+    DocumentoAfiliacionId: Optional[int] = None
 
 class JugadorConDocumentos(BaseModel):
     Id: int

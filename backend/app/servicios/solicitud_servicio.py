@@ -233,6 +233,8 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
                 if not activado:
                     # Si no pudimos activar al presidente, lanzamos error para hacer rollback
                     raise Exception("No se pudo activar el registro de Presidente de Equipo. Verifique que el usuario esté vinculado correctamente.")
+            elif payload.Estatus == 3:
+                solicitud_repositorio.rechazar_presidente_solicitud_repo(db, solicitud_id)
                 
                 # 3. Crear automáticamente el equipo real si hay pre-registro
                 equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()

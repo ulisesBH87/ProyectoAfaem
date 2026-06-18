@@ -38,14 +38,14 @@ def subir_documento_repo2(db, persona_id, documento_afiliacion_id, ruta, solicit
         try:
             from app.servicios.documentos_servicio import resolver_ruta_absoluta
             old_path = resolver_ruta_absoluta(existing.RutaArchivo)
-            if old_path and os.path.exists(old_path):
+            if old_path and os.path.exists(old_path) and existing.RutaArchivo != ruta:
                 os.remove(old_path)
         except Exception as e:
             print(f"Error removing old file on re-upload: {e}")
 
         existing.RutaArchivo = ruta
         existing.FechaEntrega = datetime.now()
-        existing.EstadoValidacionId = 2  # PENDIENTE / Espera (valida de nuevo)
+        existing.EstadoValidacionId = 1  # ESPERA / PENDIENTE (valida de nuevo)
         existing.ObservacionesDocumento = None
         existing.FechaValidacion = None
         return existing

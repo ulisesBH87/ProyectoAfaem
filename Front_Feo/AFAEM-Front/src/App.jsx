@@ -6,7 +6,6 @@ import Loader from './components/Loader';
 import { ROUTES } from './routes/paths';
 
 const Ingresar = lazy(() => import('./pages/Auth/Ingresar'));
-const Registrarse = lazy(() => import('./pages/Auth/Registrarse'));
 const RegistrarseCuenta = lazy(() => import('./components/RegistrarseCuenta'));
 const PresidenteEquipoEquipos = lazy(() => import('./pages/Equipos/PresidenteEquipoEquipos'));
 const PresidenteEquipoMisJugadores = lazy(() => import('./pages/Jugadores/PresidenteEquipoMisJugadores'));
@@ -28,7 +27,6 @@ const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
 const AdminGuard = lazy(() => import('./routes/AdminGuard'));
 const PresidenteGuard = lazy(() => import('./routes/PresidenteGuard'));
 const RegistroJugadores = lazy(() => import('./pages/Jugadores/RegistroJugadores'));
-const ProximoPresidente = lazy(() => import('./pages/Auth/ProximoPresidente'));
 const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPresidente'));
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
@@ -133,7 +131,6 @@ function App() {
           <Route path={ROUTES.HOME} element={<Ingresar />} />
           <Route path={ROUTES.LOGIN} element={<Ingresar />} />
           <Route path={ROUTES.REGISTRARSE_CUENTA} element={<RegistrarseCuenta />} />
-          <Route path={ROUTES.PROXIMO_PRESIDENTE} element={<ProximoPresidente />} />
           <Route path={ROUTES.PRE_REGISTRO_PRESIDENTE} element={<PreRegistroPresidente />} />
           <Route path={ROUTES.OLVIDE_CONTRASENA} element={<OlvideContrasena />} />
           <Route path={ROUTES.RESTABLECER_CONTRASENA} element={<RestablecerContrasena />} />

@@ -125,6 +125,7 @@ const AdminPagos = () => {
         localStorage.setItem(`motivo_rechazo_${id}`, motivoRechazo);
       }
       await updateEstatusPago(id, estatus, motivoRechazo);
+      setModalOpen(false);
       Swal.fire({
         title: '¡Actualizado!',
         text: `Pago ${label.toLowerCase()} correctamente.`,
@@ -444,24 +445,62 @@ const AdminPagos = () => {
         alCerrar={() => setModalOpen(false)}
         tamanio="grande"
         pie={
-          <button
-            onClick={() => setModalOpen(false)}
-            style={{
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              background: '#94a3b8',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              transition: 'background 0.2s'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#64748b'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#94a3b8'}
-          >
-            Cerrar
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <div>
+              {pagoDetalle && (
+                (pagoDetalle.EstatusPagoId === 3 || pagoDetalle.EstatusPagoId === 4) ? (
+                  <button
+                    onClick={() => handleCambiarEstatusTerminal(pagoDetalle.OrdenPagoId, pagoDetalle.EstatusPagoId)}
+                    style={{
+                      padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                      background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
+                    }}
+                  >
+                    Editar Estatus
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleUpdateEstatus(pagoDetalle.OrdenPagoId, 3, 'Aprobar')}
+                      style={{
+                        padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                        background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
+                      }}
+                    >
+                      Aprobar
+                    </button>
+                    <button
+                      onClick={() => handleUpdateEstatus(pagoDetalle.OrdenPagoId, 4, 'Rechazar')}
+                      style={{
+                        padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+                        background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
+                      }}
+                    >
+                      Rechazar
+                    </button>
+                  </>
+                )
+              )}
+            </div>
+            <button
+              onClick={() => setModalOpen(false)}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                background: '#94a3b8',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                transition: 'background 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#64748b'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#94a3b8'}
+            >
+              Cerrar
+            </button>
+          </div>
         }
       >
         {loadingDetalle ? (
@@ -523,6 +562,12 @@ const AdminPagos = () => {
                   <div>
                     <span style={{ color: '#64748b', fontWeight: '600' }}>Usuario:</span> <span style={{ color: '#1e293b' }}>{pagoDetalle.NombreCompleto ? `${pagoDetalle.NombreCompleto} (${pagoDetalle.Correo})` : (pagoDetalle.Correo || '—')}</span>
                   </div>
+                  {pagoDetalle.ReferenciaPago && (
+                    <div>
+                      <span style={{ color: '#64748b', fontWeight: '600' }}>Referencia de Pago:</span>{' '}
+                      <span style={{ color: '#1e293b', fontWeight: '800', fontFamily: 'monospace', fontSize: '13px', letterSpacing: '0.5px' }}>{pagoDetalle.ReferenciaPago}</span>
+                    </div>
+                  )}
                   {pagoDetalle.FechaEnvio && (
                     <div>
                       <span style={{ color: '#64748b', fontWeight: '600' }}>Fecha envío:</span> <span style={{ color: '#1e293b' }}>{formatDate(pagoDetalle.FechaEnvio)}</span>
