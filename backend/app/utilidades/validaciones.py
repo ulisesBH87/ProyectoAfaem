@@ -19,25 +19,55 @@ def validacion_curp(value: str):
             raise ValueError('Formato de CURP inválido')
         return val
 
-def validacion_fecha(value: date):
-    
-    minima = 5
-    hoy = date.today()
+def parse_y_validar_fecha(fecha_str: str) -> date:
+    if not fecha_str or not isinstance(fecha_str, str):
+        raise ValueError("Ingresa una fecha válida.")
 
-    if value > date.today():
-        raise ValueError('La fecha no puede ser futura')
+    fecha_str = fecha_str.strip()
+    
+    # Regex to enforce exactly 4-digit years
+    regex_iso = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+    regex_slash = re.compile(r'^\d{2}/\d{2}/\d{4}$')
+    
+    if regex_iso.match(fecha_str):
+        parts = fecha_str.split('-')
+        year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
+    elif regex_slash.match(fecha_str):
+        parts = fecha_str.split('/')
+        day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+    else:
+        raise ValueError("Ingresa una fecha válida.")
         
+    try:
+        parsed_date = date(year, month, day)
+    except ValueError:
+        raise ValueError("Ingresa una fecha válida.")
+        
+    return parsed_date
 
-    if value < date(1900, 1, 1):
-        raise ValueError('La fecha no puede ser anterior a 01-01-1900')
-    
-    #Edad mínima
+def validacion_fecha(value):
+    if isinstance(value, str):
+        value = parse_y_validar_fecha(value)
+    elif isinstance(value, datetime):
+        value = value.date()
+    elif not isinstance(value, date):
+        raise ValueError("Ingresa una fecha válida.")
+
+    if value.year < 1900:
+        raise ValueError("El año debe ser igual o mayor a 1900.")
+
+    hoy = date.today()
+    if value > hoy:
+        raise ValueError("La fecha de nacimiento no puede ser futura.")
+
     age = hoy.year - value.year - (
         (hoy.month, hoy.day) < (value.month, value.day)
     )
 
-    if age < minima:
-        raise ValueError(f'La edad mínima debe ser de {minima} años')
-    
-    
+    if age < 5:
+        raise ValueError("El jugador debe tener al menos 5 años de edad.")
+
+    if age > 125:
+        raise ValueError("Ingresa una fecha válida.")
+
     return value

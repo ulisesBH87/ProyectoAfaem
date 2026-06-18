@@ -104,9 +104,7 @@ export default function RegistroJugadores() {
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
-  const minDate = new Date();
-  minDate.setFullYear(minDate.getFullYear() - 100);
-  const minDateStr = minDate.toISOString().split('T')[0];
+  const minDateStr = '1900-01-01';
 
   // ESTILO DINÁMICO PARA HOVER Y DISEÑO RESPONSIVO
   const hoverStyles = `
@@ -527,7 +525,10 @@ export default function RegistroJugadores() {
         errors.curp = 'Esta CURP ya se encuentra registrada.';
       }
 
-      if (!datos.fechaNacimiento) errors.fechaNacimiento = 'La fecha de nacimiento es obligatoria.';
+      const dateError = validarFechaNacimiento(datos.fechaNacimiento);
+      if (dateError) {
+        errors.fechaNacimiento = dateError;
+      }
       if (!datos.lugarNacimiento?.trim()) errors.lugarNacimiento = 'El lugar de nacimiento es obligatorio.';
       if (!datos.genero) errors.genero = 'El sexo es obligatorio.';
 
@@ -705,6 +706,73 @@ export default function RegistroJugadores() {
     fillManually: false,
     completo: false
   });
+
+  const validarFechaNacimiento = (fechaStr) => {
+    if (!fechaStr) {
+      return 'La fecha de nacimiento es obligatoria.';
+    }
+
+    const regexISO = /^\d{4}-\d{2}-\d{2}$/;
+    const regexSlash = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    let dateObj = null;
+    let year = null;
+    let month = null;
+    let day = null;
+
+    if (regexISO.test(fechaStr)) {
+      const parts = fechaStr.split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1; // 0-indexed
+      day = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else if (regexSlash.test(fechaStr)) {
+      const parts = fechaStr.split('/');
+      day = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1;
+      year = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else {
+      return 'Ingresa una fecha válida.';
+    }
+
+    if (
+      !dateObj ||
+      isNaN(dateObj.getTime()) ||
+      dateObj.getFullYear() !== year ||
+      dateObj.getMonth() !== month ||
+      dateObj.getDate() !== day
+    ) {
+      return 'Ingresa una fecha válida.';
+    }
+
+    if (year < 1900) {
+      return 'El año debe ser igual o mayor a 1900.';
+    }
+
+    const hoy = new Date();
+    const hoyDateOnly = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const birthDateOnly = new Date(year, month, day);
+    if (birthDateOnly > hoyDateOnly) {
+      return 'La fecha de nacimiento no puede ser futura.';
+    }
+
+    let edad = hoy.getFullYear() - year;
+    const mDiff = hoy.getMonth() - month;
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < day)) {
+      edad--;
+    }
+
+    if (edad < 5) {
+      return 'El jugador debe tener al menos 5 años de edad.';
+    }
+
+    if (edad > 125) {
+      return 'Ingresa una fecha válida.';
+    }
+
+    return null;
+  };
 
   const isPlayerMinor = (fechaNacimiento) => {
     if (!fechaNacimiento) return false;
@@ -989,6 +1057,12 @@ export default function RegistroJugadores() {
     const player = jugadores[currentPlayerIndex];
     if (player) {
       const datos = { ...player.datos };
+
+      const dateError = validarFechaNacimiento(datos.fechaNacimiento);
+      setValidationErrors(prev => ({
+        ...prev,
+        fechaNacimiento: dateError
+      }));
 
       if (datos.numCamiseta) {
         const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta, player.numero);
@@ -1506,6 +1580,17 @@ export default function RegistroJugadores() {
 
   // GENERAR PDF PRE-LLENADO
   const handleDownloadFormato = async () => {
+    const dateError = validarFechaNacimiento(currentDatos.fechaNacimiento);
+    if (dateError) {
+      Swal.fire({
+        title: 'Error de validación',
+        text: dateError,
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return false;
+    }
+
     try {
       Swal.fire({
         title: 'Generando PDF...',
@@ -2944,8 +3029,10 @@ export default function RegistroJugadores() {
                             min={minDateStr}
                             max={today}
                             onChange={e => {
-                              handleFieldChange('fechaNacimiento', e.target.value);
-                              setValidationErrors(prev => ({ ...prev, fechaNacimiento: null }));
+                              const val = e.target.value;
+                              handleFieldChange('fechaNacimiento', val);
+                              const errorMsg = validarFechaNacimiento(val);
+                              setValidationErrors(prev => ({ ...prev, fechaNacimiento: errorMsg }));
                             }}
                             onBlur={handleBlur}
                             style={{
