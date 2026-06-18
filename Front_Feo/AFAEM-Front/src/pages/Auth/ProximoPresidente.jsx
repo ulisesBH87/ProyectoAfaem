@@ -74,10 +74,25 @@ export default function ProximoPresidente() {
     }, 300);
   };
 
+  const ALLOWED_TYPES_PP = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_EXT_PP = ['.pdf', '.jpg', '.jpeg', '.png'];
+
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files || []);
     if (selected.length === 0) return;
-    const toAdd = selected.map((f, idx) => {
+    const rechazados = selected.filter(f => {
+      const ext = '.' + f.name.split('.').pop().toLowerCase();
+      return !ALLOWED_TYPES_PP.includes(f.type) || !ALLOWED_EXT_PP.includes(ext);
+    });
+    if (rechazados.length > 0) {
+      alert(`Los siguientes archivos no son válidos y fueron ignorados (solo se aceptan PDF, JPG, JPEG, PNG):\n${rechazados.map(f => f.name).join('\n')}`);
+    }
+    const validos = selected.filter(f => {
+      const ext = '.' + f.name.split('.').pop().toLowerCase();
+      return ALLOWED_TYPES_PP.includes(f.type) && ALLOWED_EXT_PP.includes(ext);
+    });
+    if (validos.length === 0) return;
+    const toAdd = validos.map((f, idx) => {
       return { id: `${Date.now()}-${idx}-${f.name}`, name: f.name, progress: 0 };
     });
     setFiles(prev => {
@@ -85,7 +100,7 @@ export default function ProximoPresidente() {
       toAdd.forEach(t => simulateProgress(t.id));
       return merged;
     });
-    setFileName(selected[0].name);
+    setFileName(validos[0].name);
     e.target.value = '';
   };
 
@@ -248,13 +263,13 @@ export default function ProximoPresidente() {
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                   multiple
-                  accept=".pdf,.png,.jpg,.jpeg,.xlsx"
+                  accept=".pdf,.jpg,.jpeg,.png"
                 />
                 <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--primary)', marginBottom: '8px' }}>
                   📁 Haz clic para seleccionar archivos
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Formatos permitidos: PDF, PNG, JPG, XLSX
+                  Formatos permitidos: PDF, JPG, JPEG, PNG
                 </div>
               </label>
             </div>

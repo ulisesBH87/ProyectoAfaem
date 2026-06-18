@@ -1358,8 +1358,22 @@ export default function RegistroJugadores() {
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
+  const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
+
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
+
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
+      Swal.fire({
+        title: 'Tipo de archivo no permitido',
+        text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return;
+    }
 
     updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
 
@@ -2887,7 +2901,7 @@ export default function RegistroJugadores() {
                             type="file"
                             id={`file-${doc.key}`}
                             style={{ display: 'none' }}
-                            accept="image/*,.pdf"
+                          accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                           />
                         </div>

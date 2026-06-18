@@ -1070,9 +1070,20 @@ export default function ConfigurarEquipo() {
                   <input
                     id="comprobante-equipo"
                     type="file"
-                    accept=".pdf,image/*"
+                    accept=".pdf,.jpg,.jpeg,.png"
                     style={{ display: 'none' }}
-                    onChange={(e) => setComprobantePagoEquipo(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const ext = '.' + file.name.split('.').pop().toLowerCase();
+                      const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                      const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                      if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                        Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                        return;
+                      }
+                      setComprobantePagoEquipo(file);
+                    }}
                   />
                   <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
                     {comprobantePagoEquipo ? comprobantePagoEquipo.name : 'No se ha seleccionado archivo'}
@@ -1170,8 +1181,22 @@ export default function ConfigurarEquipo() {
   }, [selectedSeguroId, slotsData]);
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
+  const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
+
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
+
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
+      Swal.fire({
+        title: 'Tipo de archivo no permitido',
+        text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return;
+    }
 
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
@@ -2145,13 +2170,17 @@ export default function ConfigurarEquipo() {
                   <input
                     type="file"
                     id="team-logo-upload"
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png"
                     style={{ display: 'none' }}
                     onChange={(e) => {
                       const file = e.target.files[0];
-                      if (file) {
-                        setTeamFormData(prev => ({ ...prev, teamLogo: file }));
+                      if (!file) return;
+                      const ext = '.' + file.name.split('.').pop().toLowerCase();
+                      if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type) || !['.jpg', '.jpeg', '.png'].includes(ext)) {
+                        Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan imágenes JPG, JPEG o PNG para el logo.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                        return;
                       }
+                      setTeamFormData(prev => ({ ...prev, teamLogo: file }));
                     }}
                   />
                   <button
@@ -2574,7 +2603,7 @@ export default function ConfigurarEquipo() {
                           type="file"
                           id={`file-${doc.key}`}
                           style={{ display: 'none' }}
-                          accept="image/*,.pdf"
+                          accept=".pdf,.jpg,.jpeg,.png"
                           onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                         />
                       </div>
@@ -3148,11 +3177,18 @@ export default function ConfigurarEquipo() {
               type="file"
               id="final-signed-form"
               style={{ display: 'none' }}
-              accept=".pdf"
+              accept=".pdf,.jpg,.jpeg,.png"
               onChange={(e) => {
-                if (e.target.files[0]) {
-                  setSignedForm(e.target.files[0]);
+                const file = e.target.files[0];
+                if (!file) return;
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                  return;
                 }
+                setSignedForm(file);
               }}
             />
           </div>

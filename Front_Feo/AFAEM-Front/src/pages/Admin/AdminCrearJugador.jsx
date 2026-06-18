@@ -242,8 +242,22 @@ export default function AdminCrearJugador() {
   }, []);
 
   // PROCESAR OCR
+  const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
+
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
+
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
+      Swal.fire({
+        title: 'Tipo de archivo no permitido',
+        text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return;
+    }
 
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
@@ -1048,7 +1062,7 @@ export default function AdminCrearJugador() {
                     type="file"
                     id={`file-${doc.key}`}
                     style={{ display: 'none' }}
-                    accept="image/*,.pdf"
+                    accept=".pdf,.jpg,.jpeg,.png"
                     onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                   />
                 </div>
@@ -1085,7 +1099,7 @@ export default function AdminCrearJugador() {
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '10px', fontWeight: '800' }}>
                       {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                     </div>
-                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
                   </div>
                 ))}
               </div>
@@ -1119,7 +1133,7 @@ export default function AdminCrearJugador() {
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents.documentoEstudiante ? '#dcfce7' : '#fef3c7', color: documents.documentoEstudiante ? '#166534' : '#92400e', fontSize: '10px', fontWeight: '800' }}>
                     {documents.documentoEstudiante ? <><FaCheckCircle /> Listo</> : '⏳ Pendiente'}
                   </div>
-                  <input type="file" id="file-documentoEstudiante" style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload('documentoEstudiante', e.target.files[0])} />
+                  <input type="file" id="file-documentoEstudiante" style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('documentoEstudiante', e.target.files[0])} />
                 </div>
               </div>
             )}
@@ -1149,7 +1163,7 @@ export default function AdminCrearJugador() {
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '10px', fontWeight: '800' }}>
                       {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                     </div>
-                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept="image/*,.pdf" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
+                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
                   </div>
                 ))}
               </div>
@@ -1562,11 +1576,18 @@ export default function AdminCrearJugador() {
               type="file"
               id="final-signed-form"
               style={{ display: 'none' }}
-              accept=".pdf"
+              accept=".pdf,.jpg,.jpeg,.png"
               onChange={(e) => {
-                if (e.target.files[0]) {
-                  setSignedForm(e.target.files[0]);
+                const file = e.target.files[0];
+                if (!file) return;
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                  return;
                 }
+                setSignedForm(file);
               }}
             />
           </div>

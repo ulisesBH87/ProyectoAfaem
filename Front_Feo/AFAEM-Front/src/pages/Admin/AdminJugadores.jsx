@@ -851,11 +851,15 @@ export default function AdminJugadores() {
         const tipoId = Number(boton.getAttribute('data-add-doc'));
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.pdf,image/*';
+        input.accept = '.pdf,.jpg,.jpeg,.png';
         input.style.display = 'none';
         input.onchange = (e) => {
           const archivo = e.target.files?.[0];
           if (archivo) {
+            if (!validarArchivoDoc(archivo)) {
+              Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+              return;
+            }
             bsModal.hide();
             manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
           }
@@ -874,11 +878,15 @@ export default function AdminJugadores() {
         const tipoId = Number(boton.getAttribute('data-replace-doc'));
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.pdf,image/*';
+        input.accept = '.pdf,.jpg,.jpeg,.png';
         input.style.display = 'none';
         input.onchange = (ev) => {
           const archivo = ev.target.files?.[0];
           if (archivo) {
+            if (!validarArchivoDoc(archivo)) {
+              Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+              return;
+            }
             bsModal.hide();
             manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
           }
@@ -1008,9 +1016,27 @@ export default function AdminJugadores() {
       });
   };
 
+  const ALLOWED_TYPES_DOC = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_EXT_DOC = ['.pdf', '.jpg', '.jpeg', '.png'];
+
+  const validarArchivoDoc = (file) => {
+    if (!file) return false;
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    return ALLOWED_TYPES_DOC.includes(file.type) && ALLOWED_EXT_DOC.includes(ext);
+  };
+
   // PROCESAR OCR PARA EL MODAL DE EDICIÓN
   const handleOcrModalUpload = async (file) => {
     if (!file) return;
+    if (!validarArchivoDoc(file)) {
+      Swal.fire({
+        title: 'Tipo de archivo no permitido',
+        text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return;
+    }
     setOcrCargando(true);
     Swal.fire({
       title: 'Analizando documento...',
@@ -1595,7 +1621,7 @@ export default function AdminJugadores() {
                     <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>Acta</div>
                     <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
                   </div>
-                  <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
                   <span style={{ fontSize: '24px' }}>🪪</span>
@@ -1603,7 +1629,7 @@ export default function AdminJugadores() {
                     <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>INE</div>
                     <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
                   </div>
-                  <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
                 </label>
               </div>
               {ocrCargando && (
