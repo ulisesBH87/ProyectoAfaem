@@ -928,6 +928,15 @@ def crear_o_actualizar_borrador_presidente(
         if not duplicado:
             usuario_db.Correo = correo
 
+    curp_duplicada = False
+    curp_cleaned = curp.strip().upper()
+    if curp_cleaned and len(curp_cleaned) == 18:
+        query_curp = db.query(Personas).filter(Personas.CURP == curp_cleaned)
+        if persona and persona.PersonaId:
+            query_curp = query_curp.filter(Personas.PersonaId != persona.PersonaId)
+        if query_curp.first():
+            curp_duplicada = True
+
     # Update JSON data draft column
     presidente.DatosBorrador = json.dumps(datos, ensure_ascii=False)
     db.commit()
@@ -935,7 +944,8 @@ def crear_o_actualizar_borrador_presidente(
     return {
         "presidente_id": presidente.PresidenteEquipoId,
         "usuario_id": usuario_db.UsuarioId,
-        "mensaje": "Borrador guardado correctamente"
+        "mensaje": "Borrador guardado correctamente",
+        "curp_duplicada": curp_duplicada
     }
 
 @router.get("/borrador-presidente/{borrador_id}")
@@ -1663,6 +1673,18 @@ async def registrar_presidente_admin(
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
     
     try:
+        # Check CURP uniqueness
+        if curp:
+            curp_cleaned = curp.strip().upper()
+            query_curp = db.query(Personas).filter(Personas.CURP == curp_cleaned)
+            if borradorId:
+                nuevo_presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == borradorId).first()
+                if nuevo_presidente:
+                    query_curp = query_curp.filter(Personas.PersonaId != nuevo_presidente.PersonaId)
+            existing_curp = query_curp.first()
+            if existing_curp:
+                raise HTTPException(status_code=400, detail="La CURP ingresada ya se encuentra registrada.")
+
         from app.core.telefono_utils import validar_y_normalizar_telefono
         telefono_normalizado = validar_y_normalizar_telefono(telefono) if telefono else None
         telefono_opcional_normalizado = validar_y_normalizar_telefono(telefonoOpcional) if telefonoOpcional else None

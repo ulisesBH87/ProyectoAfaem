@@ -210,9 +210,35 @@ export default function RegistroJugadores() {
       box-sizing: border-box;
     }
 
+    .slot-nav-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 auto 25px auto;
+      max-width: 1000px;
+      width: 100%;
+      padding: 16px 35px;
+      background: white;
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
     @media (max-width: 1024px) {
       .form-grid-3 {
         grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .stepper-container {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 16px 12px;
+      }
+      .stepper-line {
+        display: none !important;
       }
     }
 
@@ -256,12 +282,14 @@ export default function RegistroJugadores() {
         width: 100% !important;
       }
       .stepper-container {
+        grid-template-columns: repeat(3, 1fr) !important;
         padding: 16px 12px;
         margin-bottom: 20px;
         border-radius: 12px;
+        gap: 16px 12px;
       }
       .stepper-label {
-        display: none;
+        display: block !important;
       }
       .stepper-item {
         min-width: auto;
@@ -273,8 +301,11 @@ export default function RegistroJugadores() {
         border-width: 2px;
       }
       .stepper-line {
-        left: 20px;
-        right: 20px;
+        display: none !important;
+      }
+      .slot-nav-container {
+        padding: 12px 16px;
+        border-radius: 16px;
       }
       .mobile-step-indicator {
         display: block;
@@ -292,33 +323,49 @@ export default function RegistroJugadores() {
       }
     }
 
+    @media (max-width: 480px) {
+      .stepper-container {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 12px 8px;
+        padding: 12px 8px;
+      }
+      .stepper-bubble {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 11px !important;
+      }
+      .stepper-label {
+        font-size: 10px !important;
+        margin-top: 6px !important;
+      }
+    }
+
     .mobile-step-indicator {
       display: none;
     }
 
     /* Estilos del Wizard (Stepper) */
     .stepper-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      align-items: start;
       margin-bottom: 35px;
       position: relative;
       background: #f8fafc;
       padding: 24px;
       border-radius: 20px;
       border: 1px solid #e2e8f0;
-      overflow-x: auto;
-      gap: 10px;
+      gap: 16px 10px;
+      overflow-x: hidden;
     }
     .stepper-line {
       position: absolute;
-      top: 50%;
-      left: 40px;
-      right: 40px;
+      top: 44px;
+      left: 8.33%;
+      right: 8.33%;
       height: 4px;
       background: #e2e8f0;
       z-index: 1;
-      transform: translateY(-50%);
     }
     .stepper-line-progress {
       height: 100%;
@@ -332,8 +379,7 @@ export default function RegistroJugadores() {
       position: relative;
       z-index: 2;
       cursor: pointer;
-      flex: 1;
-      min-width: 70px;
+      text-align: center;
     }
     .stepper-bubble {
       width: 40px;
@@ -370,6 +416,7 @@ export default function RegistroJugadores() {
       letter-spacing: 0.5px;
       transition: color 0.3s;
       text-align: center;
+      display: block;
     }
     .stepper-item.active .stepper-label {
       color: #0b4ea6;
@@ -1100,8 +1147,6 @@ export default function RegistroJugadores() {
         total: paidPlayers
       });
 
-      const firstSeguroId = String(slotsResponse.seguros?.[0]?.seguro_id || '');
-
       // Mapear los slots de la base de datos al estado jugadores
       const mappedJugadores = await Promise.all((slotsResponse.slots || []).map(async (slot, i) => {
         const datos = slot.datos_borrador || { ...defaultPlayerDatos };
@@ -1142,7 +1187,7 @@ export default function RegistroJugadores() {
           datos: mergedDatos,
           documentos: restoredDocs,
           signedForm: restoredSignedForm,
-          seguroId: String(slot.seguro_id || ''),
+          seguroId: (slot.datos_borrador || slot.completo) ? String(slot.seguro_id || '') : '',
           fillManually: !!slot.datos_borrador,
           completo: slot.completo
         };
@@ -1964,7 +2009,7 @@ export default function RegistroJugadores() {
         {/* CONTENEDOR DE TARJETAS DE EQUIPOS */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '28px',
           maxWidth: '1040px',
           margin: '0 auto 40px auto',
@@ -2182,20 +2227,7 @@ export default function RegistroJugadores() {
         const status = activePlayer ? getPlayerStatus(activePlayer) : 'VACIO';
         const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
         return (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            margin: '0 auto 25px auto',
-            maxWidth: '1000px',
-            width: '100%',
-            padding: '16px 35px',
-            background: 'white',
-            borderRadius: '24px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            transition: 'all 0.3s ease'
-          }}>
+          <div className="slot-nav-container">
             {/* Left Arrow Button */}
             <button
               type="button"
@@ -3350,7 +3382,7 @@ export default function RegistroJugadores() {
 
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                       gap: '20px',
                       marginBottom: '30px'
                     }}>

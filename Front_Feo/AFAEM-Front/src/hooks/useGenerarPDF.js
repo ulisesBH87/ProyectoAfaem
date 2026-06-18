@@ -68,7 +68,16 @@ export function useGenerarPDF() {
       // Nombre
       const { nombre, curp, fecha_nac } = ocrResults;
       const nacionalidad = cuenta.nacionalidad || ocrResults.nacionalidad;
-      if (nombre && nombre !== 'No detectado') {
+
+      const nombreVal = cuenta.nombre || '';
+      const primerApellidoVal = cuenta.primerApellido || '';
+      const segundoApellidoVal = cuenta.segundoApellido || '';
+
+      if (nombreVal || primerApellidoVal || segundoApellidoVal) {
+        safeField(form, 'Apellido Paterno', primerApellidoVal);
+        safeField(form, 'Apellido Materno', segundoApellidoVal);
+        safeField(form, 'Nombres', nombreVal);
+      } else if (nombre && nombre !== 'No detectado') {
         const parts = nombre.split(' ');
         if (parts.length >= 3) {
           safeField(form, 'Apellido Paterno', parts[0]);
@@ -82,8 +91,11 @@ export function useGenerarPDF() {
         }
       }
 
-      safeField(form, 'CURP o Clave Única de Registro de Población', curp);
-      safeField(form, 'Fecha de Nacimiento', fecha_nac);
+      const curpVal = cuenta.curp || curp;
+      safeField(form, 'CURP o Clave Única de Registro de Población', curpVal);
+
+      const fechaNacVal = cuenta.fechaNacimiento || fecha_nac;
+      safeField(form, 'Fecha de Nacimiento', fechaNacVal);
 
       // Correo (tamaño adaptativo)
       const correoVal = cuenta.correo || '';
@@ -91,8 +103,8 @@ export function useGenerarPDF() {
       safeField(form, 'Correo electrónico', correoVal, correoFontSize);
 
       // Teléfono
-      const telLocal = ocrResults.telefono || cuenta.telefono || '';
-      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : codigoPaisCuenta;
+      const telLocal = cuenta.telefono || ocrResults.telefono || '';
+      const codPais = telLocal.startsWith('+') ? '' : codigoPaisCuenta;
       safeField(form, 'Teléfono', codPais + telLocal);
 
       // Afiliación
@@ -114,8 +126,8 @@ export function useGenerarPDF() {
       if (cuenta.sexoId === '1' || cuenta.sexoId === 1) sexoTexto = 'MASCULINO';
       else if (cuenta.sexoId === '2' || cuenta.sexoId === 2) sexoTexto = 'FEMENINO';
       else if (cuenta.sexoId === '3' || cuenta.sexoId === 3) sexoTexto = 'OTRO';
-      else if (curp?.length >= 11) {
-        const sx = curp.charAt(10).toUpperCase();
+      else if (curpVal?.length >= 11) {
+        const sx = curpVal.charAt(10).toUpperCase();
         sexoTexto = sx === 'H' ? 'MASCULINO' : sx === 'M' ? 'FEMENINO' : '';
       }
       safeField(form, 'Sexo', sexoTexto);
@@ -133,7 +145,8 @@ export function useGenerarPDF() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Formato_${(nombre || 'Presidente').replace(/[^a-zA-Z0-9 ]/g, '').trim()}.pdf`;
+      const nombreParaNombreArchivo = cuenta.nombre || nombre || 'Presidente';
+      link.download = `Formato_${nombreParaNombreArchivo.replace(/[^a-zA-Z0-9 ]/g, '').trim()}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

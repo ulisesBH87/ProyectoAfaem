@@ -9,7 +9,7 @@ import PasswordField from './PasswordField';
  */
 export default function Step2Cuenta({
   cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
-  codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta
+  codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta, isCheckingCurp
 }) {
   return (
     <div>
@@ -106,7 +106,10 @@ export default function Step2Cuenta({
       {/* CURP y sexo */}
       <div className="rp-grid-2to1">
         <div>
-          <label style={fieldStyles.label}>CURP <span style={{ color: C.amber }}>*</span></label>
+          <label style={fieldStyles.label}>
+            CURP <span style={{ color: C.amber }}>*</span>
+            {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '10px' }}>Validando...</span>}
+          </label>
           <input
             style={{ ...fieldStyles.input, textTransform: 'uppercase', borderColor: cuentaErrors.curp ? C.rose : C.inputBorder }}
             type="text" placeholder="18 CARACTERES" maxLength={18}
