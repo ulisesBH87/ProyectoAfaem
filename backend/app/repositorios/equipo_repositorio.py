@@ -736,7 +736,7 @@ def crear_equipo_jugando(db, equipo, team_info, presidente_id, cantidad):
 # ACTUALIZACIÓN DE EQUIPO
 # =============================
 def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
-                          presidente_equipo_id: int = None, liga_id: int = None,
+                          presidente_equipo_id: int = None, entrenador_equipo_id: int = None, liga_id: int = None,
                           modalidad_id: int = None, categoria_id: int = None,
                           rama_id: int = None):
     from app.modelos.equipo_modelo import Equipos, EquiposJugando
@@ -749,15 +749,18 @@ def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
     if estatus is not None:
         equipo.Estatus = estatus
 
-    # Actualizar EquiposJugando si se enviaron campos de categoría o presidente
+    # Actualizar EquiposJugando si se enviaron campos de categoría o presidente o entrenador
     hay_cambios_jugando = any(v is not None for v in [
-        presidente_equipo_id, liga_id
+        presidente_equipo_id, entrenador_equipo_id, liga_id
     ])
     if hay_cambios_jugando:
         eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
         if eq_jugando:
             if presidente_equipo_id is not None:
                 eq_jugando.PresidenteEquipoId = presidente_equipo_id
+            if entrenador_equipo_id is not None:
+                # Si se provee, actualizar el EntrenadorEquipoId (incluso si es None/null)
+                eq_jugando.EntrenadorEquipoId = entrenador_equipo_id
             if liga_id is not None:
                 eq_jugando.LigaId = liga_id
 
@@ -820,6 +823,11 @@ def obtener_directorio_equipos_repo(db):
     from app.modelos.catalogos_liga_modelo import Ligas, CatalogoCategorias, CatalogoModalidad, CatalogoRamas
     from app.modelos.presidente_equipo_modelo import PresidenteEquipo
     from app.modelos.usuario_modelo import Usuario
+    from app.modelos.persona_modelo import Personas
+    from sqlalchemy.orm import aliased
+
+    EntrenadorPresidente = aliased(PresidenteEquipo)
+    EntrenadorPersona = aliased(Personas)
 
     slots_subquery = db.query(
         EquipoTemporal.EquipoId.label("EquipoId"),
@@ -830,7 +838,10 @@ def obtener_directorio_equipos_repo(db):
         EquiposJugando, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoCategorias.NombreCategoria,
         CatalogoModalidad.NombreModalidad, CatalogoRamas.Nombre,
         Personas.Nombre, Personas.PrimerApellido, Usuario.Correo,
-        func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados")
+        func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados"),
+        EntrenadorPresidente.PresidenteEquipoId.label("EntrenadorEquipoId"),
+        EntrenadorPersona.Nombre.label("EntrenadorNombre"),
+        EntrenadorPersona.PrimerApellido.label("EntrenadorPrimerApellido")
     ).join(
         Equipos, EquiposJugando.EquipoId == Equipos.EquipoId
     ).join(
@@ -848,11 +859,35 @@ def obtener_directorio_equipos_repo(db):
     ).outerjoin(
         Usuario, Personas.PersonaId == Usuario.PersonaId
     ).outerjoin(
+        EntrenadorPresidente, EquiposJugando.EntrenadorEquipoId == EntrenadorPresidente.PresidenteEquipoId
+    ).outerjoin(
+        EntrenadorPersona, EntrenadorPresidente.PersonaId == EntrenadorPersona.PersonaId
+    ).outerjoin(
         slots_subquery, Equipos.EquipoId == slots_subquery.c.EquipoId
     ).all()
 
     equipos_response = []
-    for (ej, eq_nombre, liga, categoria, modalidad, rama, p_nombre, p_apellido, email, slots_comprados) in resultados:
+    for row in resultados:
+        ej = row[0]
+        eq_nombre = row[1]
+        liga = row[2]
+        categoria = row[3]
+        modalidad = row[4]
+        rama = row[5]
+        p_nombre = row[6]
+        p_apellido = row[7]
+        email = row[8]
+        slots_comprados = row[9]
+        entrenador_equipo_id = row[10]
+        entrenador_nombre = row[11]
+        entrenador_apellido = row[12]
+
+        entrenador_nombre_completo = "Sin entrenador asignado"
+        if entrenador_nombre and entrenador_apellido:
+            entrenador_nombre_completo = f"{entrenador_nombre} {entrenador_apellido}"
+        elif entrenador_nombre:
+            entrenador_nombre_completo = entrenador_nombre
+
         equipos_response.append({
             "EquipoId": ej.EquipoId,
             "NombreEquipo": eq_nombre,
@@ -867,6 +902,8 @@ def obtener_directorio_equipos_repo(db):
             "PresidenteEquipoId": ej.PresidenteEquipoId,
             "PresidenteNombreCompleto": f"{p_nombre} {p_apellido}",
             "PresidenteEmail": email or "Sin correo",
+            "EntrenadorEquipoId": entrenador_equipo_id,
+            "EntrenadorNombreCompleto": entrenador_nombre_completo,
             "NumeroJugadoresRegistrados": ej.CantidadJugadores,
             "FechaCreacion": ej.EquipoRelacion.FechaCreacion,
             "Estatus": ej.EquipoRelacion.Estatus,

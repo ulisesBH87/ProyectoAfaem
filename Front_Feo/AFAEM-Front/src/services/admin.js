@@ -239,6 +239,7 @@ export const updateEquipo = async (equipoId, nombre, estatus, extras = {}) => {
 
   // Añadir campos opcionales si vienen
   if (extras.presidenteEquipoId != null) payload.PresidenteEquipoId = extras.presidenteEquipoId;
+  if (extras.entrenadorEquipoId !== undefined) payload.EntrenadorEquipoId = extras.entrenadorEquipoId;
   if (extras.ligaId != null) payload.LigaId = extras.ligaId;
   if (extras.modalidadId != null) payload.ModalidadId = extras.modalidadId;
   if (extras.categoriaId != null) payload.CategoriaId = extras.categoriaId;

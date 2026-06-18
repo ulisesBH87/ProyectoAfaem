@@ -1613,6 +1613,15 @@ def update_equipo(equipo_id: int, equipo_data: EquipoUpdateCompleto, db: Session
         if not presidente:
             raise HTTPException(status_code=404, detail="Presidente no encontrado con el ID proporcionado")
 
+    # Validar que el nuevo entrenador exista si se proporciona
+    if equipo_data.EntrenadorEquipoId is not None:
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        entrenador = db.query(PresidenteEquipo).filter(
+            PresidenteEquipo.PresidenteEquipoId == equipo_data.EntrenadorEquipoId
+        ).first()
+        if not entrenador:
+            raise HTTPException(status_code=404, detail="Entrenador no encontrado con el ID proporcionado")
+
     try:
         from app.repositorios.equipo_repositorio import actualizar_equipo_repo
         equipo = actualizar_equipo_repo(
@@ -1621,6 +1630,7 @@ def update_equipo(equipo_id: int, equipo_data: EquipoUpdateCompleto, db: Session
             equipo_data.NombreEquipo,
             equipo_data.Estatus,
             presidente_equipo_id=equipo_data.PresidenteEquipoId,
+            entrenador_equipo_id=equipo_data.EntrenadorEquipoId,
             liga_id=equipo_data.LigaId,
             modalidad_id=equipo_data.ModalidadId,
             categoria_id=equipo_data.CategoriaId,
