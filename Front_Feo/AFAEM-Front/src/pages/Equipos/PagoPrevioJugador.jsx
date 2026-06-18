@@ -45,7 +45,18 @@ export default function PagoPrevioJugador() {
   const [procesandoPagoJugador, setProcesandoPagoJugador] = useState(false);
 
   const pathSegments = location.pathname.split('/');
-  const accion = pathSegments[pathSegments.length - 1];
+  const rawAccion = pathSegments[pathSegments.length - 1];
+  const ACTION_MAPPING = {
+    'co': 'crear-orden',
+    'sc': 'subir-comprobante',
+    'rev': 'en-revision',
+    'rc': 'reenviar-comprobante',
+    'crear-orden': 'crear-orden',
+    'subir-comprobante': 'subir-comprobante',
+    'en-revision': 'en-revision',
+    'reenviar-comprobante': 'reenviar-comprobante'
+  };
+  const accion = ACTION_MAPPING[rawAccion] || rawAccion;
   const state = location.state || {};
   const { equipoId, ordenId, total } = state;
   const resolvedOrdenId = pagoData?.orden_id || pagoData?.orden_pago_id || pagoData?.OrdenPagoId || pagoData?.id || ordenId;
