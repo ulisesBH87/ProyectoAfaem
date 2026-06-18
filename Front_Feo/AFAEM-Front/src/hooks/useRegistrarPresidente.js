@@ -392,13 +392,13 @@ export function useRegistrarPresidente() {
       fd.append('segundoApellido', cuenta.segundoApellido || '');
       fd.append('correo', correoFinal);
 
-      const telLocal = ocrResults.telefono || cuenta.telefono || '';
-      const codPais = (ocrResults.telefono && ocrResults.telefono.startsWith('+')) ? '' : codigoPaisCuenta;
+      const telLocal = cuenta.telefono || ocrResults.telefono || '';
+      const codPais = telLocal.startsWith('+') ? '' : codigoPaisCuenta;
       fd.append('telefono', codPais + telLocal);
       if (cuenta.telefonoOpcional) {
         fd.append('telefonoOpcional', codigoPaisOpcionalCuenta + cuenta.telefonoOpcional);
       }
-      fd.append('curp', ocrResults.curp || cuenta.curp || '');
+      fd.append('curp', cuenta.curp || ocrResults.curp || '');
       fd.append('sexoId', cuenta.sexoId || '');
       fd.append('fechaNacimiento', cuenta.fechaNacimiento || '');
       fd.append('contrasena', cuenta.contrasena);
