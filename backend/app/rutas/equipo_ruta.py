@@ -1026,7 +1026,10 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
             if not presidente:
                 return []
-            query = query.filter(EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId)
+            if presidente.TipoDirectivoId == 2: # ENTRENADOR
+                query = query.filter(EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId)
+            else: # PRESIDENTE
+                query = query.filter(EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId)
 
         resultados = query.all()
 
@@ -1102,7 +1105,10 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
             if not presidente:
                 return []
-            query = query.filter(EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId).distinct()
+            if presidente.TipoDirectivoId == 2: # ENTRENADOR
+                query = query.filter(EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId).distinct()
+            else: # PRESIDENTE
+                query = query.filter(EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId).distinct()
 
         resultados = query.all()
         from datetime import date
@@ -1429,12 +1435,16 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
             raise HTTPException(status_code=403, detail="Acceso denegado")
 
         from app.modelos.equipo_modelo import EquiposJugando
+        
+        # Filtrar por Entrenador o Presidente según corresponda
+        filter_cond = EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId if presidente.TipoDirectivoId == 2 else EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+        
         is_member = db.query(MiembrosEquipo).join(
             EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
         ).filter(
             MiembrosEquipo.PersonaId == miembro.PersonaId,
             MiembrosEquipo.Eliminado == False,
-            EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+            filter_cond
         ).first() is not None
 
         from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
@@ -1546,12 +1556,16 @@ def get_solicitud_documento_jugador(
             raise HTTPException(status_code=403, detail="Acceso denegado")
 
         from app.modelos.equipo_modelo import EquiposJugando
+        
+        # Filtrar por Entrenador o Presidente según corresponda
+        filter_cond = EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId if presidente.TipoDirectivoId == 2 else EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+
         is_member = db.query(MiembrosEquipo).join(
             EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
         ).filter(
             MiembrosEquipo.PersonaId == miembro.PersonaId,
             MiembrosEquipo.Eliminado == False,
-            EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
+            filter_cond
         ).first() is not None
 
         from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
