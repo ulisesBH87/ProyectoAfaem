@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useRBAC } from '../../hooks/useRBAC';
+import { ROUTES } from '../../routes/paths';
 
 const UserMenu = ({ userEmail }) => {
   const navigate = useNavigate();
@@ -69,6 +70,19 @@ const UserMenu = ({ userEmail }) => {
           background: 'rgba(255, 255, 255, 0.98)', border: '1px solid var(--border-light)',
           zIndex: 1001
         }}>
+           <button 
+             onClick={() => { setShowUserMenu(false); navigate(ROUTES.MI_CUENTA); }}
+             style={{ 
+               width: '100%', padding: '12px', borderRadius: '8px',
+               display: 'flex', alignItems: 'center', gap: '10px',
+               color: 'var(--text-main)', background: 'transparent', fontWeight: '600',
+               border: 'none', cursor: 'pointer', marginBottom: '4px'
+             }}
+             onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(11, 78, 166, 0.05)'}
+             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+           >
+             <FaUserCircle /> Mi Cuenta
+           </button>
            <button 
              onClick={handleLogout}
              style={{ 
