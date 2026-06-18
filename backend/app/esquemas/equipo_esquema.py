@@ -44,6 +44,7 @@ class MiembroResponse(BaseModel):
     RutaFoto: Optional[str] = None
     NumeroCamiseta: Optional[int] = None
     EstatusDocumentos: Optional[str] = "Pendiente"
+    SeguroNombre: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -101,6 +102,8 @@ class DirectorioEquipoResponse(BaseModel):
     PresidenteEquipoId: int
     PresidenteNombreCompleto: str
     PresidenteEmail: str
+    EntrenadorEquipoId: Optional[int] = None
+    EntrenadorNombreCompleto: Optional[str] = None
     NumeroJugadoresRegistrados: int
     FechaCreacion: datetime
     Estatus: bool
@@ -129,6 +132,7 @@ class DirectorioJugadorResponse(BaseModel):
     NumeroCamiseta: Optional[int] = None
     RolEnEquipo: Optional[int] = None
     DocumentosAprobados: Optional[bool] = False
+    SeguroNombre: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -141,6 +145,7 @@ class EquipoUpdateCompleto(BaseModel):
     NombreEquipo: Optional[str] = None
     Estatus: Optional[bool] = None
     PresidenteEquipoId: Optional[int] = None  # ID del nuevo presidente responsable
+    EntrenadorEquipoId: Optional[int] = None  # ID del nuevo entrenador responsable
     LigaId: Optional[int] = None
     ModalidadId: Optional[int] = None
     CategoriaId: Optional[int] = None

@@ -9,6 +9,7 @@ export const ROUTES = {
   SUSPENDIDO: "/suspendido",
   INVITACION: "/i/:tokenIdentificador/:tokenSecreto",
   REGISTRAR_ADMIN: "/registrar-admin",
+  MI_CUENTA: "/mi-cuenta",
 
   ADMIN: {
     DASHBOARD: "/ad/d",

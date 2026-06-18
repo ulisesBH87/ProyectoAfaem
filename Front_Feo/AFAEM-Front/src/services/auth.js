@@ -102,3 +102,17 @@ export async function verificarCurp(curp) {
   const response = await api.get(`/auth/verificar-curp`, { params: { curp } });
   return response.data;
 }
+
+// CAMBIAR CONTRASEÑA
+export async function cambiarContrasena(contrasenaActual, nuevaContrasena) {
+  const token = localStorage.getItem('token');
+  const response = await api.post('/auth/cambiar-contrasena', {
+    ContrasenaActual: contrasenaActual,
+    NuevaContrasena: nuevaContrasena
+  }, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return response.data;
+}

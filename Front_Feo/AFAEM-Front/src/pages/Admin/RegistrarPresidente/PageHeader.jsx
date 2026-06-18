@@ -5,7 +5,7 @@ import { C } from './constants';
  * PageHeader
  * Header superior con botón de regreso y título/subtítulo de la página.
  */
-export default function PageHeader({ onBack }) {
+export default function PageHeader({ onBack, esEntrenador }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 32 }}>
       <button
@@ -34,7 +34,7 @@ export default function PageHeader({ onBack }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 5, height: 22, background: `linear-gradient(180deg, ${C.amber}, ${C.orange})`, borderRadius: 4 }} />
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: '0.3px', color: 'black' }}>
-            Registrar Nuevo Presidente
+            {esEntrenador ? 'Registrar Nuevo Entrenador' : 'Registrar Nuevo Presidente'}
           </h1>
         </div>
       </div>

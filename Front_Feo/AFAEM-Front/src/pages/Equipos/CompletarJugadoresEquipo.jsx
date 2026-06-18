@@ -290,8 +290,22 @@ export default function CompletarJugadoresEquipo() {
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
+  const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
+
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
+
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
+      Swal.fire({
+        title: 'Tipo de archivo no permitido',
+        text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return;
+    }
 
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
@@ -1560,7 +1574,7 @@ export default function CompletarJugadoresEquipo() {
                       type="file"
                       id={`file-${doc.key}`}
                       style={{ display: 'none' }}
-                      accept="image/*,.pdf"
+                      accept=".pdf,.jpg,.jpeg,.png"
                       onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                     />
                   </div>
@@ -2063,11 +2077,18 @@ export default function CompletarJugadoresEquipo() {
               type="file"
               id="final-signed-form"
               style={{ display: 'none' }}
-              accept=".pdf"
+              accept=".pdf,.jpg,.jpeg,.png"
               onChange={(e) => {
-                if (e.target.files[0]) {
-                  setSignedForm(e.target.files[0]);
+                const file = e.target.files[0];
+                if (!file) return;
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                  return;
                 }
+                setSignedForm(file);
               }}
             />
           </div>

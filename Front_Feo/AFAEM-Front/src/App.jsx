@@ -29,6 +29,7 @@ const PresidenteGuard = lazy(() => import('./routes/PresidenteGuard'));
 const RegistroJugadores = lazy(() => import('./pages/Jugadores/RegistroJugadores'));
 const PreRegistroPresidente = lazy(() => import('./pages/Auth/PreRegistroPresidente'));
 const OlvideContrasena = lazy(() => import('./pages/Auth/OlvideContrasena'));
+const MiCuenta = lazy(() => import('./pages/Auth/MiCuenta'));
 const RestablecerContrasena = lazy(() => import('./pages/Auth/RestablecerContrasena'));
 const ConfigurarEquipo = lazy(() => import('./pages/Equipos/ConfigurarEquipo'));
 const CompletarJugadoresEquipo = lazy(() => import('./pages/Equipos/CompletarJugadoresEquipo'));
@@ -214,6 +215,7 @@ function App() {
             <Route path={ROUTES.ADMIN.LAYOUT_JUGADORES} element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.USUARIOS_ROLES} element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.CONFIGURACION} element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />
+            <Route path={ROUTES.MI_CUENTA} element={<MiCuenta />} />
 
             {/* SECCIÓN LEGAL */}
             <Route path={ROUTES.LEGAL.REGLAMENTOS} element={<Reglamentos />} />

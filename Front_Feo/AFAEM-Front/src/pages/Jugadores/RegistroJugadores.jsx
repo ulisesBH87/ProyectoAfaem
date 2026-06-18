@@ -104,9 +104,7 @@ export default function RegistroJugadores() {
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
-  const minDate = new Date();
-  minDate.setFullYear(minDate.getFullYear() - 100);
-  const minDateStr = minDate.toISOString().split('T')[0];
+  const minDateStr = '1900-01-01';
 
   // ESTILO DINÁMICO PARA HOVER Y DISEÑO RESPONSIVO
   const hoverStyles = `
@@ -210,9 +208,35 @@ export default function RegistroJugadores() {
       box-sizing: border-box;
     }
 
+    .slot-nav-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 auto 25px auto;
+      max-width: 1000px;
+      width: 100%;
+      padding: 16px 35px;
+      background: white;
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
     @media (max-width: 1024px) {
       .form-grid-3 {
         grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .stepper-container {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 16px 12px;
+      }
+      .stepper-line {
+        display: none !important;
       }
     }
 
@@ -256,12 +280,14 @@ export default function RegistroJugadores() {
         width: 100% !important;
       }
       .stepper-container {
+        grid-template-columns: repeat(3, 1fr) !important;
         padding: 16px 12px;
         margin-bottom: 20px;
         border-radius: 12px;
+        gap: 16px 12px;
       }
       .stepper-label {
-        display: none;
+        display: block !important;
       }
       .stepper-item {
         min-width: auto;
@@ -273,8 +299,11 @@ export default function RegistroJugadores() {
         border-width: 2px;
       }
       .stepper-line {
-        left: 20px;
-        right: 20px;
+        display: none !important;
+      }
+      .slot-nav-container {
+        padding: 12px 16px;
+        border-radius: 16px;
       }
       .mobile-step-indicator {
         display: block;
@@ -292,33 +321,49 @@ export default function RegistroJugadores() {
       }
     }
 
+    @media (max-width: 480px) {
+      .stepper-container {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 12px 8px;
+        padding: 12px 8px;
+      }
+      .stepper-bubble {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 11px !important;
+      }
+      .stepper-label {
+        font-size: 10px !important;
+        margin-top: 6px !important;
+      }
+    }
+
     .mobile-step-indicator {
       display: none;
     }
 
     /* Estilos del Wizard (Stepper) */
     .stepper-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      align-items: start;
       margin-bottom: 35px;
       position: relative;
       background: #f8fafc;
       padding: 24px;
       border-radius: 20px;
       border: 1px solid #e2e8f0;
-      overflow-x: auto;
-      gap: 10px;
+      gap: 16px 10px;
+      overflow-x: hidden;
     }
     .stepper-line {
       position: absolute;
-      top: 50%;
-      left: 40px;
-      right: 40px;
+      top: 44px;
+      left: 8.33%;
+      right: 8.33%;
       height: 4px;
       background: #e2e8f0;
       z-index: 1;
-      transform: translateY(-50%);
     }
     .stepper-line-progress {
       height: 100%;
@@ -332,8 +377,7 @@ export default function RegistroJugadores() {
       position: relative;
       z-index: 2;
       cursor: pointer;
-      flex: 1;
-      min-width: 70px;
+      text-align: center;
     }
     .stepper-bubble {
       width: 40px;
@@ -370,6 +414,7 @@ export default function RegistroJugadores() {
       letter-spacing: 0.5px;
       transition: color 0.3s;
       text-align: center;
+      display: block;
     }
     .stepper-item.active .stepper-label {
       color: #0b4ea6;
@@ -480,7 +525,10 @@ export default function RegistroJugadores() {
         errors.curp = 'Esta CURP ya se encuentra registrada.';
       }
 
-      if (!datos.fechaNacimiento) errors.fechaNacimiento = 'La fecha de nacimiento es obligatoria.';
+      const dateError = validarFechaNacimiento(datos.fechaNacimiento);
+      if (dateError) {
+        errors.fechaNacimiento = dateError;
+      }
       if (!datos.lugarNacimiento?.trim()) errors.lugarNacimiento = 'El lugar de nacimiento es obligatorio.';
       if (!datos.genero) errors.genero = 'El sexo es obligatorio.';
 
@@ -658,6 +706,73 @@ export default function RegistroJugadores() {
     fillManually: false,
     completo: false
   });
+
+  const validarFechaNacimiento = (fechaStr) => {
+    if (!fechaStr) {
+      return 'La fecha de nacimiento es obligatoria.';
+    }
+
+    const regexISO = /^\d{4}-\d{2}-\d{2}$/;
+    const regexSlash = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    let dateObj = null;
+    let year = null;
+    let month = null;
+    let day = null;
+
+    if (regexISO.test(fechaStr)) {
+      const parts = fechaStr.split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1; // 0-indexed
+      day = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else if (regexSlash.test(fechaStr)) {
+      const parts = fechaStr.split('/');
+      day = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1;
+      year = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else {
+      return 'Ingresa una fecha válida.';
+    }
+
+    if (
+      !dateObj ||
+      isNaN(dateObj.getTime()) ||
+      dateObj.getFullYear() !== year ||
+      dateObj.getMonth() !== month ||
+      dateObj.getDate() !== day
+    ) {
+      return 'Ingresa una fecha válida.';
+    }
+
+    if (year < 1900) {
+      return 'El año debe ser igual o mayor a 1900.';
+    }
+
+    const hoy = new Date();
+    const hoyDateOnly = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const birthDateOnly = new Date(year, month, day);
+    if (birthDateOnly > hoyDateOnly) {
+      return 'La fecha de nacimiento no puede ser futura.';
+    }
+
+    let edad = hoy.getFullYear() - year;
+    const mDiff = hoy.getMonth() - month;
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < day)) {
+      edad--;
+    }
+
+    if (edad < 5) {
+      return 'El jugador debe tener al menos 5 años de edad.';
+    }
+
+    if (edad > 125) {
+      return 'Ingresa una fecha válida.';
+    }
+
+    return null;
+  };
 
   const isPlayerMinor = (fechaNacimiento) => {
     if (!fechaNacimiento) return false;
@@ -943,6 +1058,12 @@ export default function RegistroJugadores() {
     if (player) {
       const datos = { ...player.datos };
 
+      const dateError = validarFechaNacimiento(datos.fechaNacimiento);
+      setValidationErrors(prev => ({
+        ...prev,
+        fechaNacimiento: dateError
+      }));
+
       if (datos.numCamiseta) {
         const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta, player.numero);
         if (duplicate) {
@@ -1100,8 +1221,6 @@ export default function RegistroJugadores() {
         total: paidPlayers
       });
 
-      const firstSeguroId = String(slotsResponse.seguros?.[0]?.seguro_id || '');
-
       // Mapear los slots de la base de datos al estado jugadores
       const mappedJugadores = await Promise.all((slotsResponse.slots || []).map(async (slot, i) => {
         const datos = slot.datos_borrador || { ...defaultPlayerDatos };
@@ -1142,7 +1261,7 @@ export default function RegistroJugadores() {
           datos: mergedDatos,
           documentos: restoredDocs,
           signedForm: restoredSignedForm,
-          seguroId: String(slot.seguro_id || ''),
+          seguroId: (slot.datos_borrador || slot.completo) ? String(slot.seguro_id || '') : '',
           fillManually: !!slot.datos_borrador,
           completo: slot.completo
         };
@@ -1239,8 +1358,22 @@ export default function RegistroJugadores() {
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
+  const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
+
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
+
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
+      Swal.fire({
+        title: 'Tipo de archivo no permitido',
+        text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return;
+    }
 
     updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
 
@@ -1461,6 +1594,17 @@ export default function RegistroJugadores() {
 
   // GENERAR PDF PRE-LLENADO
   const handleDownloadFormato = async () => {
+    const dateError = validarFechaNacimiento(currentDatos.fechaNacimiento);
+    if (dateError) {
+      Swal.fire({
+        title: 'Error de validación',
+        text: dateError,
+        icon: 'error',
+        confirmButtonColor: '#0b4ea6'
+      });
+      return false;
+    }
+
     try {
       Swal.fire({
         title: 'Generando PDF...',
@@ -1964,7 +2108,7 @@ export default function RegistroJugadores() {
         {/* CONTENEDOR DE TARJETAS DE EQUIPOS */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '28px',
           maxWidth: '1040px',
           margin: '0 auto 40px auto',
@@ -2182,20 +2326,7 @@ export default function RegistroJugadores() {
         const status = activePlayer ? getPlayerStatus(activePlayer) : 'VACIO';
         const config = playerStatusConfig[status] || playerStatusConfig.VACIO;
         return (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            margin: '0 auto 25px auto',
-            maxWidth: '1000px',
-            width: '100%',
-            padding: '16px 35px',
-            background: 'white',
-            borderRadius: '24px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            transition: 'all 0.3s ease'
-          }}>
+          <div className="slot-nav-container">
             {/* Left Arrow Button */}
             <button
               type="button"
@@ -2770,7 +2901,7 @@ export default function RegistroJugadores() {
                             type="file"
                             id={`file-${doc.key}`}
                             style={{ display: 'none' }}
-                            accept="image/*,.pdf"
+                          accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                           />
                         </div>
@@ -2912,8 +3043,10 @@ export default function RegistroJugadores() {
                             min={minDateStr}
                             max={today}
                             onChange={e => {
-                              handleFieldChange('fechaNacimiento', e.target.value);
-                              setValidationErrors(prev => ({ ...prev, fechaNacimiento: null }));
+                              const val = e.target.value;
+                              handleFieldChange('fechaNacimiento', val);
+                              const errorMsg = validarFechaNacimiento(val);
+                              setValidationErrors(prev => ({ ...prev, fechaNacimiento: errorMsg }));
                             }}
                             onBlur={handleBlur}
                             style={{
@@ -3350,7 +3483,7 @@ export default function RegistroJugadores() {
 
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                       gap: '20px',
                       marginBottom: '30px'
                     }}>
