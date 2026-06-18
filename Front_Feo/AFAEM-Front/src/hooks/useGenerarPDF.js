@@ -34,6 +34,7 @@ export function useGenerarPDF() {
    * @param {string} params.liga              - ID o nombre de liga
    * @param {Array}  params.ligasCatalogo     - Catálogo de ligas cargado
    * @param {string} params.equipo            - Nombre del equipo
+   * @param {boolean} params.esEntrenador     - Indica si se genera el PDF para un entrenador
    */
   const descargarFormato = async ({
     ocrResults,
@@ -45,6 +46,7 @@ export function useGenerarPDF() {
     liga,
     ligasCatalogo,
     equipo,
+    esEntrenador,
   }) => {
     try {
       Swal.fire({ title: 'Generando PDF…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -138,14 +140,15 @@ export function useGenerarPDF() {
       safeField(form, 'A', String(hoy.getDate()).padStart(2, '0'));
       safeField(form, 'de', MESES[hoy.getMonth()]);
       safeField(form, 'del 20', String(hoy.getFullYear()).slice(-2));
-      safeField(form, 'Cargo', 'PRESIDENTE');
+      safeField(form, 'Cargo', esEntrenador ? 'ENTRENADOR' : 'PRESIDENTE');
 
       // Descargar
       const blob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const nombreParaNombreArchivo = cuenta.nombre || nombre || 'Presidente';
+      const defaultName = esEntrenador ? 'Entrenador' : 'Presidente';
+      const nombreParaNombreArchivo = cuenta.nombre || nombre || defaultName;
       link.download = `Formato_${nombreParaNombreArchivo.replace(/[^a-zA-Z0-9 ]/g, '').trim()}.pdf`;
       document.body.appendChild(link);
       link.click();

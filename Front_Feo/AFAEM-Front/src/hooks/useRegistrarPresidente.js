@@ -378,7 +378,7 @@ export function useRegistrarPresidente() {
   // ── Wrapper descargarFormato con contexto actual ─────────────────────────
   const handleDescargarFormato = () => descargarFormato({
     ocrResults, cuenta, documents, codigoPaisCuenta, tipoAfiliacion, asociacion,
-    liga, ligasCatalogo, equipo,
+    liga, ligasCatalogo, equipo, esEntrenador,
   });
 
   // ── Navegación entre pasos ───────────────────────────────────────────────
