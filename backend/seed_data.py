@@ -34,6 +34,26 @@ def run():
     with engine.begin() as conn:
 
         # ─────────────────────────────────────────────
+        # 0. ROLES (Asegurar que MASTER existe)
+        # ─────────────────────────────────────────────
+        print("\n[0/5] Asegurando rol MASTER...")
+        existing_master = conn.execute(text("SELECT COUNT(*) FROM Roles WHERE RolId = 117")).scalar()
+        if existing_master == 0:
+            try:
+                conn.execute(text("SET IDENTITY_INSERT Roles ON"))
+                conn.execute(
+                    text("INSERT INTO Roles (RolId, Nombre, Descripcion) VALUES (117, 'MASTER', 'Rol Master con acceso a auditorías y resúmenes')")
+                )
+                conn.execute(text("SET IDENTITY_INSERT Roles OFF"))
+            except Exception:
+                conn.execute(
+                    text("INSERT INTO Roles (RolId, Nombre, Descripcion) VALUES (117, 'MASTER', 'Rol Master con acceso a auditorías y resúmenes')")
+                )
+            print("  ✅  Rol MASTER insertado.")
+        else:
+            print("  ⏭   Rol MASTER ya existe, se omite.")
+
+        # ─────────────────────────────────────────────
         # 1. MENUS  (con IDENTITY_INSERT)
         # ─────────────────────────────────────────────
         print("\n[1/5] Tabla Menus...")
@@ -49,6 +69,7 @@ def run():
             (7, "Equipos",              "/presidente-equipo/equipos",       "FaFootballBall", 2, 1, 5),
             (8, "Jugadores",            "/presidente-equipo/mis-jugadores", "FaUsers",        3, 1, 5),
             (9, "Solicitudes",          "/presidente-equipo/solicitudes",   "FaClipboard",    4, 1, 5),
+            (12, "Auditorías",          "/ms/au",                           "FaHistory",      6, 1, None),
         ]
 
         conn.execute(text("SET IDENTITY_INSERT Menus ON"))
@@ -92,6 +113,7 @@ def run():
             (12, 7, 3, 1),
             (13, 8, 3, 1),
             (14, 9, 3, 1),
+            (51, 12, 117, 1),
         ]
 
         conn.execute(text("SET IDENTITY_INSERT RelMenuRoles ON"))
@@ -177,6 +199,7 @@ def run():
             (8,  "Gestionar Jugadores",        "jugadores.gestionar",         "Puede agregar y editar jugadores",       1),
             (9,  "Ver Dashboard Admin",        "admin.dashboard",             "Puede acceder al tablero administrativo",1),
             (10, "Gestionar Usuarios",         "usuarios.gestionar",          "Puede administrar cuentas de usuario",   1),
+            (11, "Ver Auditorías",             "auditorias.ver",              "Puede visualizar el registro de auditoría", 1),
         ]
 
         conn.execute(text("SET IDENTITY_INSERT Permisos ON"))
@@ -229,6 +252,7 @@ def run():
             (16, 7, 1),
             (17, 7, 5),
             (18, 7, 7),
+            (51, 117, 11),
         ]
 
         conn.execute(text("SET IDENTITY_INSERT RelRolPermisos ON"))
