@@ -20,6 +20,7 @@ import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaFileDownload, 
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import { API_BASE } from '../../config/config';
 import Loader from '../../components/Loader';
+import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { openSecurePath } from '../../utils/secureFetch';
 
@@ -489,6 +490,9 @@ export default function AdminJugadores() {
   // Hook para cargar la foto del jugador en edición de forma segura
   const { blobUrl: avatarBlobUrl, error: avatarError } = useSecureBlob(fotoJugadorEdicion || jugadorEdicion?.RutaFoto);
   const [imgError, setImgError] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetJugador, setCameraTargetJugador] = useState(null);
+  const [cameraTargetSolicitudId, setCameraTargetSolicitudId] = useState(null);
 
   useEffect(() => {
     setImgError(false);
@@ -849,24 +853,63 @@ export default function AdminJugadores() {
     modalEl.querySelectorAll('[data-add-doc]').forEach((boton) => {
       boton.addEventListener('click', () => {
         const tipoId = Number(boton.getAttribute('data-add-doc'));
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.pdf,.jpg,.jpeg,.png';
-        input.style.display = 'none';
-        input.onchange = (e) => {
-          const archivo = e.target.files?.[0];
-          if (archivo) {
-            if (!validarArchivoDoc(archivo)) {
-              Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
-              return;
+        if (tipoId === 25) {
+          Swal.fire({
+            title: 'Selecciona una opción',
+            text: '¿Cómo deseas cargar la fotografía?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '📷 Tomar con cámara',
+            cancelButtonText: '📁 Subir archivo',
+            confirmButtonColor: '#0b4ea6',
+            cancelButtonColor: '#64748b'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              bsModal.hide();
+              setCameraTargetJugador(jugador);
+              setCameraTargetSolicitudId(solicitudId);
+              setIsCameraOpen(true);
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.pdf,.jpg,.jpeg,.png';
+              input.style.display = 'none';
+              input.onchange = (e) => {
+                const archivo = e.target.files?.[0];
+                if (archivo) {
+                  if (!validarArchivoDoc(archivo)) {
+                    Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                    return;
+                  }
+                  bsModal.hide();
+                  manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
+                }
+              };
+              document.body.appendChild(input);
+              input.click();
+              input.remove();
             }
-            bsModal.hide();
-            manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
-          }
-        };
-        document.body.appendChild(input);
-        input.click();
-        input.remove();
+          });
+        } else {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.pdf,.jpg,.jpeg,.png';
+          input.style.display = 'none';
+          input.onchange = (e) => {
+            const archivo = e.target.files?.[0];
+            if (archivo) {
+              if (!validarArchivoDoc(archivo)) {
+                Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                return;
+              }
+              bsModal.hide();
+              manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
+            }
+          };
+          document.body.appendChild(input);
+          input.click();
+          input.remove();
+        }
       });
     });
 
@@ -876,24 +919,63 @@ export default function AdminJugadores() {
         e.preventDefault();
         e.stopPropagation();
         const tipoId = Number(boton.getAttribute('data-replace-doc'));
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.pdf,.jpg,.jpeg,.png';
-        input.style.display = 'none';
-        input.onchange = (ev) => {
-          const archivo = ev.target.files?.[0];
-          if (archivo) {
-            if (!validarArchivoDoc(archivo)) {
-              Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
-              return;
+        if (tipoId === 25) {
+          Swal.fire({
+            title: 'Selecciona una opción',
+            text: '¿Cómo deseas cargar la fotografía?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '📷 Tomar con cámara',
+            cancelButtonText: '📁 Subir archivo',
+            confirmButtonColor: '#0b4ea6',
+            cancelButtonColor: '#64748b'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              bsModal.hide();
+              setCameraTargetJugador(jugador);
+              setCameraTargetSolicitudId(solicitudId);
+              setIsCameraOpen(true);
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.pdf,.jpg,.jpeg,.png';
+              input.style.display = 'none';
+              input.onchange = (ev) => {
+                const archivo = ev.target.files?.[0];
+                if (archivo) {
+                  if (!validarArchivoDoc(archivo)) {
+                    Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                    return;
+                  }
+                  bsModal.hide();
+                  manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
+                }
+              };
+              document.body.appendChild(input);
+              input.click();
+              input.remove();
             }
-            bsModal.hide();
-            manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
-          }
-        };
-        document.body.appendChild(input);
-        input.click();
-        input.remove();
+          });
+        } else {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.pdf,.jpg,.jpeg,.png';
+          input.style.display = 'none';
+          input.onchange = (ev) => {
+            const archivo = ev.target.files?.[0];
+            if (archivo) {
+              if (!validarArchivoDoc(archivo)) {
+                Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                return;
+              }
+              bsModal.hide();
+              manejarSubidaDocumento(jugador, tipoId, archivo, solicitudId);
+            }
+          };
+          document.body.appendChild(input);
+          input.click();
+          input.remove();
+        }
       });
     });
 
@@ -1659,6 +1741,18 @@ export default function AdminJugadores() {
           </div>
         </div>
       </Modal>
+
+      <CameraCaptureModal
+        isOpen={isCameraOpen}
+        onClose={() => {
+          setIsCameraOpen(false);
+          setCameraTargetJugador(null);
+          setCameraTargetSolicitudId(null);
+        }}
+        onCapture={(file) => {
+          manejarSubidaDocumento(cameraTargetJugador, 25, file, cameraTargetSolicitudId);
+        }}
+      />
     </div>
   );
 }

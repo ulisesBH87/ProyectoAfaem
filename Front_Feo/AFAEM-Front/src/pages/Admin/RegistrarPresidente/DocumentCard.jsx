@@ -1,6 +1,8 @@
-import { FaUpload, FaFilePdf, FaSearchPlus, FaSyncAlt, FaExclamationTriangle } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { FaUpload, FaFilePdf, FaSearchPlus, FaSyncAlt, FaExclamationTriangle, FaCamera } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { C } from './constants';
+import CameraCaptureModal from '../../../components/Common/CameraCaptureModal';
 
 /**
  * DocumentCard
@@ -28,6 +30,7 @@ export default function DocumentCard({
   onOpenPreview,
   disabledUpload,
 }) {
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const uploaded = !!documents[doc.documento];
   const ocrDone = doc.ocr && ocrResults[doc.documento];
   const isPhoto = doc.documento === 'fotografia';
@@ -107,7 +110,29 @@ export default function DocumentCard({
               </button>
               <button
                 type="button"
-                onClick={e => { e.stopPropagation(); document.getElementById(`file-${doc.documento}`).click(); }}
+                onClick={e => {
+                  e.stopPropagation();
+                  if (isPhoto) {
+                    Swal.fire({
+                      title: 'Selecciona una opción',
+                      text: '¿Cómo deseas cargar la fotografía?',
+                      icon: 'question',
+                      showCancelButton: true,
+                      confirmButtonText: '📷 Tomar con cámara',
+                      cancelButtonText: '📁 Subir archivo',
+                      confirmButtonColor: '#0b4ea6',
+                      cancelButtonColor: '#64748b'
+                    }).then((result) => {
+                      if (result.isConfirmed) {
+                        setIsCameraOpen(true);
+                      } else if (result.dismiss === Swal.DismissReason.cancel) {
+                        document.getElementById(`file-${doc.documento}`).click();
+                      }
+                    });
+                  } else {
+                    document.getElementById(`file-${doc.documento}`).click();
+                  }
+                }}
                 style={{
                   width: 36, height: 36, borderRadius: '50%', backgroundColor: '#0ea5e9',
                   color: '#fff', border: 'none', display: 'flex', alignItems: 'center',
@@ -125,7 +150,26 @@ export default function DocumentCard({
                 Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
                 return;
               }
-              document.getElementById(`file-${doc.documento}`).click();
+              if (isPhoto) {
+                Swal.fire({
+                  title: 'Selecciona una opción',
+                  text: '¿Cómo deseas cargar la fotografía?',
+                  icon: 'question',
+                  showCancelButton: true,
+                  confirmButtonText: '📷 Tomar con cámara',
+                  cancelButtonText: '📁 Subir archivo',
+                  confirmButtonColor: '#0b4ea6',
+                  cancelButtonColor: '#64748b'
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    setIsCameraOpen(true);
+                  } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    document.getElementById(`file-${doc.documento}`).click();
+                  }
+                });
+              } else {
+                document.getElementById(`file-${doc.documento}`).click();
+              }
             }}>
             <FaUpload style={{ fontSize: 28, marginBottom: 6 }} />
             <p style={{ fontSize: 11 }}>Sin archivo</p>
@@ -180,12 +224,36 @@ export default function DocumentCard({
             <FaFilePdf /> Descargar
           </button>
         )}
+        {isPhoto && (
+          <button
+            type="button"
+            onClick={() => setIsCameraOpen(true)}
+            disabled={disabledUpload}
+            style={{
+              flex: 1, padding: '8px 10px', border: `1px solid ${C.inputBorder}`,
+              background: 'rgba(255,255,255,0.03)', color: disabledUpload ? C.textDim : C.textMid,
+              borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: disabledUpload ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              opacity: disabledUpload ? 0.5 : 1
+            }}
+          >
+            <FaCamera /> Tomar Foto
+          </button>
+        )}
         <input
           type="file" id={`file-${doc.documento}`} style={{ display: 'none' }}
           disabled={disabledUpload}
           onChange={e => handleFileUpload(doc.documento, e.target.files[0])}
         />
       </div>
+
+      {isPhoto && (
+        <CameraCaptureModal
+          isOpen={isCameraOpen}
+          onClose={() => setIsCameraOpen(false)}
+          onCapture={(file) => handleFileUpload(doc.documento, file)}
+        />
+      )}
 
       {/* Toggle detalles OCR */}
       {(doc.ocr || isPhoto) && (

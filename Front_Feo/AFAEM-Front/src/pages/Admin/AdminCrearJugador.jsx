@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
+import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import {
@@ -202,6 +203,7 @@ export default function AdminCrearJugador() {
   const [signedForm, setSignedForm] = useState(null);
   const [signedFormPreview, setSignedFormPreview] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!extractedData.equipoSeleccionado;
@@ -1140,7 +1142,8 @@ export default function AdminCrearJugador() {
 
             {/* ── FOTOGRAFÍA (aparece tras OCR del acta) ── */}
             {documents.actaNacimiento && extractedData.fechaNacimiento && (
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
+              <>
+                <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
                 {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
                   <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f1f5f9' }}>
@@ -1148,12 +1151,55 @@ export default function AdminCrearJugador() {
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                           <img src={previews[doc.key]} alt="Preview foto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,41,59,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
-                            <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSearchPlus /></button>
-                            <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${doc.key}`).click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSyncAlt /></button>
+                             <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSearchPlus /></button>
+                             <button type="button" onClick={(e) => {
+                               e.stopPropagation();
+                               if (doc.key === 'fotografia') {
+                                 Swal.fire({
+                                   title: 'Selecciona una opción',
+                                   text: '¿Cómo deseas cargar la fotografía?',
+                                   icon: 'question',
+                                   showCancelButton: true,
+                                   confirmButtonText: '📷 Tomar con cámara',
+                                   cancelButtonText: '📁 Subir archivo',
+                                   confirmButtonColor: '#0b4ea6',
+                                   cancelButtonColor: '#64748b'
+                                 }).then((result) => {
+                                   if (result.isConfirmed) {
+                                     setIsCameraOpen(true);
+                                   } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                     document.getElementById(`file-${doc.key}`).click();
+                                   }
+                                 });
+                               } else {
+                                 document.getElementById(`file-${doc.key}`).click();
+                               }
+                             }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSyncAlt /></button>
                           </div>
                         </div>
                       ) : (
-                        <div onClick={() => document.getElementById(`file-${doc.key}`).click()} style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}>
+                        <div onClick={() => {
+                          if (doc.key === 'fotografia') {
+                            Swal.fire({
+                              title: 'Selecciona una opción',
+                              text: '¿Cómo deseas cargar la fotografía?',
+                              icon: 'question',
+                              showCancelButton: true,
+                              confirmButtonText: '📷 Tomar con cámara',
+                              cancelButtonText: '📁 Subir archivo',
+                              confirmButtonColor: '#0b4ea6',
+                              cancelButtonColor: '#64748b'
+                            }).then((result) => {
+                              if (result.isConfirmed) {
+                                setIsCameraOpen(true);
+                              } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                document.getElementById(`file-${doc.key}`).click();
+                              }
+                            });
+                          } else {
+                            document.getElementById(`file-${doc.key}`).click();
+                          }
+                        }} style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}>
                           <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                           <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
                         </div>
@@ -1167,6 +1213,13 @@ export default function AdminCrearJugador() {
                   </div>
                 ))}
               </div>
+
+              <CameraCaptureModal
+                isOpen={isCameraOpen}
+                onClose={() => setIsCameraOpen(false)}
+                onCapture={(file) => handleFileUpload('fotografia', file)}
+              />
+              </>
             )}
 
             {/* Hint mientras el OCR analiza el acta */}

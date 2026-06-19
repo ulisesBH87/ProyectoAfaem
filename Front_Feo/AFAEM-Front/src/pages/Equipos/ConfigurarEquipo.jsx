@@ -19,6 +19,7 @@ import {
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
 import { verificarCurp } from '../../services/auth';
+import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
@@ -288,6 +289,7 @@ export default function ConfigurarEquipo() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!selectedSeguroId;
@@ -2477,7 +2479,26 @@ export default function ConfigurarEquipo() {
                         }}
                         onClick={() => {
                           if (!documents[doc.key]) {
-                            document.getElementById(`file-${doc.key}`).click();
+                            if (doc.key === 'foto') {
+                              Swal.fire({
+                                title: 'Selecciona una opción',
+                                text: '¿Cómo deseas cargar la fotografía?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: '📷 Tomar con cámara',
+                                cancelButtonText: '📁 Subir archivo',
+                                confirmButtonColor: '#0b4ea6',
+                                cancelButtonColor: '#64748b'
+                              }).then((result) => {
+                                  if (result.isConfirmed) {
+                                    setIsCameraOpen(true);
+                                  } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                    document.getElementById(`file-${doc.key}`).click();
+                                  }
+                              });
+                            } else {
+                              document.getElementById(`file-${doc.key}`).click();
+                            }
                           }
                         }}
                       >
@@ -2541,7 +2562,26 @@ export default function ConfigurarEquipo() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      document.getElementById(`file-${doc.key}`).click();
+                                      if (doc.key === 'foto') {
+                                        Swal.fire({
+                                          title: 'Selecciona una opción',
+                                          text: '¿Cómo deseas cargar la fotografía?',
+                                          icon: 'question',
+                                          showCancelButton: true,
+                                          confirmButtonText: '📷 Tomar con cámara',
+                                          cancelButtonText: '📁 Subir archivo',
+                                          confirmButtonColor: '#0b4ea6',
+                                          cancelButtonColor: '#64748b'
+                                        }).then((result) => {
+                                          if (result.isConfirmed) {
+                                            setIsCameraOpen(true);
+                                          } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                            document.getElementById(`file-${doc.key}`).click();
+                                          }
+                                        });
+                                      } else {
+                                        document.getElementById(`file-${doc.key}`).click();
+                                      }
                                     }}
                                     className="doc-action-btn change"
                                     title="Cambiar archivo"
@@ -2609,6 +2649,12 @@ export default function ConfigurarEquipo() {
                       </div>
                     ))}
                   </div>
+
+                  <CameraCaptureModal
+                    isOpen={isCameraOpen}
+                    onClose={() => setIsCameraOpen(false)}
+                    onCapture={(file) => handleFileUpload('foto', file)}
+                  />
 
                   {/* Loader temporal OCR */}
                   {documents.acta && !extractedData.fechaNacimiento && (

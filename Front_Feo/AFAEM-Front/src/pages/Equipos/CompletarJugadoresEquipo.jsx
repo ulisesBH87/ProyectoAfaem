@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
+import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
@@ -177,6 +178,7 @@ export default function CompletarJugadoresEquipo() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const [ordenAmpliacion, setOrdenAmpliacion] = useState(null);
   const [cargandoOrdenAmpliacion, setCargandoOrdenAmpliacion] = useState(false);
@@ -1497,7 +1499,26 @@ export default function CompletarJugadoresEquipo() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                document.getElementById(`file-${doc.key}`).click();
+                                if (doc.key === 'foto') {
+                                  Swal.fire({
+                                    title: 'Selecciona una opción',
+                                    text: '¿Cómo deseas cargar la fotografía?',
+                                    icon: 'question',
+                                    showCancelButton: true,
+                                    confirmButtonText: '📷 Tomar con cámara',
+                                    cancelButtonText: '📁 Subir archivo',
+                                    confirmButtonColor: '#0b4ea6',
+                                    cancelButtonColor: '#64748b'
+                                  }).then((result) => {
+                                    if (result.isConfirmed) {
+                                      setIsCameraOpen(true);
+                                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                      document.getElementById(`file-${doc.key}`).click();
+                                    }
+                                  });
+                                } else {
+                                  document.getElementById(`file-${doc.key}`).click();
+                                }
                               }}
                               className="btn-change"
                               style={{
@@ -1514,7 +1535,28 @@ export default function CompletarJugadoresEquipo() {
                       ) : (
                         /* ESTADO VACÍO */
                         <div
-                          onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                          onClick={() => {
+                            if (doc.key === 'foto') {
+                              Swal.fire({
+                                title: 'Selecciona una opción',
+                                text: '¿Cómo deseas cargar la fotografía?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: '📷 Tomar con cámara',
+                                cancelButtonText: '📁 Subir archivo',
+                                confirmButtonColor: '#0b4ea6',
+                                cancelButtonColor: '#64748b'
+                              }).then((result) => {
+                                if (result.isConfirmed) {
+                                  setIsCameraOpen(true);
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                  document.getElementById(`file-${doc.key}`).click();
+                                }
+                              });
+                            } else {
+                              document.getElementById(`file-${doc.key}`).click();
+                            }
+                          }}
                           style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
                         >
                           <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
@@ -1580,6 +1622,12 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                 ))}
               </div>
+
+              <CameraCaptureModal
+                isOpen={isCameraOpen}
+                onClose={() => setIsCameraOpen(false)}
+                onCapture={(file) => handleFileUpload('foto', file)}
+              />
 
               {/* Loader temporal OCR */}
               {documents.acta && !extractedData.fechaNacimiento && (
