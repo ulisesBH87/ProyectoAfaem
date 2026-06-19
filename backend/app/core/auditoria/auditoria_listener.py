@@ -35,6 +35,8 @@ def obtener_registro_id(obj):
 
 @event.listens_for(Session, "before_flush")
 def audit_before_flush(session, flush_context, instances):
+    if session.info.get("es_borrador"):
+        return
     
     try:
         buffer = session.info.setdefault(BUFFER_AUDITORIA_KEY, [])
@@ -96,6 +98,9 @@ def audit_before_flush(session, flush_context, instances):
 
 @event.listens_for(Session, "after_flush_postexec")
 def audit_after_flush(session, flush_context):
+    if session.info.get("es_borrador"):
+        session.info[BUFFER_AUDITORIA_KEY] = []
+        return
 
     buffer = session.info.get(BUFFER_AUDITORIA_KEY, [])
 
