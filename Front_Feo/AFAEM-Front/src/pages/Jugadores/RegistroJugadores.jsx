@@ -692,6 +692,7 @@ export default function RegistroJugadores() {
   const obtenerDuplicadoPosicion = (posicionId, playerNumero) => {
     if (!posicionId) return null;
     const posVal = parseInt(posicionId, 10);
+    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
     return jugadores.find(p =>
       p.numero !== playerNumero &&
       p.datos?.posicion &&
