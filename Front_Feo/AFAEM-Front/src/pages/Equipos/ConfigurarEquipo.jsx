@@ -2503,6 +2503,11 @@ export default function ConfigurarEquipo() {
                             <p className="doc-subtitle-text" style={{ margin: '0 0 6px', fontSize: '10px', color: documents[doc.key] ? '#cbd5e1' : '#64748b', lineHeight: 1.4 }}>
                               {doc.subtitle}
                             </p>
+                            {doc.key === 'foto' && (
+                              <p style={{ margin: '0 0 8px', fontSize: '10px', color: documents[doc.key] ? '#fca5a5' : '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                                Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                              </p>
+                            )}
                           </div>
 
                           <div className="doc-status-wrapper" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
