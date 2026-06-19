@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
@@ -71,6 +72,178 @@ const parsearTelefonoE164 = (telefonoCompleto) => {
     return { codigoPais: codigo, telefono: local };
   }
   return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
+};
+
+const normalizarNombreSeguro = (nombre) => {
+  if (!nombre) return '';
+  return nombre.toUpperCase().replace(/["']/g, '').trim();
+};
+
+const DETALLES_SEGUROS = {
+  'TIPO A': {
+    nombre: 'TIPO "A"',
+    precio: 240,
+    poliza: '2922500000281',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$50,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$25,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO B': {
+    nombre: 'TIPO "B"',
+    precio: 350,
+    poliza: '2922500000283',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO F': {
+    nombre: 'TIPO "F"',
+    precio: 670,
+    poliza: '2922500000282',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO H': {
+    nombre: 'TIPO "H"',
+    precio: 475,
+    poliza: '2922500000286',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO G': {
+    nombre: 'TIPO "G"',
+    precio: 350,
+    poliza: '2922500000280',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se amparan los traslados de su casa a las ligas, asociaciones y viceversa, y traslados a otras ligas, se cubre dentro de las instalaciones de sus ligas y asociaciones. Se amparan traslados de estado a estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'BASICA': {
+    nombre: 'TIPO "BASICA"',
+    precio: 155,
+    poliza: 'N/A',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Esta afiliación no incluye póliza de seguro de gastos médicos por accidente. Solo cubre derechos de participación básica.',
+    beneficios: [
+      'Participación en Torneos Estatales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Regionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Campeonatos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Federados (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur'
+    ],
+    coberturas: []
+  },
+  'SIN SEGURO': {
+    nombre: 'SIN SEGURO',
+    precio: 0,
+    poliza: 'N/A',
+    vigencia: 'N/A',
+    alcance: 'El presidente no cuenta con cobertura médica federada.',
+    beneficios: [
+      'Sin costo adicional',
+      'Registro básico en la plataforma',
+      'No incluye seguro de gastos médicos',
+      'No incluye derechos de participación deportiva federada activa'
+    ],
+    coberturas: []
+  }
 };
 
 // Badge Estilizado para los pasos
@@ -452,6 +625,18 @@ export default function RegistroJugadores() {
   const [linkError, setLinkError] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+  const [seguroDetalle, setSeguroDetalle] = useState(null);
+
+  useEffect(() => {
+    if (seguroDetalle) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [seguroDetalle]);
   const changeStep = (stepOrUpdater) => {
     document.activeElement?.blur();
     setCurrentStep(prev => {
@@ -2623,24 +2808,11 @@ export default function RegistroJugadores() {
                               <div
                                 key={`seguro-card-${seg.seguro_id}`}
                                 onClick={() => {
-                                  if (isSelected) {
-                                    updatePlayerSeguro(currentPlayerIndex, '');
-                                    const updated = { ...currentDatos };
-                                    if (currentPlayer?.slotId) {
-                                      guardarBorradorEnBD(currentPlayer.slotId, updated);
-                                    }
-                                    return;
-                                  }
                                   if (noDisponible) {
                                     Swal.fire('Atención', 'No hay espacios disponibles para este tipo de seguro.', 'warning');
                                     return;
                                   }
-                                  updatePlayerSeguro(currentPlayerIndex, String(seg.seguro_id));
-                                  setValidationErrors(prev => ({ ...prev, seguroId: null }));
-                                  const updated = { ...currentDatos };
-                                  if (currentPlayer?.slotId) {
-                                    guardarBorradorEnBD(currentPlayer.slotId, updated);
-                                  }
+                                  setSeguroDetalle(seg);
                                 }}
                                 style={{
                                   padding: '16px',
@@ -2901,7 +3073,7 @@ export default function RegistroJugadores() {
                             type="file"
                             id={`file-${doc.key}`}
                             style={{ display: 'none' }}
-                          accept=".pdf,.jpg,.jpeg,.png"
+                            accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                           />
                         </div>
@@ -3467,7 +3639,7 @@ export default function RegistroJugadores() {
                         ) : (
                           <div style={{ textAlign: 'center', padding: '20px' }}>
                             <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                              El jugador es mexicano. Si desea registrar antecedentes internacionales, cambie el toggle a "Extranjero" arriba.
+                              El jugador es mexicano. Si desea registrar antecedentes internacionales, cambie el boton a "Extranjero" arriba.
                             </p>
                           </div>
                         )}
@@ -3919,6 +4091,258 @@ export default function RegistroJugadores() {
           )}
         </div>
       </Modal>
+
+      {/* MODAL DE DETALLE DE SEGUROS */}
+      {seguroDetalle && (() => {
+        const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
+        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
+          nombre: seguroDetalle.nombre,
+          precio: seguroDetalle.precio,
+          poliza: 'N/A',
+          vigencia: 'N/A',
+          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
+          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
+          coberturas: []
+        };
+        const isSelected = String(currentSeguroId) === String(seguroDetalle.seguro_id);
+
+        return createPortal(
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{
+              backgroundColor: '#1e293b',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '850px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              color: 'white'
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: '25px 30px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
+                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
+              }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Seguro de Jugador
+                  </h3>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                    {info.nombre}
+                  </h2>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
+                  {/* Left Column - Benefits */}
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      Beneficios Incluidos
+                    </h4>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {info.beneficios.map((ben, idx) => (
+                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,0.85)' }}>
+                          <span style={{ color: '#34d399', fontWeight: '900', fontSize: '15px' }}>✓</span>
+                          <span>{ben}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Right Column - Policy & Scope */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                        Detalles de la Póliza
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.vigencia}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                        Alcance y Cobertura
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.7)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '12px', padding: '14px' }}>
+                        {info.alcance.includes('traslados dentro del mismo estado') ? (
+                          <>
+                            {info.alcance.replace('traslados dentro del mismo estado.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados dentro del mismo estado.</strong>
+                          </>
+                        ) : info.alcance.includes('traslados de estado a estado') ? (
+                          <>
+                            {info.alcance.replace('traslados de estado a estado.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados de estado a estado.</strong>
+                          </>
+                        ) : info.alcance.includes('traslados entre estados') ? (
+                          <>
+                            {info.alcance.replace('traslados entre estados.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados entre estados.</strong>
+                          </>
+                        ) : (
+                          info.alcance
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coverages Table (if applicable) */}
+                {info.coberturas && info.coberturas.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      Montos de Cobertura
+                    </h4>
+                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)', textAlign: 'right' }}>Monto Máximo Amparado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {info.coberturas.map((cob, idx) => (
+                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', backgroundColor: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                              <td style={{ padding: '12px 20px', fontWeight: '700', color: '#ffffff' }}>{cob.cobertura}</td>
+                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? '#ef4444' : '#34d399', textAlign: 'right' }}>{cob.monto}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Footer */}
+              <div style={{
+                padding: '20px 30px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '12px',
+                borderBottomLeftRadius: '24px',
+                borderBottomRightRadius: '24px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setSeguroDetalle(null)}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.7)',
+                    padding: '10px 24px',
+                    borderRadius: '12px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Cancelar
+                </button>
+                {isSelected ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updatePlayerSeguro(currentPlayerIndex, '');
+                      const updated = { ...currentDatos };
+                      if (currentPlayer?.slotId) {
+                        guardarBorradorEnBD(currentPlayer.slotId, updated);
+                      }
+                      setSeguroDetalle(null);
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      padding: '10px 28px',
+                      borderRadius: '12px',
+                      fontWeight: '900',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Deseleccionar Seguro
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updatePlayerSeguro(currentPlayerIndex, String(seguroDetalle.seguro_id));
+                      setValidationErrors(prev => ({ ...prev, seguroId: null }));
+                      const updated = { ...currentDatos };
+                      if (currentPlayer?.slotId) {
+                        guardarBorradorEnBD(currentPlayer.slotId, updated);
+                      }
+                      setSeguroDetalle(null);
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      padding: '10px 28px',
+                      borderRadius: '12px',
+                      fontWeight: '900',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Asignar Seguro
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
 
       {/* Notificación de autoguardado */}
       <div className={`toast-auto-save ${toastVisible ? 'show' : ''}`}>

@@ -7,3 +7,4 @@ class Rol(str, Enum):
     ENTRENADOR = "ENTRENADOR"
     JUGADOR = "JUGADOR"
     TUTOR = "TUTOR"
+    MASTER = "MASTER"
