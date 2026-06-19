@@ -114,32 +114,32 @@ export default function ResumenesMaster() {
   };
 
   return (
-    <div className="fade-in" style={{ padding: '20px', color: '#e2e8f0', minHeight: '100vh', fontFamily: "'Outfit', sans-serif" }}>
+    <div className="fade-in" style={{ padding: '20px', color: '#334155', minHeight: '100vh', fontFamily: "'Outfit', sans-serif" }}>
       {/* HEADER SECTION */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', letterSpacing: '-0.5px' }}>
-          <FaChartPie style={{ color: colorPrimary, filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.5))' }} /> Panel de Resúmenes
+        <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#000000', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', letterSpacing: '-0.5px' }}>
+          <FaChartPie style={{ color: colorPrimary, filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.2))' }} /> Panel de Resúmenes
         </h1>
-        <p style={{ color: '#94a3b8', fontWeight: '500', fontSize: '15px' }}>
+        <p style={{ color: '#64748b', fontWeight: '500', fontSize: '15px' }}>
           Análisis del estado, actividad y crecimiento general de la plataforma AFAEM.
         </p>
       </div>
 
       {errorMsg && (
-        <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: '12px', border: `1px solid ${colorDanger}`, color: '#fca5a5', fontSize: '14px' }}>
+        <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: '12px', border: `1px solid ${colorDanger}`, color: '#ef4444', fontSize: '14px', fontWeight: '600' }}>
           {errorMsg}
         </div>
       )}
 
       {/* METRIC CARDS SECTION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '16px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#000000', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Métricas del Período
         </h3>
 
         {/* Filtro de Mes y Año en Español */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label htmlFor="select-mes-filtro" style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <label htmlFor="select-mes-filtro" style={{ fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Filtrar por:
           </label>
           <select
@@ -147,20 +147,20 @@ export default function ResumenesMaster() {
             value={mesSeleccionado}
             onChange={(e) => setMesSeleccionado(parseInt(e.target.value, 10))}
             style={{
-              background: 'rgba(15, 23, 42, 0.95)',
-              border: '1.5px solid rgba(255,255,255,0.08)',
+              background: '#ffffff',
+              border: '1.5px solid #cbd5e1',
               borderRadius: '10px',
               padding: '8px 12px',
-              color: '#ffffff',
+              color: '#0f172a',
               fontSize: '13px',
               fontWeight: '600',
               outline: 'none',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+              boxShadow: 'var(--shadow-sm)'
             }}
           >
             {MESES.map((m) => (
-              <option key={m.value} value={m.value} style={{ background: '#0f172a' }}>
+              <option key={m.value} value={m.value}>
                 {m.label}
               </option>
             ))}
@@ -171,20 +171,20 @@ export default function ResumenesMaster() {
             value={anioSeleccionado}
             onChange={(e) => setAnioSeleccionado(parseInt(e.target.value, 10))}
             style={{
-              background: 'rgba(15, 23, 42, 0.95)',
-              border: '1.5px solid rgba(255,255,255,0.08)',
+              background: '#ffffff',
+              border: '1.5px solid #cbd5e1',
               borderRadius: '10px',
               padding: '8px 12px',
-              color: '#ffffff',
+              color: '#0f172a',
               fontSize: '13px',
               fontWeight: '600',
               outline: 'none',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+              boxShadow: 'var(--shadow-sm)'
             }}
           >
             {ANIOS.map((y) => (
-              <option key={y} value={y} style={{ background: '#0f172a' }}>
+              <option key={y} value={y}>
                 {y}
               </option>
             ))}
@@ -195,7 +195,7 @@ export default function ResumenesMaster() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
         
         {/* Presidentes */}
-        <div style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.06)', transition: 'transform 0.2s' }}>
+        <div style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.06)' }}>
           <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(59, 130, 246, 0.15)', color: colorPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
             <FaUserTie />
           </div>
@@ -297,20 +297,20 @@ export default function ResumenesMaster() {
       {/* DETALLE Y REPORTES SECTION */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px', marginBottom: '40px' }}>
         
-        {/* Historial Mensual de Crecimiento (Phase 3 - Reporte 1) */}
-        <div style={{ background: colorDark, border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '32px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Historial Mensual de Crecimiento */}
+        <div className="card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '32px', boxShadow: 'var(--shadow-md)' }}>
+          <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FaCalendarAlt style={{ color: colorPrimary }} /> Crecimiento Histórico Mensual
           </h4>
-          <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '24px' }}>
+          <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '24px' }}>
             Registros de nuevas afiliaciones creadas por mes y año agregados desde la base de datos de auditoría.
           </p>
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', textAlign: 'left' }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.1)' }}>
-                  <th style={{ padding: '12px', color: '#ffffff', fontWeight: '800' }}>Periodo</th>
+                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ padding: '12px', color: '#0f172a', fontWeight: '800' }}>Periodo</th>
                   <th style={{ padding: '12px', color: colorPrimary, fontWeight: '800' }}>Presidentes</th>
                   <th style={{ padding: '12px', color: colorInfo, fontWeight: '800' }}>Entrenadores</th>
                   <th style={{ padding: '12px', color: colorWarning, fontWeight: '800' }}>Equipos</th>
@@ -320,12 +320,12 @@ export default function ResumenesMaster() {
               <tbody>
                 {mensual.length > 0 ? (
                   mensual.map((m, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                      <td style={{ padding: '14px 12px', fontWeight: '700', color: '#ffffff' }}>{formatMonthName(m.mes, m.anio)}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: '600' }}>{m.presidentes}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: '600' }}>{m.entrenadores}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: '600' }}>{m.equipos}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: '600' }}>{m.jugadores}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} className="table-row-hover">
+                      <td style={{ padding: '14px 12px', fontWeight: '700', color: '#0f172a' }}>{formatMonthName(m.mes, m.anio)}</td>
+                      <td style={{ padding: '14px 12px', fontWeight: '600', color: '#334155' }}>{m.presidentes}</td>
+                      <td style={{ padding: '14px 12px', fontWeight: '600', color: '#334155' }}>{m.entrenadores}</td>
+                      <td style={{ padding: '14px 12px', fontWeight: '600', color: '#334155' }}>{m.equipos}</td>
+                      <td style={{ padding: '14px 12px', fontWeight: '600', color: '#334155' }}>{m.jugadores}</td>
                     </tr>
                   ))
                 ) : (
@@ -341,28 +341,27 @@ export default function ResumenesMaster() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '30px', marginBottom: '40px' }}>
         
-        {/* Actividad por Usuario (Phase 3 - Reporte 2) */}
-        <div style={{ background: colorDark, border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '30px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Actividad por Usuario */}
+        <div className="card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '30px', boxShadow: 'var(--shadow-md)' }}>
+          <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FaClock style={{ color: colorInfo }} /> Actividad Reciente por Usuario
           </h4>
-          <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '20px' }}>
+          <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '20px' }}>
             Total de acciones registradas por usuario (creaciones, modificaciones y eliminaciones).
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {usuarios.length > 0 ? (
               usuarios.map((u, idx) => {
-                // Calcular porcentaje visual relativo al usuario más activo (primero en la lista)
                 const maxAcciones = usuarios[0]?.acciones || 1;
                 const porcentaje = (u.acciones / maxAcciones) * 100;
                 return (
                   <div key={idx}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '700', color: '#ffffff' }}>{u.usuario}</span>
-                      <span style={{ fontWeight: '800', color: colorInfo }}>{u.acciones} acciones</span>
+                      <span style={{ fontWeight: '700', color: '#0f172a' }}>{u.usuario}</span>
+                      <span style={{ fontWeight: '800', color: '#1e40af' }}>{u.acciones} acciones</span>
                     </div>
-                    <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{ width: `${porcentaje}%`, height: '100%', background: `linear-gradient(90deg, ${colorInfo}, ${colorPrimary})`, borderRadius: '4px', transition: 'width 1s ease-out' }}></div>
                     </div>
                   </div>
@@ -374,12 +373,12 @@ export default function ResumenesMaster() {
           </div>
         </div>
 
-        {/* Actividad por Entidad (Phase 3 - Reporte 3) */}
-        <div style={{ background: colorDark, border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '30px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)' }}>
-          <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Actividad por Entidad */}
+        <div className="card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '30px', boxShadow: 'var(--shadow-md)' }}>
+          <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FaDatabase style={{ color: colorWarning }} /> Actividad por Entidad
           </h4>
-          <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '20px' }}>
+          <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '20px' }}>
             Distribución de las acciones de auditoría agrupadas por la tabla afectada en el sistema.
           </p>
 
@@ -391,10 +390,10 @@ export default function ResumenesMaster() {
                 return (
                   <div key={idx}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '700', color: '#ffffff' }}>{e.entidad}</span>
-                      <span style={{ fontWeight: '800', color: colorWarning }}>{e.acciones} logs</span>
+                      <span style={{ fontWeight: '700', color: '#0f172a' }}>{e.entidad}</span>
+                      <span style={{ fontWeight: '800', color: '#c2410c' }}>{e.acciones} logs</span>
                     </div>
-                    <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{ width: `${porcentaje}%`, height: '100%', background: `linear-gradient(90deg, ${colorWarning}, #f97316)`, borderRadius: '4px' }}></div>
                     </div>
                   </div>
@@ -408,17 +407,17 @@ export default function ResumenesMaster() {
 
       </div>
 
-      {/* Actividad Diaria (Phase 3 - Reporte 4) */}
-      <div style={{ background: colorDark, border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '32px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)', marginBottom: '40px' }}>
-        <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      {/* Actividad Diaria */}
+      <div className="card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '32px', boxShadow: 'var(--shadow-md)', marginBottom: '40px' }}>
+        <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <FaCalendarAlt style={{ color: colorSuccess }} /> Frecuencia de Actividad Diaria
         </h4>
-        <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '30px' }}>
+        <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '30px' }}>
           Cantidad de transacciones registradas por día en el sistema durante el último periodo de actividad.
         </p>
 
         {/* Gráfico Simple de Barras en CSS Puro */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '180px', gap: '12px', paddingBottom: '10px', borderBottom: '1.5px solid rgba(255,255,255,0.1)', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '180px', gap: '12px', paddingBottom: '10px', borderBottom: '1.5px solid #e2e8f0', overflowX: 'auto' }}>
           {diario.length > 0 ? (
             diario.map((d, idx) => {
               const maxAcciones = Math.max(...diario.map(x => x.acciones), 1);
@@ -426,7 +425,7 @@ export default function ResumenesMaster() {
               const shortDate = d.fecha.substring(5); // MM-DD
               return (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '35px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: '800', color: colorSuccess, marginBottom: '6px' }}>{d.acciones}</div>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#047857', marginBottom: '6px' }}>{d.acciones}</div>
                   <div style={{ width: '100%', height: `${altura}px`, background: `linear-gradient(180deg, ${colorSuccess}, rgba(16, 185, 129, 0.3))`, borderRadius: '4px 4px 0 0', position: 'relative' }} title={`Fecha: ${d.fecha}\nAcciones: ${d.acciones}`}></div>
                   <div style={{ fontSize: '9px', color: '#64748b', fontWeight: '700', marginTop: '8px' }}>{shortDate}</div>
                 </div>
