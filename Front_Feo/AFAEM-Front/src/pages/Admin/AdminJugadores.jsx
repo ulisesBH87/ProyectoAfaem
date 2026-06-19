@@ -377,6 +377,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
           </div>
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
             <span style="font-size: 12px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+            ${Number(tipo.id) === 25 ? `<span style="font-size: 10px; color: #ef4444; font-style: italic; line-height: 1.3; text-align: center; margin-top: 2px; font-weight: 500;">Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.</span>` : ''}
             <span style="font-size: 11px; color: #64748b; line-height: 1.4; text-align: center;">Subido el ${fechaSubida}</span>
           </div>
         </a>
@@ -432,6 +433,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
         <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+        ${Number(tipo.id) === 25 ? `<span style="font-size: 10px; color: #ef4444; font-style: italic; line-height: 1.3; text-align: center; margin-top: 2px; font-weight: 500;">Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.</span>` : ''}
         <span style="font-size: 11px; color: #f43f5e; font-weight: 700; background: #fff1f2; padding: 2px 8px; border-radius: 20px;">Faltante</span>
       </div>
       <button

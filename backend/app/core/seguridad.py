@@ -139,6 +139,45 @@ def requerir_roles(*roles_permitidos):
 
     return verificador
 
+def requerir_permiso(slug_permiso: str):
+    def verificador(usuario = Depends(obtener_usuario_actual), db: Session = Depends(get_db)):
+        from app.servicios.permisos_servicio import obtener_acceso_usuario_servicio
+        from app.modelos.roles_modelo import Roles
+        from app.modelos.rel_rol_permisos_modelo import RelRolPermisos
+
+        acceso = obtener_acceso_usuario_servicio(db, usuario.UsuarioId)
+        
+        # Logs temporales para validación de RBAC
+        admin_role = db.query(Roles).filter(Roles.Nombre == "ADMINISTRADOR").first()
+        master_role = db.query(Roles).filter(Roles.Nombre == "MASTER").first()
+        
+        admin_perms = []
+        if admin_role:
+            admin_perms = [rp.PermisoRelacion.Slug for rp in db.query(RelRolPermisos).filter(RelRolPermisos.RolId == admin_role.RolId).all()]
+            
+        master_perms = []
+        if master_role:
+            master_perms = [rp.PermisoRelacion.Slug for rp in db.query(RelRolPermisos).filter(RelRolPermisos.RolId == master_role.RolId).all()]
+            
+        print(f"[RBAC LOG] --- VERIFICACIÓN DE PERMISOS ---")
+        print(f"[RBAC LOG] Permisos cargados para ADMIN: {admin_perms}")
+        print(f"[RBAC LOG] Permisos cargados para MASTER: {master_perms}")
+        print(f"[RBAC LOG] Permiso requerido por Auditorías: '{slug_permiso}'")
+        print(f"[RBAC LOG] Permisos del usuario actual ({usuario.Correo}): {acceso.get('Permisos', [])}")
+        
+        resultado_rbac = slug_permiso in acceso.get("Permisos", [])
+        print(f"[RBAC LOG] Resultado de validación RBAC: {'EXITOSO' if resultado_rbac else 'DENEGADO'}")
+        
+        if not resultado_rbac:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para acceder a este recurso"
+            )
+            
+        return usuario
+        
+    return verificador
+
 def obtener_usuario_desde_token(token: str, db: Session):
     payload = verificar_token(token)
 

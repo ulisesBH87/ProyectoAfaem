@@ -264,6 +264,11 @@ export default function PresidenteJugadorDocumentos() {
                 <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '8px', paddingRight: '90px' }}>
                   {item.nombre}
                 </h4>
+                {item.tipoId === 25 && (!item.documento || Number(item.documento.EstadoValidacionId) === 3) && (
+                  <p style={{ margin: '5px 0 8px', fontSize: '11px', color: '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                    Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                  </p>
+                )}
                 {item.documento && (
                   <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
                     Entregado el: {new Date(item.documento.FechaEntrega).toLocaleDateString()}

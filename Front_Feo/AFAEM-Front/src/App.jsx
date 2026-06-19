@@ -21,6 +21,7 @@ const AdminCatalogos = lazy(() => import('./pages/Admin/AdminCatalogos'));
 const AdminPresidentes = lazy(() => import('./pages/Admin/AdminPresidentes'));
 const RegistrarPresidente = lazy(() => import('./pages/Admin/RegistrarPresidente'));
 const AdminAuditorias = lazy(() => import('./pages/Admin/AdminAuditorias'));
+const ResumenesMaster = lazy(() => import('./pages/Master/ResumenesMaster'));
 const AdminLayoutJugadores = lazy(() => import('./pages/Admin/AdminLayoutJugadores'));
 const RegistrarAdmin = lazy(() => import('./pages/Admin/RegistrarAdmin'));
 const AdminGuard = lazy(() => import('./routes/AdminGuard'));
@@ -167,7 +168,7 @@ function App() {
           <Route path="/admin/catalogos" element={<Navigate to={ROUTES.ADMIN.CATALOGOS} replace />} />
           <Route path="/admin/presidentes" element={<Navigate to={ROUTES.ADMIN.PRESIDENTES} replace />} />
           <Route path="/admin/registrar-presidente" element={<Navigate to={ROUTES.ADMIN.REGISTRAR_PRESIDENTE} replace />} />
-          <Route path="/admin/auditorias" element={<Navigate to={ROUTES.ADMIN.AUDITORIAS} replace />} />
+          <Route path="/admin/auditorias" element={<Navigate to={ROUTES.MASTER.AUDITORIAS} replace />} />
           <Route path="/admin/layout-jugadores" element={<Navigate to={ROUTES.ADMIN.LAYOUT_JUGADORES} replace />} />
           <Route path="/admin/usuarios-roles" element={<Navigate to={ROUTES.ADMIN.USUARIOS_ROLES} replace />} />
           <Route path="/admin/configuracion" element={<Navigate to={ROUTES.ADMIN.CONFIGURACION} replace />} />
@@ -209,7 +210,8 @@ function App() {
             <Route path={ROUTES.ADMIN.CATALOGOS} element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.PRESIDENTES} element={<AdminGuard><AdminPresidentes /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.REGISTRAR_PRESIDENTE} element={<AdminGuard><RegistrarPresidente /></AdminGuard>} />
-            <Route path={ROUTES.ADMIN.AUDITORIAS} element={<AdminGuard><AdminAuditorias /></AdminGuard>} />
+            <Route path={ROUTES.MASTER.AUDITORIAS} element={<AdminGuard requirePermission="auditorias.ver"><AdminAuditorias /></AdminGuard>} />
+            <Route path={ROUTES.MASTER.RESUMENES} element={<AdminGuard requirePermission="auditorias.ver"><ResumenesMaster /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.LAYOUT_JUGADORES} element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.USUARIOS_ROLES} element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.CONFIGURACION} element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />

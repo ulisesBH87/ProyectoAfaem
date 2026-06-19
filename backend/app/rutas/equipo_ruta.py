@@ -824,6 +824,7 @@ def crear_o_actualizar_borrador_presidente(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual),
 ):
+    db.info["es_borrador"] = True
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")

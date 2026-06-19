@@ -29,7 +29,7 @@ def register(data: RegistroUsuario, service: AutenticacionServicio = Depends(get
 
 @router.post("/registrar_admin")
 def registrar_administrador(data: RegistroAdmin, service: AutenticacionServicio = Depends(get_autenticacion_servicio)):
-    usuario = service.registrar_admin(data)
+    persona, usuario = service.registrar_admin(data)
     
     return {
         "success": True,

@@ -32,6 +32,11 @@ export const ROUTES = {
     TERMINOS_CONDICIONES: "/ad/term-cond",
   },
 
+  MASTER: {
+    AUDITORIAS: "/ms/au",
+    RESUMENES: "/ms/r",
+  },
+
   PRESIDENTE: {
     DASHBOARD: "/pe",
     JUGADORES: "/pe/j",
@@ -83,7 +88,8 @@ const OLD_TO_NEW_ROUTES = {
   "/admin/catalogos": ROUTES.ADMIN.CATALOGOS,
   "/admin/presidentes": ROUTES.ADMIN.PRESIDENTES,
   "/admin/registrar-presidente": ROUTES.ADMIN.REGISTRAR_PRESIDENTE,
-  "/admin/auditorias": ROUTES.ADMIN.AUDITORIAS,
+  "/admin/auditorias": ROUTES.MASTER.AUDITORIAS,
+  "/ad/aud": ROUTES.MASTER.AUDITORIAS,
   "/admin/layout-jugadores": ROUTES.ADMIN.LAYOUT_JUGADORES,
   "/admin/usuarios-roles": ROUTES.ADMIN.USUARIOS_ROLES,
   "/admin/configuracion": ROUTES.ADMIN.CONFIGURACION,

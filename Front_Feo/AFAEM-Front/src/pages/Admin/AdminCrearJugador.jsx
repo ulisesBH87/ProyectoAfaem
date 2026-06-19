@@ -1160,6 +1160,11 @@ export default function AdminCrearJugador() {
                       )}
                     </div>
                     <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                    {doc.key === 'fotografia' && (
+                      <p style={{ margin: '0 0 8px', fontSize: '10px', color: '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                        Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                      </p>
+                    )}
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '10px', fontWeight: '800' }}>
                       {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                     </div>

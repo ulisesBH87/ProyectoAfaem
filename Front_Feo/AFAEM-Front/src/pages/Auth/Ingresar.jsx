@@ -78,6 +78,8 @@ export default function Ingresar() {
       // --- NUEVA LÓGICA DE REDIRECCIÓN ESTRICTA ---
       if (role === 'ADMIN' || role === 'ADMINISTRADOR') {
         navigate(ROUTES.ADMIN.DASHBOARD);
+      } else if (role === 'MASTER') {
+        navigate(ROUTES.MASTER.AUDITORIAS);
       } else if (role === 'ENTRENADOR') {
         Swal.fire({
           icon: 'info',

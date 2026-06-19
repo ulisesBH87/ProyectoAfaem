@@ -17,7 +17,7 @@ import { ROUTES } from '../routes/paths';
 const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { menus, isLoading, hasRole } = useRBAC();
+  const { menus, isLoading, hasRole, hasPermission } = useRBAC();
   const [isHovered, setIsHovered] = useState(false);
 
   // DEFINICIÓN DE TEMAS (Glassmorphism)
@@ -28,6 +28,8 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
   const handleLogoClick = () => {
     if (isAdmin) {
       navigate(ROUTES.ADMIN.DASHBOARD);
+    } else if (hasPermission('auditorias.ver')) {
+      navigate(ROUTES.MASTER.AUDITORIAS);
     } else {
       navigate(ROUTES.PRESIDENTE.EQUIPOS);
     }
@@ -136,8 +138,14 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
       <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto', overflowX: 'hidden' }}>
         {menus
           .filter(item => {
-            // Seguridad: Si es una ruta de admin, solo mostrar si es admin
-            if (item.Ruta && item.Ruta.startsWith('/ad') && !isAdmin) return false;
+            // Seguridad: Si es una ruta de admin, solo mostrar si es admin o si tiene el permiso para ver auditorías
+            if (item.Ruta && item.Ruta.startsWith('/ad') && !isAdmin) {
+              if (item.Nombre === 'Auditorías' && hasPermission('auditorias.ver')) {
+                // Permitir ver Auditorías
+              } else {
+                return false;
+              }
+            }
             // Si es Catálogos o Directorio de Equipos y no es Admin, ocultar
             if ((item.Nombre === 'Catálogos' || item.Nombre === 'Equipos') && !isAdmin) {
               // A menos que sea un "Ver Mi Equipo" específico para presidentes (otra ruta)
@@ -145,8 +153,6 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
             }
             // Si es 'Mi Equipo' y es Admin, ocultar (porque pertenece a la vista de presidente)
             if (item.Nombre === 'Mi Equipo' && isAdmin) return false;
-            // Ocultar Auditorías temporalmente del sidebar (sin borrar)
-            if (item.Nombre === 'Auditorías') return false;
 
             // Ocultar Inicio y Solicitudes para Presidente de Equipo (Solo dejar Equipos y Jugadores) en el nivel superior
             if (!isAdmin && (item.Nombre === 'Inicio' || item.Nombre === 'Solicitudes' || item.Nombre === 'Dashboard' || item.Nombre === 'Reportes')) return false;
