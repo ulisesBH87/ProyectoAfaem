@@ -61,13 +61,6 @@ export const RBACProvider = ({ children }) => {
             Ruta: ROUTES.ADMIN.PRESIDENTES
           });
         }
-        if (!finalMenus.find(m => m.Nombre === 'Auditorías')) {
-          finalMenus.push({
-            Nombre: 'Auditorías',
-            Icono: 'FaHistory',
-            Ruta: ROUTES.ADMIN.AUDITORIAS
-          });
-        }
       }
 
       const newState = {

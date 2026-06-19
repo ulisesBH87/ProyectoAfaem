@@ -211,7 +211,7 @@ function App() {
             <Route path={ROUTES.ADMIN.CATALOGOS} element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.PRESIDENTES} element={<AdminGuard><AdminPresidentes /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.REGISTRAR_PRESIDENTE} element={<AdminGuard><RegistrarPresidente /></AdminGuard>} />
-            <Route path={ROUTES.ADMIN.AUDITORIAS} element={<AdminGuard><AdminAuditorias /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.AUDITORIAS} element={<AdminGuard requirePermission="auditorias.ver"><AdminAuditorias /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.LAYOUT_JUGADORES} element={<AdminGuard><AdminLayoutJugadores /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.USUARIOS_ROLES} element={<AdminGuard><UsuariosRolesAdmin /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.CONFIGURACION} element={<AdminGuard><ConfiguracionAdmin /></AdminGuard>} />

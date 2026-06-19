@@ -9,3 +9,4 @@ class Rol(IntEnum):
     JUGADOR = 5
     TUTOR = 6
     INVITADO = 7
+    MASTER = 117
