@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FaCamera, FaTimes, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCamera, FaTimes, FaCheck, FaExclamationTriangle, FaSyncAlt } from 'react-icons/fa';
 import '../../styles/CameraCaptureModal.css';
 
 export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
@@ -8,6 +8,8 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
+  const [facingMode, setFacingMode] = useState('user');
+  const activeStreamRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -23,7 +25,7 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
         try {
           mediaStream = await navigator.mediaDevices.getUserMedia({
             video: {
-              facingMode: 'user',
+              facingMode: facingMode,
               width: { ideal: 1280 },
               height: { ideal: 720 }
             },
@@ -36,6 +38,7 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
           });
         }
         setStream(mediaStream);
+        activeStreamRef.current = mediaStream;
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
         }
@@ -48,20 +51,26 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
     startCamera();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (activeStreamRef.current) {
+        activeStreamRef.current.getTracks().forEach(track => track.stop());
+        activeStreamRef.current = null;
       }
     };
-  }, [isOpen]);
+  }, [isOpen, facingMode]);
 
   // Cleanup effect
   useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (activeStreamRef.current) {
+        activeStreamRef.current.getTracks().forEach(track => track.stop());
+        activeStreamRef.current = null;
       }
     };
-  }, [stream]);
+  }, []);
+
+  const toggleCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
 
   const handleCapture = () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -76,9 +85,11 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
     canvas.width = width;
     canvas.height = height;
 
-    // Mirror image for final capture to match mirror preview
-    context.translate(width, 0);
-    context.scale(-1, 1);
+    // Mirror image for final capture to match mirror preview only if using front camera
+    if (facingMode === 'user') {
+      context.translate(width, 0);
+      context.scale(-1, 1);
+    }
 
     // Draw frame
     context.drawImage(video, 0, 0, width, height);
@@ -111,9 +122,22 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
       <div className="camera-capture-container" onClick={e => e.stopPropagation()}>
         <div className="camera-capture-header">
           <h3>Tomar Fotografía</h3>
-          <button className="camera-capture-close-btn" onClick={handleClose}>
-            <FaTimes />
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {!error && (
+              <button 
+                type="button"
+                className="camera-capture-close-btn"
+                onClick={toggleCamera}
+                title="Girar cámara"
+                style={{ color: '#0b4ea6', fontSize: '18px' }}
+              >
+                <FaSyncAlt />
+              </button>
+            )}
+            <button className="camera-capture-close-btn" onClick={handleClose}>
+              <FaTimes />
+            </button>
+          </div>
         </div>
 
         <div className="camera-preview-wrapper">
@@ -132,6 +156,7 @@ export default function CameraCaptureModal({ isOpen, onClose, onCapture }) {
                 playsInline
                 muted
                 className="camera-video"
+                style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
               />
               {/* Vignette face cutout */}
               <div className="camera-overlay-guide" />
