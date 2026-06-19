@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock, FaCamera } from 'react-icons/fa';
+import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
 import AmateurLogo from '../../assets/amateur-logo.png';
@@ -358,6 +359,24 @@ function PreRegistroPresidente() {
   const [fotoValidacionFallida, setFotoValidacionFallida] = useState(false);
   const [fotoArchivoPendiente, setFotoArchivoPendiente] = useState(null);
   const [mostrarFormularioManual, setMostrarFormularioManual] = useState(false);
+
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState(null);
+
+  const handleCameraPhotoCaptured = (file) => {
+    if (cameraTargetKey === 'file-val-fotografia') {
+      const docAfiliacionId = 37;
+      const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === docAfiliacionId);
+      if (docGuardado) {
+        handleReemplazarDocumento(docAfiliacionId, file);
+        setDocuments(prev => ({ ...prev, fotografia: file }));
+      } else {
+        handleFileUpload('fotografia', file);
+      }
+    } else {
+      handleFileUpload('fotografia', file);
+    }
+  };
 
   const segurosPresidente = catalogoSeguros.filter((seg) =>
     ['TIPO G', 'SIN SEGURO'].includes(seg.nombre.toUpperCase().trim())
@@ -3423,7 +3442,27 @@ function PreRegistroPresidente() {
                           if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
                             return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
                           }
-                          document.getElementById(`file-${doc.documento}`).click();
+                          if (doc.documento === 'fotografia') {
+                            Swal.fire({
+                              title: 'Selecciona una opción',
+                              text: '¿Cómo deseas cargar la fotografía?',
+                              icon: 'question',
+                              showCancelButton: true,
+                              confirmButtonText: '📷 Tomar con cámara',
+                              cancelButtonText: '📁 Subir archivo',
+                              confirmButtonColor: '#0b4ea6',
+                              cancelButtonColor: '#64748b'
+                            }).then((result) => {
+                              if (result.isConfirmed) {
+                                setCameraTargetKey('file-fotografia');
+                                setIsCameraOpen(true);
+                              } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                document.getElementById(`file-${doc.documento}`).click();
+                              }
+                            });
+                          } else {
+                            document.getElementById(`file-${doc.documento}`).click();
+                          }
                         }}
                         style={{
                           cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer')
@@ -3512,7 +3551,27 @@ function PreRegistroPresidente() {
                                 if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
                                   return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
                                 }
-                                document.getElementById(`file-${doc.documento}`).click();
+                                if (doc.documento === 'fotografia') {
+                                  Swal.fire({
+                                    title: 'Selecciona una opción',
+                                    text: '¿Cómo deseas cargar la fotografía?',
+                                    icon: 'question',
+                                    showCancelButton: true,
+                                    confirmButtonText: '📷 Tomar con cámara',
+                                    cancelButtonText: '📁 Subir archivo',
+                                    confirmButtonColor: '#0b4ea6',
+                                    cancelButtonColor: '#64748b'
+                                  }).then((result) => {
+                                    if (result.isConfirmed) {
+                                      setCameraTargetKey('file-fotografia');
+                                      setIsCameraOpen(true);
+                                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                      document.getElementById(`file-${doc.documento}`).click();
+                                    }
+                                  });
+                                } else {
+                                  document.getElementById(`file-${doc.documento}`).click();
+                                }
                               }}
                               className="doc-action-btn"
                               style={{
@@ -3731,7 +3790,27 @@ function PreRegistroPresidente() {
                     className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
                     onClick={() => {
                       if (isApproved) return;
-                      document.getElementById(`file-val-${doc.documento}`).click();
+                      if (doc.documento === 'fotografia') {
+                        Swal.fire({
+                          title: 'Selecciona una opción',
+                          text: '¿Cómo deseas cargar la fotografía?',
+                          icon: 'question',
+                          showCancelButton: true,
+                          confirmButtonText: '📷 Tomar con cámara',
+                          cancelButtonText: '📁 Subir archivo',
+                          confirmButtonColor: '#0b4ea6',
+                          cancelButtonColor: '#64748b'
+                        }).then((result) => {
+                          if (result.isConfirmed) {
+                            setCameraTargetKey('file-val-fotografia');
+                            setIsCameraOpen(true);
+                          } else if (result.dismiss === Swal.DismissReason.cancel) {
+                            document.getElementById(`file-val-${doc.documento}`).click();
+                          }
+                        });
+                      } else {
+                        document.getElementById(`file-val-${doc.documento}`).click();
+                      }
                     }}
                     style={{
                       cursor: isApproved ? 'default' : 'pointer'
@@ -3776,7 +3855,27 @@ function PreRegistroPresidente() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            document.getElementById(`file-val-${doc.documento}`).click();
+                            if (doc.documento === 'fotografia') {
+                              Swal.fire({
+                                title: 'Selecciona una opción',
+                                text: '¿Cómo deseas cargar la fotografía?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: '📷 Tomar con cámara',
+                                cancelButtonText: '📁 Subir archivo',
+                                confirmButtonColor: '#0b4ea6',
+                                cancelButtonColor: '#64748b'
+                              }).then((result) => {
+                                if (result.isConfirmed) {
+                                  setCameraTargetKey('file-val-fotografia');
+                                  setIsCameraOpen(true);
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                  document.getElementById(`file-val-${doc.documento}`).click();
+                                }
+                              });
+                            } else {
+                              document.getElementById(`file-val-${doc.documento}`).click();
+                            }
                           }}
                           className="doc-action-btn"
                           style={{
@@ -4233,6 +4332,13 @@ function PreRegistroPresidente() {
             )}
           </div>
         </Modal>
+      )}
+      {isCameraOpen && (
+        <CameraCaptureModal
+          isOpen={isCameraOpen}
+          onClose={() => setIsCameraOpen(false)}
+          onCapture={handleCameraPhotoCaptured}
+        />
       )}
     </div>
   );
