@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaArrowLeft, FaCheckCircle, FaClock, FaFileUpload, FaMoneyBillWave, FaTimesCircle, FaUpload } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaClock, FaFileUpload, FaMoneyBillWave, FaTimesCircle, FaUpload, FaFilePdf } from 'react-icons/fa';
 import '../../styles/dashboard.css';
 import Swal from 'sweetalert2';
 import { API_BASE } from '../../config/config';
@@ -43,6 +43,7 @@ export default function PagoPrevioJugador() {
   const [asignacionSegurosAgregar, setAsignacionSegurosAgregar] = useState({});
   const [pagoErrorJugador, setPagoErrorJugador] = useState(null);
   const [procesandoPagoJugador, setProcesandoPagoJugador] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const pathSegments = location.pathname.split('/');
   const rawAccion = pathSegments[pathSegments.length - 1];
@@ -158,6 +159,10 @@ export default function PagoPrevioJugador() {
           const orden = await ordenRes.json();
           const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
           setOrderDetails(detalles);
+          setPagoData(prev => ({
+            ...prev,
+            referencia_pago: orden.ReferenciaPago || orden.referencia_pago
+          }));
 
           const seguros = {};
           let cantidadJugadores = 0;
@@ -325,7 +330,9 @@ export default function PagoPrevioJugador() {
           catalogoSeguros: catalogs.seguros,
           asignacionSeguros: asignacionSegurosAgregar,
           total: Number(data.total || totalPagoEstimadoJugador || 0),
-          estado: 'NO ENVIADO'
+          estado: 'NO ENVIADO',
+          referenciaPago: data.ReferenciaPago || data.referencia_pago,
+          user
         });
         Swal.fire({
           icon: 'success',
@@ -351,6 +358,19 @@ export default function PagoPrevioJugador() {
     }
   };
 
+  const handleDescargarOrdenPagoJugador = () => {
+    if (!resolvedOrdenId) return;
+    generarPDFOrdenPagoJugador({
+      ordenId: resolvedOrdenId,
+      cantidadJugadores: Number(numJugadoresAgregar || 0),
+      catalogoSeguros: catalogs.seguros,
+      asignacionSeguros: asignacionSegurosAgregar,
+      total: totalResumen,
+      referenciaPago: pagoData?.ReferenciaPago || pagoData?.referencia_pago,
+      user
+    });
+  };
+
   const renderComprobanteBox = ({ helperText, buttonText }) => (
     <>
       {resolvedOrdenId && (
@@ -373,13 +393,22 @@ export default function PagoPrevioJugador() {
         <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
           {comprobante || 'No se ha seleccionado archivo'}
         </div>
-        <button
-          onClick={() => document.getElementById(uploadInputId)?.click()}
-          disabled={uploadingComprobante}
-          style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: uploadingComprobante ? 'not-allowed' : 'pointer', opacity: uploadingComprobante ? 0.7 : 1 }}
-        >
-          {buttonText}
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => document.getElementById(uploadInputId)?.click()}
+            disabled={uploadingComprobante}
+            style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: uploadingComprobante ? 'not-allowed' : 'pointer', opacity: uploadingComprobante ? 0.7 : 1 }}
+          >
+            {buttonText}
+          </button>
+          <button
+            type="button"
+            onClick={handleDescargarOrdenPagoJugador}
+            style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid rgba(96, 165, 250, 0.4)', background: 'white', color: '#60a5fa', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FaFilePdf /> Descargar Ficha de Pago
+          </button>
+        </div>
       </div>
       <button
         onClick={handleSubirComprobante}
@@ -532,12 +561,21 @@ export default function PagoPrevioJugador() {
                   <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
                     {comprobante || 'No se ha seleccionado archivo'}
                   </div>
-                  <button
-                    onClick={() => document.getElementById(uploadInputId)?.click()}
-                    style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}
-                  >
-                    {comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'}
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => document.getElementById(uploadInputId)?.click()}
+                      style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}
+                    >
+                      {comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDescargarOrdenPagoJugador}
+                      style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid rgba(96, 165, 250, 0.4)', background: 'white', color: '#60a5fa', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <FaFilePdf /> Descargar Ficha de Pago
+                    </button>
+                  </div>
                 </div>
               </>
             )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
@@ -14,7 +15,8 @@ import {
   FaFutbol,
   FaMoneyBillWave,
   FaClock,
-  FaTimesCircle
+  FaTimesCircle,
+  FaInfoCircle
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -58,6 +60,179 @@ const parsearTelefonoE164 = (telefonoCompleto) => {
   }
   return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
 };
+
+const normalizarNombreSeguro = (nombre) => {
+  if (!nombre) return '';
+  return nombre.toUpperCase().replace(/["']/g, '').trim();
+};
+
+const DETALLES_SEGUROS = {
+  'TIPO A': {
+    nombre: 'TIPO "A"',
+    precio: 240,
+    poliza: '2922500000281',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$50,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$25,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO B': {
+    nombre: 'TIPO "B"',
+    precio: 350,
+    poliza: '2922500000283',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO F': {
+    nombre: 'TIPO "F"',
+    precio: 670,
+    poliza: '2922500000282',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO H': {
+    nombre: 'TIPO "H"',
+    precio: 475,
+    poliza: '2922500000286',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO G': {
+    nombre: 'TIPO "G"',
+    precio: 350,
+    poliza: '2922500000280',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se amparan los traslados de su casa a las ligas, asociaciones y viceversa, y traslados a otras ligas, se cubre dentro de las instalaciones de sus ligas y asociaciones. Se amparan traslados de estado a estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'BASICA': {
+    nombre: 'TIPO "BASICA"',
+    precio: 155,
+    poliza: 'N/A',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Esta afiliación no incluye póliza de seguro de gastos médicos por accidente. Solo cubre derechos de participación básica.',
+    beneficios: [
+      'Participación en Torneos Estatales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Regionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Campeonatos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Federados (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur'
+    ],
+    coberturas: []
+  },
+  'SIN SEGURO': {
+    nombre: 'SIN SEGURO',
+    precio: 0,
+    poliza: 'N/A',
+    vigencia: 'N/A',
+    alcance: 'El presidente no cuenta con cobertura médica federada.',
+    beneficios: [
+      'Sin costo adicional',
+      'Registro básico en la plataforma',
+      'No incluye seguro de gastos médicos',
+      'No incluye derechos de participación deportiva federada activa'
+    ],
+    coberturas: []
+  }
+};
+
 
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
@@ -142,15 +317,16 @@ export default function ConfigurarEquipo() {
   });
 
   const [pagoEquipo, setPagoEquipo] = useState({
-    loading: false,
+    loading: true,
     aprobado: false,
-    estadoEquipo: null,
+    estadoEquipo: ESTADO_EQUIPO.SIN_ORDEN,
     equipoTemporalId: null,
     estado: null,
     ordenId: null,
     total: 0,
     cantidadJugadores: 0,
-    tieneComprobante: false
+    tieneComprobante: false,
+    referenciaPago: null
   });
   const [pagoError, setPagoError] = useState(null);
   const [numJugadoresPago, setNumJugadoresPago] = useState(25);
@@ -211,6 +387,68 @@ export default function ConfigurarEquipo() {
       transform: translateY(-5px);
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
+    .seguro-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .seguro-modal-container {
+      background-color: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 850px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      color: #f8fafc;
+    }
+    @media (max-width: 768px) {
+      .form-inputs-grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+      }
+      .form-inputs-grid-2 input,
+      .form-inputs-grid-2 select {
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .phone-input-flex-container {
+        flex-direction: column !important;
+        gap: 8px !important;
+      }
+      .phone-input-flex-container select,
+      .phone-input-flex-container input {
+        width: 100% !important;
+      }
+      .abuelos-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+      .seguro-modal-container {
+        border-radius: 16px;
+        max-height: 95vh;
+      }
+      .premium-card {
+        padding: 20px 15px !important;
+        border-radius: 16px !important;
+      }
+      .dashboard-card {
+        padding: 20px 15px !important;
+      }
+    }
   `;
 
   // ESTADOS
@@ -219,6 +457,20 @@ export default function ConfigurarEquipo() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedSeguroId, setSelectedSeguroId] = useState('');
+  const [seguroDetalle, setSeguroDetalle] = useState(null);
+  const [registeredPlayers, setRegisteredPlayers] = useState([]);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  useEffect(() => {
+    if (seguroDetalle) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [seguroDetalle]);
 
   const [documents, setDocuments] = useState({
     acta: null,
@@ -278,6 +530,26 @@ export default function ConfigurarEquipo() {
     if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < nac.getDate())) edad--;
     return edad < 18;
   }, [extractedData.fechaNacimiento]);
+
+  const obtenerDuplicadoCamiseta = (numeroCamiseta) => {
+    if (!numeroCamiseta || String(numeroCamiseta).trim() === '') return null;
+    const camisetaVal = parseInt(numeroCamiseta, 10);
+    return registeredPlayers.find(p =>
+      p.NumeroCamiseta !== undefined && p.NumeroCamiseta !== null &&
+      parseInt(p.NumeroCamiseta, 10) === camisetaVal
+    );
+  };
+
+  const obtenerDuplicadoPosicion = (posicionId) => {
+    if (!posicionId) return null;
+    const posVal = parseInt(posicionId, 10);
+    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
+    const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicionId))?.nombre;
+    if (!posNombre) return null;
+    return registeredPlayers.find(p =>
+      p.Rol && p.Rol.trim().toUpperCase() === posNombre.trim().toUpperCase()
+    );
+  };
 
   const [curpExistente, setCurpExistente] = useState(false);
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
@@ -442,6 +714,17 @@ export default function ConfigurarEquipo() {
           setSelectedSeguroId(String(mappedSlotsData.seguros_disponibles[0].SeguroId));
         }
 
+        try {
+          const allPlayers = await teamsService.getUserPlayersReal();
+          const targetTeamName = targetTeam?.NombreEquipo || targetTeam?.Nombre || '';
+          const jugList = (allPlayers || []).filter(
+            p => p.Equipo && p.Equipo.toUpperCase().trim() === targetTeamName.toUpperCase().trim()
+          );
+          setRegisteredPlayers(jugList);
+        } catch (e) {
+          console.error("Error al cargar jugadores del equipo:", e);
+        }
+
       } catch (error) {
         console.error("Error al iniciar datos:", error);
         Swal.fire('Error', error.message || 'No se pudo cargar la información del equipo.', 'error');
@@ -475,6 +758,43 @@ export default function ConfigurarEquipo() {
     }
   }, [extractedData.curp]);
 
+  // Validar si el número de camiseta ya existe en tiempo real
+  useEffect(() => {
+    const camiseta = (extractedData.numCamiseta || '').trim();
+    if (camiseta) {
+      const duplicate = obtenerDuplicadoCamiseta(camiseta);
+      if (duplicate) {
+        setValidationErrors(prev => ({
+          ...prev,
+          numCamiseta: `El número de camiseta #${camiseta} ya está asignado al Jugador ${duplicate.NombreCompleto}.`
+        }));
+      } else {
+        setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+      }
+    } else {
+      setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+    }
+  }, [extractedData.numCamiseta, registeredPlayers]);
+
+  // Validar si la posición en el campo ya está ocupada en tiempo real
+  useEffect(() => {
+    const posicion = extractedData.posicion;
+    if (posicion && Number(posicion) !== 11) {
+      const duplicate = obtenerDuplicadoPosicion(posicion);
+      if (duplicate) {
+        const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicion))?.nombre || 'esta posición';
+        setValidationErrors(prev => ({
+          ...prev,
+          posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
+        }));
+      } else {
+        setValidationErrors(prev => ({ ...prev, posicion: null }));
+      }
+    } else {
+      setValidationErrors(prev => ({ ...prev, posicion: null }));
+    }
+  }, [extractedData.posicion, registeredPlayers, catalogs]);
+
   const cargarDetalleOrdenPagoEquipo = async (ordenId, token) => {
     if (!ordenId) return;
 
@@ -488,8 +808,11 @@ export default function ConfigurarEquipo() {
       const orden = await resOrden.json();
       const detalles = Array.isArray(orden.OrdenPagoDetalleRelacion) ? orden.OrdenPagoDetalleRelacion : [];
       const estatusOrden = Number(orden.EstatusPagoId || orden.estatus || 0);
+      const referenciaPago = orden.ReferenciaPago || orden.referencia_pago || null;
       if (estatusOrden) {
-        setPagoEquipo(prev => ({ ...prev, estado: estatusOrden }));
+        setPagoEquipo(prev => ({ ...prev, estado: estatusOrden, referenciaPago }));
+      } else {
+        setPagoEquipo(prev => ({ ...prev, referenciaPago }));
       }
 
       let cantidadJugadores = 0;
@@ -746,6 +1069,7 @@ export default function ConfigurarEquipo() {
       const data = await res.json();
       const ordenId = data.orden_pago_id || data.OrdenPagoId || data.id;
       const totalOrden = Number(data.total || totalPagoEstimado || 0);
+      const referenciaPago = data.ReferenciaPago || data.referencia_pago || null;
       setPagoEquipo({
         loading: false,
         aprobado: false,
@@ -754,7 +1078,8 @@ export default function ConfigurarEquipo() {
         ordenId,
         total: totalOrden,
         cantidadJugadores: Number(numJugadoresPago),
-        tieneComprobante: false
+        tieneComprobante: false,
+        referenciaPago
       });
 
       generarPDFCuota({
@@ -766,7 +1091,8 @@ export default function ConfigurarEquipo() {
         asignacionSeguros,
         total: totalOrden,
         cantidadJugadores: Number(numJugadoresPago || 0),
-        incluirPresidente: false
+        incluirPresidente: false,
+        referenciaPago
       });
 
       Swal.fire({
@@ -783,6 +1109,22 @@ export default function ConfigurarEquipo() {
     } finally {
       setProcesandoPago(false);
     }
+  };
+
+  const handleDescargarOrdenPagoEquipo = () => {
+    if (!pagoEquipo.ordenId) return;
+    generarPDFCuota({
+      ordenId: pagoEquipo.ordenId,
+      user,
+      bankInfo,
+      catalogoAfiliaciones: catalogoAfiliacionesPago,
+      catalogoSeguros: catalogs.seguros,
+      asignacionSeguros,
+      total: pagoEquipo.total || 0,
+      cantidadJugadores: Number(pagoEquipo.cantidadJugadores || 0),
+      incluirPresidente: false,
+      referenciaPago: pagoEquipo.referenciaPago
+    });
   };
 
   const handleSubirComprobanteEquipo = async () => {
@@ -1090,9 +1432,14 @@ export default function ConfigurarEquipo() {
                   <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
                     {comprobantePagoEquipo ? comprobantePagoEquipo.name : 'No se ha seleccionado archivo'}
                   </div>
-                  <button onClick={() => document.getElementById('comprobante-equipo').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}>
-                    {comprobantePagoEquipo ? 'Cambiar archivo' : 'Seleccionar archivo'}
-                  </button>
+                   <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <button onClick={() => document.getElementById('comprobante-equipo').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}>
+                      {comprobantePagoEquipo ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                    </button>
+                    <button type="button" onClick={handleDescargarOrdenPagoEquipo} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid rgba(96, 165, 250, 0.4)', background: 'white', color: '#60a5fa', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FaFilePdf /> Descargar Ficha de Pago
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -1190,6 +1537,20 @@ export default function ConfigurarEquipo() {
     if (!file) return;
 
     const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (documentKey === 'foto') {
+      const allowedFotoTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      const allowedFotoExts = ['.jpg', '.jpeg', '.png'];
+      if (!allowedFotoTypes.includes(file.type) || !allowedFotoExts.includes(ext)) {
+        Swal.fire({
+          title: 'Tipo de archivo no permitido',
+          text: 'Solo se aceptan imágenes JPG, JPEG o PNG para la fotografía.',
+          icon: 'error',
+          confirmButtonColor: '#0b4ea6'
+        });
+        return;
+      }
+    }
+
     if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
       Swal.fire({
         title: 'Tipo de archivo no permitido',
@@ -1550,6 +1911,10 @@ export default function ConfigurarEquipo() {
   const esFormularioIncompleto = () => {
     if (!selectedSeguroId) return true;
 
+    if (validationErrors.numCamiseta || validationErrors.posicion) {
+      return true;
+    }
+
     const camposRequeridos = [
       'nombreJugador',
       'apellidoPaterno',
@@ -1606,6 +1971,16 @@ export default function ConfigurarEquipo() {
 
     if (!selectedSeguroId) {
       Swal.fire('Atención', 'Debe seleccionar un tipo de seguro/slot disponible.', 'warning');
+      return;
+    }
+
+    if (validationErrors.numCamiseta) {
+      Swal.fire('Atención', validationErrors.numCamiseta, 'warning');
+      return;
+    }
+
+    if (validationErrors.posicion) {
+      Swal.fire('Atención', validationErrors.posicion, 'warning');
       return;
     }
 
@@ -2414,13 +2789,45 @@ export default function ConfigurarEquipo() {
                             className="insurance-card-custom"
                             style={{
                               border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                              backgroundColor: isSelected ? '#eff6ff' : 'white'
+                              backgroundColor: isSelected ? '#eff6ff' : 'white',
+                              padding: '16px',
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px'
                             }}
                           >
                             <div className="insurance-info-wrapper">
-                              <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
-                                🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
-                              </span>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                                  🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
+                                </span>
+                                {matchedSeguro && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSeguroDetalle(matchedSeguro);
+                                    }}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#3b82f6',
+                                      cursor: 'pointer',
+                                      fontSize: '16px',
+                                      padding: '2px 6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}
+                                    title="Ver información del seguro"
+                                  >
+                                    ℹ️
+                                  </button>
+                                )}
+                              </div>
                               {matchedSeguro?.precio !== undefined && (
                                 <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
                                   Precio: ${matchedSeguro.precio} MXN
@@ -2749,8 +3156,21 @@ export default function ConfigurarEquipo() {
                           }}
                           onBlur={handleBlur}
                           placeholder="Ej. 10"
-                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`,
+                            boxShadow: validationErrors.numCamiseta ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none',
+                            fontSize: '14px',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
                         />
+                        {validationErrors.numCamiseta && (
+                          <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                            {validationErrors.numCamiseta}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
@@ -2761,13 +3181,27 @@ export default function ConfigurarEquipo() {
                             handleFieldChange('posicion', val);
                             guardarBorradorEnBD({ ...extractedData, posicion: val });
                           }}
-                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`,
+                            boxShadow: validationErrors.posicion ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none',
+                            fontSize: '14px',
+                            backgroundColor: 'white',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
                         >
                           <option value="">Posición...</option>
                           {(catalogs?.roles_equipo || []).map(r => (
                             <option key={r.id} value={r.id}>{r.nombre}</option>
                           ))}
                         </select>
+                        {validationErrors.posicion && (
+                          <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                            {validationErrors.posicion}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2869,7 +3303,7 @@ export default function ConfigurarEquipo() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="phone-input-flex-container" style={{ display: 'flex', gap: '8px' }}>
                           <select
                             value={extractedData.codigoPais || '+52'}
                             onChange={e => handleFieldChange('codigoPais', e.target.value)}
@@ -3073,7 +3507,7 @@ export default function ConfigurarEquipo() {
                             obligatorio={true}
                           />
 
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
+                          <div className="abuelos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
                             <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
                             <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
                             <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />
@@ -3245,6 +3679,142 @@ export default function ConfigurarEquipo() {
           </div>
         </div>
       </Modal>
+
+      {seguroDetalle && (() => {
+        const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
+        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
+          nombre: seguroDetalle.nombre,
+          precio: seguroDetalle.precio,
+          poliza: 'N/A',
+          vigencia: 'N/A',
+          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
+          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
+          coberturas: []
+        };
+
+        return createPortal(
+          <div className="seguro-modal-backdrop">
+            <div className="seguro-modal-container">
+              {/* Header */}
+              <div style={{
+                padding: '25px 30px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
+                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
+              }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '950', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Información de Seguro
+                  </h3>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                    {info.nombre}
+                  </h2>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
+                  {/* Left Column - Benefits */}
+                  <div>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '800', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      ✨ Beneficios Incluidos
+                    </h4>
+                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#cbd5e1', lineHeight: '1.5' }}>
+                      {info.beneficios.map((b, i) => (
+                        <li key={i}>{b}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Right Column - Coverage Table */}
+                  <div>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '800', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      📊 Coberturas y Límites
+                    </h4>
+                    {info.coberturas.length > 0 ? (
+                      <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                          <thead>
+                            <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                              <th style={{ padding: '12px 15px', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>Concepto</th>
+                              <th style={{ padding: '12px 15px', color: 'rgba(255,255,255,0.6)', fontWeight: '700', textAlign: 'right' }}>Límite</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {info.coberturas.map((c, i) => (
+                              <tr key={i} style={{ borderBottom: i === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
+                                <td style={{ padding: '12px 15px', color: '#e2e8f0', fontWeight: '600' }}>{c.cobertura}</td>
+                                <td style={{ padding: '12px 15px', color: '#34d399', fontWeight: '800', textAlign: 'right' }}>{c.monto}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                        No ampara gastos médicos por accidente.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scope / Terms */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    🔍 Alcance y Conditions de la Póliza
+                  </h4>
+                  <div style={{ fontSize: '12.5px', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '15px' }}>
+                    {info.alcance}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '15px', fontSize: '12px' }}>
+                    <div>
+                      <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>Póliza:</span>{' '}
+                      <span style={{ color: '#ffffff', fontWeight: '700' }}>{info.poliza}</span>
+                    </div>
+                    <div>
+                      <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>Vigencia:</span>{' '}
+                      <span style={{ color: '#ffffff', fontWeight: '700' }}>{info.vigencia}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSeguroDetalle(null)}
+                    style={{
+                      padding: '10px 24px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: '#3b82f6',
+                      color: 'white',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)'
+                    }}
+                  >
+                    Cerrar Detalles
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 
