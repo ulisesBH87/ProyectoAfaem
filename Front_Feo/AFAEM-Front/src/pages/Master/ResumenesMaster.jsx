@@ -12,8 +12,6 @@ import {
   FaUsers, 
   FaUserTie, 
   FaFutbol, 
-  FaCreditCard, 
-  FaClipboardList, 
   FaCalendarAlt, 
   FaUserCheck, 
   FaDatabase, 
@@ -247,34 +245,6 @@ export default function ResumenesMaster() {
               {loadingMetricas ? '...' : (metricas?.jugadores_mes ?? 0)}
             </div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Afiliados en el mes</div>
-          </div>
-        </div>
-
-        {/* Pagos Aprobados */}
-        <div style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.06)' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(239, 68, 68, 0.15)', color: colorDanger, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-            <FaCreditCard />
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px' }}>Pagos Aprobados</div>
-            <div style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>
-              {loadingMetricas ? '...' : (metricas?.pagos_aprobados_mes ?? 0)}
-            </div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Órdenes validadas este mes</div>
-          </div>
-        </div>
-
-        {/* Solicitudes Enviadas */}
-        <div style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.06)' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(16, 185, 129, 0.15)', color: colorSuccess, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-            <FaClipboardList />
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px' }}>Solicitudes</div>
-            <div style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>
-              {loadingMetricas ? '...' : (metricas?.solicitudes_enviadas_mes ?? 0)}
-            </div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Enviadas para revisión este mes</div>
           </div>
         </div>
 
