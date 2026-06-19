@@ -70,6 +70,7 @@ def run():
             (8, "Jugadores",            "/presidente-equipo/mis-jugadores", "FaUsers",        3, 1, 5),
             (9, "Solicitudes",          "/presidente-equipo/solicitudes",   "FaClipboard",    4, 1, 5),
             (12, "Auditorías",          "/ms/au",                           "FaHistory",      6, 1, None),
+            (13, "Resúmenes",           "/ms/r",                            "FaChartPie",     7, 1, None),
         ]
 
         conn.execute(text("SET IDENTITY_INSERT Menus ON"))
@@ -114,6 +115,7 @@ def run():
             (13, 8, 3, 1),
             (14, 9, 3, 1),
             (51, 12, 117, 1),
+            (52, 13, 117, 1),
         ]
 
         conn.execute(text("SET IDENTITY_INSERT RelMenuRoles ON"))

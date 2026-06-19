@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import DashboardTable from '../../components/DashboardTable';
-import { getAuditorias } from '../../services/admin';
+import { getAuditoriasMaster } from '../../services/admin';
 import Modal from '../../components/partials/Forms/Modal';
-import { FaHistory, FaEye, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaSearch } from 'react-icons/fa';
+import { FaHistory, FaEye, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaSearch, FaFilter } from 'react-icons/fa';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 
@@ -12,17 +12,16 @@ const AdminAuditorias = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  
-  // Como el backend restringe el límite máximo a 100 por consulta (le=100), usamos 100
-  // para cargar el histórico reciente y permitir que la búsqueda funcione.
-  const API_FETCH_SIZE = 100; 
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [errorMsg, setErrorMsg] = useState(null);
-  
-  // Estados para búsqueda y filtrado
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filtroAccion, setFiltroAccion] = useState('todos');
-  const [sortOrder, setSortOrder] = useState('desc');
+
+  // Estados para búsqueda y filtrado en base de datos
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+  const [usuario, setUsuario] = useState('');
+  const [accion, setAccion] = useState('todos');
+  const [entidad, setEntidad] = useState('todos');
+  const [ip, setIp] = useState('');
 
   // Modal State
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -32,10 +31,32 @@ const AdminAuditorias = () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const resp = await getAuditorias(1, API_FETCH_SIZE);
+      const filters = {};
+      if (fechaInicio) {
+        // Enviar con hora inicio de día
+        filters.fecha_inicio = `${fechaInicio}T00:00:00`;
+      }
+      if (fechaFin) {
+        // Enviar con hora fin de día
+        filters.fecha_fin = `${fechaFin}T23:59:59`;
+      }
+      if (usuario.trim()) {
+        filters.usuario = usuario.trim();
+      }
+      if (accion !== 'todos') {
+        filters.accion = accion;
+      }
+      if (entidad !== 'todos') {
+        filters.entidad = entidad;
+      }
+      if (ip.trim()) {
+        filters.ip = ip.trim();
+      }
+
+      const resp = await getAuditoriasMaster(currentPage, itemsPerPage, filters);
       setAuditorias(resp?.data || []);
-      // Obtenemos el total real en base de datos para mostrar la métrica
-      setTotalItems(resp?.total || 0); 
+      setTotalItems(resp?.total || 0);
+      setTotalPages(resp?.total_pages || 0);
     } catch (error) {
       console.error('Error fetching auditorias:', error);
       setErrorMsg(error?.response?.data?.detail || error.message || 'Error de conexión con el servidor.');
@@ -44,54 +65,40 @@ const AdminAuditorias = () => {
     }
   };
 
+  // Cargar datos al montar y al cambiar de página o filtros principales
   useEffect(() => {
     fetchAuditorias();
-  }, []);
+  }, [currentPage, itemsPerPage]);
 
-  // Volver a la página 1 cuando se cambie de filtro
-  useEffect(() => {
+  const handleBuscar = (e) => {
+    if (e) e.preventDefault();
     setCurrentPage(1);
-  }, [searchTerm, filtroAccion, sortOrder]);
+    fetchAuditorias();
+  };
 
-  const filteredAuditorias = React.useMemo(() => {
-    let result = [...auditorias];
-
-    if (filtroAccion !== 'todos') {
-      result = result.filter(a => a.accion === filtroAccion);
-    }
-
-    if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase();
-      result = result.filter(a =>
-        (a.usuario_que_realizo_la_accion?.toLowerCase().includes(query)) ||
-        (a.entidad?.toLowerCase().includes(query)) ||
-        (a.resumen?.toLowerCase().includes(query))
-      );
-    }
-
-    result.sort((a, b) => {
-      // Las auditorías traen un AuditoriaId implícito en el orden cronológico o podemos usar fechas
-      const dateA = new Date(a.fecha).getTime();
-      const dateB = new Date(b.fecha).getTime();
-      if (sortOrder === 'asc') return dateA - dateB;
-      return dateB - dateA;
-    });
-
-    return result;
-  }, [auditorias, filtroAccion, searchTerm, sortOrder]);
-
-  const paginatedAuditorias = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredAuditorias.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredAuditorias, currentPage, itemsPerPage]);
+  const handleLimpiarFiltros = () => {
+    setFechaInicio('');
+    setFechaFin('');
+    setUsuario('');
+    setAccion('todos');
+    setEntidad('todos');
+    setIp('');
+    setCurrentPage(1);
+    // Ejecutar después de limpiar los estados
+    setTimeout(() => {
+      fetchAuditorias();
+    }, 50);
+  };
 
   const formatDate = (val) => {
     if (!val) return '—';
-    return new Date(val).toLocaleDateString('es-MX', 
-      { 
-        timeZone: 'America/Mexico_City',
-        day: '2-digit', month: 'short', year: 'numeric', 
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    return new Date(val).toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     });
   };
 
@@ -100,171 +107,260 @@ const AdminAuditorias = () => {
     setModalAbierto(true);
   };
 
+  const parseJsonData = (val) => {
+    if (!val) return null;
+    try {
+      return typeof val === 'string' ? JSON.parse(val) : val;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const renderValoresObjeto = (objeto) => {
+    const data = parseJsonData(objeto);
+    if (!data || Object.keys(data).length === 0) {
+      return <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Sin datos registrados</span>;
+    }
+
+    return (
+      <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', background: 'rgba(0,0,0,0.2)' }}>
+        <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', color: '#e2e8f0' }}>
+          <tbody>
+            {Object.entries(data).map(([key, val]) => (
+              <tr key={key} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                <td style={{ padding: '8px 12px', fontWeight: '700', color: '#3b82f6', width: '40%', borderRight: '1px solid rgba(255,255,255,0.03)' }}>
+                  {key}
+                </td>
+                <td style={{ padding: '8px 12px', wordBreak: 'break-all' }}>
+                  {val !== null && val !== undefined ? String(val) : <span style={{ fontStyle: 'italic', color: '#64748b' }}>null</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   const columns = [
     {
       key: 'fecha',
       label: 'Fecha y Hora',
       render: (val) => (
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{formatDate(val)}</span>
+        <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>{formatDate(val)}</span>
       )
     },
-    { 
-      key: 'usuario_que_realizo_la_accion', 
-      label: 'Usuario que realizó la acción',
+    {
+      key: 'usuario_que_realizo_la_accion',
+      label: 'Usuario',
       render: (val) => (
-        <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>{val || '—'}</span>
+        <span style={{ fontWeight: '700', fontSize: '13px', color: '#ffffff' }}>{val || '—'}</span>
       )
     },
-    { 
-      key: 'titulo', 
-      label: 'Acción / Título',
+    {
+      key: 'titulo',
+      label: 'Acción / Entidad',
       render: (val, row) => (
         <div>
-          <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '14px' }}>{val}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{row.accion} - {row.entidad}</div>
+          <div style={{ fontWeight: '800', color: '#3b82f6', fontSize: '13px' }}>{val}</div>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{row.accion} - {row.entidad}</div>
         </div>
       )
     },
-    { 
-      key: 'resumen', 
-      label: 'Resumen',
+    {
+      key: 'ip',
+      label: 'Dirección IP',
       render: (val) => (
-        <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '500' }}>{val || '—'}</span>
+        <span style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace' }}>{val || '—'}</span>
+      )
+    },
+    {
+      key: 'resumen',
+      label: 'Detalle',
+      render: (val) => (
+        <span style={{ fontSize: '12px', color: '#cbd5e1', fontWeight: '500' }}>{val || '—'}</span>
       )
     },
     {
       key: 'Acciones',
-      label: 'Detalles',
+      label: 'Acción',
       render: (_, row) => {
-        const tieneCambios = row.cambios && row.cambios.length > 0;
+        const tieneDetalle = row.valores_antes || row.valores_despues || (row.cambios && row.cambios.length > 0);
         return (
-          <button 
+          <button
             onClick={() => handleVerDetalle(row)}
-            disabled={!tieneCambios}
-            style={{ 
-              padding: '6px 12px', 
+            disabled={!tieneDetalle}
+            className="btn-premium"
+            style={{
+              padding: '6px 12px',
               fontSize: '11px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: tieneCambios ? 'rgba(37, 99, 235, 0.08)' : 'rgba(100, 116, 139, 0.08)',
-              color: tieneCambios ? 'var(--primary)' : '#94a3b8',
-              border: tieneCambios ? '1px solid rgba(37, 99, 235, 0.2)' : '1px solid rgba(100, 116, 139, 0.2)',
               borderRadius: '8px',
-              fontWeight: '700',
-              cursor: tieneCambios ? 'pointer' : 'not-allowed',
-              transition: 'all 0.2s',
-              opacity: tieneCambios ? 1 : 0.6
+              cursor: tieneDetalle ? 'pointer' : 'not-allowed',
+              opacity: tieneDetalle ? 1 : 0.4
             }}
-            onMouseEnter={(e) => {
-              if (tieneCambios) e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.15)';
-            }}
-            onMouseLeave={(e) => {
-              if (tieneCambios) e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
-            }}
-            title={tieneCambios ? "Ver cambios detallados" : "Sin detalles adicionales"}
           >
-            <FaEye /> {tieneCambios ? 'Ver Cambios' : 'Sin Cambios'}
+            <FaEye /> Ver Detalle
           </button>
         );
       }
     }
   ];
 
-  if (loading) {
-    return <Loader text="Cargando registros de auditoría..." />;
-  }
-
   return (
-    <div className="fade-in">
+    <div className="fade-in" style={{ color: '#e2e8f0' }}>
       {/* HEADER SECTION */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaHistory style={{ color: 'var(--primary)' }} /> Auditorías
+        <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#ffffff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', letterSpacing: '-0.5px' }}>
+          <FaHistory style={{ color: '#3b82f6', filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.4))' }} /> Auditorías
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Registro de acciones y cambios en el sistema.</p>
+        <p style={{ color: '#94a3b8', fontWeight: '500', fontSize: '15px' }}>Registro centralizado de transacciones y operaciones en el sistema.</p>
       </div>
 
-      {/* STATS SECTION */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        <div 
-          className="card" 
-          style={{ 
-            padding: '20px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '16px',
-            border: '1.5px solid var(--border-light)'
-          }}
-        >
-          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: `rgba(37, 99, 235, 0.15)`, color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-            <FaHistory />
-          </div>
+      {/* FILTER PANEL */}
+      <div className="card" style={{ background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4)' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#ffffff', marginBottom: '16px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FaFilter style={{ color: '#3b82f6', fontSize: '12px' }} /> Filtrar Auditorías
+        </h3>
+        
+        <form onSubmit={handleBuscar} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', alignItems: 'flex-end' }}>
+          {/* Fecha Inicio */}
           <div>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Registros</div>
-            <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-main)' }}>{totalItems}</div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Fecha Inicio</label>
+            <input
+              type="date"
+              value={fechaInicio}
+              onChange={(e) => setFechaInicio(e.target.value)}
+              style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '8px 12px', color: '#ffffff', fontSize: '13px' }}
+            />
           </div>
-        </div>
+
+          {/* Fecha Fin */}
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Fecha Fin</label>
+            <input
+              type="date"
+              value={fechaFin}
+              onChange={(e) => setFechaFin(e.target.value)}
+              style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '8px 12px', color: '#ffffff', fontSize: '13px' }}
+            />
+          </div>
+
+          {/* Usuario */}
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Usuario</label>
+            <input
+              type="text"
+              value={usuario}
+              onChange={(e) => setUsuario(e.target.value)}
+              placeholder="Nombre de usuario..."
+              style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '8px 12px', color: '#ffffff', fontSize: '13px' }}
+            />
+          </div>
+
+          {/* IP */}
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Dirección IP</label>
+            <input
+              type="text"
+              value={ip}
+              onChange={(e) => setIp(e.target.value)}
+              placeholder="Ej. 127.0.0.1"
+              style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '8px 12px', color: '#ffffff', fontSize: '13px' }}
+            />
+          </div>
+
+          {/* Acción */}
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Acción</label>
+            <select
+              value={accion}
+              onChange={(e) => setAccion(e.target.value)}
+              style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '8px 12px', color: '#ffffff', fontSize: '13px' }}
+            >
+              <option value="todos" style={{ background: '#0f172a' }}>Todas</option>
+              <option value="CREATE" style={{ background: '#0f172a' }}>CREATE (Creación)</option>
+              <option value="UPDATE" style={{ background: '#0f172a' }}>UPDATE (Edición)</option>
+              <option value="DELETE" style={{ background: '#0f172a' }}>DELETE (Eliminación)</option>
+              <option value="READ" style={{ background: '#0f172a' }}>READ (Consulta)</option>
+            </select>
+          </div>
+
+          {/* Entidad */}
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>Entidad Afectada</label>
+            <select
+              value={entidad}
+              onChange={(e) => setEntidad(e.target.value)}
+              style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '8px 12px', color: '#ffffff', fontSize: '13px' }}
+            >
+              <option value="todos" style={{ background: '#0f172a' }}>Todas</option>
+              <option value="Personas" style={{ background: '#0f172a' }}>Personas</option>
+              <option value="Usuarios" style={{ background: '#0f172a' }}>Usuarios</option>
+              <option value="Equipos" style={{ background: '#0f172a' }}>Equipos</option>
+              <option value="MiembrosEquipo" style={{ background: '#0f172a' }}>Miembros de Equipo</option>
+              <option value="Ligas" style={{ background: '#0f172a' }}>Ligas</option>
+              <option value="PresidenteInvitacion" style={{ background: '#0f172a' }}>Invitaciones</option>
+            </select>
+          </div>
+
+          {/* Botones */}
+          <div style={{ display: 'flex', gap: '8px', gridColumn: 'span 2' }}>
+            <button
+              type="submit"
+              className="btn-premium"
+              style={{ flex: 1, padding: '10px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <FaSearch /> Filtrar
+            </button>
+            <button
+              type="button"
+              onClick={handleLimpiarFiltros}
+              style={{ background: 'transparent', border: '1.5px solid rgba(255,255,255,0.1)', color: '#cbd5e1', padding: '10px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+            >
+              Limpiar
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* TABLE SECTION */}
-      <div className="card" style={{ padding: '32px' }}>
+      <div className="card" style={{ background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '20px', padding: '32px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4)' }}>
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Historial de Acciones</h3>
-          
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <SearchBar
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar acción, usuario..."
-              width="280px"
-            />
-
-            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'Antiguos Primero' : 'Recientes Primero'}
-            </button>
-
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '12px', border: '1.5px solid var(--border-light)' }}>
-              {['todos', 'CREATE', 'UPDATE', 'DELETE'].map((val) => (
-                <button key={val} onClick={() => setFiltroAccion(val)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: filtroAccion === val ? 'white' : 'transparent', color: filtroAccion === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroAccion === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '700' }}>
-                  {val === 'todos' ? 'Todas' : (val === 'CREATE' ? 'Creaciones' : (val === 'UPDATE' ? 'Ediciones' : 'Eliminaciones'))}
-                </button>
-              ))}
-            </div>
-
-            <button onClick={fetchAuditorias} className="btn-premium" style={{ padding: '10px 16px', fontSize: '12px' }}>
-              <FaSyncAlt /> Refrescar
-            </button>
-          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', margin: 0 }}>Historial de Acciones</h3>
+          <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', padding: '4px 10px', borderRadius: '8px' }}>
+            {totalItems} registros totales
+          </span>
         </div>
 
         {errorMsg && (
-          <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#fee2e2', borderRadius: '8px', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <span style={{ fontWeight: '800' }}>No se pudieron cargar los registros:</span>
-            <span>{typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : errorMsg}</span>
+          <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', fontSize: '14px' }}>
+            {errorMsg}
           </div>
         )}
 
-        <DashboardTable 
-          columns={columns} 
-          data={paginatedAuditorias} 
-          isLoading={loading} 
-          totalItems={filteredAuditorias.length} 
-          itemsPerPage={itemsPerPage} 
-          currentPage={currentPage} 
-          onPageChange={setCurrentPage} 
-          emptyMessage="No hay registros de auditoría que coincidan con los filtros." 
+        <DashboardTable
+          columns={columns}
+          data={auditorias}
+          isLoading={loading}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          emptyMessage="No hay registros de auditoría que coincidan con los filtros."
         />
       </div>
 
       {/* MODAL DETALLES */}
       <Modal
         estaAbierto={modalAbierto}
-        titulo="Detalle de Cambios"
+        titulo="Detalle de Auditoría"
         alCerrar={() => setModalAbierto(false)}
         tamanio="medio"
         pie={
-          <button 
+          <button
             onClick={() => setModalAbierto(false)}
             className="btn-premium"
             style={{ minWidth: '100px' }}
@@ -274,33 +370,39 @@ const AdminAuditorias = () => {
         }
       >
         {auditoriaSeleccionada && (
-          <div>
-            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Información General</h4>
-              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Acción:</strong> {auditoriaSeleccionada.accion}</p>
-              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Sujeto modificado:</strong> {auditoriaSeleccionada.resumen}</p>
-              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Usuario que hizo la acción:</strong> {auditoriaSeleccionada.usuario_que_realizo_la_accion}</p>
-              <p style={{ margin: '4px 0', fontSize: '13px' }}><strong>Fecha:</strong> {formatDate(auditoriaSeleccionada.fecha)}</p>
+          <div style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'rgba(0, 0, 0, 0.25)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', color: '#cbd5e1' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '800', color: '#ffffff', textTransform: 'uppercase' }}>Información General</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', fontSize: '13px' }}>
+                <p style={{ margin: 0 }}><strong>Acción:</strong> <span style={{ color: '#3b82f6', fontWeight: '700' }}>{auditoriaSeleccionada.accion}</span></p>
+                <p style={{ margin: 0 }}><strong>Entidad:</strong> {auditoriaSeleccionada.entidad}</p>
+                <p style={{ margin: 0 }}><strong>IP Origen:</strong> {auditoriaSeleccionada.ip || 'N/A'}</p>
+                <p style={{ margin: 0 }}><strong>Usuario Ejecutor:</strong> {auditoriaSeleccionada.usuario_que_realizo_la_accion}</p>
+                <p style={{ margin: 0 }}><strong>Fecha:</strong> {formatDate(auditoriaSeleccionada.fecha)}</p>
+              </div>
+              {auditoriaSeleccionada.observaciones && (
+                <p style={{ margin: '8px 0 0 0', fontSize: '13px' }}><strong>Observaciones:</strong> {auditoriaSeleccionada.observaciones}</p>
+              )}
             </div>
 
-            {auditoriaSeleccionada.cambios && auditoriaSeleccionada.cambios.length > 0 ? (
+            {auditoriaSeleccionada.accion === 'UPDATE' && auditoriaSeleccionada.cambios && auditoriaSeleccionada.cambios.length > 0 ? (
               <div style={{ marginTop: '16px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '12px' }}>Modificaciones</h4>
+                <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '12px', textTransform: 'uppercase' }}>Campos Modificados</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {auditoriaSeleccionada.cambios.map((cambio, idx) => (
-                    <div key={idx} style={{ padding: '12px', border: '1px solid var(--border-light)', borderRadius: '8px', backgroundColor: '#fff', fontSize: '13px' }}>
-                      <div style={{ fontWeight: '700', color: 'var(--primary)', marginBottom: '6px' }}>
-                        Atributo: {cambio.campo}
+                    <div key={idx} style={{ padding: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', backgroundColor: 'rgba(0, 0, 0, 0.15)', fontSize: '12px' }}>
+                      <div style={{ fontWeight: '700', color: '#3b82f6', marginBottom: '6px' }}>
+                        Campo: {cambio.campo}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-                        <div style={{ flex: 1, padding: '8px', backgroundColor: '#fee2e2', borderRadius: '6px', color: '#991b1b', border: '1px dashed #fca5a5' }}>
-                           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Antes</span>
-                           {cambio.antes || <span style={{ fontStyle: 'italic', color: '#f87171' }}>Vacío</span>}
+                        <div style={{ flex: 1, padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: '6px', color: '#fca5a5', border: '1px dashed rgba(239, 68, 68, 0.2)' }}>
+                           <span style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px', color: '#ef4444' }}>Antes</span>
+                           {cambio.antes !== null && cambio.antes !== undefined ? String(cambio.antes) : <span style={{ fontStyle: 'italic', opacity: 0.5 }}>vacío</span>}
                         </div>
-                        <div style={{ fontSize: '16px', color: '#94a3b8' }}>➔</div>
-                        <div style={{ flex: 1, padding: '8px', backgroundColor: '#dcfce7', borderRadius: '6px', color: '#166534', border: '1px dashed #86efac' }}>
-                           <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Después</span>
-                           {cambio.despues || <span style={{ fontStyle: 'italic', color: '#4ade80' }}>Vacío</span>}
+                        <div style={{ fontSize: '16px', color: '#64748b' }}>➔</div>
+                        <div style={{ flex: 1, padding: '8px', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: '6px', color: '#a7f3d0', border: '1px dashed rgba(16, 185, 129, 0.2)' }}>
+                           <span style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '4px', color: '#10b981' }}>Después</span>
+                           {cambio.despues !== null && cambio.despues !== undefined ? String(cambio.despues) : <span style={{ fontStyle: 'italic', opacity: 0.5 }}>vacío</span>}
                         </div>
                       </div>
                     </div>
@@ -308,12 +410,20 @@ const AdminAuditorias = () => {
                 </div>
               </div>
             ) : (
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No se registraron cambios específicos detallados.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginTop: '16px' }}>
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '8px', textTransform: 'uppercase' }}>Valores Antes</h4>
+                  {renderValoresObjeto(auditoriaSeleccionada.valores_antes)}
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '8px', textTransform: 'uppercase' }}>Valores Después</h4>
+                  {renderValoresObjeto(auditoriaSeleccionada.valores_despues)}
+                </div>
+              </div>
             )}
           </div>
         )}
       </Modal>
-
     </div>
   );
 };
