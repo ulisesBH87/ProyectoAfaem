@@ -277,6 +277,9 @@ export default function RegistroJugadores() {
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
+  const maxBirthDate = new Date();
+  maxBirthDate.setFullYear(maxBirthDate.getFullYear() - 3);
+  const maxBirthDateStr = maxBirthDate.toISOString().split('T')[0];
   const minDateStr = '1900-01-01';
 
   // ESTILO DINÁMICO PARA HOVER Y DISEÑO RESPONSIVO
@@ -686,6 +689,16 @@ export default function RegistroJugadores() {
     );
   };
 
+  const obtenerDuplicadoPosicion = (posicionId, playerNumero) => {
+    if (!posicionId) return null;
+    const posVal = parseInt(posicionId, 10);
+    return jugadores.find(p =>
+      p.numero !== playerNumero &&
+      p.datos?.posicion &&
+      parseInt(p.datos.posicion, 10) === posVal
+    );
+  };
+
   // Función que verifica requisitos sin lanzar alertas ni modificar estado
   const verificarRequisitosPaso = (step, targetPlayer = null) => {
     const errors = {};
@@ -737,7 +750,15 @@ export default function RegistroJugadores() {
           errors.numCamiseta = `El número de camiseta #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}.`;
         }
       }
-      if (!datos.posicion) errors.posicion = 'La posición es obligatoria.';
+      if (!datos.posicion) {
+        errors.posicion = 'La posición es obligatoria.';
+      } else {
+        const duplicate = obtenerDuplicadoPosicion(datos.posicion, player.numero);
+        if (duplicate) {
+          const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(datos.posicion))?.nombre || 'esta posición';
+          errors.posicion = `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`;
+        }
+      }
     } else if (step === 4) {
       if (datos.esForaneo) {
         if (!datos.nacionalidadJugador?.trim()) errors.nacionalidadJugador = 'La nacionalidad del jugador es obligatoria.';
@@ -948,8 +969,8 @@ export default function RegistroJugadores() {
       edad--;
     }
 
-    if (edad < 5) {
-      return 'El jugador debe tener al menos 5 años de edad.';
+    if (edad < 3) {
+      return 'El jugador debe tener al menos 3 años de edad.';
     }
 
     if (edad > 125) {
@@ -1233,6 +1254,21 @@ export default function RegistroJugadores() {
       } else {
         setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
       }
+    } else if (field === 'posicion') {
+      if (cleanValue) {
+        const duplicate = obtenerDuplicadoPosicion(cleanValue, jugadores[currentPlayerIndex]?.numero);
+        if (duplicate) {
+          const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(cleanValue))?.nombre || 'esta posición';
+          setValidationErrors(prev => ({
+            ...prev,
+            posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`
+          }));
+        } else {
+          setValidationErrors(prev => ({ ...prev, posicion: null }));
+        }
+      } else {
+        setValidationErrors(prev => ({ ...prev, posicion: null }));
+      }
     }
 
     updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
@@ -1260,6 +1296,21 @@ export default function RegistroJugadores() {
           });
           datos.numCamiseta = '';
           setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+        }
+      }
+
+      if (datos.posicion) {
+        const duplicate = obtenerDuplicadoPosicion(datos.posicion, player.numero);
+        if (duplicate) {
+          const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(datos.posicion))?.nombre || 'esta posición';
+          Swal.fire({
+            title: 'Posición duplicada',
+            text: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`,
+            icon: 'warning',
+            confirmButtonColor: '#0b4ea6'
+          });
+          datos.posicion = '';
+          setValidationErrors(prev => ({ ...prev, posicion: null }));
         }
       }
 
@@ -1534,6 +1585,17 @@ export default function RegistroJugadores() {
       return () => clearTimeout(timer);
     }
   }, [jugadores[currentPlayerIndex]?.datos?.curp, currentPlayerIndex]);
+
+  // Efecto para autovalidación de fecha de nacimiento en tiempo real
+  useEffect(() => {
+    const val = currentDatos?.fechaNacimiento;
+    if (val) {
+      const errorMsg = validarFechaNacimiento(val);
+      setValidationErrors(prev => ({ ...prev, fechaNacimiento: errorMsg }));
+    } else {
+      setValidationErrors(prev => ({ ...prev, fechaNacimiento: null }));
+    }
+  }, [currentDatos?.fechaNacimiento, currentPlayerIndex]);
 
   const playerStatusConfig = {
     VACIO: { label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
@@ -3218,7 +3280,7 @@ export default function RegistroJugadores() {
                             type="date"
                             value={currentDatos.fechaNacimiento || ''}
                             min={minDateStr}
-                            max={today}
+                            max={maxBirthDateStr}
                             onChange={e => {
                               const val = e.target.value;
                               handleFieldChange('fechaNacimiento', val);
@@ -3385,7 +3447,7 @@ export default function RegistroJugadores() {
                     <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
                       <div className="form-grid-3">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>No. Camiseta <span className="required-star">*</span></label>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -3414,7 +3476,6 @@ export default function RegistroJugadores() {
                             onChange={e => {
                               const val = parseInt(e.target.value) || '';
                               handleFieldChange('posicion', val);
-                              setValidationErrors(prev => ({ ...prev, posicion: null }));
                               if (currentPlayer?.slotId) {
                                 guardarBorradorEnBD(currentPlayer.slotId, { ...currentDatos, posicion: val });
                               }
