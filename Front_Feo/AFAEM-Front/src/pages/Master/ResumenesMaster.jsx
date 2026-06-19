@@ -17,7 +17,8 @@ import {
   FaCalendarAlt, 
   FaUserCheck, 
   FaDatabase, 
-  FaClock 
+  FaClock,
+  FaFileAlt
 } from 'react-icons/fa';
 
 export default function ResumenesMaster() {
@@ -274,6 +275,20 @@ export default function ResumenesMaster() {
               {loadingMetricas ? '...' : (metricas?.solicitudes_enviadas_mes ?? 0)}
             </div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Enviadas para revisión este mes</div>
+          </div>
+        </div>
+
+        {/* Documentos Subidos */}
+        <div style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.06)' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(139, 92, 246, 0.15)', color: colorInfo, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+            <FaFileAlt />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '1px' }}>Documentos</div>
+            <div style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>
+              {loadingMetricas ? '...' : (metricas?.documentos_subidos_mes ?? 0)}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Subidos en el mes</div>
           </div>
         </div>
 

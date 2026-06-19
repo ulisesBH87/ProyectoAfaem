@@ -10,6 +10,7 @@ from app.modelos.catalogo_accion import CatalogoAccion
 from app.modelos.presidente_equipo_modelo import PresidenteEquipo
 from app.modelos.ordenes_pago_modelo import OrdenPago
 from app.modelos.solicitud_modelo import Solicitud
+from app.modelos.documentos_entregados_modelo import DocumentosEntregados
 
 # Mapeos legibles para el frontend
 MAPEO_ENTIDADES = {
@@ -294,6 +295,12 @@ def obtener_metricas_master(db: Session, anio: int = None, mes: int = None):
         Solicitud.EstatusValidacion != 4 # Excluir borradores
     ).count()
 
+    # 6. Documentos subidos en el rango (desde DocumentosEntregados - no auditada)
+    documentos_subidos = db.query(DocumentosEntregados).filter(
+        DocumentosEntregados.FechaEntrega >= inicio_mes,
+        DocumentosEntregados.FechaEntrega <= fin_mes
+    ).count()
+
     t1 = time.perf_counter()
     duracion = t1 - t0
 
@@ -303,7 +310,8 @@ def obtener_metricas_master(db: Session, anio: int = None, mes: int = None):
         "equipos_mes": equipos_creados,
         "jugadores_mes": jugadores_registrados,
         "pagos_aprobados_mes": pagos_aprobados,
-        "solicitudes_enviadas_mes": solicitudes_enviadas
+        "solicitudes_enviadas_mes": solicitudes_enviadas,
+        "documentos_subidos_mes": documentos_subidos
     }
 
     # LOGS TEMPORALES (Fase 6)
