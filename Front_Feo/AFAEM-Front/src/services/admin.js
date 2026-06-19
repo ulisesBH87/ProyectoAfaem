@@ -442,6 +442,40 @@ export const getEquiposSinEntrenador = async () => {
   return response.data;
 };
 
+export const getAuditoriasMaster = async (page = 1, size = 10, filters = {}) => {
+  const params = { page, size, ...filters };
+  const response = await api.get('/auditoria/master/listar', { params });
+  return response.data;
+};
+
+export const getMetricasMaster = async (anio = null, mes = null) => {
+  const params = {};
+  if (anio) params.anio = anio;
+  if (mes) params.mes = mes;
+  const response = await api.get('/auditoria/master/metricas', { params });
+  return response.data;
+};
+
+export const getReporteMensualMaster = async () => {
+  const response = await api.get('/auditoria/master/reporte-mensual');
+  return response.data;
+};
+
+export const getReporteUsuarioMaster = async (limite = 15) => {
+  const response = await api.get('/auditoria/master/reporte-usuario', { params: { limite } });
+  return response.data;
+};
+
+export const getReporteEntidadMaster = async () => {
+  const response = await api.get('/auditoria/master/reporte-entidad');
+  return response.data;
+};
+
+export const getReporteDiarioMaster = async (limiteDias = 30) => {
+  const response = await api.get('/auditoria/master/reporte-diario', { params: { limite_dias: limiteDias } });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -476,5 +510,11 @@ export default {
   obtenerBorradorPresidente,
   getCatalogosRegistro,
   checkOrdenAmpliacionAdmin,
-  getJugadoresEquipo
+  getJugadoresEquipo,
+  getAuditoriasMaster,
+  getMetricasMaster,
+  getReporteMensualMaster,
+  getReporteUsuarioMaster,
+  getReporteEntidadMaster,
+  getReporteDiarioMaster
 };

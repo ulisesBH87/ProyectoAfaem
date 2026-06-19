@@ -15,6 +15,7 @@ from app.rutas import (
     auditoria_ruta,
     catalogos_ruta,
     whatsapp_webhook_ruta,
+    auditoria_master_ruta,
 )
 from app.utilidades.context import usuario_actual_id, ip_actual
 from app.db.sesion import SessionLocal
@@ -378,6 +379,7 @@ app.include_router(personas_ruta.router)
 app.include_router(auditoria_ruta.router)
 app.include_router(catalogos_ruta.router)
 app.include_router(whatsapp_webhook_ruta.router)
+app.include_router(auditoria_master_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
 @app.exception_handler(AppError)

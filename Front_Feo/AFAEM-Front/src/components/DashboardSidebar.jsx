@@ -28,6 +28,8 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
   const handleLogoClick = () => {
     if (isAdmin) {
       navigate(ROUTES.ADMIN.DASHBOARD);
+    } else if (hasPermission('auditorias.ver')) {
+      navigate(ROUTES.MASTER.AUDITORIAS);
     } else {
       navigate(ROUTES.PRESIDENTE.EQUIPOS);
     }
