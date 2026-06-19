@@ -6,6 +6,7 @@ import Loader from '../../components/Loader';
 import Swal from 'sweetalert2';
 import { FaArrowLeft, FaFileAlt, FaCheckCircle, FaExclamationCircle, FaUpload, FaClock, FaEye } from 'react-icons/fa';
 import { ROUTES } from '../../routes/paths';
+import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 
 // Tipos de documentos requeridos y opcionales por edad
 const TIPOS_DOCUMENTO_ADULTO = [
@@ -66,6 +67,7 @@ export default function PresidenteJugadorDocumentos() {
   const [loading, setLoading] = useState(true);
   const [jugadorInfo, setJugadorInfo] = useState(null);
   const [personaId, setPersonaId] = useState(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const cargarDatos = async () => {
     try {
@@ -292,47 +294,115 @@ export default function PresidenteJugadorDocumentos() {
 
               {(!item.documento || Number(item.documento.EstadoValidacionId) === 3) && (
                 <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                  <label style={{
-                    flex: 1,
-                    padding: '10px 14px',
-                    background: '#0b4ea6',
-                    color: 'white',
-                    borderRadius: '10px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    textAlign: 'center',
-                    margin: 0
-                  }}>
-                    <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const ext = '.' + file.name.split('.').pop().toLowerCase();
-                        const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-                        const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
-                        if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
-                          Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
-                          return;
-                        }
-                        handleSubirDocumento(item.tipoId, file);
-                      }}
-                    />
-                  </label>
+                  {item.tipoId === 25 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          Swal.fire({
+                            title: 'Selecciona una opción',
+                            text: '¿Cómo deseas cargar la fotografía?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: '📷 Tomar con cámara',
+                            cancelButtonText: '📁 Subir archivo',
+                            confirmButtonColor: '#0b4ea6',
+                            cancelButtonColor: '#64748b'
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              setIsCameraOpen(true);
+                            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                              document.getElementById('file-upload-25').click();
+                            }
+                          });
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          background: '#0b4ea6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          textAlign: 'center',
+                          margin: 0
+                        }}
+                      >
+                        <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
+                      </button>
+                      <input
+                        type="file"
+                        id="file-upload-25"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const ext = '.' + file.name.split('.').pop().toLowerCase();
+                          const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                          const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                          if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                            Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                            return;
+                          }
+                          handleSubirDocumento(item.tipoId, file);
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <label style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      background: '#0b4ea6',
+                      color: 'white',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      textAlign: 'center',
+                      margin: 0
+                    }}>
+                      <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const ext = '.' + file.name.split('.').pop().toLowerCase();
+                          const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                          const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                          if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                            Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                            return;
+                          }
+                          handleSubirDocumento(item.tipoId, file);
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+      <CameraCaptureModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={(file) => handleSubirDocumento(25, file)}
+      />
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
+import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
 import {
@@ -864,6 +865,7 @@ export default function RegistroJugadores() {
   const [showFinishModal, setShowFinishModal] = useState(false);
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const selectedInvitationTeam = invitationTeams.find(
     (team) => String(team.equipo_temporal_id) === String(teamId)
   ) || null;
@@ -3050,7 +3052,26 @@ export default function RegistroJugadores() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      document.getElementById(`file-${doc.key}`).click();
+                                      if (doc.key === 'foto') {
+                                        Swal.fire({
+                                          title: 'Selecciona una opción',
+                                          text: '¿Cómo deseas cargar la fotografía?',
+                                          icon: 'question',
+                                          showCancelButton: true,
+                                          confirmButtonText: '📷 Tomar con cámara',
+                                          cancelButtonText: '📁 Subir archivo',
+                                          confirmButtonColor: '#0b4ea6',
+                                          cancelButtonColor: '#64748b'
+                                        }).then((result) => {
+                                          if (result.isConfirmed) {
+                                            setIsCameraOpen(true);
+                                          } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                            document.getElementById(`file-${doc.key}`).click();
+                                          }
+                                        });
+                                      } else {
+                                        document.getElementById(`file-${doc.key}`).click();
+                                      }
                                     }}
                                     className="btn-change"
                                     style={{
@@ -3067,7 +3088,28 @@ export default function RegistroJugadores() {
                             ) : (
                               /* ESTADO VACÍO */
                               <div
-                                onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                                onClick={() => {
+                                  if (doc.key === 'foto') {
+                                    Swal.fire({
+                                      title: 'Selecciona una opción',
+                                      text: '¿Cómo deseas cargar la fotografía?',
+                                      icon: 'question',
+                                      showCancelButton: true,
+                                      confirmButtonText: '📷 Tomar con cámara',
+                                      cancelButtonText: '📁 Subir archivo',
+                                      confirmButtonColor: '#0b4ea6',
+                                      cancelButtonColor: '#64748b'
+                                    }).then((result) => {
+                                      if (result.isConfirmed) {
+                                        setIsCameraOpen(true);
+                                      } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                        document.getElementById(`file-${doc.key}`).click();
+                                      }
+                                    });
+                                  } else {
+                                    document.getElementById(`file-${doc.key}`).click();
+                                  }
+                                }}
                                 style={{
                                   display: 'flex',
                                   flexDirection: 'column',
@@ -3147,6 +3189,12 @@ export default function RegistroJugadores() {
                         </div>
                       ))}
                     </div>
+
+                    <CameraCaptureModal
+                      isOpen={isCameraOpen}
+                      onClose={() => setIsCameraOpen(false)}
+                      onCapture={(file) => handleFileUpload('foto', file)}
+                    />
 
                     {/* Loader temporal OCR */}
                     {currentDocuments.acta && !currentDatos.fechaNacimiento && (
