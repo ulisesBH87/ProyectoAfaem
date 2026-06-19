@@ -467,7 +467,7 @@ export default function CompletarJugadoresEquipo() {
       width: 100%;
     }
     
-    @media (max-width: 480px) {
+    @media (max-width: 768px) {
       .phone-input-row {
         flex-direction: column;
       }
@@ -479,6 +479,35 @@ export default function CompletarJugadoresEquipo() {
     @media (max-width: 480px) {
       .nacionalidad-toggle {
         flex-direction: column;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .abuelos-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+    }
+    
+    .form-inputs-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .form-inputs-grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+      }
+      .form-inputs-grid-2 input,
+      .form-inputs-grid-2 select {
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .international-info-card {
+        padding: 15px !important;
       }
     }
     
@@ -502,6 +531,35 @@ export default function CompletarJugadoresEquipo() {
   const [registeredPlayers, setRegisteredPlayers] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+
+  // Obtener el slot actual según el seguro seleccionado
+  const currentSlot = React.useMemo(() => {
+    if (!slotsData?.rawSlots || !selectedSeguroId) return null;
+    return slotsData.rawSlots.find(
+      s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
+    );
+  }, [selectedSeguroId, slotsData]);
+
+  // Guardar Borrador en la Base de Datos
+  const guardarBorradorEnBD = async (newData) => {
+    if (!currentSlot?.slot_id) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          slot_id: currentSlot.slot_id,
+          datos: newData
+        })
+      });
+    } catch (err) {
+      console.warn('No se pudo guardar el borrador:', err);
+    }
+  };
 
   useEffect(() => {
     if (seguroDetalle) {
@@ -684,7 +742,7 @@ export default function CompletarJugadoresEquipo() {
     if (!numeroCamiseta || String(numeroCamiseta).trim() === '') return null;
     const camisetaVal = parseInt(numeroCamiseta, 10);
     return registeredPlayers.find(p =>
-      p.NumeroCamiseta &&
+      p.NumeroCamiseta !== undefined && p.NumeroCamiseta !== null &&
       parseInt(p.NumeroCamiseta, 10) === camisetaVal
     );
   };
@@ -693,9 +751,10 @@ export default function CompletarJugadoresEquipo() {
     if (!posicionId) return null;
     const posVal = parseInt(posicionId, 10);
     if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
+    const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicionId))?.nombre;
+    if (!posNombre) return null;
     return registeredPlayers.find(p =>
-      p.RolEnEquipo &&
-      parseInt(p.RolEnEquipo, 10) === posVal
+      p.Rol && p.Rol.trim().toUpperCase() === posNombre.trim().toUpperCase()
     );
   };
 
@@ -727,39 +786,6 @@ export default function CompletarJugadoresEquipo() {
       }
     }
 
-    if (field === 'numCamiseta' || !field) {
-      if (datos.numCamiseta) {
-        const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta);
-        if (duplicate) {
-          Swal.fire({
-            title: 'Número de camiseta duplicado',
-            text: `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.NombreCompleto || 'del equipo'}. Por favor, elige otro número.`,
-            icon: 'warning',
-            confirmButtonColor: '#0b4ea6'
-          });
-          setExtractedData(prev => ({ ...prev, numCamiseta: '' }));
-          setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
-        }
-      }
-    }
-
-    if (field === 'posicion' || !field) {
-      if (datos.posicion) {
-        const duplicate = obtenerDuplicadoPosicion(datos.posicion);
-        if (duplicate) {
-          const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(datos.posicion))?.nombre || 'esta posición';
-          Swal.fire({
-            title: 'Posición duplicada',
-            text: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto || 'del equipo'}. Por favor, elige otra posición.`,
-            icon: 'warning',
-            confirmButtonColor: '#0b4ea6'
-          });
-          setExtractedData(prev => ({ ...prev, posicion: '' }));
-          setValidationErrors(prev => ({ ...prev, posicion: null }));
-        }
-      }
-    }
-
     if (field === 'curp' || !field) {
       if (datos.curp) {
         if (datos.curp.length !== 18) {
@@ -787,7 +813,7 @@ export default function CompletarJugadoresEquipo() {
   const isStep1Done = !!selectedSeguroId;
   const isStep2Done = Object.values(documents).some(d => d !== null);
   const showStep2 = isStep1Done;
-  const showStep3 = isStep2Done || fillManually;
+  const showStep3 = isStep2Done || true; // El paso 3 siempre se muestra una vez seleccionado el seguro
 
   // Cargar catálogos, detalles de equipo y disponibilidad de slots
   useEffect(() => {
@@ -815,7 +841,20 @@ export default function CompletarJugadoresEquipo() {
 
         // 3. Verificar slots disponibles
         const slotsResponse = await teamsService.checkTeamSlots(equipoId);
-        setSlotsData(slotsResponse);
+        if (slotsResponse?.equipo_temporal_id) {
+          try {
+            const detailSlots = await teamsService.getAvailableSlots(slotsResponse.equipo_temporal_id);
+            setSlotsData({
+              ...slotsResponse,
+              rawSlots: detailSlots.slots || []
+            });
+          } catch (errSlots) {
+            console.error("Error al obtener detalle de slots:", errSlots);
+            setSlotsData(slotsResponse);
+          }
+        } else {
+          setSlotsData(slotsResponse);
+        }
 
         // Preseleccionar primer seguro disponible si existe
         if (slotsResponse?.seguros_disponibles?.length > 0) {
@@ -837,8 +876,12 @@ export default function CompletarJugadoresEquipo() {
 
         // 5. Cargar jugadores registrados del equipo para validaciones
         try {
-          const jugList = await adminService.getJugadoresEquipo(equipoId);
-          setRegisteredPlayers(jugList || []);
+          const allPlayers = await teamsService.getUserPlayersReal();
+          const targetTeamName = targetTeam?.NombreEquipo || targetTeam?.Nombre || '';
+          const jugList = (allPlayers || []).filter(
+            p => p.Equipo && p.Equipo.toUpperCase().trim() === targetTeamName.toUpperCase().trim()
+          );
+          setRegisteredPlayers(jugList);
         } catch (e) {
           console.error("Error al cargar jugadores del equipo:", e);
         }
@@ -887,6 +930,107 @@ export default function CompletarJugadoresEquipo() {
       setValidationErrors(prev => ({ ...prev, curp: null }));
     }
   }, [extractedData.curp]);
+
+  // Cargar borrador del slot seleccionado al cambiar de seguro
+  useEffect(() => {
+    if (!slotsData?.rawSlots || !selectedSeguroId) return;
+
+    const slotConBorrador = slotsData.rawSlots.find(
+      s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
+    );
+
+    if (slotConBorrador?.datos_borrador) {
+      const dbTel = slotConBorrador.datos_borrador.telefono || '';
+      const codPais = slotConBorrador.datos_borrador.codigoPais;
+      if (codPais === undefined) {
+        const parsed = parsearTelefonoE164(dbTel);
+        setExtractedData({
+          ...slotConBorrador.datos_borrador,
+          codigoPais: parsed.codigoPais,
+          telefono: parsed.telefono
+        });
+      } else {
+        setExtractedData(slotConBorrador.datos_borrador);
+      }
+    } else {
+      // Limpiar a valores por defecto
+      setExtractedData({
+        nombreJugador: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        curp: '',
+        genero: '1',
+        fechaNacimiento: '',
+        lugarNacimiento: 'MÉXICO',
+        correo: '',
+        codigoPais: '+52',
+        telefono: '',
+        posicion: '',
+        numCamiseta: '',
+        esForaneo: false,
+        nacionalidadJugador: '',
+        paisResidencia: '',
+        haVividoExtranjero: false,
+        dondeVividoExtranjero: '',
+        nacionalidadPadre: '',
+        nacionalidadMadre: '',
+        registroAsociacionExtranjera: '',
+        nacAbueloPaterno: '',
+        nacAbuelaPaterna: '',
+        nacAbueloMaterno: '',
+        nacAbuelaMaterna: '',
+        juegoClubExtranjero: ''
+      });
+    }
+  }, [selectedSeguroId, slotsData]);
+
+  // Auto-guardado de borrador (debounced)
+  useEffect(() => {
+    if (!currentSlot?.slot_id) return;
+    
+    const timer = setTimeout(() => {
+      guardarBorradorEnBD(extractedData);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [extractedData, currentSlot?.slot_id]);
+
+  // Autovalidación de número de camiseta en tiempo real
+  useEffect(() => {
+    const num = (extractedData.numCamiseta || '').trim();
+    if (num) {
+      const duplicate = obtenerDuplicadoCamiseta(num);
+      if (duplicate) {
+        setValidationErrors(prev => ({
+          ...prev,
+          numCamiseta: `El número de camiseta #${num} ya está asignado al Jugador ${duplicate.NombreCompleto}.`
+        }));
+      } else {
+        setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+      }
+    } else {
+      setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+    }
+  }, [extractedData.numCamiseta, registeredPlayers]);
+
+  // Autovalidación de posición en tiempo real
+  useEffect(() => {
+    const pos = extractedData.posicion;
+    if (pos) {
+      const duplicate = obtenerDuplicadoPosicion(pos);
+      if (duplicate) {
+        const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(pos))?.nombre || 'esta posición';
+        setValidationErrors(prev => ({
+          ...prev,
+          posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
+        }));
+      } else {
+        setValidationErrors(prev => ({ ...prev, posicion: null }));
+      }
+    } else {
+      setValidationErrors(prev => ({ ...prev, posicion: null }));
+    }
+  }, [extractedData.posicion, registeredPlayers, catalogs?.roles_equipo]);
 
   const handleFieldChange = (field, value) => {
     let cleanValue = value;
@@ -2007,7 +2151,7 @@ export default function CompletarJugadoresEquipo() {
                     return (
                       <div
                         key={`seguro-card-${seg.SeguroId}`}
-                        onClick={() => setSelectedSeguroId(String(seg.SeguroId))}
+                        onClick={() => setSelectedSeguroId(prev => prev === String(seg.SeguroId) ? '' : String(seg.SeguroId))}
                         style={{
                           padding: '16px',
                           borderRadius: '12px',
@@ -2293,7 +2437,7 @@ export default function CompletarJugadoresEquipo() {
                       type="file"
                       id={`file-${doc.key}`}
                       style={{ display: 'none' }}
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept={doc.key === 'foto' ? ".jpg,.jpeg,.png" : ".pdf,.jpg,.jpeg,.png"}
                       onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                     />
                   </div>
@@ -2643,7 +2787,7 @@ export default function CompletarJugadoresEquipo() {
                 </section>
 
                 {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
+                <div className="international-info-card" style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
                       <FaGlobeAmericas />
@@ -2653,7 +2797,7 @@ export default function CompletarJugadoresEquipo() {
 
                   {extractedData.esForaneo ? (
                     <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                      <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                         <EntradaFormulario
                           etiqueta="Nacionalidad del jugador"
                           valor={extractedData.nacionalidadJugador}
@@ -2666,7 +2810,7 @@ export default function CompletarJugadoresEquipo() {
                         />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
+                      <div className="form-inputs-grid-2" style={{ alignItems: 'end', width: '100%' }}>
                         <EntradaSeleccion
                           etiqueta="¿El jugador ha vivido en el extranjero?"
                           valor={extractedData.haVividoExtranjero ? '1' : '0'}
@@ -2684,7 +2828,7 @@ export default function CompletarJugadoresEquipo() {
                         )}
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                      <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                         <EntradaFormulario
                           etiqueta="Nacionalidad del padre"
                           valor={extractedData.nacionalidadPadre}
@@ -2705,7 +2849,7 @@ export default function CompletarJugadoresEquipo() {
                         obligatorio={true}
                       />
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                      <div className="abuelos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
                         <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => handleFieldChange('nacAbueloPaterno', e.target.value)} />
                         <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => handleFieldChange('nacAbuelaPaterna', e.target.value)} />
                         <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => handleFieldChange('nacAbueloMaterno', e.target.value)} />
@@ -2723,7 +2867,7 @@ export default function CompletarJugadoresEquipo() {
                   ) : (
                     <div style={{ textAlign: 'center', padding: '20px' }}>
                       <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                        Si el jugador es extranjero, habilite está opción para completar los antecedentes internacionales.
+                        Si el jugador es extranjero, habilite esta opción para completar los antecedentes internacionales.
                       </p>
                     </div>
                   )}
