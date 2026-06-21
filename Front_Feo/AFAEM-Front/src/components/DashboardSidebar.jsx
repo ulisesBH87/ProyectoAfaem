@@ -44,14 +44,14 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
 
   const theme = {
     bg: isAdmin
-      ? 'rgba(15, 23, 42, 0.95)' // Black Glass (Deep Navy)
-      : 'rgba(255, 255, 255, 0.85)', // White Glass
+      ? '#0f172a'
+      : 'rgba(255, 255, 255, 0.85)',
     text: isAdmin ? '#e2e8f0' : '#1e293b',
     textMuted: isAdmin ? '#94a3b8' : '#64748b',
-    border: isAdmin ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-    activeBg: isAdmin ? 'var(--primary)' : '#0b4ea6',
+    border: isAdmin ? 'rgba(148, 163, 184, 0.18)' : 'rgba(0, 0, 0, 0.05)',
+    activeBg: isAdmin ? '#1e293b' : '#0b4ea6',
     activeText: '#ffffff',
-    hoverBg: isAdmin ? 'rgba(255, 255, 255, 0.05)' : 'rgba(11, 78, 166, 0.05)',
+    hoverBg: isAdmin ? 'rgba(148, 163, 184, 0.12)' : 'rgba(11, 78, 166, 0.05)',
     shadow: isAdmin ? '0 8px 32px 0 rgba(0, 0, 0, 0.8)' : '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
   };
   return (
