@@ -243,7 +243,7 @@ export default function Step3Cuotas({
             <label style={fieldStyles.label}>Nombre del Equipo <span style={{ color: C.amber }}>*</span></label>
             {esEntrenador ? (
               <select
-                style={fieldStyles.select}
+                style={{ ...fieldStyles.select, background: C.inputBg, color: C.text }}
                 value={selectedEquipoId || ''}
                 onChange={handleEquipoSelectChange}
                 required
@@ -270,7 +270,7 @@ export default function Step3Cuotas({
           <div>
             <label style={fieldStyles.label}>Cargo / Tipo de Afiliación</label>
             <select
-              style={{ ...fieldStyles.select, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}
+              style={{ ...fieldStyles.select, cursor: 'not-allowed', background: C.inputBg, color: C.text }}
               value={tipoAfiliacion}
               disabled
             >
@@ -297,7 +297,8 @@ export default function Step3Cuotas({
               style={{
                 ...fieldStyles.select,
                 cursor: esEntrenador ? 'not-allowed' : 'default',
-                background: esEntrenador ? 'rgba(255,255,255,0.05)' : undefined
+                background: C.inputBg,
+                color: C.text
               }}
               value={liga}
               onChange={e => setLiga(e.target.value)}
@@ -345,7 +346,7 @@ export default function Step3Cuotas({
                     style={{
                       width: 100, padding: '9px 14px', borderRadius: 10,
                       background: C.inputBg, border: `1px solid ${C.inputBorder}`,
-                      color: 'white', textAlign: 'center', fontSize: 18, fontWeight: 700, outline: 'none',
+                      color: C.text, textAlign: 'center', fontSize: 18, fontWeight: 700, outline: 'none',
                     }}
                   />
                   <div style={{ fontSize: 13, color: C.textDim }}>

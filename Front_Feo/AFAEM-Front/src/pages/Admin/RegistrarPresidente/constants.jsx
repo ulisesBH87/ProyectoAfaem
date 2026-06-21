@@ -2,10 +2,10 @@ import { FaUser, FaMoneyBillWave, FaFolderOpen } from 'react-icons/fa';
 
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 export const C = {
-  bg: '#FFFFFF',
-  surface: '#272d3eff',
-  card: '#272d3eff',
-  cardBorder: 'rgba(54, 70, 153, 0.29)',
+  bg: '#ffffff',
+  surface: '#0f172a',
+  card: '#0f172a',
+  cardBorder: 'rgba(148, 163, 184, 0.18)',
   amber: '#f59e0b',
   amberDark: '#d97706',
   amberLight: '#fbbf24',
@@ -13,13 +13,13 @@ export const C = {
   rose: '#f87171',
   green: '#4ade80',
   greenDim: 'rgba(74,222,128,0.15)',
-  text: 'rgba(255,255,255,0.87)',
-  textMid: 'rgba(255, 255, 255, 1)',
-  textArrow: 'rgba(0, 0, 0, 1)',
-  textDim: 'rgba(255, 255, 255, 1)',
-  inputBg: 'rgba(255, 255, 255, 0.04)',
-  inputBorder: 'rgba(255,255,255,0.1)',
-  focusBorder: '#f59e0b',
+  text: '#f8fafc',
+  textMid: '#e2e8f0',
+  textArrow: '#0f172a',
+  textDim: '#cbd5e1',
+  inputBg: '#102033',
+  inputBorder: 'rgba(148, 163, 184, 0.28)',
+  focusBorder: '#60a5fa',
 };
 
 // ─── Estilos de campo reutilizables ──────────────────────────────────────────
@@ -49,7 +49,7 @@ export const fieldStyles = {
     boxSizing: 'border-box',
     padding: '11px 14px',
     borderRadius: 10,
-    background: 'rgba(15,17,23,0.95)',
+    background: C.inputBg,
     border: `1px solid ${C.inputBorder}`,
     color: C.text,
     outline: 'none',
