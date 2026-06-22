@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
@@ -17,6 +18,7 @@ import { validarFotografia } from '../../services/foto';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
+import { verificarCurp } from '../../services/auth';
 import { API_BASE } from '../../config/config';
 import { openSecurePath } from '../../utils/secureFetch';
 import {
@@ -53,6 +55,178 @@ const parsearTelefonoE164 = (telefonoCompleto) => {
   return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
 };
 
+const normalizarNombreSeguro = (nombre) => {
+  if (!nombre) return '';
+  return nombre.toUpperCase().replace(/["']/g, '').trim();
+};
+
+const DETALLES_SEGUROS = {
+  'TIPO A': {
+    nombre: 'TIPO "A"',
+    precio: 240,
+    poliza: '2922500000281',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$50,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$25,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO B': {
+    nombre: 'TIPO "B"',
+    precio: 350,
+    poliza: '2922500000283',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO F': {
+    nombre: 'TIPO "F"',
+    precio: 670,
+    poliza: '2922500000282',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO H': {
+    nombre: 'TIPO "H"',
+    precio: 475,
+    poliza: '2922500000286',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'TIPO G': {
+    nombre: 'TIPO "G"',
+    precio: 350,
+    poliza: '2922500000280',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Se amparan los traslados de su casa a las ligas, asociaciones y viceversa, y traslados a otras ligas, se cubre dentro de las instalaciones de sus ligas y asociaciones. Se amparan traslados de estado a estado.',
+    beneficios: [
+      'Participación en Torneos Estatales',
+      'Participación en Torneos Regionales',
+      'Participación en Torneos Nacionales',
+      'Participación en Campeonatos Nacionales',
+      'Participación en Torneos Federados',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
+      'Seguro de Gastos Médicos por Accidente'
+    ],
+    coberturas: [
+      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
+      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
+      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
+      { cobertura: 'Deducible', monto: '$1,500.00' }
+    ]
+  },
+  'BASICA': {
+    nombre: 'TIPO "BASICA"',
+    precio: 155,
+    poliza: 'N/A',
+    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
+    alcance: 'Esta afiliación no incluye póliza de seguro de gastos médicos por accidente. Solo cubre derechos de participación básica.',
+    beneficios: [
+      'Participación en Torneos Estatales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Regionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Campeonatos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Torneos Federados (Es necesario Afiliación con cobertura de Seguro)',
+      'Participación en Capacitaciones',
+      'Descuentos en Material Deportivo',
+      'Expediente deportivo Oficial en la FMF',
+      'Activaciones y Experiencias con Patrocinadores',
+      'Descuentos en la Compra de Balones Oficiales del Sector Amateur'
+    ],
+    coberturas: []
+  },
+  'SIN SEGURO': {
+    nombre: 'SIN SEGURO',
+    precio: 0,
+    poliza: 'N/A',
+    vigencia: 'N/A',
+    alcance: 'El presidente no cuenta con cobertura médica federada.',
+    beneficios: [
+      'Sin costo adicional',
+      'Registro básico en la plataforma',
+      'No incluye seguro de gastos médicos',
+      'No incluye derechos de participación deportiva federada activa'
+    ],
+    coberturas: []
+  }
+};
+
 // Badge Estilizado para los pasos
 const StepBadge = ({ number, isActive, isDone }) => (
   <div style={{
@@ -83,7 +257,7 @@ export default function CompletarJugadoresEquipo() {
   minDate.setFullYear(minDate.getFullYear() - 100);
   const minDateStr = minDate.toISOString().split('T')[0];
 
-  // ESTILO DINÁMICO PARA HOVER
+  // ESTILO DINÁMICO PARA HOVER Y RESPONSIVIDAD
   const hoverStyles = `
     .document-card:hover .overlay-actions {
       opacity: 1 !important;
@@ -91,6 +265,258 @@ export default function CompletarJugadoresEquipo() {
     .document-card:hover {
       transform: translateY(-5px);
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .premium-details-card {
+      max-width: 1000px;
+      margin: 0 auto 30px auto;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      border-radius: 20px;
+      padding: 25px 35px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    
+    .main-form-card {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .no-slots-card {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+      border: 1px solid #fee2e2;
+    }
+    
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    
+    .nacionalidad-toggle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .nacionalidad-toggle button {
+      flex: 1;
+      text-align: center;
+      justify-content: center;
+    }
+    
+    .action-buttons-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 40px;
+    }
+    
+    .inner-form-card {
+      background-color: white;
+      padding: 30px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 30px;
+    }
+    
+    .info-alert-box {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #0369a1;
+      font-weight: 600;
+    }
+    
+    .doc-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .seguro-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    
+    .seguro-modal-container {
+      background-color: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 850px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      color: #f8fafc;
+    }
+
+    @media (max-width: 768px) {
+      .premium-details-card {
+        padding: 16px 20px;
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+      }
+      
+      .premium-details-card > div {
+        text-align: center !important;
+      }
+      
+      .premium-details-card > div:last-child {
+        text-align: center !important;
+        margin-top: 10px;
+      }
+      
+      .main-form-card, .no-slots-card {
+        padding: 20px 15px;
+        border-radius: 16px;
+      }
+      
+      .form-grid-3, .form-grid-2 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+      
+      .action-buttons-container {
+        flex-direction: column-reverse;
+        gap: 12px;
+      }
+      
+      .action-buttons-container button,
+      .action-buttons-container a {
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+      
+      .inner-form-card {
+        padding: 16px 12px;
+      }
+      
+      .info-alert-box {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px;
+        font-size: 12px;
+      }
+      
+      .doc-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .seguro-modal-container {
+        border-radius: 16px;
+        max-height: 95vh;
+      }
+    }
+
+    .phone-input-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+    
+    @media (max-width: 768px) {
+      .phone-input-row {
+        flex-direction: column;
+      }
+      .phone-input-row select {
+        width: 100% !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .nacionalidad-toggle {
+        flex-direction: column;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .abuelos-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+    }
+    
+    .form-inputs-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .form-inputs-grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+      }
+      .form-inputs-grid-2 input,
+      .form-inputs-grid-2 select {
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .international-info-card {
+        padding: 15px !important;
+      }
+    }
+    
+    .field-error-msg {
+      color: #ef4444;
+      font-size: 11px;
+      margin-top: 6px;
+      font-weight: 700;
+      display: block;
     }
   `;
 
@@ -101,6 +527,50 @@ export default function CompletarJugadoresEquipo() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedSeguroId, setSelectedSeguroId] = useState('');
   const [fillManually, setFillManually] = useState(false);
+  const [seguroDetalle, setSeguroDetalle] = useState(null);
+  const [registeredPlayers, setRegisteredPlayers] = useState([]);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [isCheckingCurp, setIsCheckingCurp] = useState(false);
+
+  // Obtener el slot actual según el seguro seleccionado
+  const currentSlot = React.useMemo(() => {
+    if (!slotsData?.rawSlots || !selectedSeguroId) return null;
+    return slotsData.rawSlots.find(
+      s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
+    );
+  }, [selectedSeguroId, slotsData]);
+
+  // Guardar Borrador en la Base de Datos
+  const guardarBorradorEnBD = async (newData) => {
+    if (!currentSlot?.slot_id) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE}/equipo-temporal/borrador-jugador`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          slot_id: currentSlot.slot_id,
+          datos: newData
+        })
+      });
+    } catch (err) {
+      console.warn('No se pudo guardar el borrador:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (seguroDetalle) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [seguroDetalle]);
 
   const [documents, setDocuments] = useState({
     acta: null,
@@ -197,11 +667,153 @@ export default function CompletarJugadoresEquipo() {
     return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
 
+  const abrirModalDetalle = (seguro) => {
+    setSeguroDetalle(seguro);
+  };
+
+  const validarFechaNacimiento = (fechaStr) => {
+    if (!fechaStr) {
+      return 'La fecha de nacimiento es obligatoria.';
+    }
+
+    const regexISO = /^\d{4}-\d{2}-\d{2}$/;
+    const regexSlash = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    let dateObj = null;
+    let year = null;
+    let month = null;
+    let day = null;
+
+    if (regexISO.test(fechaStr)) {
+      const parts = fechaStr.split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1; // 0-indexed
+      day = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else if (regexSlash.test(fechaStr)) {
+      const parts = fechaStr.split('/');
+      day = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1;
+      year = parseInt(parts[2], 10);
+      dateObj = new Date(year, month, day);
+    } else {
+      return 'Ingresa una fecha válida.';
+    }
+
+    if (
+      !dateObj ||
+      isNaN(dateObj.getTime()) ||
+      dateObj.getFullYear() !== year ||
+      dateObj.getMonth() !== month ||
+      dateObj.getDate() !== day
+    ) {
+      return 'Ingresa una fecha válida.';
+    }
+
+    if (year < 1900) {
+      return 'El año debe ser igual o mayor a 1900.';
+    }
+
+    const hoy = new Date();
+    const hoyDateOnly = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const birthDateOnly = new Date(year, month, day);
+    if (birthDateOnly > hoyDateOnly) {
+      return 'La fecha de nacimiento no puede ser futura.';
+    }
+
+    let edad = hoy.getFullYear() - year;
+    const mDiff = hoy.getMonth() - month;
+    if (mDiff < 0 || (mDiff === 0 && hoy.getDate() < day)) {
+      edad--;
+    }
+
+    if (edad < 3) {
+      return 'El jugador debe tener al menos 3 años de edad.';
+    }
+
+    if (edad > 125) {
+      return 'Ingresa una fecha válida.';
+    }
+
+    return null;
+  };
+
+  const obtenerDuplicadoCamiseta = (numeroCamiseta) => {
+    if (!numeroCamiseta || String(numeroCamiseta).trim() === '') return null;
+    const camisetaVal = parseInt(numeroCamiseta, 10);
+    return registeredPlayers.find(p =>
+      p.NumeroCamiseta !== undefined && p.NumeroCamiseta !== null &&
+      parseInt(p.NumeroCamiseta, 10) === camisetaVal
+    );
+  };
+
+  const obtenerDuplicadoPosicion = (posicionId) => {
+    if (!posicionId) return null;
+    const posVal = parseInt(posicionId, 10);
+    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
+    const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicionId))?.nombre;
+    if (!posNombre) return null;
+    return registeredPlayers.find(p =>
+      p.Rol && p.Rol.trim().toUpperCase() === posNombre.trim().toUpperCase()
+    );
+  };
+
+  const obtenerDuplicadoCURP = (curpVal) => {
+    if (!curpVal || String(curpVal).trim() === '') return null;
+    const curpUpper = curpVal.trim().toUpperCase();
+    return registeredPlayers.find(p =>
+      p.CURP && p.CURP.toUpperCase() === curpUpper
+    );
+  };
+
+  const handleBlur = (field) => {
+    const datos = { ...extractedData };
+
+    if (field === 'fechaNacimiento' || !field) {
+      const dateError = validarFechaNacimiento(datos.fechaNacimiento);
+      setValidationErrors(prev => ({
+        ...prev,
+        fechaNacimiento: dateError
+      }));
+      if (dateError && field === 'fechaNacimiento') {
+        Swal.fire({
+          title: 'Fecha de nacimiento inválida',
+          text: dateError,
+          icon: 'warning',
+          confirmButtonColor: '#0b4ea6'
+        });
+        setExtractedData(prev => ({ ...prev, fechaNacimiento: '' }));
+      }
+    }
+
+    if (field === 'curp' || !field) {
+      if (datos.curp) {
+        if (datos.curp.length !== 18) {
+          setValidationErrors(prev => ({ ...prev, curp: 'El CURP debe tener exactamente 18 caracteres.' }));
+        } else {
+          const duplicate = obtenerDuplicadoCURP(datos.curp);
+          if (duplicate) {
+            Swal.fire({
+              title: 'CURP duplicado',
+              text: `La CURP ya está asignada al Jugador ${duplicate.NombreCompleto || 'del equipo'}. Por favor, ingresa una diferente.`,
+              icon: 'warning',
+              confirmButtonColor: '#0b4ea6'
+            });
+            setExtractedData(prev => ({ ...prev, curp: '' }));
+            setValidationErrors(prev => ({ ...prev, curp: null }));
+          } else {
+            setValidationErrors(prev => ({ ...prev, curp: null }));
+          }
+        }
+      }
+    }
+  };
+
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!selectedSeguroId;
   const isStep2Done = Object.values(documents).some(d => d !== null);
   const showStep2 = isStep1Done;
-  const showStep3 = isStep2Done || fillManually;
+  const showStep3 = isStep2Done || true; // El paso 3 siempre se muestra una vez seleccionado el seguro
 
   // Cargar catálogos, detalles de equipo y disponibilidad de slots
   useEffect(() => {
@@ -229,7 +841,20 @@ export default function CompletarJugadoresEquipo() {
 
         // 3. Verificar slots disponibles
         const slotsResponse = await teamsService.checkTeamSlots(equipoId);
-        setSlotsData(slotsResponse);
+        if (slotsResponse?.equipo_temporal_id) {
+          try {
+            const detailSlots = await teamsService.getAvailableSlots(slotsResponse.equipo_temporal_id);
+            setSlotsData({
+              ...slotsResponse,
+              rawSlots: detailSlots.slots || []
+            });
+          } catch (errSlots) {
+            console.error("Error al obtener detalle de slots:", errSlots);
+            setSlotsData(slotsResponse);
+          }
+        } else {
+          setSlotsData(slotsResponse);
+        }
 
         // Preseleccionar primer seguro disponible si existe
         if (slotsResponse?.seguros_disponibles?.length > 0) {
@@ -249,6 +874,18 @@ export default function CompletarJugadoresEquipo() {
           }
         }
 
+        // 5. Cargar jugadores registrados del equipo para validaciones
+        try {
+          const allPlayers = await teamsService.getUserPlayersReal();
+          const targetTeamName = targetTeam?.NombreEquipo || targetTeam?.Nombre || '';
+          const jugList = (allPlayers || []).filter(
+            p => p.Equipo && p.Equipo.toUpperCase().trim() === targetTeamName.toUpperCase().trim()
+          );
+          setRegisteredPlayers(jugList);
+        } catch (e) {
+          console.error("Error al cargar jugadores del equipo:", e);
+        }
+
       } catch (error) {
         console.error("Error al iniciar datos:", error);
         Swal.fire('Error', error.message || 'No se pudo cargar la información del equipo.', 'error');
@@ -259,6 +896,141 @@ export default function CompletarJugadoresEquipo() {
     };
     initData();
   }, [equipoId]);
+
+  // Autovalidación de CURP con base de datos en tiempo real
+  useEffect(() => {
+    const curp = (extractedData.curp || '').trim().toUpperCase();
+    if (curp.length === 18) {
+      setIsCheckingCurp(true);
+      const timer = setTimeout(async () => {
+        try {
+          const localDup = obtenerDuplicadoCURP(curp);
+          if (localDup) {
+            setValidationErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
+            setIsCheckingCurp(false);
+            return;
+          }
+          const res = await verificarCurp(curp);
+          if (res.existe) {
+            setValidationErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
+          } else {
+            setValidationErrors(prev => ({ ...prev, curp: null }));
+          }
+        } catch (error) {
+          console.error("Error al verificar CURP:", error);
+        } finally {
+          setIsCheckingCurp(false);
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
+    } else if (curp.length > 0) {
+      setValidationErrors(prev => ({ ...prev, curp: 'El CURP debe tener exactamente 18 caracteres.' }));
+    } else {
+      setValidationErrors(prev => ({ ...prev, curp: null }));
+    }
+  }, [extractedData.curp]);
+
+  // Cargar borrador del slot seleccionado al cambiar de seguro
+  useEffect(() => {
+    if (!slotsData?.rawSlots || !selectedSeguroId) return;
+
+    const slotConBorrador = slotsData.rawSlots.find(
+      s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
+    );
+
+    if (slotConBorrador?.datos_borrador) {
+      const dbTel = slotConBorrador.datos_borrador.telefono || '';
+      const codPais = slotConBorrador.datos_borrador.codigoPais;
+      if (codPais === undefined) {
+        const parsed = parsearTelefonoE164(dbTel);
+        setExtractedData({
+          ...slotConBorrador.datos_borrador,
+          codigoPais: parsed.codigoPais,
+          telefono: parsed.telefono
+        });
+      } else {
+        setExtractedData(slotConBorrador.datos_borrador);
+      }
+    } else {
+      // Limpiar a valores por defecto
+      setExtractedData({
+        nombreJugador: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        curp: '',
+        genero: '1',
+        fechaNacimiento: '',
+        lugarNacimiento: 'MÉXICO',
+        correo: '',
+        codigoPais: '+52',
+        telefono: '',
+        posicion: '',
+        numCamiseta: '',
+        esForaneo: false,
+        nacionalidadJugador: '',
+        paisResidencia: '',
+        haVividoExtranjero: false,
+        dondeVividoExtranjero: '',
+        nacionalidadPadre: '',
+        nacionalidadMadre: '',
+        registroAsociacionExtranjera: '',
+        nacAbueloPaterno: '',
+        nacAbuelaPaterna: '',
+        nacAbueloMaterno: '',
+        nacAbuelaMaterna: '',
+        juegoClubExtranjero: ''
+      });
+    }
+  }, [selectedSeguroId, slotsData]);
+
+  // Auto-guardado de borrador (debounced)
+  useEffect(() => {
+    if (!currentSlot?.slot_id) return;
+    
+    const timer = setTimeout(() => {
+      guardarBorradorEnBD(extractedData);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [extractedData, currentSlot?.slot_id]);
+
+  // Autovalidación de número de camiseta en tiempo real
+  useEffect(() => {
+    const num = (extractedData.numCamiseta || '').trim();
+    if (num) {
+      const duplicate = obtenerDuplicadoCamiseta(num);
+      if (duplicate) {
+        setValidationErrors(prev => ({
+          ...prev,
+          numCamiseta: `El número de camiseta #${num} ya está asignado al Jugador ${duplicate.NombreCompleto}.`
+        }));
+      } else {
+        setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+      }
+    } else {
+      setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+    }
+  }, [extractedData.numCamiseta, registeredPlayers]);
+
+  // Autovalidación de posición en tiempo real
+  useEffect(() => {
+    const pos = extractedData.posicion;
+    if (pos) {
+      const duplicate = obtenerDuplicadoPosicion(pos);
+      if (duplicate) {
+        const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(pos))?.nombre || 'esta posición';
+        setValidationErrors(prev => ({
+          ...prev,
+          posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
+        }));
+      } else {
+        setValidationErrors(prev => ({ ...prev, posicion: null }));
+      }
+    } else {
+      setValidationErrors(prev => ({ ...prev, posicion: null }));
+    }
+  }, [extractedData.posicion, registeredPlayers, catalogs?.roles_equipo]);
 
   const handleFieldChange = (field, value) => {
     let cleanValue = value;
@@ -286,6 +1058,19 @@ export default function CompletarJugadoresEquipo() {
       cleanValue = value.replace(/\D/g, '').slice(0, 10);
     } else if (field === 'numCamiseta') {
       cleanValue = value.replace(/\D/g, '').slice(0, 3);
+      if (cleanValue !== '') {
+        const duplicate = obtenerDuplicadoCamiseta(cleanValue);
+        if (duplicate) {
+          setValidationErrors(prev => ({
+            ...prev,
+            numCamiseta: `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.NombreCompleto}.`
+          }));
+        } else {
+          setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+        }
+      } else {
+        setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
+      }
     }
 
     setExtractedData(prev => ({ ...prev, [field]: cleanValue }));
@@ -299,17 +1084,33 @@ export default function CompletarJugadoresEquipo() {
     if (!file) return;
 
     const ext = '.' + file.name.split('.').pop().toLowerCase();
-    if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
-      Swal.fire({
-        title: 'Tipo de archivo no permitido',
-        text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
-        icon: 'error',
-        confirmButtonColor: '#0b4ea6'
-      });
-      return;
+    if (documentKey === 'foto') {
+      const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      const allowedImageExts = ['.jpg', '.jpeg', '.png'];
+      if (!allowedImageTypes.includes(file.type) || !allowedImageExts.includes(ext)) {
+        Swal.fire({
+          title: 'Tipo de archivo no permitido',
+          text: 'Solo se permiten fotografías en formato JPG, JPEG o PNG.',
+          icon: 'error',
+          confirmButtonColor: '#0b4ea6'
+        });
+        return;
+      }
+    } else {
+      if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
+        Swal.fire({
+          title: 'Tipo de archivo no permitido',
+          text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
+          icon: 'error',
+          confirmButtonColor: '#0b4ea6'
+        });
+        return;
+      }
     }
 
-    setDocuments(prev => ({ ...prev, [documentKey]: file }));
+    if (documentKey !== 'foto') {
+      setDocuments(prev => ({ ...prev, [documentKey]: file }));
+    }
 
     // Generar Previsualización
     if (file.type.startsWith('image/')) {
@@ -819,6 +1620,42 @@ export default function CompletarJugadoresEquipo() {
       return;
     }
 
+    if (validationErrors.curp) {
+      Swal.fire('Atención', validationErrors.curp, 'warning');
+      return;
+    }
+    if (validationErrors.numCamiseta) {
+      Swal.fire('Atención', validationErrors.numCamiseta, 'warning');
+      return;
+    }
+    if (validationErrors.posicion) {
+      Swal.fire('Atención', validationErrors.posicion, 'warning');
+      return;
+    }
+    if (validationErrors.fechaNacimiento) {
+      Swal.fire('Atención', validationErrors.fechaNacimiento, 'warning');
+      return;
+    }
+
+    const dupCurp = obtenerDuplicadoCURP(extractedData.curp);
+    if (dupCurp) {
+      Swal.fire('Atención', `La CURP ya está asignada al Jugador ${dupCurp.NombreCompleto || 'del equipo'}.`, 'warning');
+      return;
+    }
+
+    const dupCamiseta = obtenerDuplicadoCamiseta(extractedData.numCamiseta);
+    if (dupCamiseta) {
+      Swal.fire('Atención', `El número de camiseta #${extractedData.numCamiseta} ya está asignado al Jugador ${dupCamiseta.NombreCompleto || 'del equipo'}.`, 'warning');
+      return;
+    }
+
+    const dupPos = obtenerDuplicadoPosicion(extractedData.posicion);
+    if (dupPos) {
+      const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(extractedData.posicion))?.nombre || 'esta posición';
+      Swal.fire('Atención', `La posición de ${posNombre} ya está asignada al Jugador ${dupPos.NombreCompleto || 'del equipo'}.`, 'warning');
+      return;
+    }
+
     if (extractedData.fechaNacimiento) {
       const parts = extractedData.fechaNacimiento.split('-');
       const fechaDate = new Date(extractedData.fechaNacimiento);
@@ -838,9 +1675,9 @@ export default function CompletarJugadoresEquipo() {
         return;
       }
 
-      const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
+      const minAgeDate = new Date(hoy.getFullYear() - 3, hoy.getMonth(), hoy.getDate());
       if (fechaDate > minAgeDate) {
-        Swal.fire('Atención', 'El jugador debe tener al menos 5 años de edad.', 'warning');
+        Swal.fire('Atención', 'El jugador debe tener al menos 3 años de edad.', 'warning');
         return;
       }
     }
@@ -1077,20 +1914,7 @@ export default function CompletarJugadoresEquipo() {
 
       {/* DETALLES DEL EQUIPO */}
       {equipo && (
-        <div className="premium-card fade-in" style={{
-          maxWidth: '1000px',
-          margin: '0 auto 30px auto',
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-          color: 'white',
-          borderRadius: '20px',
-          padding: '25px 35px',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '20px'
-        }}>
+        <div className="premium-card premium-details-card fade-in">
           <div>
             <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
             <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>🛡️ {equipo.NombreEquipo}</h1>
@@ -1114,16 +1938,7 @@ export default function CompletarJugadoresEquipo() {
 
       {/* BLOQUEO SI NO HAY SLOTS */}
       {sinSlots ? (
-        <div className="premium-card fade-in" style={{
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: 'white',
-          borderRadius: '24px',
-          padding: '40px',
-          textAlign: 'center',
-          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-          border: '1px solid #fee2e2'
-        }}>
+        <div className="premium-card no-slots-card fade-in">
           {cargandoOrdenAmpliacion ? (
             <div style={{ padding: '40px' }}>
               <Loader text="Verificando si existen ampliaciones solicitadas por el presidente..." />
@@ -1309,15 +2124,7 @@ export default function CompletarJugadoresEquipo() {
           )}
         </div>
       ) : (
-        <div className="premium-card fade-in" style={{
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: 'white',
-          borderRadius: '24px',
-          padding: '40px',
-          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-          border: '1px solid #e2e8f0'
-        }}>
+        <div className="premium-card main-form-card fade-in">
 
           <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p className="required-legend" style={{ margin: 0 }}>
@@ -1344,7 +2151,7 @@ export default function CompletarJugadoresEquipo() {
                     return (
                       <div
                         key={`seguro-card-${seg.SeguroId}`}
-                        onClick={() => setSelectedSeguroId(String(seg.SeguroId))}
+                        onClick={() => setSelectedSeguroId(prev => prev === String(seg.SeguroId) ? '' : String(seg.SeguroId))}
                         style={{
                           padding: '16px',
                           borderRadius: '12px',
@@ -1357,9 +2164,34 @@ export default function CompletarJugadoresEquipo() {
                           gap: '6px'
                         }}
                       >
-                        <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
-                          🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
-                        </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                            🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
+                          </span>
+                          {matchedSeguro && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                abrirModalDetalle(matchedSeguro);
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#3b82f6',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                padding: '2px 6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Ver información del seguro"
+                            >
+                              ℹ️
+                            </button>
+                          )}
+                        </div>
                         {matchedSeguro?.precio !== undefined && (
                           <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
                             Precio: ${matchedSeguro.precio} MXN
@@ -1384,28 +2216,12 @@ export default function CompletarJugadoresEquipo() {
                 <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
               </div>
 
-              <div style={{
-                background: '#f0f9ff',
-                border: '1px solid #bae6fd',
-                borderRadius: '12px',
-                padding: '12px 18px',
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                fontSize: '13px',
-                color: '#0369a1',
-                fontWeight: '600'
-              }}>
+              <div className="info-alert-box">
                 <span style={{ fontSize: '18px' }}>📋</span>
                 Recomendamos subir primero el<strong style={{ marginLeft: 4 }}>Acta de Nacimiento / INE</strong>el sistema detectará la minoría de edad y ajustará los requisitos.
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '20px'
-              }}>
+              <div className="doc-cards-grid">
                 {documentCards.map((doc) => (
                   <div
                     key={doc.key}
@@ -1567,6 +2383,11 @@ export default function CompletarJugadoresEquipo() {
 
                     <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
                     <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
+                    {doc.key === 'foto' && (
+                       <p style={{ margin: '0 0 8px', fontSize: '10px', color: '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                         Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                       </p>
+                     )}
                     <div style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1616,7 +2437,7 @@ export default function CompletarJugadoresEquipo() {
                       type="file"
                       id={`file-${doc.key}`}
                       style={{ display: 'none' }}
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept={doc.key === 'foto' ? ".jpg,.jpeg,.png" : ".pdf,.jpg,.jpeg,.png"}
                       onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                     />
                   </div>
@@ -1688,64 +2509,129 @@ export default function CompletarJugadoresEquipo() {
                 </div>
               )}
 
-              {/* CAMPOS DEL FORMULARIO */}
-              <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+               {/* CAMPOS DEL FORMULARIO */}
+              <div className="inner-form-card">
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div className="form-grid-3">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div className="form-grid-2">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
-                    <input type="text" maxLength={3} value={extractedData.numCamiseta} onChange={e => handleFieldChange('numCamiseta', e.target.value)} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input
+                      type="text"
+                      maxLength={3}
+                      value={extractedData.numCamiseta}
+                      onChange={e => handleFieldChange('numCamiseta', e.target.value)}
+                      onBlur={() => handleBlur('numCamiseta')}
+                      placeholder="Ej. 10"
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                    />
+                    {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
-                    <select value={extractedData.posicion} onChange={e => setExtractedData({ ...extractedData, posicion: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                    <select
+                      value={extractedData.posicion}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) || '';
+                        setExtractedData(prev => ({ ...prev, posicion: val }));
+                        if (val) {
+                          const duplicate = obtenerDuplicadoPosicion(val);
+                          if (duplicate) {
+                            const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(val))?.nombre || 'esta posición';
+                            setValidationErrors(prev => ({
+                              ...prev,
+                              posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
+                            }));
+                          } else {
+                            setValidationErrors(prev => ({ ...prev, posicion: null }));
+                          }
+                        } else {
+                          setValidationErrors(prev => ({ ...prev, posicion: null }));
+                        }
+                      }}
+                      onBlur={() => handleBlur('posicion')}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}
+                    >
                       <option value="">Posición...</option>
                       {(catalogs?.roles_equipo || []).map(r => (
                         <option key={r.id} value={r.id}>{r.nombre}</option>
                       ))}
                     </select>
+                    {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP<span className="required-star">*</span></label>
-                    <input type="text" value={extractedData.curp || ''} onChange={(e) => {
-                      const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                      let sId = extractedData.genero;
-                      if (val.length >= 11) {
-                        const char = val.charAt(10);
-                        if (char === 'M') sId = '2'; // Femenino
-                        else if (char === 'H') sId = '1'; // Masculino
-                      }
-                      setExtractedData({ ...extractedData, curp: val, genero: sId });
-                    }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                      CURP<span className="required-star">*</span>
+                      {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}>Validando...</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={extractedData.curp || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        let sId = extractedData.genero;
+                        if (val.length >= 11) {
+                          const char = val.charAt(10);
+                          if (char === 'M') sId = '2'; // Femenino
+                          else if (char === 'H') sId = '1'; // Masculino
+                        }
+                        setExtractedData({ ...extractedData, curp: val, genero: sId });
+                        
+                        // Real-time duplicate check
+                        if (val.length === 18) {
+                          const duplicate = obtenerDuplicadoCURP(val);
+                          if (duplicate) {
+                            setValidationErrors(prev => ({
+                              ...prev,
+                              curp: `Esta CURP ya se encuentra registrada en el equipo con el Jugador ${duplicate.NombreCompleto}.`
+                            }));
+                          } else {
+                            setValidationErrors(prev => ({ ...prev, curp: null }));
+                          }
+                        } else {
+                          setValidationErrors(prev => ({ ...prev, curp: null }));
+                        }
+                      }}
+                      onBlur={() => handleBlur('curp')}
+                      placeholder="ABCD..."
+                      maxLength="18"
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.curp ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                    />
+                    {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div className="form-grid-3">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
                     <input
                       type="date"
                       value={extractedData.fechaNacimiento || ''}
-                      onChange={e => setExtractedData({ ...extractedData, fechaNacimiento: e.target.value })}
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setExtractedData({ ...extractedData, fechaNacimiento: val });
+                        const dateError = validarFechaNacimiento(val);
+                        setValidationErrors(prev => ({ ...prev, fechaNacimiento: dateError }));
+                      }}
+                      onBlur={() => handleBlur('fechaNacimiento')}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.fechaNacimiento ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
                     />
                     {(() => {
                       const val = extractedData.fechaNacimiento;
@@ -1768,9 +2654,9 @@ export default function CompletarJugadoresEquipo() {
                         return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                       }
 
-                      const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
+                      const minAgeDate = new Date(hoy.getFullYear() - 3, hoy.getMonth(), hoy.getDate());
                       if (fechaDate > minAgeDate) {
-                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
+                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 3 años</div>;
                       }
 
                       return null;
@@ -1778,11 +2664,11 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                    <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                    <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}>
                       <option value="">Seleccione...</option>
                       <option value="1">MASCULINO</option>
                       <option value="2">FEMENINO</option>
@@ -1790,14 +2676,14 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                <div className="form-grid-2">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                    <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                    <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="phone-input-row">
                       <select
                         value={extractedData.codigoPais || '+52'}
                         onChange={e => setExtractedData({ ...extractedData, codigoPais: e.target.value })}
@@ -1854,16 +2740,7 @@ export default function CompletarJugadoresEquipo() {
                     <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
                   </div>
 
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '10px',
-                    background: '#f1f5f9',
-                    padding: '4px',
-                    borderRadius: '12px',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}>
+                  <div className="nacionalidad-toggle">
                     <button
                       type="button"
                       onClick={() => setExtractedData(prev => ({ ...prev, esForaneo: false }))}
@@ -1910,7 +2787,7 @@ export default function CompletarJugadoresEquipo() {
                 </section>
 
                 {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
+                <div className="international-info-card" style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
                       <FaGlobeAmericas />
@@ -1920,7 +2797,7 @@ export default function CompletarJugadoresEquipo() {
 
                   {extractedData.esForaneo ? (
                     <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '20px', width: '100%' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                      <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                         <EntradaFormulario
                           etiqueta="Nacionalidad del jugador"
                           valor={extractedData.nacionalidadJugador}
@@ -1933,7 +2810,7 @@ export default function CompletarJugadoresEquipo() {
                         />
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end', width: '100%' }}>
+                      <div className="form-inputs-grid-2" style={{ alignItems: 'end', width: '100%' }}>
                         <EntradaSeleccion
                           etiqueta="¿El jugador ha vivido en el extranjero?"
                           valor={extractedData.haVividoExtranjero ? '1' : '0'}
@@ -1951,7 +2828,7 @@ export default function CompletarJugadoresEquipo() {
                         )}
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                      <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                         <EntradaFormulario
                           etiqueta="Nacionalidad del padre"
                           valor={extractedData.nacionalidadPadre}
@@ -1972,7 +2849,7 @@ export default function CompletarJugadoresEquipo() {
                         obligatorio={true}
                       />
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
+                      <div className="abuelos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
                         <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => handleFieldChange('nacAbueloPaterno', e.target.value)} />
                         <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => handleFieldChange('nacAbuelaPaterna', e.target.value)} />
                         <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => handleFieldChange('nacAbueloMaterno', e.target.value)} />
@@ -1990,7 +2867,7 @@ export default function CompletarJugadoresEquipo() {
                   ) : (
                     <div style={{ textAlign: 'center', padding: '20px' }}>
                       <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
-                        Si el jugador es extranjero, habilite está opción para completar los antecedentes internacionales.
+                        Si el jugador es extranjero, habilite esta opción para completar los antecedentes internacionales.
                       </p>
                     </div>
                   )}
@@ -1998,7 +2875,7 @@ export default function CompletarJugadoresEquipo() {
               </div>
 
               {/* ACCIONES FINALES */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '40px' }}>
+              <div className="action-buttons-container">
                 <BotonSecundario
                   etiqueta="Cancelar y volver"
                   alHacerClick={() => navigate(ROUTES.ADMIN.EQUIPOS)}
@@ -2142,6 +3019,176 @@ export default function CompletarJugadoresEquipo() {
           </div>
         </div>
       </Modal>
+
+      {seguroDetalle && (() => {
+        const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
+        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
+          nombre: seguroDetalle.nombre,
+          precio: seguroDetalle.precio,
+          poliza: 'N/A',
+          vigencia: 'N/A',
+          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
+          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
+          coberturas: []
+        };
+
+        return createPortal(
+          <div className="seguro-modal-backdrop">
+            <div className="seguro-modal-container">
+              {/* Header */}
+              <div style={{
+                padding: '25px 30px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
+                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
+              }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '950', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Información de Seguro
+                  </h3>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                    {info.nombre}
+                  </h2>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
+                  {/* Left Column - Benefits */}
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      Beneficios Incluidos
+                    </h4>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {info.beneficios.map((ben, idx) => (
+                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,0.85)' }}>
+                          <span style={{ color: '#34d399', fontWeight: '900', fontSize: '15px' }}>✓</span>
+                          <span>{ben}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Right Column - Policy & Scope */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                        Detalles de la Póliza
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.vigencia}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                        Alcance y Cobertura
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.7)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '12px', padding: '14px' }}>
+                        {info.alcance.includes('traslados dentro del mismo estado') ? (
+                          <>
+                            {info.alcance.replace('traslados dentro del mismo estado.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados dentro del mismo estado.</strong>
+                          </>
+                        ) : info.alcance.includes('traslados de estado a estado') ? (
+                          <>
+                            {info.alcance.replace('traslados de estado a estado.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados de estado a estado.</strong>
+                          </>
+                        ) : info.alcance.includes('traslados entre estados') ? (
+                          <>
+                            {info.alcance.replace('traslados entre estados.', '')}
+                            <strong style={{ color: '#ef4444' }}>traslados entre estados.</strong>
+                          </>
+                        ) : (
+                          info.alcance
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coverages Table (if applicable) */}
+                {info.coberturas.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      Montos de Cobertura
+                    </h4>
+                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)', textAlign: 'right' }}>Monto Máximo Amparado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {info.coberturas.map((cob, idx) => (
+                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', backgroundColor: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                              <td style={{ padding: '12px 20px', fontWeight: '700', color: '#ffffff' }}>{cob.cobertura}</td>
+                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? '#ef4444' : '#34d399', textAlign: 'right' }}>{cob.monto}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Footer */}
+              <div style={{
+                padding: '20px 30px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                borderBottomLeftRadius: '24px',
+                borderBottomRightRadius: '24px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setSeguroDetalle(null)}
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '10px 28px',
+                    borderRadius: '12px',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Entendido / Cerrar
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 }

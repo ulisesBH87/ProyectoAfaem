@@ -3486,6 +3486,11 @@ function PreRegistroPresidente() {
                         <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
                           {doc.nombre}
                         </h4>
+                        {doc.documento === 'fotografia' && (
+                          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', margin: '5px 0 10px', fontStyle: 'italic', lineHeight: '1.4' }}>
+                            Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                          </p>
+                        )}
                         {/* Filename */}
                         <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
                           {hasLocalFile ? `📎 ${documents[doc.documento].name}` : (docGuardado ? '📎 Archivo enviado' : 'Sin archivo seleccionado')}
@@ -3829,6 +3834,11 @@ function PreRegistroPresidente() {
                     <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? '#34d399' : 'var(--text-main)', margin: '0 0 5px' }}>
                       {doc.nombre}
                     </h4>
+                    {doc.documento === 'fotografia' && (
+                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', margin: '5px 0 10px', fontStyle: 'italic', lineHeight: '1.4' }}>
+                        Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                      </p>
+                    )}
                     {/* Filename */}
                     <p style={{ fontSize: '10px', color: isUploaded ? 'rgba(52,211,153,0.7)' : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
                       {hasLocalFile ? `📎 ${documents[doc.documento].name}` : (docGuardado ? '📎 Archivo enviado' : 'Sin archivo seleccionado')}

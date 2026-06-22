@@ -180,6 +180,11 @@ export default function DocumentCard({
       {/* Nombre y archivo */}
       <div style={{ marginBottom: 12 }}>
         <h4 style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 800 }}>{doc.nombre}</h4>
+        {isPhoto && (
+          <p style={{ margin: '5px 0 8px', fontSize: 11, color: C.textDim, fontStyle: 'italic', lineHeight: 1.4 }}>
+            Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+          </p>
+        )}
         <p style={{ margin: 0, fontSize: 11, color: C.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {uploaded ? `📎 ${documents[doc.documento].name}` : 'No seleccionado'}
         </p>

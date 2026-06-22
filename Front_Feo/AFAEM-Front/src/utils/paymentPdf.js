@@ -20,7 +20,8 @@ export const generarPDFCuota = ({
   asignacionSeguros = {},
   total = 0,
   cantidadJugadores = 0,
-  incluirPresidente = true
+  incluirPresidente = true,
+  referenciaPago = null
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -76,6 +77,9 @@ export const generarPDFCuota = ({
     doc.text(`Tarjeta: ${bankInfo.tarjeta}`, margin, yPosition);
     yPosition += 6;
   }
+  const refFinal = referenciaPago || bankInfo.referencia || 'N/A';
+  doc.text(`Referencia Obligatoria: ${refFinal}`, margin, yPosition);
+  yPosition += 6;
   yPosition += 2;
 
   doc.setFontSize(12);
@@ -113,7 +117,9 @@ export const generarPDFCuota = ({
   doc.setTextColor(100, 100, 100);
   doc.setFont(undefined, 'normal');
   yPosition += 6;
-  doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro.', margin, yPosition, { maxWidth: contentWidth });
+  doc.text('Por favor, incluye la referencia obligatoria en tu transferencia bancaria.', margin, yPosition, { maxWidth: contentWidth });
+  yPosition += 6;
+  doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro. Recuerda que el comprobante de pago debe tener la referencia obligatoria para que sea procesado.', margin, yPosition, { maxWidth: contentWidth });
 
   const nombreArchivo = `Cuota_AFAEM_${ordenId}_${today.replace(/\//g, '-')}.pdf`;
   doc.save(nombreArchivo);
@@ -126,6 +132,8 @@ export const generarPDFOrdenPagoJugador = ({
   catalogoSeguros = [],
   asignacionSeguros = {},
   total = 0,
+  referenciaPago = null,
+  user = {}
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -150,6 +158,19 @@ export const generarPDFOrdenPagoJugador = ({
   yPosition += 10;
   doc.text(`Fecha de Emisión: ${today}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 12;
+
+  // Datos del Usuario/Solicitante
+  doc.setFontSize(12);
+  doc.setTextColor(11, 78, 166);
+  doc.text('DATOS DEL SOLICITANTE', margin, yPosition);
+  yPosition += 8;
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  const userName = (user.usuario?.nombre || user.usuario?.Nombre || user.Nombre || user.NombreUsuario || 'N/A').toUpperCase();
+  doc.text(`Nombre: ${userName}`, margin, yPosition);
+  yPosition += 6;
+  doc.text(`Correo: ${user.Correo || user.email || 'N/A'}`, margin, yPosition);
+  yPosition += 10;
 
   doc.setFontSize(12);
   doc.setTextColor(11, 78, 166);
@@ -180,6 +201,9 @@ export const generarPDFOrdenPagoJugador = ({
     doc.text(`Tarjeta: ${bankInfo.tarjeta}`, margin, yPosition);
     yPosition += 6;
   }
+  const refFinal = referenciaPago || bankInfo.referencia || 'N/A';
+  doc.text(`Referencia Obligatoria: ${refFinal}`, margin, yPosition);
+  yPosition += 6;
   yPosition += 10;
 
   doc.setFontSize(12);
@@ -215,7 +239,9 @@ export const generarPDFOrdenPagoJugador = ({
   doc.setTextColor(100, 100, 100);
   doc.setFont(undefined, 'normal');
   yPosition += 6;
-  doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar el registro.', margin, yPosition, { maxWidth: contentWidth });
+  doc.text('Por favor, incluye la referencia obligatoria en tu transferencia bancaria.', margin, yPosition, { maxWidth: contentWidth });
+  yPosition += 6;
+  doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro. Recuerda que el comprobante de pago debe tener la referencia obligatoria para que sea procesado.', margin, yPosition, { maxWidth: contentWidth });
 
   const nombreArchivo = `Orden_Pago_${ordenId}_${today.replace(/\//g, '-')}.pdf`;
   doc.save(nombreArchivo);
