@@ -58,6 +58,11 @@ class CatalogoItem(BaseModel):
 class LigaCatalogoItem(BaseModel):
     id: int
     nombre: str
+    nombreOriginal: Optional[str] = None
+    descripcion: Optional[str] = None
+    nombreCategoria: Optional[str] = None
+    nombreModalidad: Optional[str] = None
+    nombreRama: Optional[str] = None
     modalidadId: Optional[int] = None
     categoriaId: Optional[int] = None
     ramaId: Optional[int] = None
