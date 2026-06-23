@@ -129,7 +129,7 @@ export default function AdminCatalogos() {
   const handleEditar = (item) => {
     setModalConfig({ tipo: 'editar', item });
     setFormData({
-      nombre: item.nombre || '',
+      nombre: (seccionActiva === 'ligas' ? (item.nombreOriginal || item.nombre) : item.nombre) || '',
       descripcion: item.descripcion || '',
       categoriaId: item.categoriaId || '',
       modalidadId: item.modalidadId || '',
@@ -199,7 +199,7 @@ export default function AdminCatalogos() {
   const dataTransformada = dataActual.map(item => {
     const row = {
       id: <span style={{ fontWeight: '700', color: '#64748b' }}>#{item.id}</span>,
-      nombre: <span style={{ fontWeight: '600' }}>{item.nombre}</span>,
+      nombre: <span style={{ fontWeight: '600' }}>{seccionActiva === 'ligas' ? (item.nombreOriginal || item.nombre) : item.nombre}</span>,
       descripcion: <span style={{ color: '#64748b' }}>{item.descripcion || '-'}</span>,
       acciones: (
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
@@ -392,7 +392,7 @@ export default function AdminCatalogos() {
               <div className="modal-header" style={{ borderBottom: '1px solid #f1f5f9', padding: '20px 24px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
                 <div>
                   <h5 className="modal-title" style={{ fontSize: '18px', fontWeight: '800', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaTrophy style={{ color: '#3b82f6' }} /> Equipos inscritos en {ligaSeleccionada.nombre}
+                    <FaTrophy style={{ color: '#3b82f6' }} /> Equipos inscritos en {ligaSeleccionada.nombreOriginal || ligaSeleccionada.nombre}
                   </h5>
                   <p style={{ margin: 0, fontSize: '13px', color: '#3b82f6', marginTop: '4px', fontWeight: '500' }}>
                     {ligaSeleccionada.nombreCategoria} - {ligaSeleccionada.nombreModalidad} - {ligaSeleccionada.nombreRama}

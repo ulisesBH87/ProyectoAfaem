@@ -81,7 +81,7 @@ export default function DocumentCard({
       >
         {previews[doc.documento] ? (
           <>
-            {previews[doc.documento] === 'pdf' ? (
+            {(documents[doc.documento]?.type === 'application/pdf' || previews[doc.documento] === 'pdf') ? (
               <div style={{ color: '#ef4444', fontSize: 42, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                 <FaFilePdf />
                 <span style={{ fontSize: 10, color: '#64748b', fontWeight: 800 }}>PDF</span>

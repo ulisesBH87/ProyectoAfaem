@@ -17,6 +17,7 @@ class CatalogoUpdate(CatalogoBase):
 
 class CatalogoResponse(CatalogoBase):
     id: int
+    nombreOriginal: Optional[str] = None
     modalidadId: Optional[int] = None
     categoriaId: Optional[int] = None
     ramaId: Optional[int] = None

@@ -63,12 +63,18 @@ def listar_catalogos(tipo: str, db: Session = Depends(get_db)):
             "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None
         }
         if tipo == "ligas":
+            cat = item.CategoriaRelacion.NombreCategoria if item.CategoriaRelacion else ""
+            mod = item.ModalidadRelacion.NombreModalidad if item.ModalidadRelacion else ""
+            ram = item.RamaRelacion.Nombre if item.RamaRelacion else ""
+            desc = f"{item.Nombreliga} ({cat} - {mod} - {ram})" if cat or mod or ram else item.Nombreliga
+            res["nombre"] = desc
+            res["nombreOriginal"] = item.Nombreliga
             res["modalidadId"] = item.ModalidadId
             res["categoriaId"] = item.CategoriaId
             res["ramaId"] = item.RamaId
-            res["nombreModalidad"] = item.ModalidadRelacion.NombreModalidad if item.ModalidadRelacion else None
-            res["nombreCategoria"] = item.CategoriaRelacion.NombreCategoria if item.CategoriaRelacion else None
-            res["nombreRama"] = item.RamaRelacion.Nombre if item.RamaRelacion else None
+            res["nombreModalidad"] = mod if mod else None
+            res["nombreCategoria"] = cat if cat else None
+            res["nombreRama"] = ram if ram else None
         resultado.append(res)
     return resultado
 
@@ -107,9 +113,19 @@ def crear_catalogo(tipo: str, data: CatalogoCreate, db: Session = Depends(get_db
             "descripcion": getattr(nuevo_item, config["description_field"]) if config["description_field"] else None
         }
         if tipo == "ligas":
+            db.refresh(nuevo_item)
+            cat = nuevo_item.CategoriaRelacion.NombreCategoria if nuevo_item.CategoriaRelacion else ""
+            mod = nuevo_item.ModalidadRelacion.NombreModalidad if nuevo_item.ModalidadRelacion else ""
+            ram = nuevo_item.RamaRelacion.Nombre if nuevo_item.RamaRelacion else ""
+            desc = f"{nuevo_item.Nombreliga} ({cat} - {mod} - {ram})" if cat or mod or ram else nuevo_item.Nombreliga
+            res["nombre"] = desc
+            res["nombreOriginal"] = nuevo_item.Nombreliga
             res["modalidadId"] = nuevo_item.ModalidadId
             res["categoriaId"] = nuevo_item.CategoriaId
             res["ramaId"] = nuevo_item.RamaId
+            res["nombreModalidad"] = mod if mod else None
+            res["nombreCategoria"] = cat if cat else None
+            res["nombreRama"] = ram if ram else None
         return res
     except Exception as e:
         db.rollback()
@@ -151,9 +167,19 @@ def actualizar_catalogo(tipo: str, item_id: int, data: CatalogoUpdate, db: Sessi
             "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None
         }
         if tipo == "ligas":
+            db.refresh(item)
+            cat = item.CategoriaRelacion.NombreCategoria if item.CategoriaRelacion else ""
+            mod = item.ModalidadRelacion.NombreModalidad if item.ModalidadRelacion else ""
+            ram = item.RamaRelacion.Nombre if item.RamaRelacion else ""
+            desc = f"{item.Nombreliga} ({cat} - {mod} - {ram})" if cat or mod or ram else item.Nombreliga
+            res["nombre"] = desc
+            res["nombreOriginal"] = item.Nombreliga
             res["modalidadId"] = item.ModalidadId
             res["categoriaId"] = item.CategoriaId
             res["ramaId"] = item.RamaId
+            res["nombreModalidad"] = mod if mod else None
+            res["nombreCategoria"] = cat if cat else None
+            res["nombreRama"] = ram if ram else None
         return res
     except Exception as e:
         db.rollback()

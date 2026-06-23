@@ -211,7 +211,7 @@ export function useRegistrarPresidente() {
                 try {
                   const file = await base64ToFile(docData.data, docData.name);
                   restoredDocs[key] = file;
-                  restoredPreviews[key] = file.type === 'application/pdf' ? 'pdf' : URL.createObjectURL(file);
+                  restoredPreviews[key] = URL.createObjectURL(file);
                 } catch (e) {
                   console.warn(`Error al restaurar el documento ${key} desde el borrador:`, e);
                 }
@@ -364,7 +364,7 @@ export function useRegistrarPresidente() {
   // ── Manejo de subida de archivos ─────────────────────────────────────────
   const handleFileUpload = (docKey, file) => {
     if (!file) return;
-    const preview = file.type === 'application/pdf' ? 'pdf' : URL.createObjectURL(file);
+    const preview = URL.createObjectURL(file);
     setPreviews(prev => ({ ...prev, [docKey]: preview }));
 
     if (docKey === 'fotografia') {
