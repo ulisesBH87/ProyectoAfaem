@@ -8,7 +8,7 @@ import COLORS from '../../../styles/colors';
 
 const normalizarNombreSeguro = (nombre) => {
   if (!nombre) return '';
-  return nombre.toUpperCase().replace(/["']/g, '').trim();
+  return nombre.toUpperCase().replace(/[\u0022\u0027]/g, '').trim();
 };
 
 const DETALLES_SEGUROS = {

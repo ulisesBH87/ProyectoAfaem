@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -63,7 +64,7 @@ const parsearTelefonoE164 = (telefonoCompleto) => {
 
 const normalizarNombreSeguro = (nombre) => {
   if (!nombre) return '';
-  return nombre.toUpperCase().replace(/["']/g, '').trim();
+  return nombre.toUpperCase().replace(/[\u0022\u0027]/g, '').trim();
 };
 
 const DETALLES_SEGUROS = {
@@ -240,8 +241,8 @@ const StepBadge = ({ number, isActive, isDone }) => (
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    backgroundColor: isDone ? '#10b981' : (isActive ? '#0b4ea6' : '#e2e8f0'),
-    color: (isActive || isDone) ? 'white' : '#64748b',
+    backgroundColor: isDone ? COLORS.success : (isActive ? COLORS.primary : COLORS.slate200),
+    color: (isActive || isDone) ? 'white' : COLORS.slate500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -385,7 +386,7 @@ export default function ConfigurarEquipo() {
     }
     .document-card:hover {
       transform: translateY(-5px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 15px -3px ${COLORS.shadow10};
     }
     .seguro-modal-backdrop {
       position: fixed;
@@ -393,7 +394,7 @@ export default function ConfigurarEquipo() {
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(15, 23, 42, 0.75);
+      background-color: ${COLORS.overlaySlateDeep};
       backdrop-filter: blur(10px);
       display: flex;
       align-items: center;
@@ -403,17 +404,17 @@ export default function ConfigurarEquipo() {
       animation: fadeIn 0.2s ease-out;
     }
     .seguro-modal-container {
-      background-color: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background-color: ${COLORS.slate800};
+      border: 1px solid ${COLORS.overlayWhite10};
       border-radius: 24px;
       width: 100%;
       max-width: 850px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 25px 50px -12px ${COLORS.overlayBlack};
       display: flex;
       flex-direction: column;
-      color: #f8fafc;
+      color: ${COLORS.slate50};
     }
     @media (max-width: 768px) {
       .form-inputs-grid-2 {
@@ -907,7 +908,7 @@ export default function ConfigurarEquipo() {
             title: 'Pago pendiente',
             text: 'El presidente seleccionado no tiene una orden aprobada disponible para crear el equipo.',
             icon: 'info',
-            confirmButtonColor: '#0b4ea6'
+            confirmButtonColor: COLORS.primary
           });
         }
         return false;
@@ -991,7 +992,7 @@ export default function ConfigurarEquipo() {
             title: 'Pago en revisión',
             text: `El comprobante${ordenId ? ` de la orden #${ordenId}` : ''} del presidente seleccionado sigue en revisión.`,
             icon: 'info',
-            confirmButtonColor: '#0b4ea6'
+            confirmButtonColor: COLORS.primary
           });
         }
         return false;
@@ -1101,7 +1102,7 @@ export default function ConfigurarEquipo() {
           ? 'Se descargó la ficha de pago en PDF. Puedes aprobar la orden inmediatamente o enviarsela al presidente para que realice el pago.'
           : 'Se descargó tu ficha de pago en PDF. Realiza el pago y sube el comprobante.',
         icon: 'success',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
     } catch (error) {
       setPagoError(error.message);
@@ -1164,7 +1165,7 @@ export default function ConfigurarEquipo() {
         title: 'Comprobante guardado',
         text: 'Dirigete al panel de  "Validación de Pagos" para aprobar el pago y guardarlo.',
         icon: 'success',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
     } catch (error) {
       setPagoError(error.message);
@@ -1211,7 +1212,7 @@ export default function ConfigurarEquipo() {
         html: 'La orden de pago del presidente aún no ha sido aprobada.<br/><br/>Regresa al paso anterior y aprueba la orden directamente antes de crear el equipo.',
         icon: 'warning',
         confirmButtonText: 'Volver al paso anterior',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       }).then(() => setActiveStep(0));
       return;
     }
@@ -1257,9 +1258,9 @@ export default function ConfigurarEquipo() {
     if (pagoEquipo.loading || loadingCatalogs) {
       return (
         <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
-          <FaClock style={{ fontSize: '42px', color: '#0b4ea6', marginBottom: '18px' }} />
-          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Revisando estado de pago</h2>
-          <p style={{ color: '#64748b', margin: 0 }}>Un momento mientras validamos si tienes una orden aprobada disponible.</p>
+          <FaClock style={{ fontSize: '42px', color: COLORS.primary, marginBottom: '18px' }} />
+          <h2 style={{ fontWeight: '900', color: COLORS.slate800 }}>Revisando estado de pago</h2>
+          <p style={{ color: COLORS.slate500, margin: 0 }}>Un momento mientras validamos si tienes una orden aprobada disponible.</p>
         </div>
       );
     }
@@ -1267,14 +1268,14 @@ export default function ConfigurarEquipo() {
     if (pagoEnRevision) {
       return (
         <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ width: '82px', height: '82px', borderRadius: '50%', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: '36px' }}>
+          <div style={{ width: '82px', height: '82px', borderRadius: '50%', background: COLORS.warningBg, color: COLORS.warningDark, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: '36px' }}>
             <FaClock />
           </div>
-          <h2 style={{ fontWeight: '900', color: '#1e293b' }}>Pago en revisión</h2>
-          <p style={{ color: '#64748b', lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
+          <h2 style={{ fontWeight: '900', color: COLORS.slate800 }}>Pago en revisión</h2>
+          <p style={{ color: COLORS.slate500, lineHeight: 1.6, margin: '10px auto 28px', maxWidth: '520px' }}>
             Favor de aprobar la orden #{pagoEquipo.ordenId}. directamente desde el panel de Validación de Pagos.
           </p>
-          <button onClick={() => navigate(isAdmin ? ROUTES.ADMIN.PAGOS : ROUTES.PRESIDENTE.DASHBOARD)} style={{ padding: '12px 28px', borderRadius: '12px', border: '1px solid #cbd5e1', background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer' }}>
+          <button onClick={() => navigate(isAdmin ? ROUTES.ADMIN.PAGOS : ROUTES.PRESIDENTE.DASHBOARD)} style={{ padding: '12px 28px', borderRadius: '12px', border: `1px solid ${COLORS.slate300}`, background: 'white', color: COLORS.slate500, fontWeight: '800', cursor: 'pointer' }}>
             Dirigete al panel de "Validación de Pagos"
           </button>
         </div>
@@ -1288,17 +1289,17 @@ export default function ConfigurarEquipo() {
     return (
       <div style={{ maxWidth: '980px', margin: '0 auto', animation: 'slideUp 0.4s ease' }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: '0 12px 24px rgba(11,78,166,0.22)' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryActive} 100%)`, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '30px', boxShadow: `0 12px 24px ${COLORS.primaryBgTranslucent20}` }}>
             <FaMoneyBillWave />
           </div>
-          <h2 style={{ fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: '900', color: '#1e293b', marginBottom: '8px' }}>Generar un pago previo para nuevo equipo</h2>
-          <p style={{ color: '#64748b', margin: 0, fontSize: 'clamp(13px, 3.5vw, 15px)' }}>
+          <h2 style={{ fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: '900', color: COLORS.slate800, marginBottom: '8px' }}>Generar un pago previo para nuevo equipo</h2>
+          <p style={{ color: COLORS.slate500, margin: 0, fontSize: 'clamp(13px, 3.5vw, 15px)' }}>
             {isAdmin
               ? 'Genera la orden de pago con el número de jugadores y tipos de seguros'
               : 'Genera tu orden, sube el comprobante y espera la aprobacion administrativa para continuar.'
             }
           </p>
-          <p style={{ color: '#ff0000', margin: 0, fontSize: 'clamp(11px, 3vw, 13px)' }}>
+          <p style={{ color: COLORS.dangerDark, margin: 0, fontSize: 'clamp(11px, 3vw, 13px)' }}>
             {isAdmin
               ? '*Registro de equipo como administrador*'
               : '*Si ya tienes una orden de pago y subiste el comprobante, contáctate con un administrador*'}
@@ -1306,14 +1307,14 @@ export default function ConfigurarEquipo() {
         </div>
 
         {pagoRechazado && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '16px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ background: COLORS.dangerBgLight, border: `1px solid ${COLORS.dangerBgMedium}`, color: COLORS.dangerDeep, borderRadius: '14px', padding: '16px 18px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
             <FaTimesCircle />
             <span style={{ fontWeight: '700' }}>El comprobante fue rechazado. Sube un nuevo archivo para enviarlo otra vez a revision.</span>
           </div>
         )}
 
         {pagoError && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', fontWeight: '700' }}>
+          <div style={{ background: COLORS.dangerBgLight, border: `1px solid ${COLORS.dangerBgMedium}`, color: COLORS.dangerDeep, borderRadius: '14px', padding: '14px 18px', marginBottom: '20px', fontWeight: '700' }}>
             {pagoError}
           </div>
         )}
@@ -1322,25 +1323,25 @@ export default function ConfigurarEquipo() {
           <div className="pago-card">
             {!ordenCreada ? (
               <>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: '#334155', marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '900', color: COLORS.slate700, marginBottom: '8px', textTransform: 'uppercase' }}>Numero de jugadores</label>
                 <input
                   type="number"
                   min="1"
                   value={numJugadoresPago}
                   onChange={(e) => setNumJugadoresPago(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0))}
-                  style={{ width: '100%', padding: '14px 16px', border: '2px solid #dbeafe', borderRadius: '12px', fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '18px' }}
+                  style={{ width: '100%', padding: '14px 16px', border: `2px solid ${COLORS.secondaryBg100}`, borderRadius: '12px', fontSize: '18px', fontWeight: '800', color: COLORS.slate800, marginBottom: '18px' }}
                 />
 
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '16px', background: 'white' }}>
-                  <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase' }}>Seguros para jugador</div>
+                <div style={{ border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '16px', background: 'white' }}>
+                  <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: COLORS.slate800, textTransform: 'uppercase' }}>Seguros para jugador</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
                     {segurosJugador.map(seguro => {
                       const id = String(seguro.id);
                       return (
-                        <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px', background: '#f8fafc' }}>
+                        <div key={id} style={{ display: 'grid', gridTemplateColumns: '1fr 92px', gap: '12px', alignItems: 'center', border: `1px solid ${COLORS.slate200}`, borderRadius: '14px', padding: '14px', background: COLORS.slate50 }}>
                           <div>
-                            <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '14px' }}>{seguro.nombre}</div>
-                            <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
+                            <div style={{ fontWeight: '900', color: COLORS.slate800, fontSize: '14px' }}>{seguro.nombre}</div>
+                            <div style={{ color: COLORS.slate500, fontSize: '12px', marginTop: '3px' }}>${Number(seguro.precio || 0).toFixed(2)} c/u</div>
                           </div>
                           <input
                             type="number"
@@ -1350,7 +1351,7 @@ export default function ConfigurarEquipo() {
                               const value = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10) || 0);
                               setAsignacionSeguros(prev => ({ ...prev, [id]: value }));
                             }}
-                            style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '800', textAlign: 'center', backgroundColor: 'white' }}
+                            style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.slate300}`, borderRadius: '10px', fontWeight: '800', textAlign: 'center', backgroundColor: 'white' }}
                           />
                         </div>
                       );
@@ -1358,25 +1359,25 @@ export default function ConfigurarEquipo() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? '#ecfdf5' : '#fff7ed', color: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? '#047857' : '#c2410c', fontWeight: '800', fontSize: '13px' }}>
+                <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: '12px', background: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? COLORS.successBg : COLORS.orange50, color: canGeneratePagoEquipo && segurosRequeridosPago > 0 ? COLORS.successDarker : COLORS.orangeDarker, fontWeight: '800', fontSize: '13px' }}>
                   Seguros asignados: jugadores {totalAsignadosPagoJugador}/{segurosRequeridosPagoJugador || 0}
                 </div>
                 {!tieneSegurosJugadorValidos && Number(numJugadoresPago || 0) > 0 && (
-                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#b45309', fontWeight: '700' }}>
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: COLORS.warningBrown, fontWeight: '700' }}>
                     La suma de seguros para jugador debe ser igual al numero de jugadores seleccionado.
                   </div>
                 )}
               </>
             ) : (
               <>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: '#ecfdf5', color: '#047857', fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '999px', background: COLORS.successBg, color: COLORS.successDarker, fontWeight: '900', fontSize: '12px', marginBottom: '18px' }}>
                   <FaCheckCircle /> Orden activa #{pagoEquipo.ordenId}
                 </div>
 
                 {/* Botón de aprobación directa para admin cuando la orden no tiene comprobante */}
                 {isAdmin && pagoEquipo.estadoEquipo === ESTADO_EQUIPO.ORDEN_SIN_COMPROBANTE && (
-                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '18px', marginBottom: '18px' }}>
-                    <p style={{ color: '#92400e', fontWeight: '800', fontSize: '14px', margin: '0 0 12px' }}>
+                  <div style={{ background: COLORS.warningBgLight, border: `1px solid ${COLORS.warningBgDark}`, borderRadius: '14px', padding: '18px', marginBottom: '18px' }}>
+                    <p style={{ color: COLORS.orangeDeep, fontWeight: '800', fontSize: '14px', margin: '0 0 12px' }}>
                       Puedes aprobar la orden directamente o esperar a que se ponga en contacto contigo el presidente.
                     </p>
                     <button
@@ -1389,7 +1390,7 @@ export default function ConfigurarEquipo() {
                             title: 'Orden aprobada',
                             text: `La orden #${pagoEquipo.ordenId} se aprobó correctamente.`,
                             icon: 'success',
-                            confirmButtonColor: '#0b4ea6'
+                            confirmButtonColor: COLORS.primary
                           });
                           await cargarEstadoPagoEquipo({ presidenteId: selectedPresidentId });
                         } catch (error) {
@@ -1398,19 +1399,19 @@ export default function ConfigurarEquipo() {
                           Swal.fire('Error', error.message, 'error');
                         }
                       }}
-                      style={{ padding: '11px 22px', borderRadius: '10px', border: 'none', background: '#10b981', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: procesandoPago ? 0.6 : 1 }}
+                      style={{ padding: '11px 22px', borderRadius: '10px', border: 'none', background: COLORS.success, color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: procesandoPago ? 0.6 : 1 }}
                     >
                       {procesandoPago ? 'Aprobando...' : '✓ Aprobar orden directamente'}
                     </button>
                   </div>
                 )}
 
-                <h3 style={{ color: '#1e293b', fontWeight: '900', marginBottom: '8px' }}>Sube el comprobante de pago</h3>
-                <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
+                <h3 style={{ color: COLORS.slate800, fontWeight: '900', marginBottom: '8px' }}>Sube el comprobante de pago</h3>
+                <p style={{ color: COLORS.slate500, lineHeight: 1.6, marginBottom: '22px' }}>
                   Se recomienda adjuntar un PDF o imagen del comprobante para tener mas control sobre el pago.
                 </p>
-                <div style={{ border: '2px dashed #bfdbfe', borderRadius: '16px', padding: '26px', textAlign: 'center', background: '#f8fafc' }}>
-                  <FaUpload style={{ fontSize: '34px', color: '#0b4ea6', marginBottom: '12px' }} />
+                <div style={{ border: `2px dashed ${COLORS.secondaryBgDark}`, borderRadius: '16px', padding: '26px', textAlign: 'center', background: COLORS.slate50 }}>
+                  <FaUpload style={{ fontSize: '34px', color: COLORS.primary, marginBottom: '12px' }} />
                   <input
                     id="comprobante-equipo"
                     type="file"
@@ -1423,20 +1424,20 @@ export default function ConfigurarEquipo() {
                       const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
                       const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
                       if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
-                        Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                        Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                         return;
                       }
                       setComprobantePagoEquipo(file);
                     }}
                   />
-                  <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '12px' }}>
+                  <div style={{ fontWeight: '800', color: COLORS.slate800, marginBottom: '12px' }}>
                     {comprobantePagoEquipo ? comprobantePagoEquipo.name : 'No se ha seleccionado archivo'}
                   </div>
-                   <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <button onClick={() => document.getElementById('comprobante-equipo').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid #0b4ea6', background: 'white', color: '#0b4ea6', fontWeight: '900', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <button onClick={() => document.getElementById('comprobante-equipo').click()} style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.primary}`, background: 'white', color: COLORS.primary, fontWeight: '900', cursor: 'pointer' }}>
                       {comprobantePagoEquipo ? 'Cambiar archivo' : 'Seleccionar archivo'}
                     </button>
-                    <button type="button" onClick={handleDescargarOrdenPagoEquipo} style={{ padding: '11px 22px', borderRadius: '10px', border: '1px solid rgba(96, 165, 250, 0.4)', background: 'white', color: '#60a5fa', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button type="button" onClick={handleDescargarOrdenPagoEquipo} style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.brandBlueLight50}`, background: 'white', color: COLORS.secondaryLight, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <FaFilePdf /> Descargar Ficha de Pago
                     </button>
                   </div>
@@ -1446,26 +1447,26 @@ export default function ConfigurarEquipo() {
           </div>
 
           <div className="pago-card">
-            <h3 style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b', marginBottom: '18px' }}>Resumen de pago</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: '900', color: COLORS.slate800, marginBottom: '18px' }}>Resumen de pago</h3>
 
             {catalogs.seguros ? catalogs.seguros.filter(seguro => Number(asignacionSeguros[String(seguro.id)] || 0) > 0).map(seguro => {
               const cantidad = Number(asignacionSeguros[String(seguro.id)] || 0);
               return (
-                <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '13px' }}>
+                <div key={seguro.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: `1px solid ${COLORS.slate100}`, color: COLORS.slate500, fontSize: '13px' }}>
                   <span>{seguro.nombre} x{cantidad}</span>
-                  <strong style={{ color: '#1e293b' }}>${(Number(seguro.precio || 0) * cantidad).toFixed(2)}</strong>
+                  <strong style={{ color: COLORS.slate800 }}>${(Number(seguro.precio || 0) * cantidad).toFixed(2)}</strong>
                 </div>
               );
             }) : null}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: '2px solid #e2e8f0' }}>
-              <span style={{ fontWeight: '900', color: '#1e293b' }}>Total</span>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#0b4ea6' }}>${Number(totalPagoMostrado || 0).toFixed(2)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', paddingTop: '18px', borderTop: `2px solid ${COLORS.slate200}` }}>
+              <span style={{ fontWeight: '900', color: COLORS.slate800 }}>Total</span>
+              <span style={{ fontSize: '24px', fontWeight: '900', color: COLORS.primary }}>${Number(totalPagoMostrado || 0).toFixed(2)}</span>
             </div>
 
             <button
               disabled={procesandoPago || (!ordenCreada && !canGeneratePagoEquipo) || (ordenCreada && !comprobantePagoEquipo)}
               onClick={ordenCreada ? handleSubirComprobanteEquipo : handleCrearOrdenPagoEquipo}
-              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPago ? '#94a3b8' : '#0b4ea6', color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: (!ordenCreada && !canGeneratePagoEquipo) || (ordenCreada && !comprobantePagoEquipo) ? 0.55 : 1 }}
+              style={{ width: '100%', marginTop: '24px', padding: '14px 18px', borderRadius: '12px', border: 'none', background: procesandoPago ? COLORS.slate400 : COLORS.primary, color: 'white', fontWeight: '900', cursor: procesandoPago ? 'wait' : 'pointer', opacity: (!ordenCreada && !canGeneratePagoEquipo) || (ordenCreada && !comprobantePagoEquipo) ? 0.55 : 1 }}
             >
               {procesandoPago ? 'Procesando...' : ordenCreada ? 'Enviar comprobante' : 'Generar orden de pago'}
             </button>
@@ -1545,7 +1546,7 @@ export default function ConfigurarEquipo() {
           title: 'Tipo de archivo no permitido',
           text: 'Solo se aceptan imágenes JPG, JPEG o PNG para la fotografía.',
           icon: 'error',
-          confirmButtonColor: '#0b4ea6'
+          confirmButtonColor: COLORS.primary
         });
         return;
       }
@@ -1556,7 +1557,7 @@ export default function ConfigurarEquipo() {
         title: 'Tipo de archivo no permitido',
         text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
         icon: 'error',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
       return;
     }
@@ -1610,13 +1611,13 @@ export default function ConfigurarEquipo() {
 
           Swal.fire({
             title: 'Error en la fotografía',
-            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
+            text: `${data.mensaje || 'La foto no cumple con los requisitos.'}. Podría ser rechazada más adelante ¿Deseas cargarla de todos modos?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, cargar igualmente',
             cancelButtonText: 'No, intentar de nuevo',
-            confirmButtonColor: '#0b4ea6',
-            cancelButtonColor: '#cbd5e1'
+            confirmButtonColor: COLORS.primary,
+            cancelButtonColor: COLORS.slate300
           }).then((result) => {
             if (result.isConfirmed) {
               const reader = new FileReader();
@@ -2201,8 +2202,8 @@ export default function ConfigurarEquipo() {
                 text: "Se perderán los documentos subidos y el progreso actual (excepto los campos guardados en la BD).",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#64748b',
+                confirmButtonColor: COLORS.danger,
+                cancelButtonColor: COLORS.slate500,
                 confirmButtonText: 'Sí, salir',
                 cancelButtonText: 'Continuar registro'
               }).then((result) => {
@@ -2213,15 +2214,15 @@ export default function ConfigurarEquipo() {
             }
           }}
           className="btn btn-outline-secondary"
-          style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+          style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: `1px solid ${COLORS.slate300}`, cursor: 'pointer' }}
         >
           <FaArrowLeft />
         </button>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>
             {(!equipoId || !equipoTemporalId) && isAdmin ? 'Crear Nuevo Equipo' : 'Registrar Jugadores de Equipo'}
           </h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: COLORS.slate500, marginTop: '4px' }}>
             {(!equipoId || !equipoTemporalId) && isAdmin ? 'Asistente de configuración de equipo para presidente' : 'Registrar jugadores en espacios pagados restantes.'}
           </p>
         </div>
@@ -2240,7 +2241,7 @@ export default function ConfigurarEquipo() {
                     <StepBadge number={idx + 1} isActive={isActive} isDone={isDone} />
                     <span style={{
                       fontWeight: isActive ? '800' : '600',
-                      color: isActive ? '#0b4ea6' : '#64748b',
+                      color: isActive ? COLORS.primary : COLORS.slate500,
                       fontSize: '14px'
                     }}>
                       {s.label}
@@ -2250,7 +2251,7 @@ export default function ConfigurarEquipo() {
                     <div style={{
                       height: '2px',
                       width: '40px',
-                      backgroundColor: isDone ? '#10b981' : '#e2e8f0',
+                      backgroundColor: isDone ? COLORS.success : COLORS.slate200,
                       transition: 'all 0.3s'
                     }} />
                   )}
@@ -2271,13 +2272,13 @@ export default function ConfigurarEquipo() {
             background: 'white',
             borderRadius: '24px',
             padding: '35px',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #e2e8f0'
+            boxShadow: `0 10px 25px -5px ${COLORS.shadow05}`,
+            border: `1px solid ${COLORS.slate200}`
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', color: COLORS.slate800, marginBottom: '8px' }}>
               Seleccionar Presidente del Club
             </h3>
-            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '25px' }}>
+            <p style={{ color: COLORS.slate500, fontSize: '14px', marginBottom: '25px' }}>
               Busca y selecciona al presidente al que se le asignará el nuevo equipo. Si el presidente no cuenta con un pago de cupos aprobado, podrás generarlo y aprobarlo aquí mismo.
             </p>
 
@@ -2291,18 +2292,18 @@ export default function ConfigurarEquipo() {
                 style={{
                   width: '100%',
                   padding: '14px 16px 14px 44px',
-                  border: '2px solid #e2e8f0',
+                  border: `2px solid ${COLORS.slate200}`,
                   borderRadius: '14px',
                   fontSize: '15px',
                   fontWeight: '600',
-                  color: '#1e293b',
+                  color: COLORS.slate800,
                   transition: 'all 0.2s',
                   outline: 'none'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#0b4ea6'}
-                onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+                onBlur={(e) => e.target.style.borderColor = COLORS.slate200}
               />
-              <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+              <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400 }}>
                 🔍
               </span>
             </div>
@@ -2315,8 +2316,8 @@ export default function ConfigurarEquipo() {
                   const nombreCompleto = pres ? pres.nombre || pres.NombrePresidente || pres.correo : 'Presidente seleccionado';
                   return (
                     <div style={{
-                      background: '#eff6ff',
-                      border: '1.5px solid #0b4ea6',
+                      background: COLORS.secondaryBg,
+                      border: `1.5px solid ${COLORS.primary}`,
                       borderRadius: '16px',
                       padding: '20px',
                       display: 'flex',
@@ -2325,9 +2326,9 @@ export default function ConfigurarEquipo() {
                       marginBottom: '25px'
                     }}>
                       <div>
-                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#0b4ea6', textTransform: 'uppercase' }}>Presidente Seleccionado</span>
-                        <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: '4px 0 2px 0' }}>👤 {nombreCompleto}</h4>
-                        <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{pres?.correo || 'Sin correo registrado'}</p>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase' }}>Presidente Seleccionado</span>
+                        <h4 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: '4px 0 2px 0' }}>👤 {nombreCompleto}</h4>
+                        <p style={{ margin: 0, fontSize: '13px', color: COLORS.slate500 }}>{pres?.correo || 'Sin correo registrado'}</p>
                       </div>
                       <button
                         onClick={() => {
@@ -2344,10 +2345,10 @@ export default function ConfigurarEquipo() {
                         }}
                         style={{
                           background: 'none',
-                          border: '1px solid #cbd5e1',
+                          border: `1px solid ${COLORS.slate300}`,
                           padding: '8px 14px',
                           borderRadius: '10px',
-                          color: '#64748b',
+                          color: COLORS.slate500,
                           fontSize: '12px',
                           fontWeight: '800',
                           cursor: 'pointer'
@@ -2364,11 +2365,11 @@ export default function ConfigurarEquipo() {
                   renderPagoPrevioEquipo()
                 ) : (
                   <div style={{ textAlign: 'center', padding: '30px' }}>
-                    <div style={{ color: '#10b981', fontSize: '48px', marginBottom: '15px' }}>
+                    <div style={{ color: COLORS.success, fontSize: '48px', marginBottom: '15px' }}>
                       <FaCheckCircle />
                     </div>
-                    <h4 style={{ fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>Pago verificado y aprobado</h4>
-                    <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
+                    <h4 style={{ fontWeight: '800', color: COLORS.slate800, marginBottom: '6px' }}>Pago verificado y aprobado</h4>
+                    <p style={{ color: COLORS.slate500, fontSize: '14px', marginBottom: '20px' }}>
                       Este presidente tiene cupos disponibles. Haz clic en continuar para configurar el equipo.
                     </p>
                     <button
@@ -2377,11 +2378,11 @@ export default function ConfigurarEquipo() {
                         padding: '12px 30px',
                         borderRadius: '12px',
                         border: 'none',
-                        background: '#0b4ea6',
+                        background: COLORS.primary,
                         color: 'white',
                         fontWeight: '800',
                         cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(11,78,166,0.2)'
+                        boxShadow: `0 4px 12px ${COLORS.primaryBgTranslucent20}`
                       }}
                     >
                       Configurar Equipo →
@@ -2420,7 +2421,7 @@ export default function ConfigurarEquipo() {
                           await cargarEstadoPagoEquipo({ presidenteId: id });
                         }}
                         style={{
-                          border: '1px solid #e2e8f0',
+                          border: `1px solid ${COLORS.slate200}`,
                           borderRadius: '16px',
                           padding: '16px',
                           cursor: 'pointer',
@@ -2428,24 +2429,24 @@ export default function ConfigurarEquipo() {
                           backgroundColor: 'white'
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.borderColor = '#0b4ea6';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.05)';
+                          e.currentTarget.style.borderColor = COLORS.primary;
+                          e.currentTarget.style.boxShadow = `0 4px 12px ${COLORS.shadow05}`;
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.borderColor = COLORS.slate200;
                           e.currentTarget.style.boxShadow = 'none';
                         }}
                       >
-                        <div style={{ fontWeight: '800', color: '#1e293b', marginBottom: '4px' }}>👤 {nombreCompleto}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>{pres.correo || 'Sin correo'}</div>
+                        <div style={{ fontWeight: '800', color: COLORS.slate800, marginBottom: '4px' }}>👤 {nombreCompleto}</div>
+                        <div style={{ fontSize: '12px', color: COLORS.slate500, marginBottom: '8px' }}>{pres.correo || 'Sin correo'}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                          <span style={{ fontSize: '11px', color: '#0b4ea6', fontWeight: '800' }}>SELECCIONAR →</span>
+                          <span style={{ fontSize: '11px', color: COLORS.primary, fontWeight: '800' }}>SELECCIONAR →</span>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '30px', color: COLORS.slate500 }}>
                     No se encontraron presidentes activos.
                   </div>
                 )}
@@ -2462,25 +2463,25 @@ export default function ConfigurarEquipo() {
             background: 'white',
             borderRadius: '24px',
             padding: '35px',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #e2e8f0'
+            boxShadow: `0 10px 25px -5px ${COLORS.shadow05}`,
+            border: `1px solid ${COLORS.slate200}`
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', color: COLORS.slate800, marginBottom: '8px' }}>
               Configuración del Nuevo Equipo
             </h3>
-            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '25px' }}>
+            <p style={{ color: COLORS.slate500, fontSize: '14px', marginBottom: '25px' }}>
               Ingresa los detalles básicos para registrar el equipo en el sistema. Los campos de categoría, modalidad y rama se auto-completarán según la liga seleccionada.
             </p>
             {/* Advertencia si la orden aún no fue aprobada */}
             {!pagoEquipo.equipoTemporalId && (
-              <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '14px', padding: '16px 20px', marginBottom: '22px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <div style={{ background: COLORS.warningBg, border: `1px solid ${COLORS.warningLight}`, borderRadius: '14px', padding: '16px 20px', marginBottom: '22px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                 <span style={{ fontSize: '22px' }}>⚠️</span>
                 <div>
-                  <div style={{ fontWeight: '900', color: '#92400e', marginBottom: '4px' }}>Orden de pago pendiente de aprobación</div>
-                  <div style={{ color: '#78350f', fontSize: '13px', lineHeight: 1.5 }}>
+                  <div style={{ fontWeight: '900', color: COLORS.orangeDeep, marginBottom: '4px' }}>Orden de pago pendiente de aprobación</div>
+                  <div style={{ color: COLORS.warningDeep, fontSize: '13px', lineHeight: 1.5 }}>
                     Para crear el equipo primero debes aprobar la orden de pago del presidente. Regresa al paso anterior y usa el botón <strong>"Aprobar orden directamente"</strong>.
                   </div>
-                  <button onClick={() => setActiveStep(0)} style={{ marginTop: '10px', padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#d97706', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>
+                  <button onClick={() => setActiveStep(0)} style={{ marginTop: '10px', padding: '8px 16px', borderRadius: '8px', border: 'none', background: COLORS.warningDark, color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '13px' }}>
                     ← Aprobar orden
                   </button>
                 </div>
@@ -2489,7 +2490,7 @@ export default function ConfigurarEquipo() {
 
             {/* Nombre del Equipo */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#475569', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: COLORS.slate600, marginBottom: '8px' }}>
                 Nombre del Equipo <span className="required-star">*</span>
               </label>
               <input
@@ -2508,7 +2509,7 @@ export default function ConfigurarEquipo() {
                 style={{
                   width: '100%',
                   padding: '12px 14px',
-                  border: '1px solid #cbd5e1',
+                  border: `1px solid ${COLORS.slate300}`,
                   borderRadius: '10px',
                   fontSize: '14px',
                   fontWeight: '600'
@@ -2518,7 +2519,7 @@ export default function ConfigurarEquipo() {
 
             {/* Logotipo del Equipo (Opcional) */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#475569', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: COLORS.slate600, marginBottom: '8px' }}>
                 Logotipo del Equipo (Opcional)
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -2526,11 +2527,11 @@ export default function ConfigurarEquipo() {
                   width: '80px',
                   height: '80px',
                   borderRadius: '16px',
-                  border: '2px dashed #cbd5e1',
+                  border: `2px dashed ${COLORS.slate300}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: COLORS.slate50,
                   overflow: 'hidden'
                 }}>
                   {teamFormData.teamLogo ? (
@@ -2540,7 +2541,7 @@ export default function ConfigurarEquipo() {
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                   ) : (
-                    <span style={{ fontSize: '24px', color: '#94a3b8' }}>🛡️</span>
+                    <span style={{ fontSize: '24px', color: COLORS.slate400 }}>🛡️</span>
                   )}
                 </div>
                 <div>
@@ -2554,7 +2555,7 @@ export default function ConfigurarEquipo() {
                       if (!file) return;
                       const ext = '.' + file.name.split('.').pop().toLowerCase();
                       if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type) || !['.jpg', '.jpeg', '.png'].includes(ext)) {
-                        Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan imágenes JPG, JPEG o PNG para el logo.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                        Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan imágenes JPG, JPEG o PNG para el logo.', icon: 'error', confirmButtonColor: COLORS.primary });
                         return;
                       }
                       setTeamFormData(prev => ({ ...prev, teamLogo: file }));
@@ -2566,9 +2567,9 @@ export default function ConfigurarEquipo() {
                     style={{
                       padding: '10px 18px',
                       borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
+                      border: `1px solid ${COLORS.slate300}`,
                       background: 'white',
-                      color: '#475569',
+                      color: COLORS.slate600,
                       fontWeight: '700',
                       cursor: 'pointer',
                       fontSize: '13px'
@@ -2584,8 +2585,8 @@ export default function ConfigurarEquipo() {
                         padding: '10px 18px',
                         borderRadius: '10px',
                         border: 'none',
-                        background: '#fee2e2',
-                        color: '#ef4444',
+                        background: COLORS.dangerBg,
+                        color: COLORS.danger,
                         fontWeight: '700',
                         cursor: 'pointer',
                         fontSize: '13px',
@@ -2601,7 +2602,7 @@ export default function ConfigurarEquipo() {
 
             {/* Seleccionar Liga */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: '#475569', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: COLORS.slate600, marginBottom: '8px' }}>
                 Seleccionar Liga <span className="required-star">*</span>
               </label>
               <select
@@ -2610,7 +2611,7 @@ export default function ConfigurarEquipo() {
                 style={{
                   width: '100%',
                   padding: '12px 14px',
-                  border: '1px solid #cbd5e1',
+                  border: `1px solid ${COLORS.slate300}`,
                   borderRadius: '10px',
                   fontSize: '14px',
                   fontWeight: '600',
@@ -2629,31 +2630,31 @@ export default function ConfigurarEquipo() {
             {/* Parámetros de Liga Enlazados */}
             {teamFormData.season && (
               <div style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                background: COLORS.slate50,
+                border: `1px solid ${COLORS.slate200}`,
                 borderRadius: '14px',
                 padding: '20px',
                 marginBottom: '30px'
               }}>
-                <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#334155', marginBottom: '12px', textTransform: 'uppercase' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate700, marginBottom: '12px', textTransform: 'uppercase' }}>
                   Parámetros de Liga Enlazados
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '600' }}>Modalidad</span>
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                    <span style={{ fontSize: '11px', color: COLORS.slate500, display: 'block', fontWeight: '600' }}>Modalidad</span>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: COLORS.slate800 }}>
                       {catalogs.modalidades.find(m => Number(m.id) === Number(teamFormData.modality))?.nombre || 'Cargando...'}
                     </span>
                   </div>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '600' }}>Categoría</span>
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                    <span style={{ fontSize: '11px', color: COLORS.slate500, display: 'block', fontWeight: '600' }}>Categoría</span>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: COLORS.slate800 }}>
                       {catalogs.categorias.find(c => Number(c.id) === Number(teamFormData.category))?.nombre || 'Cargando...'}
                     </span>
                   </div>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '600' }}>Rama</span>
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                    <span style={{ fontSize: '11px', color: COLORS.slate500, display: 'block', fontWeight: '600' }}>Rama</span>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: COLORS.slate800 }}>
                       {catalogs.ramas.find(r => Number(r.id) === Number(teamFormData.rama))?.nombre || 'Cargando...'}
                     </span>
                   </div>
@@ -2669,9 +2670,9 @@ export default function ConfigurarEquipo() {
                 style={{
                   padding: '12px 24px',
                   borderRadius: '12px',
-                  border: '1px solid #cbd5e1',
+                  border: `1px solid ${COLORS.slate300}`,
                   background: 'white',
-                  color: '#64748b',
+                  color: COLORS.slate500,
                   fontWeight: '800',
                   cursor: 'pointer'
                 }}
@@ -2685,11 +2686,11 @@ export default function ConfigurarEquipo() {
                   padding: '12px 28px',
                   borderRadius: '12px',
                   border: 'none',
-                  background: '#10b981',
+                  background: COLORS.success,
                   color: 'white',
                   fontWeight: '800',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
+                  boxShadow: `0 4px 12px ${COLORS.successBgTranslucent18}`
                 }}
               >
                 🛡️ Autorizar y crear equipo
@@ -2706,9 +2707,9 @@ export default function ConfigurarEquipo() {
           {equipo && (
             <div className="team-selected-header-card">
               <div>
-                <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
+                <span style={{ fontSize: '11px', fontWeight: '900', color: COLORS.infoBootstrap, letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
                 <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>🛡️ {equipo.NombreEquipo}</h1>
-                <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: '#94a3b8', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: COLORS.slate400, flexWrap: 'wrap' }}>
                   <span><strong>Liga:</strong> {equipo.Liga || 'N/A'}</span>
                   <span>•</span>
                   <span><strong>Categoría:</strong> {equipo.Categoria || 'LIBRE'} ({equipo.Rama || 'N/A'})</span>
@@ -2718,8 +2719,8 @@ export default function ConfigurarEquipo() {
               </div>
 
               <div className="slots-counter-badge">
-                <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Cupos Disponibles</span>
-                <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
+                <span style={{ fontSize: '11px', color: COLORS.slate400, display: 'block', fontWeight: '600' }}>Cupos Disponibles</span>
+                <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? COLORS.danger : COLORS.success }}>
                   {slotsData?.slots_disponibles || 0} cupo(s)
                 </span>
               </div>
@@ -2736,11 +2737,11 @@ export default function ConfigurarEquipo() {
               padding: '40px',
               textAlign: 'center',
               boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-              border: '1px solid #fee2e2'
+              border: `1px solid ${COLORS.dangerBg}`
             }}>
               <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
-              <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin Slots / Seguros Disponibles</h2>
-              <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.danger, marginBottom: '10px' }}>Sin Slots / Seguros Disponibles</h2>
+              <p style={{ color: COLORS.slate500, maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
                 Este equipo ya ha completado todos los seguros y slots contratados.
                 No es posible agregar más jugadores hasta adquirir nuevos slots de registro.
               </p>
@@ -2757,10 +2758,10 @@ export default function ConfigurarEquipo() {
               borderRadius: '24px',
               padding: '40px',
               boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-              border: '1px solid #e2e8f0'
+              border: `1px solid ${COLORS.slate200}`
             }}>
 
-              <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ marginBottom: '30px', borderBottom: `1px solid ${COLORS.slate100}`, paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <p className="required-legend" style={{ margin: 0 }}>
                   <span className="required-star">*</span> Indica que el campo es obligatorio.
                 </p>
@@ -2770,11 +2771,11 @@ export default function ConfigurarEquipo() {
               <section style={{ marginBottom: '45px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
                   <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Seguro pagado por asignar</h3>
                 </div>
 
                 <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
-                  <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                  <div className="card" style={{ padding: '25px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, background: COLORS.slate50 }}>
                     <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
                       Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
                     </label>
@@ -2788,8 +2789,8 @@ export default function ConfigurarEquipo() {
                             onClick={() => setSelectedSeguroId(String(seg.SeguroId))}
                             className="insurance-card-custom"
                             style={{
-                              border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                              backgroundColor: isSelected ? '#eff6ff' : 'white',
+                              border: isSelected ? `2.5px solid ${COLORS.primary}` : `1px solid ${COLORS.slate300}`,
+                              backgroundColor: isSelected ? COLORS.secondaryBg : 'white',
                               padding: '16px',
                               borderRadius: '12px',
                               cursor: 'pointer',
@@ -2801,7 +2802,7 @@ export default function ConfigurarEquipo() {
                           >
                             <div className="insurance-info-wrapper">
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? COLORS.primary : COLORS.slate800 }}>
                                   🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
                                 </span>
                                 {matchedSeguro && (
@@ -2814,7 +2815,7 @@ export default function ConfigurarEquipo() {
                                     style={{
                                       background: 'none',
                                       border: 'none',
-                                      color: '#3b82f6',
+                                      color: COLORS.brandBlueLight,
                                       cursor: 'pointer',
                                       fontSize: '16px',
                                       padding: '2px 6px',
@@ -2829,12 +2830,12 @@ export default function ConfigurarEquipo() {
                                 )}
                               </div>
                               {matchedSeguro?.precio !== undefined && (
-                                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                                <span style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '600' }}>
                                   Precio: ${matchedSeguro.precio} MXN
                                 </span>
                               )}
                             </div>
-                            <div className="insurance-badge-wrapper" style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                            <div className="insurance-badge-wrapper" style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: COLORS.greenBg, color: COLORS.greenDarker, fontSize: '11px', fontWeight: '800' }}>
                               {seg.Cantidad} disponibles
                             </div>
                           </div>
@@ -2850,12 +2851,12 @@ export default function ConfigurarEquipo() {
                 <section className="fade-in" style={{ marginBottom: '45px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                     <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
                   </div>
 
                   <div style={{
-                    background: '#d5eeffff',
-                    border: '1px solid #bae6fd',
+                    background: COLORS.secondaryBg100,
+                    border: `1px solid ${COLORS.sky100}`,
                     borderRadius: '12px',
                     padding: '12px 18px',
                     marginBottom: '20px',
@@ -2863,7 +2864,7 @@ export default function ConfigurarEquipo() {
                     alignItems: 'center',
                     gap: '10px',
                     fontSize: '13px',
-                    color: '#0369a1',
+                    color: COLORS.skyDarker,
                     fontWeight: '600'
                   }}>
                     <span style={{ fontSize: '18px' }}>📋</span>
@@ -2876,13 +2877,13 @@ export default function ConfigurarEquipo() {
                         key={doc.key}
                         className="document-card-custom"
                         style={{
-                          border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
-                          backgroundImage: (documents[doc.key] && documents[doc.key].type !== 'application/pdf' && previews[doc.key]) ? `linear-gradient(rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.8)), url(${previews[doc.key]})` : 'none',
+                          border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                          backgroundImage: (documents[doc.key] && documents[doc.key].type !== 'application/pdf' && previews[doc.key]) ? `linear-gradient(${COLORS.overlaySlateDark}, ${COLORS.overlaySlateDeep}), url(${previews[doc.key]})` : 'none',
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                           cursor: 'pointer',
                           position: 'relative',
-                          color: documents[doc.key] ? '#ffffff' : 'inherit'
+                          color: documents[doc.key] ? COLORS.white : 'inherit'
                         }}
                         onClick={() => {
                           if (!documents[doc.key]) {
@@ -2894,14 +2895,14 @@ export default function ConfigurarEquipo() {
                                 showCancelButton: true,
                                 confirmButtonText: '📷 Tomar con cámara',
                                 cancelButtonText: '📁 Subir archivo',
-                                confirmButtonColor: '#0b4ea6',
-                                cancelButtonColor: '#64748b'
+                                confirmButtonColor: COLORS.primary,
+                                cancelButtonColor: COLORS.slate500
                               }).then((result) => {
-                                  if (result.isConfirmed) {
-                                    setIsCameraOpen(true);
-                                  } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                    document.getElementById(`file-${doc.key}`).click();
-                                  }
+                                if (result.isConfirmed) {
+                                  setIsCameraOpen(true);
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                  document.getElementById(`file-${doc.key}`).click();
+                                }
                               });
                             } else {
                               document.getElementById(`file-${doc.key}`).click();
@@ -2911,28 +2912,28 @@ export default function ConfigurarEquipo() {
                       >
                         {/* Indicador de Menor para tutor/credencial */}
                         {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
-                          <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
+                          <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                         )}
 
                         <div className="doc-card-body-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                           <div className="doc-info-wrapper" style={{ width: '100%' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                               {!documents[doc.key] ? (
-                                <FaUpload style={{ color: '#3b82f6', flexShrink: 0 }} />
+                                <FaUpload style={{ color: COLORS.brandBlueLight, flexShrink: 0 }} />
                               ) : documents[doc.key].type === 'application/pdf' ? (
-                                <FaFilePdf style={{ color: '#ef4444', flexShrink: 0 }} />
+                                <FaFilePdf style={{ color: COLORS.danger, flexShrink: 0 }} />
                               ) : (
-                                <span style={{ color: '#10b981', flexShrink: 0 }}>📷</span>
+                                <span style={{ color: COLORS.success, flexShrink: 0 }}>📷</span>
                               )}
-                              <h4 className="doc-title-text" style={{ fontSize: '13px', fontWeight: '800', margin: 0, color: documents[doc.key] ? '#ffffff' : '#1e293b' }}>
+                              <h4 className="doc-title-text" style={{ fontSize: '13px', fontWeight: '800', margin: 0, color: documents[doc.key] ? COLORS.white : COLORS.slate800 }}>
                                 {doc.title}
                               </h4>
                             </div>
-                            <p className="doc-subtitle-text" style={{ margin: '0 0 6px', fontSize: '10px', color: documents[doc.key] ? '#cbd5e1' : '#64748b', lineHeight: 1.4 }}>
+                            <p className="doc-subtitle-text" style={{ margin: '0 0 6px', fontSize: '10px', color: documents[doc.key] ? COLORS.slate300 : COLORS.slate500, lineHeight: 1.4 }}>
                               {doc.subtitle}
                             </p>
                             {doc.key === 'foto' && (
-                              <p style={{ margin: '0 0 8px', fontSize: '10px', color: documents[doc.key] ? '#fca5a5' : '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                              <p style={{ margin: '0 0 8px', fontSize: '10px', color: documents[doc.key] ? COLORS.dangerBgDark : COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
                                 Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
                               </p>
                             )}
@@ -2947,8 +2948,8 @@ export default function ConfigurarEquipo() {
                                   gap: '6px',
                                   padding: '4px 10px',
                                   borderRadius: '20px',
-                                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                                  color: '#34d399',
+                                  backgroundColor: COLORS.successBgTranslucent18,
+                                  color: COLORS.successLight,
                                   fontSize: '10px',
                                   fontWeight: '800'
                                 }}>
@@ -2982,8 +2983,8 @@ export default function ConfigurarEquipo() {
                                           showCancelButton: true,
                                           confirmButtonText: '📷 Tomar con cámara',
                                           cancelButtonText: '📁 Subir archivo',
-                                          confirmButtonColor: '#0b4ea6',
-                                          cancelButtonColor: '#64748b'
+                                          confirmButtonColor: COLORS.primary,
+                                          cancelButtonColor: COLORS.slate500
                                         }).then((result) => {
                                           if (result.isConfirmed) {
                                             setIsCameraOpen(true);
@@ -3009,8 +3010,8 @@ export default function ConfigurarEquipo() {
                                 gap: '6px',
                                 padding: '4px 12px',
                                 borderRadius: '20px',
-                                backgroundColor: '#f1f5f9',
-                                color: '#64748b',
+                                backgroundColor: COLORS.slate100,
+                                color: COLORS.slate500,
                                 fontSize: '10px',
                                 fontWeight: '800'
                               }}>
@@ -3029,7 +3030,7 @@ export default function ConfigurarEquipo() {
                               style={{
                                 width: '100%',
                                 padding: '8px 12px',
-                                backgroundColor: '#f59e0b',
+                                backgroundColor: COLORS.warning,
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
@@ -3040,11 +3041,11 @@ export default function ConfigurarEquipo() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '4px',
-                                boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
+                                boxShadow: `0 2px 4px ${COLORS.warningBgTranslucent30}`,
                                 transition: 'background-color 0.2s'
                               }}
-                              onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
-                              onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
+                              onMouseEnter={e => e.target.style.backgroundColor = COLORS.warningDark}
+                              onMouseLeave={e => e.target.style.backgroundColor = COLORS.warning}
                             >
                               ⚠️ Cargar igualmente
                             </button>
@@ -3070,7 +3071,7 @@ export default function ConfigurarEquipo() {
 
                   {/* Loader temporal OCR */}
                   {documents.acta && !extractedData.fechaNacimiento && (
-                    <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                    <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: COLORS.warningBgLight, border: `1px dashed ${COLORS.warningLight}`, borderRadius: '10px', fontSize: '12px', color: COLORS.orangeDeep, fontWeight: '600' }}>
                       Analizando el Acta de Nacimiento... Los campos del formulario se auto-completarán en breve.
                     </div>
                   )}
@@ -3083,7 +3084,7 @@ export default function ConfigurarEquipo() {
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                       <StepBadge number="3" isActive={true} isDone={false} />
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
                     </div>
                   </div>
 
@@ -3096,11 +3097,11 @@ export default function ConfigurarEquipo() {
                       background: (
                         extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                         extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                      ) ? '#fff7ed' : '#f0fdf4',
+                      ) ? COLORS.orange50 : COLORS.greenBg50,
                       border: (
                         extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                         extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                      ) ? '1px solid #ffedd5' : '1px solid #dcfce7',
+                      ) ? `1px solid ${COLORS.orange100}` : `1px solid ${COLORS.greenBg}`,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px'
@@ -3110,12 +3111,12 @@ export default function ConfigurarEquipo() {
                           extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
                       </div>
                       <div>
-                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
                           {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                             extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
                             'Discrepancia detectada' : 'Datos validados'}
                         </h4>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
+                        <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
                           {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                             extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
                             'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
@@ -3126,26 +3127,26 @@ export default function ConfigurarEquipo() {
                   )}
 
                   {/* CAMPOS DEL FORMULARIO */}
-                  <div className="dashboard-card" style={{ border: '1px solid #e2e8f0', marginBottom: '30px' }}>
+                  <div className="dashboard-card" style={{ border: `1px solid ${COLORS.slate200}`, marginBottom: '30px' }}>
 
                     <div className="form-inputs-grid-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
+                        <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
+                        <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
+                        <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                       </div>
                     </div>
 
                     <div className="form-inputs-grid-2">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
                         <input
                           type="text"
                           maxLength={3}
@@ -3159,21 +3160,21 @@ export default function ConfigurarEquipo() {
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`,
-                            boxShadow: validationErrors.numCamiseta ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none',
+                            border: `1.5px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`,
+                            boxShadow: validationErrors.numCamiseta ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
                             fontSize: '14px',
                             width: '100%',
                             boxSizing: 'border-box'
                           }}
                         />
                         {validationErrors.numCamiseta && (
-                          <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                          <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
                             {validationErrors.numCamiseta}
                           </div>
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
                         <select
                           value={extractedData.posicion}
                           onChange={e => {
@@ -3184,8 +3185,8 @@ export default function ConfigurarEquipo() {
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`,
-                            boxShadow: validationErrors.posicion ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none',
+                            border: `1.5px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`,
+                            boxShadow: validationErrors.posicion ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
                             fontSize: '14px',
                             backgroundColor: 'white',
                             width: '100%',
@@ -3198,7 +3199,7 @@ export default function ConfigurarEquipo() {
                           ))}
                         </select>
                         {validationErrors.posicion && (
-                          <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                          <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
                             {validationErrors.posicion}
                           </div>
                         )}
@@ -3207,9 +3208,9 @@ export default function ConfigurarEquipo() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                           CURP<span className="required-star">*</span>
-                          {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}>Validando...</span>}
+                          {isCheckingCurp && <span style={{ marginLeft: '10px', color: COLORS.success, fontSize: '11px', fontWeight: 'bold' }}>Validando...</span>}
                         </label>
                         <input
                           type="text"
@@ -3231,13 +3232,13 @@ export default function ConfigurarEquipo() {
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
-                            border: `1.5px solid ${curpExistente ? '#ef4444' : '#cbd5e1'}`,
-                            boxShadow: curpExistente ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none',
+                            border: `1.5px solid ${curpExistente ? COLORS.danger : COLORS.slate300}`,
+                            boxShadow: curpExistente ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
                             fontSize: '14px'
                           }}
                         />
                         {curpExistente && (
-                          <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                          <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
                             Esta CURP ya se encuentra registrada.
                           </div>
                         )}
@@ -3246,13 +3247,13 @@ export default function ConfigurarEquipo() {
 
                     <div className="form-inputs-grid-3">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Fecha Nac. <span className="required-star">*</span></label>
                         <input
                           type="date"
                           value={extractedData.fechaNacimiento || ''}
                           onChange={e => handleFieldChange('fechaNacimiento', e.target.value)}
                           onBlur={handleBlur}
-                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                          style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }}
                         />
                         {(() => {
                           const val = extractedData.fechaNacimiento;
@@ -3261,33 +3262,33 @@ export default function ConfigurarEquipo() {
                           const hoy = new Date();
 
                           if (fechaDate.getFullYear() < 1900) {
-                            return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
+                            return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
                           }
                           if (fechaDate.getFullYear() > hoy.getFullYear()) {
-                            return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
+                            return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                           }
 
                           const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
                           if (fechaDate > minAgeDate) {
-                            return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
+                            return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
                           }
 
                           return null;
                         })()}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
+                        <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
                         <select
                           value={extractedData.genero || ""}
                           onChange={e => {
                             handleFieldChange('genero', e.target.value);
                             guardarBorradorEnBD({ ...extractedData, genero: e.target.value });
                           }}
-                          style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}
+                          style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white' }}
                         >
                           <option value="">Seleccione...</option>
                           <option value="1">MASCULINO</option>
@@ -3298,11 +3299,11 @@ export default function ConfigurarEquipo() {
 
                     <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Correo electrónico <span className="required-star">*</span></label>
+                        <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono <span className="required-star">*</span></label>
                         <div className="phone-input-flex-container" style={{ display: 'flex', gap: '8px' }}>
                           <select
                             value={extractedData.codigoPais || '+52'}
@@ -3311,7 +3312,7 @@ export default function ConfigurarEquipo() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
+                              border: `1px solid ${COLORS.slate300}`,
                               fontSize: '14px',
                               backgroundColor: 'white',
                               width: '35%',
@@ -3348,7 +3349,7 @@ export default function ConfigurarEquipo() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: '1px solid #cbd5e1',
+                              border: `1px solid ${COLORS.slate300}`,
                               fontSize: '14px',
                               flexGrow: 1,
                               width: '65%',
@@ -3363,15 +3364,15 @@ export default function ConfigurarEquipo() {
                     {/* Selector de Nacionalidad */}
                     <div style={{ marginBottom: '25px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                        <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
-                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
+                        <FaGlobeAmericas style={{ color: COLORS.primary, fontSize: '20px' }} />
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Nacionalidad del jugador</h3>
                       </div>
 
                       <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
                         gap: '10px',
-                        background: '#f1f5f9',
+                        background: COLORS.slate100,
                         padding: '4px',
                         borderRadius: '12px',
                         width: '100%',
@@ -3389,10 +3390,10 @@ export default function ConfigurarEquipo() {
                             borderRadius: '10px',
                             border: 'none',
                             background: !extractedData.esForaneo ? 'white' : 'transparent',
-                            color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                            color: !extractedData.esForaneo ? COLORS.primary : COLORS.slate500,
                             fontWeight: '800',
                             fontSize: '13px',
-                            boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            boxShadow: !extractedData.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                             transition: 'all 0.2s',
                             display: 'flex',
                             alignItems: 'center',
@@ -3416,10 +3417,10 @@ export default function ConfigurarEquipo() {
                             borderRadius: '10px',
                             border: 'none',
                             background: extractedData.esForaneo ? 'white' : 'transparent',
-                            color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                            color: extractedData.esForaneo ? COLORS.primary : COLORS.slate500,
                             fontWeight: '800',
                             fontSize: '13px',
-                            boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            boxShadow: extractedData.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                             transition: 'all 0.2s',
                             display: 'flex',
                             alignItems: 'center',
@@ -3436,11 +3437,11 @@ export default function ConfigurarEquipo() {
 
                     {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
                     <div className="international-info-card">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: `1px solid ${COLORS.orange100}`, paddingBottom: '20px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: COLORS.warningBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.warningDark }}>
                           <FaGlobeAmericas />
                         </div>
-                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: COLORS.orangeDeep }}>Antecedentes internacionales</h4>
                       </div>
 
                       {extractedData.esForaneo ? (
@@ -3525,7 +3526,7 @@ export default function ConfigurarEquipo() {
                         </div>
                       ) : (
                         <div style={{ textAlign: 'center', padding: '20px' }}>
-                          <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: COLORS.orangeDeep, fontStyle: 'italic' }}>
                             Si el jugador es extranjero, habilite esta opción para completar los antecedentes internacionales.
                           </p>
                         </div>
@@ -3568,7 +3569,7 @@ export default function ConfigurarEquipo() {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '300px',
-          backgroundColor: '#f1f5f9',
+          backgroundColor: COLORS.slate100,
           borderRadius: '12px',
           overflow: 'hidden'
         }}>
@@ -3610,18 +3611,18 @@ export default function ConfigurarEquipo() {
           <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', justifyContent: 'center' }}>
             <button
               onClick={() => handleDownloadFormato()}
-              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0b4ea6, #063f82)', color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryActive})`, color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               📥 Descargar Formato
             </button>
           </div>
           <div style={{
-            backgroundColor: '#f0f9ff',
-            border: '1px solid #bae6fd',
+            backgroundColor: COLORS.skyBgLight,
+            border: `1px solid ${COLORS.sky100}`,
             borderRadius: '16px',
             padding: '20px',
             marginBottom: '25px',
-            color: '#0369a1',
+            color: COLORS.skyDarker,
             fontSize: '14px',
             lineHeight: '1.6'
           }}>
@@ -3637,25 +3638,25 @@ export default function ConfigurarEquipo() {
           <div
             onClick={() => document.getElementById('final-signed-form').click()}
             style={{
-              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+              border: signedForm ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.sky}`,
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+              backgroundColor: signedForm ? COLORS.greenBg50 : COLORS.slate50,
               cursor: 'pointer',
               transition: 'all 0.3s'
             }}
           >
             {signedForm ? (
-              <div style={{ color: '#10b981' }}>
+              <div style={{ color: COLORS.success }}>
                 <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
               </div>
             ) : (
-              <div style={{ color: '#0ea5e9' }}>
+              <div style={{ color: COLORS.sky }}>
                 <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: COLORS.slate500 }}>Solo se aceptan archivos PDF</p>
               </div>
             )}
             <input
@@ -3670,7 +3671,7 @@ export default function ConfigurarEquipo() {
                 const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
                 const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
                 if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
-                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                   return;
                 }
                 setSignedForm(file);
@@ -3698,26 +3699,26 @@ export default function ConfigurarEquipo() {
               {/* Header */}
               <div style={{
                 padding: '25px 30px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                borderBottom: `1px solid ${COLORS.overlayWhite08}`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: '15px',
-                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
+                background: `linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900})`
               }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '950', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '950', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Información de Seguro
                   </h3>
-                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: COLORS.white }}>
                     {info.nombre}
                   </h2>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
-                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
-                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  <div style={{ fontSize: '10px', color: COLORS.overlayWhite50, fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: COLORS.successLight }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.overlayWhite60 }}>M.N.</span>
                   </div>
                 </div>
               </div>
@@ -3727,10 +3728,10 @@ export default function ConfigurarEquipo() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
-                    <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '800', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '800', color: COLORS.secondaryLight, display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       ✨ Beneficios Incluidos
                     </h4>
-                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#cbd5e1', lineHeight: '1.5' }}>
+                    <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: COLORS.slate300, lineHeight: '1.5' }}>
                       {info.beneficios.map((b, i) => (
                         <li key={i}>{b}</li>
                       ))}
@@ -3739,30 +3740,30 @@ export default function ConfigurarEquipo() {
 
                   {/* Right Column - Coverage Table */}
                   <div>
-                    <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '800', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '800', color: COLORS.secondaryLight, display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       📊 Coberturas y Límites
                     </h4>
                     {info.coberturas.length > 0 ? (
-                      <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', overflow: 'hidden' }}>
+                      <div style={{ border: `1px solid ${COLORS.overlayWhite08}`, borderRadius: '12px', overflow: 'hidden' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                           <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                              <th style={{ padding: '12px 15px', color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>Concepto</th>
-                              <th style={{ padding: '12px 15px', color: 'rgba(255,255,255,0.6)', fontWeight: '700', textAlign: 'right' }}>Límite</th>
+                            <tr style={{ background: COLORS.overlayWhite02, borderBottom: `1px solid ${COLORS.overlayWhite08}` }}>
+                              <th style={{ padding: '12px 15px', color: COLORS.overlayWhite60, fontWeight: '700' }}>Concepto</th>
+                              <th style={{ padding: '12px 15px', color: COLORS.overlayWhite60, fontWeight: '700', textAlign: 'right' }}>Límite</th>
                             </tr>
                           </thead>
                           <tbody>
                             {info.coberturas.map((c, i) => (
-                              <tr key={i} style={{ borderBottom: i === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
-                                <td style={{ padding: '12px 15px', color: '#e2e8f0', fontWeight: '600' }}>{c.cobertura}</td>
-                                <td style={{ padding: '12px 15px', color: '#34d399', fontWeight: '800', textAlign: 'right' }}>{c.monto}</td>
+                              <tr key={i} style={{ borderBottom: i === info.coberturas.length - 1 ? 'none' : `1px solid ${COLORS.overlayWhite05}` }}>
+                                <td style={{ padding: '12px 15px', color: COLORS.slate200, fontWeight: '600' }}>{c.cobertura}</td>
+                                <td style={{ padding: '12px 15px', color: COLORS.successLight, fontWeight: '800', textAlign: 'right' }}>{c.monto}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
                     ) : (
-                      <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                      <p style={{ margin: 0, fontSize: '13px', color: COLORS.slate400, fontStyle: 'italic' }}>
                         No ampara gastos médicos por accidente.
                       </p>
                     )}
@@ -3770,27 +3771,27 @@ export default function ConfigurarEquipo() {
                 </div>
 
                 {/* Scope / Terms */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
-                  <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ background: COLORS.overlayWhite02, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '16px', padding: '20px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '800', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     🔍 Alcance y Conditions de la Póliza
                   </h4>
-                  <div style={{ fontSize: '12.5px', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '15px' }}>
+                  <div style={{ fontSize: '12.5px', color: COLORS.slate300, lineHeight: '1.6', marginBottom: '15px' }}>
                     {info.alcance}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '15px', fontSize: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', borderTop: `1px solid ${COLORS.overlayWhite06}`, paddingTop: '15px', fontSize: '12px' }}>
                     <div>
-                      <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>Póliza:</span>{' '}
-                      <span style={{ color: '#ffffff', fontWeight: '700' }}>{info.poliza}</span>
+                      <span style={{ color: COLORS.overlayWhite50, fontWeight: '600' }}>Póliza:</span>{' '}
+                      <span style={{ color: COLORS.white, fontWeight: '700' }}>{info.poliza}</span>
                     </div>
                     <div>
-                      <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>Vigencia:</span>{' '}
-                      <span style={{ color: '#ffffff', fontWeight: '700' }}>{info.vigencia}</span>
+                      <span style={{ color: COLORS.overlayWhite50, fontWeight: '600' }}>Vigencia:</span>{' '}
+                      <span style={{ color: COLORS.white, fontWeight: '700' }}>{info.vigencia}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Close Button */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid ${COLORS.overlayWhite08}`, paddingTop: '20px' }}>
                   <button
                     type="button"
                     onClick={() => setSeguroDetalle(null)}
@@ -3798,12 +3799,12 @@ export default function ConfigurarEquipo() {
                       padding: '10px 24px',
                       borderRadius: '10px',
                       border: 'none',
-                      background: '#3b82f6',
+                      background: COLORS.brandBlueLight,
                       color: 'white',
                       fontWeight: '800',
                       cursor: 'pointer',
                       fontSize: '13px',
-                      boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)'
+                      boxShadow: `0 4px 10px ${COLORS.brandBlueLight30}`
                     }}
                   >
                     Cerrar Detalles

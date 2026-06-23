@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState } from 'react';
 import {
   FaFileContract,
@@ -247,7 +248,7 @@ const TerminosCondiciones = () => {
       {/* ── PANEL ACORDEÓN ── */}
       <div className="legal-panel">
         <div className="legal-panel-header">
-          <span className="legal-panel-icono" style={{ color: '#0ea5e9' }}>
+          <span className="legal-panel-icono" style={{ color: COLORS.sky }}>
             <FaFileContract />
           </span>
           <div>

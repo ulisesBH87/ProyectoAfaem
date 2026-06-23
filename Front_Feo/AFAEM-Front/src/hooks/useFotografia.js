@@ -32,7 +32,7 @@ export function useFotografia({ setDocuments, setPreviews }) {
   const _confirmarCargaForzada = async (archivo, mensaje) => {
     const result = await Swal.fire({
       title: 'Error en fotografía',
-      text: `${mensaje} ¿Deseas cargarla de todos modos?`,
+      text: `${mensaje}. Podría ser rechazada más adelante ¿Deseas cargarla de todos modos?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, cargar igualmente',

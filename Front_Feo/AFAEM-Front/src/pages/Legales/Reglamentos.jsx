@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState } from 'react';
 import {
   FaGavel,
@@ -327,7 +328,7 @@ const Reglamentos = () => {
       id: 'reglamento',
       label: 'Reglamento de Competencia',
       icono: <FaGavel />,
-      color: '#2563eb',
+      color: COLORS.secondary,
       descripcion:
         'Normativas oficiales para el desarrollo de los torneos AFAEM, basadas en el marco del Sector Amateur de la FMF.',
     },
@@ -335,7 +336,7 @@ const Reglamentos = () => {
       id: 'terminos',
       label: 'Términos y Condiciones',
       icono: <FaFileContract />,
-      color: '#0ea5e9',
+      color: COLORS.sky,
       descripcion:
         'Acuerdo legal que regula el uso de la plataforma digital y la participación en las competencias de AFAEM.',
     },
@@ -343,7 +344,7 @@ const Reglamentos = () => {
       id: 'privacidad',
       label: 'Aviso de Privacidad',
       icono: <FaShieldAlt />,
-      color: '#10b981',
+      color: COLORS.success,
       descripcion:
         'Tratamiento y protección de los datos personales de jugadores, equipos y directivos, conforme a la LFPDPPP.',
     },
