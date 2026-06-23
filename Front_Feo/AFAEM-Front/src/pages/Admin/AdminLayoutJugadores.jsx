@@ -5,6 +5,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import SearchBar from '../../components/Common/SearchBar';
 import Loader from '../../components/Loader';
+import COLORS from '../../styles/colors';
 
 export default function AdminLayoutJugadores() {
   const [jugadores, setJugadores] = useState([]);
@@ -79,24 +80,24 @@ export default function AdminLayoutJugadores() {
         style={{
           padding: '10px 12px',
           fontSize: '12px',
-          color: '#1e293b',
+          color: COLORS.slate800,
           cursor: value ? 'pointer' : 'default',
-          borderBottom: '1px solid #f1f5f9',
+          borderBottom: `1px solid ${COLORS.slate100}`,
           transition: 'background 0.15s',
           whiteSpace: 'nowrap',
           maxWidth: '200px',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          background: isCopied ? '#eff6ff' : 'transparent',
+          background: isCopied ? COLORS.secondaryBg : 'transparent',
           fontFamily: id?.includes('curp') ? 'monospace' : 'inherit',
           position: 'relative',
         }}
-        onMouseEnter={e => { if (value) e.currentTarget.style.background = '#f8fafc'; }}
+        onMouseEnter={e => { if (value) e.currentTarget.style.background = COLORS.slate50; }}
         onMouseLeave={e => { if (!isCopied) e.currentTarget.style.background = 'transparent'; }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>}
-          {isCopied && <FaCheck style={{ color: '#10b981', fontSize: '10px', flexShrink: 0 }} />}
+          {value || <span style={{ color: COLORS.slate300, fontStyle: 'italic' }}>—</span>}
+          {isCopied && <FaCheck style={{ color: COLORS.success, fontSize: '10px', flexShrink: 0 }} />}
         </span>
       </td>
     );
@@ -110,23 +111,23 @@ export default function AdminLayoutJugadores() {
     <div className="dashboard-content">
       <div className="admin-dashboard-header" style={{ marginBottom: '28px' }}>
         <div>
-          <h2 style={{ fontSize: 'clamp(20px, 5vw, 24px)', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+          <h2 style={{ fontSize: 'clamp(20px, 5vw, 24px)', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>
             Layout de Jugadores
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: 'clamp(12px, 3.5vw, 14px)', color: '#64748b' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 'clamp(12px, 3.5vw, 14px)', color: COLORS.slate500 }}>
             Haz clic en cualquier dato para copiarlo al portapapeles.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={() => fetchData(true)}
-            style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: '#334155' }}
+            style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: COLORS.slate700 }}
           >
             <FaSyncAlt />
           </button>
           <button
             onClick={() => navigate(ROUTES.ADMIN.JUGADORES)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: COLORS.slate700, border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaUsers /> Catálogo de jugadores
           </button>
@@ -143,13 +144,13 @@ export default function AdminLayoutJugadores() {
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FaFilter style={{ color: '#94a3b8', fontSize: '12px' }} />
+          <FaFilter style={{ color: COLORS.slate400, fontSize: '12px' }} />
           <select
             value={filtroEquipo}
             onChange={(e) => setFiltroEquipo(e.target.value)}
             style={{
-              padding: '8px 16px', borderRadius: '10px', border: '1.5px solid #e2e8f0',
-              fontWeight: '700', fontSize: '13px', background: 'white', color: '#334155',
+              padding: '8px 16px', borderRadius: '10px', border: `1.5px solid ${COLORS.slate200}`,
+              fontWeight: '700', fontSize: '13px', background: 'white', color: COLORS.slate700,
               cursor: 'pointer'
             }}
           >
@@ -162,18 +163,18 @@ export default function AdminLayoutJugadores() {
           </select>
         </div>
 
-        <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: 'auto' }}>
+        <span style={{ fontSize: '12px', color: COLORS.slate400, marginLeft: 'auto' }}>
           {filteredJugadores.length} jugadores
         </span>
       </div>
 
       {/* TABLA */}
-      <div className="card" style={{ padding: 0, overflowX: 'auto', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+      <div className="card" style={{ padding: 0, overflowX: 'auto', borderRadius: '16px', boxShadow: `0 4px 12px ${COLORS.shadow05}` }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
           <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+            <tr style={{ background: COLORS.slate50, borderBottom: `2px solid ${COLORS.slate200}` }}>
               {['#', 'Nombre completo', 'CURP', 'Sexo', 'Equipo', 'Liga', 'Email', 'Fecha Nac.', 'NUI'].map(col => (
-                <th key={col} style={{ padding: '12px 14px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                <th key={col} style={{ padding: '12px 14px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: COLORS.slate500, textAlign: 'left', whiteSpace: 'nowrap' }}>
                   {col}
                 </th>
               ))}
@@ -182,14 +183,14 @@ export default function AdminLayoutJugadores() {
           <tbody>
             {filteredJugadores.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: COLORS.slate400 }}>
                   No se encontraron jugadores con los filtros actuales.
                 </td>
               </tr>
             ) : (
               filteredJugadores.map((j, idx) => (
-                <tr key={j.MiembroEquipoId} style={{ borderBottom: '1px solid #f1f5f9' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                <tr key={j.MiembroEquipoId} style={{ borderBottom: `1px solid ${COLORS.slate100}` }}
+                  onMouseEnter={e => e.currentTarget.style.background = COLORS.neutral50}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <CeldaCopia value={String(j.MiembroEquipoId)} id={`id-${idx}`} />
@@ -208,7 +209,7 @@ export default function AdminLayoutJugadores() {
         </table>
       </div>
 
-      <p style={{ marginTop: '16px', fontSize: '12px', color: '#7c8b9d', textAlign: 'center' }}>
+      <p style={{ marginTop: '16px', fontSize: '12px', color: COLORS.neutralSlate, textAlign: 'center' }}>
         💡 Clic en cualquier celda para copiar el dato al portapapeles.
       </p>
     </div>

@@ -3,6 +3,7 @@ import { FaUpload, FaFilePdf, FaSearchPlus, FaSyncAlt, FaExclamationTriangle, Fa
 import Swal from 'sweetalert2';
 import { C } from './constants';
 import CameraCaptureModal from '../../../components/Common/CameraCaptureModal';
+import COLORS from '../../../styles/colors';
 
 /**
  * DocumentCard
@@ -36,13 +37,13 @@ export default function DocumentCard({
   const isPhoto = doc.documento === 'fotografia';
 
   const statusLabel = (ocrDone || uploaded) ? (ocrDone ? 'Procesado' : 'Listo') : 'Pendiente';
-  const statusColor = (ocrDone || uploaded) ? C.green : '#f59e0b';
-  const statusBg = (ocrDone || uploaded) ? 'rgba(74,222,128,0.1)' : 'rgba(245,158,11,0.1)';
+  const statusColor = (ocrDone || uploaded) ? C.green : COLORS.warning;
+  const statusBg = (ocrDone || uploaded) ? COLORS.greenBgTranslucent10 : COLORS.warningBgTranslucent10;
 
   return (
     <div style={{
       position: 'relative', background: C.card,
-      border: `1px solid ${uploaded ? 'rgba(74,222,128,0.2)' : C.cardBorder}`,
+      border: `1px solid ${uploaded ? COLORS.greenBgTranslucent20 : C.cardBorder}`,
       borderRadius: 16, padding: '18px 20px', paddingTop: 45,
       display: 'flex', flexDirection: 'column', transition: 'border-color .2s',
     }}>
@@ -61,7 +62,7 @@ export default function DocumentCard({
       {/* Área de preview */}
       <div
         style={{
-          height: 140, width: '100%', background: '#111827', borderRadius: 12,
+          height: 140, width: '100%', background: COLORS.gray900, borderRadius: 12,
           marginBottom: 14, overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
         }}
@@ -82,9 +83,9 @@ export default function DocumentCard({
         {previews[doc.documento] ? (
           <>
             {(documents[doc.documento]?.type === 'application/pdf' || previews[doc.documento] === 'pdf') ? (
-              <div style={{ color: '#ef4444', fontSize: 42, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+              <div style={{ color: COLORS.danger, fontSize: 42, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                 <FaFilePdf />
-                <span style={{ fontSize: 10, color: '#64748b', fontWeight: 800 }}>PDF</span>
+                <span style={{ fontSize: 10, color: COLORS.slate500, fontWeight: 800 }}>PDF</span>
               </div>
             ) : (
               <img src={previews[doc.documento]} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -93,7 +94,7 @@ export default function DocumentCard({
             {/* Overlay de acciones */}
             <div className="overlay-actions" style={{
               position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: 'rgba(30, 41, 59, 0.7)',
+              backgroundColor: COLORS.overlaySlateGray,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
               opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)',
             }}>
@@ -101,9 +102,9 @@ export default function DocumentCard({
                 type="button"
                 onClick={e => { e.stopPropagation(); onOpenPreview(doc, previews[doc.documento], documents[doc.documento]); }}
                 style={{
-                  width: 36, height: 36, borderRadius: '50%', backgroundColor: '#fff',
-                  color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer',
+                  width: 36, height: 36, borderRadius: '50%', backgroundColor: COLORS.white,
+                  color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer',
                 }}
               >
                 <FaSearchPlus />
@@ -120,8 +121,8 @@ export default function DocumentCard({
                       showCancelButton: true,
                       confirmButtonText: '📷 Tomar con cámara',
                       cancelButtonText: '📁 Subir archivo',
-                      confirmButtonColor: '#0b4ea6',
-                      cancelButtonColor: '#64748b'
+                      confirmButtonColor: COLORS.primary,
+                      cancelButtonColor: COLORS.slate500
                     }).then((result) => {
                       if (result.isConfirmed) {
                         setIsCameraOpen(true);
@@ -134,9 +135,9 @@ export default function DocumentCard({
                   }
                 }}
                 style={{
-                  width: 36, height: 36, borderRadius: '50%', backgroundColor: '#0ea5e9',
-                  color: '#fff', border: 'none', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer',
+                  width: 36, height: 36, borderRadius: '50%', backgroundColor: COLORS.sky,
+                  color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer',
                 }}
               >
                 <FaSyncAlt />
@@ -144,7 +145,7 @@ export default function DocumentCard({
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', color: '#6b7280', cursor: disabledUpload ? 'not-allowed' : 'pointer', opacity: disabledUpload ? 0.5 : 1 }}
+          <div style={{ textAlign: 'center', color: COLORS.gray500, cursor: disabledUpload ? 'not-allowed' : 'pointer', opacity: disabledUpload ? 0.5 : 1 }}
             onClick={() => {
               if (disabledUpload) {
                 Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
@@ -158,8 +159,8 @@ export default function DocumentCard({
                   showCancelButton: true,
                   confirmButtonText: '📷 Tomar con cámara',
                   cancelButtonText: '📁 Subir archivo',
-                  confirmButtonColor: '#0b4ea6',
-                  cancelButtonColor: '#64748b'
+                  confirmButtonColor: COLORS.primary,
+                  cancelButtonColor: COLORS.slate500
                 }).then((result) => {
                   if (result.isConfirmed) {
                     setIsCameraOpen(true);
@@ -193,7 +194,7 @@ export default function DocumentCard({
       {/* Error de foto */}
       {isPhoto && fotoError && (
         <div style={{
-          background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)',
+          background: COLORS.dangerLightTranslucent, border: `1px solid ${COLORS.dangerLightTranslucent20}`,
           borderRadius: 8, padding: '8px 12px', fontSize: 11.5, color: C.rose,
           marginBottom: 10, display: 'flex', alignItems: 'center', gap: 7,
         }}>
@@ -205,7 +206,7 @@ export default function DocumentCard({
       {isPhoto && fotoFallida && fotoArchivo && (
         <button onClick={forzarFoto} style={{
           width: '100%', padding: '7px 12px',
-          border: `1px solid rgba(245,158,11,0.4)`, background: 'rgba(245,158,11,0.08)',
+          border: `1px solid ${COLORS.warningBgTranslucent40}`, background: COLORS.warningBgTranslucent08,
           color: C.amber, borderRadius: 8, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', marginBottom: 10,
         }}>
           ⚠️ Omitir validación y usar esta foto
@@ -220,7 +221,7 @@ export default function DocumentCard({
             disabled={disabledUpload}
             style={{
               flex: 1, padding: '8px 10px', border: `1px solid ${C.inputBorder}`,
-              background: 'rgba(255,255,255,0.03)', color: disabledUpload ? C.textDim : C.textMid,
+              background: COLORS.overlayWhite03, color: disabledUpload ? C.textDim : C.textMid,
               borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: disabledUpload ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               opacity: disabledUpload ? 0.5 : 1
@@ -236,7 +237,7 @@ export default function DocumentCard({
             disabled={disabledUpload}
             style={{
               flex: 1, padding: '8px 10px', border: `1px solid ${C.inputBorder}`,
-              background: 'rgba(255,255,255,0.03)', color: disabledUpload ? C.textDim : C.textMid,
+              background: COLORS.overlayWhite03, color: disabledUpload ? C.textDim : C.textMid,
               borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: disabledUpload ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
               opacity: disabledUpload ? 0.5 : 1
@@ -271,7 +272,7 @@ export default function DocumentCard({
           </button>
 
           {detailsOpen[doc.documento] && (
-            <div style={{ marginTop: 8, background: 'rgba(255,255,255,0.02)', border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: '10px 12px' }}>
+            <div style={{ marginTop: 8, background: COLORS.overlayWhite02, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: '10px 12px' }}>
               {doc.ocr && Object.keys(ocrResults).length > 0 ? (
                 [['Nombre', ocrResults.nombre], ['CURP', ocrResults.curp], ['Fecha Nac.', ocrResults.fecha_nac], ['Edad', ocrResults.edad], ['Nacionalidad', ocrResults.nacionalidad]].map(([label, val]) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4 }}>

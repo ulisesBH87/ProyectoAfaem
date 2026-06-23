@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaUsers, FaUserShield, FaLock, FaArrowRight } from 'react-icons/fa';
+import COLORS from '../../styles/colors';
 
 /**
  * MÓDULO EN PREPARACIÓN
@@ -52,14 +53,14 @@ export default function UsuariosRolesAdmin() {
             width: '88px',
             height: '88px',
             borderRadius: '28px',
-            background: 'rgba(99, 102, 241, 0.1)',
-            color: '#6366f1',
+            background: COLORS.indigoTranslucent10,
+            color: COLORS.indigo,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '36px',
             margin: '0 auto 24px',
-            border: '2px solid rgba(99, 102, 241, 0.2)',
+            border: `2px solid ${COLORS.indigoTranslucent20}`,
           }}
         >
           <FaUserShield />
@@ -70,15 +71,15 @@ export default function UsuariosRolesAdmin() {
           style={{
             display: 'inline-block',
             padding: '6px 16px',
-            background: 'rgba(99, 102, 241, 0.08)',
-            color: '#6366f1',
+            background: COLORS.indigoTranslucent08,
+            color: COLORS.indigo,
             borderRadius: '20px',
             fontSize: '11px',
             fontWeight: '800',
             letterSpacing: '0.6px',
             textTransform: 'uppercase',
             marginBottom: '16px',
-            border: '1px solid rgba(99, 102, 241, 0.2)',
+            border: `1px solid ${COLORS.indigoTranslucent20}`,
           }}
         >
           🔧 En preparación — Requiere Backend
@@ -135,8 +136,8 @@ export default function UsuariosRolesAdmin() {
                   width: '36px',
                   height: '36px',
                   borderRadius: '10px',
-                  background: 'rgba(99, 102, 241, 0.1)',
-                  color: '#6366f1',
+                  background: COLORS.indigoTranslucent10,
+                  color: COLORS.indigo,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

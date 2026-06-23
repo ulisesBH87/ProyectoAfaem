@@ -10,6 +10,7 @@ import Step3Cuotas from './RegistrarPresidente/Step3Cuotas';
 import Step4Afiliacion from './RegistrarPresidente/Step4Afiliacion';
 import { FaCheckCircle } from 'react-icons/fa';
 import Loader from '../../components/Loader';
+import COLORS from '../../styles/colors';
 
 /**
  * RegistrarPresidente
@@ -213,18 +214,18 @@ export default function RegistrarPresidente() {
           position: fixed;
           top: 24px;
           right: 24px;
-          background: rgba(255, 255, 255, 0.75);
+          background: ${COLORS.overlayWhite75};
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.4);
+          border: 1px solid ${COLORS.overlayWhite40};
           padding: 12px 20px;
           border-radius: 12px;
-          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+          box-shadow: 0 8px 32px 0 ${COLORS.glassShadowBorder};
           z-index: 9999;
           font-family: inherit;
           font-size: 14px;
           font-weight: 700;
-          color: #1e293b;
+          color: ${COLORS.slate800};
           display: flex;
           align-items: center;
           gap: 8px;
@@ -245,7 +246,7 @@ export default function RegistrarPresidente() {
       <div className="rp-container" style={{
         background: C.surface, borderRadius: 20,
         border: `1px solid ${C.cardBorder}`,
-        boxShadow: '0 24px 60px rgba(0,0,0,.5)',
+        boxShadow: `0 24px 60px ${COLORS.overlayBlack}`,
         position: 'relative', overflow: 'hidden',
       }}>
         {/* Línea decorativa superior */}
@@ -339,7 +340,7 @@ export default function RegistrarPresidente() {
             onClick={() => paso > 1 ? setPaso(p => p - 1) : navigate(ROUTES.ADMIN.PRESIDENTES)}
             style={{
               padding: '10px 22px', borderRadius: 10,
-              border: `1px solid ${C.inputBorder}`, background: 'rgba(255,255,255,0.03)',
+              border: `1px solid ${C.inputBorder}`, background: COLORS.overlayWhite03,
               color: C.textMid, fontWeight: 700, cursor: 'pointer', fontSize: 14, transition: 'all .2s',
             }}
           >
@@ -353,12 +354,12 @@ export default function RegistrarPresidente() {
               disabled={loading}
               style={{
                 padding: '11px 28px', borderRadius: 10,
-                background: loading ? 'rgba(255,255,255,0.1)' : `linear-gradient(135deg, ${C.amberDark}, ${C.orange})`,
+                background: loading ? COLORS.overlayWhite10 : `linear-gradient(135deg, ${C.amberDark}, ${C.orange})`,
                 border: 'none',
                 color: loading ? C.textDim : 'white',
                 fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer',
                 fontSize: 14, display: 'flex', alignItems: 'center', gap: 9,
-                boxShadow: loading ? 'none' : `0 6px 20px rgba(217,119,6,.35)`,
+                boxShadow: loading ? 'none' : `0 6px 20px ${COLORS.warningDarkTranslucent35}`,
                 transition: 'all .2s',
               }}
             >
@@ -370,7 +371,7 @@ export default function RegistrarPresidente() {
 
       {/* Notificación de autoguardado */}
       <div className={`toast-auto-save ${toastVisible ? 'show' : ''}`}>
-        <FaCheckCircle style={{ color: '#10b981', fontSize: '16px' }} />
+        <FaCheckCircle style={{ color: COLORS.success, fontSize: '16px' }} />
         <span>Borrador guardado</span>
       </div>
     </div>

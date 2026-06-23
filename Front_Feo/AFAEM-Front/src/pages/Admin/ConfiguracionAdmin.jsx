@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaCog, FaKey, FaCompass } from 'react-icons/fa';
+import COLORS from '../../styles/colors';
 
 /**
  * MÓDULO EN PREPARACIÓN
@@ -51,14 +52,14 @@ export default function ConfiguracionAdmin() {
             width: '88px',
             height: '88px',
             borderRadius: '28px',
-            background: 'rgba(37, 99, 235, 0.08)',
+            background: COLORS.secondaryBgTranslucent,
             color: 'var(--primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '36px',
             margin: '0 auto 24px',
-            border: '2px solid rgba(37, 99, 235, 0.15)',
+            border: `2px solid ${COLORS.secondaryBgTranslucent15}`,
           }}
         >
           <FaCog style={{ animation: 'spin 4s linear infinite' }} />
@@ -76,7 +77,7 @@ export default function ConfiguracionAdmin() {
           style={{
             display: 'inline-block',
             padding: '6px 16px',
-            background: 'rgba(37, 99, 235, 0.07)',
+            background: COLORS.secondaryBgTranslucent07,
             color: 'var(--primary)',
             borderRadius: '20px',
             fontSize: '11px',
@@ -84,7 +85,7 @@ export default function ConfiguracionAdmin() {
             letterSpacing: '0.6px',
             textTransform: 'uppercase',
             marginBottom: '16px',
-            border: '1px solid rgba(37, 99, 235, 0.2)',
+            border: `1px solid ${COLORS.secondaryBgTranslucent20}`,
           }}
         >
           🔧 En preparación — Requiere Backend
@@ -132,7 +133,7 @@ export default function ConfiguracionAdmin() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  background: 'rgba(37,99,235,0.08)',
+                  background: COLORS.secondaryBgTranslucent,
                   color: 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',

@@ -2573,38 +2573,13 @@ async def obtener_link_invitacion(
     if invitacion_activa:
         token_identificador = invitacion_activa.TokenIdentificador
         token_secreto = invitacion_activa.TokenSecreto
-        inv_id = str(invitacion_activa.PresidenteInvitacionId)
-        obs = f"Enlace de invitación copiado para usuario {usuario_db.UsuarioId}"
-        accion_id = 4 # READ
     else:
         invitacion_data = crear_invitacion_presidente_repo(db, usuario_db.UsuarioId)
         token_identificador = invitacion_data['token_identificador']
         token_secreto = invitacion_data['token_secreto']
-        inv_id = str(invitacion_data['invitacion'].PresidenteInvitacionId)
-        obs = f"Invitación creada automáticamente para copiar enlace de usuario {usuario_db.UsuarioId}"
-        accion_id = 1 # CREATE
+        db.commit()
 
     link_invitacion = f"{frontend_base_url}/i/{token_identificador}/{token_secreto}"
-
-    # Registrar auditoría
-    from app.modelos.auditoria import Auditoria
-    from app.core.auditoria.auditoria_servicio import obtener_nombre_usuario
-    admin_id = getattr(usuario, "UsuarioId", 0)
-    admin_nombre = obtener_nombre_usuario(db, admin_id)
-    ip = request.client.host if request.client else None
-
-    auditoria = Auditoria(
-        EntidadAfectada="PresidenteInvitacion",
-        RegistroId=inv_id,
-        AccionId=accion_id,
-        UsuarioId=admin_id,
-        FechaAccion=datetime.now(),
-        Ip=ip,
-        ObservacionesAuditoria=obs,
-        UsuarioNombre=admin_nombre
-    )
-    db.add(auditoria)
-    db.commit()
 
     return {
         "success": True,

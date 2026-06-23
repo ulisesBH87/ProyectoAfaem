@@ -23,6 +23,7 @@ import Loader from '../../components/Loader';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { openSecurePath } from '../../utils/secureFetch';
+import COLORS from '../../styles/colors';
 
 /**
  * Tipos requeridos para jugadores. El campo `id` coincide con DocumentoAfiliacionId
@@ -98,26 +99,26 @@ const getDocumentoEstatusInfo = (estadoId) => {
     case 2:
       return {
         texto: 'Aceptado',
-        color: '#16a34a', // Green-600
-        bg: '#f0fdf4', // Green-50
-        cardBg: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
-        border: '#10b981', // Green-500
+        color: COLORS.green, // Green-600
+        bg: COLORS.greenBg50, // Green-50
+        cardBg: `linear-gradient(180deg, ${COLORS.white} 0%, ${COLORS.greenBg50} 100%)`,
+        border: COLORS.success, // Green-500
       };
     case 1:
       return {
         texto: 'Espera',
-        color: '#d97706', // Amber-600
-        bg: '#fffbeb', // Amber-50
-        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
-        border: '#f59e0b', // Amber-500
+        color: COLORS.warningDark, // Amber-600
+        bg: COLORS.warningBgLight, // Amber-50
+        cardBg: `linear-gradient(180deg, ${COLORS.white} 0%, ${COLORS.warningBgLight} 100%)`,
+        border: COLORS.warning, // Amber-500
       };
     case 3:
       return {
         texto: 'Rechazado',
-        color: '#dc2626', // Red-600
-        bg: '#fef2f2', // Red-50
-        cardBg: 'linear-gradient(180deg, #ffffff 0%, #fef2f2 100%)',
-        border: '#ef4444', // Red-500
+        color: COLORS.dangerDark, // Red-600
+        bg: COLORS.dangerBgLight, // Red-50
+        cardBg: `linear-gradient(180deg, ${COLORS.white} 0%, ${COLORS.dangerBgLight} 100%)`,
+        border: COLORS.danger, // Red-500
       };
     default:
       return null;
@@ -154,9 +155,9 @@ const getDocumentActionButtons = (documento, tipoId) => {
   }
 
   const actionStyles = {
-    aceptar: 'background: #10b981; color: white; border: none; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);',
-    rechazar: 'background: #ef4444; color: white; border: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);',
-    espera: 'background: #f59e0b; color: white; border: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);',
+    aceptar: `background: ${COLORS.success}; color: white; border: none; box-shadow: 0 2px 4px ${COLORS.successBgTranslucent10};`,
+    rechazar: `background: ${COLORS.danger}; color: white; border: none; box-shadow: 0 2px 4px ${COLORS.dangerBgTranslucent10};`,
+    espera: `background: ${COLORS.warning}; color: white; border: none; box-shadow: 0 2px 4px ${COLORS.warningBgTranslucent10};`,
   };
 
   return acciones
@@ -179,7 +180,7 @@ const getDocumentActionButtons = (documento, tipoId) => {
             text-align: center;
             transition: all 0.2s;
             box-sizing: border-box;
-            ${actionStyles[accion.key] || 'background: #0b4ea6; color: white;'}
+            ${actionStyles[accion.key] || `background: ${COLORS.primary}; color: white;`}
           "
           onmouseover="this.style.filter='brightness(0.95)'"
           onmouseout="this.style.filter='none'"
@@ -245,7 +246,7 @@ const attachActionButtonListeners = (root = document) => {
       overlay.style.cssText = `
         position: absolute;
         inset: 0;
-        background: rgba(15, 23, 42, 0.55);
+        background: ${COLORS.overlaySlateMedium};
         display: flex;
         align-items: center;
         justify-content: center;
@@ -255,18 +256,18 @@ const attachActionButtonListeners = (root = document) => {
       popup.style.position = 'relative';
 
       overlay.innerHTML = `
-        <div style="background: white; border-radius: 20px; padding: 24px; width: min(480px, 90%); box-shadow: 0 18px 50px rgba(15,23,42,0.18); text-align: center; font-family: 'Inter', sans-serif;">
-          <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">¿Deseas ${actionText} este documento?</div>
+        <div style="background: white; border-radius: 20px; padding: 24px; width: min(480px, 90%); box-shadow: 0 18px 50px ${COLORS.overlaySlateSuperLight}; text-align: center; font-family: 'Inter', sans-serif;">
+          <div style="font-size: 16px; font-weight: 700; color: ${COLORS.slate900}; margin-bottom: 16px;">¿Deseas ${actionText} este documento?</div>
           ${isRejectAction ? `
             <div style="text-align:left; margin-bottom: 14px;">
-              <label for="rechazo-motivo" style="display:block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Motivo de rechazo</label>
-              <textarea id="rechazo-motivo" data-reject-reason rows="4" style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 12px; resize: vertical; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box;" placeholder="Describe brevemente por qué se rechaza este documento."></textarea>
-              <div data-rejection-error style="font-size: 13px; color: #b91c1c; margin-top: 6px; min-height: 18px; font-weight: 600;"></div>
+              <label for="rechazo-motivo" style="display:block; font-size: 13px; font-weight: 700; color: ${COLORS.slate900}; margin-bottom: 8px;">Motivo de rechazo</label>
+              <textarea id="rechazo-motivo" data-reject-reason rows="4" style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid ${COLORS.slate300}; border-radius: 12px; resize: vertical; font-size: 14px; color: ${COLORS.slate900}; outline: none; box-sizing: border-box;" placeholder="Describe brevemente por qué se rechaza este documento."></textarea>
+              <div data-rejection-error style="font-size: 13px; color: ${COLORS.dangerDarker}; margin-top: 6px; min-height: 18px; font-weight: 600;"></div>
             </div>
           ` : ''}
           <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-            <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: #0b4ea6; color: white; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#083b7e'" onmouseout="this.style.background='#0b4ea6'">Aceptar</button>
-            <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Cancelar</button>
+            <button data-confirm-action type="button" style="padding: 10px 18px; border-radius: 12px; border: none; background: ${COLORS.primary}; color: white; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='${COLORS.primaryHover}'" onmouseout="this.style.background='${COLORS.primary}'">Aceptar</button>
+            <button data-cancel-action type="button" style="padding: 10px 18px; border-radius: 12px; border: 1px solid ${COLORS.slate300}; background: white; color: ${COLORS.slate600}; font-weight: 700; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='${COLORS.slate50}'" onmouseout="this.style.background='white'">Cancelar</button>
           </div>
         </div>
       `;
@@ -293,7 +294,7 @@ const attachActionButtonListeners = (root = document) => {
         try {
           const waitingText = document.createElement('div');
           waitingText.textContent = 'Actualizando estado...';
-          waitingText.style = 'margin-top: 14px; color: #334155; font-size: 14px; font-weight: 600;';
+          waitingText.style = `margin-top: 14px; color: ${COLORS.slate700}; font-size: 14px; font-weight: 600;`;
           overlay.querySelector('div').appendChild(waitingText);
           boton.disabled = true;
           if (confirmButton) confirmButton.disabled = true;
@@ -322,10 +323,10 @@ const estilosCardDocumento = `
   padding: 20px 16px 16px 16px;
   text-align: center;
   border-radius: 16px;
-  border: 1.5px solid #cbd5e1;
-  background: #ffffff;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  color: #1e293b;
+  border: 1.5px solid ${COLORS.slate300};
+  background: ${COLORS.white};
+  box-shadow: 0 4px 6px -1px ${COLORS.shadow05}, 0 2px 4px -1px ${COLORS.shadow03};
+  color: ${COLORS.slate800};
   box-sizing: border-box;
 `;
 
@@ -356,8 +357,8 @@ const construirCardDocumentoHtml = (tipo, documento) => {
           text-decoration: none;
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         "
-        onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px rgba(0, 0, 0, 0.15)'; this.querySelector('.doc-icon-wrapper').style.background='#e0f2fe';"
-        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.05)'; this.querySelector('.doc-icon-wrapper').style.background='#f0f9ff';"
+        onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px ${COLORS.shadow15}'; this.querySelector('.doc-icon-wrapper').style.background='${COLORS.skyBg}';"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px ${COLORS.shadow05}'; this.querySelector('.doc-icon-wrapper').style.background='${COLORS.skyBgLight}';"
       >
         ${estadoBadge}
         <a
@@ -367,7 +368,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
           style="display: flex; flex-direction: column; align-items: center; width: 100%; gap: 10px; text-decoration: none;"
           title="Ver documento en pestaña nueva"
         >
-          <div class="doc-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: #f0f9ff; color: #0284c7; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
+          <div class="doc-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: ${COLORS.skyBgLight}; color: ${COLORS.skyDark}; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
             <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -377,9 +378,9 @@ const construirCardDocumentoHtml = (tipo, documento) => {
             </svg>
           </div>
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
-            <span style="font-size: 12px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
-            ${Number(tipo.id) === 25 ? `<span style="font-size: 10px; color: #ef4444; font-style: italic; line-height: 1.3; text-align: center; margin-top: 2px; font-weight: 500;">Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.</span>` : ''}
-            <span style="font-size: 11px; color: #64748b; line-height: 1.4; text-align: center;">Subido el ${fechaSubida}</span>
+            <span style="font-size: 12px; font-weight: 700; color: ${COLORS.slate800}; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+            ${Number(tipo.id) === 25 ? `<span style="font-size: 10px; color: ${COLORS.danger}; font-style: italic; line-height: 1.3; text-align: center; margin-top: 2px; font-weight: 500;">Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.</span>` : ''}
+            <span style="font-size: 11px; color: ${COLORS.slate500}; line-height: 1.4; text-align: center;">Subido el ${fechaSubida}</span>
           </div>
         </a>
         <div style="display: flex; flex-direction: column; gap: 6px; margin-top: auto; width: 100%;">
@@ -393,9 +394,9 @@ const construirCardDocumentoHtml = (tipo, documento) => {
             style="
               padding: 6px 12px;
               border-radius: 8px;
-              border: 1.5px solid #0284c7;
+              border: 1.5px solid ${COLORS.skyDark};
               background: white;
-              color: #0284c7;
+              color: ${COLORS.skyDark};
               font-size: 11px;
               font-weight: 700;
               cursor: pointer;
@@ -407,7 +408,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
               width: 100%;
               box-sizing: border-box;
             "
-            onmouseover="this.style.background='#f0f9ff'"
+            onmouseover="this.style.background='${COLORS.skyBgLight}'"
             onmouseout="this.style.background='white'"
           >
             <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="12" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -421,11 +422,11 @@ const construirCardDocumentoHtml = (tipo, documento) => {
   return `
     <div
       style="${estilosCardDocumento}"
-      onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px rgba(0, 0, 0, 0.1)'; this.querySelector('.missing-icon-wrapper').style.background='#ffe4e6';"
-      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'; this.querySelector('.missing-icon-wrapper').style.background='#fef2f2';"
+      onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 20px -8px ${COLORS.shadow10}'; this.querySelector('.missing-icon-wrapper').style.background='${COLORS.roseBg}';"
+      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'; this.querySelector('.missing-icon-wrapper').style.background='${COLORS.dangerBgLight}';"
     >
-      <div class="missing-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: #fef2f2; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
-        <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg" style="color: #ef4444;">
+      <div class="missing-icon-wrapper" style="width: 52px; height: 52px; border-radius: 14px; background: ${COLORS.dangerBgLight}; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.2s;">
+        <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg" style="color: ${COLORS.danger};">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
           <line x1="12" y1="18" x2="12" y2="12"></line>
@@ -433,9 +434,9 @@ const construirCardDocumentoHtml = (tipo, documento) => {
         </svg>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; align-items: center; width: 100%;">
-        <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
-        ${Number(tipo.id) === 25 ? `<span style="font-size: 10px; color: #ef4444; font-style: italic; line-height: 1.3; text-align: center; margin-top: 2px; font-weight: 500;">Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.</span>` : ''}
-        <span style="font-size: 11px; color: #f43f5e; font-weight: 700; background: #fff1f2; padding: 2px 8px; border-radius: 20px;">Faltante</span>
+        <span style="font-size: 12px; font-weight: 700; color: ${COLORS.slate500}; text-transform: uppercase; letter-spacing: 0.04em; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">${tituloTipo}</span>
+        ${Number(tipo.id) === 25 ? `<span style="font-size: 10px; color: ${COLORS.danger}; font-style: italic; line-height: 1.3; text-align: center; margin-top: 2px; font-weight: 500;">Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.</span>` : ''}
+        <span style="font-size: 11px; color: ${COLORS.rose}; font-weight: 700; background: ${COLORS.roseBgLight}; padding: 2px 8px; border-radius: 20px;">Faltante</span>
       </div>
       <button
         type="button"
@@ -445,7 +446,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
           padding: 8px 14px;
           border-radius: 8px;
           border: none;
-          background: #0b4ea6;
+          background: ${COLORS.primary};
           color: white;
           font-size: 11px;
           font-weight: 700;
@@ -454,8 +455,8 @@ const construirCardDocumentoHtml = (tipo, documento) => {
           box-sizing: border-box;
           transition: all 0.2s;
         "
-        onmouseover="this.style.background='#083b7e'"
-        onmouseout="this.style.background='#0b4ea6'"
+        onmouseover="this.style.background='${COLORS.primaryHover}'"
+        onmouseout="this.style.background='${COLORS.primary}'"
       >
         Añadir documento
       </button>
@@ -713,8 +714,8 @@ export default function AdminJugadores() {
             showCancelButton: true,
             confirmButtonText: 'Sí, cargar igualmente',
             cancelButtonText: 'No, intentar de nuevo',
-            confirmButtonColor: '#0b4ea6',
-            cancelButtonColor: '#cbd5e1'
+            confirmButtonColor: COLORS.primary,
+            cancelButtonColor: COLORS.slate300
           });
 
           if (result.isConfirmed) {
@@ -732,8 +733,8 @@ export default function AdminJugadores() {
           showCancelButton: true,
           confirmButtonText: 'Sí, cargar igualmente',
           cancelButtonText: 'No, intentar de nuevo',
-          confirmButtonColor: '#0b4ea6',
-          cancelButtonColor: '#cbd5e1'
+          confirmButtonColor: COLORS.primary,
+          cancelButtonColor: COLORS.slate300
         });
 
         if (result.isConfirmed) {
@@ -780,7 +781,7 @@ export default function AdminJugadores() {
       <div class="modal-dialog modal-dialog-centered" style="max-width: min(860px, 95vw);">
         <div class="modal-content">
           <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
-            <h5 class="modal-title" style="font-size: 1.875em; font-weight: 600; text-align: center; width: 100%; color: #545454; padding-left: 32px;">Documentos de ${jugador.NombreCompleto}</h5>
+            <h5 class="modal-title" style="font-size: 1.875em; font-weight: 600; text-align: center; width: 100%; color: ${COLORS.neutral500}; padding-left: 32px;">Documentos de ${jugador.NombreCompleto}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body" style="padding-top: 0;">
@@ -795,15 +796,15 @@ export default function AdminJugadores() {
                 width: 6px;
               }
               .doc-card-container::-webkit-scrollbar-track {
-                background: #f8fafc;
+                background: ${COLORS.slate50};
                 border-radius: 10px;
               }
               .doc-card-container::-webkit-scrollbar-thumb {
-                background: #cbd5e1;
+                background: ${COLORS.slate300};
                 border-radius: 10px;
               }
               .doc-card-container::-webkit-scrollbar-thumb:hover {
-                background: #94a3b8;
+                background: ${COLORS.slate400};
               }
               body, .main-header-fixed {
                 padding-right: 0 !important;
@@ -816,7 +817,7 @@ export default function AdminJugadores() {
             </div>
           </div>
           <div class="modal-footer" style="border-top: none; justify-content: center; gap: 10px; padding-bottom: 20px;">
-            <button type="button" class="btn text-white" data-bs-dismiss="modal" style="background-color: #0b4ea6; border: none; padding: 10px 24px; font-weight: 500; border-radius: 0.25em;">Cerrar</button>
+            <button type="button" class="btn text-white" data-bs-dismiss="modal" style="background-color: ${COLORS.primary}; border: none; padding: 10px 24px; font-weight: 500; border-radius: 0.25em;">Cerrar</button>
           </div>
         </div>
       </div>
@@ -863,8 +864,8 @@ export default function AdminJugadores() {
             showCancelButton: true,
             confirmButtonText: '📷 Tomar con cámara',
             cancelButtonText: '📁 Subir archivo',
-            confirmButtonColor: '#0b4ea6',
-            cancelButtonColor: '#64748b'
+            confirmButtonColor: COLORS.primary,
+            cancelButtonColor: COLORS.slate500
           }).then((result) => {
             if (result.isConfirmed) {
               bsModal.hide();
@@ -880,7 +881,7 @@ export default function AdminJugadores() {
                 const archivo = e.target.files?.[0];
                 if (archivo) {
                   if (!validarArchivoDoc(archivo)) {
-                    Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                    Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                     return;
                   }
                   bsModal.hide();
@@ -901,7 +902,7 @@ export default function AdminJugadores() {
             const archivo = e.target.files?.[0];
             if (archivo) {
               if (!validarArchivoDoc(archivo)) {
-                Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                 return;
               }
               bsModal.hide();
@@ -929,8 +930,8 @@ export default function AdminJugadores() {
             showCancelButton: true,
             confirmButtonText: '📷 Tomar con cámara',
             cancelButtonText: '📁 Subir archivo',
-            confirmButtonColor: '#0b4ea6',
-            cancelButtonColor: '#64748b'
+            confirmButtonColor: COLORS.primary,
+            cancelButtonColor: COLORS.slate500
           }).then((result) => {
             if (result.isConfirmed) {
               bsModal.hide();
@@ -946,7 +947,7 @@ export default function AdminJugadores() {
                 const archivo = ev.target.files?.[0];
                 if (archivo) {
                   if (!validarArchivoDoc(archivo)) {
-                    Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                    Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                     return;
                   }
                   bsModal.hide();
@@ -967,7 +968,7 @@ export default function AdminJugadores() {
             const archivo = ev.target.files?.[0];
             if (archivo) {
               if (!validarArchivoDoc(archivo)) {
-                Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                 return;
               }
               bsModal.hide();
@@ -1117,7 +1118,7 @@ export default function AdminJugadores() {
         title: 'Tipo de archivo no permitido',
         text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
         icon: 'error',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
       return;
     }
@@ -1204,8 +1205,8 @@ export default function AdminJugadores() {
         text: "Tienes cambios sin guardar que se perderán.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#64748b',
+        confirmButtonColor: COLORS.danger,
+        cancelButtonColor: COLORS.slate500,
         confirmButtonText: 'Sí, salir sin guardar',
         cancelButtonText: 'Volver a la edición'
       }).then((result) => {
@@ -1275,19 +1276,19 @@ export default function AdminJugadores() {
   ];
 
   const dataTransformada = paginatedJugadores.map(j => ({
-    MiembroEquipoId: <span style={{ fontWeight: '700', color: '#64748b' }}>#{j.MiembroEquipoId}</span>,
+    MiembroEquipoId: <span style={{ fontWeight: '700', color: COLORS.slate500 }}>#{j.MiembroEquipoId}</span>,
     NombreCompleto: (
       <div>
-        <div style={{ fontWeight: '800', color: '#1e293b' }}>{j.NombreCompleto}</div>
-        <div style={{ fontSize: '11px', color: '#64748b' }}>{j.Email || 'Sin correo registrado'}</div>
+        <div style={{ fontWeight: '800', color: COLORS.slate800 }}>{j.NombreCompleto}</div>
+        <div style={{ fontSize: '11px', color: COLORS.slate500 }}>{j.Email || 'Sin correo registrado'}</div>
       </div>
     ),
     NUI: j.NUI ? (
-      <span style={{ fontFamily: 'monospace', fontSize: '12px', background: '#eff6ff', color: '#2563eb', padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>{j.NUI}</span>
+      <span style={{ fontFamily: 'monospace', fontSize: '12px', background: COLORS.secondaryBg, color: COLORS.secondary, padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>{j.NUI}</span>
     ) : (
-      <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>Sin NUI</span>
+      <span style={{ fontSize: '11px', color: COLORS.slate400, fontStyle: 'italic' }}>Sin NUI</span>
     ),
-    Sexo: <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>{j.Sexo || 'N/A'}</span>,
+    Sexo: <span style={{ fontSize: '13px', color: COLORS.slate600, fontWeight: '600' }}>{j.Sexo || 'N/A'}</span>,
     EquipoLiga: (
       <div style={{ maxWidth: '340px' }}>
         {j.EquipoId ? (
@@ -1295,7 +1296,7 @@ export default function AdminJugadores() {
             style={{
               fontWeight: '700',
               fontSize: '14px',
-              color: '#0b4ea6',
+              color: COLORS.primary,
               cursor: 'pointer',
               textDecoration: 'underline'
             }}
@@ -1308,20 +1309,20 @@ export default function AdminJugadores() {
             {j.EquipoNombre}
           </div>
         ) : (
-          <div style={{ fontWeight: '700', fontSize: '14px', color: '#64748b' }}>{j.EquipoNombre || 'Sin equipo'}</div>
+          <div style={{ fontWeight: '700', fontSize: '14px', color: COLORS.slate500 }}>{j.EquipoNombre || 'Sin equipo'}</div>
         )}
-        <div style={{ fontSize: '12px', color: '#64748b' }}>{j.Liga}</div>
+        <div style={{ fontSize: '12px', color: COLORS.slate500 }}>{j.Liga}</div>
       </div>
     ),
     FechaIngreso: <span style={{ fontSize: '12px' }}>{new Date(j.FechaIngreso).toLocaleDateString()}</span>,
     Estatus: j.Estatus ?
-      <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>ACTIVO</span> :
-      <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>BAJA</span>,
+      <span className="badge" style={{ background: COLORS.successBg, color: COLORS.successDark, border: `1px solid ${COLORS.successBgDark}` }}>ACTIVO</span> :
+      <span className="badge" style={{ background: COLORS.dangerBgLight, color: COLORS.dangerDark, border: `1px solid ${COLORS.dangerBgMedium}` }}>BAJA</span>,
     Acciones: (
       <div style={{ display: 'flex', gap: '8px' }}>
         <button
           className="btn btn-sm"
-          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: '#e2e8f0', color: '#475569', border: 'none', fontWeight: '700' }}
+          style={{ padding: '8px 14px', fontSize: '12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', background: COLORS.slate200, color: COLORS.slate600, border: 'none', fontWeight: '700' }}
           onClick={() => handleDescargarDocs(j)}
           title="Ver documentos"
         >
@@ -1336,8 +1337,8 @@ export default function AdminJugadores() {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: j.DocumentosAprobados ? '#eff6ff' : '#f1f5f9',
-            color: j.DocumentosAprobados ? '#2563eb' : '#94a3b8',
+            background: j.DocumentosAprobados ? COLORS.secondaryBg : COLORS.slate100,
+            color: j.DocumentosAprobados ? COLORS.secondary : COLORS.slate400,
             border: 'none',
             fontWeight: '700',
             cursor: j.DocumentosAprobados ? 'pointer' : 'not-allowed'
@@ -1414,21 +1415,21 @@ export default function AdminJugadores() {
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Catálogo de jugadores registrados</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza y gestiona jugadores.</p>
+          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Catálogo de jugadores registrados</h2>
+          <p style={{ margin: 0, fontSize: '14px', color: COLORS.slate500, marginTop: '4px' }}>Visualiza y gestiona jugadores.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
             className="btn btn-primary"
             onClick={() => loadJugadores(true)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: COLORS.slate700, border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
           </button>
           <button
             className="btn btn-primary"
             onClick={() => navigate(ROUTES.ADMIN.LAYOUT_JUGADORES)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: COLORS.slate700, border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaTable /> Tabla de jugadores
           </button>
@@ -1450,17 +1451,17 @@ export default function AdminJugadores() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'todos' ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'todos' ? `0 4px 12px ${COLORS.primaryBgTranslucent}` : 'none',
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaUsers /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL JUGADORES</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.primary }}><FaUsers /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>TOTAL JUGADORES</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.slate800 }}>{stats.total}</div>
         </div>
 
         {/* TARJETA ACTIVOS */}
@@ -1470,17 +1471,17 @@ export default function AdminJugadores() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'activos' ? '2px solid #10b981' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'activos' ? `2px solid ${COLORS.success}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'activos' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'activos' ? `0 4px 12px ${COLORS.successBgTranslucent}` : 'none',
             transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES ACTIVOS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.success }}><FaCheckCircle /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>JUGADORES ACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.success }}>{stats.activos}</div>
         </div>
 
         {/* TARJETA INACTIVOS */}
@@ -1490,17 +1491,17 @@ export default function AdminJugadores() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'inactivos' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'inactivos' ? `2px solid ${COLORS.danger}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'inactivos' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'inactivos' ? `0 4px 12px ${COLORS.dangerBgTranslucent}` : 'none',
             transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>JUGADORES INACTIVOS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.danger }}><FaTimesCircle /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>JUGADORES INACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.danger }}>{stats.inactivos}</div>
         </div>
 
         {/* TARJETA HOMBRES */}
@@ -1510,17 +1511,17 @@ export default function AdminJugadores() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'hombres' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'hombres' ? `2px solid ${COLORS.blue}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'hombres' ? '0 4px 12px rgba(59, 130, 246, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'hombres' ? `0 4px 12px ${COLORS.blueTranslucent15}` : 'none',
             transform: filtroEstatus === 'hombres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#3b82f6' }}><FaMale /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>MASCULINO</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#3b82f6' }}>{stats.hombres}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.blue }}><FaMale /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>MASCULINO</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.blue }}>{stats.hombres}</div>
         </div>
 
         {/* TARJETA MUJERES */}
@@ -1530,32 +1531,32 @@ export default function AdminJugadores() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'mujeres' ? '2px solid #f43f5e' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'mujeres' ? `2px solid ${COLORS.rose}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'mujeres' ? '0 4px 12px rgba(244, 63, 94, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'mujeres' ? `0 4px 12px ${COLORS.roseTranslucent15}` : 'none',
             transform: filtroEstatus === 'mujeres' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f43f5e' }}><FaFemale /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>FEMENINO</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#f43f5e' }}>{stats.mujeres}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.rose }}><FaFemale /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>FEMENINO</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.rose }}>{stats.mujeres}</div>
         </div>
         {/* TARJETA CON NUI */}
         <div
           onClick={() => setFiltroEstatus('conNUI')}
           style={{
             background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === 'conNUI' ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'conNUI' ? `2px solid ${COLORS.violet}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'conNUI' ? '0 4px 12px rgba(139,92,246,0.15)' : 'none',
+            boxShadow: filtroEstatus === 'conNUI' ? `0 4px 12px ${COLORS.violetTranslucent15}` : 'none',
             transform: filtroEstatus === 'conNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#8b5cf6' }}><FaIdCard /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>CON NUI</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#8b5cf6' }}>{stats.conNUI}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.violet }}><FaIdCard /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>CON NUI</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.violet }}>{stats.conNUI}</div>
         </div>
 
         {/* TARJETA SIN NUI */}
@@ -1563,19 +1564,19 @@ export default function AdminJugadores() {
           onClick={() => setFiltroEstatus('sinNUI')}
           style={{
             background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === 'sinNUI' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'sinNUI' ? `2px solid ${COLORS.warning}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'sinNUI' ? '0 4px 12px rgba(245,158,11,0.15)' : 'none',
+            boxShadow: filtroEstatus === 'sinNUI' ? `0 4px 12px ${COLORS.warningBgTranslucent}` : 'none',
             transform: filtroEstatus === 'sinNUI' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f59e0b' }}><FaExclamationTriangle /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>SIN NUI</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.sinNUI}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.warning }}><FaExclamationTriangle /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>SIN NUI</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.warning }}>{stats.sinNUI}</div>
         </div>
       </div>
 
-      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
+      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: `0 10px 15px -3px ${COLORS.shadow05}` }}>
         <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de jugadores</h3>
@@ -1589,7 +1590,7 @@ export default function AdminJugadores() {
               width="280px"
             />
 
-            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569' }}>
+            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate600 }}>
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DEC'}
             </button>
 
@@ -1636,8 +1637,8 @@ export default function AdminJugadores() {
       >
         <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
           {/* FOTO DEL JUGADOR Y CABECERA */}
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', background: 'white', padding: '20px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}` }}>
+            <div style={{ width: '100px', height: '100px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0, border: `2px solid ${COLORS.slate200}`, background: COLORS.slate50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {!mostrarFallback ? (
                 <img
                   src={avatarBlobUrl}
@@ -1648,20 +1649,20 @@ export default function AdminJugadores() {
               ) : (
                 <FaUser
                   className="fallback-icon"
-                  style={{ fontSize: '40px', color: '#cbd5e1' }}
+                  style={{ fontSize: '40px', color: COLORS.slate300 }}
                 />
               )}
             </div>
             <div>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '800', color: COLORS.slate800 }}>
                 {datosEditables.nombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
               </h3>
-              <div style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600', display: 'flex', gap: '5px', alignItems: 'center' }}>
+              <div style={{ margin: 0, fontSize: '13px', color: COLORS.slate500, fontWeight: '600', display: 'flex', gap: '5px', alignItems: 'center' }}>
                 <span>{datosEditables.curp || 'CURP NO REGISTRADA'}</span>
                 <span>•</span>
                 {jugadorEdicion?.EquipoId ? (
                   <span
-                    style={{ color: '#0b4ea6', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{ color: COLORS.primary, cursor: 'pointer', textDecoration: 'underline' }}
                     title="Ver detalle del equipo"
                     onClick={() => {
                       setModalEdicion(false);
@@ -1675,9 +1676,9 @@ export default function AdminJugadores() {
                 )}
               </div>
               {datosEditables.estatus === '1' ? (
-                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: '#ecfdf5', color: '#059669', fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: '1px solid #a7f3d0' }}>ACTIVO</span>
+                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: COLORS.successBg, color: COLORS.successDark, fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: `1px solid ${COLORS.successBgDark}` }}>ACTIVO</span>
               ) : (
-                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: '#fef2f2', color: '#dc2626', fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: '1px solid #fecaca' }}>BAJA</span>
+                <span style={{ display: 'inline-block', marginTop: '10px', padding: '4px 10px', background: COLORS.dangerBgLight, color: COLORS.dangerDark, fontSize: '11px', fontWeight: '800', borderRadius: '6px', border: `1px solid ${COLORS.dangerBgMedium}` }}>BAJA</span>
               )}
             </div>
           </div>
@@ -1685,46 +1686,46 @@ export default function AdminJugadores() {
           {/* PRIMERA FILA: AVISO Y OCR */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
             {/* AVISO CAMPOS PROTEGIDOS */}
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '20px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ background: COLORS.secondaryBg, border: `1px solid ${COLORS.secondaryBgDark}`, padding: '20px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '20px' }}>ℹ️</span>
-                <strong style={{ fontSize: '14px', color: '#1e40af' }}>Campos Protegidos</strong>
+                <strong style={{ fontSize: '14px', color: COLORS.secondaryHover }}>Campos Protegidos</strong>
               </div>
-              <p style={{ margin: 0, fontSize: '13px', color: '#1e3a8a', lineHeight: '1.6' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: COLORS.blueDark, lineHeight: '1.6' }}>
                 El Nombre, Apellidos y CURP están bloqueados. Solo se actualizan automáticamente subiendo y verificando el Acta de Nacimiento o la INE.
               </p>
             </div>
 
             {/* CARGA DE DOCUMENTO OFICIAL (OCR) */}
-            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>Carga de Documento Oficial</h4>
+            <div style={{ background: 'white', border: `1px solid ${COLORS.slate200}`, borderRadius: '14px', padding: '20px', boxShadow: `0 4px 6px -1px ${COLORS.shadow05}` }}>
+              <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: COLORS.slate800 }}>Carga de Documento Oficial</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: `1.5px dashed ${COLORS.slate300}`, borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: COLORS.slate50, transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
                   <span style={{ fontSize: '24px' }}>📋</span>
                   <div>
-                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>Acta</div>
-                    <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
+                    <div style={{ fontWeight: '700', fontSize: '12px', color: COLORS.slate700 }}>Acta</div>
+                    <div style={{ fontSize: '10px', color: COLORS.slate500 }}>PDF/img</div>
                   </div>
                   <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: '#f8fafc', transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: `1.5px dashed ${COLORS.slate300}`, borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: COLORS.slate50, transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
                   <span style={{ fontSize: '24px' }}>🪪</span>
                   <div>
-                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#334155' }}>INE</div>
-                    <div style={{ fontSize: '10px', color: '#64748b' }}>PDF/img</div>
+                    <div style={{ fontWeight: '700', fontSize: '12px', color: COLORS.slate700 }}>INE</div>
+                    <div style={{ fontSize: '10px', color: COLORS.slate500 }}>PDF/img</div>
                   </div>
                   <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
                 </label>
               </div>
               {ocrCargando && (
-                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#0b4ea6', fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento...</p>
+                <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: COLORS.primary, fontWeight: '600', marginBottom: 0 }}>⏳ Procesando documento...</p>
               )}
             </div>
           </div>
 
           {/* SEGUNDA FILA: FORMULARIO */}
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Datos del Jugador</h4>
+          <div style={{ background: 'white', border: `1px solid ${COLORS.slate200}`, borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: `0 4px 6px -1px ${COLORS.shadow05}` }}>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800, borderBottom: `1px solid ${COLORS.slate200}`, paddingBottom: '8px' }}>Datos del Jugador</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: '16px', rowGap: '0', alignItems: 'start' }}>
               <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
               <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FaCheck } from 'react-icons/fa';
 import { C, PASOS } from './constants';
+import COLORS from '../../../styles/colors';
 
 /**
  * StepBar
@@ -22,10 +23,10 @@ export default function StepBar({ paso, setPaso, stepStatus = {} }) {
               <div style={{
                 width: 46, height: 46, borderRadius: 14, fontSize: 17,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: done ? C.greenDim : active ? `linear-gradient(135deg, ${C.amberDark}, ${C.orange})` : 'rgba(255,255,255,0.04)',
-                border: done ? '1.5px solid rgba(74,222,128,.4)' : active ? `1.5px solid ${C.amber}` : `1.5px solid ${C.cardBorder}`,
+                background: done ? C.greenDim : active ? `linear-gradient(135deg, ${C.amberDark}, ${C.orange})` : COLORS.overlayWhite04,
+                border: done ? `1.5px solid ${COLORS.greenBgTranslucent40}` : active ? `1.5px solid ${C.amber}` : `1.5px solid ${C.cardBorder}`,
                 color: done ? C.green : active ? 'white' : C.textDim,
-                boxShadow: active ? `0 0 20px rgba(245,158,11,.35)` : 'none',
+                boxShadow: active ? `0 0 20px ${COLORS.warningBgTranslucent35}` : 'none',
                 transition: 'all .4s',
               }}>
                 {done ? <FaCheck /> : p.icon}
