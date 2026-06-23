@@ -27,6 +27,7 @@ backend/*.env
 # 🔹 Backend - OCR
 # =========================
 OCR/afaem-487315-9fef755ac1dc.json
+OCR/afaem-500220-6c43ed3c7e1f.json
 OCR/__pycache__
 OCR/__pycache__/
 # =========================

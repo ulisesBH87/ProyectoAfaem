@@ -16,7 +16,12 @@ try:
 except ImportError:
     pass
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "afaem-487315-9fef755ac1dc.json")
+credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if not credentials_path:
+    credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "afaem-500220-6c43ed3c7e1f.json")
+elif not os.path.isabs(credentials_path):
+    credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), credentials_path)
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
 app = Flask(__name__)
 
