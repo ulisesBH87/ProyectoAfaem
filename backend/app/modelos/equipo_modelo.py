@@ -14,9 +14,6 @@ class Equipos(Base):
 
     
     EquiposJugandoRelacion = relationship("EquiposJugando", back_populates="EquipoRelacion")
-    MiembrosRelacion = relationship("MiembrosEquipo", back_populates="EquipoRelacion")
-
-    SolicitudRelacion = relationship("Solicitud", back_populates="EquipoRelacion")
 
 class EquiposJugando(Base):
     __tablename__ = "EquiposJugando"
@@ -32,3 +29,5 @@ class EquiposJugando(Base):
     EquipoRelacion = relationship("Equipos", back_populates="EquiposJugandoRelacion")
     PresidenteRelacion = relationship("PresidenteEquipo", foreign_keys=[PresidenteEquipoId], back_populates="EquiposJugandoRelacion")
     EntrenadorRelacion = relationship("PresidenteEquipo", foreign_keys=[EntrenadorEquipoId], back_populates="EquiposEntrenadosRelacion")
+    MiembrosRelacion = relationship("MiembrosEquipo", back_populates="EquipoRelacion")
+    SolicitudRelacion = relationship("Solicitud", back_populates="EquipoRelacion")

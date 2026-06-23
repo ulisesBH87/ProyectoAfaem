@@ -75,6 +75,12 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
         )
     
     elif tipo_proceso == ProcesosEquipoTemporalEnum.AMPLIACION.value:
+        from app.modelos.equipo_modelo import EquiposJugando
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == equipo_id).first()
+        
+        real_equipo_id = eq_jugando.EquipoId if eq_jugando else None
+        liga_id = eq_jugando.LigaId if eq_jugando else None
+
         equipo = EquipoTemporal(
             UsuarioId=orden.UsuarioId,
             SolicitudId=solicitud_id,
@@ -82,7 +88,8 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
             Activo=True,
             CantidadJugadoresPagados=cantidad_jugadores,
             TipoProcesoId=tipo_proceso,
-            EquipoId=equipo_id
+            EquipoId=real_equipo_id,
+            LigaId=liga_id
         )
 
     db.add(equipo)
@@ -127,17 +134,33 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
 # =============================
 
 def obtener_disponibilidad_equipo(db, equipo_id):
-
-    equipos_temporales = (
-        db.query(EquipoTemporal)
-        .options(selectinload(EquipoTemporal.EquipoTemporalJugadorRelacion))
-        .filter(
-            EquipoTemporal.EquipoId == equipo_id,
-            EquipoTemporal.Activo == True
+    from app.modelos.equipo_modelo import EquiposJugando
+    
+    # Check if equipo_id matches EquiposJugandoId
+    ej = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == equipo_id).first()
+    if ej:
+        equipos_temporales = (
+            db.query(EquipoTemporal)
+            .options(selectinload(EquipoTemporal.EquipoTemporalJugadorRelacion))
+            .filter(
+                EquipoTemporal.EquipoId == ej.EquipoId,
+                EquipoTemporal.LigaId == ej.LigaId,
+                EquipoTemporal.Activo == True
+            )
+            .order_by(EquipoTemporal.EquipoTemporalId.desc())
+            .all()
         )
-        .order_by(EquipoTemporal.EquipoTemporalId.desc())
-        .all()
-    )
+    else:
+        equipos_temporales = (
+            db.query(EquipoTemporal)
+            .options(selectinload(EquipoTemporal.EquipoTemporalJugadorRelacion))
+            .filter(
+                EquipoTemporal.EquipoId == equipo_id,
+                EquipoTemporal.Activo == True
+            )
+            .order_by(EquipoTemporal.EquipoTemporalId.desc())
+            .all()
+        )
 
     if not equipos_temporales:
         return None
@@ -501,9 +524,12 @@ def crear_solicitud_presidente(db, usuario_id):
 # =============================
 #CREACIÓN DE EQUIPO
 # =============================
-def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int):
+def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int, liga_id: int = None):
     
-    equipo_temporal = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoId == equipo_id, EquipoTemporal.Activo == True).with_for_update().first()
+    query = db.query(EquipoTemporal).filter(EquipoTemporal.EquipoId == equipo_id, EquipoTemporal.Activo == True)
+    if liga_id:
+        query = query.filter(EquipoTemporal.LigaId == liga_id)
+    equipo_temporal = query.with_for_update().first()
     
     if not equipo_temporal:
         raise HTTPException(status_code=404, detail="Equipo temporal no encontrado o no activo")
@@ -588,7 +614,7 @@ def doc_type_to_id_jugador(es_menor: bool) -> dict:
         "formato": 28,
     }
 
-async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
+async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id, liga_id=None):
     try:
         #Validar fecha de nacimiento
         fecha_nacimiento = None
@@ -653,13 +679,73 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
         db.flush()
         antecedentes_id = antecedentes.AntecedentesId
 
+    from app.modelos.equipo_modelo import EquiposJugando
+    liga_id_resolved = liga_id
+    if not liga_id_resolved and solicitud_id:
+        from app.modelos.equipo_temporal_modelo import EquipoTemporal
+        eq_tem = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
+        if eq_tem:
+            liga_id_resolved = eq_tem.LigaId
+
+    eq_jugando = None
+    if liga_id_resolved:
+        eq_jugando = db.query(EquiposJugando).filter(
+            EquiposJugando.EquipoId == equipo.EquipoId,
+            EquiposJugando.LigaId == liga_id_resolved
+        ).first()
+    
+    if not eq_jugando:
+        eq_jugando = db.query(EquiposJugando).filter(
+            EquiposJugando.EquipoId == equipo.EquipoId
+        ).first()
+    
+    if not eq_jugando:
+        raise HTTPException(400, "El equipo no está registrado en ninguna liga activa")
+
+    rol_en_equipo = p_data.get("rol_en_equipo", 3)
+    numero_camiseta = p_data.get("numero_camiseta")
+
+    # Validar número de camiseta duplicado
+    if numero_camiseta is not None:
+        dup_camiseta = db.query(MiembrosEquipo).filter(
+            MiembrosEquipo.EquipoID == eq_jugando.EquiposJugandoId,
+            MiembrosEquipo.NumeroCamiseta == numero_camiseta,
+            MiembrosEquipo.Eliminado == False
+        ).first()
+        if dup_camiseta or any(
+            isinstance(obj, MiembrosEquipo) and
+            obj.EquipoID == eq_jugando.EquiposJugandoId and
+            obj.NumeroCamiseta == numero_camiseta and
+            not obj.Eliminado
+            for obj in db.new
+        ):
+            raise HTTPException(400, f"El número de camiseta {numero_camiseta} ya está asignado a otro jugador en este equipo.")
+
+    # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
+    if rol_en_equipo != 11:
+        dup_rol = db.query(MiembrosEquipo).filter(
+            MiembrosEquipo.EquipoID == eq_jugando.EquiposJugandoId,
+            MiembrosEquipo.RolEnEquipo == rol_en_equipo,
+            MiembrosEquipo.Eliminado == False
+        ).first()
+        if dup_rol or any(
+            isinstance(obj, MiembrosEquipo) and
+            obj.EquipoID == eq_jugando.EquiposJugandoId and
+            obj.RolEnEquipo == rol_en_equipo and
+            not obj.Eliminado
+            for obj in db.new
+        ):
+            from app.modelos.rol_equipo_modelo import RolesDeEquipo
+            rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_en_equipo).scalar() or "esta posición"
+            raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
     miembro = MiembrosEquipo(
         PersonaId=nueva_persona.PersonaId,
-        RolEnEquipo=p_data.get("rol_en_equipo", 3),
-        EquipoID=equipo.EquipoId,
+        RolEnEquipo=rol_en_equipo,
+        EquipoID=eq_jugando.EquiposJugandoId,
         Estatus=True,
         Eliminado=False,
-        NumeroCamiseta=p_data.get("numero_camiseta"),
+        NumeroCamiseta=numero_camiseta,
         Extranjero=p_data.get("extranjero", False),
         AntecedentesId=antecedentes_id
     )
@@ -672,7 +758,7 @@ async def procesar_jugador(db, equipo, p_data, form_data, index, solicitud_id):
     if not seguro_id:
         raise HTTPException(400, "Debe seleccionar un seguro")
     
-    slot_jugador = actualizar_slot_repo(db, equipo.EquipoId, nueva_persona.PersonaId, seguro_id)
+    slot_jugador = actualizar_slot_repo(db, equipo.EquipoId, nueva_persona.PersonaId, seguro_id, liga_id_resolved)
 
     db.add(miembro)
 
@@ -740,29 +826,41 @@ def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
                           modalidad_id: int = None, categoria_id: int = None,
                           rama_id: int = None):
     from app.modelos.equipo_modelo import Equipos, EquiposJugando
-    equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo_id).first()
+    eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == equipo_id).first()
+    if not eq_jugando:
+        return None
+    equipo = db.query(Equipos).filter(Equipos.EquipoId == eq_jugando.EquipoId).first()
     if not equipo:
         return None
 
     if nombre is not None:
+        if equipo.NombreEquipo != nombre:
+            otro_existente = db.query(EquiposJugando).join(Equipos).filter(
+                Equipos.NombreEquipo == nombre,
+                EquiposJugando.LigaId == eq_jugando.LigaId,
+                EquiposJugando.EquiposJugandoId != eq_jugando.EquiposJugandoId
+            ).first()
+            if otro_existente:
+                raise HTTPException(status_code=400, detail="Ya existe un equipo con este nombre registrado en la misma liga")
         equipo.NombreEquipo = nombre
     if estatus is not None:
         equipo.Estatus = estatus
 
-    # Actualizar EquiposJugando si se enviaron campos de categoría o presidente o entrenador
-    hay_cambios_jugando = any(v is not None for v in [
-        presidente_equipo_id, entrenador_equipo_id, liga_id
-    ])
-    if hay_cambios_jugando:
-        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
-        if eq_jugando:
-            if presidente_equipo_id is not None:
-                eq_jugando.PresidenteEquipoId = presidente_equipo_id
-            if entrenador_equipo_id is not None:
-                # Si se provee, actualizar el EntrenadorEquipoId (incluso si es None/null)
-                eq_jugando.EntrenadorEquipoId = entrenador_equipo_id
-            if liga_id is not None:
-                eq_jugando.LigaId = liga_id
+    if presidente_equipo_id is not None:
+        eq_jugando.PresidenteEquipoId = presidente_equipo_id
+    if entrenador_equipo_id is not None:
+        eq_jugando.EntrenadorEquipoId = entrenador_equipo_id
+    if liga_id is not None:
+        liga_para_validar = liga_id
+        nombre_para_validar = nombre if nombre is not None else equipo.NombreEquipo
+        otro_existente = db.query(EquiposJugando).join(Equipos).filter(
+            Equipos.NombreEquipo == nombre_para_validar,
+            EquiposJugando.LigaId == liga_para_validar,
+            EquiposJugando.EquiposJugandoId != eq_jugando.EquiposJugandoId
+        ).first()
+        if otro_existente:
+            raise HTTPException(status_code=400, detail="Ya existe un equipo con este nombre registrado en la misma liga")
+        eq_jugando.LigaId = liga_id
 
     db.commit()
     db.refresh(equipo)
@@ -831,8 +929,9 @@ def obtener_directorio_equipos_repo(db):
 
     slots_subquery = db.query(
         EquipoTemporal.EquipoId.label("EquipoId"),
+        EquipoTemporal.LigaId.label("LigaId"),
         func.count(EquipoTemporalJugador.EquipoTemporalJugadorId).label("SlotsComprados")
-    ).join(EquipoTemporalJugador, EquipoTemporal.EquipoTemporalId == EquipoTemporalJugador.EquipoTemporalId).group_by(EquipoTemporal.EquipoId).subquery()
+    ).join(EquipoTemporalJugador, EquipoTemporal.EquipoTemporalId == EquipoTemporalJugador.EquipoTemporalId).group_by(EquipoTemporal.EquipoId, EquipoTemporal.LigaId).subquery()
 
     resultados = db.query(
         EquiposJugando, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoCategorias.NombreCategoria,
@@ -863,7 +962,7 @@ def obtener_directorio_equipos_repo(db):
     ).outerjoin(
         EntrenadorPersona, EntrenadorPresidente.PersonaId == EntrenadorPersona.PersonaId
     ).outerjoin(
-        slots_subquery, Equipos.EquipoId == slots_subquery.c.EquipoId
+        slots_subquery, (EquiposJugando.EquipoId == slots_subquery.c.EquipoId) & (EquiposJugando.LigaId == slots_subquery.c.LigaId)
     ).all()
 
     equipos_response = []
@@ -889,7 +988,7 @@ def obtener_directorio_equipos_repo(db):
             entrenador_nombre_completo = entrenador_nombre
 
         equipos_response.append({
-            "EquipoId": ej.EquipoId,
+            "EquipoId": ej.EquiposJugandoId,
             "NombreEquipo": eq_nombre,
             "Liga": liga,
             "LigaId": ej.LigaId,
@@ -920,7 +1019,7 @@ def verificar_documentos_aprobados_repo(db, persona_id: int, fecha_nacimiento) -
     approved_count = db.query(DocumentosEntregados.DocumentoAfiliacionId).filter(
         DocumentosEntregados.PersonaId == persona_id,
         DocumentosEntregados.DocumentoAfiliacionId.in_(required_docs_ids),
-        DocumentosEntregados.EstadoValidacionId == 1  # 1 es Aprobado/Aceptado en BD
+        DocumentosEntregados.EstadoValidacionId == 2  # 2 es Aceptado/Aprobado en BD
     ).distinct().count()
 
     return approved_count >= len(required_docs_ids)
@@ -947,9 +1046,9 @@ def obtener_directorio_jugadores_repo(db):
     ).join(
         Personas, MiembrosEquipo.PersonaId == Personas.PersonaId
     ).join(
-        Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId
-    ).outerjoin(
-        EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId
+        EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId
+    ).join(
+        Equipos, EquiposJugando.EquipoId == Equipos.EquipoId
     ).outerjoin(
         Ligas, EquiposJugando.LigaId == Ligas.LigaId
     ).outerjoin(

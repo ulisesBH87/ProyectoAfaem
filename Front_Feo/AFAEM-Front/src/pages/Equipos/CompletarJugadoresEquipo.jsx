@@ -877,9 +877,8 @@ export default function CompletarJugadoresEquipo() {
         // 5. Cargar jugadores registrados del equipo para validaciones
         try {
           const allPlayers = await teamsService.getUserPlayersReal();
-          const targetTeamName = targetTeam?.NombreEquipo || targetTeam?.Nombre || '';
           const jugList = (allPlayers || []).filter(
-            p => p.Equipo && p.Equipo.toUpperCase().trim() === targetTeamName.toUpperCase().trim()
+            p => String(p.EquipoId) === String(equipoId)
           );
           setRegisteredPlayers(jugList);
         } catch (e) {

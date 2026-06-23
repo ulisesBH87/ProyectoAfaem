@@ -63,7 +63,7 @@ function PlayerAvatar({ rutaFoto, nombre, fallbackIcon }) {
 export default function PresidenteEquipoMisJugadores() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const equipoFilter = searchParams.get('equipo');
+  const equipoIdFilter = searchParams.get('equipoId');
 
   // Helper para normalizar la ruta del logo del equipo
   const obtenerRutaLogo = (rutaLogo) => {
@@ -108,13 +108,13 @@ export default function PresidenteEquipoMisJugadores() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filtroEstatus, searchTerm, sortOrder, equipoFilter]);
+  }, [filtroEstatus, searchTerm, sortOrder, equipoIdFilter]);
 
   // Obtener información del equipo filtrado
   const selectedTeamInfo = React.useMemo(() => {
-    if (!equipoFilter) return null;
-    return teams.find(t => t.NombreEquipo === equipoFilter);
-  }, [teams, equipoFilter]);
+    if (!equipoIdFilter) return null;
+    return teams.find(t => String(t.EquipoId) === String(equipoIdFilter));
+  }, [teams, equipoIdFilter]);
 
   // MÉTRICAS
   const totalJugadores = players.length;
@@ -127,8 +127,8 @@ export default function PresidenteEquipoMisJugadores() {
     let result = [...players];
 
     // Filtro por equipo desde URL
-    if (equipoFilter) {
-      result = result.filter(p => p.Equipo === equipoFilter);
+    if (equipoIdFilter) {
+      result = result.filter(p => String(p.EquipoId) === String(equipoIdFilter));
     }
 
     // Filtro por estatus
@@ -156,7 +156,7 @@ export default function PresidenteEquipoMisJugadores() {
     });
 
     return result;
-  }, [players, filtroEstatus, searchTerm, sortOrder, equipoFilter]);
+  }, [players, filtroEstatus, searchTerm, sortOrder, equipoIdFilter]);
 
   const paginatedPlayers = React.useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -230,29 +230,23 @@ export default function PresidenteEquipoMisJugadores() {
       </div>
 
       {/* CABECERA DE PERFIL DE EQUIPO DESTACADO (SI FILTRO DE URL EXISTE) */}
-      {equipoFilter && (
+      {selectedTeamInfo && (
         <div className="team-profile-header-card fade-in">
           <div className="team-profile-header-left">
             <div className="team-profile-header-logo">
-              {selectedTeamInfo && selectedTeamInfo.RutaLogo ? (
+              {selectedTeamInfo.RutaLogo ? (
                 <img
                   src={obtenerRutaLogo(selectedTeamInfo.RutaLogo)}
-                  alt={equipoFilter}
+                  alt={selectedTeamInfo.NombreEquipo}
                 />
               ) : (
                 <FaShieldAlt />
               )}
             </div>
             <div>
-              <h2 className="team-profile-header-title">{equipoFilter.toUpperCase()}</h2>
+              <h2 className="team-profile-header-title">{selectedTeamInfo.NombreEquipo.toUpperCase()}</h2>
               <div className="team-profile-header-meta">
-                {selectedTeamInfo ? (
-                  <>
-                    Categoría: {selectedTeamInfo.Categoria || 'LIBRE'} • Liga: {selectedTeamInfo.Liga || 'Liga local'} • {selectedTeamInfo.Rama || 'Rama mixta'}
-                  </>
-                ) : (
-                  <>Filtro de equipo activo</>
-                )}
+                Categoría: {selectedTeamInfo.Categoria || 'LIBRE'} • Liga: {selectedTeamInfo.Liga || 'Liga local'} • {selectedTeamInfo.Rama || 'Rama mixta'}
               </div>
             </div>
           </div>
@@ -269,7 +263,7 @@ export default function PresidenteEquipoMisJugadores() {
       <div className="dashboard-card" style={{ padding: '24px' }}>
         <div className="table-header-actions" style={{ marginBottom: '20px' }}>
           <h3 className="table-header-title">
-            {equipoFilter ? `Plantilla de ${equipoFilter}` : 'Lista de jugadores'}
+            {selectedTeamInfo ? `Plantilla de ${selectedTeamInfo.NombreEquipo}` : 'Lista de jugadores'}
           </h3>
 
           <div className="table-actions-group">
@@ -345,7 +339,7 @@ export default function PresidenteEquipoMisJugadores() {
                   <div className="player-card-meta">
                     {player.Rol || 'Miembro Registrado'}
                   </div>
-                  {!equipoFilter && (
+                  {!selectedTeamInfo && (
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '8px', textTransform: 'uppercase' }}>
                       {player.Equipo || 'SIN EQUIPO'}
                     </div>

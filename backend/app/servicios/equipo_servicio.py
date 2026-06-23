@@ -116,16 +116,65 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
         except (ValueError, TypeError):
             numero_camiseta = 0
             
+        # Resolve EquiposJugandoId
+        from app.modelos.equipo_modelo import EquiposJugando
+        eq_jugando = db.query(EquiposJugando).filter(
+            EquiposJugando.EquipoId == equipo.EquipoId,
+            EquiposJugando.LigaId == equipo.LigaId
+        ).first()
+        
+        if not eq_jugando:
+            eq_jugando = db.query(EquiposJugando).filter(
+                EquiposJugando.EquipoId == equipo.EquipoId
+            ).first()
+            
+        if not eq_jugando:
+            raise HTTPException(400, "El equipo no está participando en ninguna liga activa")
+
         existe_miembro = db.query(MiembrosEquipo).filter(
             MiembrosEquipo.PersonaId == persona_id,
-            MiembrosEquipo.EquipoID == equipo.EquipoId
+            MiembrosEquipo.EquipoID == eq_jugando.EquiposJugandoId
         ).first()
         
         if not existe_miembro:
+            # Validar número de camiseta duplicado
+            if numero_camiseta is not None:
+                dup_camiseta = db.query(MiembrosEquipo).filter(
+                    MiembrosEquipo.EquipoID == eq_jugando.EquiposJugandoId,
+                    MiembrosEquipo.NumeroCamiseta == numero_camiseta,
+                    MiembrosEquipo.Eliminado == False
+                ).first()
+                if dup_camiseta or any(
+                    isinstance(obj, MiembrosEquipo) and
+                    obj.EquipoID == eq_jugando.EquiposJugandoId and
+                    obj.NumeroCamiseta == numero_camiseta and
+                    not obj.Eliminado
+                    for obj in db.new
+                ):
+                    raise HTTPException(400, f"El número de camiseta {numero_camiseta} ya está asignado a otro jugador en este equipo.")
+            
+            # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
+            if rol_en_equipo != 11:
+                dup_rol = db.query(MiembrosEquipo).filter(
+                    MiembrosEquipo.EquipoID == eq_jugando.EquiposJugandoId,
+                    MiembrosEquipo.RolEnEquipo == rol_en_equipo,
+                    MiembrosEquipo.Eliminado == False
+                ).first()
+                if dup_rol or any(
+                    isinstance(obj, MiembrosEquipo) and
+                    obj.EquipoID == eq_jugando.EquiposJugandoId and
+                    obj.RolEnEquipo == rol_en_equipo and
+                    not obj.Eliminado
+                    for obj in db.new
+                ):
+                    from app.modelos.rol_equipo_modelo import RolesDeEquipo
+                    rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_en_equipo).scalar() or "esta posición"
+                    raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
             nuevo_miembro = MiembrosEquipo(
                 PersonaId=persona_id,
                 RolEnEquipo=rol_en_equipo,
-                EquipoID=equipo.EquipoId,
+                EquipoID=eq_jugando.EquiposJugandoId,
                 Estatus=True,
                 Eliminado=False,
                 NumeroCamiseta=numero_camiseta,
@@ -135,10 +184,7 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
             db.add(nuevo_miembro)
             
         # 3. Sumar +1 a la CantidadJugadores en la tabla EquiposJugando
-        from app.modelos.equipo_modelo import EquiposJugando
-        equipo_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo.EquipoId).first()
-        if equipo_jugando:
-            equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + 1
+        eq_jugando.CantidadJugadores = (eq_jugando.CantidadJugadores or 0) + 1
             
         slot.DatosBorrador = None
     else:
@@ -188,9 +234,22 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
         if real_equipo and not nombre_equipo:
             nombre_equipo = real_equipo.NombreEquipo
 
-        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo.EquipoId).first()
+        liga_id = equipo.LigaId
+        eq_jugando = None
+        if liga_id:
+            eq_jugando = db.query(EquiposJugando).filter(
+                EquiposJugando.EquipoId == equipo.EquipoId,
+                EquiposJugando.LigaId == liga_id
+            ).first()
+        
+        if not eq_jugando:
+            eq_jugando = db.query(EquiposJugando).filter(
+                EquiposJugando.EquipoId == equipo.EquipoId
+            ).first()
+            if eq_jugando and not liga_id:
+                liga_id = eq_jugando.LigaId
+        
         if eq_jugando:
-            liga_id = equipo.LigaId or eq_jugando.LigaId
             if liga_id:
                 from app.modelos.catalogos_liga_modelo import Ligas
                 liga_obj = db.query(Ligas).filter(Ligas.LigaId == liga_id).first()
@@ -358,11 +417,22 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         # == CREACIÓN DE PRESIDENTE O EQUIPO = INSCRIPCIÓN INICIAL
         # == NO EXISTE EL EQUIPO ==
         if tipo_proceso_original == EquipoTemporalProcesoEnum.INSCRIPCION_INICIAL:
+            from app.modelos.equipo_modelo import Equipos, EquiposJugando
+            # Uniqueness check: check if team with this name exists in this league
+            equipo_existente = db.query(EquiposJugando).join(Equipos).filter(
+                Equipos.NombreEquipo == team_info["nombre_equipo"],
+                EquiposJugando.LigaId == team_info["liga_id"]
+            ).first()
+            if equipo_existente:
+                raise HTTPException(status_code=400, detail="Ya existe un equipo con este nombre registrado en la misma liga")
+
             equipo = equipo_repositorio.obtener_o_crear_equipo(
                 db, team_info["nombre_equipo"]
             )
             # vincular el equipo creado al equipo temporal
             equipo_tem.EquipoId = equipo.EquipoId
+            equipo_tem.LigaId = team_info["liga_id"]
+            equipo_tem.NombreEquipo = team_info["nombre_equipo"]
             db.flush()
         
             # Buscar todos los slots completados (jugadores que se registraron por el link público antes)
@@ -371,6 +441,12 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                 EquipoTemporalJugador.Completo == True,
                 EquipoTemporalJugador.PersonaId != None
             ).all()
+
+            # Crear el registro en EquiposJugando con la suma de los del formulario + completados previamente
+            cantidad_total = len(players_info) + len(slots_completados)
+            equipo_jugando = equipo_repositorio.crear_equipo_jugando(
+                db, equipo, team_info, presidente_id, cantidad_total
+            )
 
             # Procesar cada slot completado para meterlos a la base real (MiembrosEquipo y Antecedentes)
             from app.modelos.miembro_equipo_modelo import MiembrosEquipo
@@ -420,14 +496,48 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                 
                 existe_miembro = db.query(MiembrosEquipo).filter(
                     MiembrosEquipo.PersonaId == s_comp.PersonaId,
-                    MiembrosEquipo.EquipoID == equipo.EquipoId
+                    MiembrosEquipo.EquipoID == equipo_jugando.EquiposJugandoId
                 ).first()
                 
                 if not existe_miembro:
+                    # Validar número de camiseta duplicado
+                    if numero_camiseta is not None:
+                        dup_camiseta = db.query(MiembrosEquipo).filter(
+                            MiembrosEquipo.EquipoID == equipo_jugando.EquiposJugandoId,
+                            MiembrosEquipo.NumeroCamiseta == numero_camiseta,
+                            MiembrosEquipo.Eliminado == False
+                        ).first()
+                        if dup_camiseta or any(
+                            isinstance(obj, MiembrosEquipo) and
+                            obj.EquipoID == equipo_jugando.EquiposJugandoId and
+                            obj.NumeroCamiseta == numero_camiseta and
+                            not obj.Eliminado
+                            for obj in db.new
+                        ):
+                            raise HTTPException(400, f"El número de camiseta {numero_camiseta} ya está asignado a otro jugador en este equipo.")
+                    
+                    # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
+                    if rol_en_equipo != 11:
+                        dup_rol = db.query(MiembrosEquipo).filter(
+                            MiembrosEquipo.EquipoID == equipo_jugando.EquiposJugandoId,
+                            MiembrosEquipo.RolEnEquipo == rol_en_equipo,
+                            MiembrosEquipo.Eliminado == False
+                        ).first()
+                        if dup_rol or any(
+                            isinstance(obj, MiembrosEquipo) and
+                            obj.EquipoID == equipo_jugando.EquiposJugandoId and
+                            obj.RolEnEquipo == rol_en_equipo and
+                            not obj.Eliminado
+                            for obj in db.new
+                        ):
+                            from app.modelos.rol_equipo_modelo import RolesDeEquipo
+                            rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_en_equipo).scalar() or "esta posición"
+                            raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
                     nuevo_miembro = MiembrosEquipo(
                         PersonaId=s_comp.PersonaId,
                         RolEnEquipo=rol_en_equipo,
-                        EquipoID=equipo.EquipoId,
+                        EquipoID=equipo_jugando.EquiposJugandoId,
                         Estatus=True,
                         Eliminado=False,
                         NumeroCamiseta=numero_camiseta,
@@ -438,12 +548,6 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                 
                 # Limpiar DatosBorrador ya que se vinculó al equipo real
                 s_comp.DatosBorrador = None
-            
-            # Crear el registro en EquiposJugando con la suma de los del formulario + completados previamente
-            cantidad_total = len(players_info) + len(slots_completados)
-            equipo_repositorio.crear_equipo_jugando(
-                db, equipo, team_info, presidente_id, cantidad_total
-            )
             
             equipo_repositorio.actualizar_orden(db, solicitud_id)
             equipo_tem.TipoProcesoId = EquipoTemporalProcesoEnum.AMPLIACION
@@ -458,12 +562,15 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
             solicitud_id = equipo_tem.SolicitudId if equipo_tem else None
 
             for index, player in enumerate(players_info):
-                await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
+                await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id, liga_id=equipo_tem.LigaId)
 
             # Si el tipo de proceso original ya era AMPLIACION, sumamos los nuevos registrados en esta petición a EquiposJugando
             if tipo_proceso_original == EquipoTemporalProcesoEnum.AMPLIACION:
                 from app.modelos.equipo_modelo import EquiposJugando
-                equipo_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo.EquipoId).first()
+                equipo_jugando = db.query(EquiposJugando).filter(
+                    EquiposJugando.EquipoId == equipo.EquipoId,
+                    EquiposJugando.LigaId == equipo_tem.LigaId
+                ).first()
                 if equipo_jugando:
                     equipo_jugando.CantidadJugadores = (equipo_jugando.CantidadJugadores or 0) + len(players_info)
 
@@ -538,7 +645,7 @@ async def add_jugador_equipo_existente_servicio(db, equipo, players_info, form_d
     solicitud_id = equipo_tem.SolicitudId if equipo_tem else None
 
     for index, player in enumerate(players_info):
-        await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id)
+        await equipo_repositorio.procesar_jugador(db, equipo, player, form_data, index, solicitud_id, liga_id=equipo_tem.LigaId)
 
 
     slots_restantes = db.query(EquipoTemporalJugador).filter(

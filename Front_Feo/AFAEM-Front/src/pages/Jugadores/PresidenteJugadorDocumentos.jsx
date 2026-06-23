@@ -139,7 +139,7 @@ export default function PresidenteJugadorDocumentos() {
 
   const getEstatusInfo = (estadoId) => {
     switch (Number(estadoId)) {
-      case 1:
+      case 2:
         return {
           texto: 'Aprobado',
           color: '#16a34a',
@@ -147,7 +147,7 @@ export default function PresidenteJugadorDocumentos() {
           border: '#10b981',
           icon: <FaCheckCircle style={{ color: '#16a34a' }} />
         };
-      case 2:
+      case 1:
         return {
           texto: 'En espera',
           color: '#d97706',

@@ -77,8 +77,8 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
             .first()
         )
 
-        if miembro and miembro.EquipoRelacion:
-            nombre_equipo = (miembro.EquipoRelacion.NombreEquipo or f"equipo_{miembro.EquipoID}").strip()
+        if miembro and miembro.EquipoRelacion and miembro.EquipoRelacion.EquipoRelacion:
+            nombre_equipo = (miembro.EquipoRelacion.EquipoRelacion.NombreEquipo or f"equipo_{miembro.EquipoID}").strip()
         else:
             # Fallback: si no tiene equipo asignado aún, usar carpeta genérica por id
             nombre_equipo = f"equipo_desconocido"
@@ -332,9 +332,16 @@ def generar_zip_documentos_equipo(db, equipo_id):
     """
     from datetime import datetime as dt
     
+    from app.modelos.equipo_modelo import EquiposJugando
+    ej = db.query(EquiposJugando).filter(
+        EquiposJugando.EquiposJugandoId == equipo_id
+    ).first()
+    if not ej:
+        raise Exception("Participación de equipo no encontrada")
+
     # Obtener el equipo para el nombre
     equipo = db.query(Equipos).filter(
-        Equipos.EquipoId == equipo_id
+        Equipos.EquipoId == ej.EquipoId
     ).first()
 
     if not equipo:
@@ -387,11 +394,9 @@ def generar_zip_documentos_equipo(db, equipo_id):
                     zipf.write(ruta_absoluta, arcname=arcname)
 
         # 3. Agregar los documentos del presidente (dentro de "Presidente")
-        from app.modelos.equipo_modelo import EquiposJugando
         from app.modelos.presidente_equipo_modelo import PresidenteEquipo
         from app.modelos.persona_modelo import Personas
 
-        ej = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
         if ej and ej.PresidenteEquipoId:
             presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PresidenteEquipoId == ej.PresidenteEquipoId).first()
             if presidente:

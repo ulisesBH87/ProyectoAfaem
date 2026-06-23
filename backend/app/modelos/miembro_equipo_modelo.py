@@ -11,7 +11,7 @@ class MiembrosEquipo(Base):
     RolEnEquipo = Column(Integer, ForeignKey("RolesDeEquipo.RolId"), nullable=False)
     FechaIngreso = Column(DateTime, server_default=func.now())
     FechaSalida = Column(DateTime, nullable=True)
-    EquipoID = Column(Integer, ForeignKey("Equipos.EquipoId"), nullable=False)
+    EquipoID = Column(Integer, ForeignKey("EquiposJugando.EquiposJugandoId"), nullable=False)
     Estatus = Column(Boolean, default=True)
     Eliminado = Column(Boolean, default=False)
     NumeroCamiseta = Column(Integer, nullable=True)
@@ -20,5 +20,5 @@ class MiembrosEquipo(Base):
 
     PersonaRelacion = relationship("Personas", back_populates="MiembrosRelacion")
     RolRelacion = relationship("RolesDeEquipo", back_populates="MiembrosRelacion")
-    EquipoRelacion = relationship("Equipos", back_populates="MiembrosRelacion")
+    EquipoRelacion = relationship("EquiposJugando", back_populates="MiembrosRelacion")
     AntecedentesRelacion = relationship("AntecedentesInternacionales")
