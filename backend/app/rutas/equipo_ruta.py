@@ -146,6 +146,11 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
             ligas_desc.append({
                 "id": l.LigaId,
                 "nombre": desc,
+                "nombreOriginal": l.Nombreliga,
+                "nombreCategoria": cat,
+                "nombreModalidad": mod,
+                "nombreRama": ram,
+                "descripcion": l.Descripcionliga,
                 "modalidadId": l.ModalidadId,
                 "categoriaId": l.CategoriaId,
                 "ramaId": l.RamaId
