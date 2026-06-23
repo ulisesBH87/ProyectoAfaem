@@ -1,4 +1,5 @@
 import { C } from './constants';
+import COLORS from '../../../styles/colors';
 
 /**
  * SeguroRow
@@ -11,7 +12,7 @@ export default function SeguroRow({ seg, isPres, isChecked, asignacion, onSelect
       onClick={isPres ? onSelectPres : undefined}
       style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        background: isPres && isChecked ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.02)',
+        background: isPres && isChecked ? COLORS.warningBgTranslucent06 : COLORS.overlayWhite02,
         border: isPres && isChecked ? `1px solid ${C.amber}` : `1px solid ${C.cardBorder}`,
         padding: '10px 12px', borderRadius: 10,
         cursor: isPres ? 'pointer' : 'default',
@@ -19,13 +20,13 @@ export default function SeguroRow({ seg, isPres, isChecked, asignacion, onSelect
       }}
       onMouseEnter={isPres ? e => {
         if (!isChecked) {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+          e.currentTarget.style.background = COLORS.overlayWhite05;
+          e.currentTarget.style.borderColor = COLORS.overlayWhite15;
         }
       } : undefined}
       onMouseLeave={isPres ? e => {
         if (!isChecked) {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+          e.currentTarget.style.background = COLORS.overlayWhite02;
           e.currentTarget.style.borderColor = C.cardBorder;
         }
       } : undefined}

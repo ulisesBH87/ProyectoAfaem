@@ -12,6 +12,7 @@ import { validarFotografia } from '../../services/foto';
 import { API_BASE } from '../../config/config';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin, obtenerLinkInvitacion, regenerarInvitacion, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
+import COLORS from '../../styles/colors';
 
 /* ─── Catálogos ─── */
 const CATALOGO_SEGUROS_INICIAL = [
@@ -54,23 +55,23 @@ const StepCircle = ({ num, label, active, done }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
     <div style={{
       width: 44, height: 44, borderRadius: 14,
-      background: done ? 'rgba(16,185,129,.15)'
-        : active ? 'linear-gradient(135deg,#0b4ea6,#1e40af)'
-          : 'rgba(255,255,255,.05)',
-      border: done ? '1px solid rgba(16,185,129,.4)'
-        : active ? '1px solid rgba(93,135,229,.5)'
-          : '1px solid rgba(255,255,255,.1)',
+      background: done ? COLORS.successBgTranslucent
+        : active ? `linear-gradient(135deg,${COLORS.primary},${COLORS.secondaryHover})`
+          : COLORS.overlayWhite05,
+      border: done ? `1px solid ${COLORS.successBgTranslucent40}`
+        : active ? `1px solid ${COLORS.brandBlueLight50}`
+          : `1px solid ${COLORS.overlayWhite10}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
-      boxShadow: active ? '0 8px 20px rgba(11,78,166,.4)' : 'none',
+      boxShadow: active ? `0 8px 20px ${COLORS.primaryBgTranslucent40}` : 'none',
       transition: 'all .4s',
     }}>
-      {done ? <span style={{ color: '#34d399' }}>✓</span>
-        : num === 1 ? <FaMoneyBillWave style={{ color: active ? 'white' : 'rgba(255,255,255,.3)' }} />
-          : <FaFileAlt style={{ color: active ? 'white' : 'rgba(255,255,255,.3)' }} />}
+      {done ? <span style={{ color: COLORS.successLight }}>✓</span>
+        : num === 1 ? <FaMoneyBillWave style={{ color: active ? 'white' : COLORS.overlayWhite30 }} />
+          : <FaFileAlt style={{ color: active ? 'white' : COLORS.overlayWhite30 }} />}
     </div>
     <span style={{
       fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
-      color: done ? 'rgba(52,211,153,.8)' : active ? '#5d87e5' : 'rgba(255,255,255,.25)'
+      color: done ? COLORS.successLightTranslucent80 : active ? COLORS.brandBlueLight : COLORS.overlayWhite25
     }}>
       {label}
     </span>
@@ -409,10 +410,10 @@ export default function AdminPresidentes() {
         setDocuments(prev => ({ ...prev, fotografia: archivo }));
         Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
       } else {
-        Swal.fire({ title: 'Error de validación', text: data.mensaje, icon: 'error', confirmButtonText: 'Intentar de nuevo', confirmButtonColor: '#ef4444' });
+        Swal.fire({ title: 'Error de validación', text: data.mensaje, icon: 'error', confirmButtonText: 'Intentar de nuevo', confirmButtonColor: COLORS.danger });
       }
     } catch (err) {
-      Swal.fire({ title: 'Error de validación', text: err.message || 'No se pudo procesar la foto.', icon: 'error', confirmButtonColor: '#ef3030' });
+      Swal.fire({ title: 'Error de validación', text: err.message || 'No se pudo procesar la foto.', icon: 'error', confirmButtonColor: COLORS.dangerAccent });
     }
   };
 
@@ -541,8 +542,8 @@ export default function AdminPresidentes() {
       cerrarModal();
       Swal.fire({
         title: '¡Presidente Registrado!',
-        html: `<p style="font-size:14px;color:#000000;">El registro de <strong>${nombreDetectado}</strong> fue completado y aprobado automáticamente. Su contraseña de acceso es <strong>Hola1234?</strong></p>`,
-        icon: 'success', confirmButtonColor: '#0b4ea6',
+        html: `<p style="font-size:14px;color:${COLORS.black};">El registro de <strong>${nombreDetectado}</strong> fue completado y aprobado automáticamente. Su contraseña de acceso es <strong>Hola1234?</strong></p>`,
+        icon: 'success', confirmButtonColor: COLORS.primary,
       });
     } catch (err) {
       Swal.fire('Error', err.response?.data?.detail || err.message || 'No se pudo completar el registro.', 'error');
@@ -554,14 +555,14 @@ export default function AdminPresidentes() {
 
   /* Mapa de estatus del catálogo */
   const ESTATUS_CATALOGO = [
-    { id: 1, nombre: 'PAGO_PENDIENTE', label: 'Pago Pendiente', bg: '#fee2e2', color: '#991b1b' },
-    { id: 2, nombre: 'PAGO_EN_REVISION', label: 'Pago en Revisión', bg: '#e0f2fe', color: '#075985' },
-    { id: 3, nombre: 'DOCUMENTOS_PENDIENTES', label: 'Docs. Pendientes', bg: '#fef3c7', color: '#92400e' },
-    { id: 4, nombre: 'DOCUMENTOS_EN_REVISION', label: 'Docs. en Revisión', bg: '#fef9c3', color: '#854d0e' },
-    { id: 5, nombre: 'PRE_APROBADO', label: 'Pre-Aprobado', bg: '#d1fae5', color: '#065f46' },
-    { id: 6, nombre: 'REGISTRO_PENDIENTE', label: 'Registro Pendiente', bg: '#f1f5f9', color: '#475569' },
-    { id: 7, nombre: 'ACTIVO', label: 'Activo', bg: '#dcfce7', color: '#166534' },
-    { id: 8, nombre: 'BORRADOR', label: 'Borrador (Incompleto)', bg: 'rgba(217, 119, 6, 0.1)', color: '#d97706' },
+    { id: 1, nombre: 'PAGO_PENDIENTE', label: 'Pago Pendiente', bg: COLORS.dangerBg, color: COLORS.dangerDeep },
+    { id: 2, nombre: 'PAGO_EN_REVISION', label: 'Pago en Revisión', bg: COLORS.skyBg, color: COLORS.skyDeep },
+    { id: 3, nombre: 'DOCUMENTOS_PENDIENTES', label: 'Docs. Pendientes', bg: COLORS.warningBg, color: COLORS.warningBrown },
+    { id: 4, nombre: 'DOCUMENTOS_EN_REVISION', label: 'Docs. en Revisión', bg: COLORS.yellowBg, color: COLORS.warningDeep },
+    { id: 5, nombre: 'PRE_APROBADO', label: 'Pre-Aprobado', bg: COLORS.successBg100, color: COLORS.successDeep },
+    { id: 6, nombre: 'REGISTRO_PENDIENTE', label: 'Registro Pendiente', bg: COLORS.slate100, color: COLORS.slate600 },
+    { id: 7, nombre: 'ACTIVO', label: 'Activo', bg: COLORS.greenBg, color: COLORS.greenDarker },
+    { id: 8, nombre: 'BORRADOR', label: 'Borrador (Incompleto)', bg: COLORS.warningDarkTranslucent, color: COLORS.warningDark },
   ];
 
   const handleEditarPresidente = (pres) => {
@@ -626,8 +627,8 @@ export default function AdminPresidentes() {
       text: `¿Estás seguro que quieres eliminar a ${nombre} de forma permanente? Ya no podrá tener acceso al sistema.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate500,
       confirmButtonText: 'Sí, eliminar permanentemente',
       cancelButtonText: 'Cancelar'
     }).then(async (res) => {
@@ -645,7 +646,7 @@ export default function AdminPresidentes() {
               showCancelButton: true,
               confirmButtonText: 'Sí, asignar nuevo presidente',
               cancelButtonText: 'Después',
-              confirmButtonColor: '#0b4ea6'
+              confirmButtonColor: COLORS.primary
             }).then((result) => {
               if (result.isConfirmed) {
                 abrirReasignacion(equipoId, equipoNombre);
@@ -740,7 +741,7 @@ export default function AdminPresidentes() {
             title: '¡Enviado!',
             text: 'La invitación ha sido puesta en cola y enviada a los servidores de WhatsApp. Podrás ver si fue entregada o leída directamente en la lista.',
             icon: 'success',
-            confirmButtonColor: '#0b4ea6'
+            confirmButtonColor: COLORS.primary
           });
         } else {
           throw new Error();
@@ -760,8 +761,8 @@ export default function AdminPresidentes() {
         },
         inputValue: telPrincipal,
         showCancelButton: true,
-        confirmButtonColor: '#0b4ea6',
-        cancelButtonColor: '#64748b',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500,
         confirmButtonText: 'Enviar',
         cancelButtonText: 'Cancelar',
         inputValidator: (value) => {
@@ -781,8 +782,8 @@ export default function AdminPresidentes() {
         text: `¿Quieres enviar la invitación a ${unicoTelefono}?`,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#0b4ea6',
-        cancelButtonColor: '#64748b',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500,
         confirmButtonText: 'Sí, enviar',
         cancelButtonText: 'No, cerrar'
       }).then((result) => {
@@ -806,8 +807,8 @@ export default function AdminPresidentes() {
       text: `Se invalidará cualquier enlace anterior y se generará un nuevo token de invitación para ${nombre}.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate500,
       confirmButtonText: 'Sí, regenerar',
       cancelButtonText: 'Cancelar'
     }).then(async (result) => {
@@ -821,7 +822,7 @@ export default function AdminPresidentes() {
               title: '¡Regenerada y Copiada!',
               html: `<p>Se ha generado una nueva invitación. El nuevo enlace se copió al portapapeles:</p><code style="font-size:12px;word-break:break-all;">${res.link_invitacion}</code>`,
               icon: 'success',
-              confirmButtonColor: '#0b4ea6'
+              confirmButtonColor: COLORS.primary
             });
           } else {
             throw new Error();
@@ -846,13 +847,13 @@ export default function AdminPresidentes() {
     const esBorrador = p.estatus === 8 || (p.estatusNombre || '').toUpperCase().trim() === 'BORRADOR';
 
     return {
-      id: <span style={{ fontWeight: 700, color: '#64748b' }}>#{p.id || p.UsuarioId || '—'}</span>,
-      presidente: <div style={{ fontWeight: 800, color: '#1e293b' }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
+      id: <span style={{ fontWeight: 700, color: COLORS.slate500 }}>#{p.id || p.UsuarioId || '—'}</span>,
+      presidente: <div style={{ fontWeight: 800, color: COLORS.slate800 }}>{p.nombre || p.Nombre || 'Sin nombre'}</div>,
       tipoDirectivo: (
         <span style={{
-          background: p.esEntrenador ? '#f0fdf4' : '#eff6ff',
-          color: p.esEntrenador ? '#166534' : '#1e40af',
-          border: p.esEntrenador ? '1px solid #bbf7d0' : '1px solid #bfdbfe',
+          background: p.esEntrenador ? COLORS.greenBg50 : COLORS.secondaryBg,
+          color: p.esEntrenador ? COLORS.greenDarker : COLORS.secondaryHover,
+          border: p.esEntrenador ? `1px solid ${COLORS.greenBgDark}` : `1px solid ${COLORS.secondaryBgDark}`,
           padding: '4px 8px',
           borderRadius: '12px',
           fontSize: '11px',
@@ -869,19 +870,19 @@ export default function AdminPresidentes() {
         return (
           <div>
             {esEmailTemporal ? (
-              <div style={{ fontSize: 13, color: '#64748b', fontStyle: 'italic', fontWeight: 600 }}>En espera de registro</div>
+              <div style={{ fontSize: 13, color: COLORS.slate500, fontStyle: 'italic', fontWeight: 600 }}>En espera de registro</div>
             ) : (
-              <div style={{ fontSize: 13, color: '#0b4ea6', fontWeight: 600 }}>{emailVal || 'Sin correo'}</div>
+              <div style={{ fontSize: 13, color: COLORS.primary, fontWeight: 600 }}>{emailVal || 'Sin correo'}</div>
             )}
-            <div style={{ fontSize: 12, color: '#64748b' }}>{p.telefono || p.Telefono || '—'}</div>
+            <div style={{ fontSize: 12, color: COLORS.slate500 }}>{p.telefono || p.Telefono || '—'}</div>
           </div>
         );
       })(),
       curp: <span style={{ fontSize: 12, letterSpacing: '0.5px' }}>{p.curp || p.CURP || '—'}</span>,
       estatus: (() => {
         const cfg = ESTATUS_CATALOGO.find(e => e.id === p.estatus || e.nombre === p.estatusNombre);
-        const bg = cfg?.bg || '#f1f5f9';
-        const color = cfg?.color || '#475569';
+        const bg = cfg?.bg || COLORS.slate100;
+        const color = cfg?.color || COLORS.slate600;
         const label = cfg?.label || p.estatusNombre || String(p.estatus) || '—';
         return <span style={{ background: bg, color, padding: '5px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap' }}>{label}</span>;
       })(),
@@ -893,9 +894,9 @@ export default function AdminPresidentes() {
               disabled={esBorrador}
               onClick={() => handleCopiarEnlace(p)}
               style={{
-                background: esBorrador ? '#f1f5f9' : '#f0fdf4',
-                border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
-                color: esBorrador ? '#94a3b8' : '#16a34a',
+                background: esBorrador ? COLORS.slate100 : COLORS.greenBg50,
+                border: esBorrador ? `1px solid ${COLORS.slate300}` : `1px solid ${COLORS.greenBgDark}`,
+                color: esBorrador ? COLORS.slate400 : COLORS.green,
                 cursor: esBorrador ? 'not-allowed' : 'pointer',
                 padding: '8px',
                 borderRadius: 8,
@@ -910,9 +911,9 @@ export default function AdminPresidentes() {
               disabled={esBorrador}
               onClick={() => handleReenviarWhatsApp(p)}
               style={{
-                background: esBorrador ? '#f1f5f9' : '#f0fdf4',
-                border: esBorrador ? '1px solid #cbd5e1' : '1px solid #bbf7d0',
-                color: esBorrador ? '#94a3b8' : '#25d366',
+                background: esBorrador ? COLORS.slate100 : COLORS.greenBg50,
+                border: esBorrador ? `1px solid ${COLORS.slate300}` : `1px solid ${COLORS.greenBgDark}`,
+                color: esBorrador ? COLORS.slate400 : COLORS.whatsappGreen,
                 cursor: esBorrador ? 'not-allowed' : 'pointer',
                 padding: '8px',
                 borderRadius: 8,
@@ -927,9 +928,9 @@ export default function AdminPresidentes() {
               disabled={esBorrador}
               onClick={() => handleRegenerarInvitacion(p)}
               style={{
-                background: esBorrador ? '#f1f5f9' : '#fef3c7',
-                border: esBorrador ? '1px solid #cbd5e1' : '1px solid #fde68a',
-                color: esBorrador ? '#94a3b8' : '#d97706',
+                background: esBorrador ? COLORS.slate100 : COLORS.warningBg,
+                border: esBorrador ? `1px solid ${COLORS.slate300}` : `1px solid ${COLORS.warningBgDark}`,
+                color: esBorrador ? COLORS.slate400 : COLORS.warningDark,
                 cursor: esBorrador ? 'not-allowed' : 'pointer',
                 padding: '8px',
                 borderRadius: 8,
@@ -946,29 +947,29 @@ export default function AdminPresidentes() {
           {!esBorrador && (() => {
             const status = p.whatsappStatus ? String(p.whatsappStatus).toLowerCase().trim() : '';
             let label = 'No enviado';
-            let bg = '#f8fafc';
-            let color = '#94a3b8';
+            let bg = COLORS.slate50;
+            let color = COLORS.slate400;
             let icon = '';
 
             if (status === 'read') {
               label = 'Leído';
-              bg = '#e0f2fe';
-              color = '#0369a1';
+              bg = COLORS.skyBg;
+              color = COLORS.skyDarker;
               icon = '✓✓';
             } else if (status === 'delivered') {
               label = 'Entregado';
-              bg = '#f1f5f9';
-              color = '#475569';
+              bg = COLORS.slate100;
+              color = COLORS.slate600;
               icon = '✓✓';
             } else if (status === 'failed') {
               label = 'Fallido';
-              bg = '#fee2e2';
-              color = '#b91c1c';
+              bg = COLORS.dangerBg;
+              color = COLORS.dangerDarker;
               icon = '✗';
             } else if (status === 'sent') {
               label = 'Enviado';
-              bg = '#f1f5f9';
-              color = '#475569';
+              bg = COLORS.slate100;
+              color = COLORS.slate600;
               icon = '✓';
             }
 
@@ -983,7 +984,7 @@ export default function AdminPresidentes() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: icon ? 4 : 0,
-                border: status ? 'none' : '1px dashed #cbd5e1',
+                border: status ? 'none' : `1px dashed ${COLORS.slate300}`,
                 opacity: status ? 1 : 0.75
               }}>
                 {icon && <span style={{ fontSize: 9 }}>{icon}</span>} {label}
@@ -998,7 +999,7 @@ export default function AdminPresidentes() {
           {esBorrador ? (
             <button
               onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?borradorId=${p.id}${p.esEntrenador ? '&esEntrenador=true' : ''}`)}
-              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+              style={{ background: COLORS.secondaryBg, border: `1px solid ${COLORS.secondaryBgDark}`, color: COLORS.secondary, cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
               title="Continuar Registro"
             >
               <FaArrowRight />
@@ -1006,7 +1007,7 @@ export default function AdminPresidentes() {
           ) : (
             <button
               onClick={() => handleEditarPresidente(p)}
-              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+              style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, color: COLORS.blue, cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
               title="Ver / Editar"
             >
               <FaEdit />
@@ -1014,7 +1015,7 @@ export default function AdminPresidentes() {
           )}
           <button
             onClick={() => handleEliminar(p)}
-            style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
+            style={{ background: COLORS.dangerBgLight, border: `1px solid ${COLORS.dangerBgMedium}`, color: COLORS.danger, cursor: 'pointer', padding: '8px', borderRadius: 8, fontSize: 14, transition: 'all 0.2s' }}
             title="Eliminar Permanente"
           >
             <FaTrash />
@@ -1048,12 +1049,12 @@ export default function AdminPresidentes() {
           justify-content: space-between;
           align-items: center;
           padding: 12px 14px;
-          border-bottom: 1px solid rgba(174, 142, 142, 0.44);
+          border-bottom: 1px solid ${COLORS.dustyRedTranslucent};
           transition: all 0.2s ease;
           border-radius: 8px;
         }
         .insurance-row-admin:hover {
-          background: rgba(100, 127, 165, 1);
+          background: ${COLORS.slateBlueOpaque};
         }
         .insurance-row-admin:last-child {
           border-bottom: none;
@@ -1071,12 +1072,12 @@ export default function AdminPresidentes() {
         .insurance-row-name {
           font-size: 13.5px;
           font-weight: 600;
-          color: rgba(255,255,255,0.9);
+          color: ${COLORS.overlayWhite90};
         }
         .insurance-row-price {
           font-size: 11px;
           font-weight: 700;
-          color: #ffffffff;
+          color: ${COLORS.white};
           padding: 2px 6px;
           border-radius: 6px;
         }
@@ -1084,8 +1085,8 @@ export default function AdminPresidentes() {
           width: 64px;
           text-align: center;
           padding: 6px 10px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.1);
+          background: ${COLORS.overlayWhite04};
+          border: 1px solid ${COLORS.overlayWhite10};
           color: white;
           border-radius: 8px;
           font-size: 13px;
@@ -1093,35 +1094,35 @@ export default function AdminPresidentes() {
           transition: all 0.2s;
         }
         .insurance-row-input:focus {
-          border-color: rgba(255, 255, 255, 0.4);
-          background: rgba(93,135,229,0.06);
+          border-color: ${COLORS.overlayWhite40};
+          background: ${COLORS.brandBlueLight06};
           outline: none;
-          box-shadow: 0 0 0 2px rgba(93,135,229,0.1);
+          box-shadow: 0 0 0 2px ${COLORS.brandBlueLight10};
         }
         .premium-input-admin {
           width: 100%; box-sizing: border-box; padding: 12px 14px;
-          background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+          background: ${COLORS.overlayWhite05}; border: 1px solid ${COLORS.overlayWhite12};
           border-radius: 12px; font-size: 14px; font-weight: 600; color: white;
           outline: none; transition: all 0.25s;
         }
-        .premium-input-admin:focus { background: rgba(93,135,229,0.1); border-color: rgba(93,135,229,0.5); box-shadow: 0 0 0 3px rgba(93,135,229,0.12); }
-        .premium-input-admin::placeholder { color: rgba(255,255,255,0.25); }
-        .premium-input-admin option { background: #1e1b4b; color: white; }
-        .premium-label-admin { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; display: block; }
+        .premium-input-admin:focus { background: ${COLORS.brandBlueLight10}; border-color: ${COLORS.brandBlueLight50}; box-shadow: 0 0 0 3px ${COLORS.brandBlueLight12}; }
+        .premium-input-admin::placeholder { color: ${COLORS.overlayWhite25}; }
+        .premium-input-admin option { background: ${COLORS.indigo950}; color: white; }
+        .premium-label-admin { font-size: 10px; font-weight: 800; color: ${COLORS.overlayWhite40}; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; display: block; }
         .doc-glass-card-admin {
-          background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.12);
+          background: ${COLORS.overlayWhite03}; border: 1px dashed ${COLORS.overlayWhite12};
           border-radius: 20px; padding: 22px 16px;
           display: flex; flex-direction: column; align-items: center; text-align: center;
           position: relative; overflow: hidden; transition: all 0.35s;
         }
-        .doc-glass-card-admin:hover { background: rgba(255,255,255,0.06); border-color: rgba(93,135,229,0.3); border-style: solid; transform: translateY(-5px); box-shadow: 0 14px 35px rgba(0,0,0,0.28); }
-        .doc-glass-card-admin.uploaded-admin { background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.3); }
-        @keyframes glowPulse2 { 0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } 50% { box-shadow: 0 0 16px 4px rgba(16,185,129,0.18); } }
+        .doc-glass-card-admin:hover { background: ${COLORS.overlayWhite06}; border-color: ${COLORS.brandBlueLight30}; border-style: solid; transform: translateY(-5px); box-shadow: 0 14px 35px ${COLORS.shadow28}; }
+        .doc-glass-card-admin.uploaded-admin { background: ${COLORS.successBgTranslucent05}; border: 1px solid ${COLORS.successBgTranslucent30}; }
+        @keyframes glowPulse2 { 0%,100% { box-shadow: 0 0 0 0 ${COLORS.successTransparent}; } 50% { box-shadow: 0 0 16px 4px ${COLORS.successBgTranslucent18}; } }
         .uploaded-admin { animation: glowPulse2 2s ease-in-out 1; }
         .doc-action-btn-admin { width: 100%; padding: 9px 12px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
-        .doc-download-btn-admin { width: 100%; padding: 9px 12px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer; background: rgba(93,135,229,0.08); border: 1px solid rgba(93,135,229,0.2); color: #fcfcfcff; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; }
-        .doc-download-btn-admin:hover { background: rgba(93,135,229,0.16); transform: translateY(-1px); }
-        .assigned-bar-admin { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 18px; font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 16px; }
+        .doc-download-btn-admin { width: 100%; padding: 9px 12px; border-radius: 11px; font-size: 12px; font-weight: 700; cursor: pointer; background: ${COLORS.brandBlueLight08}; border: 1px solid ${COLORS.brandBlueLight20}; color: ${COLORS.whiteFallback}; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; }
+        .doc-download-btn-admin:hover { background: ${COLORS.brandBlueLight16}; transform: translateY(-1px); }
+        .assigned-bar-admin { display: flex; justify-content: space-between; align-items: center; background: ${COLORS.overlayWhite04}; border: 1px solid ${COLORS.overlayWhite08}; border-radius: 12px; padding: 12px 18px; font-size: 13px; color: ${COLORS.overlayWhite60}; margin-top: 16px; }
         .insurance-grid-admin {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -1136,10 +1137,10 @@ export default function AdminPresidentes() {
         .insurance-col-title-admin {
           font-size: 12px;
           font-weight: 800;
-          color: rgba(255,255,255,0.8);
+          color: ${COLORS.overlayWhite80};
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
+          border-bottom: 1px solid ${COLORS.overlayWhite08};
           padding-bottom: 6px;
           margin-bottom: 5px;
         }
@@ -1228,30 +1229,30 @@ export default function AdminPresidentes() {
           }
         }
         .pres-modal-dark-bg {
-          --text-main: rgba(255,255,255,0.92);
-          --text-muted: rgba(255,255,255,0.45);
-          --border-light: rgba(255,255,255,0.08);
+          --text-main: ${COLORS.overlayWhite92};
+          --text-muted: ${COLORS.overlayWhite45};
+          --border-light: ${COLORS.overlayWhite08};
         }
       `}</style>
 
       <div className="pres-page-header" style={{ marginBottom: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#1e293b' }}>Lista de directivos</h2>
-          <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Administra los accesos y directivos registrados.</p>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: COLORS.slate800 }}>Lista de directivos</h2>
+          <p style={{ margin: 0, fontSize: 14, color: COLORS.slate500 }}>Administra los accesos y directivos registrados.</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={() => cargarPresidentes(true)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: '#334155', border: '1.5px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ padding: '10px 20px', backgroundColor: 'white', color: COLORS.slate700, border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <FaSyncAlt />
           </button>
           <button onClick={() => navigate(ROUTES.ADMIN.REGISTRAR_PRESIDENTE)}
-            style={{ background: '#0b4ea6', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            style={{ background: COLORS.primary, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
           </button>
           <button onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?esEntrenador=true`)}
-            style={{ background: 'linear-gradient(135deg, #d97706, #ea580c)', color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            style={{ background: `linear-gradient(135deg, ${COLORS.warningDark}, ${COLORS.orangeDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Entrenador
           </button>
         </div>
@@ -1260,12 +1261,12 @@ export default function AdminPresidentes() {
       {/* ─── Stats ─── */}
       <div className="pres-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
-          { icon: <FaFileAlt />, bg: 'rgba(217, 119, 6, 0.1)', color: '#d97706', label: 'PENDIENTES', val: stats.pendientes, key: 'pendientes' },
-          { icon: <FaUserTie />, bg: '#eff6ff', color: '#3b82f6', label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
-          { icon: <FaCheck />, bg: '#dcfce7', color: '#10b981', label: 'ACTIVOS', val: stats.activos, key: 'activos' },
-          { icon: <FaTimes />, bg: '#fee2e2', color: '#ef4444', label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
-          { icon: <FaUser />, bg: '#eff6ff', color: '#1e40af', label: 'PRESIDENTES', val: stats.presidentes, key: 'solo_presidentes' },
-          { icon: <FaShieldAlt />, bg: '#f0fdf4', color: '#15803d', label: 'ENTRENADORES', val: stats.entrenadores, key: 'solo_entrenadores' },
+          { icon: <FaFileAlt />, bg: COLORS.warningDarkTranslucent, color: COLORS.warningDark, label: 'PENDIENTES', val: stats.pendientes, key: 'pendientes' },
+          { icon: <FaUserTie />, bg: COLORS.secondaryBg, color: COLORS.blue, label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
+          { icon: <FaCheck />, bg: COLORS.greenBg, color: COLORS.success, label: 'ACTIVOS', val: stats.activos, key: 'activos' },
+          { icon: <FaTimes />, bg: COLORS.dangerBg, color: COLORS.danger, label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
+          { icon: <FaUser />, bg: COLORS.secondaryBg, color: COLORS.secondaryHover, label: 'PRESIDENTES', val: stats.presidentes, key: 'solo_presidentes' },
+          { icon: <FaShieldAlt />, bg: COLORS.greenBg50, color: COLORS.greenDark, label: 'ENTRENADORES', val: stats.entrenadores, key: 'solo_entrenadores' },
         ].map(({ icon, bg, color, label, val, key }) => (
           <div
             key={label}
@@ -1274,7 +1275,7 @@ export default function AdminPresidentes() {
               background: 'white',
               padding: 24,
               borderRadius: 16,
-              border: filtroEstatus === key ? `2px solid ${color}` : '1px solid #e2e8f0',
+              border: filtroEstatus === key ? `2px solid ${color}` : `1px solid ${COLORS.slate200}`,
               display: 'flex',
               alignItems: 'center',
               gap: 20,
@@ -1286,18 +1287,18 @@ export default function AdminPresidentes() {
           >
             <div style={{ width: 60, height: 60, borderRadius: 14, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color }}>{icon}</div>
             <div>
-              <p style={{ margin: 0, fontSize: 13, color: '#64748b', fontWeight: 700 }}>{label}</p>
-              <h3 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: '#1e293b' }}>{val}</h3>
+              <p style={{ margin: 0, fontSize: 13, color: COLORS.slate500, fontWeight: 700 }}>{label}</p>
+              <h3 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: COLORS.slate800 }}>{val}</h3>
             </div>
           </div>
         ))}
       </div>
 
       {/* ─── Tabla ─── */}
-      <div className="card pres-card-table" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', borderRadius: '16px' }}>
+      <div className="card pres-card-table" style={{ padding: '35px', border: 'none', boxShadow: `0 10px 15px -3px ${COLORS.shadow05}`, background: 'white', borderRadius: '16px' }}>
         <div className="pres-table-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Lista de directivos</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Lista de directivos</h3>
           </div>
 
           <div className="pres-filters-row" style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
@@ -1310,7 +1311,7 @@ export default function AdminPresidentes() {
 
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              style={{ background: 'white', border: '1.5px solid #e2e8f0', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', cursor: 'pointer' }}
+              style={{ background: 'white', border: `1.5px solid ${COLORS.slate200}`, padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate600, cursor: 'pointer' }}
             >
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
             </button>
@@ -1382,8 +1383,8 @@ export default function AdminPresidentes() {
       >
         <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
           {/* FOTO DEL PRESIDENTE Y CABECERA */}
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: 'white', padding: '16px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0, border: '2px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: 'white', padding: '16px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}` }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0, border: `2px solid ${COLORS.slate200}`, background: COLORS.slate50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {!mostrarFallback ? (
                 <img
                   src={avatarBlobUrl}
@@ -1392,21 +1393,21 @@ export default function AdminPresidentes() {
                   onError={() => setImgError(true)}
                 />
               ) : (
-                <FaUser className="fallback-icon" style={{ fontSize: '32px', color: '#cbd5e1' }} />
+                <FaUser className="fallback-icon" style={{ fontSize: '32px', color: COLORS.slate300 }} />
               )}
             </div>
             <div>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: COLORS.slate800 }}>
                 {datosEditables.primerNombre} {datosEditables.primerApellido} {datosEditables.segundoApellido}
               </h3>
-              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: COLORS.slate500, fontWeight: '600' }}>
                 {datosEditables.curp || 'CURP NO REGISTRADA'} • <strong>Equipos a cargo:</strong>{' '}
                 {presidenteEnEdicion?.equipos && presidenteEnEdicion.equipos.length > 0
                   ? presidenteEnEdicion.equipos.map((eq, idx) => (
                     <span key={eq.id || idx}>
                       {idx > 0 && ', '}
                       <span
-                        style={{ cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
+                        style={{ cursor: 'pointer', color: COLORS.primary, textDecoration: 'underline' }}
                         onClick={() => {
                           setModalEdicion(false);
                           if (esNavegacionCruzada) {
@@ -1431,12 +1432,12 @@ export default function AdminPresidentes() {
                     display: 'inline-block',
                     marginTop: '6px',
                     padding: '4px 10px',
-                    background: statusCfg?.bg || '#f1f5f9',
-                    color: statusCfg?.color || '#475569',
+                    background: statusCfg?.bg || COLORS.slate100,
+                    color: statusCfg?.color || COLORS.slate600,
                     fontSize: '11px',
                     fontWeight: '800',
                     borderRadius: '6px',
-                    border: `1px solid ${statusCfg?.color || '#cbd5e1'}22`
+                    border: `1px solid ${statusCfg?.color || COLORS.slate300}22`
                   }}>
                     {statusCfg?.label?.toUpperCase() || 'DESCONOCIDO'}
                   </span>
@@ -1446,8 +1447,8 @@ export default function AdminPresidentes() {
           </div>
 
           {/* SECCIÓN: DATOS DEL PRESIDENTE */}
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>Datos del Presidente</h4>
+          <div style={{ background: 'white', border: `1px solid ${COLORS.slate200}`, borderRadius: '14px', padding: '16px 16px 0 16px', boxShadow: `0 4px 6px -1px ${COLORS.shadow05}` }}>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800, borderBottom: `1px solid ${COLORS.slate200}`, paddingBottom: '8px' }}>Datos del Presidente</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: '16px', rowGap: '0', alignItems: 'start' }}>
               <EntradaFormulario
                 etiqueta="Nombre(s)"
@@ -1530,8 +1531,8 @@ export default function AdminPresidentes() {
         <div style={{ textAlign: 'center', marginBottom: '25px' }}>
           <div style={{
             fontSize: '32px',
-            background: 'rgba(59, 130, 246, 0.1)',
-            color: '#3b82f6',
+            background: COLORS.blueTranslucent10,
+            color: COLORS.blue,
             width: '70px',
             height: '70px',
             borderRadius: '20px',
@@ -1539,16 +1540,16 @@ export default function AdminPresidentes() {
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 15px',
-            boxShadow: '0 8px 16px rgba(59, 130, 246, 0.15)'
+            boxShadow: `0 8px 16px ${COLORS.blueTranslucent15}`
           }}>
             <FaUserPlus />
           </div>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>Equiparando a {equipoNombreHuerfano}</h3>
-          <p style={{ margin: '5px 0 0', fontSize: '14px', color: '#64748b' }}>Selecciona un presidente disponible para tomar el mando.</p>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: COLORS.slate800 }}>Equiparando a {equipoNombreHuerfano}</h3>
+          <p style={{ margin: '5px 0 0', fontSize: '14px', color: COLORS.slate500 }}>Selecciona un presidente disponible para tomar el mando.</p>
         </div>
 
         <div style={{ position: 'relative', marginBottom: '20px' }}>
-          <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+          <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400 }}>
             <FaSearch />
           </div>
           <input
@@ -1560,8 +1561,8 @@ export default function AdminPresidentes() {
               width: '100%',
               padding: '14px 14px 14px 45px',
               borderRadius: '16px',
-              border: '2px solid #f1f5f9',
-              background: '#f8fafc',
+              border: `2px solid ${COLORS.slate100}`,
+              background: COLORS.slate50,
               fontSize: '15px',
               outline: 'none',
               transition: 'all 0.3s'
@@ -1586,7 +1587,7 @@ export default function AdminPresidentes() {
                     padding: '15px',
                     borderRadius: '16px',
                     marginBottom: '10px',
-                    border: '1px solid #f1f5f9',
+                    border: `1px solid ${COLORS.slate100}`,
                     transition: 'all 0.2s',
                     background: 'white'
                   }}
@@ -1596,7 +1597,7 @@ export default function AdminPresidentes() {
                       width: '44px',
                       height: '44px',
                       borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
+                      background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondaryHover} 100%)`,
                       color: 'white',
                       display: 'flex',
                       alignItems: 'center',
@@ -1607,8 +1608,8 @@ export default function AdminPresidentes() {
                       {(pres.nombre || pres.Nombre || '?').charAt(0)}
                     </div>
                     <div>
-                      <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{pres.nombre || pres.Nombre}</div>
-                      <div style={{ color: '#64748b', fontSize: '12px' }}>{pres.correo || pres.Email}</div>
+                      <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{pres.nombre || pres.Nombre}</div>
+                      <div style={{ color: COLORS.slate500, fontSize: '12px' }}>{pres.correo || pres.Email}</div>
                     </div>
                   </div>
                   <button
@@ -1616,8 +1617,8 @@ export default function AdminPresidentes() {
                     style={{
                       padding: '8px 16px',
                       borderRadius: '10px',
-                      background: '#eff6ff',
-                      color: '#2563eb',
+                      background: COLORS.secondaryBg,
+                      color: COLORS.secondary,
                       border: 'none',
                       fontWeight: '700',
                       fontSize: '12px',
@@ -1630,7 +1631,7 @@ export default function AdminPresidentes() {
                 </div>
               ))
           ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+            <div style={{ textAlign: 'center', padding: '40px', color: COLORS.slate400 }}>
               <FaUserTie style={{ fontSize: '40px', opacity: 0.3, marginBottom: '10px' }} />
               <p>No hay presidentes disponibles que coincidan.</p>
             </div>
@@ -1640,12 +1641,12 @@ export default function AdminPresidentes() {
 
       <style>{`
         .pres-item-hover:hover {
-          background: #f8fafc !important;
-          border-color: #cbd5e1 !important;
+          background: ${COLORS.slate50} !important;
+          border-color: ${COLORS.slate300} !important;
           transform: translateX(5px);
         }
         .pres-item-hover button:hover {
-          background: #2563eb !important;
+          background: ${COLORS.secondary} !important;
           color: white !important;
         }
       `}</style>

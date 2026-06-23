@@ -1,5 +1,6 @@
 import { FaArrowLeft } from 'react-icons/fa';
 import { C } from './constants';
+import COLORS from '../../../styles/colors';
 
 /**
  * PageHeader
@@ -13,16 +14,16 @@ export default function PageHeader({ onBack, esEntrenador }) {
         style={{
           width: 42, height: 42, borderRadius: 12,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.cardBorder}`,
+          background: COLORS.overlayWhite04, border: `1px solid ${C.cardBorder}`,
           color: C.textArrow, cursor: 'pointer', fontSize: 15, transition: 'all .2s',
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.background = 'rgba(245,158,11,0.1)';
+          e.currentTarget.style.background = COLORS.warningBgTranslucent10;
           e.currentTarget.style.borderColor = C.amber;
           e.currentTarget.style.color = C.amber;
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+          e.currentTarget.style.background = COLORS.overlayWhite04;
           e.currentTarget.style.borderColor = C.cardBorder;
           e.currentTarget.style.color = C.textArrow;
         }}

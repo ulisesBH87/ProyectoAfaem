@@ -10,6 +10,7 @@ import Modal from '../../components/partials/Forms/Modal';
 import AdminTabs from '../../components/Admin/AdminTabs';
 
 import { useSecureBlob } from '../../hooks/useSecureBlob';
+import COLORS from '../../styles/colors';
 
 const AdminPagos = () => {
   const [pagos, setPagos] = useState([]);
@@ -145,7 +146,7 @@ const AdminPagos = () => {
     const { isConfirmed, isDenied } = await Swal.fire({
       title: 'Re-verificar Pago',
       html: `
-        <p style="margin:0 0 12px; color:#475569; font-size:14px;">
+        <p style="margin:0 0 12px; color:${COLORS.slate600}; font-size:14px;">
           Este pago fue <strong>${etiqueta}</strong> previamente.<br/>
           Selecciona la nueva acción a realizar:
         </p>
@@ -156,9 +157,9 @@ const AdminPagos = () => {
       confirmButtonText: '✓ Aprobar',
       denyButtonText: '✗ Rechazar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#10b981',
-      denyButtonColor: '#ef4444',
-      cancelButtonColor: '#94a3b8'
+      confirmButtonColor: COLORS.success,
+      denyButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
     });
 
     if (isConfirmed) {
@@ -265,12 +266,12 @@ const AdminPagos = () => {
       label: 'Estatus',
       render: (val) => {
         const config = {
-          2: { label: 'Pendiente', bg: '#fef3c7', color: '#92400e', icon: <FaClock /> },
-          3: { label: 'Aprobado', bg: '#dcfce7', color: '#166534', icon: <FaCheckCircle /> },
-          4: { label: 'Rechazado', bg: '#fee2e2', color: '#991b1b', icon: <FaTimesCircle /> },
-          5: { label: 'Caducado', bg: '#fee2e2', color: '#006774', icon: <FaTimesCircle /> }
+          2: { label: 'Pendiente', bg: COLORS.warningBg, color: COLORS.warningBrown, icon: <FaClock /> },
+          3: { label: 'Aprobado', bg: COLORS.greenBg, color: COLORS.greenDarker, icon: <FaCheckCircle /> },
+          4: { label: 'Rechazado', bg: COLORS.dangerBg, color: COLORS.dangerDeep, icon: <FaTimesCircle /> },
+          5: { label: 'Caducado', bg: COLORS.dangerBg, color: COLORS.teal, icon: <FaTimesCircle /> }
         };
-        const c = config[val] || { label: 'Desconocido', bg: '#f1f5f9', color: '#64748b', icon: null };
+        const c = config[val] || { label: 'Desconocido', bg: COLORS.slate100, color: COLORS.slate500, icon: null };
         return (
           <span style={{
             padding: '5px 12px', borderRadius: '20px', background: c.bg, color: c.color,
@@ -294,19 +295,19 @@ const AdminPagos = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: 'rgba(37, 99, 235, 0.08)',
+              backgroundColor: COLORS.secondaryBgTranslucent,
               color: 'var(--primary)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
+              border: `1px solid ${COLORS.secondaryBgTranslucent20}`,
               borderRadius: '8px',
               fontWeight: '700',
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.15)';
+              e.currentTarget.style.backgroundColor = COLORS.secondaryBgTranslucent15;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
+              e.currentTarget.style.backgroundColor = COLORS.secondaryBgTranslucent;
             }}
             title="Ver comprobante adjunto"
           >
@@ -318,7 +319,7 @@ const AdminPagos = () => {
               onClick={() => handleCambiarEstatusTerminal(row.OrdenPagoId, row.EstatusPagoId)}
               style={{
                 padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-                background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px'
+                background: COLORS.warning, color: 'white', border: 'none', borderRadius: '8px'
               }}
             >
               Editar
@@ -329,7 +330,7 @@ const AdminPagos = () => {
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 3, 'Aprobar')}
                 style={{
                   padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-                  background: '#10b981', color: 'white', border: 'none', borderRadius: '8px'
+                  background: COLORS.success, color: 'white', border: 'none', borderRadius: '8px'
                 }}
               >
                 Aprobar
@@ -338,7 +339,7 @@ const AdminPagos = () => {
                 onClick={() => handleUpdateEstatus(row.OrdenPagoId, 4, 'Rechazar')}
                 style={{
                   padding: '7px 14px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-                  background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px'
+                  background: COLORS.danger, color: 'white', border: 'none', borderRadius: '8px'
                 }}
               >
                 Rechazar
@@ -453,7 +454,7 @@ const AdminPagos = () => {
                     onClick={() => handleCambiarEstatusTerminal(pagoDetalle.OrdenPagoId, pagoDetalle.EstatusPagoId)}
                     style={{
                       padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
-                      background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
+                      background: COLORS.warning, color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
                     }}
                   >
                     Editar Estatus
@@ -464,7 +465,7 @@ const AdminPagos = () => {
                       onClick={() => handleUpdateEstatus(pagoDetalle.OrdenPagoId, 3, 'Aprobar')}
                       style={{
                         padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
-                        background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
+                        background: COLORS.success, color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
                       }}
                     >
                       Aprobar
@@ -473,7 +474,7 @@ const AdminPagos = () => {
                       onClick={() => handleUpdateEstatus(pagoDetalle.OrdenPagoId, 4, 'Rechazar')}
                       style={{
                         padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
-                        background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
+                        background: COLORS.danger, color: 'white', border: 'none', borderRadius: '8px', marginRight: '10px'
                       }}
                     >
                       Rechazar
@@ -489,14 +490,14 @@ const AdminPagos = () => {
                 fontSize: '13px',
                 fontWeight: '700',
                 cursor: 'pointer',
-                background: '#94a3b8',
+                background: COLORS.slate400,
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 transition: 'background 0.2s'
               }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#64748b'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#94a3b8'}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = COLORS.slate500}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = COLORS.slate400}
             >
               Cerrar
             </button>
@@ -508,14 +509,14 @@ const AdminPagos = () => {
             <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
               <span className="visually-hidden">Cargando...</span>
             </div>
-            <span style={{ marginTop: '16px', color: '#64748b', fontWeight: '600' }}>Cargando detalles de la orden...</span>
+            <span style={{ marginTop: '16px', color: COLORS.slate500, fontWeight: '600' }}>Cargando detalles de la orden...</span>
           </div>
         ) : pagoDetalle ? (
           <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '24px' }}>
             {/* Columna izquierda: Detalles del pago */}
             <div style={{ flex: '1 1 350px', minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ padding: '20px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0b4ea6', marginBottom: '16px', marginTop: 0 }}>Conceptos de la Orden #{pagoDetalle.OrdenPagoId}</h4>
+              <div style={{ padding: '20px', border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', background: COLORS.slate50 }}>
+                <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.primary, marginBottom: '16px', marginTop: 0 }}>Conceptos de la Orden #{pagoDetalle.OrdenPagoId}</h4>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {pagoDetalle.OrdenPagoDetalleRelacion && pagoDetalle.OrdenPagoDetalleRelacion.length > 0 ? (
@@ -530,64 +531,64 @@ const AdminPagos = () => {
                       }
 
                       return (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: `1px solid ${COLORS.slate200}` }}>
                           <div>
-                            <div style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b' }}>{nombreConcepto}</div>
-                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Cant: {detalle.Cantidad} x ${parseFloat(detalle.PrecioUnitarioCobrado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
+                            <div style={{ fontWeight: '700', fontSize: '13px', color: COLORS.slate800 }}>{nombreConcepto}</div>
+                            <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>Cant: {detalle.Cantidad} x ${parseFloat(detalle.PrecioUnitarioCobrado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>
                           </div>
-                          <div style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b', alignSelf: 'center' }}>
+                          <div style={{ fontWeight: '700', fontSize: '13px', color: COLORS.slate800, alignSelf: 'center' }}>
                             ${parseFloat(detalle.Subtotal).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                           </div>
                         </div>
                       );
                     })
                   ) : (
-                    <div style={{ color: '#64748b', fontSize: '12px', fontStyle: 'italic', textAlign: 'center', padding: '10px 0' }}>
+                    <div style={{ color: COLORS.slate500, fontSize: '12px', fontStyle: 'italic', textAlign: 'center', padding: '10px 0' }}>
                       No hay conceptos registrados para esta orden.
                     </div>
                   )}
                 </div>
 
-                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '2px solid #e2e8f0' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#64748b' }}>Total de la orden:</span>
-                  <span style={{ fontSize: '20px', fontWeight: '900', color: '#0b4ea6' }}>
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: `2px solid ${COLORS.slate200}` }}>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: COLORS.slate500 }}>Total de la orden:</span>
+                  <span style={{ fontSize: '20px', fontWeight: '900', color: COLORS.primary }}>
                     ${parseFloat(pagoDetalle.TotalPagar).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
 
-              <div style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', background: 'white' }}>
-                <h5 style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: '0 0 10px 0' }}>Información de Pago</h5>
+              <div style={{ padding: '16px', border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', background: 'white' }}>
+                <h5 style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate800, margin: '0 0 10px 0' }}>Información de Pago</h5>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                   <div>
-                    <span style={{ color: '#64748b', fontWeight: '600' }}>Usuario:</span> <span style={{ color: '#1e293b' }}>{pagoDetalle.NombreCompleto ? `${pagoDetalle.NombreCompleto} (${pagoDetalle.Correo})` : (pagoDetalle.Correo || '—')}</span>
+                    <span style={{ color: COLORS.slate500, fontWeight: '600' }}>Usuario:</span> <span style={{ color: COLORS.slate800 }}>{pagoDetalle.NombreCompleto ? `${pagoDetalle.NombreCompleto} (${pagoDetalle.Correo})` : (pagoDetalle.Correo || '—')}</span>
                   </div>
                   {pagoDetalle.ReferenciaPago && (
                     <div>
-                      <span style={{ color: '#64748b', fontWeight: '600' }}>Referencia de Pago:</span>{' '}
-                      <span style={{ color: '#1e293b', fontWeight: '800', fontFamily: 'monospace', fontSize: '13px', letterSpacing: '0.5px' }}>{pagoDetalle.ReferenciaPago}</span>
+                      <span style={{ color: COLORS.slate500, fontWeight: '600' }}>Referencia de Pago:</span>{' '}
+                      <span style={{ color: COLORS.slate800, fontWeight: '800', fontFamily: 'monospace', fontSize: '13px', letterSpacing: '0.5px' }}>{pagoDetalle.ReferenciaPago}</span>
                     </div>
                   )}
                   {pagoDetalle.FechaEnvio && (
                     <div>
-                      <span style={{ color: '#64748b', fontWeight: '600' }}>Fecha envío:</span> <span style={{ color: '#1e293b' }}>{formatDate(pagoDetalle.FechaEnvio)}</span>
+                      <span style={{ color: COLORS.slate500, fontWeight: '600' }}>Fecha envío:</span> <span style={{ color: COLORS.slate800 }}>{formatDate(pagoDetalle.FechaEnvio)}</span>
                     </div>
                   )}
                   {pagoDetalle.FechaDePago && (
                     <div>
-                      <span style={{ color: '#64748b', fontWeight: '600' }}>Fecha pago:</span> <span style={{ color: '#1e293b' }}>{formatDate(pagoDetalle.FechaDePago)}</span>
+                      <span style={{ color: COLORS.slate500, fontWeight: '600' }}>Fecha pago:</span> <span style={{ color: COLORS.slate800 }}>{formatDate(pagoDetalle.FechaDePago)}</span>
                     </div>
                   )}
                   <div>
-                    <span style={{ color: '#64748b', fontWeight: '600' }}>Estatus actual:</span>{' '}
+                    <span style={{ color: COLORS.slate500, fontWeight: '600' }}>Estatus actual:</span>{' '}
                     {(() => {
                       const estatusConfig = {
-                        2: { label: 'PENDIENTE', bg: '#fef3c7', color: '#92400e' },
-                        3: { label: 'APROBADO', bg: '#dcfce7', color: '#166534' },
-                        4: { label: 'RECHAZADO', bg: '#fee2e2', color: '#991b1b' },
-                        5: { label: 'CADUCADO', bg: '#fee2e2', color: '#006774' }
+                        2: { label: 'PENDIENTE', bg: COLORS.warningBg, color: COLORS.warningBrown },
+                        3: { label: 'APROBADO', bg: COLORS.greenBg, color: COLORS.greenDarker },
+                        4: { label: 'RECHAZADO', bg: COLORS.dangerBg, color: COLORS.dangerDeep },
+                        5: { label: 'CADUCADO', bg: COLORS.dangerBg, color: COLORS.teal }
                       };
-                      const conf = estatusConfig[pagoDetalle.EstatusPagoId] || { label: 'DESCONOCIDO', bg: '#f1f5f9', color: '#64748b' };
+                      const conf = estatusConfig[pagoDetalle.EstatusPagoId] || { label: 'DESCONOCIDO', bg: COLORS.slate100, color: COLORS.slate500 };
                       return (
                         <span style={{ padding: '2px 8px', borderRadius: '12px', background: conf.bg, color: conf.color, fontSize: '10px', fontWeight: '700' }}>
                           {conf.label}
@@ -602,13 +603,13 @@ const AdminPagos = () => {
             {/* Columna derecha: Comprobante/Voucher */}
             <div style={{ flex: '1 1 350px', minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#0b4ea6', margin: 0 }}>Comprobante de Pago</h4>
+                <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.primary, margin: 0 }}>Comprobante de Pago</h4>
                 {isVoucherVisible && !voucherLoading && (
                   <a
                     href={voucherBlobUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ fontSize: '12px', fontWeight: '700', color: COLORS.secondary, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     Ver en pantalla completa ↗
                   </a>
@@ -616,37 +617,37 @@ const AdminPagos = () => {
               </div>
 
               {voucherLoading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed #e2e8f0', borderRadius: '12px', height: '400px', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: `1px dashed ${COLORS.slate200}`, borderRadius: '12px', height: '400px', background: COLORS.slate50 }}>
                   <Loader />
-                  <span style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>Cargando comprobante...</span>
+                  <span style={{ fontSize: '12px', color: COLORS.slate500, marginTop: '8px' }}>Cargando comprobante...</span>
                 </div>
               ) : !isVoucherVisible ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #cbd5e1', borderRadius: '12px', height: '400px', padding: '24px', background: '#f8fafc', color: '#64748b', textAlign: 'center' }}>
-                  <FaFileAlt style={{ fontSize: '48px', color: '#94a3b8', marginBottom: '16px' }} />
-                  <h5 style={{ fontSize: '14px', fontWeight: '800', color: '#475569', margin: '0 0 8px 0' }}>El comprobante no se encuentra disponible.</h5>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>El usuario aún no ha cargado un voucher o el archivo ya no existe.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: `2px dashed ${COLORS.slate300}`, borderRadius: '12px', height: '400px', padding: '24px', background: COLORS.slate50, color: COLORS.slate500, textAlign: 'center' }}>
+                  <FaFileAlt style={{ fontSize: '48px', color: COLORS.slate400, marginBottom: '16px' }} />
+                  <h5 style={{ fontSize: '14px', fontWeight: '800', color: COLORS.slate600, margin: '0 0 8px 0' }}>El comprobante no se encuentra disponible.</h5>
+                  <p style={{ fontSize: '12px', color: COLORS.slate500, margin: 0 }}>El usuario aún no ha cargado un voucher o el archivo ya no existe.</p>
                 </div>
               ) : pagoDetalle.RutaVoucher.toLowerCase().includes('.pdf') ? (
                 <object
                   data={voucherBlobUrl}
                   type="application/pdf"
-                  style={{ width: '100%', height: '400px', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}
+                  style={{ width: '100%', height: '400px', border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', overflow: 'hidden' }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '24px', background: '#f8fafc', color: '#64748b', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '24px', background: COLORS.slate50, color: COLORS.slate500, textAlign: 'center' }}>
                     <FaFileAlt style={{ fontSize: '32px', marginBottom: '8px' }} />
                     <span style={{ fontSize: '13px', fontWeight: '500' }}>No se puede previsualizar el PDF directamente.</span>
                     <a
                       href={voucherBlobUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ marginTop: '12px', padding: '8px 16px', background: '#2563eb', color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}
+                      style={{ marginTop: '12px', padding: '8px 16px', background: COLORS.secondary, color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}
                     >
                       Abrir PDF en nueva pestaña
                     </a>
                   </div>
                 </object>
               ) : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', height: '400px', padding: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', overflow: 'hidden', background: COLORS.slate50, height: '400px', padding: '8px' }}>
                   <img
                     src={voucherBlobUrl}
                     alt="Voucher"
@@ -657,7 +658,7 @@ const AdminPagos = () => {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', color: '#ef4444' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', color: COLORS.danger }}>
             <FaTimesCircle style={{ fontSize: '32px', marginBottom: '12px' }} />
             <span style={{ fontWeight: '700' }}>No se pudieron obtener los detalles de la orden de pago.</span>
           </div>

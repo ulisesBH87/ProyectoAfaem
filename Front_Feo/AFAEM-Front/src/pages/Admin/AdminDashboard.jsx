@@ -15,6 +15,7 @@ import { getPagosGenerales, getJugadoresDirectorio } from '../../services/admin'
 import Loader from '../../components/Loader';
 import AdminTabs from '../../components/Admin/AdminTabs';
 import '../../styles/dashboard.css';
+import COLORS from '../../styles/colors';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -134,23 +135,23 @@ const AdminDashboard = () => {
         {/* STAT 1: SOLICITUDES PENDIENTES */}
         <StatCard
           icon={<FaRegFileAlt />}
-          bg="rgba(37, 99, 235, 0.1)"
+          bg={COLORS.secondaryBgTranslucent10}
           color="var(--primary)"
           label="Solicitudes Pendientes"
           val={statsData.solicitudesPendientes}
           ruta={ROUTES.ADMIN.SOLICITUDES}
-          badge={{ text: 'Revisar', color: 'var(--primary)', bg: 'rgba(37,99,235,0.08)' }}
+          badge={{ text: 'Revisar', color: 'var(--primary)', bg: COLORS.secondaryBgTranslucent }}
         />
 
         {/* STAT 2: PAGOS PENDIENTES */}
         <StatCard
           icon={<FaMoneyBillWave />}
-          bg="rgba(245, 158, 11, 0.1)"
+          bg={COLORS.warningBgTranslucent10}
           color="var(--warning)"
           label="Pagos Pendientes"
           val={statsData.pagosPendientes}
           ruta={ROUTES.ADMIN.PAGOS}
-          badge={{ text: 'Validar', color: 'var(--warning)', bg: 'rgba(245,158,11,0.08)' }}
+          badge={{ text: 'Validar', color: 'var(--warning)', bg: COLORS.warningBgTranslucent08 }}
         />
 
         {/* CHART: RECAUDACIÓN (2x2) */}
@@ -169,9 +170,9 @@ const AdminDashboard = () => {
                   style={{
                     padding: '6px 14px', borderRadius: '10px', variant: 'none', border: 'none', fontSize: '11px', fontWeight: '800', cursor: 'pointer',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    background: mesFiltro === m ? 'var(--primary)' : 'rgba(0,0,0,0.03)',
+                    background: mesFiltro === m ? 'var(--primary)' : COLORS.shadow03,
                     color: mesFiltro === m ? 'white' : 'var(--text-muted)',
-                    boxShadow: mesFiltro === m ? '0 4px 12px rgba(11, 78, 166, 0.25)' : 'none',
+                    boxShadow: mesFiltro === m ? `0 4px 12px ${COLORS.primaryBgTranslucent25}` : 'none',
                     transform: mesFiltro === m ? 'scale(1.05)' : 'scale(1)'
                   }}
                 >
@@ -200,7 +201,7 @@ const AdminDashboard = () => {
                   cornerRadius={12}
                 >
                   <Cell fill="var(--primary)" />
-                  <Cell fill="rgba(0,0,0,0.03)" />
+                  <Cell fill={COLORS.shadow03} />
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
@@ -209,7 +210,7 @@ const AdminDashboard = () => {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '4px' }}>
                 {mesFiltro}
               </div>
-              <div className="chart-inner-value data-fira" style={{ textShadow: '0 4px 12px rgba(11, 78, 166, 0.15)' }}>
+              <div className="chart-inner-value data-fira" style={{ textShadow: `0 4px 12px ${COLORS.primaryBgTranslucent}` }}>
                 ${(mesSeleccionadoData?.ingresos || 0).toLocaleString()}
               </div>
             </div>
@@ -219,7 +220,7 @@ const AdminDashboard = () => {
         {/* STAT 3: EQUIPOS APROBADOS */}
         <StatCard
           icon={<FaShieldAlt />}
-          bg="rgba(16, 185, 129, 0.1)"
+          bg={COLORS.successBgTranslucent10}
           color="var(--secondary)"
           label="Equipos Aprobados"
           val={statsData.equipos}
@@ -229,8 +230,8 @@ const AdminDashboard = () => {
         {/* STAT 4: JUGADORES ACTIVOS */}
         <StatCard
           icon={<FaUsers />}
-          bg="rgba(139, 92, 246, 0.1)"
-          color="#8b5cf6"
+          bg={COLORS.violetTranslucent10}
+          color={COLORS.violet}
           label="Jugadores Activos"
           val={statsData.jugadoresActivos ?? 'N/D'}
           ruta={ROUTES.ADMIN.JUGADORES}
