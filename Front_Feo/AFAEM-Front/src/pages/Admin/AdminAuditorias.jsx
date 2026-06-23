@@ -116,22 +116,65 @@ const AdminAuditorias = () => {
     }
   };
 
-  const renderValoresObjeto = (objeto) => {
+  const renderValoresObjeto = (objeto, tipo = 'normal') => {
     const data = parseJsonData(objeto);
     if (!data || Object.keys(data).length === 0) {
       return <span style={{ fontStyle: 'italic', color: '#64748b', fontSize: '13px' }}>Sin datos registrados</span>;
     }
 
+    const isAntes = tipo === 'antes';
+    const isDespues = tipo === 'despues';
+
+    const containerStyle = {
+      maxHeight: '260px',
+      overflowY: 'auto',
+      border: isAntes 
+        ? '1.5px solid #fca5a5' 
+        : isDespues 
+        ? '1.5px solid #6ee7b7' 
+        : '1.5px solid #e2e8f0',
+      borderRadius: '12px',
+      background: '#ffffff',
+      boxShadow: 'var(--shadow-sm)',
+      transition: 'all 0.3s ease'
+    };
+
+    const keyBgColor = isAntes 
+      ? '#fef2f2' 
+      : isDespues 
+      ? '#f0fdf4' 
+      : '#f8fafc';
+
+    const keyTextColor = isAntes 
+      ? '#991b1b' 
+      : isDespues 
+      ? '#065f46' 
+      : '#1e40af';
+
+    const borderCellColor = isAntes
+      ? '#fee2e2'
+      : isDespues
+      ? '#dcfce7'
+      : '#f1f5f9';
+
     return (
-      <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#ffffff', boxShadow: 'var(--shadow-sm)' }}>
-        <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', color: '#334155' }}>
+      <div style={containerStyle}>
+        <table style={{ width: '100%', fontSize: '12.5px', borderCollapse: 'collapse', color: '#334155' }}>
           <tbody>
             {Object.entries(data).map(([key, val]) => (
-              <tr key={key} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }} className="table-row-hover">
-                <td style={{ padding: '10px 14px', fontWeight: '700', color: '#1e40af', width: '40%', borderRight: '1px solid #f1f5f9', fontFamily: 'monospace', backgroundColor: '#f8fafc' }}>
+              <tr key={key} style={{ borderBottom: `1px solid ${borderCellColor}`, transition: 'background-color 0.2s' }} className="table-row-hover">
+                <td style={{ 
+                  padding: '10px 14px', 
+                  fontWeight: '700', 
+                  color: keyTextColor, 
+                  width: '38%', 
+                  borderRight: `1px solid ${borderCellColor}`, 
+                  fontFamily: 'monospace', 
+                  backgroundColor: keyBgColor 
+                }}>
                   {key}
                 </td>
-                <td style={{ padding: '10px 14px', wordBreak: 'break-all', fontFamily: 'monospace', color: '#0f172a' }}>
+                <td style={{ padding: '10px 14px', wordBreak: 'break-all', fontFamily: 'monospace', color: '#0f172a', fontWeight: '500' }}>
                   {val !== null && val !== undefined ? String(val) : <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>null</span>}
                 </td>
               </tr>
@@ -455,7 +498,7 @@ const AdminAuditorias = () => {
         estaAbierto={modalAbierto}
         titulo="Detalle de Auditoría"
         alCerrar={() => setModalAbierto(false)}
-        tamanio="medio"
+        tamanio="grande"
         pie={
           <button
             onClick={() => setModalAbierto(false)}
@@ -541,18 +584,18 @@ const AdminAuditorias = () => {
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginTop: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '20px' }}>
                 <div>
                   <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }}></span> Valores Antes
                   </h4>
-                  {renderValoresObjeto(auditoriaSeleccionada.valores_antes)}
+                  {renderValoresObjeto(auditoriaSeleccionada.valores_antes, 'antes')}
                 </div>
                 <div>
                   <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></span> Valores Después
                   </h4>
-                  {renderValoresObjeto(auditoriaSeleccionada.valores_despues)}
+                  {renderValoresObjeto(auditoriaSeleccionada.valores_despues, 'despues')}
                 </div>
               </div>
             )}
