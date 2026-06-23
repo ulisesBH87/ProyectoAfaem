@@ -3,7 +3,7 @@ import { Modal, BotonSecundario } from '../../../components/partials';
 /**
  * DocumentPreviewModal
  * Modal de previsualización de documentos (zoom).
- * Soporta imágenes e iframes para PDF.
+ * Soporta imágenes e iframes para PDF con estilos responsivos.
  */
 export default function DocumentPreviewModal({ previewDoc, onClose }) {
   return (
@@ -16,21 +16,20 @@ export default function DocumentPreviewModal({ previewDoc, onClose }) {
     >
       <div style={{
         width: '100%',
-        height: previewDoc.type === 'pdf' ? '100%' : 'auto',
+        height: previewDoc.type === 'pdf' ? '70vh' : 'auto',
         display: 'flex', justifyContent: 'center', alignItems: 'center',
-        backgroundColor: '#0f172a', borderRadius: 12, overflow: 'hidden',
       }}>
         {previewDoc.type === 'pdf' ? (
           <iframe
             src={previewDoc.url}
-            style={{ width: '1800px', height: '70vh', border: 'none' }}
+            style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }}
             title="Visor de PDF"
           />
         ) : (
           <img
             src={previewDoc.url}
             alt="Preview Grande"
-            style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+            style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px' }}
           />
         )}
       </div>
