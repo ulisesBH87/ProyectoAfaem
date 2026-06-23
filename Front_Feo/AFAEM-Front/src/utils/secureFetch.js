@@ -12,7 +12,9 @@ export const fetchSecureBlobUrl = async (path) => {
   const pathWithSlash = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
   const fullUrl = `${API_BASE}${pathWithSlash}`;
   
-  const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+  const token = (typeof window !== 'undefined' && /^\/i\//.test(window.location.pathname))
+    ? sessionStorage.getItem('temp_token')
+    : (localStorage.getItem('token') || sessionStorage.getItem('temp_token'));
   const headers = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
