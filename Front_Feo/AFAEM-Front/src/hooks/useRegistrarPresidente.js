@@ -15,6 +15,7 @@ import { useOCR } from './useOCR';
 import { useFotografia } from './useFotografia';
 import { useGenerarPDF } from './useGenerarPDF';
 import { REQUISITOS, C } from '../pages/Admin/RegistrarPresidente/constants';
+import { API_BASE } from '../config/config';
 
 const CUENTA_INICIAL = {
   nombre: '', primerApellido: '', segundoApellido: '',
@@ -157,6 +158,59 @@ export function useRegistrarPresidente() {
   const [previews, setPreviews] = useState({});
   const [detailsOpen, setDetailsOpen] = useState({});
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
+
+  // Estados para validación de nombre de equipo en tiempo real
+  const [nombreEquipoValido, setNombreEquipoValido] = useState(true);
+  const [nombreEquipoMensaje, setNombreEquipoMensaje] = useState('');
+  const [verificandoNombre, setVerificandoNombre] = useState(false);
+
+  // Validación de nombre de equipo en tiempo real
+  useEffect(() => {
+    const verificarNombreEquipo = async () => {
+      const nombre = equipo?.trim();
+      const ligaIdVal = liga;
+
+      if (esEntrenador || !nombre || !ligaIdVal) {
+        setNombreEquipoValido(true);
+        setNombreEquipoMensaje('');
+        return;
+      }
+
+      setVerificandoNombre(true);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(
+          `${API_BASE}/equipo-temporal/validar-nombre?nombre_equipo=${encodeURIComponent(nombre)}&liga_id=${ligaIdVal}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.disponible) {
+            setNombreEquipoValido(true);
+            setNombreEquipoMensaje('✓ Nombre de equipo disponible en esta liga');
+          } else {
+            setNombreEquipoValido(false);
+            setNombreEquipoMensaje('✗ Ya existe un equipo con este nombre registrado en la misma liga');
+          }
+        }
+      } catch (err) {
+        console.error("Error al verificar disponibilidad de nombre de equipo:", err);
+      } finally {
+        setVerificandoNombre(false);
+      }
+    };
+
+    // Debounce de 500ms
+    const timer = setTimeout(() => {
+      verificarNombreEquipo();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [equipo, liga, esEntrenador]);
 
   // ── Hooks de lógica ──────────────────────────────────────────────────────
   const ocrHook = useOCR();
@@ -394,6 +448,12 @@ export function useRegistrarPresidente() {
       return;
     }
 
+    if (!esEntrenador && !nombreEquipoValido) {
+      Swal.fire('Atención', 'Ya existe un equipo con este nombre registrado en la misma liga. Por favor elige otro.', 'warning');
+      setPaso(3);
+      return;
+    }
+
     if (esEntrenador) {
       if (!selectedEquipoId) {
         Swal.fire('Atención', 'El Equipo es obligatorio en Datos del Expediente.', 'warning');
@@ -558,6 +618,7 @@ export function useRegistrarPresidente() {
     tipoAfiliacion, asociacion, liga, setLiga,
     documents, previews, detailsOpen, setDetailsOpen,
     previewDoc, setPreviewDoc,
+    nombreEquipoValido, nombreEquipoMensaje, verificandoNombre,
     // OCR
     ocrResults,
     isCheckingCurp,

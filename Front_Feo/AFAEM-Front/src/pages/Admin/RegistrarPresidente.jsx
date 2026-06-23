@@ -39,6 +39,9 @@ export default function RegistrarPresidente() {
     tipoAfiliacion, asociacion, liga, setLiga,
     documents, previews, detailsOpen, setDetailsOpen,
     previewDoc, setPreviewDoc,
+    nombreEquipoValido,
+    nombreEquipoMensaje,
+    verificandoNombre,
     // OCR
     ocrResults,
     // Foto
@@ -90,7 +93,7 @@ export default function RegistrarPresidente() {
   const selectedPresCount = segurosPresidente.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
   const isPaso3Ready = esEntrenador
     ? (!!selectedEquipoId && !!liga && selectedPresCount === 1)
-    : (Number(numPersonas) > 0 && totalAsignados === segurosRequeridos);
+    : (Number(numPersonas) > 0 && totalAsignados === segurosRequeridos && nombreEquipoValido);
 
   const isPaso4Ready = !!documents.formatoAfiliacion;
 
@@ -316,6 +319,9 @@ export default function RegistrarPresidente() {
             equiposSinEntrenador={equiposSinEntrenador}
             selectedEquipoId={selectedEquipoId}
             handleEquipoSelectChange={handleEquipoSelectChange}
+            nombreEquipoValido={nombreEquipoValido}
+            nombreEquipoMensaje={nombreEquipoMensaje}
+            verificandoNombre={verificandoNombre}
           />
         )}
 

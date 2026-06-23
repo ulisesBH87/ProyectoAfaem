@@ -356,6 +356,11 @@ function PreRegistroPresidente() {
   const [cargoSeleccionado, setCargoSeleccionado] = useState('Presidente Equipo');
   const [ligasCatalogo, setLigasCatalogo] = useState([]);
 
+  // Estados para validación de nombre de equipo en tiempo real
+  const [nombreEquipoValido, setNombreEquipoValido] = useState(true);
+  const [nombreEquipoMensaje, setNombreEquipoMensaje] = useState('');
+  const [verificandoNombre, setVerificandoNombre] = useState(false);
+
   // Estados para validación fallida de fotografía y captura manual de OCR
   const [fotoValidacionFallida, setFotoValidacionFallida] = useState(false);
   const [fotoArchivoPendiente, setFotoArchivoPendiente] = useState(null);
@@ -499,6 +504,54 @@ function PreRegistroPresidente() {
     fetchSeguros();
     fetchAfiliaciones();
   }, []);
+
+  // NUEVO: Validación de nombre de equipo en tiempo real
+  useEffect(() => {
+    const verificarNombreEquipo = async () => {
+      const nombre = ocrResults.equipo?.trim();
+      const ligaIdVal = liga;
+
+      if (!nombre || !ligaIdVal) {
+        setNombreEquipoValido(true);
+        setNombreEquipoMensaje('');
+        return;
+      }
+
+      setVerificandoNombre(true);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(
+          `${API_BASE}/equipo-temporal/validar-nombre?nombre_equipo=${encodeURIComponent(nombre)}&liga_id=${ligaIdVal}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.disponible) {
+            setNombreEquipoValido(true);
+            setNombreEquipoMensaje('✓ Nombre de equipo disponible en esta liga');
+          } else {
+            setNombreEquipoValido(false);
+            setNombreEquipoMensaje('✗ Ya existe un equipo con este nombre registrado en la misma liga');
+          }
+        }
+      } catch (err) {
+        console.error("Error al verificar disponibilidad de nombre de equipo:", err);
+      } finally {
+        setVerificandoNombre(false);
+      }
+    };
+
+    // Debounce de 500ms
+    const timer = setTimeout(() => {
+      verificarNombreEquipo();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [ocrResults.equipo, liga]);
 
   // SINCRONIZAR PASO ACTUAL CON EL ESTATUS REAL DEL BACKEND
   useEffect(() => {
@@ -1629,6 +1682,10 @@ function PreRegistroPresidente() {
       setLoading(true);
       setError(null);
 
+      if (!nombreEquipoValido) {
+        throw new Error('Ya existe un equipo con este nombre registrado en la misma liga. Por favor elige otro.');
+      }
+
       // Validar teléfono obligatorio de 10 dígitos locales
       const telLimpio = (ocrResults.telefono || '').replace(/\D/g, '');
       if (!telLimpio) {
@@ -1804,6 +1861,10 @@ function PreRegistroPresidente() {
     try {
       setLoading(true);
       setError(null);
+
+      if (!nombreEquipoValido) {
+        throw new Error('Ya existe un equipo con este nombre registrado en la misma liga. Por favor elige otro.');
+      }
 
       // Verify all 4 documents are approved (2) or en espera (1), none rejected (3)
       const docIdMap = {
@@ -3170,6 +3231,17 @@ function PreRegistroPresidente() {
                     onChange={(e) => handleManualOcrChange('equipo', e.target.value.toUpperCase())}
                     className="premium-input"
                   />
+                  {nombreEquipoMensaje && (
+                    <span style={{
+                      fontSize: '11px',
+                      color: nombreEquipoValido ? '#2ecc71' : '#e74c3c',
+                      marginTop: '4px',
+                      display: 'block',
+                      fontWeight: 'bold'
+                    }}>
+                      {nombreEquipoMensaje}
+                    </span>
+                  )}
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Tipo de afiliación comprado*</label>
@@ -3390,7 +3462,7 @@ function PreRegistroPresidente() {
               })();
 
               const formatAfiliacionLocked = !(
-                ocrResults.equipo && ocrResults.nombre && ocrResults.curp &&
+                ocrResults.equipo && nombreEquipoValido && ocrResults.nombre && ocrResults.curp &&
                 ocrResults.fecha_nac && esMayorDeEdad && ocrResults.nacionalidad && ocrResults.sexo &&
                 ocrResults.telefono && liga && tipoAfiliacion &&
                 documents.actaNacimiento && documents.identificacion && documents.fotografia
