@@ -444,7 +444,7 @@ export default function PresidenteEquipoEquipos() {
                     </div>
                     <div className="team-card-actions">
                       <button
-                        onClick={() => navigate(`${ROUTES.PRESIDENTE.MIS_JUGADORES}?equipo=${encodeURIComponent(team.NombreEquipo)}`)}
+                        onClick={() => navigate(`${ROUTES.PRESIDENTE.MIS_JUGADORES}?equipoId=${team.EquipoId}`)}
                         className="btn btn-primary btn-sm"
                         style={{ padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
