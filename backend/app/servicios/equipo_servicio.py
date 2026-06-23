@@ -418,9 +418,10 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
         # == NO EXISTE EL EQUIPO ==
         if tipo_proceso_original == EquipoTemporalProcesoEnum.INSCRIPCION_INICIAL:
             from app.modelos.equipo_modelo import Equipos, EquiposJugando
+            from sqlalchemy import func
             # Uniqueness check: check if team with this name exists in this league
             equipo_existente = db.query(EquiposJugando).join(Equipos).filter(
-                Equipos.NombreEquipo == team_info["nombre_equipo"],
+                func.lower(Equipos.NombreEquipo) == func.lower(team_info["nombre_equipo"]),
                 EquiposJugando.LigaId == team_info["liga_id"]
             ).first()
             if equipo_existente:

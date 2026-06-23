@@ -180,6 +180,18 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
     if nombre_equipo or liga_id:
         equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
         if equipo_temp:
+            nombre_final = nombre_equipo.strip().upper() if nombre_equipo else equipo_temp.NombreEquipo
+            liga_final = liga_id if liga_id else equipo_temp.LigaId
+            if nombre_final and liga_final:
+                from app.modelos.equipo_modelo import Equipos, EquiposJugando
+                from sqlalchemy import func
+                equipo_existente = db.query(EquiposJugando).join(Equipos).filter(
+                    func.lower(Equipos.NombreEquipo) == func.lower(nombre_final),
+                    EquiposJugando.LigaId == liga_final
+                ).first()
+                if equipo_existente:
+                    raise HTTPException(status_code=400, detail="Ya existe un equipo con este nombre registrado en la misma liga")
+
             if nombre_equipo:
                 equipo_temp.NombreEquipo = nombre_equipo.strip().upper()
             if liga_id:
@@ -233,8 +245,6 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
                 if not activado:
                     # Si no pudimos activar al presidente, lanzamos error para hacer rollback
                     raise Exception("No se pudo activar el registro de Presidente de Equipo. Verifique que el usuario esté vinculado correctamente.")
-            elif payload.Estatus == 3:
-                solicitud_repositorio.rechazar_presidente_solicitud_repo(db, solicitud_id)
                 
                 # 3. Crear automáticamente el equipo real si hay pre-registro
                 equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
@@ -259,7 +269,10 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
                             db.flush()
                         
                         # Crear el registro en EquiposJugando si no existe
-                        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_real.EquipoId).first()
+                        eq_jugando = db.query(EquiposJugando).filter(
+                            EquiposJugando.EquipoId == equipo_real.EquipoId,
+                            EquiposJugando.LigaId == equipo_temp.LigaId
+                        ).first()
                         if not eq_jugando:
                             eq_jugando = EquiposJugando(
                                 EquipoId=equipo_real.EquipoId,
@@ -273,6 +286,8 @@ def validar_solicitud_servicio(db: Session, solicitud_id: int, payload):
                         # Vincular el equipo temporal
                         equipo_temp.EquipoId = equipo_real.EquipoId
                         equipo_temp.TipoProcesoId = EquipoTemporalProcesoEnum.AMPLIACION
+            elif payload.Estatus == 3:
+                solicitud_repositorio.rechazar_presidente_solicitud_repo(db, solicitud_id)
             
         db.commit()
         mensaje = "Solicitud aprobada y presidente activado" if payload.Estatus == 2 else "Solicitud rechazada correctamente"
