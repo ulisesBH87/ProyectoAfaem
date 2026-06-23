@@ -89,7 +89,7 @@ def build_audit_entry(
         "AccionId": accion_id,
         "UsuarioId": user_id,
         "UsuarioNombre": usuario_nombre,
-        "FechaAccion": datetime.now(timezone.utc),
+        "FechaAccion": datetime.now(),
         "ValoresAntes": json.dumps(valores_antes, default=str) if valores_antes else None,
         "ValoresDespues": json.dumps(valores_despues, default=str) if valores_despues else None,
         "Ip": ip
@@ -195,7 +195,7 @@ def obtener_auditorias(db: Session, page: int, size: int):
             fecha = a.FechaAccion
 
             if fecha.tzinfo is None:
-                fecha = fecha.replace(tzinfo=timezone.utc)
+                fecha = fecha.astimezone()
             
             nombre_completo = a.UsuarioNombre or "SYSTEM"
 

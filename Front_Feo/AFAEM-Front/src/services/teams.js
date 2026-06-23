@@ -174,15 +174,20 @@ export const certifyUser = async (email) => {
   }
 };
 
+const getAuthToken = () => {
+  const isPublic = typeof window !== 'undefined' && /^\/i\//.test(window.location.pathname);
+  if (isPublic) {
+    return sessionStorage.getItem('temp_token');
+  }
+  return localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+};
+
 /**
  * REGISTRAR JUGADOR TEMPORAL (FormData)
  */
 export const registrarJugadorTemporal = async (data) => {
   try {
-    let token = localStorage.getItem('token');
-    if (!token) {
-      token = sessionStorage.getItem('temp_token');
-    }
+    const token = getAuthToken();
     const headers = {
       'Content-Type': 'multipart/form-data'
     };
@@ -201,10 +206,7 @@ export const registrarJugadorTemporal = async (data) => {
  */
 export const getAvailableSlots = async (equipoTemporalId, invitation = null) => {
   try {
-    let token = localStorage.getItem('token');
-    if (!token) {
-      token = sessionStorage.getItem('temp_token');
-    }
+    const token = getAuthToken();
     const headers = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -448,10 +450,7 @@ export const checkTeamSlots = async (equipoId) => {
 
 export const registrarGrupoJugadores = async (equipoTemporalId) => {
   try {
-    let token = localStorage.getItem('token');
-    if (!token) {
-      token = sessionStorage.getItem('temp_token');
-    }
+    const token = getAuthToken();
     const headers = {
       'Content-Type': 'application/json'
     };

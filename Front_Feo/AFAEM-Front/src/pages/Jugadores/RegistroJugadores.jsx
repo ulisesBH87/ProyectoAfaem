@@ -1171,7 +1171,9 @@ export default function RegistroJugadores() {
   const guardarBorradorEnBD = async (slotId, newData) => {
     if (!slotId) return;
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const token = isPublicFlow
+        ? sessionStorage.getItem('temp_token')
+        : (localStorage.getItem('token') || sessionStorage.getItem('temp_token'));
       const headers = {
         'Content-Type': 'application/json'
       };

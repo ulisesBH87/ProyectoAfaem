@@ -159,7 +159,7 @@ def obtener_auditorias_master(
     for a in auditorias:
         fecha = a.FechaAccion
         if fecha.tzinfo is None:
-            fecha = fecha.replace(tzinfo=timezone.utc)
+            fecha = fecha.astimezone()
             
         entidades_detectadas.add(a.EntidadAfectada)
         nombre_completo = a.UsuarioNombre or "SYSTEM"
