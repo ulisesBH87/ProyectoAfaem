@@ -22,7 +22,7 @@ class Solicitud(Base):
     
     TipoSolicitudId = Column(Integer, ForeignKey("CatalogoTiposSolicitud.TipoSolicitudId"), nullable=True)
 
-    EquipoId = Column(Integer, ForeignKey("Equipos.EquipoId"), nullable=True) #Solo se llena si la solicitud es para un equipo ya existente (ampliación)
-    EquipoRelacion = relationship("Equipos", back_populates="SolicitudRelacion")
+    EquipoId = Column(Integer, ForeignKey("EquiposJugando.EquiposJugandoId"), nullable=True) #Solo se llena si la solicitud es para un equipo ya existente (ampliación)
+    EquipoRelacion = relationship("EquiposJugando", back_populates="SolicitudRelacion")
     
     Afiliacion = Column(String(100), nullable=True)

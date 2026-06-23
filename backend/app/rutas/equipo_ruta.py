@@ -220,13 +220,13 @@ async def agregar_jugador_equipo_existente(
         # 1. Validar que el equipo exista
         from app.modelos.equipo_modelo import Equipos, EquiposJugando
         
-        equipo_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_id).first()
+        equipo_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == equipo_id).first()
         if not equipo_jugando:
             raise HTTPException(status_code=404, detail="El equipo no está registrado en la temporada actual (No se encontró en EquiposJugando)")
 
-        equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo_id).first()
+        equipo = db.query(Equipos).filter(Equipos.EquipoId == equipo_jugando.EquipoId).first()
         if not equipo:
-            raise HTTPException(status_code=404, detail="El equipo especificado no existe en la tabla Equipos")
+            raise HTTPException(status_code=404, detail="El equipo especificado no existe in la tabla Equipos")
 
         # 2. Parsear los datos del único jugador
         p_data = {}
@@ -357,6 +357,40 @@ async def agregar_jugador_equipo_existente(
         
         rol_id = safe_int(p_data.get("rol_en_equipo"), 3)
         camista_num = safe_int(p_data.get("numero_camiseta"))
+
+        # Validar número de camiseta duplicado
+        if camista_num is not None:
+            dup_camiseta = db.query(MiembrosEquipo).filter(
+                MiembrosEquipo.EquipoID == equipo.EquipoId,
+                MiembrosEquipo.NumeroCamiseta == camista_num,
+                MiembrosEquipo.Eliminado == False
+            ).first()
+            if dup_camiseta or any(
+                isinstance(obj, MiembrosEquipo) and
+                obj.EquipoID == equipo.EquipoId and
+                obj.NumeroCamiseta == camista_num and
+                not obj.Eliminado
+                for obj in db.new
+            ):
+                raise HTTPException(400, f"El número de camiseta {camista_num} ya está asignado a otro jugador en este equipo.")
+
+        # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
+        if rol_id != 11:
+            dup_rol = db.query(MiembrosEquipo).filter(
+                MiembrosEquipo.EquipoID == equipo.EquipoId,
+                MiembrosEquipo.RolEnEquipo == rol_id,
+                MiembrosEquipo.Eliminado == False
+            ).first()
+            if dup_rol or any(
+                isinstance(obj, MiembrosEquipo) and
+                obj.EquipoID == equipo.EquipoId and
+                obj.RolEnEquipo == rol_id and
+                not obj.Eliminado
+                for obj in db.new
+            ):
+                from app.modelos.rol_equipo_modelo import RolesDeEquipo
+                rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_id).scalar() or "esta posición"
+                raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
 
         nuevo_miembro = MiembrosEquipo(
             PersonaId=nueva_persona.PersonaId,
@@ -990,12 +1024,20 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
         # 1. Subquery para contar slots comprados por equipo
         slots_subquery = db.query(
             EquipoTemporal.EquipoId.label("EquipoId"),
+            EquipoTemporal.LigaId.label("LigaId"),
             func.count(EquipoTemporalJugador.EquipoTemporalJugadorId).label("SlotsComprados")
-        ).join(EquipoTemporalJugador, EquipoTemporal.EquipoTemporalId == EquipoTemporalJugador.EquipoTemporalId).group_by(EquipoTemporal.EquipoId).subquery()
+        ).join(EquipoTemporalJugador, EquipoTemporal.EquipoTemporalId == EquipoTemporalJugador.EquipoTemporalId).group_by(EquipoTemporal.EquipoId, EquipoTemporal.LigaId).subquery()
+
+        # 1.5. Subquery to get one SolicitudId for the team-league participation
+        solicitud_id_subquery = db.query(EquipoTemporal.SolicitudId)\
+            .filter(EquipoTemporal.EquipoId == EquiposJugando.EquipoId)\
+            .filter(EquipoTemporal.LigaId == EquiposJugando.LigaId)\
+            .limit(1)\
+            .scalar_subquery()
 
         # 2. Base query with joins
         query = db.query(
-            Equipos.EquipoId,
+            EquiposJugando.EquiposJugandoId.label("EquipoId"),
             Equipos.NombreEquipo,
             Equipos.FechaCreacion,
             Equipos.RutaLogo,
@@ -1005,7 +1047,7 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
             CatalogoRamas.Nombre.label("Rama"),
             EquiposJugando.CantidadJugadores.label("NumeroJugadores"),
             Equipos.Estatus,
-            EquipoTemporal.SolicitudId,
+            solicitud_id_subquery.label("SolicitudId"),
             func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados"),
             func.trim(
                 func.concat(
@@ -1022,8 +1064,7 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
          .join(PresidenteEquipo, EquiposJugando.PresidenteEquipoId == PresidenteEquipo.PresidenteEquipoId)\
          .join(Personas, PresidenteEquipo.PersonaId == Personas.PersonaId)\
          .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
-         .outerjoin(EquipoTemporal, Usuario.UsuarioId == EquipoTemporal.UsuarioId)\
-         .outerjoin(slots_subquery, Equipos.EquipoId == slots_subquery.c.EquipoId)
+         .outerjoin(slots_subquery, (EquiposJugando.EquipoId == slots_subquery.c.EquipoId) & (EquiposJugando.LigaId == slots_subquery.c.LigaId))
 
         # 3. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
@@ -1098,11 +1139,12 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             MiembrosEquipo.Estatus,
             foto_subquery.label("RutaFoto"),
             MiembrosEquipo.NumeroCamiseta,
-            seguro_subquery.label("SeguroNombre")
+            seguro_subquery.label("SeguroNombre"),
+            MiembrosEquipo.EquipoID.label("EquipoId")
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
-         .join(Equipos, MiembrosEquipo.EquipoID == Equipos.EquipoId)\
-         .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)
+         .join(EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId)\
+         .join(Equipos, EquiposJugando.EquipoId == Equipos.EquipoId)
 
         # 3. Add filter if not ADMINISTRADOR (RolId == 1)
         rol_id = getattr(usuario, 'RolId', None)
@@ -1136,7 +1178,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             approved_count = db.query(DocumentosEntregados.DocumentoAfiliacionId).filter(
                 DocumentosEntregados.PersonaId == r.PersonaId,
                 DocumentosEntregados.DocumentoAfiliacionId.in_(required_docs_ids),
-                DocumentosEntregados.EstadoValidacionId == 1
+                DocumentosEntregados.EstadoValidacionId == 2
             ).distinct().count()
 
             rejected_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
@@ -1146,7 +1188,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
 
             pending_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
                 DocumentosEntregados.PersonaId == r.PersonaId,
-                DocumentosEntregados.EstadoValidacionId == 2
+                DocumentosEntregados.EstadoValidacionId == 1
             ).count()
 
             if rejected_count > 0:
@@ -1170,7 +1212,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "RutaFoto": f"/documentos/{r.RutaFoto}" if r.RutaFoto else None,
                 "NumeroCamiseta": r.NumeroCamiseta,
                 "EstatusDocumentos": estatus_docs,
-                "SeguroNombre": r.SeguroNombre or "Sin seguro asignado"
+                "SeguroNombre": r.SeguroNombre or "Sin seguro asignado",
+                "EquipoId": r.EquipoId
             })
 
         return formatted_results
@@ -1967,6 +2010,13 @@ async def registrar_presidente_admin(
 
         # Crear automáticamente el equipo real
         if nuevo_equipo_temporal.NombreEquipo and nuevo_equipo_temporal.LigaId:
+            equipo_existente = db.query(EquiposJugando).join(Equipos).filter(
+                func.lower(Equipos.NombreEquipo) == func.lower(nuevo_equipo_temporal.NombreEquipo),
+                EquiposJugando.LigaId == nuevo_equipo_temporal.LigaId
+            ).first()
+            if equipo_existente:
+                raise HTTPException(status_code=400, detail="Ya existe un equipo con este nombre registrado en la misma liga")
+
             equipo_real = db.query(Equipos).filter(
                 func.lower(Equipos.NombreEquipo) == func.lower(nuevo_equipo_temporal.NombreEquipo)
             ).first()
@@ -1975,7 +2025,10 @@ async def registrar_presidente_admin(
                 db.add(equipo_real)
                 db.flush()
             
-            eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipo_real.EquipoId).first()
+            eq_jugando = db.query(EquiposJugando).filter(
+                EquiposJugando.EquipoId == equipo_real.EquipoId,
+                EquiposJugando.LigaId == nuevo_equipo_temporal.LigaId
+            ).first()
             if not eq_jugando:
                 eq_jugando = EquiposJugando(
                     EquipoId=equipo_real.EquipoId,
@@ -2069,8 +2122,8 @@ def get_equipos_sin_entrenador(
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
     
     results = (
-        db.query(Equipos.EquipoId, Equipos.NombreEquipo, Ligas.LigaId, Ligas.Nombreliga)
-        .join(EquiposJugando, Equipos.EquipoId == EquiposJugando.EquipoId)
+        db.query(EquiposJugando.EquiposJugandoId.label("EquipoId"), Equipos.NombreEquipo, Ligas.LigaId, Ligas.Nombreliga)
+        .join(Equipos, Equipos.EquipoId == EquiposJugando.EquipoId)
         .join(Ligas, EquiposJugando.LigaId == Ligas.LigaId)
         .filter(Equipos.Estatus == True)
         .filter(EquiposJugando.EntrenadorEquipoId == None)
@@ -2119,7 +2172,7 @@ async def registrar_entrenador_admin(
     
     try:
         # 1. Validar equipo
-        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquipoId == equipoId).first()
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == equipoId).first()
         if not eq_jugando:
             raise HTTPException(status_code=404, detail="El equipo seleccionado no existe en el registro real de la liga.")
         if eq_jugando.EntrenadorEquipoId is not None:

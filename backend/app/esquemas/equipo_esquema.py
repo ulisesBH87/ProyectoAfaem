@@ -45,6 +45,7 @@ class MiembroResponse(BaseModel):
     NumeroCamiseta: Optional[int] = None
     EstatusDocumentos: Optional[str] = "Pendiente"
     SeguroNombre: Optional[str] = None
+    EquipoId: Optional[int] = None
 
     class Config:
         from_attributes = True

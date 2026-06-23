@@ -96,7 +96,7 @@ const escaparHtml = (texto) =>
 
 const getDocumentoEstatusInfo = (estadoId) => {
   switch (Number(estadoId)) {
-    case 1:
+    case 2:
       return {
         texto: 'Aceptado',
         color: COLORS.green, // Green-600
@@ -104,7 +104,7 @@ const getDocumentoEstatusInfo = (estadoId) => {
         cardBg: `linear-gradient(180deg, ${COLORS.white} 0%, ${COLORS.greenBg50} 100%)`,
         border: COLORS.success, // Green-500
       };
-    case 2:
+    case 1:
       return {
         texto: 'Espera',
         color: COLORS.warningDark, // Amber-600
@@ -128,9 +128,9 @@ const getDocumentoEstatusInfo = (estadoId) => {
 const mapActionKeyToEstadoId = (actionKey) => {
   switch (actionKey) {
     case 'espera':
-      return 2;
-    case 'aceptar':
       return 1;
+    case 'aceptar':
+      return 2;
     case 'rechazar':
       return 3;
     default:
@@ -143,10 +143,10 @@ const getDocumentActionButtons = (documento, tipoId) => {
 
   const estado = Number(documento.EstadoValidacionId);
   const acciones = [];
-  if (estado === 1) {
+  if (estado === 2) {
     acciones.push({ key: 'espera', label: 'Espera' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
-  } else if (estado === 2) {
+  } else if (estado === 1) {
     acciones.push({ key: 'aceptar', label: 'Aceptar' });
     acciones.push({ key: 'rechazar', label: 'Rechazar' });
   } else if (estado === 3) {

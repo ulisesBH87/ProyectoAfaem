@@ -125,7 +125,7 @@ async def servir_archivo_uploads(
                         filter_cond = EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId if presidente.TipoDirectivoId == 2 else EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
                         
                         is_member = db.query(MiembrosEquipo).join(
-                            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
+                            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId
                         ).filter(
                             MiembrosEquipo.PersonaId == doc.PersonaId,
                             MiembrosEquipo.Eliminado == False,
