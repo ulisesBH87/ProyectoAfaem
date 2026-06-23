@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
@@ -239,9 +240,9 @@ export default function PresidenteEquipoEquipos() {
         <span 
           className="status-badge-table"
           style={{
-            background: status ? '#dcfce7' : '#fee2e2',
-            color: status ? '#166534' : '#991b1b',
-            border: status ? '1px solid #bbf7d0' : '1px solid #fecaca'
+            background: status ? COLORS.greenBg : COLORS.dangerBg,
+            color: status ? COLORS.greenDeep : COLORS.dangerDeep,
+            border: status ? `1px solid ${COLORS.greenBgDark}` : `1px solid ${COLORS.dangerBgMedium}`
           }}
         >
           {status ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
@@ -313,7 +314,7 @@ export default function PresidenteEquipoEquipos() {
         {[
           { label: 'Equipos Registrados', value: totalEquipos, filter: 'todos', color: 'var(--primary)', icon: <FaShieldAlt /> },
           { label: 'Jugadores Totales', value: jugadoresTotales, color: 'var(--secondary)', icon: <FaUsers />, isMetricOnly: true },
-          { label: 'Equipos Activos', value: teams.filter(t => t.Estatus).length, filter: 'activos', color: '#10b981', icon: <FaCheckCircle /> }
+          { label: 'Equipos Activos', value: teams.filter(t => t.Estatus).length, filter: 'activos', color: COLORS.success, icon: <FaCheckCircle /> }
         ].map((stat, i) => (
           <div
             key={i}
@@ -392,7 +393,7 @@ export default function PresidenteEquipoEquipos() {
         </div>
 
         {filteredTeams.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontWeight: '700' }}>
+          <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate400, fontWeight: '700' }}>
             No se encontraron equipos en la búsqueda.
           </div>
         ) : (
@@ -432,9 +433,9 @@ export default function PresidenteEquipoEquipos() {
                       <span 
                         className="status-badge-table"
                         style={{
-                          background: team.Estatus ? '#dcfce7' : '#fee2e2',
-                          color: team.Estatus ? '#166534' : '#991b1b',
-                          border: team.Estatus ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                          background: team.Estatus ? COLORS.greenBg : COLORS.dangerBg,
+                          color: team.Estatus ? COLORS.greenDeep : COLORS.dangerDeep,
+                          border: team.Estatus ? `1px solid ${COLORS.greenBgDark}` : `1px solid ${COLORS.dangerBgMedium}`,
                           margin: 0
                         }}
                       >

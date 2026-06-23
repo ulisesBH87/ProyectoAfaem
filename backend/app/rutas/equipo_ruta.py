@@ -178,6 +178,23 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
         #print(f"Error en get_catalogos_registro: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/validar-nombre")
+def validar_nombre_equipo(
+    nombre_equipo: str = Query(...),
+    liga_id: int = Query(...),
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    from app.modelos.equipo_modelo import Equipos, EquiposJugando
+    from sqlalchemy import func
+    
+    existe = db.query(EquiposJugando).join(Equipos).filter(
+        func.lower(Equipos.NombreEquipo) == func.lower(nombre_equipo.strip()),
+        EquiposJugando.LigaId == liga_id
+    ).first()
+    
+    return {"disponible": existe is None}
+
 @router.post("/crear-equipo-completo")
 async def crear_equipo_completo(request: Request, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:

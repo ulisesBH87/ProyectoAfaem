@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState } from 'react';
 import {
   FaShieldAlt,
@@ -222,7 +223,7 @@ const PoliticaPrivacidad = () => {
       {/* ── PANEL ACORDEÓN ── */}
       <div className="legal-panel">
         <div className="legal-panel-header">
-          <span className="legal-panel-icono" style={{ color: '#10b981' }}>
+          <span className="legal-panel-icono" style={{ color: COLORS.success }}>
             <FaFileSignature />
           </span>
           <div>

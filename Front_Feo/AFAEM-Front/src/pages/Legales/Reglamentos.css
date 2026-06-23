@@ -41,7 +41,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-secondaryHover) 0%, var(--color-secondary) 100%);
   color: white;
   padding: 8px 16px;
   border-radius: 50px;
@@ -49,7 +49,7 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   white-space: nowrap;
-  box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 4px 12px -2px var(--color-primaryBgTranslucent40);
   flex-shrink: 0;
   align-self: flex-start;
 }
@@ -89,7 +89,7 @@
 .reglamentos-tab.activa {
   background: var(--tab-color, var(--primary));
   border-color: var(--tab-color, var(--primary));
-  color: #ffffff;
+  color: var(--color-white);
   box-shadow: 0 8px 20px -4px color-mix(in srgb, var(--tab-color, var(--primary)) 50%, transparent);
   transform: translateY(-2px);
 }
@@ -231,7 +231,7 @@
 .reglamentos-acordeon-texto {
   font-size: 14px;
   line-height: 1.85;
-  color: #334155;
+  color: var(--color-slate700);
   white-space: pre-line;
   font-weight: 400;
   padding-left: 4px;
@@ -241,7 +241,7 @@
 
 /* ── Bloque contacto ── */
 .reglamentos-contacto {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, var(--color-slate900) 0%, var(--color-slate800) 100%);
   border-radius: var(--radius-lg);
   padding: 36px 40px;
   color: white;
@@ -272,7 +272,7 @@
 }
 
 .reglamentos-contacto-desc {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--color-overlayWhite70);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -288,7 +288,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--color-overlayWhite75);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -296,7 +296,7 @@
 }
 
 .reglamentos-contacto-item svg {
-  color: #60a5fa;
+  color: var(--color-secondaryLight);
   flex-shrink: 0;
   font-size: 15px;
 }
@@ -306,12 +306,12 @@ a.reglamentos-contacto-item:hover {
 }
 
 a.reglamentos-contacto-link {
-  color: #60a5fa;
+  color: var(--color-secondaryLight);
   font-weight: 600;
 }
 
 a.reglamentos-contacto-link:hover {
-  color: #93c5fd;
+  color: var(--color-secondaryBgDark);
 }
 
 /* ── Responsive ── */

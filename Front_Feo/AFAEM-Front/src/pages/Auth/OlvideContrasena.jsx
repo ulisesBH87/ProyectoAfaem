@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
@@ -67,7 +68,7 @@ export default function OlvideContrasena() {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.35);
+          background: ${COLORS.shadow28};
           pointer-events: none;
           z-index: 5;
         }
@@ -82,12 +83,12 @@ export default function OlvideContrasena() {
         .login-card {
            background: white;
           border-radius: 14px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 20px 60px ${COLORS.shadow28};
           overflow: hidden;
         }
         
         .login-header {
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
+          background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryActive} 100%);
           padding: 24px 32px 16px;
           text-align: center;
           position: relative;
@@ -105,7 +106,7 @@ export default function OlvideContrasena() {
         .logo-item {
           width: 38px;
           height: 38px;
-          background: rgba(255, 255, 255, 0.1);
+          background: ${COLORS.overlayWhite10};
           border-radius: 8px;
           display: flex;
           align-items: center;
@@ -140,7 +141,7 @@ export default function OlvideContrasena() {
         .form-label {
            display: block;
           font-weight: 600;
-          color: #2c3e50;
+          color: ${COLORS.slate700};
           margin-bottom: 6px;
           font-size: 13px;
           letter-spacing: 0.5px;
@@ -150,34 +151,34 @@ export default function OlvideContrasena() {
         .form-input {
           width: 100%;
           padding: 10px 14px;
-          border: 2px solid #e0e6ed;
+          border: 2px solid ${COLORS.slate200};
           border-radius: 9px;
           font-size: 14px;
           transition: all 0.3s ease;
           font-family: inherit;
-           background: #f8fafb;
+           background: ${COLORS.slate50};
           box-sizing: border-box;
         }
         
         .form-input:focus {
            outline: none;
-          border-color: #0b4ea6;
-          box-shadow: 0 0 0 4px rgba(11, 78, 166, 0.12);
-          background-color: #ffffff;
+          border-color: ${COLORS.primary};
+          box-shadow: 0 0 0 4px ${COLORS.primaryBgTranslucent};
+          background-color: ${COLORS.white};
         }
         
         .form-input::placeholder {
-           color: #cbd5e0;
+           color: ${COLORS.slate300};
         }
         
         .error-message {
-          background: linear-gradient(135deg, #fee 0%, #fdd 100%);
-          color: #d32f2f;
+          background: linear-gradient(135deg, ${COLORS.roseBgLight} 0%, ${COLORS.dangerBg} 100%);
+          color: ${COLORS.dangerDark};
           padding: 10px 14px;
           border-radius: 9px;
           margin-bottom: 14px;
           font-size: 13px;
-          border-left: 4px solid #d32f2f;
+          border-left: 4px solid ${COLORS.dangerDark};
           animation: slideIn 0.3s ease;
           display: flex;
           align-items: flex-start;
@@ -185,13 +186,13 @@ export default function OlvideContrasena() {
         }
 
         .success-message {
-          background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-          color: #166534;
+          background: linear-gradient(135deg, ${COLORS.greenBg} 0%, ${COLORS.greenBgDark} 100%);
+          color: ${COLORS.greenDeep};
           padding: 15px;
           border-radius: 9px;
           margin-bottom: 20px;
           font-size: 13px;
-          border-left: 4px solid #16a34a;
+          border-left: 4px solid ${COLORS.greenDark};
           animation: slideIn 0.3s ease;
         }
         
@@ -203,7 +204,7 @@ export default function OlvideContrasena() {
         .submit-btn {
           width: 100%;
           padding: 11px;
-          background: linear-gradient(135deg, #0b4ea6 0%, #063f82 100%);
+          background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryActive} 100%);
           color: white;
           border: none;
           border-radius: 9px;
@@ -213,12 +214,12 @@ export default function OlvideContrasena() {
           transition: all 0.3s ease;
           letter-spacing: 0.5px;
           margin-top: 8px;
-          box-shadow: 0 4px 15px rgba(11, 78, 166, 0.25);
+          box-shadow: 0 4px 15px ${COLORS.primaryBgTranslucent25};
         }
         
         .submit-btn:hover:not(:disabled) {
            transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(11, 78, 166, 0.35);
+          box-shadow: 0 8px 25px ${COLORS.primaryBgTranslucent40};
         }
         
         .submit-btn:active:not(:disabled) {
@@ -234,8 +235,8 @@ export default function OlvideContrasena() {
           width: 100%;
           padding: 11px;
           background: white;
-          color: #475569;
-          border: 1px solid #cbd5e1;
+          color: ${COLORS.slate600};
+          border: 1px solid ${COLORS.slate300};
           border-radius: 9px;
           font-size: 14px;
           font-weight: 600;
@@ -245,28 +246,28 @@ export default function OlvideContrasena() {
         }
 
         .btn-outline:hover {
-          background: #f8fafc;
-          color: #1e293b;
+          background: ${COLORS.slate50};
+          color: ${COLORS.slate800};
         }
         
         .back-link {
           text-align: center;
           margin-top: 16px;
           padding-top: 12px;
-          border-top: 1px solid #e0e6ed;
+          border-top: 1px solid ${COLORS.slate200};
           font-size: 13px;
-          color: #718096;
+          color: ${COLORS.neutralSlate};
         }
         
         .back-link a {
-          color: #0b4ea6;
+          color: ${COLORS.primary};
           text-decoration: none;
           font-weight: 700;
           transition: all 0.3s ease;
         }
         
         .back-link a:hover {
-           color: #063f82;
+           color: ${COLORS.primaryActive};
         }
         
         @media (max-width: 768px) {
@@ -297,7 +298,7 @@ export default function OlvideContrasena() {
           
           <div className="login-body">
             {!success && (
-              <p style={{ color: '#475569', fontSize: '13px', marginBottom: '20px', lineHeight: '1.5' }}>
+              <p style={{ color: COLORS.slate600, fontSize: '13px', marginBottom: '20px', lineHeight: '1.5' }}>
                 Ingresa tu correo electrónico asociado a tu cuenta y te enviaremos instrucciones para restablecer tu contraseña.
               </p>
             )}
@@ -312,7 +313,7 @@ export default function OlvideContrasena() {
             {success ? (
               <div className="success-message">
                 <h4 style={{ margin: '0 0 8px 0', fontSize: '15px' }}>¡Correo enviado!</h4>
-                <p style={{ margin: '0 0 16px 0', color: '#15803d' }}>{success}</p>
+                <p style={{ margin: '0 0 16px 0', color: COLORS.greenDarker }}>{success}</p>
                 <button type="button" className="submit-btn" onClick={handleGoToReset}>
                   Continuar a restablecer contraseña
                 </button>

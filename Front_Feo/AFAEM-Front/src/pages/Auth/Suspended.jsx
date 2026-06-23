@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import StadiumBg from '../../assets/stadium.jpg';
@@ -34,7 +35,7 @@ const Suspended = () => {
           content: '';
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%);
+          background: radial-gradient(circle at center, ${COLORS.overlayBlack} 0%, ${COLORS.overlaySlateDeep} 100%);
           backdrop-filter: blur(8px);
           z-index: 1;
         }
@@ -44,13 +45,13 @@ const Suspended = () => {
           z-index: 10;
           width: 100%;
           max-width: 500px;
-          background: rgba(255, 255, 255, 0.1);
+          background: ${COLORS.overlayWhite10};
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: 1px solid ${COLORS.overlayWhite25};
           border-radius: 24px;
           padding: 48px 32px;
           text-align: center;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 25px 50px -12px ${COLORS.overlayBlack};
           animation: fadeInUp 0.6s ease-out;
         }
 
@@ -65,14 +66,14 @@ const Suspended = () => {
 
         .logo-container img {
           width: 120px;
-          filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+          filter: drop-shadow(0 4px 12px ${COLORS.shadow28});
         }
 
         .icon-warning {
           font-size: 64px;
-          color: #f59e0b;
+          color: ${COLORS.warning};
           margin-bottom: 24px;
-          filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.4));
+          filter: drop-shadow(0 0 20px ${COLORS.warningBgTranslucent40});
         }
 
         .suspended-title {
@@ -84,7 +85,7 @@ const Suspended = () => {
         }
 
         .suspended-text {
-          color: rgba(255, 255, 255, 0.8);
+          color: ${COLORS.overlayWhite80};
           font-size: 16px;
           line-height: 1.6;
           margin-bottom: 40px;
@@ -101,8 +102,8 @@ const Suspended = () => {
           align-items: center;
           justify-content: center;
           gap: 12px;
-          background: #ffffff;
-          color: #1e293b;
+          background: ${COLORS.white};
+          color: ${COLORS.slate800};
           padding: 14px 28px;
           border-radius: 12px;
           font-weight: 700;
@@ -114,8 +115,8 @@ const Suspended = () => {
 
         .btn-contact:hover {
           transform: translateY(-2px);
-          background: #f1f5f9;
-          box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+          background: ${COLORS.slate100};
+          box-shadow: 0 10px 20px ${COLORS.shadow15};
         }
 
         .btn-logout {
@@ -123,24 +124,24 @@ const Suspended = () => {
           align-items: center;
           justify-content: center;
           gap: 12px;
-          background: rgba(255, 255, 255, 0.1);
+          background: ${COLORS.overlayWhite10};
           color: white;
           padding: 14px 28px;
           border-radius: 12px;
           font-weight: 600;
           transition: all 0.3s ease;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: 1px solid ${COLORS.overlayWhite25};
           cursor: pointer;
         }
 
         .btn-logout:hover {
-          background: rgba(255, 255, 255, 0.2);
-          border-color: rgba(255, 255, 255, 0.4);
+          background: ${COLORS.overlayWhite25};
+          border-color: ${COLORS.overlayWhite40};
         }
 
         .footer-note {
           margin-top: 32px;
-          color: rgba(255, 255, 255, 0.4);
+          color: ${COLORS.overlayWhite40};
           font-size: 12px;
           text-transform: uppercase;
           letter-spacing: 1px;

@@ -8,7 +8,7 @@ import COLORS from '../../../styles/colors';
 
 const normalizarNombreSeguro = (nombre) => {
   if (!nombre) return '';
-  return nombre.toUpperCase().replace(/["']/g, '').trim();
+  return nombre.toUpperCase().replace(/[\u0022\u0027]/g, '').trim();
 };
 
 const DETALLES_SEGUROS = {
@@ -188,7 +188,8 @@ export default function Step3Cuotas({
   totalAsignados, segurosRequeridos, totalPagar,
   voucher, setVoucher,
   equipo, setEquipo, tipoAfiliacion, asociacion, liga, setLiga, ligasCatalogo,
-  esEntrenador, equiposSinEntrenador = [], selectedEquipoId, handleEquipoSelectChange
+  esEntrenador, equiposSinEntrenador = [], selectedEquipoId, handleEquipoSelectChange,
+  nombreEquipoValido, nombreEquipoMensaje, verificandoNombre
 }) {
   const [seguroDetalle, setSeguroDetalle] = useState(null);
   const [cantidadModal, setCantidadModal] = useState(0);
@@ -262,6 +263,17 @@ export default function Step3Cuotas({
                 type="text" value={equipo} placeholder="EJ: RAYADOS FC" required
                 onChange={e => setEquipo(e.target.value.toUpperCase())}
               />
+            )}
+            {nombreEquipoMensaje && (
+              <span style={{
+                fontSize: '11px',
+                color: nombreEquipoValido ? '#2ecc71' : '#e74c3c',
+                marginTop: '4px',
+                display: 'block',
+                fontWeight: 'bold'
+              }}>
+                {nombreEquipoMensaje}
+              </span>
             )}
           </div>
         </div>
