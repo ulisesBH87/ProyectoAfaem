@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registrarAdmin } from '../../services/auth';
 import Swal from 'sweetalert2';
+import COLORS from '../../styles/colors';
 
 export default function RegistrarAdmin() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function RegistrarAdmin() {
       showCancelButton: true,
       confirmButtonText: 'Sí, registrar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#0b4ea6'
+      confirmButtonColor: COLORS.primary
     });
 
     if (result.isConfirmed) {
@@ -35,7 +36,7 @@ export default function RegistrarAdmin() {
           title: '¡Éxito!',
           text: 'Cuenta de Administrador creada correctamente.',
           icon: 'success',
-          confirmButtonColor: '#0b4ea6'
+          confirmButtonColor: COLORS.primary
         });
         navigate('/ingresar');
       } catch (error) {
@@ -57,7 +58,7 @@ export default function RegistrarAdmin() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#f8fafc',
+      background: COLORS.slate50,
       fontFamily: 'inherit'
     }}>
       <div style={{
@@ -66,13 +67,13 @@ export default function RegistrarAdmin() {
         background: 'white',
         padding: '40px',
         borderRadius: '16px',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+        boxShadow: `0 10px 25px -5px ${COLORS.shadow10}, 0 8px 10px -6px ${COLORS.shadow10}`,
         textAlign: 'center'
       }}>
         <div style={{ 
           width: '60px', 
           height: '60px', 
-          background: '#eff6ff', 
+          background: COLORS.secondaryBg, 
           borderRadius: '50%', 
           display: 'flex', 
           alignItems: 'center', 
@@ -82,16 +83,16 @@ export default function RegistrarAdmin() {
         }}>
           🛡️
         </div>
-        <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
           Registro de Administrador
         </h2>
-        <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '30px', lineHeight: '1.5' }}>
+        <p style={{ color: COLORS.slate500, fontSize: '15px', marginBottom: '30px', lineHeight: '1.5' }}>
           Estás a punto de crear una cuenta con privilegios totales sobre el sistema AFAEM. 
           Asegúrate de que esta acción está autorizada.
         </p>
 
         <div style={{ 
-          background: '#f1f5f9', 
+          background: COLORS.slate100, 
           padding: '20px', 
           borderRadius: '12px', 
           textAlign: 'left', 
@@ -109,7 +110,7 @@ export default function RegistrarAdmin() {
           style={{
             width: '100%',
             padding: '14px',
-            background: 'linear-gradient(135deg, #0b4ea6 0%, #063f82 100%)',
+            background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryActive} 100%)`,
             color: 'white',
             border: 'none',
             borderRadius: '10px',
@@ -118,7 +119,7 @@ export default function RegistrarAdmin() {
             cursor: loading ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
             opacity: loading ? 0.7 : 1,
-            boxShadow: '0 4px 12px rgba(11, 78, 166, 0.2)'
+            boxShadow: `0 4px 12px ${COLORS.primaryBgTranslucent20}`
           }}
         >
           {loading ? 'Procesando...' : 'Confirmar y Crear Cuenta'}
@@ -130,7 +131,7 @@ export default function RegistrarAdmin() {
             marginTop: '15px',
             background: 'none',
             border: 'none',
-            color: '#64748b',
+            color: COLORS.slate500,
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',

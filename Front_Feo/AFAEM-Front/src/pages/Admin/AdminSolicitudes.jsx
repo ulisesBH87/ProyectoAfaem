@@ -11,6 +11,7 @@ import SearchBar from '../../components/Common/SearchBar';
 import AdminTabs from '../../components/Admin/AdminTabs';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaHourglassHalf, FaClipboardList, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import Loader from '../../components/Loader';
+import COLORS from '../../styles/colors';
 
 export default function AdminSolicitudes() {
   const navigate = useNavigate();
@@ -150,16 +151,16 @@ export default function AdminSolicitudes() {
         title: `Solicitud #${id}`,
         html: `
           <div style="text-align: left; font-size: 14px;">
-            <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
-              <p style="margin-bottom: 8px; font-weight:700; color:#0b4ea6;">Datos del Solicitante</p>
+            <div style="background: ${COLORS.slate50}; padding: 15px; border-radius: 10px; border: 1px solid ${COLORS.slate200}; margin-bottom: 12px;">
+              <p style="margin-bottom: 8px; font-weight:700; color:${COLORS.primary};">Datos del Solicitante</p>
               <p style="margin-bottom: 6px;"><strong>Nombre:</strong> ${detalle.Nombre || ''} ${detalle.PrimerApellido || ''} ${detalle.SegundoApellido || ''}</p>
               <p style="margin-bottom: 6px;"><strong>Email:</strong> ${detalle.Email || 'N/A'}</p>
               <p style="margin-bottom: 6px;"><strong>CURP:</strong> <code>${detalle.CURP || 'N/A'}</code></p>
               <p style="margin-bottom: 6px;"><strong>Sexo:</strong> ${detalle.Sexo || 'N/A'}</p>
               <p style="margin-bottom: 0;"><strong>Fecha Nacimiento:</strong> ${detalle.FechaNacimiento ? new Date(detalle.FechaNacimiento).toLocaleDateString('es-MX') : 'N/A'}</p>
             </div>
-            <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-              <p style="margin-bottom: 8px; font-weight:700; color:#0b4ea6;">Datos de la Solicitud</p>
+            <div style="background: ${COLORS.slate50}; padding: 15px; border-radius: 10px; border: 1px solid ${COLORS.slate200};">
+              <p style="margin-bottom: 8px; font-weight:700; color:${COLORS.primary};">Datos de la Solicitud</p>
               <p style="margin-bottom: 6px;"><strong>Tipo:</strong> ${detalle.TipoSolicitud || 'N/A'}</p>
               <p style="margin-bottom: 6px;"><strong>Estatus:</strong> ${detalle.EstatusSolicitud || 'N/A'}</p>
               <p style="margin-bottom: 0;"><strong>Fecha:</strong> ${detalle.FechaSolicitud ? new Date(detalle.FechaSolicitud).toLocaleString('es-MX') : 'Sin fecha'}</p>
@@ -167,7 +168,7 @@ export default function AdminSolicitudes() {
           </div>
         `,
         confirmButtonText: 'Cerrar',
-        confirmButtonColor: '#0b4ea6',
+        confirmButtonColor: COLORS.primary,
         width: '550px'
       });
     } catch (error) {
@@ -185,7 +186,7 @@ export default function AdminSolicitudes() {
           </div>
         `,
         confirmButtonText: 'Cerrar',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
     }
   };
@@ -236,9 +237,9 @@ export default function AdminSolicitudes() {
           confirmButtonText: 'Rechazar solicitud',
           denyButtonText: 'Guardar progreso',
           cancelButtonText: 'Seguir revisando',
-          confirmButtonColor: '#ef4444',
-          denyButtonColor: '#0b4ea6',
-          cancelButtonColor: '#94a3b8'
+          confirmButtonColor: COLORS.danger,
+          denyButtonColor: COLORS.primary,
+          cancelButtonColor: COLORS.slate400
         });
 
         if (result.isConfirmed) {
@@ -290,8 +291,8 @@ export default function AdminSolicitudes() {
       showCancelButton: true,
       confirmButtonText: 'Sí, aprobar',
       cancelButtonText: 'Volver',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonColor: '#10b981'
+      cancelButtonColor: COLORS.slate400,
+      confirmButtonColor: COLORS.success
     });
 
     if (isConfirmed) {
@@ -331,7 +332,7 @@ export default function AdminSolicitudes() {
       showCancelButton: true,
       confirmButtonText: 'Rechazar',
       cancelButtonText: 'Volver',
-      confirmButtonColor: '#dc3545'
+      confirmButtonColor: COLORS.dangerBootstrap
     });
 
     if (motivo?.trim()) {
@@ -358,7 +359,7 @@ export default function AdminSolicitudes() {
     const { isConfirmed } = await Swal.fire({
       title: 'Re-verificar Solicitud',
       html: `
-        <p style="margin:0; color:#475569; font-size:14px;">
+        <p style="margin:0; color:${COLORS.slate600}; font-size:14px;">
           Esta solicitud fue <strong>${etiqueta}</strong> previamente.<br/>
           Se abrirá el módulo de revisión para que puedas evaluarla nuevamente
           y decidir si <strong>aprobarla o rechazarla</strong>.
@@ -368,8 +369,8 @@ export default function AdminSolicitudes() {
       showCancelButton: true,
       confirmButtonText: 'Abrir revisión',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#6366f1',
-      cancelButtonColor: '#94a3b8'
+      confirmButtonColor: COLORS.indigo,
+      cancelButtonColor: COLORS.slate400
     });
 
     if (isConfirmed) {
@@ -384,7 +385,7 @@ export default function AdminSolicitudes() {
       text: `La funcionalidad para ${label.toLowerCase()} solicitudes requiere un nuevo endpoint en el Backend que aún no está disponible.`,
       icon: 'info',
       confirmButtonText: 'Aceptar',
-      footer: '<small style="color: #64748b">Nota para el equipo: Falta implementar POST /solicitud/estatus</small>'
+      footer: '<small style=`color: ${COLORS.slate500}`>Nota para el equipo: Falta implementar POST /solicitud/estatus</small>'
     });
   };
 
@@ -396,7 +397,7 @@ export default function AdminSolicitudes() {
       render: (value, row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>#{value || '-'}</span>
-          {row.esMock && <span style={{ fontSize: '9px', padding: '2px 6px', background: '#e2e8f0', borderRadius: '4px', color: '#475569', fontWeight: '800' }}>MOCK</span>}
+          {row.esMock && <span style={{ fontSize: '9px', padding: '2px 6px', background: COLORS.slate200, borderRadius: '4px', color: COLORS.slate600, fontWeight: '800' }}>MOCK</span>}
         </div>
       )
     },
@@ -411,11 +412,11 @@ export default function AdminSolicitudes() {
             {row.TipoAfiliacion === 2 && (
               <span style={{
                 fontSize: '10px',
-                backgroundColor: '#eff6ff',
-                color: '#1e40af',
+                backgroundColor: COLORS.secondaryBg,
+                color: COLORS.secondaryHover,
                 padding: '2px 8px',
                 borderRadius: '12px',
-                border: '1px solid #bfdbfe',
+                border: `1px solid ${COLORS.secondaryBgDark}`,
                 fontWeight: '800'
               }}>
                 PRESIDENTE
@@ -484,7 +485,7 @@ export default function AdminSolicitudes() {
           <button
             onClick={() => handleVerDetalles(row.SolicitudId)}
             style={{
-              padding: '7px 14px', background: '#3b82f6', color: 'white',
+              padding: '7px 14px', background: COLORS.blue, color: 'white',
               border: 'none', borderRadius: '8px', cursor: 'pointer',
               fontSize: '12px', fontWeight: '700'
             }}
@@ -495,7 +496,7 @@ export default function AdminSolicitudes() {
             <button
               onClick={() => handleRevisarDocumentos(row.SolicitudId)}
               style={{
-                padding: '7px 14px', background: '#6366f1', color: 'white',
+                padding: '7px 14px', background: COLORS.indigo, color: 'white',
                 border: 'none', borderRadius: '8px', cursor: 'pointer',
                 fontSize: '12px', fontWeight: '700'
               }}
@@ -508,7 +509,7 @@ export default function AdminSolicitudes() {
             <button
               onClick={() => handleCambiarEstatusTerminal(row.SolicitudId, row.EstatusValidacion)}
               style={{
-                padding: '7px 14px', background: '#f59e0b', color: 'white',
+                padding: '7px 14px', background: COLORS.warning, color: 'white',
                 border: 'none', borderRadius: '8px', cursor: 'pointer',
                 fontSize: '12px', fontWeight: '700'
               }}
@@ -525,7 +526,7 @@ export default function AdminSolicitudes() {
                 }}
                 disabled={row.EstatusValidacion === 2}
                 style={{
-                  padding: '7px 14px', background: '#10b981', color: 'white',
+                  padding: '7px 14px', background: COLORS.success, color: 'white',
                   border: 'none', borderRadius: '8px', cursor: row.EstatusValidacion === 2 ? 'not-allowed' : 'pointer',
                   fontSize: '12px', fontWeight: '700',
                   opacity: row.EstatusValidacion === 2 ? 0.5 : 1
@@ -536,7 +537,7 @@ export default function AdminSolicitudes() {
               <button
                 onClick={() => handleRechazarSolicitud(row.SolicitudId)}
                 style={{
-                  padding: '7px 14px', background: '#ef4444', color: 'white',
+                  padding: '7px 14px', background: COLORS.danger, color: 'white',
                   border: 'none', borderRadius: '8px', cursor: 'pointer',
                   fontSize: '12px', fontWeight: '700'
                 }}
@@ -563,16 +564,16 @@ export default function AdminSolicitudes() {
     <div className="dashboard-content">
       {tieneMock && (
         <div style={{
-          background: '#fffbeb',
-          border: '1px solid #fde68a',
+          background: COLORS.warningBgLight,
+          border: `1px solid ${COLORS.warningBgDark}`,
           padding: '16px 20px',
           borderRadius: '12px',
           marginBottom: '24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
-          color: '#92400e',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+          color: COLORS.warningBrown,
+          boxShadow: `0 2px 10px ${COLORS.shadow05}`
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ fontSize: '24px' }}>⚠️</div>
@@ -587,11 +588,11 @@ export default function AdminSolicitudes() {
             <div style={{
               marginTop: '10px',
               padding: '10px',
-              background: 'rgba(0,0,0,0.05)',
+              background: COLORS.shadow05,
               borderRadius: '6px',
               fontFamily: 'monospace',
               fontSize: '11px',
-              border: '1px dashed #d97706'
+              border: `1px dashed ${COLORS.warningDark}`
             }}>
               <strong>Error Técnico:</strong> {errorServidor}
             </div>
@@ -612,7 +613,7 @@ export default function AdminSolicitudes() {
       <div className="admin-dashboard-header">
         <div>
           <h2 className="admin-dashboard-title" style={{ margin: 0 }}>Validación de Solicitudes</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>Revisa y aprueba las solicitudes de registro de presidente de equipo</p>
+          <p style={{ margin: '4px 0 0', fontSize: '14px', color: COLORS.slate500 }}>Revisa y aprueba las solicitudes de registro de presidente de equipo</p>
         </div>
       </div>
 
@@ -622,15 +623,15 @@ export default function AdminSolicitudes() {
           onClick={() => setFiltroEstatus('1')}
           style={{
             background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === '1' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+            border: filtroEstatus === '1' ? `2px solid ${COLORS.warning}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === '1' ? '0 4px 12px rgba(245, 158, 11, 0.15)' : 'none',
+            boxShadow: filtroEstatus === '1' ? `0 4px 12px ${COLORS.warningBgTranslucent}` : 'none',
             transform: filtroEstatus === '1' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#f59e0b' }}><FaHourglassHalf /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>PENDIENTES</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{stats.pendientes}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.warning }}><FaHourglassHalf /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>PENDIENTES</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.warning }}>{stats.pendientes}</div>
         </div>
 
         {/* TARJETA TOTAL */}
@@ -638,15 +639,15 @@ export default function AdminSolicitudes() {
           onClick={() => setFiltroEstatus('todos')}
           style={{
             background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'todos' ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'todos' ? `0 4px 12px ${COLORS.primaryBgTranslucent}` : 'none',
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaClipboardList /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.primary }}><FaClipboardList /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>TOTAL</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.slate800 }}>{stats.total}</div>
         </div>
 
         {/* TARJETA APROBADAS */}
@@ -654,15 +655,15 @@ export default function AdminSolicitudes() {
           onClick={() => setFiltroEstatus('2')}
           style={{
             background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === '2' ? '2px solid #10b981' : '1px solid #e2e8f0',
+            border: filtroEstatus === '2' ? `2px solid ${COLORS.success}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === '2' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
+            boxShadow: filtroEstatus === '2' ? `0 4px 12px ${COLORS.successBgTranslucent}` : 'none',
             transform: filtroEstatus === '2' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>APROBADAS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.aprobadas}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.success }}><FaCheckCircle /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>APROBADAS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.success }}>{stats.aprobadas}</div>
         </div>
 
         {/* TARJETA RECHAZADAS */}
@@ -670,15 +671,15 @@ export default function AdminSolicitudes() {
           onClick={() => setFiltroEstatus('3')}
           style={{
             background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === '3' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+            border: filtroEstatus === '3' ? `2px solid ${COLORS.danger}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === '3' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
+            boxShadow: filtroEstatus === '3' ? `0 4px 12px ${COLORS.dangerBgTranslucent}` : 'none',
             transform: filtroEstatus === '3' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>RECHAZADAS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.rechazadas}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.danger }}><FaTimesCircle /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>RECHAZADAS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.danger }}>{stats.rechazadas}</div>
         </div>
       </div>
 

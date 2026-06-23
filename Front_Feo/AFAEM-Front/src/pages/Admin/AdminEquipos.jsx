@@ -8,6 +8,7 @@ import SearchBar from '../../components/Common/SearchBar';
 import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, FaEye, FaSave, FaShieldAlt, FaUser, FaCalendarDay, FaUserPlus, FaTable, FaFileArchive, FaCheckCircle, FaTimesCircle, FaClipboardList } from 'react-icons/fa';
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Loader from '../../components/Loader';
+import COLORS from '../../styles/colors';
 
 export default function AdminEquipos() {
   const navigate = useNavigate();
@@ -234,8 +235,8 @@ export default function AdminEquipos() {
         text: "Tienes cambios sin guardar que se perderán.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#64748b',
+        confirmButtonColor: COLORS.danger,
+        cancelButtonColor: COLORS.slate500,
         confirmButtonText: 'Sí, salir sin guardar',
         cancelButtonText: 'Volver a la edición'
       }).then((result) => {
@@ -374,12 +375,12 @@ export default function AdminEquipos() {
 
   const dataTransformada = paginatedEquipos.map(eq => ({
     _original: eq,
-    EquipoId: <span style={{ fontWeight: '700', color: '#64748b' }}>#{eq.EquipoId}</span>,
-    NombreEquipo: <span style={{ fontWeight: '800', color: '#1e293b' }}>{eq.NombreEquipo}</span>,
+    EquipoId: <span style={{ fontWeight: '700', color: COLORS.slate500 }}>#{eq.EquipoId}</span>,
+    NombreEquipo: <span style={{ fontWeight: '800', color: COLORS.slate800 }}>{eq.NombreEquipo}</span>,
     Liga: (
       <div>
         <div style={{ fontWeight: '700', fontSize: '13px' }}>{eq.Liga}</div>
-        <div style={{ fontSize: '11px', color: '#64748b' }}>{eq.Categoria} - {eq.Rama}</div>
+        <div style={{ fontSize: '11px', color: COLORS.slate500 }}>{eq.Categoria} - {eq.Rama}</div>
       </div>
     ),
     Presidente: eq.PresidenteNombreCompleto ? (() => {
@@ -388,7 +389,7 @@ export default function AdminEquipos() {
       return (
         <div>
           <div
-            style={{ fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: '#0b4ea6', textDecoration: 'underline' }}
+            style={{ fontWeight: '600', fontSize: '13px', cursor: 'pointer', color: COLORS.primary, textDecoration: 'underline' }}
             onClick={(e) => {
               e.stopPropagation();
               navigate(`${ROUTES.ADMIN.PRESIDENTES}?abrirDetalle=${eq.PresidenteEquipoId}`);
@@ -398,21 +399,21 @@ export default function AdminEquipos() {
             {eq.PresidenteNombreCompleto}
           </div>
           {esEmailTemporal ? (
-            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', fontWeight: 600 }}>En espera de registro</div>
+            <div style={{ fontSize: '11px', color: COLORS.slate500, fontStyle: 'italic', fontWeight: 600 }}>En espera de registro</div>
           ) : (
-            <div style={{ fontSize: '11px', color: '#64748b' }}>{emailVal}</div>
+            <div style={{ fontSize: '11px', color: COLORS.slate500 }}>{emailVal}</div>
           )}
         </div>
       );
     })() : (
       <div style={{
-        background: '#fee2e2',
-        color: '#991b1b',
+        background: COLORS.dangerBg,
+        color: COLORS.dangerDeep,
         padding: '6px 14px',
         borderRadius: '12px',
         fontSize: '11px',
         fontWeight: '800',
-        border: '1px solid #fecaca',
+        border: `1px solid ${COLORS.dangerBgMedium}`,
         display: 'inline-flex',
         alignItems: 'center',
         gap: '4px'
@@ -421,13 +422,13 @@ export default function AdminEquipos() {
       </div>
     ),
     NumeroJugadoresRegistrados: (
-      <span style={{ fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '4px 10px', borderRadius: '20px' }}>
+      <span style={{ fontWeight: '800', color: COLORS.slate900, background: COLORS.slate100, padding: '4px 10px', borderRadius: '20px' }}>
         {eq.NumeroJugadoresRegistrados || 0}/{eq.SlotsComprados || 0}
       </span>
     ),
     Estatus: eq.Estatus ?
-      <span className="badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>ACTIVO</span> :
-      <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>INACTIVO</span>,
+      <span className="badge" style={{ background: COLORS.successBg, color: COLORS.successDark, border: `1px solid ${COLORS.successBgDark}` }}>ACTIVO</span> :
+      <span className="badge" style={{ background: COLORS.dangerBgLight, color: COLORS.dangerDark, border: `1px solid ${COLORS.dangerBgMedium}` }}>INACTIVO</span>,
     Acciones: (
       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
         {/* Editar */}
@@ -460,8 +461,8 @@ export default function AdminEquipos() {
             gap: '6px',
             fontWeight: '700',
             background: 'white',
-            color: (eq.NumeroJugadoresRegistrados || 0) === 0 ? '#94a3b8' : '#059669',
-            border: (eq.NumeroJugadoresRegistrados || 0) === 0 ? '1.5px solid #cbd5e1' : '1.5px solid #86efac',
+            color: (eq.NumeroJugadoresRegistrados || 0) === 0 ? COLORS.slate400 : COLORS.successDark,
+            border: (eq.NumeroJugadoresRegistrados || 0) === 0 ? `1.5px solid ${COLORS.slate300}` : `1.5px solid ${COLORS.green300}`,
             whiteSpace: 'nowrap',
             cursor: (eq.NumeroJugadoresRegistrados || 0) === 0 ? 'not-allowed' : 'pointer'
           }}
@@ -483,9 +484,9 @@ export default function AdminEquipos() {
           style={{
             padding: '6px 10px',
             borderRadius: '8px',
-            border: '1.5px solid #cbd5e1',
+            border: `1.5px solid ${COLORS.slate300}`,
             background: 'white',
-            color: '#0b4ea6',
+            color: COLORS.primary,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -494,12 +495,12 @@ export default function AdminEquipos() {
             fontWeight: '700'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f1f5f9';
-            e.currentTarget.style.borderColor = '#94a3b8';
+            e.currentTarget.style.backgroundColor = COLORS.slate100;
+            e.currentTarget.style.borderColor = COLORS.slate400;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'white';
-            e.currentTarget.style.borderColor = '#cbd5e1';
+            e.currentTarget.style.borderColor = COLORS.slate300;
           }}
           title="Agregar Jugador"
         >
@@ -527,8 +528,8 @@ export default function AdminEquipos() {
 
       <div className="section-header" style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Directorio de equipos</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Visualiza los equipos registrados.</p>
+          <h2 className="section-title" style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Directorio de equipos</h2>
+          <p style={{ margin: 0, fontSize: '14px', color: COLORS.slate500, marginTop: '4px' }}>Visualiza los equipos registrados.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -549,17 +550,17 @@ export default function AdminEquipos() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'todos' ? '2px solid #0b4ea6' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'todos' ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'todos' ? '0 4px 12px rgba(11, 78, 166, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'todos' ? `0 4px 12px ${COLORS.primaryBgTranslucent}` : 'none',
             transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#0b4ea6' }}><FaClipboardList /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>TOTAL EQUIPOS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b' }}>{stats.total}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.primary }}><FaClipboardList /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>TOTAL EQUIPOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.slate800 }}>{stats.total}</div>
         </div>
 
         {/* TARJETA ACTIVOS */}
@@ -569,17 +570,17 @@ export default function AdminEquipos() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'activos' ? '2px solid #10b981' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'activos' ? `2px solid ${COLORS.success}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'activos' ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'activos' ? `0 4px 12px ${COLORS.successBgTranslucent}` : 'none',
             transform: filtroEstatus === 'activos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#10b981' }}><FaCheckCircle /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>EQUIPOS ACTIVOS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{stats.activos}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.success }}><FaCheckCircle /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>EQUIPOS ACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.success }}>{stats.activos}</div>
         </div>
 
         {/* TARJETA INACTIVOS */}
@@ -589,21 +590,21 @@ export default function AdminEquipos() {
             background: 'white',
             padding: '20px',
             borderRadius: '12px',
-            border: filtroEstatus === 'inactivos' ? '2px solid #ef4444' : '1px solid #e2e8f0',
+            border: filtroEstatus === 'inactivos' ? `2px solid ${COLORS.danger}` : `1px solid ${COLORS.slate200}`,
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'inactivos' ? '0 4px 12px rgba(239, 68, 68, 0.15)' : 'none',
+            boxShadow: filtroEstatus === 'inactivos' ? `0 4px 12px ${COLORS.dangerBgTranslucent}` : 'none',
             transform: filtroEstatus === 'inactivos' ? 'translateY(-2px)' : 'none'
           }}
         >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: '#ef4444' }}><FaTimesCircle /></div>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>EQUIPOS INACTIVOS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: '#ef4444' }}>{stats.inactivos}</div>
+          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.danger }}><FaTimesCircle /></div>
+          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>EQUIPOS INACTIVOS</div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.danger }}>{stats.inactivos}</div>
         </div>
       </div>
 
-      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
+      <div className="card" style={{ padding: '35px', border: 'none', boxShadow: `0 10px 15px -3px ${COLORS.shadow05}` }}>
         <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
           <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de equipos</h3>
 
@@ -615,7 +616,7 @@ export default function AdminEquipos() {
               width="280px"
             />
 
-            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: '#475569' }}>
+            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate600 }}>
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ANT' : 'REC'}
             </button>
 
@@ -668,19 +669,19 @@ export default function AdminEquipos() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
           <div style={{
             gridColumn: 'span 2',
-            background: 'rgba(245, 158, 11, 0.08)',
-            border: '1px solid rgba(245, 158, 11, 0.2)',
+            background: COLORS.warningBgTranslucent08,
+            border: `1px solid ${COLORS.warningBgTranslucent20}`,
             padding: '16px 20px',
             borderRadius: '16px',
             marginBottom: '10px',
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
-            boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.05)'
+            boxShadow: `0 4px 6px -1px ${COLORS.warningBgTranslucent05}`
           }}>
             <div style={{
               fontSize: '22px',
-              background: '#f59e0b',
+              background: COLORS.warning,
               color: 'white',
               width: '42px',
               height: '42px',
@@ -688,14 +689,14 @@ export default function AdminEquipos() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+              boxShadow: `0 4px 12px ${COLORS.warningBgTranslucent30}`,
               flexShrink: 0
             }}>
               <FaShieldAlt />
             </div>
             <div>
-              <h4 style={{ margin: 0, fontSize: '15px', color: '#92400e', fontWeight: '800' }}>Edición de Ficha de equipo</h4>
-              <p style={{ margin: 0, fontSize: '13px', color: '#b45309', fontWeight: '500', marginTop: '2px' }}>Edita la información oficial del equipo.</p>
+              <h4 style={{ margin: 0, fontSize: '15px', color: COLORS.warningBrown, fontWeight: '800' }}>Edición de Ficha de equipo</h4>
+              <p style={{ margin: 0, fontSize: '13px', color: COLORS.warningBrown, fontWeight: '500', marginTop: '2px' }}>Edita la información oficial del equipo.</p>
             </div>
           </div>
 
@@ -726,19 +727,19 @@ export default function AdminEquipos() {
               <div style={{
                 marginBottom: '16px',
                 padding: '12px 20px',
-                background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-                border: '1px solid #bbf7d0',
+                background: `linear-gradient(135deg, ${COLORS.greenBg50} 0%, ${COLORS.greenBg} 100%)`,
+                border: `1px solid ${COLORS.greenBgDark}`,
                 borderRadius: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                boxShadow: '0 4px 6px -1px rgba(22, 163, 74, 0.05)'
+                boxShadow: `0 4px 6px -1px ${COLORS.greenMediumTranslucent}`
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '20px' }}>👥</span>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#166534' }}>Ver jugadores del equipo</div>
-                    <div style={{ fontSize: '12px', color: '#15803d', marginTop: '1px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.greenDarker }}>Ver jugadores del equipo</div>
+                    <div style={{ fontSize: '12px', color: COLORS.greenDark, marginTop: '1px' }}>
                       Ver catálogo de jugadores de: <strong>{equipoEdicion.NombreEquipo}</strong>
                     </div>
                   </div>
@@ -764,8 +765,8 @@ export default function AdminEquipos() {
                         text: "Tienes cambios sin guardar que se perderán.",
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonColor: '#ef4444',
-                        cancelButtonColor: '#64748b',
+                        confirmButtonColor: COLORS.danger,
+                        cancelButtonColor: COLORS.slate500,
                         confirmButtonText: 'Sí, salir sin guardar',
                         cancelButtonText: 'Cancelar navegación'
                       }).then((result) => {
@@ -782,8 +783,8 @@ export default function AdminEquipos() {
                   style={{
                     padding: '8px 16px',
                     borderRadius: '10px',
-                    border: '1px solid #166534',
-                    background: '#166534',
+                    border: `1px solid ${COLORS.greenDarker}`,
+                    background: COLORS.greenDarker,
                     color: 'white',
                     fontWeight: '700',
                     fontSize: '12px',
@@ -792,15 +793,15 @@ export default function AdminEquipos() {
                     alignItems: 'center',
                     gap: '6px',
                     transition: 'all 0.2s',
-                    boxShadow: '0 2px 4px rgba(22, 101, 52, 0.15)'
+                    boxShadow: `0 2px 4px ${COLORS.greenDeepTranslucent}`
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#15803d';
-                    e.currentTarget.style.borderColor = '#15803d';
+                    e.currentTarget.style.backgroundColor = COLORS.greenDark;
+                    e.currentTarget.style.borderColor = COLORS.greenDark;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#166534';
-                    e.currentTarget.style.borderColor = '#166534';
+                    e.currentTarget.style.backgroundColor = COLORS.greenDarker;
+                    e.currentTarget.style.borderColor = COLORS.greenDarker;
                   }}
                 >
                   <FaTable /> Ver catálogo
@@ -808,12 +809,12 @@ export default function AdminEquipos() {
               </div>
 
               {/* ── SECCIÓN: PRESIDENTE RESPONSABLE ── */}
-              <div style={{ marginBottom: '16px', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden' }}>
-                <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <FaUser style={{ color: '#0b4ea6', fontSize: '16px' }} />
+              <div style={{ marginBottom: '16px', border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', background: `linear-gradient(135deg, ${COLORS.secondaryBg} 0%, ${COLORS.secondaryBg100} 100%)`, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <FaUser style={{ color: COLORS.primary, fontSize: '16px' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e3a8a' }}>Presidente responsable</div>
-                    <div style={{ fontSize: '12px', color: '#3b82f6', marginTop: '1px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.blueDark }}>Presidente responsable</div>
+                    <div style={{ fontSize: '12px', color: COLORS.blue, marginTop: '1px' }}>
                       {(() => {
                         const pid = presidenteSeleccionado || equipoEdicion.PresidenteEquipoId;
                         const pName = presidenteSeleccionado
@@ -822,7 +823,7 @@ export default function AdminEquipos() {
 
                         return pid && pName ? (
                           <span
-                            style={{ cursor: 'pointer', color: '#1e3a8a', textDecoration: 'underline' }}
+                            style={{ cursor: 'pointer', color: COLORS.blueDark, textDecoration: 'underline' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               const irAlPresidente = () => {
@@ -841,8 +842,8 @@ export default function AdminEquipos() {
                                   text: "Tienes cambios sin guardar que se perderán.",
                                   icon: 'warning',
                                   showCancelButton: true,
-                                  confirmButtonColor: '#ef4444',
-                                  cancelButtonColor: '#64748b',
+                                  confirmButtonColor: COLORS.danger,
+                                  cancelButtonColor: COLORS.slate500,
                                   confirmButtonText: 'Sí, salir sin guardar',
                                   cancelButtonText: 'Cancelar navegación'
                                 }).then((result) => {
@@ -866,7 +867,7 @@ export default function AdminEquipos() {
                       })()}
                     </div>
                   </div>
-                  {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Sincronizando...</span>}
+                  {loadingExtras && <span style={{ fontSize: '11px', color: COLORS.slate500 }}>Sincronizando...</span>}
                 </div>
 
                 <button
@@ -875,9 +876,9 @@ export default function AdminEquipos() {
                   style={{
                     width: '100%',
                     padding: '12px 20px',
-                    background: collapsePresidente ? '#f8fafc' : 'white',
+                    background: collapsePresidente ? COLORS.slate50 : 'white',
                     border: 'none',
-                    borderTop: '1px solid #e2e8f0',
+                    borderTop: `1px solid ${COLORS.slate200}`,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -885,33 +886,33 @@ export default function AdminEquipos() {
                     transition: 'background 0.2s',
                   }}
                 >
-                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#0b4ea6', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: COLORS.primary, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     Cambiar presidente
                   </span>
-                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                  <span style={{ color: COLORS.slate400, fontSize: '12px' }}>
                     {collapsePresidente ? '▲' : '▼'}
                   </span>
                 </button>
 
                 {collapsePresidente && (
-                  <div style={{ padding: '16px 20px', background: 'white', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ padding: '16px 20px', background: 'white', borderTop: `1px solid ${COLORS.slate100}` }}>
                     <input
                       type="text"
                       placeholder="Buscar presidente por nombre..."
                       value={searchPresidente}
                       onChange={e => setSearchPresidente(e.target.value)}
-                      style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dbeafe', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${COLORS.secondaryBg100}`, borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                      <span style={{ fontSize: '11px', background: COLORS.greenBg, color: COLORS.greenDarker, padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
                         Solo presidentes con estatus Activo
                       </span>
                     </div>
-                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: `1px solid ${COLORS.slate100}`, borderRadius: '10px' }}>
                       {loadingExtras ? (
                         <Loader inline text="Cargando presidentes..." />
                       ) : presidentes.filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase())).length === 0 ? (
-                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No se encontraron presidentes</div>
+                        <div style={{ padding: '20px', textAlign: 'center', color: COLORS.slate400, fontSize: '13px' }}>No se encontraron presidentes</div>
                       ) : (
                         presidentes
                           .filter(p => !searchPresidente || p.nombre.toLowerCase().includes(searchPresidente.toLowerCase()))
@@ -921,21 +922,21 @@ export default function AdminEquipos() {
                               onClick={() => { setPresidenteSeleccionado(p.id); setHaCambiado(true); }}
                               style={{
                                 padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                                borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
-                                backgroundColor: presidenteSeleccionado === p.id ? '#eff6ff' : 'white'
+                                borderBottom: `1px solid ${COLORS.slate50}`, transition: 'background 0.15s',
+                                backgroundColor: presidenteSeleccionado === p.id ? COLORS.secondaryBg : 'white'
                               }}
                             >
                               <div style={{
                                 width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-                                background: presidenteSeleccionado === p.id ? '#0b4ea6' : '#f1f5f9',
-                                color: presidenteSeleccionado === p.id ? 'white' : '#64748b',
+                                background: presidenteSeleccionado === p.id ? COLORS.primary : COLORS.slate100,
+                                color: presidenteSeleccionado === p.id ? 'white' : COLORS.slate500,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: '11px', fontWeight: '800'
                               }}>
                                 {p.nombre.charAt(0).toUpperCase()}
                               </div>
-                              <span style={{ fontSize: '13px', fontWeight: presidenteSeleccionado === p.id ? '700' : '500', color: '#1e293b', flex: 1 }}>{p.nombre}</span>
-                              {presidenteSeleccionado === p.id && <span style={{ color: '#0b4ea6', fontWeight: '800' }}>✓</span>}
+                              <span style={{ fontSize: '13px', fontWeight: presidenteSeleccionado === p.id ? '700' : '500', color: COLORS.slate800, flex: 1 }}>{p.nombre}</span>
+                              {presidenteSeleccionado === p.id && <span style={{ color: COLORS.primary, fontWeight: '800' }}>✓</span>}
                             </div>
                           ))
                       )}
@@ -945,12 +946,12 @@ export default function AdminEquipos() {
               </div>
 
               {/* ── SECCIÓN: ENTRENADOR RESPONSABLE ── */}
-              <div style={{ marginBottom: '16px', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden' }}>
-                <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <FaUser style={{ color: '#15803d', fontSize: '16px' }} />
+              <div style={{ marginBottom: '16px', border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', background: `linear-gradient(135deg, ${COLORS.greenBg50} 0%, ${COLORS.greenBg} 100%)`, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <FaUser style={{ color: COLORS.greenDark, fontSize: '16px' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#15803d' }}>Entrenador responsable</div>
-                    <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '1px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.greenDark }}>Entrenador responsable</div>
+                    <div style={{ fontSize: '12px', color: COLORS.green, marginTop: '1px' }}>
                       {(() => {
                         const eid = entrenadorSeleccionado || equipoEdicion.EntrenadorEquipoId;
                         const eName = entrenadorSeleccionado
@@ -959,7 +960,7 @@ export default function AdminEquipos() {
 
                         return eid && eName && eName !== 'Sin entrenador asignado' ? (
                           <span
-                            style={{ cursor: 'pointer', color: '#15803d', textDecoration: 'underline' }}
+                            style={{ cursor: 'pointer', color: COLORS.greenDark, textDecoration: 'underline' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               const irAlEntrenador = () => {
@@ -978,8 +979,8 @@ export default function AdminEquipos() {
                                   text: "Tienes cambios sin guardar que se perderán.",
                                   icon: 'warning',
                                   showCancelButton: true,
-                                  confirmButtonColor: '#ef4444',
-                                  cancelButtonColor: '#64748b',
+                                  confirmButtonColor: COLORS.danger,
+                                  cancelButtonColor: COLORS.slate500,
                                   confirmButtonText: 'Sí, salir sin guardar',
                                   cancelButtonText: 'Cancelar navegación'
                                 }).then((result) => {
@@ -1003,7 +1004,7 @@ export default function AdminEquipos() {
                       })()}
                     </div>
                   </div>
-                  {loadingExtras && <span style={{ fontSize: '11px', color: '#64748b' }}>Sincronizando...</span>}
+                  {loadingExtras && <span style={{ fontSize: '11px', color: COLORS.slate500 }}>Sincronizando...</span>}
                 </div>
 
                 <button
@@ -1012,9 +1013,9 @@ export default function AdminEquipos() {
                   style={{
                     width: '100%',
                     padding: '12px 20px',
-                    background: collapseEntrenador ? '#f8fafc' : 'white',
+                    background: collapseEntrenador ? COLORS.slate50 : 'white',
                     border: 'none',
-                    borderTop: '1px solid #e2e8f0',
+                    borderTop: `1px solid ${COLORS.slate200}`,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1022,29 +1023,29 @@ export default function AdminEquipos() {
                     transition: 'background 0.2s',
                   }}
                 >
-                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#15803d', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: COLORS.greenDark, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     Cambiar entrenador
                   </span>
-                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                  <span style={{ color: COLORS.slate400, fontSize: '12px' }}>
                     {collapseEntrenador ? '▲' : '▼'}
                   </span>
                 </button>
 
                 {collapseEntrenador && (
-                  <div style={{ padding: '16px 20px', background: 'white', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ padding: '16px 20px', background: 'white', borderTop: `1px solid ${COLORS.slate100}` }}>
                     <input
                       type="text"
                       placeholder="Buscar entrenador por nombre..."
                       value={searchEntrenador}
                       onChange={e => setSearchEntrenador(e.target.value)}
-                      style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #dcfce7', borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${COLORS.greenBg}`, borderRadius: '10px', fontSize: '13px', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '11px', background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
+                      <span style={{ fontSize: '11px', background: COLORS.greenBg, color: COLORS.greenDarker, padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>
                         Solo entrenadores con estatus Activo
                       </span>
                     </div>
-                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '10px' }}>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: `1px solid ${COLORS.slate100}`, borderRadius: '10px' }}>
                       {loadingExtras ? (
                         <Loader inline text="Cargando entrenadores..." />
                       ) : (
@@ -1054,26 +1055,26 @@ export default function AdminEquipos() {
                               onClick={() => { setEntrenadorSeleccionado(null); setHaCambiado(true); }}
                               style={{
                                 padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                                borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
-                                backgroundColor: entrenadorSeleccionado === null ? '#f0fdf4' : 'white'
+                                borderBottom: `1px solid ${COLORS.slate50}`, transition: 'background 0.15s',
+                                backgroundColor: entrenadorSeleccionado === null ? COLORS.greenBg50 : 'white'
                               }}
                             >
                               <div style={{
                                 width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-                                background: entrenadorSeleccionado === null ? '#15803d' : '#f1f5f9',
-                                color: entrenadorSeleccionado === null ? 'white' : '#64748b',
+                                background: entrenadorSeleccionado === null ? COLORS.greenDark : COLORS.slate100,
+                                color: entrenadorSeleccionado === null ? 'white' : COLORS.slate500,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: '14px', fontWeight: '800'
                               }}>
                                 ∅
                               </div>
-                              <span style={{ fontSize: '13px', fontWeight: entrenadorSeleccionado === null ? '700' : '500', color: '#dc2626', flex: 1 }}>Sin entrenador (desasignar)</span>
-                              {entrenadorSeleccionado === null && <span style={{ color: '#15803d', fontWeight: '800' }}>✓</span>}
+                              <span style={{ fontSize: '13px', fontWeight: entrenadorSeleccionado === null ? '700' : '500', color: COLORS.dangerDark, flex: 1 }}>Sin entrenador (desasignar)</span>
+                              {entrenadorSeleccionado === null && <span style={{ color: COLORS.greenDark, fontWeight: '800' }}>✓</span>}
                             </div>
                           )}
 
                           {entrenadores.filter(p => !searchEntrenador || p.nombre.toLowerCase().includes(searchEntrenador.toLowerCase())).length === 0 ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No se encontraron entrenadores</div>
+                            <div style={{ padding: '20px', textAlign: 'center', color: COLORS.slate400, fontSize: '13px' }}>No se encontraron entrenadores</div>
                           ) : (
                             entrenadores
                               .filter(p => !searchEntrenador || p.nombre.toLowerCase().includes(searchEntrenador.toLowerCase()))
@@ -1083,21 +1084,21 @@ export default function AdminEquipos() {
                                   onClick={() => { setEntrenadorSeleccionado(p.id); setHaCambiado(true); }}
                                   style={{
                                     padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                                    borderBottom: '1px solid #f8fafc', transition: 'background 0.15s',
-                                    backgroundColor: entrenadorSeleccionado === p.id ? '#f0fdf4' : 'white'
+                                    borderBottom: `1px solid ${COLORS.slate50}`, transition: 'background 0.15s',
+                                    backgroundColor: entrenadorSeleccionado === p.id ? COLORS.greenBg50 : 'white'
                                   }}
                                 >
                                   <div style={{
                                     width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-                                    background: entrenadorSeleccionado === p.id ? '#15803d' : '#f1f5f9',
-                                    color: entrenadorSeleccionado === p.id ? 'white' : '#64748b',
+                                    background: entrenadorSeleccionado === p.id ? COLORS.greenDark : COLORS.slate100,
+                                    color: entrenadorSeleccionado === p.id ? 'white' : COLORS.slate500,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: '11px', fontWeight: '800'
                                   }}>
                                     {p.nombre.charAt(0).toUpperCase()}
                                   </div>
-                                  <span style={{ fontSize: '13px', fontWeight: entrenadorSeleccionado === p.id ? '700' : '500', color: '#1e293b', flex: 1 }}>{p.nombre}</span>
-                                  {entrenadorSeleccionado === p.id && <span style={{ color: '#15803d', fontWeight: '800' }}>✓</span>}
+                                  <span style={{ fontSize: '13px', fontWeight: entrenadorSeleccionado === p.id ? '700' : '500', color: COLORS.slate800, flex: 1 }}>{p.nombre}</span>
+                                  {entrenadorSeleccionado === p.id && <span style={{ color: COLORS.greenDark, fontWeight: '800' }}>✓</span>}
                                 </div>
                               ))
                           )}
@@ -1109,27 +1110,27 @@ export default function AdminEquipos() {
               </div>
 
               {/* ── SECCIÓN: ASIGNACIÓN DE LIGA ── */}
-              <div style={{ marginBottom: '10px', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden' }}>
+              <div style={{ marginBottom: '10px', border: `1px solid ${COLORS.slate200}`, borderRadius: '14px', overflow: 'hidden' }}>
                 <button
                   type="button"
                   onClick={() => setCollapseOpen(prev => ({ ...prev, liga: !prev.liga }))}
                   style={{
-                    width: '100%', padding: '13px 18px', background: collapseOpen.liga ? '#f8fafc' : 'white',
+                    width: '100%', padding: '13px 18px', background: collapseOpen.liga ? COLORS.slate50 : 'white',
                     border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                    borderBottom: collapseOpen.liga ? '1px solid #e2e8f0' : 'none', transition: 'background 0.2s'
+                    borderBottom: collapseOpen.liga ? `1px solid ${COLORS.slate200}` : 'none', transition: 'background 0.2s'
                   }}
                 >
                   <span style={{ fontSize: '16px' }}>🏆</span>
-                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#1e293b', flex: 1, textAlign: 'left' }}>Liga del equipo</span>
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: COLORS.slate800, flex: 1, textAlign: 'left' }}>Liga del equipo</span>
                   {(() => {
                     const currentLiga = catalogos.ligas.find(l => l.id === catSeleccionada.ligaId);
                     return currentLiga && (
-                      <span style={{ fontSize: '11px', background: '#eff6ff', color: '#0b4ea6', padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
+                      <span style={{ fontSize: '11px', background: COLORS.secondaryBg, color: COLORS.primary, padding: '3px 10px', borderRadius: '20px', fontWeight: '700' }}>
                         {currentLiga.nombre}
                       </span>
                     );
                   })()}
-                  <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '6px' }}>{collapseOpen.liga ? '▲' : '▼'}</span>
+                  <span style={{ color: COLORS.slate400, fontSize: '12px', marginLeft: '6px' }}>{collapseOpen.liga ? '▲' : '▼'}</span>
                 </button>
 
                 {collapseOpen.liga && (
@@ -1137,7 +1138,7 @@ export default function AdminEquipos() {
                     {loadingExtras ? (
                       <Loader inline text="Cargando ligas..." />
                     ) : catalogos.ligas.length === 0 ? (
-                      <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '10px' }}>Sin ligas disponibles</div>
+                      <div style={{ color: COLORS.slate400, fontSize: '13px', textAlign: 'center', padding: '10px' }}>Sin ligas disponibles</div>
                     ) : catalogos.ligas.map(item => (
                       <label
                         key={item.id}
@@ -1145,8 +1146,8 @@ export default function AdminEquipos() {
                           display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
                           borderRadius: '10px', cursor: 'pointer', transition: 'background 0.15s',
                           border: '1.5px solid',
-                          borderColor: catSeleccionada.ligaId === item.id ? '#0b4ea6' : '#f1f5f9',
-                          background: catSeleccionada.ligaId === item.id ? '#eff6ff' : 'white'
+                          borderColor: catSeleccionada.ligaId === item.id ? COLORS.primary : COLORS.slate100,
+                          background: catSeleccionada.ligaId === item.id ? COLORS.secondaryBg : 'white'
                         }}
                       >
                         <input
@@ -1163,9 +1164,9 @@ export default function AdminEquipos() {
                             });
                             setHaCambiado(true);
                           }}
-                          style={{ accentColor: '#0b4ea6' }}
+                          style={{ accentColor: COLORS.primary }}
                         />
-                        <span style={{ fontSize: '13px', fontWeight: catSeleccionada.ligaId === item.id ? '700' : '500', color: '#1e293b' }}>
+                        <span style={{ fontSize: '13px', fontWeight: catSeleccionada.ligaId === item.id ? '700' : '500', color: COLORS.slate800 }}>
                           {item.nombre}
                         </span>
                       </label>
@@ -1187,27 +1188,27 @@ export default function AdminEquipos() {
                   <div style={{
                     marginTop: '15px',
                     padding: '16px 20px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
+                    background: COLORS.slate50,
+                    border: `1px solid ${COLORS.slate200}`,
                     borderRadius: '16px',
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, 1fr)',
                     gap: '12px'
                   }}>
-                    <div style={{ gridColumn: 'span 3', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                    <div style={{ gridColumn: 'span 3', fontSize: '12px', fontWeight: '800', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                       Información derivada de la Liga:
                     </div>
-                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Modalidad</div>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{modalidadName}</div>
+                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: `1px solid ${COLORS.slate100}` }}>
+                      <div style={{ fontSize: '10px', color: COLORS.slate400, fontWeight: '700', textTransform: 'uppercase' }}>Modalidad</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate800, marginTop: '2px' }}>{modalidadName}</div>
                     </div>
-                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Categoría</div>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{categoriaName}</div>
+                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: `1px solid ${COLORS.slate100}` }}>
+                      <div style={{ fontSize: '10px', color: COLORS.slate400, fontWeight: '700', textTransform: 'uppercase' }}>Categoría</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate800, marginTop: '2px' }}>{categoriaName}</div>
                     </div>
-                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Rama</div>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginTop: '2px' }}>{ramaName}</div>
+                    <div style={{ background: 'white', padding: '10px 14px', borderRadius: '12px', border: `1px solid ${COLORS.slate100}` }}>
+                      <div style={{ fontSize: '10px', color: COLORS.slate400, fontWeight: '700', textTransform: 'uppercase' }}>Rama</div>
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate800, marginTop: '2px' }}>{ramaName}</div>
                     </div>
                   </div>
                 );
@@ -1237,15 +1238,15 @@ export default function AdminEquipos() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
-            Se descargarán los documentos del presidente: <span style={{ color: '#0b4ea6' }}>{equipoDescarga?.PresidenteNombreCompleto || 'Sin presidente asignado'}</span>
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: COLORS.slate800 }}>
+            Se descargarán los documentos del presidente: <span style={{ color: COLORS.primary }}>{equipoDescarga?.PresidenteNombreCompleto || 'Sin presidente asignado'}</span>
           </p>
-          <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: COLORS.slate800 }}>
             Se descargarán los documentos de los siguientes jugadores:
           </p>
           
           {cargandoJugadoresDescarga ? (
-            <div style={{ padding: '20px 0', textAlign: 'center', color: '#64748b' }}>
+            <div style={{ padding: '20px 0', textAlign: 'center', color: COLORS.slate500 }}>
               Cargando jugadores...
             </div>
           ) : (
@@ -1256,10 +1257,10 @@ export default function AdminEquipos() {
                 gap: '8px',
                 maxHeight: '180px',
                 overflowY: 'auto',
-                border: '1px solid #e2e8f0',
+                border: `1px solid ${COLORS.slate200}`,
                 borderRadius: '12px',
                 padding: '12px',
-                background: '#f8fafc'
+                background: COLORS.slate50
               }}>
                 {jugadoresDescarga.length > 0 ? (
                   jugadoresDescarga.map((jugador, idx) => (
@@ -1268,10 +1269,10 @@ export default function AdminEquipos() {
                       style={{
                         fontSize: '13px',
                         fontWeight: '600',
-                        color: '#334155',
+                        color: COLORS.slate700,
                         padding: '8px 12px',
                         background: 'white',
-                        border: '1px solid #e2e8f0',
+                        border: `1px solid ${COLORS.slate200}`,
                         borderRadius: '8px',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -1284,26 +1285,26 @@ export default function AdminEquipos() {
                       title={jugador.NombreCompleto}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span style={{ color: '#0b4ea6' }}>👤</span>
+                        <span style={{ color: COLORS.primary }}>👤</span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{jugador.NombreCompleto}</span>
                       </div>
                       <span style={{ flexShrink: 0 }}>
                         {jugador.DocumentosAprobados ? (
-                          <span style={{ color: '#16a34a', fontWeight: 'bold' }} title="Documentos aprobados">✔️</span>
+                          <span style={{ color: COLORS.green, fontWeight: 'bold' }} title="Documentos aprobados">✔️</span>
                         ) : (
-                          <span style={{ color: '#dc2626', fontWeight: 'bold' }} title="Documentos pendientes de aprobación">⚠️</span>
+                          <span style={{ color: COLORS.dangerDark, fontWeight: 'bold' }} title="Documentos pendientes de aprobación">⚠️</span>
                         )}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
+                  <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: '13px', color: COLORS.slate500, textAlign: 'center' }}>
                     No hay ningún jugador registrado en este equipo.
                   </p>
                 )}
               </div>
               {jugadoresDescarga.some(j => !j.DocumentosAprobados) && (
-                <p style={{ margin: 0, fontSize: '13px', color: '#dc2626', fontWeight: '700', textAlign: 'center', background: '#fef2f2', border: '1px solid #fecaca', padding: '8px', borderRadius: '8px' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: COLORS.dangerDark, fontWeight: '700', textAlign: 'center', background: COLORS.dangerBgLight, border: `1px solid ${COLORS.dangerBgMedium}`, padding: '8px', borderRadius: '8px' }}>
                   ⚠️ Todos los jugadores deben tener sus documentos aprobados para poder exportar el equipo.
                 </p>
               )}

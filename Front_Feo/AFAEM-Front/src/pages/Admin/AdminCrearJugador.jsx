@@ -28,6 +28,7 @@ import {
   Modal
 } from '../../components/partials';
 import Loader from '../../components/Loader';
+import COLORS from '../../styles/colors';
 
 const parsearTelefonoE164 = (telefonoCompleto) => {
   if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
@@ -57,8 +58,8 @@ const StepBadge = ({ number, isActive, isDone }) => (
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    backgroundColor: isDone ? '#10b981' : (isActive ? '#0b4ea6' : '#e2e8f0'),
-    color: (isActive || isDone) ? 'white' : '#64748b',
+    backgroundColor: isDone ? COLORS.success : (isActive ? COLORS.primary : COLORS.slate200),
+    color: (isActive || isDone) ? 'white' : COLORS.slate500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -87,7 +88,7 @@ export default function AdminCrearJugador() {
     }
     .document-card:hover {
       transform: translateY(-5px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 15px -3px ${COLORS.shadow10};
     }
   `;
 
@@ -256,7 +257,7 @@ export default function AdminCrearJugador() {
         title: 'Tipo de archivo no permitido',
         text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
         icon: 'error',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
       return;
     }
@@ -686,8 +687,8 @@ export default function AdminCrearJugador() {
                   text: "Se perderán los documentos subidos y el progreso actual.",
                   icon: 'warning',
                   showCancelButton: true,
-                  confirmButtonColor: '#ef4444',
-                  cancelButtonColor: '#64748b',
+                  confirmButtonColor: COLORS.danger,
+                  cancelButtonColor: COLORS.slate500,
                   confirmButtonText: 'Sí, salir',
                   cancelButtonText: 'Continuar registro'
                 }).then((result) => {
@@ -703,14 +704,14 @@ export default function AdminCrearJugador() {
             <FaArrowLeft />
           </button>
           <div>
-            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Alta rápida de jugador</h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Inscripción administrativa directa en equipos de liga.</p>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Alta rápida de jugador</h2>
+            <p style={{ margin: 0, fontSize: '13px', color: COLORS.slate500, marginTop: '4px' }}>Inscripción administrativa directa en equipos de liga.</p>
           </div>
         </div>
       </div>
 
       <div className="premium-card fade-in" style={{ maxWidth: '1000px', margin: '0 auto', background: 'white', borderRadius: '24px', padding: '40px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
-        <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px' }}>
+        <div style={{ marginBottom: '30px', borderBottom: `1px solid ${COLORS.slate100}`, paddingBottom: '20px' }}>
           <p className="required-legend" style={{ margin: 0 }}>
             <span className="required-star">*</span> Indica que el campo es obligatorio para el registro oficial en la liga.
           </p>
@@ -720,17 +721,17 @@ export default function AdminCrearJugador() {
         <section style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
             <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Elección de equipo destino</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Elección de equipo destino</h3>
           </div>
 
           <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '30px' }}>
               <div style={{ fontSize: '40px', marginBottom: '10px' }}>🛡️</div>
-              <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b' }}>Seleccionar Equipo</h2>
-              <p style={{ color: '#64748b' }}>Busca y elige el equipo donde se inscribirá el jugador.</p>
+              <h2 style={{ fontSize: '24px', fontWeight: '800', color: COLORS.slate800 }}>Seleccionar Equipo</h2>
+              <p style={{ color: COLORS.slate500 }}>Busca y elige el equipo donde se inscribirá el jugador.</p>
             </div>
 
-            <div className="card" style={{ padding: '30px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', position: 'relative', border: '1px solid #e2e8f0', background: 'white' }}>
+            <div className="card" style={{ padding: '30px', borderRadius: '16px', boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`, position: 'relative', border: `1px solid ${COLORS.slate200}`, background: 'white' }}>
               <div className="mb-4">
                 <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Buscar Equipo <span className="required-star">*</span></label>
                 <input
@@ -739,7 +740,7 @@ export default function AdminCrearJugador() {
                   placeholder="Escribe nombre de equipo, liga o categoría..."
                   value={teamSearchTerm}
                   onChange={(e) => setTeamSearchTerm(e.target.value)}
-                  style={{ borderRadius: '10px', padding: '12px', width: '100%', border: '1px solid #cbd5e1' }}
+                  style={{ borderRadius: '10px', padding: '12px', width: '100%', border: `1px solid ${COLORS.slate300}` }}
                   disabled={loadingTeams}
                 />
               </div>
@@ -747,7 +748,7 @@ export default function AdminCrearJugador() {
               {loadingTeams ? (
                 <Loader inline text="Cargando equipos..." />
               ) : (
-                <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '20px' }}>
+                <div style={{ maxHeight: '300px', overflowY: 'auto', border: `1px solid ${COLORS.slate200}`, borderRadius: '10px', marginBottom: '20px' }}>
                   {equiposDb
                     .filter(eq => {
                       const term = (teamSearchTerm || '').toLowerCase().trim();
@@ -774,8 +775,8 @@ export default function AdminCrearJugador() {
                         style={{
                           padding: '12px 20px',
                           cursor: 'pointer',
-                          borderBottom: '1px solid #f1f5f9',
-                          backgroundColor: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? '#eff6ff' : 'white',
+                          borderBottom: `1px solid ${COLORS.slate100}`,
+                          backgroundColor: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? COLORS.secondaryBg : 'white',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '12px',
@@ -784,22 +785,22 @@ export default function AdminCrearJugador() {
                       >
                         <div style={{
                           width: '40px', height: '40px', borderRadius: '50%',
-                          background: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? '#0b4ea6' : '#f1f5f9',
-                          color: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? 'white' : '#64748b',
+                          background: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? COLORS.primary : COLORS.slate100,
+                          color: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? 'white' : COLORS.slate500,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '14px', fontWeight: '800', flexShrink: 0
                         }}>
                           {(eq.NombreEquipo || 'E').charAt(0).toUpperCase()}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <span style={{ fontWeight: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? '700' : '500', color: '#1e293b', display: 'block' }}>
+                          <span style={{ fontWeight: String(extractedData.equipoSeleccionado) === String(eq.EquipoId) ? '700' : '500', color: COLORS.slate800, display: 'block' }}>
                             {eq.NombreEquipo}
                           </span>
-                          <span style={{ fontSize: '12px', color: '#64748b' }}>
+                          <span style={{ fontSize: '12px', color: COLORS.slate500 }}>
                             {eq.Liga || 'Sin Liga'} - {eq.Categoria || 'LIBRE'}
                           </span>
                         </div>
-                        {String(extractedData.equipoSeleccionado) === String(eq.EquipoId) && <span style={{ marginLeft: 'auto', color: '#0b4ea6', fontSize: '20px' }}>✓</span>}
+                        {String(extractedData.equipoSeleccionado) === String(eq.EquipoId) && <span style={{ marginLeft: 'auto', color: COLORS.primary, fontSize: '20px' }}>✓</span>}
                       </div>
                     ))}
                   {equiposDb.filter(eq => {
@@ -809,7 +810,7 @@ export default function AdminCrearJugador() {
                     const liga = (eq.Liga || '').toLowerCase();
                     return name.includes(term) || liga.includes(term);
                   }).length === 0 && (
-                      <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                      <div style={{ padding: '20px', textAlign: 'center', color: COLORS.slate400 }}>
                         No se encontraron equipos que coincidan con la búsqueda.
                       </div>
                     )}
@@ -822,13 +823,13 @@ export default function AdminCrearJugador() {
         {/* SELECTOR DE NACIONALIDAD */}
         <section className="fade-in" style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-            <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
-            <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
+            <FaGlobeAmericas style={{ color: COLORS.primary, fontSize: '20px' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Nacionalidad del jugador</h3>
           </div>
 
           <div style={{
             display: 'flex',
-            background: '#f1f5f9',
+            background: COLORS.slate100,
             padding: '4px',
             borderRadius: '12px',
             width: 'fit-content'
@@ -840,10 +841,10 @@ export default function AdminCrearJugador() {
                 borderRadius: '10px',
                 border: 'none',
                 background: !extractedData.esForaneo ? 'white' : 'transparent',
-                color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                color: !extractedData.esForaneo ? COLORS.primary : COLORS.slate500,
                 fontWeight: '800',
                 fontSize: '13px',
-                boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                boxShadow: !extractedData.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                 transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
@@ -860,10 +861,10 @@ export default function AdminCrearJugador() {
                 borderRadius: '10px',
                 border: 'none',
                 background: extractedData.esForaneo ? 'white' : 'transparent',
-                color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                color: extractedData.esForaneo ? COLORS.primary : COLORS.slate500,
                 fontWeight: '800',
                 fontSize: '13px',
-                boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                boxShadow: extractedData.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                 transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
@@ -881,19 +882,19 @@ export default function AdminCrearJugador() {
           <section className="fade-in" style={{ marginBottom: '40px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
               <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
             </div>
 
             <div style={{ marginBottom: '24px', paddingLeft: '47px' }}>
               <div style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
+                background: COLORS.slate50,
+                border: `1px solid ${COLORS.slate200}`,
                 padding: '10px 16px',
                 borderRadius: '10px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '10px',
-                color: '#475569',
+                color: COLORS.slate600,
                 fontSize: '13px',
                 fontWeight: '600'
               }}>
@@ -904,8 +905,8 @@ export default function AdminCrearJugador() {
 
             {/* ── Instrucción de flujo ── */}
             <div style={{
-              background: '#f0f9ff',
-              border: '1px solid #bae6fd',
+              background: COLORS.skyBgLight,
+              border: `1px solid ${COLORS.sky100}`,
               borderRadius: '12px',
               padding: '12px 18px',
               marginBottom: '20px',
@@ -913,7 +914,7 @@ export default function AdminCrearJugador() {
               alignItems: 'center',
               gap: '10px',
               fontSize: '13px',
-              color: '#0369a1',
+              color: COLORS.skyDarker,
               fontWeight: '600'
             }}>
               <span style={{ fontSize: '18px' }}>📋</span>
@@ -933,7 +934,7 @@ export default function AdminCrearJugador() {
                   style={{
                     backgroundColor: 'white',
                     borderRadius: '20px',
-                    border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                    border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
                     padding: '15px',
                     textAlign: 'center',
                     transition: 'all 0.3s',
@@ -944,7 +945,7 @@ export default function AdminCrearJugador() {
                   <div style={{
                     height: '140px',
                     width: '100%',
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: COLORS.slate50,
                     borderRadius: '12px',
                     marginBottom: '10px',
                     position: 'relative',
@@ -952,7 +953,7 @@ export default function AdminCrearJugador() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: '1px solid #f1f5f9'
+                    border: `1px solid ${COLORS.slate100}`
                   }}
 
                     onDragOver={(e) => {
@@ -969,9 +970,9 @@ export default function AdminCrearJugador() {
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                         {/* MINIATURA */}
                         {(previews[doc.key].startsWith('blob:') && documents[doc.key]?.type === 'application/pdf') || previews[doc.key] === 'pdf_icon' ? (
-                          <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                          <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
                             <FaFilePdf />
-                            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                            <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
                           </div>
                         ) : (
                           <img
@@ -985,7 +986,7 @@ export default function AdminCrearJugador() {
                         <div className="overlay-actions" style={{
                           position: 'absolute',
                           top: 0, left: 0, right: 0, bottom: 0,
-                          backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                          backgroundColor: COLORS.overlaySlateGray,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1009,9 +1010,9 @@ export default function AdminCrearJugador() {
                             className="btn-zoom"
                             style={{
                               width: '36px', height: '36px', borderRadius: '50%',
-                              backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                              backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                              boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
                             }}
                           >
                             <FaSearchPlus />
@@ -1025,9 +1026,9 @@ export default function AdminCrearJugador() {
                             className="btn-change"
                             style={{
                               width: '36px', height: '36px', borderRadius: '50%',
-                              backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                              backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                              boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
                             }}
                           >
                             <FaSyncAlt />
@@ -1038,7 +1039,7 @@ export default function AdminCrearJugador() {
                       /* ESTADO VACÍO */
                       <div
                         onClick={() => document.getElementById(`file-${doc.key}`).click()}
-                        style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                        style={{ textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}
                       >
                         <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                         <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
@@ -1046,15 +1047,15 @@ export default function AdminCrearJugador() {
                     )}
                   </div>
 
-                  <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
                   <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
                     padding: '4px 12px',
                     borderRadius: '20px',
-                    backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9',
-                    color: documents[doc.key] ? '#166534' : '#64748b',
+                    backgroundColor: documents[doc.key] ? COLORS.greenBg : COLORS.slate100,
+                    color: documents[doc.key] ? COLORS.greenDarker : COLORS.slate500,
                     fontSize: '10px',
                     fontWeight: '800'
                   }}>
@@ -1078,27 +1079,27 @@ export default function AdminCrearJugador() {
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}
               >
                 {[{ key: 'identificacion', title: 'Identificación (INE / Pasaporte)' }].map(doc => (
-                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f1f5f9' }}>
+                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.slate50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.slate100}` }}>
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                           {documents[doc.key]?.type === 'application/pdf'
-                            ? <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}><FaFilePdf /><span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span></div>
+                            ? <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}><FaFilePdf /><span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span></div>
                             : <img src={previews[doc.key]} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                          <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,41,59,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
-                            <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: documents[doc.key]?.type === 'application/pdf' ? 'pdf' : 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSearchPlus /></button>
-                            <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${doc.key}`).click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSyncAlt /></button>
+                          <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: documents[doc.key]?.type === 'application/pdf' ? 'pdf' : 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${doc.key}`).click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSyncAlt /></button>
                           </div>
                         </div>
                       ) : (
-                        <div onClick={() => document.getElementById(`file-${doc.key}`).click()} style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}>
+                        <div onClick={() => document.getElementById(`file-${doc.key}`).click()} style={{ textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
                           <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                           <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
                         </div>
                       )}
                     </div>
-                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '10px', fontWeight: '800' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? COLORS.greenBg : COLORS.slate100, color: documents[doc.key] ? COLORS.greenDarker : COLORS.slate500, fontSize: '10px', fontWeight: '800' }}>
                       {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                     </div>
                     <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
@@ -1110,29 +1111,29 @@ export default function AdminCrearJugador() {
             {/* ── Documento Estudiante para menores (aparece tras OCR del acta) ── */}
             {documents.actaNacimiento && extractedData.fechaNacimiento && esMenorDeEdad && (
               <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                <div className="document-card" style={{ borderRadius: '20px', border: documents.documentoEstudiante ? '2px solid #10b981' : '2px solid #fbbf24', background: documents.documentoEstudiante ? 'rgba(16,185,129,0.04)' : 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
-                  <div style={{ height: '140px', width: '100%', backgroundColor: '#fef9ec', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fde68a' }}>
+                <div className="document-card" style={{ borderRadius: '20px', border: documents.documentoEstudiante ? `2px solid ${COLORS.success}` : `2px solid ${COLORS.warningLight}`, background: documents.documentoEstudiante ? COLORS.successBgTranslucent04 : `linear-gradient(135deg,${COLORS.warningBgLight} 0%,${COLORS.warningBg} 100%)`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
+                  <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.yellow50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.warningBgDark}` }}>
                     {previews.documentoEstudiante ? (
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                         {documents.documentoEstudiante?.type === 'application/pdf'
-                          ? <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}><FaFilePdf /><span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span></div>
+                          ? <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}><FaFilePdf /><span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span></div>
                           : <img src={previews.documentoEstudiante} alt="Doc estudiante" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                        <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,41,59,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease' }}>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews.documentoEstudiante, type: documents.documentoEstudiante?.type === 'application/pdf' ? 'pdf' : 'image', title: 'Documento de Estudiante' }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSearchPlus /></button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById('file-documentoEstudiante').click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSyncAlt /></button>
+                        <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease' }}>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews.documentoEstudiante, type: documents.documentoEstudiante?.type === 'application/pdf' ? 'pdf' : 'image', title: 'Documento de Estudiante' }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSearchPlus /></button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById('file-documentoEstudiante').click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSyncAlt /></button>
                         </div>
                       </div>
                     ) : (
-                      <div onClick={() => document.getElementById('file-documentoEstudiante').click()} style={{ textAlign: 'center', color: '#f59e0b', cursor: 'pointer' }}>
+                      <div onClick={() => document.getElementById('file-documentoEstudiante').click()} style={{ textAlign: 'center', color: COLORS.warning, cursor: 'pointer' }}>
                         <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '800', color: '#92400e' }}>SUBIR DOCUMENTO</p>
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '800', color: COLORS.warningBrown }}>SUBIR DOCUMENTO</p>
                       </div>
                     )}
                   </div>
-                  <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 4px 0', color: '#78350f' }}>Documento de Estudiante</h4>
-                  <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#92400e' }}>Credencial escolar, certificado o carta de residencia</p>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents.documentoEstudiante ? '#dcfce7' : '#fef3c7', color: documents.documentoEstudiante ? '#166534' : '#92400e', fontSize: '10px', fontWeight: '800' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 4px 0', color: COLORS.amberDeep }}>Documento de Estudiante</h4>
+                  <p style={{ margin: '0 0 6px', fontSize: '10px', color: COLORS.warningBrown }}>Credencial escolar, certificado o carta de residencia</p>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents.documentoEstudiante ? COLORS.greenBg : COLORS.warningBg, color: documents.documentoEstudiante ? COLORS.greenDarker : COLORS.warningBrown, fontSize: '10px', fontWeight: '800' }}>
                     {documents.documentoEstudiante ? <><FaCheckCircle /> Listo</> : '⏳ Pendiente'}
                   </div>
                   <input type="file" id="file-documentoEstudiante" style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('documentoEstudiante', e.target.files[0])} />
@@ -1145,13 +1146,13 @@ export default function AdminCrearJugador() {
               <>
                 <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
                 {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
-                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1', padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ height: '140px', width: '100%', backgroundColor: '#f8fafc', borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #f1f5f9' }}>
+                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.slate50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.slate100}` }}>
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                           <img src={previews[doc.key]} alt="Preview foto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,41,59,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
-                             <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: '#1e293b', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSearchPlus /></button>
+                          <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
+                             <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
                              <button type="button" onClick={(e) => {
                                e.stopPropagation();
                                if (doc.key === 'fotografia') {
@@ -1162,8 +1163,8 @@ export default function AdminCrearJugador() {
                                    showCancelButton: true,
                                    confirmButtonText: '📷 Tomar con cámara',
                                    cancelButtonText: '📁 Subir archivo',
-                                   confirmButtonColor: '#0b4ea6',
-                                   cancelButtonColor: '#64748b'
+                                   confirmButtonColor: COLORS.primary,
+                                   cancelButtonColor: COLORS.slate500
                                  }).then((result) => {
                                    if (result.isConfirmed) {
                                      setIsCameraOpen(true);
@@ -1174,7 +1175,7 @@ export default function AdminCrearJugador() {
                                } else {
                                  document.getElementById(`file-${doc.key}`).click();
                                }
-                             }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0ea5e9', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer' }}><FaSyncAlt /></button>
+                             }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSyncAlt /></button>
                           </div>
                         </div>
                       ) : (
@@ -1187,8 +1188,8 @@ export default function AdminCrearJugador() {
                               showCancelButton: true,
                               confirmButtonText: '📷 Tomar con cámara',
                               cancelButtonText: '📁 Subir archivo',
-                              confirmButtonColor: '#0b4ea6',
-                              cancelButtonColor: '#64748b'
+                              confirmButtonColor: COLORS.primary,
+                              cancelButtonColor: COLORS.slate500
                             }).then((result) => {
                               if (result.isConfirmed) {
                                 setIsCameraOpen(true);
@@ -1199,19 +1200,19 @@ export default function AdminCrearJugador() {
                           } else {
                             document.getElementById(`file-${doc.key}`).click();
                           }
-                        }} style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}>
+                        }} style={{ textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
                           <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                           <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
                         </div>
                       )}
                     </div>
-                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
+                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
                     {doc.key === 'fotografia' && (
-                      <p style={{ margin: '0 0 8px', fontSize: '10px', color: '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                      <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
                         Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
                       </p>
                     )}
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9', color: documents[doc.key] ? '#166534' : '#64748b', fontSize: '10px', fontWeight: '800' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? COLORS.greenBg : COLORS.slate100, color: documents[doc.key] ? COLORS.greenDarker : COLORS.slate500, fontSize: '10px', fontWeight: '800' }}>
                       {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
                     </div>
                     <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
@@ -1229,7 +1230,7 @@ export default function AdminCrearJugador() {
 
             {/* Hint mientras el OCR analiza el acta */}
             {documents.actaNacimiento && !extractedData.fechaNacimiento && (
-              <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+              <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: COLORS.warningBgLight, border: `1px dashed ${COLORS.warningLight}`, borderRadius: '10px', fontSize: '12px', color: COLORS.warningBrown, fontWeight: '600' }}>
                 ⏳ Analizando el Acta de Nacimiento... Los documentos adicionales aparecerán en breve.
               </div>
             )}
@@ -1238,7 +1239,7 @@ export default function AdminCrearJugador() {
               <div style={{ textAlign: 'center', marginTop: '25px' }}>
                 <button
                   onClick={() => setFillManually(true)}
-                  style={{ fontSize: '13px', color: '#0b4ea6', fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline' }}
+                  style={{ fontSize: '13px', color: COLORS.primary, fontWeight: '700', background: 'none', border: 'none', textDecoration: 'underline' }}
                 >
                   Omitir carga y llenar datos manualmente
                 </button>
@@ -1253,7 +1254,7 @@ export default function AdminCrearJugador() {
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <StepBadge number="3" isActive={true} isDone={false} />
-                <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
+                <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
               </div>
             </div>
 
@@ -1266,11 +1267,11 @@ export default function AdminCrearJugador() {
                 background: (
                   extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                   extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                ) ? '#fff7ed' : '#f0fdf4',
+                ) ? COLORS.orange50 : COLORS.greenBg50,
                 border: (
                   extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                   extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                ) ? '1px solid #ffedd5' : '1px solid #dcfce7',
+                ) ? `1px solid ${COLORS.orange100}` : `1px solid ${COLORS.greenBg}`,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px'
@@ -1280,12 +1281,12 @@ export default function AdminCrearJugador() {
                     extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
                     {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                       extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
                       'Discrepancia detectada' : 'Datos validados con OCR'}
                   </h4>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
+                  <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
                     {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                       extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
                       'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
@@ -1296,31 +1297,31 @@ export default function AdminCrearJugador() {
             )}
 
             {/* FORMULARIO DE AFILIACIÓN */}
-            <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', marginBottom: '30px' }}>
+            <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`, marginBottom: '30px' }}>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta</label>
-                  <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({ ...extractedData, numCamiseta: e.target.value })} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta</label>
+                  <input type="number" value={extractedData.numCamiseta} onChange={e => setExtractedData({ ...extractedData, numCamiseta: e.target.value })} placeholder="Ej. 10" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo</label>
-                  <select value={extractedData.posicion} onChange={e => setExtractedData({ ...extractedData, posicion: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo</label>
+                  <select value={extractedData.posicion} onChange={e => setExtractedData({ ...extractedData, posicion: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white' }}>
                     <option value="">Posición...</option>
                     {(catalogs?.roles_equipo || []).map(r => (
                       <option key={r.id} value={r.id}>{r.nombre}</option>
@@ -1331,7 +1332,7 @@ export default function AdminCrearJugador() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>CURP o Identificador <span className="required-star">*</span></label>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>CURP o Identificador <span className="required-star">*</span></label>
                   <input type="text" value={extractedData.curp || ''} onChange={(e) => {
                     const val = e.target.value.toUpperCase();
                     let sId = extractedData.genero;
@@ -1341,29 +1342,29 @@ export default function AdminCrearJugador() {
                       else if (char === 'H') sId = 1; // Masculino
                     }
                     setExtractedData({ ...extractedData, curp: val, genero: sId });
-                  }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Fecha Nac. <span className="required-star">*</span></label>
                   <input
                     type="date"
                     value={extractedData.fechaNacimiento || ''}
                     min={minDateStr}
                     max={today}
                     onChange={e => setExtractedData({ ...extractedData, fechaNacimiento: e.target.value })}
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                    style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
+                  <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                  <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
+                  <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white' }}>
                     <option value="">Seleccione...</option>
                     <option value={1}>MASCULINO</option>
                     <option value={2}>FEMENINO</option>
@@ -1373,11 +1374,11 @@ export default function AdminCrearJugador() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                  <input type="email" value={extractedData.correo} onChange={e => setExtractedData({ ...extractedData, correo: e.target.value })} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Correo electrónico <span className="required-star">*</span></label>
+                  <input type="email" value={extractedData.correo} onChange={e => setExtractedData({ ...extractedData, correo: e.target.value })} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono</label>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <select
                       value={extractedData.codigoPais || '+52'}
@@ -1385,7 +1386,7 @@ export default function AdminCrearJugador() {
                       style={{
                         padding: '10px',
                         borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
+                        border: `1px solid ${COLORS.slate300}`,
                         fontSize: '14px',
                         backgroundColor: 'white',
                         width: '110px',
@@ -1419,7 +1420,7 @@ export default function AdminCrearJugador() {
                       style={{
                         padding: '10px',
                         borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
+                        border: `1px solid ${COLORS.slate300}`,
                         fontSize: '14px',
                         flexGrow: 1
                       }}
@@ -1429,12 +1430,12 @@ export default function AdminCrearJugador() {
               </div>
 
               {/* SECCIÓN MODO PREMIUM: ANTECEDENTES INTERNACIONALES */}
-              <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '30px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+              <div style={{ backgroundColor: COLORS.orange50, border: `1px solid ${COLORS.orange100}`, padding: '30px', borderRadius: '24px', boxShadow: `0 10px 15px -3px ${COLORS.shadow05}`, marginTop: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: `1px solid ${COLORS.orange100}`, paddingBottom: '20px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: COLORS.warningBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.warningDark }}>
                     <FaGlobeAmericas />
                   </div>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: COLORS.orangeDeep }}>Antecedentes internacionales</h4>
                 </div>
 
                 {extractedData.esForaneo ? (
@@ -1508,7 +1509,7 @@ export default function AdminCrearJugador() {
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '20px' }}>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: COLORS.orangeDeep, fontStyle: 'italic' }}>
                       Si el jugador es foráneo, habilita el interruptor para completar los antecedentes internacionales obligatorios.
                     </p>
                   </div>
@@ -1548,7 +1549,7 @@ export default function AdminCrearJugador() {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '300px',
-          backgroundColor: '#f1f5f9',
+          backgroundColor: COLORS.slate100,
           borderRadius: '12px',
           overflow: 'hidden'
         }}>
@@ -1588,12 +1589,12 @@ export default function AdminCrearJugador() {
       >
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            backgroundColor: '#f0f9ff',
-            border: '1px solid #bae6fd',
+            backgroundColor: COLORS.skyBgLight,
+            border: `1px solid ${COLORS.sky100}`,
             borderRadius: '16px',
             padding: '20px',
             marginBottom: '25px',
-            color: '#0369a1',
+            color: COLORS.skyDarker,
             fontSize: '14px',
             lineHeight: '1.6'
           }}>
@@ -1609,25 +1610,25 @@ export default function AdminCrearJugador() {
           <div
             onClick={() => document.getElementById('final-signed-form').click()}
             style={{
-              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+              border: signedForm ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.sky}`,
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+              backgroundColor: signedForm ? COLORS.greenBg50 : COLORS.slate50,
               cursor: 'pointer',
               transition: 'all 0.3s'
             }}
           >
             {signedForm ? (
-              <div style={{ color: '#10b981' }}>
+              <div style={{ color: COLORS.success }}>
                 <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
               </div>
             ) : (
-              <div style={{ color: '#0ea5e9' }}>
+              <div style={{ color: COLORS.sky }}>
                 <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: COLORS.slate500 }}>Solo se aceptan archivos PDF</p>
               </div>
             )}
             <input
@@ -1642,7 +1643,7 @@ export default function AdminCrearJugador() {
                 const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
                 const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
                 if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
-                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                   return;
                 }
                 setSignedForm(file);

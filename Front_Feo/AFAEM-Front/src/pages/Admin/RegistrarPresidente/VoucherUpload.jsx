@@ -1,5 +1,6 @@
 import { FaUpload } from 'react-icons/fa';
 import { C } from './constants';
+import COLORS from '../../../styles/colors';
 
 /**
  * VoucherUpload
@@ -16,10 +17,10 @@ export default function VoucherUpload({ voucher, onFileChange }) {
         onClick={() => document.getElementById('voucher-inp').click()}
         style={{
           width: '100%', height: 110,
-          border: `2px dashed ${voucher ? 'rgba(74,222,128,0.3)' : C.inputBorder}`,
+          border: `2px dashed ${voucher ? COLORS.greenBgTranslucent30 : C.inputBorder}`,
           borderRadius: 14, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          background: voucher ? 'rgba(74,222,128,0.03)' : 'transparent',
+          background: voucher ? COLORS.greenBgTranslucent03 : 'transparent',
           transition: 'all .2s',
         }}
       >

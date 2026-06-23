@@ -1,25 +1,26 @@
 import { FaUser, FaMoneyBillWave, FaFolderOpen } from 'react-icons/fa';
+import COLORS from '../../../styles/colors';
 
 // ─── Paleta de colores ────────────────────────────────────────────────────────
 export const C = {
-  bg: '#ffffff',
-  surface: '#0f172a',
-  card: '#0f172a',
-  cardBorder: 'rgba(148, 163, 184, 0.18)',
-  amber: '#f59e0b',
-  amberDark: '#d97706',
-  amberLight: '#fbbf24',
-  orange: '#fb923c',
-  rose: '#f87171',
-  green: '#4ade80',
-  greenDim: 'rgba(74,222,128,0.15)',
-  text: '#f8fafc',
-  textMid: '#e2e8f0',
-  textArrow: '#0f172a',
-  textDim: '#cbd5e1',
-  inputBg: '#102033',
-  inputBorder: 'rgba(148, 163, 184, 0.28)',
-  focusBorder: '#60a5fa',
+  bg: COLORS.white,
+  surface: COLORS.slate900,
+  card: COLORS.slate900,
+  cardBorder: COLORS.slateLightTranslucent,
+  amber: COLORS.warning,
+  amberDark: COLORS.warningDark,
+  amberLight: COLORS.warningLight,
+  orange: COLORS.orangeAccent,
+  rose: COLORS.dangerLight,
+  green: COLORS.greenAccent,
+  greenDim: COLORS.greenBgTranslucent,
+  text: COLORS.slate50,
+  textMid: COLORS.slate200,
+  textArrow: COLORS.slate900,
+  textDim: COLORS.slate300,
+  inputBg: COLORS.darkBlueBg,
+  inputBorder: COLORS.slateMediumTranslucent,
+  focusBorder: COLORS.secondaryLight,
 };
 
 // ─── Estilos de campo reutilizables ──────────────────────────────────────────

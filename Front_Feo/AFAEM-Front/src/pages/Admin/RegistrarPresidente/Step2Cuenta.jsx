@@ -2,6 +2,7 @@ import { C, fieldStyles } from './constants';
 import PasoHeader from './PasoHeader';
 import PaisSelect from './PaisSelect';
 import PasswordField from './PasswordField';
+import COLORS from '../../../styles/colors';
 
 /**
  * Step1Cuenta
@@ -19,12 +20,12 @@ export default function Step2Cuenta({
 
       {/* Aviso admin */}
       <div style={{
-        background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)',
+        background: COLORS.warningBgTranslucent07, border: `1px solid ${COLORS.warningBgTranslucent20}`,
         borderRadius: 14, padding: '14px 18px', marginBottom: 26,
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <span style={{ fontSize: 20 }}>🔐</span>
-        <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+        <p style={{ margin: 0, fontSize: 13, color: COLORS.overlayWhite70, lineHeight: 1.5 }}>
           Como <strong style={{ color: C.amberLight }}>Administrador</strong> defines la contraseña del nuevo presidente.
           La cuenta se activará <strong style={{ color: C.amberLight }}>al instante</strong> sin procesos de validación.
         </p>
@@ -108,7 +109,7 @@ export default function Step2Cuenta({
         <div>
           <label style={fieldStyles.label}>
             CURP <span style={{ color: C.amber }}>*</span>
-            {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '10px' }}>Validando...</span>}
+            {isCheckingCurp && <span style={{ marginLeft: '10px', color: COLORS.success, fontSize: '10px' }}>Validando...</span>}
           </label>
           <input
             style={{ ...fieldStyles.input, textTransform: 'uppercase', borderColor: cuentaErrors.curp ? C.rose : C.inputBorder }}

@@ -4,6 +4,7 @@ import { C, fieldStyles, CATALOGO_ROLES, CATALOGO_LIGAS_DEFAULT } from './consta
 import PasoHeader from './PasoHeader';
 import SeguroRow from './SeguroRow';
 import VoucherUpload from './VoucherUpload';
+import COLORS from '../../../styles/colors';
 
 const normalizarNombreSeguro = (nombre) => {
   if (!nombre) return '';
@@ -283,8 +284,8 @@ export default function Step3Cuotas({
             <input
               style={{
                 ...fieldStyles.input, cursor: 'not-allowed',
-                background: 'rgba(245,158,11,0.05)',
-                borderColor: 'rgba(245,158,11,0.2)',
+                background: COLORS.warningBgTranslucent05,
+                borderColor: COLORS.warningBgTranslucent20,
                 color: C.amberLight,
               }}
               value={asociacion}
@@ -328,7 +329,7 @@ export default function Step3Cuotas({
           {/* Número de jugadores */}
           {!esEntrenador && (
             <div style={{
-              background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.12)',
+              background: COLORS.warningBgTranslucent04, border: `1px solid ${COLORS.warningBgTranslucent12}`,
               borderRadius: 14, padding: '16px 18px', marginBottom: 22,
               display: 'flex', alignItems: 'center', gap: 18,
             }}>
@@ -392,7 +393,7 @@ export default function Step3Cuotas({
           {!esEntrenador && (
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              background: 'rgba(255,255,255,0.02)', padding: '12px 16px',
+              background: COLORS.overlayWhite02, padding: '12px 16px',
               borderRadius: 10, border: `1px solid ${C.cardBorder}`, marginTop: 18,
             }}>
               <span style={{ fontSize: 13, color: C.textMid }}>Seguros asignados: {totalAsignados}/{segurosRequeridos}</span>
@@ -407,7 +408,7 @@ export default function Step3Cuotas({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <VoucherUpload voucher={voucher} onFileChange={setVoucher} />
 
-          <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)', borderRadius: 18, padding: '18px 20px', textAlign: 'right' }}>
+          <div style={{ background: COLORS.warningBgTranslucent07, border: `1px solid ${COLORS.warningBgTranslucent18}`, borderRadius: 18, padding: '18px 20px', textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Monto Estimado</div>
             <div style={{ fontSize: 26, fontWeight: 900, color: C.amber, marginTop: 6 }}>${totalPagar.toLocaleString()}</div>
           </div>
@@ -436,7 +437,7 @@ export default function Step3Cuotas({
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backgroundColor: COLORS.overlaySlateDeep,
             backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'center',
@@ -446,14 +447,14 @@ export default function Step3Cuotas({
             animation: 'fadeIn 0.2s ease-out'
           }}>
             <div style={{
-              backgroundColor: '#1e293b',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: COLORS.slate800,
+              border: `1px solid ${COLORS.overlayWhite10}`,
               borderRadius: '24px',
               width: '100%',
               maxWidth: '850px',
               maxHeight: '90vh',
               overflowY: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              boxShadow: `0 25px 50px -12px ${COLORS.overlayBlack}`,
               display: 'flex',
               flexDirection: 'column',
               color: 'white'
@@ -461,26 +462,26 @@ export default function Step3Cuotas({
               {/* Header */}
               <div style={{
                 padding: '25px 30px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                borderBottom: `1px solid ${COLORS.overlayWhite08}`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: '15px',
-                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
+                background: `linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900})`
               }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {esPresidente ? 'Seguro Presidente' : 'Seguro Jugador'}
                   </h3>
-                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: COLORS.white }}>
                     {info.nombre}
                   </h2>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
-                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
-                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  <div style={{ fontSize: '10px', color: COLORS.overlayWhite50, fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: COLORS.successLight }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.overlayWhite60 }}>M.N.</span>
                   </div>
                 </div>
               </div>
@@ -490,13 +491,13 @@ export default function Step3Cuotas({
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                       Beneficios Incluidos
                     </h4>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {info.beneficios.map((ben, idx) => (
-                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,0.85)' }}>
-                          <span style={{ color: '#34d399', fontWeight: '900', fontSize: '15px' }}>✓</span>
+                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: COLORS.overlayWhite85 }}>
+                          <span style={{ color: COLORS.successLight, fontWeight: '900', fontSize: '15px' }}>✓</span>
                           <span>{ben}</span>
                         </li>
                       ))}
@@ -506,40 +507,40 @@ export default function Step3Cuotas({
                   {/* Right Column - Policy & Scope */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                         Detalles de la Póliza
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
+                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.poliza}</div>
                         </div>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.vigencia}</div>
+                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.vigencia}</div>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                         Alcance y Cobertura
                       </h4>
-                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.7)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '12px', padding: '14px' }}>
+                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: COLORS.overlayWhite70, background: COLORS.dangerBgTranslucent05, border: `1px solid ${COLORS.dangerBgTranslucent}`, borderRadius: '12px', padding: '14px' }}>
                         {info.alcance.includes('traslados dentro del mismo estado') ? (
                           <>
                             {info.alcance.replace('traslados dentro del mismo estado.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados dentro del mismo estado.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados dentro del mismo estado.</strong>
                           </>
                         ) : info.alcance.includes('traslados de estado a estado') ? (
                           <>
                             {info.alcance.replace('traslados de estado a estado.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados de estado a estado.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados de estado a estado.</strong>
                           </>
                         ) : info.alcance.includes('traslados entre estados') ? (
                           <>
                             {info.alcance.replace('traslados entre estados.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados entre estados.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados entre estados.</strong>
                           </>
                         ) : (
                           info.alcance
@@ -552,22 +553,22 @@ export default function Step3Cuotas({
                 {/* Coverages Table (if applicable) */}
                 {info.coberturas && info.coberturas.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                       Montos de Cobertura
                     </h4>
-                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                    <div style={{ borderRadius: '16px', border: `1px solid ${COLORS.overlayWhite08}`, overflowX: 'auto' }}>
                       <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                         <thead>
-                          <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)', textAlign: 'right' }}>Monto Máximo Amparado</th>
+                          <tr style={{ backgroundColor: COLORS.overlayWhite04, borderBottom: `1px solid ${COLORS.overlayWhite08}` }}>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60 }}>Cobertura / Concepto</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60, textAlign: 'right' }}>Monto Máximo Amparado</th>
                           </tr>
                         </thead>
                         <tbody>
                           {info.coberturas.map((cob, idx) => (
-                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', backgroundColor: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
-                              <td style={{ padding: '12px 20px', fontWeight: '700', color: '#ffffff' }}>{cob.cobertura}</td>
-                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? '#ef4444' : '#34d399', textAlign: 'right' }}>{cob.monto}</td>
+                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : `1px solid ${COLORS.overlayWhite05}`, backgroundColor: idx % 2 === 0 ? COLORS.overlayWhite01 : 'transparent' }}>
+                              <td style={{ padding: '12px 20px', fontWeight: '700', color: COLORS.white }}>{cob.cobertura}</td>
+                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? COLORS.danger : COLORS.successLight, textAlign: 'right' }}>{cob.monto}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -580,8 +581,8 @@ export default function Step3Cuotas({
               {/* Action Footer */}
               <div style={{
                 padding: '20px 30px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                borderTop: `1px solid ${COLORS.overlayWhite08}`,
+                backgroundColor: COLORS.overlaySlateLight,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -592,19 +593,19 @@ export default function Step3Cuotas({
               }}>
                 <div>
                   {esPresidente ? (
-                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                    <div style={{ fontSize: '13px', color: COLORS.overlayWhite60 }}>
                       Este seguro se asignará a tu cuenta de Presidente de Equipo.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontWeight: '600' }}>
+                      <span style={{ fontSize: '13px', color: COLORS.overlayWhite60, fontWeight: '600' }}>
                         Selecciona la cantidad:
                       </span>
-                      <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '3px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', background: COLORS.overlayWhite04, border: `1px solid ${COLORS.overlayWhite10}`, borderRadius: '12px', padding: '3px' }}>
                         <button
                           type="button"
                           onClick={() => setCantidadModal(prev => Math.max(0, prev - 1))}
-                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(255,255,255,0.06)', color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: COLORS.overlayWhite06, color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >-</button>
                         <input
                           type="text"
@@ -616,15 +617,15 @@ export default function Step3Cuotas({
                             const val = e.target.value.replace(/\D/g, '');
                             setCantidadModal(val === '' ? 0 : parseInt(val, 10));
                           }}
-                          style={{ width: '60px', border: 'none', background: 'transparent', color: '#ffffff', textAlign: 'center', fontWeight: '900', fontSize: '16px' }}
+                          style={{ width: '60px', border: 'none', background: 'transparent', color: COLORS.white, textAlign: 'center', fontWeight: '900', fontSize: '16px' }}
                         />
                         <button
                           type="button"
                           onClick={() => setCantidadModal(prev => prev + 1)}
-                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: 'rgba(255,255,255,0.06)', color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: COLORS.overlayWhite06, color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >+</button>
                       </div>
-                      <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: '700' }}>
+                      <span style={{ fontSize: '12px', color: COLORS.overlayWhite40, fontWeight: '700' }}>
                         (Faltan {jugadoresRestantes} por asignar)
                       </span>
                     </div>
@@ -636,9 +637,9 @@ export default function Step3Cuotas({
                     type="button"
                     onClick={() => setSeguroDetalle(null)}
                     style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: 'rgba(255,255,255,0.7)',
+                      background: COLORS.overlayWhite05,
+                      border: `1px solid ${COLORS.overlayWhite10}`,
+                      color: COLORS.overlayWhite70,
                       padding: '10px 24px',
                       borderRadius: '12px',
                       fontWeight: '800',
@@ -666,9 +667,9 @@ export default function Step3Cuotas({
                       setSeguroDetalle(null);
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      background: `linear-gradient(135deg, ${COLORS.blue} 0%, ${COLORS.secondaryDark} 100%)`,
                       border: 'none',
-                      color: '#ffffff',
+                      color: COLORS.white,
                       padding: '10px 28px',
                       borderRadius: '12px',
                       fontWeight: '800',
