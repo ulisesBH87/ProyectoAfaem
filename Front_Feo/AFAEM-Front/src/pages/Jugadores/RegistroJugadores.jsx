@@ -629,6 +629,155 @@ export default function RegistroJugadores() {
       background-color: ${COLORS.dangerBgLight} !important;
       box-shadow: 0 0 0 3px ${COLORS.dangerBgTranslucent10} !important;
     }
+
+    /* Paso 5 Seguros */
+    .seguro-wizard-card {
+      background: ${COLORS.slate50};
+      border-radius: 16px;
+      padding: 25px;
+    }
+    .seguro-wizard-label {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .seguro-wizard-sublabel {
+      font-size: 10px;
+      margin-bottom: 12px;
+    }
+    .seguro-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .seguro-card-item {
+      padding: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+    .seguro-card-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+    .seguro-card-title {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .seguro-card-badge {
+      margin-top: 5px;
+      display: inline-flex;
+      align-self: start;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .seguro-modal-container {
+      background-color: ${COLORS.slate800};
+      border: 1px solid ${COLORS.overlayWhite10};
+      border-radius: 24px;
+      width: 100%;
+      max-width: 750px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px ${COLORS.overlayBlack};
+      display: flex;
+      flex-direction: column;
+      color: white;
+    }
+    .seguro-modal-header {
+      padding: 24px 30px;
+      border-bottom: 1px solid ${COLORS.overlayWhite08};
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      background: linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900});
+    }
+    .seguro-modal-content {
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .seguro-modal-footer {
+      padding: 20px 30px;
+      border-top: 1px solid ${COLORS.overlayWhite08};
+      background-color: ${COLORS.overlaySlateLight};
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .seguro-wizard-card {
+        padding: 15px !important;
+        border-radius: 12px !important;
+      }
+      .seguro-wizard-label {
+        font-size: 12px !important;
+        margin-bottom: 6px !important;
+      }
+      .seguro-wizard-sublabel {
+        font-size: 9px !important;
+        margin-bottom: 8px !important;
+      }
+      .seguro-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .seguro-card-item {
+        padding: 12px !important;
+      }
+      .seguro-card-title {
+        font-size: 12.5px !important;
+      }
+      .seguro-card-badge {
+        font-size: 10px !important;
+        padding: 2px 6px !important;
+      }
+      .seguro-modal-container {
+        border-radius: 18px;
+        max-height: 95vh;
+      }
+      .seguro-modal-header {
+        padding: 18px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .seguro-modal-header > div:last-child {
+        text-align: left !important;
+        align-self: flex-start;
+      }
+      .seguro-modal-content {
+        padding: 18px 20px;
+        gap: 18px;
+      }
+      .seguro-modal-content > div:first-child {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+      }
+      .seguro-modal-footer {
+        padding: 15px 20px;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        border-bottom-left-radius: 18px;
+        border-bottom-right-radius: 18px;
+      }
+      .seguro-modal-footer button {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+      }
+    }
   `;
 
   // ESTADOS
@@ -2867,14 +3016,14 @@ export default function RegistroJugadores() {
                     </div>
 
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                      <div className="card" style={{ padding: '25px', borderRadius: '16px', border: `1.5px solid ${validationErrors.seguroId ? COLORS.danger : COLORS.slate200}`, background: COLORS.slate50 }}>
-                        <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
-                          Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
+                      <div className="card seguro-wizard-card" style={{ border: `1.5px solid ${validationErrors.seguroId ? COLORS.danger : COLORS.slate200}` }}>
+                        <label className="form-label seguro-wizard-label" style={{ fontWeight: '700', display: 'block' }}>
+                          Estos son tus seguros comprados. Selecciona el seguro deseado para este jugador: <span className="required-star">*</span>
                         </label>
-                        <label className="form-label" style={{ fontWeight: '700', fontSize: '10px', marginBottom: '12px', display: 'block' }}>
+                        <label className="form-label seguro-wizard-sublabel" style={{ fontWeight: '700', display: 'block' }}>
                           Vuelve a tocar para deseleccionar el seguro
                         </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                        <div className="seguro-cards-grid">
                           {slotsData?.seguros?.map((seg) => {
                             const isSelected = String(currentSeguroId) === String(seg.seguro_id);
 
@@ -2901,9 +3050,8 @@ export default function RegistroJugadores() {
                                   }
                                   setSeguroDetalle(seg);
                                 }}
+                                className="seguro-card-item"
                                 style={{
-                                  padding: '16px',
-                                  borderRadius: '12px',
                                   border: isSelected
                                     ? `2.5px solid ${COLORS.primary}`
                                     : noDisponible
@@ -2916,25 +3064,19 @@ export default function RegistroJugadores() {
                                       : 'white',
                                   cursor: noDisponible ? 'not-allowed' : 'pointer',
                                   opacity: noDisponible ? 0.6 : 1,
-                                  transition: 'all 0.2s',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '6px'
                                 }}
                               >
-                                <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? COLORS.primary : noDisponible ? COLORS.slate400 : COLORS.slate800 }}>
-                                  🛡️ {seg.nombre}
-                                </span>
-                                <div style={{
-                                  marginTop: '5px',
-                                  display: 'inline-flex',
-                                  alignSelf: 'start',
-                                  padding: '2px 8px',
-                                  borderRadius: '20px',
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
+                                  <span className="seguro-card-title" style={{ fontWeight: '800', color: isSelected ? COLORS.primary : noDisponible ? COLORS.slate400 : COLORS.slate800 }}>
+                                    🛡️ {seg.nombre}
+                                  </span>
+                                  {isSelected && (
+                                    <FaCheckCircle style={{ color: COLORS.primary, fontSize: '16px', flexShrink: 0, marginTop: '2px' }} />
+                                  )}
+                                </div>
+                                <div className="seguro-card-badge" style={{
                                   background: noDisponible ? COLORS.dangerBg : COLORS.greenBg,
                                   color: noDisponible ? COLORS.danger : COLORS.greenDarker,
-                                  fontSize: '11px',
-                                  fontWeight: '800'
                                 }}>
                                   {noDisponible ? '🚫 SIN ESPACIOS' : `${disponiblesLocales} disponibles`}
                                 </div>
@@ -4302,33 +4444,12 @@ export default function RegistroJugadores() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 9999,
-            padding: '20px',
+            padding: /Mobi|Android/i.test(navigator.userAgent) ? '10px' : '20px',
             animation: 'fadeIn 0.2s ease-out'
           }}>
-            <div style={{
-              backgroundColor: COLORS.slate800,
-              border: `1px solid ${COLORS.overlayWhite10}`,
-              borderRadius: '24px',
-              width: '100%',
-              maxWidth: '850px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: `0 25px 50px -12px ${COLORS.overlayBlack}`,
-              display: 'flex',
-              flexDirection: 'column',
-              color: 'white'
-            }}>
+            <div className="seguro-modal-container">
               {/* Header */}
-              <div style={{
-                padding: '25px 30px',
-                borderBottom: `1px solid ${COLORS.overlayWhite08}`,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '15px',
-                background: `linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900})`
-              }}>
+              <div className="seguro-modal-header">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Seguro de Jugador
@@ -4346,7 +4467,7 @@ export default function RegistroJugadores() {
               </div>
 
               {/* Content */}
-              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div className="seguro-modal-content">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
@@ -4438,17 +4559,7 @@ export default function RegistroJugadores() {
               </div>
 
               {/* Action Footer */}
-              <div style={{
-                padding: '20px 30px',
-                borderTop: `1px solid ${COLORS.overlayWhite08}`,
-                backgroundColor: COLORS.overlaySlateLight,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '12px',
-                borderBottomLeftRadius: '24px',
-                borderBottomRightRadius: '24px'
-              }}>
+              <div className="seguro-modal-footer">
                 <button
                   type="button"
                   onClick={() => setSeguroDetalle(null)}
