@@ -46,11 +46,23 @@ const fileToBase64 = (file) => new Promise((resolve, reject) => {
 
 const base64ToFile = async (dataurl, filename) => {
   try {
-    const res = await fetch(dataurl);
-    const blob = await res.blob();
-    return new File([blob], filename, { type: blob.type });
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
   } catch (err) {
-    throw err;
+    try {
+      const res = await fetch(dataurl);
+      const blob = await res.blob();
+      return new File([blob], filename, { type: blob.type });
+    } catch (fetchErr) {
+      throw fetchErr;
+    }
   }
 };
 
@@ -1571,7 +1583,14 @@ export default function RegistroJugadores() {
         }
       });
     }
-  }, [currentPlayerIndex]);
+  }, [
+    currentPlayerIndex,
+    currentDocuments.acta,
+    currentDocuments.ine,
+    currentDocuments.ineTutor,
+    currentDocuments.identificacionMenor,
+    currentDocuments.foto
+  ]);
 
   // Efecto para autovalidación de CURP con debounce
   useEffect(() => {
