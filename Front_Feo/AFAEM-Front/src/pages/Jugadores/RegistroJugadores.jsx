@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -45,11 +46,23 @@ const fileToBase64 = (file) => new Promise((resolve, reject) => {
 
 const base64ToFile = async (dataurl, filename) => {
   try {
-    const res = await fetch(dataurl);
-    const blob = await res.blob();
-    return new File([blob], filename, { type: blob.type });
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
   } catch (err) {
-    throw err;
+    try {
+      const res = await fetch(dataurl);
+      const blob = await res.blob();
+      return new File([blob], filename, { type: blob.type });
+    } catch (fetchErr) {
+      throw fetchErr;
+    }
   }
 };
 
@@ -77,7 +90,7 @@ const parsearTelefonoE164 = (telefonoCompleto) => {
 
 const normalizarNombreSeguro = (nombre) => {
   if (!nombre) return '';
-  return nombre.toUpperCase().replace(/["']/g, '').trim();
+  return nombre.toUpperCase().replace(/[\u0022\u0027]/g, '').trim();
 };
 
 const DETALLES_SEGUROS = {
@@ -253,8 +266,8 @@ const StepBadge = ({ number, isActive, isDone }) => (
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    backgroundColor: isDone ? '#10b981' : (isActive ? '#0b4ea6' : '#e2e8f0'),
-    color: (isActive || isDone) ? 'white' : '#64748b',
+    backgroundColor: isDone ? COLORS.success : (isActive ? COLORS.primary : COLORS.slate200),
+    color: (isActive || isDone) ? 'white' : COLORS.slate500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -290,7 +303,7 @@ export default function RegistroJugadores() {
     }
     .document-card:hover {
       transform: translateY(-5px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 15px -3px ${COLORS.shadow10};
     }
     label, .form-label {
       text-transform: uppercase !important;
@@ -302,18 +315,18 @@ export default function RegistroJugadores() {
       position: fixed;
       top: 24px;
       right: 24px;
-      background: rgba(255, 255, 255, 0.75);
+      background: ${COLORS.overlayWhite75};
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.4);
+      border: 1px solid ${COLORS.overlayWhite40};
       padding: 12px 20px;
       border-radius: 12px;
-      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+      box-shadow: 0 8px 32px 0 ${COLORS.glassShadowBorder};
       z-index: 9999;
       font-family: inherit;
       font-size: 14px;
       font-weight: 700;
-      color: #1e293b;
+      color: ${COLORS.slate800};
       display: flex;
       align-items: center;
       gap: 8px;
@@ -395,8 +408,8 @@ export default function RegistroJugadores() {
       padding: 16px 35px;
       background: white;
       border-radius: 24px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border: 1px solid ${COLORS.slate200};
+      box-shadow: 0 4px 6px -1px ${COLORS.shadow05}, 0 2px 4px -1px ${COLORS.shadow05};
       transition: all 0.3s ease;
       box-sizing: border-box;
     }
@@ -487,14 +500,14 @@ export default function RegistroJugadores() {
         text-align: center;
         font-weight: 800;
         font-size: 12px;
-        color: #0b4ea6;
+        color: ${COLORS.primary};
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 25px;
-        background: #eff6ff;
+        background: ${COLORS.secondaryBg};
         padding: 10px;
         border-radius: 10px;
-        border: 1px dashed rgba(11, 78, 166, 0.25);
+        border: 1px dashed ${COLORS.primaryBgTranslucent25};
       }
     }
 
@@ -526,10 +539,10 @@ export default function RegistroJugadores() {
       align-items: start;
       margin-bottom: 35px;
       position: relative;
-      background: #f8fafc;
+      background: ${COLORS.slate50};
       padding: 24px;
       border-radius: 20px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid ${COLORS.slate200};
       gap: 16px 10px;
       overflow-x: hidden;
     }
@@ -539,12 +552,12 @@ export default function RegistroJugadores() {
       left: 8.33%;
       right: 8.33%;
       height: 4px;
-      background: #e2e8f0;
+      background: ${COLORS.slate200};
       z-index: 1;
     }
     .stepper-line-progress {
       height: 100%;
-      background: linear-gradient(90deg, #0b4ea6, #10b981);
+      background: linear-gradient(90deg, ${COLORS.primary}, ${COLORS.success});
       transition: width 0.4s ease;
     }
     .stepper-item {
@@ -561,32 +574,32 @@ export default function RegistroJugadores() {
       height: 40px;
       border-radius: 50%;
       background: white;
-      border: 3px solid #cbd5e1;
+      border: 3px solid ${COLORS.slate300};
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      color: #64748b;
+      color: ${COLORS.slate500};
       transition: all 0.3s ease;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 6px -1px ${COLORS.shadow05};
     }
     .stepper-item.active .stepper-bubble {
-      border-color: #0b4ea6;
-      color: #0b4ea6;
-      background: #eff6ff;
+      border-color: ${COLORS.primary};
+      color: ${COLORS.primary};
+      background: ${COLORS.secondaryBg};
       transform: scale(1.1);
-      box-shadow: 0 0 12px rgba(11, 78, 166, 0.3);
+      box-shadow: 0 0 12px ${COLORS.primaryBgTranslucent25};
     }
     .stepper-item.completed .stepper-bubble {
-      border-color: #10b981;
+      border-color: ${COLORS.success};
       color: white;
-      background: #10b981;
+      background: ${COLORS.success};
     }
     .stepper-label {
       font-size: 11px;
       font-weight: 800;
       margin-top: 8px;
-      color: #64748b;
+      color: ${COLORS.slate500};
       text-transform: uppercase;
       letter-spacing: 0.5px;
       transition: color 0.3s;
@@ -594,10 +607,10 @@ export default function RegistroJugadores() {
       display: block;
     }
     .stepper-item.active .stepper-label {
-      color: #0b4ea6;
+      color: ${COLORS.primary};
     }
     .stepper-item.completed .stepper-label {
-      color: #10b981;
+      color: ${COLORS.success};
     }
     
     .wizard-step-container {
@@ -605,16 +618,165 @@ export default function RegistroJugadores() {
     }
     
     .field-error-msg {
-      color: #ef4444;
+      color: ${COLORS.danger};
       font-size: 11px;
       font-weight: 700;
       margin-top: 4px;
       text-transform: uppercase;
     }
     .input-error {
-      border-color: #ef4444 !important;
-      background-color: #fef2f2 !important;
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+      border-color: ${COLORS.danger} !important;
+      background-color: ${COLORS.dangerBgLight} !important;
+      box-shadow: 0 0 0 3px ${COLORS.dangerBgTranslucent10} !important;
+    }
+
+    /* Paso 5 Seguros */
+    .seguro-wizard-card {
+      background: ${COLORS.slate50};
+      border-radius: 16px;
+      padding: 25px;
+    }
+    .seguro-wizard-label {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .seguro-wizard-sublabel {
+      font-size: 10px;
+      margin-bottom: 12px;
+    }
+    .seguro-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .seguro-card-item {
+      padding: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+    .seguro-card-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+    .seguro-card-title {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .seguro-card-badge {
+      margin-top: 5px;
+      display: inline-flex;
+      align-self: start;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .seguro-modal-container {
+      background-color: ${COLORS.slate800};
+      border: 1px solid ${COLORS.overlayWhite10};
+      border-radius: 24px;
+      width: 100%;
+      max-width: 750px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px ${COLORS.overlayBlack};
+      display: flex;
+      flex-direction: column;
+      color: white;
+    }
+    .seguro-modal-header {
+      padding: 24px 30px;
+      border-bottom: 1px solid ${COLORS.overlayWhite08};
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      background: linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900});
+    }
+    .seguro-modal-content {
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .seguro-modal-footer {
+      padding: 20px 30px;
+      border-top: 1px solid ${COLORS.overlayWhite08};
+      background-color: ${COLORS.overlaySlateLight};
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .seguro-wizard-card {
+        padding: 15px !important;
+        border-radius: 12px !important;
+      }
+      .seguro-wizard-label {
+        font-size: 12px !important;
+        margin-bottom: 6px !important;
+      }
+      .seguro-wizard-sublabel {
+        font-size: 9px !important;
+        margin-bottom: 8px !important;
+      }
+      .seguro-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .seguro-card-item {
+        padding: 12px !important;
+      }
+      .seguro-card-title {
+        font-size: 12.5px !important;
+      }
+      .seguro-card-badge {
+        font-size: 10px !important;
+        padding: 2px 6px !important;
+      }
+      .seguro-modal-container {
+        border-radius: 18px;
+        max-height: 95vh;
+      }
+      .seguro-modal-header {
+        padding: 18px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .seguro-modal-header > div:last-child {
+        text-align: left !important;
+        align-self: flex-start;
+      }
+      .seguro-modal-content {
+        padding: 18px 20px;
+        gap: 18px;
+      }
+      .seguro-modal-content > div:first-child {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+      }
+      .seguro-modal-footer {
+        padding: 15px 20px;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        border-bottom-left-radius: 18px;
+        border-bottom-right-radius: 18px;
+      }
+      .seguro-modal-footer button {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+      }
     }
   `;
 
@@ -818,7 +980,7 @@ export default function RegistroJugadores() {
         title: 'Campos requeridos',
         text: firstError,
         icon: 'warning',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
       return false;
     }
@@ -1297,7 +1459,7 @@ export default function RegistroJugadores() {
             title: 'Número de camiseta duplicado',
             text: `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`,
             icon: 'warning',
-            confirmButtonColor: '#0b4ea6'
+            confirmButtonColor: COLORS.primary
           });
           datos.numCamiseta = '';
           setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
@@ -1312,7 +1474,7 @@ export default function RegistroJugadores() {
             title: 'Posición duplicada',
             text: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`,
             icon: 'warning',
-            confirmButtonColor: '#0b4ea6'
+            confirmButtonColor: COLORS.primary
           });
           datos.posicion = '';
           setValidationErrors(prev => ({ ...prev, posicion: null }));
@@ -1570,7 +1732,14 @@ export default function RegistroJugadores() {
         }
       });
     }
-  }, [currentPlayerIndex]);
+  }, [
+    currentPlayerIndex,
+    currentDocuments.acta,
+    currentDocuments.ine,
+    currentDocuments.ineTutor,
+    currentDocuments.identificacionMenor,
+    currentDocuments.foto
+  ]);
 
   // Efecto para autovalidación de CURP con debounce
   useEffect(() => {
@@ -1603,10 +1772,10 @@ export default function RegistroJugadores() {
   }, [currentDatos?.fechaNacimiento, currentPlayerIndex]);
 
   const playerStatusConfig = {
-    VACIO: { label: 'VACÍO', bg: '#f8fafc', color: '#475569' },
-    EN_CAPTURA: { label: 'EN CAPTURA', bg: '#fffbeb', color: '#92400e' },
-    LISTO: { label: 'LISTO PARA REGISTRAR', bg: '#eff6ff', color: '#1e40af' },
-    INSCRITO: { label: 'INSCRITO', bg: '#dcfce7', color: '#166534' }
+    VACIO: { label: 'VACÍO', bg: COLORS.slate50, color: COLORS.slate600 },
+    EN_CAPTURA: { label: 'EN CAPTURA', bg: COLORS.warningBgLight, color: COLORS.orangeDeep },
+    LISTO: { label: 'LISTO PARA REGISTRAR', bg: COLORS.secondaryBg, color: COLORS.secondaryHover },
+    INSCRITO: { label: 'INSCRITO', bg: COLORS.greenBg, color: COLORS.greenDeep }
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
@@ -1622,7 +1791,7 @@ export default function RegistroJugadores() {
         title: 'Tipo de archivo no permitido',
         text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
         icon: 'error',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
       return;
     }
@@ -1675,13 +1844,13 @@ export default function RegistroJugadores() {
 
           Swal.fire({
             title: 'Error en la fotografía',
-            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
+            text: `${data.mensaje || 'La foto no cumple con los requisitos.'}. Podría ser rechazada más adelante ¿Deseas cargarla de todos modos?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, cargar igualmente',
             cancelButtonText: 'No, intentar de nuevo',
-            confirmButtonColor: '#0b4ea6',
-            cancelButtonColor: '#cbd5e1'
+            confirmButtonColor: COLORS.primary,
+            cancelButtonColor: COLORS.slate300
           }).then((result) => {
             if (result.isConfirmed) {
               const reader = new FileReader();
@@ -1852,7 +2021,7 @@ export default function RegistroJugadores() {
         title: 'Error de validación',
         text: dateError,
         icon: 'error',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
       return false;
     }
@@ -2093,8 +2262,8 @@ export default function RegistroJugadores() {
       text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer.',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#10b981',
-      cancelButtonColor: '#64748b',
+      confirmButtonColor: COLORS.success,
+      cancelButtonColor: COLORS.slate500,
       confirmButtonText: 'Sí, registrar todos',
       cancelButtonText: 'Cancelar'
     }).then((result) => {
@@ -2120,7 +2289,7 @@ export default function RegistroJugadores() {
         icon: 'success',
         title: 'Registro Completado',
         text: 'Todos los jugadores han sido registrados con éxito. Espera indicaciones de la administración de AFAEM.',
-        confirmButtonColor: '#10b981'
+        confirmButtonColor: COLORS.success
       }).then(() => {
         fetchTeamInfo();
       });
@@ -2145,7 +2314,7 @@ export default function RegistroJugadores() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#ffffff',
+          background: COLORS.white,
           padding: '20px',
         }}
       >
@@ -2157,8 +2326,8 @@ export default function RegistroJugadores() {
             textAlign: 'center',
             maxWidth: '520px',
             width: '100%',
-            backgroundColor: '#ffffff',
-            border: '1px solid #f1f5f9'
+            backgroundColor: COLORS.white,
+            border: `1px solid ${COLORS.slate100}`
           }}
         >
           {/* Logo */}
@@ -2166,13 +2335,13 @@ export default function RegistroJugadores() {
             width: '96px',
             height: '96px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            background: `linear-gradient(135deg, ${COLORS.slate900} 0%, ${COLORS.slate800} 100%)`,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 24px',
-            boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15), 0 4px 6px -2px rgba(15, 23, 42, 0.1)',
-            border: '2px solid rgba(255, 255, 255, 0.05)'
+            boxShadow: `0 10px 15px -3px ${COLORS.overlaySlateSuperLight}, 0 4px 6px -2px ${COLORS.overlaySlateSuperLight}`,
+            border: `2px solid ${COLORS.overlayWhite05}`
           }}>
             <img
               src={AfaemLogo}
@@ -2210,15 +2379,15 @@ export default function RegistroJugadores() {
             style={{
               display: 'inline-block',
               padding: '6px 18px',
-              background: 'rgba(239, 68, 68, 0.08)',
-              color: '#ef4444',
+              background: COLORS.dangerBgTranslucent10,
+              color: COLORS.danger,
               borderRadius: '20px',
               fontSize: '12px',
               fontWeight: '800',
               letterSpacing: '1px',
               textTransform: 'uppercase',
               marginBottom: '20px',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
+              border: `1px solid ${COLORS.dangerBgTranslucent}`,
             }}
           >
             Error de Acceso
@@ -2228,7 +2397,7 @@ export default function RegistroJugadores() {
             style={{
               fontSize: '28px',
               fontWeight: '800',
-              color: '#1e293b',
+              color: COLORS.slate800,
               margin: '0 0 12px',
               letterSpacing: '-0.5px',
             }}
@@ -2238,7 +2407,7 @@ export default function RegistroJugadores() {
 
           <p
             style={{
-              color: '#64748b',
+              color: COLORS.slate500,
               fontSize: '15px',
               lineHeight: '1.7',
               marginBottom: '36px',
@@ -2261,8 +2430,8 @@ export default function RegistroJugadores() {
               cursor: 'pointer',
               borderRadius: '14px',
               border: 'none',
-              backgroundColor: '#0b4ea6',
-              color: '#ffffff',
+              backgroundColor: COLORS.primary,
+              color: COLORS.white,
               fontWeight: 'bold',
               width: '100%'
             }}
@@ -2285,11 +2454,11 @@ export default function RegistroJugadores() {
   if (noPendingTeams) {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', padding: '24px' }}>
-        <div style={{ background: '#fff', padding: '40px 32px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08)', border: '1px solid #e2e8f0', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1e293b', marginBottom: '16px' }}>
+        <div style={{ background: COLORS.white, padding: '40px 32px', borderRadius: '24px', boxShadow: `0 20px 40px ${COLORS.overlaySlateSuperLight}`, border: `1px solid ${COLORS.slate200}`, maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: '800', color: COLORS.slate800, marginBottom: '16px' }}>
             No hay equipos pendientes
           </h1>
-          <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.7', margin: 0 }}>
+          <p style={{ color: COLORS.slate500, fontSize: '15px', lineHeight: '1.7', margin: 0 }}>
             Esta invitación es válida, pero por ahora no existen equipos con espacios disponibles para registrar jugadores.
           </p>
         </div>
@@ -2312,13 +2481,13 @@ export default function RegistroJugadores() {
             width: '96px',
             height: '96px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            background: `linear-gradient(135deg, ${COLORS.slate900} 0%, ${COLORS.slate800} 100%)`,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 20px',
-            boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15), 0 4px 6px -2px rgba(15, 23, 42, 0.1)',
-            border: '2px solid rgba(255, 255, 255, 0.05)'
+            boxShadow: `0 10px 15px -3px ${COLORS.overlaySlateSuperLight}, 0 4px 6px -2px ${COLORS.overlaySlateSuperLight}`,
+            border: `2px solid ${COLORS.overlayWhite05}`
           }}>
             <img
               src={AfaemLogo}
@@ -2330,10 +2499,10 @@ export default function RegistroJugadores() {
               }}
             />
           </div>
-          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1e293b', margin: 0, letterSpacing: '-0.5px' }}>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', color: COLORS.slate800, margin: 0, letterSpacing: '-0.5px' }}>
             Selección de Equipo
           </h2>
-          <p style={{ margin: '10px 0 0 0', fontSize: '15px', color: '#64748b', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: '1.6' }}>
+          <p style={{ margin: '10px 0 0 0', fontSize: '15px', color: COLORS.slate500, maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: '1.6' }}>
             Bienvenido {invitationTeams[0]?.nombre_presidente ? <strong>{invitationTeams[0].nombre_presidente} </strong> : ''}al portal de registro de jugadores de la AFAEM. A continuación, selecciona el equipo del cual deseas capturar los registros. Puedes regresar a esta pantalla en cualquier momento.
           </p>
           {invitationTeams[0]?.nombre_presidente && (
@@ -2342,17 +2511,17 @@ export default function RegistroJugadores() {
               alignItems: 'center',
               gap: '8px',
               padding: '10px 22px',
-              background: '#f8fafc',
+              background: COLORS.slate50,
               borderRadius: '24px',
-              border: '1px solid #e2e8f0',
+              border: `1px solid ${COLORS.slate200}`,
               marginTop: '20px',
               fontSize: '14px',
               fontWeight: '700',
-              color: '#334155',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+              color: COLORS.slate700,
+              boxShadow: `0 2px 4px ${COLORS.shadow03}`
             }}>
               <span>👤 PRESIDENTE:</span>
-              <span style={{ color: '#0b4ea6', textTransform: 'uppercase' }}>{invitationTeams[0].nombre_presidente}</span>
+              <span style={{ color: COLORS.primary, textTransform: 'uppercase' }}>{invitationTeams[0].nombre_presidente}</span>
             </div>
           )}
         </div>
@@ -2383,11 +2552,11 @@ export default function RegistroJugadores() {
                 style={{
                   background: 'white',
                   borderRadius: '24px',
-                  border: estaCompletado ? '2px solid #10b981' : '1px solid #e2e8f0',
+                  border: estaCompletado ? `2px solid ${COLORS.success}` : `1px solid ${COLORS.slate200}`,
                   padding: '32px 28px',
                   cursor: 'pointer',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)',
+                  boxShadow: `0 4px 6px -1px ${COLORS.shadow03}, 0 2px 4px -1px ${COLORS.shadow03}`,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -2396,13 +2565,13 @@ export default function RegistroJugadores() {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-6px)';
-                  e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0,0,0,0.06), 0 10px 10px -5px rgba(0,0,0,0.04)';
-                  e.currentTarget.style.borderColor = estaCompletado ? '#10b981' : '#0b4ea6';
+                  e.currentTarget.style.boxShadow = `0 20px 25px -5px ${COLORS.shadow05}, 0 10px 10px -5px ${COLORS.shadow03}`;
+                  e.currentTarget.style.borderColor = estaCompletado ? COLORS.success : COLORS.primary;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01)';
-                  e.currentTarget.style.borderColor = estaCompletado ? '#10b981' : '#e2e8f0';
+                  e.currentTarget.style.boxShadow = `0 4px 6px -1px ${COLORS.shadow03}, 0 2px 4px -1px ${COLORS.shadow03}`;
+                  e.currentTarget.style.borderColor = estaCompletado ? COLORS.success : COLORS.slate200;
                 }}
               >
                 {estaCompletado && (
@@ -2410,7 +2579,7 @@ export default function RegistroJugadores() {
                     position: 'absolute',
                     top: '0',
                     right: '0',
-                    background: '#10b981',
+                    background: COLORS.success,
                     color: 'white',
                     padding: '6px 16px',
                     fontSize: '11px',
@@ -2427,7 +2596,7 @@ export default function RegistroJugadores() {
                   <span style={{
                     fontSize: '11px',
                     fontWeight: '900',
-                    color: estaCompletado ? '#10b981' : '#0b4ea6',
+                    color: estaCompletado ? COLORS.success : COLORS.primary,
                     letterSpacing: '1px',
                     textTransform: 'uppercase'
                   }}>
@@ -2437,7 +2606,7 @@ export default function RegistroJugadores() {
                   <h3 style={{
                     fontSize: '22px',
                     fontWeight: '900',
-                    color: '#1e293b',
+                    color: COLORS.slate800,
                     margin: '10px 0 4px 0',
                     lineHeight: '1.2'
                   }}>
@@ -2446,7 +2615,7 @@ export default function RegistroJugadores() {
 
                   <p style={{
                     fontSize: '13px',
-                    color: '#64748b',
+                    color: COLORS.slate500,
                     margin: '0 0 24px 0',
                     fontWeight: '600'
                   }}>
@@ -2462,8 +2631,8 @@ export default function RegistroJugadores() {
                     alignItems: 'baseline',
                     marginBottom: '8px'
                   }}>
-                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>Progreso de Registro</span>
-                    <span style={{ fontSize: '16px', fontWeight: '900', color: estaCompletado ? '#10b981' : '#1e293b' }}>
+                    <span style={{ fontSize: '13px', color: COLORS.slate500, fontWeight: '700' }}>Progreso de Registro</span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: estaCompletado ? COLORS.success : COLORS.slate800 }}>
                       {registrados} / {total} cupos
                     </span>
                   </div>
@@ -2472,7 +2641,7 @@ export default function RegistroJugadores() {
                   <div style={{
                     width: '100%',
                     height: '8px',
-                    backgroundColor: '#f1f5f9',
+                    backgroundColor: COLORS.slate100,
                     borderRadius: '9999px',
                     overflow: 'hidden',
                     marginBottom: '24px'
@@ -2480,7 +2649,7 @@ export default function RegistroJugadores() {
                     <div style={{
                       width: `${porcentaje}%`,
                       height: '100%',
-                      background: estaCompletado ? '#10b981' : 'linear-gradient(90deg, #0b4ea6, #3b82f6)',
+                      background: estaCompletado ? COLORS.success : `linear-gradient(90deg, ${COLORS.primary}, ${COLORS.brandBlueLight})`,
                       borderRadius: '9999px',
                       transition: 'width 0.4s ease'
                     }} />
@@ -2494,8 +2663,8 @@ export default function RegistroJugadores() {
                       padding: '12px',
                       borderRadius: '12px',
                       border: 'none',
-                      background: estaCompletado ? '#f0fdf4' : '#eff6ff',
-                      color: estaCompletado ? '#166534' : '#0b4ea6',
+                      background: estaCompletado ? COLORS.greenBg50 : COLORS.secondaryBg,
+                      color: estaCompletado ? COLORS.greenDeep : COLORS.primary,
                       fontWeight: '800',
                       fontSize: '13px',
                       cursor: 'pointer',
@@ -2504,10 +2673,10 @@ export default function RegistroJugadores() {
                       letterSpacing: '0.3px'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = estaCompletado ? '#dcfce7' : '#dbeafe';
+                      e.currentTarget.style.background = estaCompletado ? COLORS.greenBg : COLORS.secondaryBg100;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = estaCompletado ? '#f0fdf4' : '#eff6ff';
+                      e.currentTarget.style.background = estaCompletado ? COLORS.greenBg50 : COLORS.secondaryBg;
                     }}
                   >
                     {estaCompletado ? 'Ver Registro' : (registrados > 0 ? 'Continuar Captura' : 'Comenzar Registro')}
@@ -2539,8 +2708,8 @@ export default function RegistroJugadores() {
                     : 'Se perderán los documentos subidos y el progreso actual (excepto los campos autoguardados en borrador).',
                   icon: 'warning',
                   showCancelButton: true,
-                  confirmButtonColor: '#ef4444',
-                  cancelButtonColor: '#64748b',
+                  confirmButtonColor: COLORS.danger,
+                  cancelButtonColor: COLORS.slate500,
                   confirmButtonText: isPublicFlow && invitationTeams.length > 1 ? 'Sí, regresar' : 'Sí, salir',
                   cancelButtonText: 'Continuar registro'
                 }).then((result) => {
@@ -2561,14 +2730,14 @@ export default function RegistroJugadores() {
               }
             }}
             className="btn btn-outline-secondary"
-            style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+            style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: `1px solid ${COLORS.slate300}`, cursor: 'pointer' }}
           >
             <FaArrowLeft />
           </button>
         )}
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Registro de Jugadores</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registra y guarda los borradores de tus jugadores libremente.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Registro de Jugadores</h2>
+          <p style={{ margin: 0, fontSize: '13px', color: COLORS.slate500, marginTop: '4px' }}>Registra y guarda los borradores de tus jugadores libremente.</p>
         </div>
       </div>
 
@@ -2594,24 +2763,24 @@ export default function RegistroJugadores() {
                 width: '38px',
                 height: '38px',
                 borderRadius: '50%',
-                border: '1px solid #cbd5e1',
-                backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
-                color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
+                border: `1px solid ${COLORS.slate300}`,
+                backgroundColor: currentPlayerIndex === 0 ? COLORS.slate100 : 'white',
+                color: currentPlayerIndex === 0 ? COLORS.slate400 : COLORS.primary,
                 cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
                 opacity: currentPlayerIndex === 0 ? 0.4 : 1,
                 transition: 'all 0.2s',
-                boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                boxShadow: currentPlayerIndex === 0 ? 'none' : `0 2px 4px ${COLORS.shadow05}`
               }}
               onMouseEnter={(e) => {
                 if (currentPlayerIndex !== 0) {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                  e.currentTarget.style.borderColor = '#94a3b8';
+                  e.currentTarget.style.backgroundColor = COLORS.slate100;
+                  e.currentTarget.style.borderColor = COLORS.slate400;
                 }
               }}
               onMouseLeave={(e) => {
                 if (currentPlayerIndex !== 0) {
                   e.currentTarget.style.backgroundColor = 'white';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
+                  e.currentTarget.style.borderColor = COLORS.slate300;
                 }
               }}
             >
@@ -2628,7 +2797,7 @@ export default function RegistroJugadores() {
               <span style={{
                 fontSize: '28px',
                 fontWeight: '900',
-                color: '#1e293b',
+                color: COLORS.slate800,
                 userSelect: 'none',
                 lineHeight: '1.2'
               }}>
@@ -2648,14 +2817,14 @@ export default function RegistroJugadores() {
                 textTransform: 'uppercase',
                 border: `1px solid ${config.color}30`,
                 marginTop: '8px',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                boxShadow: `0 1px 2px ${COLORS.shadow03}`
               }}>
                 <span>{config.label}</span>
               </div>
               <div style={{
                 marginTop: '8px',
                 fontSize: '12px',
-                color: '#64748b',
+                color: COLORS.slate500,
                 fontWeight: '600'
               }}>
                 Seguro seleccionado: {slotsData?.seguros?.find(s => String(s.seguro_id) === String(jugadores[currentPlayerIndex]?.seguroId))?.nombre || 'No asignado'}
@@ -2677,24 +2846,24 @@ export default function RegistroJugadores() {
                 width: '38px',
                 height: '38px',
                 borderRadius: '50%',
-                border: '1px solid #cbd5e1',
-                backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
-                color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
+                border: `1px solid ${COLORS.slate300}`,
+                backgroundColor: currentPlayerIndex === jugadores.length - 1 ? COLORS.slate100 : 'white',
+                color: currentPlayerIndex === jugadores.length - 1 ? COLORS.slate400 : COLORS.primary,
                 cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
                 opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
                 transition: 'all 0.2s',
-                boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : `0 2px 4px ${COLORS.shadow05}`
               }}
               onMouseEnter={(e) => {
                 if (currentPlayerIndex !== jugadores.length - 1) {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                  e.currentTarget.style.borderColor = '#94a3b8';
+                  e.currentTarget.style.backgroundColor = COLORS.slate100;
+                  e.currentTarget.style.borderColor = COLORS.slate400;
                 }
               }}
               onMouseLeave={(e) => {
                 if (currentPlayerIndex !== jugadores.length - 1) {
                   e.currentTarget.style.backgroundColor = 'white';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
+                  e.currentTarget.style.borderColor = COLORS.slate300;
                 }
               }}
             >
@@ -2708,11 +2877,11 @@ export default function RegistroJugadores() {
       <div className="premium-card fade-in" style={{
         maxWidth: '1000px',
         margin: '0 auto 30px auto',
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: `linear-gradient(135deg, ${COLORS.slate800} 0%, ${COLORS.slate900} 100%)`,
         color: 'white',
         borderRadius: '20px',
         padding: '25px 35px',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+        boxShadow: `0 10px 15px -3px ${COLORS.shadow28}`,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -2720,9 +2889,9 @@ export default function RegistroJugadores() {
         gap: '20px'
       }}>
         <div>
-          <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo</span>
+          <span style={{ fontSize: '11px', fontWeight: '900', color: COLORS.infoBootstrap, letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo</span>
           <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>🛡️ {(currentDatos.equipo || 'Cargando...').toUpperCase()}</h1>
-          <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: '#94a3b8', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: COLORS.slate400, flexWrap: 'wrap' }}>
             <span><strong>Liga:</strong> {(currentDatos.liga || 'N/A').toUpperCase()}</span>
             <span>•</span>
             <span><strong>Categoría:</strong> {(currentDatos.categoria || 'LIBRE').toUpperCase()}</span>
@@ -2731,9 +2900,9 @@ export default function RegistroJugadores() {
           </div>
         </div>
 
-        <div className="espacios-disponibles-card" style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Espacios Disponibles</span>
-          <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
+        <div className="espacios-disponibles-card" style={{ background: COLORS.overlayWhite05, padding: '12px 20px', borderRadius: '14px', border: `1px solid ${COLORS.overlayWhite10}`, textAlign: 'right' }}>
+          <span style={{ fontSize: '11px', color: COLORS.slate400, display: 'block', fontWeight: '600' }}>Espacios Disponibles</span>
+          <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? COLORS.danger : COLORS.success }}>
             {slotsInfo.disponibles} / {slotsInfo.total} Cupos
           </span>
         </div>
@@ -2749,11 +2918,11 @@ export default function RegistroJugadores() {
           padding: '40px',
           textAlign: 'center',
           boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-          border: '1px solid #fee2e2'
+          border: `1px solid ${COLORS.dangerBg}`
         }}>
           <div style={{ fontSize: '60px', marginBottom: '20px' }}>🎉</div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#10b981', marginBottom: '10px' }}>Inscripción Completada</h2>
-          <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.success, marginBottom: '10px' }}>Inscripción Completada</h2>
+          <p style={{ color: COLORS.slate500, maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
             Todos los espacios contratados se han registrado de manera correcta.
           </p>
           {!isPublicFlow && (
@@ -2771,22 +2940,22 @@ export default function RegistroJugadores() {
             background: 'white',
             borderRadius: '24px',
             boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-            border: '1px solid #e2e8f0'
+            border: `1px solid ${COLORS.slate200}`
           }}>
 
             {currentPlayer.completo ? (
               <div style={{
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
+                background: COLORS.successBg,
+                border: `1px solid ${COLORS.successBgDark}`,
                 borderRadius: '16px',
                 padding: '24px',
                 textAlign: 'center',
-                color: '#065f46',
+                color: COLORS.successDeep,
                 marginBottom: '30px'
               }}>
                 <FaCheckCircle style={{ fontSize: '42px', marginBottom: '10px' }} />
                 <h3 style={{ fontWeight: '800', fontSize: '18px', margin: 0 }}>Este espacio ya está completamente registrado</h3>
-                <p style={{ fontSize: '13px', margin: '6px 0 0 0', color: '#047857' }}>
+                <p style={{ fontSize: '13px', margin: '6px 0 0 0', color: COLORS.successDarker }}>
                   Los datos de este jugador ya fueron enviados y guardados en el sistema oficial. Selecciona otro espacio de arriba para registrar otro jugador.
                 </p>
               </div>
@@ -2843,18 +3012,18 @@ export default function RegistroJugadores() {
                   <section className="wizard-step-container">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
                       <StepBadge number="5" isActive={true} isDone={esPasoCompleto(5)} />
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar</h3>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Seguro pagado por asignar</h3>
                     </div>
 
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                      <div className="card" style={{ padding: '25px', borderRadius: '16px', border: `1.5px solid ${validationErrors.seguroId ? '#ef4444' : '#e2e8f0'}`, background: '#f8fafc' }}>
-                        <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
-                          Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
+                      <div className="card seguro-wizard-card" style={{ border: `1.5px solid ${validationErrors.seguroId ? COLORS.danger : COLORS.slate200}` }}>
+                        <label className="form-label seguro-wizard-label" style={{ fontWeight: '700', display: 'block' }}>
+                          Estos son tus seguros comprados. Selecciona el seguro deseado para este jugador: <span className="required-star">*</span>
                         </label>
-                        <label className="form-label" style={{ fontWeight: '700', fontSize: '10px', marginBottom: '12px', display: 'block' }}>
+                        <label className="form-label seguro-wizard-sublabel" style={{ fontWeight: '700', display: 'block' }}>
                           Vuelve a tocar para deseleccionar el seguro
                         </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                        <div className="seguro-cards-grid">
                           {slotsData?.seguros?.map((seg) => {
                             const isSelected = String(currentSeguroId) === String(seg.seguro_id);
 
@@ -2881,40 +3050,33 @@ export default function RegistroJugadores() {
                                   }
                                   setSeguroDetalle(seg);
                                 }}
+                                className="seguro-card-item"
                                 style={{
-                                  padding: '16px',
-                                  borderRadius: '12px',
                                   border: isSelected
-                                    ? '2.5px solid #0b4ea6'
+                                    ? `2.5px solid ${COLORS.primary}`
                                     : noDisponible
-                                      ? '1.5px dashed #cbd5e1'
-                                      : '1px solid #cbd5e1',
+                                      ? `1.5px dashed ${COLORS.slate300}`
+                                      : `1px solid ${COLORS.slate300}`,
                                   backgroundColor: isSelected
-                                    ? '#eff6ff'
+                                    ? COLORS.secondaryBg
                                     : noDisponible
-                                      ? '#f1f5f9'
+                                      ? COLORS.slate100
                                       : 'white',
                                   cursor: noDisponible ? 'not-allowed' : 'pointer',
                                   opacity: noDisponible ? 0.6 : 1,
-                                  transition: 'all 0.2s',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '6px'
                                 }}
                               >
-                                <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : noDisponible ? '#94a3b8' : '#1e293b' }}>
-                                  🛡️ {seg.nombre}
-                                </span>
-                                <div style={{
-                                  marginTop: '5px',
-                                  display: 'inline-flex',
-                                  alignSelf: 'start',
-                                  padding: '2px 8px',
-                                  borderRadius: '20px',
-                                  background: noDisponible ? '#fee2e2' : '#dcfce7',
-                                  color: noDisponible ? '#ef4444' : '#15803d',
-                                  fontSize: '11px',
-                                  fontWeight: '800'
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
+                                  <span className="seguro-card-title" style={{ fontWeight: '800', color: isSelected ? COLORS.primary : noDisponible ? COLORS.slate400 : COLORS.slate800 }}>
+                                    🛡️ {seg.nombre}
+                                  </span>
+                                  {isSelected && (
+                                    <FaCheckCircle style={{ color: COLORS.primary, fontSize: '16px', flexShrink: 0, marginTop: '2px' }} />
+                                  )}
+                                </div>
+                                <div className="seguro-card-badge" style={{
+                                  background: noDisponible ? COLORS.dangerBg : COLORS.greenBg,
+                                  color: noDisponible ? COLORS.danger : COLORS.greenDarker,
                                 }}>
                                   {noDisponible ? '🚫 SIN ESPACIOS' : `${disponiblesLocales} disponibles`}
                                 </div>
@@ -2923,7 +3085,7 @@ export default function RegistroJugadores() {
                           })}
                         </div>
                         {validationErrors.seguroId && (
-                          <span style={{ display: 'block', color: '#ef4444', fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
+                          <span style={{ display: 'block', color: COLORS.danger, fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
                             ❌ {validationErrors.seguroId}
                           </span>
                         )}
@@ -2937,12 +3099,12 @@ export default function RegistroJugadores() {
                   <section className="wizard-step-container">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                       <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
+                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
                     </div>
 
                     <div style={{
-                      background: '#f0f9ff',
-                      border: '1px solid #bae6fd',
+                      background: COLORS.skyBgLight,
+                      border: `1px solid ${COLORS.sky100}`,
                       borderRadius: '12px',
                       padding: '12px 18px',
                       marginBottom: '20px',
@@ -2950,7 +3112,7 @@ export default function RegistroJugadores() {
                       alignItems: 'center',
                       gap: '10px',
                       fontSize: '13px',
-                      color: '#0369a1',
+                      color: COLORS.skyDarker,
                       fontWeight: '600'
                     }}>
                       Puedes subir los documentos ahora para llenar los campos automáticamente, o continuar a los pasos siguientes y cargarlos después.
@@ -2968,7 +3130,7 @@ export default function RegistroJugadores() {
                           style={{
                             backgroundColor: 'white',
                             borderRadius: '20px',
-                            border: currentDocuments[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                            border: currentDocuments[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
                             padding: '15px',
                             textAlign: 'center',
                             transition: 'all 0.3s',
@@ -2978,13 +3140,13 @@ export default function RegistroJugadores() {
                         >
                           {/* Indicador de Menor para tutor/credencial */}
                           {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                            <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
+                            <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                           )}
 
                           <div style={{
                             height: '140px',
                             width: '100%',
-                            backgroundColor: '#f8fafc',
+                            backgroundColor: COLORS.slate50,
                             borderRadius: '12px',
                             marginBottom: '10px',
                             position: 'relative',
@@ -2992,7 +3154,7 @@ export default function RegistroJugadores() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            border: '1px solid #f1f5f9'
+                            border: `1px solid ${COLORS.slate100}`
                           }}
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => {
@@ -3003,9 +3165,9 @@ export default function RegistroJugadores() {
                             {previews[doc.key] ? (
                               <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                                 {currentDocuments[doc.key]?.type === 'application/pdf' ? (
-                                  <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                  <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
                                     <FaFilePdf />
-                                    <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                                    <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
                                   </div>
                                 ) : (
                                   <img
@@ -3019,7 +3181,7 @@ export default function RegistroJugadores() {
                                 <div className="overlay-actions" style={{
                                   position: 'absolute',
                                   top: 0, left: 0, right: 0, bottom: 0,
-                                  backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                                  backgroundColor: COLORS.overlaySlateGray,
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -3043,9 +3205,9 @@ export default function RegistroJugadores() {
                                     className="btn-zoom"
                                     style={{
                                       width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                      backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
                                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
                                     }}
                                   >
                                     <FaSearchPlus />
@@ -3062,8 +3224,8 @@ export default function RegistroJugadores() {
                                           showCancelButton: true,
                                           confirmButtonText: '📷 Tomar con cámara',
                                           cancelButtonText: '📁 Subir archivo',
-                                          confirmButtonColor: '#0b4ea6',
-                                          cancelButtonColor: '#64748b'
+                                          confirmButtonColor: COLORS.primary,
+                                          cancelButtonColor: COLORS.slate500
                                         }).then((result) => {
                                           if (result.isConfirmed) {
                                             setIsCameraOpen(true);
@@ -3078,9 +3240,9 @@ export default function RegistroJugadores() {
                                     className="btn-change"
                                     style={{
                                       width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                      backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
                                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
                                     }}
                                   >
                                     <FaSyncAlt />
@@ -3099,8 +3261,8 @@ export default function RegistroJugadores() {
                                       showCancelButton: true,
                                       confirmButtonText: '📷 Tomar con cámara',
                                       cancelButtonText: '📁 Subir archivo',
-                                      confirmButtonColor: '#0b4ea6',
-                                      cancelButtonColor: '#64748b'
+                                      confirmButtonColor: COLORS.primary,
+                                      cancelButtonColor: COLORS.slate500
                                     }).then((result) => {
                                       if (result.isConfirmed) {
                                         setIsCameraOpen(true);
@@ -3119,7 +3281,7 @@ export default function RegistroJugadores() {
                                   justifyContent: 'center',
                                   width: '100%',
                                   textAlign: 'center',
-                                  color: '#94a3b8',
+                                  color: COLORS.slate400,
                                   cursor: 'pointer'
                                 }}
                               >
@@ -3129,12 +3291,12 @@ export default function RegistroJugadores() {
                             )}
                           </div>
 
-                          <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                          <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
+                          <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
+                          <p style={{ margin: '0 0 6px', fontSize: '10px', color: COLORS.slate500, lineHeight: 1.4 }}>{doc.subtitle}</p>
                           {doc.key === 'foto' && (
-                             <p style={{ margin: '0 0 8px', fontSize: '10px', color: '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
-                               Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
-                             </p>
+                            <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                              Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                            </p>
                           )}
                           <div style={{
                             display: 'inline-flex',
@@ -3142,8 +3304,8 @@ export default function RegistroJugadores() {
                             gap: '6px',
                             padding: '4px 12px',
                             borderRadius: '20px',
-                            backgroundColor: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9',
-                            color: currentDocuments[doc.key] ? '#166534' : '#64748b',
+                            backgroundColor: currentDocuments[doc.key] ? COLORS.greenBg : COLORS.slate100,
+                            color: currentDocuments[doc.key] ? COLORS.greenDeep : COLORS.slate500,
                             fontSize: '10px',
                             fontWeight: '800'
                           }}>
@@ -3159,7 +3321,7 @@ export default function RegistroJugadores() {
                                 style={{
                                   width: '100%',
                                   padding: '8px 12px',
-                                  backgroundColor: '#f59e0b',
+                                  backgroundColor: COLORS.warning,
                                   color: 'white',
                                   border: 'none',
                                   borderRadius: '8px',
@@ -3170,11 +3332,11 @@ export default function RegistroJugadores() {
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   gap: '4px',
-                                  boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
+                                  boxShadow: `0 2px 4px ${COLORS.warningBgTranslucent30}`,
                                   transition: 'background-color 0.2s'
                                 }}
-                                onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
-                                onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
+                                onMouseEnter={e => e.target.style.backgroundColor = COLORS.warningDark}
+                                onMouseLeave={e => e.target.style.backgroundColor = COLORS.warning}
                               >
                                 ⚠️ Cargar igualmente
                               </button>
@@ -3200,7 +3362,7 @@ export default function RegistroJugadores() {
 
                     {/* Loader temporal OCR */}
                     {currentDocuments.acta && !currentDatos.fechaNacimiento && (
-                      <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                      <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: COLORS.warningBgLight, border: `1px dashed ${COLORS.warningLight}`, borderRadius: '10px', fontSize: '12px', color: COLORS.orangeDeep, fontWeight: '600' }}>
                         Analizando el Acta de Nacimiento... Los campos se rellenarán automáticamente en breve. Si no es así, puedes completarlos manualmente.
                       </div>
                     )}
@@ -3212,13 +3374,13 @@ export default function RegistroJugadores() {
                   <section className="wizard-step-container">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
                       <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Personal</h3>
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Información Personal</h3>
                     </div>
 
-                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
+                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`, padding: '24px' }}>
                       <div className="form-grid-3">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
                           <input
                             type="text"
                             maxLength={30}
@@ -3232,16 +3394,16 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.nombreJugador ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.nombreJugador ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none',
-                              boxShadow: validationErrors.nombreJugador ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                              boxShadow: validationErrors.nombreJugador ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
                           {validationErrors.nombreJugador && <span className="field-error-msg">❌ {validationErrors.nombreJugador}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
                           <input
                             type="text"
                             maxLength={30}
@@ -3255,16 +3417,16 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.apellidoPaterno ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.apellidoPaterno ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none',
-                              boxShadow: validationErrors.apellidoPaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                              boxShadow: validationErrors.apellidoPaterno ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
                           {validationErrors.apellidoPaterno && <span className="field-error-msg">❌ {validationErrors.apellidoPaterno}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
                           <input
                             type="text"
                             maxLength={30}
@@ -3278,10 +3440,10 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.apellidoMaterno ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.apellidoMaterno ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none',
-                              boxShadow: validationErrors.apellidoMaterno ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                              boxShadow: validationErrors.apellidoMaterno ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
                           {validationErrors.apellidoMaterno && <span className="field-error-msg">❌ {validationErrors.apellidoMaterno}</span>}
@@ -3290,9 +3452,9 @@ export default function RegistroJugadores() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px', marginTop: '15px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                             CURP <span className="required-star">*</span>
-                            {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '10px' }}>Validando...</span>}
+                            {isCheckingCurp && <span style={{ marginLeft: '10px', color: COLORS.success, fontSize: '10px' }}>Validando...</span>}
                           </label>
                           <input
                             type="text"
@@ -3314,10 +3476,10 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.curp ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none',
-                              boxShadow: validationErrors.curp ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : 'none'
+                              boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
@@ -3326,7 +3488,7 @@ export default function RegistroJugadores() {
 
                       <div className="form-grid-3">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Fecha Nac. <span className="required-star">*</span></label>
                           <input
                             type="date"
                             value={currentDatos.fechaNacimiento || ''}
@@ -3342,7 +3504,7 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.fechaNacimiento ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.fechaNacimiento ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none'
                             }}
@@ -3350,7 +3512,7 @@ export default function RegistroJugadores() {
                           {validationErrors.fechaNacimiento && <span className="field-error-msg">❌ {validationErrors.fechaNacimiento}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
                           <input
                             type="text"
                             maxLength={30}
@@ -3364,7 +3526,7 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.lugarNacimiento ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.lugarNacimiento ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none'
                             }}
@@ -3372,7 +3534,7 @@ export default function RegistroJugadores() {
                           {validationErrors.lugarNacimiento && <span className="field-error-msg">❌ {validationErrors.lugarNacimiento}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
                           <select
                             value={currentDatos.genero || ""}
                             onChange={e => {
@@ -3385,7 +3547,7 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.genero ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.genero ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               backgroundColor: 'white',
                               outline: 'none'
@@ -3402,7 +3564,7 @@ export default function RegistroJugadores() {
 
                       <div className="form-grid-2" style={{ marginTop: '15px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Correo electrónico <span className="required-star">*</span></label>
                           <input
                             type="email"
                             maxLength={60}
@@ -3418,7 +3580,7 @@ export default function RegistroJugadores() {
                               boxSizing: 'border-box',
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.correo ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.correo ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none'
                             }}
@@ -3426,7 +3588,7 @@ export default function RegistroJugadores() {
                           {validationErrors.correo && <span className="field-error-msg">❌ {validationErrors.correo}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono <span className="required-star">*</span></label>
                           <div className="phone-input-row">
                             <select
                               value={currentDatos.codigoPais || '+52'}
@@ -3435,7 +3597,7 @@ export default function RegistroJugadores() {
                               style={{
                                 padding: '10px',
                                 borderRadius: '8px',
-                                border: '1px solid #cbd5e1',
+                                border: `1px solid ${COLORS.slate300}`,
                                 fontSize: '14px',
                                 backgroundColor: 'white',
                                 boxSizing: 'border-box'
@@ -3472,7 +3634,7 @@ export default function RegistroJugadores() {
                               style={{
                                 padding: '10px',
                                 borderRadius: '8px',
-                                border: `1.5px solid ${validationErrors.telefono ? '#ef4444' : '#cbd5e1'}`,
+                                border: `1.5px solid ${validationErrors.telefono ? COLORS.danger : COLORS.slate300}`,
                                 fontSize: '14px',
                                 flexGrow: 1,
                                 outline: 'none',
@@ -3492,13 +3654,13 @@ export default function RegistroJugadores() {
                   <section className="wizard-step-container">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
                       <StepBadge number="3" isActive={true} isDone={esPasoCompleto(3)} />
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Información Deportiva</h3>
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Información Deportiva</h3>
                     </div>
 
-                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
+                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`, padding: '24px' }}>
                       <div className="form-grid-3">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>No. Camiseta <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>No. Camiseta <span className="required-star">*</span></label>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -3513,7 +3675,7 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none'
                             }}
@@ -3521,7 +3683,7 @@ export default function RegistroJugadores() {
                           {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición  <span className="required-star">*</span></label>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición  <span className="required-star">*</span></label>
                           <select
                             value={currentDatos.posicion}
                             onChange={e => {
@@ -3534,7 +3696,7 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`,
+                              border: `1.5px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               backgroundColor: 'white',
                               outline: 'none'
@@ -3557,20 +3719,20 @@ export default function RegistroJugadores() {
                   <section className="wizard-step-container">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
                       <StepBadge number="4" isActive={true} isDone={esPasoCompleto(4)} />
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad y Antecedentes</h3>
+                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Nacionalidad y Antecedentes</h3>
                     </div>
 
-                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', padding: '24px' }}>
+                    <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`, padding: '24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                        <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
-                        <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Procedencia del jugador</h4>
+                        <FaGlobeAmericas style={{ color: COLORS.primary, fontSize: '20px' }} />
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Procedencia del jugador</h4>
                       </div>
 
                       <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
                         gap: '10px',
-                        background: '#f1f5f9',
+                        background: COLORS.slate100,
                         padding: '4px',
                         borderRadius: '12px',
                         width: 'fit-content',
@@ -3591,10 +3753,10 @@ export default function RegistroJugadores() {
                             borderRadius: '10px',
                             border: 'none',
                             background: !currentDatos.esForaneo ? 'white' : 'transparent',
-                            color: !currentDatos.esForaneo ? '#0b4ea6' : '#64748b',
+                            color: !currentDatos.esForaneo ? COLORS.primary : COLORS.slate500,
                             fontWeight: '800',
                             fontSize: '13px',
-                            boxShadow: !currentDatos.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            boxShadow: !currentDatos.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                             transition: 'all 0.2s',
                             display: 'flex',
                             alignItems: 'center',
@@ -3618,10 +3780,10 @@ export default function RegistroJugadores() {
                             borderRadius: '10px',
                             border: 'none',
                             background: currentDatos.esForaneo ? 'white' : 'transparent',
-                            color: currentDatos.esForaneo ? '#0b4ea6' : '#64748b',
+                            color: currentDatos.esForaneo ? COLORS.primary : COLORS.slate500,
                             fontWeight: '800',
                             fontSize: '13px',
-                            boxShadow: currentDatos.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                            boxShadow: currentDatos.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                             transition: 'all 0.2s',
                             display: 'flex',
                             alignItems: 'center',
@@ -3634,12 +3796,12 @@ export default function RegistroJugadores() {
                       </div>
 
                       {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                      <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', width: '100%', boxSizing: 'border-box' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                      <div style={{ backgroundColor: COLORS.orange50, border: `1px solid ${COLORS.orange100}`, padding: '15px', borderRadius: '24px', boxShadow: `0 10px 15px -3px ${COLORS.shadow05}`, width: '100%', boxSizing: 'border-box' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: `1px solid ${COLORS.orange100}`, paddingBottom: '20px' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: COLORS.warningBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.warningDark }}>
                             <FaGlobeAmericas />
                           </div>
-                          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: COLORS.orangeDeep }}>Antecedentes internacionales</h4>
                         </div>
 
                         {currentDatos.esForaneo ? (
@@ -3755,7 +3917,7 @@ export default function RegistroJugadores() {
                           </div>
                         ) : (
                           <div style={{ textAlign: 'center', padding: '20px' }}>
-                            <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                            <p style={{ margin: 0, fontSize: '13px', color: COLORS.orangeDeep, fontStyle: 'italic' }}>
                               El jugador es mexicano. Si desea registrar antecedentes internacionales, cambie el boton a "Extranjero" arriba.
                             </p>
                           </div>
@@ -3768,7 +3930,7 @@ export default function RegistroJugadores() {
                 {/* PASO 6: RESUMEN Y FINALIZACIÓN */}
                 {currentStep === 6 && (
                   <section className="wizard-step-container">
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '20px' }}>Resumen del Registro</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, marginBottom: '20px' }}>Resumen del Registro</h3>
 
                     <div style={{
                       display: 'grid',
@@ -3777,8 +3939,8 @@ export default function RegistroJugadores() {
                       marginBottom: '30px'
                     }}>
                       {/* Tarjeta de Datos Personales */}
-                      <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Datos Personales</h4>
+                      <div style={{ padding: '20px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, background: COLORS.slate50 }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: COLORS.primary, margin: '0 0 12px 0', textTransform: 'uppercase' }}>Datos Personales</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                           <div><strong>Nombre:</strong> {currentDatos.nombreJugador} {currentDatos.apellidoPaterno} {currentDatos.apellidoMaterno}</div>
                           <div><strong>CURP:</strong> {currentDatos.curp}</div>
@@ -3790,8 +3952,8 @@ export default function RegistroJugadores() {
                       </div>
 
                       {/* Tarjeta de Datos Deportivos */}
-                      <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Información Deportiva</h4>
+                      <div style={{ padding: '20px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, background: COLORS.slate50 }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: COLORS.primary, margin: '0 0 12px 0', textTransform: 'uppercase' }}>Información Deportiva</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                           <div><strong>Camiseta:</strong> #{currentDatos.numCamiseta}</div>
                           <div>
@@ -3809,16 +3971,16 @@ export default function RegistroJugadores() {
                       </div>
 
                       {/* Tarjeta de Documentación */}
-                      <div style={{ padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#0b4ea6', margin: '0 0 12px 0', textTransform: 'uppercase' }}>Documentos Cargados</h4>
+                      <div style={{ padding: '20px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, background: COLORS.slate50 }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: COLORS.primary, margin: '0 0 12px 0', textTransform: 'uppercase' }}>Documentos Cargados</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                           {documentCards.map(doc => (
                             <div key={`summary-doc-${doc.key}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span>{doc.title}:</span>
                               <span style={{
                                 fontWeight: '800',
-                                color: currentDocuments[doc.key] ? '#166534' : '#64748b',
-                                background: currentDocuments[doc.key] ? '#dcfce7' : '#f1f5f9',
+                                color: currentDocuments[doc.key] ? COLORS.greenDeep : COLORS.slate500,
+                                background: currentDocuments[doc.key] ? COLORS.greenBg : COLORS.slate100,
                                 padding: '2px 8px',
                                 borderRadius: '12px',
                                 fontSize: '11px'
@@ -3832,16 +3994,16 @@ export default function RegistroJugadores() {
                     </div>
 
                     {/* Descarga de formato prellenado y carga del formato firmado */}
-                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '25px', marginBottom: '20px' }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
-                      <p style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                    <div style={{ borderTop: `1px solid ${COLORS.slate200}`, paddingTop: '25px', marginBottom: '20px' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
+                      <p style={{ fontSize: '13px', color: COLORS.slate500, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
                         Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
                         <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
                       </p>
 
                       {!pasos1a5Completos && (
-                        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px auto', textAlign: 'center' }}>
-                          <span style={{ color: '#ef4444', fontSize: '13px', fontWeight: '700' }}>
+                        <div style={{ backgroundColor: COLORS.dangerBgLight, border: `1px solid ${COLORS.dangerBgMedium}`, borderRadius: '12px', padding: '12px', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px auto', textAlign: 'center' }}>
+                          <span style={{ color: COLORS.danger, fontSize: '13px', fontWeight: '700' }}>
                             Debe completar todos los campos obligatorios de los pasos anteriores para descargar y subir el formato.
                           </span>
                         </div>
@@ -3860,7 +4022,7 @@ export default function RegistroJugadores() {
                             padding: '12px 28px',
                             borderRadius: '12px',
                             border: 'none',
-                            background: pasos1a5Completos ? 'linear-gradient(135deg, #0b4ea6, #063f82)' : '#cbd5e1',
+                            background: pasos1a5Completos ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryActive})` : COLORS.slate300,
                             color: 'white',
                             fontWeight: '800',
                             fontSize: '14px',
@@ -3868,7 +4030,7 @@ export default function RegistroJugadores() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            boxShadow: pasos1a5Completos ? '0 4px 6px -1px rgba(11, 78, 166, 0.2)' : 'none'
+                            boxShadow: pasos1a5Completos ? `0 4px 6px -1px ${COLORS.primaryBgTranslucent20}` : 'none'
                           }}
                         >
                           📥 Descargar Formato Prellenado
@@ -3882,10 +4044,10 @@ export default function RegistroJugadores() {
                           }
                         }}
                         style={{
-                          border: currentPlayer?.signedForm ? '2px solid #10b981' : (pasos1a5Completos ? '2px dashed #0ea5e9' : '2px dashed #cbd5e1'),
+                          border: currentPlayer?.signedForm ? `2px solid ${COLORS.success}` : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`),
                           borderRadius: '20px',
                           padding: '35px 20px',
-                          backgroundColor: currentPlayer?.signedForm ? '#f0fdf4' : (pasos1a5Completos ? '#f8fafc' : '#f1f5f9'),
+                          backgroundColor: currentPlayer?.signedForm ? COLORS.greenBg50 : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100),
                           cursor: pasos1a5Completos ? 'pointer' : 'not-allowed',
                           transition: 'all 0.3s',
                           textAlign: 'center',
@@ -3895,16 +4057,16 @@ export default function RegistroJugadores() {
                         }}
                       >
                         {currentPlayer?.signedForm ? (
-                          <div style={{ color: '#10b981' }}>
+                          <div style={{ color: COLORS.success }}>
                             <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
                             <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
                             <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
                           </div>
                         ) : (
-                          <div style={{ color: pasos1a5Completos ? '#0ea5e9' : '#94a3b8' }}>
+                          <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400 }}>
                             <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
                             <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b' }}>Solo se permiten archivos PDF</p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
                           </div>
                         )}
                         <input
@@ -3929,7 +4091,7 @@ export default function RegistroJugadores() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   marginTop: '40px',
-                  borderTop: '1px solid #f1f5f9',
+                  borderTop: `1px solid ${COLORS.slate100}`,
                   paddingTop: '25px',
                   gap: '20px'
                 }}>
@@ -3940,9 +4102,9 @@ export default function RegistroJugadores() {
                       style={{
                         padding: '12px 28px',
                         borderRadius: '12px',
-                        border: '1px solid #cbd5e1',
+                        border: `1px solid ${COLORS.slate300}`,
                         background: 'white',
-                        color: '#64748b',
+                        color: COLORS.slate500,
                         fontWeight: '800',
                         fontSize: '14px',
                         cursor: 'pointer',
@@ -3968,7 +4130,7 @@ export default function RegistroJugadores() {
                         padding: '12px 32px',
                         borderRadius: '12px',
                         border: 'none',
-                        background: '#0b4ea6',
+                        background: COLORS.primary,
                         color: 'white',
                         fontWeight: '800',
                         fontSize: '14px',
@@ -3976,14 +4138,14 @@ export default function RegistroJugadores() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(11, 78, 166, 0.2)',
+                        boxShadow: `0 4px 6px -1px ${COLORS.primaryBgTranslucent20}`,
                         transition: 'all 0.2s'
                       }}
                     >
                       Siguiente <FaArrowRight />
                     </button>
                   ) : (
-                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', fontStyle: 'italic' }}>
+                    <span style={{ fontSize: '13px', color: COLORS.slate500, fontWeight: '600', fontStyle: 'italic' }}>
                       * Envío grupal al final de la página
                     </span>
                   )}
@@ -4002,21 +4164,21 @@ export default function RegistroJugadores() {
               <div
                 className="fade-in"
                 style={{
-                  background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-                  border: '2px solid #10b981',
+                  background: `linear-gradient(135deg, ${COLORS.greenBg50} 0%, ${COLORS.greenBg} 100%)`,
+                  border: `2px solid ${COLORS.success}`,
                   borderRadius: '24px',
                   padding: '30px',
                   textAlign: 'center',
                   marginTop: '30px',
-                  boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.15)',
+                  boxShadow: `0 10px 25px -5px ${COLORS.successBgTranslucent}`,
                   maxWidth: '1000px',
                   margin: '30px auto 0 auto'
                 }}
               >
-                <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#166534', margin: '0 0 10px 0' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: '800', color: COLORS.greenDeep, margin: '0 0 10px 0' }}>
                   Todos los datos de tus jugadores están listos
                 </h3>
-                <p style={{ fontSize: '14px', color: '#15803d', margin: '0 0 20px 0', fontWeight: '600' }}>
+                <p style={{ fontSize: '14px', color: COLORS.greenDarker, margin: '0 0 20px 0', fontWeight: '600' }}>
                   ¿Deseas realizar el registro o modificar alguno?
                 </p>
                 <button
@@ -4027,12 +4189,12 @@ export default function RegistroJugadores() {
                     padding: '14px 40px',
                     borderRadius: '14px',
                     border: 'none',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    background: `linear-gradient(135deg, ${COLORS.success}, ${COLORS.successDark})`,
                     color: 'white',
                     fontWeight: '900',
                     fontSize: '15px',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                    boxShadow: `0 4px 6px -1px ${COLORS.successBgTranslucent30}`,
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -4040,11 +4202,11 @@ export default function RegistroJugadores() {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 12px -2px rgba(16, 185, 129, 0.4)';
+                    e.currentTarget.style.boxShadow = `0 6px 12px -2px ${COLORS.successBgTranslucent40}`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'none';
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(16, 185, 129, 0.3)';
+                    e.currentTarget.style.boxShadow = `0 4px 6px -1px ${COLORS.successBgTranslucent30}`;
                   }}
                 >
                   {uploading ? 'Registrando grupo...' : 'Registrar todos los jugadores'} <FaSave />
@@ -4069,8 +4231,8 @@ export default function RegistroJugadores() {
                 padding: '16px 35px',
                 background: 'white',
                 borderRadius: '24px',
-                border: '1px solid #e2e8f0',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                border: `1px solid ${COLORS.slate200}`,
+                boxShadow: `0 4px 6px -1px ${COLORS.shadow05}, 0 2px 4px -1px ${COLORS.shadow05}`,
                 transition: 'all 0.3s ease'
               }}>
                 {/* Left Arrow Button */}
@@ -4088,24 +4250,24 @@ export default function RegistroJugadores() {
                     width: '38px',
                     height: '38px',
                     borderRadius: '50%',
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: currentPlayerIndex === 0 ? '#f1f5f9' : 'white',
-                    color: currentPlayerIndex === 0 ? '#94a3b8' : '#0b4ea6',
+                    border: `1px solid ${COLORS.slate300}`,
+                    backgroundColor: currentPlayerIndex === 0 ? COLORS.slate100 : 'white',
+                    color: currentPlayerIndex === 0 ? COLORS.slate400 : COLORS.primary,
                     cursor: currentPlayerIndex === 0 ? 'not-allowed' : 'pointer',
                     opacity: currentPlayerIndex === 0 ? 0.4 : 1,
                     transition: 'all 0.2s',
-                    boxShadow: currentPlayerIndex === 0 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                    boxShadow: currentPlayerIndex === 0 ? 'none' : `0 2px 4px ${COLORS.shadow05}`
                   }}
                   onMouseEnter={(e) => {
                     if (currentPlayerIndex !== 0) {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                      e.currentTarget.style.borderColor = '#94a3b8';
+                      e.currentTarget.style.backgroundColor = COLORS.slate100;
+                      e.currentTarget.style.borderColor = COLORS.slate400;
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (currentPlayerIndex !== 0) {
                       e.currentTarget.style.backgroundColor = 'white';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.borderColor = COLORS.slate300;
                     }
                   }}
                 >
@@ -4122,7 +4284,7 @@ export default function RegistroJugadores() {
                   <span style={{
                     fontSize: '28px',
                     fontWeight: '900',
-                    color: '#1e293b',
+                    color: COLORS.slate800,
                     userSelect: 'none',
                     lineHeight: '1.2'
                   }}>
@@ -4142,7 +4304,7 @@ export default function RegistroJugadores() {
                     textTransform: 'uppercase',
                     border: `1px solid ${config.color}30`,
                     marginTop: '8px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                    boxShadow: `0 1px 2px ${COLORS.shadow03}`
                   }}>
                     <span>{config.label}</span>
                   </div>
@@ -4163,24 +4325,24 @@ export default function RegistroJugadores() {
                     width: '38px',
                     height: '38px',
                     borderRadius: '50%',
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: currentPlayerIndex === jugadores.length - 1 ? '#f1f5f9' : 'white',
-                    color: currentPlayerIndex === jugadores.length - 1 ? '#94a3b8' : '#0b4ea6',
+                    border: `1px solid ${COLORS.slate300}`,
+                    backgroundColor: currentPlayerIndex === jugadores.length - 1 ? COLORS.slate100 : 'white',
+                    color: currentPlayerIndex === jugadores.length - 1 ? COLORS.slate400 : COLORS.primary,
                     cursor: currentPlayerIndex === jugadores.length - 1 ? 'not-allowed' : 'pointer',
                     opacity: currentPlayerIndex === jugadores.length - 1 ? 0.4 : 1,
                     transition: 'all 0.2s',
-                    boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'
+                    boxShadow: currentPlayerIndex === jugadores.length - 1 ? 'none' : `0 2px 4px ${COLORS.shadow05}`
                   }}
                   onMouseEnter={(e) => {
                     if (currentPlayerIndex !== jugadores.length - 1) {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                      e.currentTarget.style.borderColor = '#94a3b8';
+                      e.currentTarget.style.backgroundColor = COLORS.slate100;
+                      e.currentTarget.style.borderColor = COLORS.slate400;
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (currentPlayerIndex !== jugadores.length - 1) {
                       e.currentTarget.style.backgroundColor = 'white';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.borderColor = COLORS.slate300;
                     }
                   }}
                 >
@@ -4202,7 +4364,53 @@ export default function RegistroJugadores() {
       >
         <div style={{ width: '100%', height: previewDoc.type === 'pdf' ? '70vh' : 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           {previewDoc.type === 'pdf' ? (
-            <iframe src={previewDoc.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
+            /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '30px 20px',
+                textAlign: 'center',
+                background: COLORS.slate900,
+                borderRadius: '16px',
+                border: `1px dashed ${COLORS.slate600}`,
+                color: 'white',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <div style={{ fontSize: '48px', color: COLORS.danger, marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FaFilePdf />
+                </div>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '800' }}>Vista previa no disponible</h3>
+                <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: COLORS.slate300, lineHeight: '1.5' }}>
+                  Los navegadores móviles no permiten ver archivos PDF integrados en la pantalla. Haz clic abajo para abrirlo directamente en tu dispositivo.
+                </p>
+                <a
+                  href={previewDoc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    backgroundColor: COLORS.primary,
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    boxShadow: `0 4px 12px ${COLORS.primaryBgTranslucent25}`,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  📥 Abrir PDF Completo
+                </a>
+              </div>
+            ) : (
+              <iframe src={previewDoc.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
+            )
           ) : (
             <img src={previewDoc.url} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px' }} />
           )}
@@ -4230,67 +4438,46 @@ export default function RegistroJugadores() {
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backgroundColor: COLORS.overlaySlateDeep,
             backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 9999,
-            padding: '20px',
+            padding: /Mobi|Android/i.test(navigator.userAgent) ? '10px' : '20px',
             animation: 'fadeIn 0.2s ease-out'
           }}>
-            <div style={{
-              backgroundColor: '#1e293b',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '24px',
-              width: '100%',
-              maxWidth: '850px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              flexDirection: 'column',
-              color: 'white'
-            }}>
+            <div className="seguro-modal-container">
               {/* Header */}
-              <div style={{
-                padding: '25px 30px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '15px',
-                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
-              }}>
+              <div className="seguro-modal-header">
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Seguro de Jugador
                   </h3>
-                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: COLORS.white }}>
                     {info.nombre}
                   </h2>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo</div>
-                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
-                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  <div style={{ fontSize: '10px', color: COLORS.overlayWhite50, fontWeight: '700', textTransform: 'uppercase' }}>Costo</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: COLORS.successLight }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.overlayWhite60 }}>M.N.</span>
                   </div>
                 </div>
               </div>
 
               {/* Content */}
-              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div className="seguro-modal-content">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                       Beneficios Incluidos
                     </h4>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {info.beneficios.map((ben, idx) => (
-                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,0.85)' }}>
-                          <span style={{ color: '#34d399', fontWeight: '900', fontSize: '15px' }}>✓</span>
+                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: COLORS.overlayWhite85 }}>
+                          <span style={{ color: COLORS.successLight, fontWeight: '900', fontSize: '15px' }}>✓</span>
                           <span>{ben}</span>
                         </li>
                       ))}
@@ -4300,40 +4487,40 @@ export default function RegistroJugadores() {
                   {/* Right Column - Policy & Scope */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                         Detalles de la Póliza
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
+                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.poliza}</div>
                         </div>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.vigencia}</div>
+                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.vigencia}</div>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                         Alcance y Cobertura
                       </h4>
-                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.7)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '12px', padding: '14px' }}>
+                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: COLORS.overlayWhite70, background: COLORS.dangerBgTranslucent05, border: `1px solid ${COLORS.dangerBgTranslucent}`, borderRadius: '12px', padding: '14px' }}>
                         {info.alcance.includes('traslados dentro del mismo estado') ? (
                           <>
                             {info.alcance.replace('traslados dentro del mismo estado.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados dentro del mismo estado.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados dentro del mismo estado.</strong>
                           </>
                         ) : info.alcance.includes('traslados de estado a estado') ? (
                           <>
                             {info.alcance.replace('traslados de estado a estado.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados de estado a estado.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados de estado a estado.</strong>
                           </>
                         ) : info.alcance.includes('traslados entre estados') ? (
                           <>
                             {info.alcance.replace('traslados entre estados.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados entre estados.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados entre estados.</strong>
                           </>
                         ) : (
                           info.alcance
@@ -4346,22 +4533,22 @@ export default function RegistroJugadores() {
                 {/* Coverages Table (if applicable) */}
                 {info.coberturas && info.coberturas.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                       Montos de Cobertura
                     </h4>
-                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                    <div style={{ borderRadius: '16px', border: `1px solid ${COLORS.overlayWhite08}`, overflowX: 'auto' }}>
                       <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                         <thead>
-                          <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)', textAlign: 'right' }}>Monto Máximo Amparado</th>
+                          <tr style={{ backgroundColor: COLORS.overlayWhite04, borderBottom: `1px solid ${COLORS.overlayWhite08}` }}>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60 }}>Cobertura / Concepto</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60, textAlign: 'right' }}>Monto Máximo Amparado</th>
                           </tr>
                         </thead>
                         <tbody>
                           {info.coberturas.map((cob, idx) => (
-                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', backgroundColor: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
-                              <td style={{ padding: '12px 20px', fontWeight: '700', color: '#ffffff' }}>{cob.cobertura}</td>
-                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? '#ef4444' : '#34d399', textAlign: 'right' }}>{cob.monto}</td>
+                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : `1px solid ${COLORS.overlayWhite05}`, backgroundColor: idx % 2 === 0 ? COLORS.overlayWhite01 : 'transparent' }}>
+                              <td style={{ padding: '12px 20px', fontWeight: '700', color: COLORS.white }}>{cob.cobertura}</td>
+                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? COLORS.danger : COLORS.successLight, textAlign: 'right' }}>{cob.monto}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -4372,24 +4559,14 @@ export default function RegistroJugadores() {
               </div>
 
               {/* Action Footer */}
-              <div style={{
-                padding: '20px 30px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                backgroundColor: 'rgba(15, 23, 42, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '12px',
-                borderBottomLeftRadius: '24px',
-                borderBottomRightRadius: '24px'
-              }}>
+              <div className="seguro-modal-footer">
                 <button
                   type="button"
                   onClick={() => setSeguroDetalle(null)}
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.7)',
+                    background: COLORS.overlayWhite05,
+                    border: `1px solid ${COLORS.overlayWhite10}`,
+                    color: COLORS.overlayWhite70,
                     padding: '10px 24px',
                     borderRadius: '12px',
                     fontWeight: '800',
@@ -4412,15 +4589,15 @@ export default function RegistroJugadores() {
                       setSeguroDetalle(null);
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      background: `linear-gradient(135deg, ${COLORS.danger} 0%, ${COLORS.dangerDark} 100%)`,
                       border: 'none',
-                      color: '#ffffff',
+                      color: COLORS.white,
                       padding: '10px 28px',
                       borderRadius: '12px',
                       fontWeight: '900',
                       cursor: 'pointer',
                       fontSize: '14px',
-                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                      boxShadow: `0 4px 12px ${COLORS.dangerBgTranslucent30}`,
                       transition: 'all 0.2s'
                     }}
                   >
@@ -4439,15 +4616,15 @@ export default function RegistroJugadores() {
                       setSeguroDetalle(null);
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      background: `linear-gradient(135deg, ${COLORS.brandBlueLight} 0%, ${COLORS.secondaryDark} 100%)`,
                       border: 'none',
-                      color: '#ffffff',
+                      color: COLORS.white,
                       padding: '10px 28px',
                       borderRadius: '12px',
                       fontWeight: '900',
                       cursor: 'pointer',
                       fontSize: '14px',
-                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                      boxShadow: `0 4px 12px ${COLORS.brandBlueLight30}`,
                       transition: 'all 0.2s'
                     }}
                   >
@@ -4463,7 +4640,7 @@ export default function RegistroJugadores() {
 
       {/* Notificación de autoguardado */}
       <div className={`toast-auto-save ${toastVisible ? 'show' : ''}`}>
-        <FaCheckCircle style={{ color: '#10b981', fontSize: '16px' }} />
+        <FaCheckCircle style={{ color: COLORS.success, fontSize: '16px' }} />
         <span>Borrador guardado</span>
       </div>
     </div>

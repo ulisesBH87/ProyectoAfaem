@@ -357,12 +357,6 @@ export default function AdminEquipos() {
     }
   };
 
-  const handleRowClick = (row) => {
-    if (row && row._original) {
-      navigate(ROUTES.ADMIN.EQUIPOS_COMPLETAR.replace(':equipoId', row._original.EquipoId));
-    }
-  };
-
   const columns = [
     { key: "EquipoId", label: "ID" },
     { key: "NombreEquipo", label: "Equipo" },
@@ -642,7 +636,6 @@ export default function AdminEquipos() {
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
-          onRowClick={handleRowClick}
           emptyMessage="No se encontraron equipos con los criterios de búsqueda."
         />
       </div>

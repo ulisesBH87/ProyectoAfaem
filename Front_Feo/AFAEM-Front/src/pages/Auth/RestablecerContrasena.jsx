@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import StadiumBg from '../../assets/stadium.jpg';
@@ -76,13 +77,13 @@ export default function RestablecerContrasena() {
         style={{
           minHeight: '100vh',
           minWidth: '100vw',
-          background: `linear-gradient(rgba(10,30,70,0.6),rgba(10,30,70,0.6)), url(${StadiumBg}) center/cover no-repeat`,
+          background: `linear-gradient(${COLORS.overlaySlateDark},${COLORS.overlaySlateDark}), url(${StadiumBg}) center/cover no-repeat`,
         }}
       >
         <div className="card shadow-lg w-100" style={{ maxWidth: 420, marginTop: 48, marginBottom: 48 }}>
           <img src={AfaemLogo} className="login-logo" alt="AFAEM" />
           <h2 className="login-title">Enlace Inválido</h2>
-          <div style={{ background: '#f8d7da', color: '#721c24', padding: 12, borderRadius: 6, marginBottom: 12 }}>
+          <div style={{ background: COLORS.dangerBg, color: COLORS.dangerDeep, padding: 12, borderRadius: 6, marginBottom: 12 }}>
             {error}
           </div>
           <button className="btn-primary" style={{ width: '100%' }} onClick={() => navigate(ROUTES.OLVIDE_CONTRASENA)}>
@@ -99,14 +100,14 @@ export default function RestablecerContrasena() {
       style={{
         minHeight: '100vh',
         minWidth: '100vw',
-        background: `linear-gradient(rgba(10,30,70,0.6),rgba(10,30,70,0.6)), url(${StadiumBg}) center/cover no-repeat`,
+        background: `linear-gradient(${COLORS.overlaySlateDark},${COLORS.overlaySlateDark}), url(${StadiumBg}) center/cover no-repeat`,
       }}
     >
       <div className="card shadow-lg w-100" style={{ maxWidth: 420, marginTop: 48, marginBottom: 48 }}>
         <img src={AfaemLogo} className="login-logo" alt="AFAEM" />
         <h2 className="login-title">Restablecer Contraseña</h2>
         {success ? (
-          <div style={{ background: '#d4edda', color: '#155724', padding: 12, borderRadius: 6, marginBottom: 12 }}>
+          <div style={{ background: COLORS.successBg100, color: COLORS.greenDeep, padding: 12, borderRadius: 6, marginBottom: 12 }}>
             {success}
             <p style={{ marginTop: 12, fontSize: '0.9em' }}>Redirigiendo a inicio de sesión...</p>
           </div>
@@ -134,7 +135,7 @@ export default function RestablecerContrasena() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#5b6b87',
+                    color: COLORS.slate500,
                     fontSize: 18,
                     padding: '4px 8px',
                     display: 'flex',
@@ -166,7 +167,7 @@ export default function RestablecerContrasena() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#5b6b87',
+                    color: COLORS.slate500,
                     fontSize: 18,
                     padding: '4px 8px',
                     display: 'flex',
@@ -177,7 +178,7 @@ export default function RestablecerContrasena() {
                   {showConfirmPassword ? '👁️‍🗨️' : '👁️'}
                 </button>
               </div>
-              {error && <div style={{ color: '#c00', fontSize: '0.9em' }}>{error}</div>}
+              {error && <div style={{ color: COLORS.dangerDarker, fontSize: '0.9em' }}>{error}</div>}
               <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>
                 {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
               </button>

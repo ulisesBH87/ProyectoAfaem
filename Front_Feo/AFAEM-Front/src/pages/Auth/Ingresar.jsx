@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState } from 'react';
 import StadiumBg from '../../assets/stadium.jpg';
 import { Link, useNavigate } from 'react-router-dom';
@@ -117,21 +118,21 @@ export default function Ingresar() {
       <div className="auth-content fade-in-up">
         <div className="glass-dark auth-card-refined" style={{ padding: 'clamp(24px, 6vh, 48px) clamp(16px, 5vw, 40px)' }}>
           <div style={{ textAlign: 'center', marginBottom: 'clamp(20px, 5vh, 40px)' }}>
-            <img src={AfaemLogo} alt="AFAEM" style={{ height: 'clamp(60px, 12vh, 84px)', marginBottom: 'clamp(12px, 3vh, 24px)', filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.3))' }} />
+            <img src={AfaemLogo} alt="AFAEM" style={{ height: 'clamp(60px, 12vh, 84px)', marginBottom: 'clamp(12px, 3vh, 24px)', filter: `drop-shadow(0 0 15px ${COLORS.overlayWhite30})` }} />
             <h1 className="heading-outfit" style={{ fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: '800', marginBottom: '8px', color: 'white' }}>Inicia Sesión</h1>
-            <p className="glass-subtitle" style={{ fontWeight: '500', color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(12px, 3.5vw, 15px)' }}>Bienvenido a la plataforma AFAEM</p>
+            <p className="glass-subtitle" style={{ fontWeight: '500', color: COLORS.overlayWhite70, fontSize: 'clamp(12px, 3.5vw, 15px)' }}>Bienvenido a la plataforma AFAEM</p>
           </div>
 
           <form onSubmit={handleSubmit}>
             {!backendOk && (
-              <div style={{ background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fef3c7', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', textAlign: 'center' }}>
+              <div style={{ background: COLORS.warningBgTranslucent20, border: `1px solid ${COLORS.warningBgTranslucent30}`, color: COLORS.warningBg, padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', textAlign: 'center' }}>
                 <strong>Problemas de conexión</strong>
                 <div style={{ opacity: 0.8, marginTop: '4px' }}>Estamos experimentando errores internos. Por favor, inténtalo de nuevo en unos minutos.</div>
               </div>
             )}
 
             {err && (
-              <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fecaca', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', textAlign: 'center', fontWeight: '600' }}>
+              <div style={{ background: COLORS.dangerBgTranslucent, border: `1px solid ${COLORS.dangerBgTranslucent30}`, color: COLORS.dangerBgMedium, padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', textAlign: 'center', fontWeight: '600' }}>
                 {err}
               </div>
             )}
@@ -174,12 +175,12 @@ export default function Ingresar() {
                   }}
                 >
                   {showPassword ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={COLORS.white} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={COLORS.white} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
@@ -198,7 +199,7 @@ export default function Ingresar() {
             </button>
           </form>
 
-          <div style={{ marginTop: 'clamp(16px, 4vh, 32px)', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(12px, 3.5vw, 14px)' }}>
+          <div style={{ marginTop: 'clamp(16px, 4vh, 32px)', textAlign: 'center', color: COLORS.overlayWhite50, fontSize: 'clamp(12px, 3.5vw, 14px)' }}>
             ¿No tienes cuenta? <Link to={ROUTES.REGISTRARSE_CUENTA} style={{ color: 'white', fontWeight: '700', textDecoration: 'none' }}>Regístrate ahora</Link>
           </div>
 

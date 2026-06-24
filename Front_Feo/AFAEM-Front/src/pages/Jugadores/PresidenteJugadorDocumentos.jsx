@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getJugadorDocumentos, getJugadorSolicitudDocumento, subirDocumentoJugador } from '../../services/admin';
@@ -142,34 +143,34 @@ export default function PresidenteJugadorDocumentos() {
       case 2:
         return {
           texto: 'Aprobado',
-          color: '#16a34a',
-          bg: '#f0fdf4',
-          border: '#10b981',
-          icon: <FaCheckCircle style={{ color: '#16a34a' }} />
+          color: COLORS.greenDark,
+          bg: COLORS.greenBg50,
+          border: COLORS.success,
+          icon: <FaCheckCircle style={{ color: COLORS.greenDark }} />
         };
       case 1:
         return {
           texto: 'En espera',
-          color: '#d97706',
-          bg: '#fffbeb',
-          border: '#f59e0b',
-          icon: <FaClock style={{ color: '#d97706' }} />
+          color: COLORS.warningDark,
+          bg: COLORS.warningBgLight,
+          border: COLORS.warning,
+          icon: <FaClock style={{ color: COLORS.warningDark }} />
         };
       case 3:
         return {
           texto: 'Rechazado',
-          color: '#dc2626',
-          bg: '#fef2f2',
-          border: '#ef4444',
-          icon: <FaExclamationCircle style={{ color: '#dc2626' }} />
+          color: COLORS.dangerDark,
+          bg: COLORS.dangerBgLight,
+          border: COLORS.danger,
+          icon: <FaExclamationCircle style={{ color: COLORS.dangerDark }} />
         };
       default:
         return {
           texto: 'Faltante',
-          color: '#64748b',
-          bg: '#f8fafc',
-          border: '#cbd5e1',
-          icon: <FaFileAlt style={{ color: '#64748b' }} />
+          color: COLORS.slate500,
+          bg: COLORS.slate50,
+          border: COLORS.slate300,
+          icon: <FaFileAlt style={{ color: COLORS.slate500 }} />
         };
     }
   };
@@ -196,7 +197,7 @@ export default function PresidenteJugadorDocumentos() {
           onClick={() => navigate(ROUTES.PRESIDENTE.MIS_JUGADORES)}
           style={{
             background: 'white',
-            border: '1.5px solid #e2e8f0',
+            border: `1.5px solid ${COLORS.slate200}`,
             borderRadius: '12px',
             width: '42px',
             height: '42px',
@@ -204,16 +205,16 @@ export default function PresidenteJugadorDocumentos() {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#475569',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            color: COLORS.slate600,
+            boxShadow: `0 1px 3px ${COLORS.shadow05}`
           }}
           title="Regresar al listado"
         >
           <FaArrowLeft />
         </button>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Documentación del Jugador</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', marginTop: '2px' }}>Consulta el estatus de los documentos de afiliación y sube archivos si fueron rechazados.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Documentación del Jugador</h2>
+          <p style={{ margin: 0, fontSize: '14px', color: COLORS.slate500, marginTop: '2px' }}>Consulta el estatus de los documentos de afiliación y sube archivos si fueron rechazados.</p>
         </div>
       </div>
 
@@ -239,7 +240,7 @@ export default function PresidenteJugadorDocumentos() {
                 justifyContent: 'space-between',
                 minHeight: '150px',
                 maxWidth: '360px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`,
                 position: 'relative'
               }}
             >
@@ -263,16 +264,16 @@ export default function PresidenteJugadorDocumentos() {
               </div>
 
               <div style={{ marginTop: '10px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', marginBottom: '8px', paddingRight: '90px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, marginBottom: '8px', paddingRight: '90px' }}>
                   {item.nombre}
                 </h4>
                 {item.tipoId === 25 && (!item.documento || Number(item.documento.EstadoValidacionId) === 3) && (
-                  <p style={{ margin: '5px 0 8px', fontSize: '11px', color: '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                  <p style={{ margin: '5px 0 8px', fontSize: '11px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
                     Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
                   </p>
                 )}
                 {item.documento && (
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                  <p style={{ fontSize: '12px', color: COLORS.slate500, margin: 0 }}>
                     Entregado el: {new Date(item.documento.FechaEntrega).toLocaleDateString()}
                   </p>
                 )}
@@ -280,13 +281,13 @@ export default function PresidenteJugadorDocumentos() {
 
               {item.documento && Number(item.documento.EstadoValidacionId) === 3 && (
                 <div style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
+                  background: COLORS.dangerBgLight,
+                  border: `1px solid ${COLORS.dangerBgMedium}`,
                   borderRadius: '12px',
                   padding: '12px',
                   margin: '12px 0 6px 0',
                   fontSize: '12px',
-                  color: '#991b1b'
+                  color: COLORS.dangerDeep
                 }}>
                   <strong>Motivo de rechazo:</strong> {item.documento.ObservacionesDocumento || 'No especificado por el administrador.'}
                 </div>
@@ -306,8 +307,8 @@ export default function PresidenteJugadorDocumentos() {
                             showCancelButton: true,
                             confirmButtonText: '📷 Tomar con cámara',
                             cancelButtonText: '📁 Subir archivo',
-                            confirmButtonColor: '#0b4ea6',
-                            cancelButtonColor: '#64748b'
+                            confirmButtonColor: COLORS.primary,
+                            cancelButtonColor: COLORS.slate500
                           }).then((result) => {
                             if (result.isConfirmed) {
                               setIsCameraOpen(true);
@@ -319,7 +320,7 @@ export default function PresidenteJugadorDocumentos() {
                         style={{
                           flex: 1,
                           padding: '10px 14px',
-                          background: '#0b4ea6',
+                          background: COLORS.primary,
                           color: 'white',
                           border: 'none',
                           borderRadius: '10px',
@@ -348,7 +349,7 @@ export default function PresidenteJugadorDocumentos() {
                           const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
                           const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
                           if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
-                            Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                            Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                             return;
                           }
                           handleSubirDocumento(item.tipoId, file);
@@ -359,7 +360,7 @@ export default function PresidenteJugadorDocumentos() {
                     <label style={{
                       flex: 1,
                       padding: '10px 14px',
-                      background: '#0b4ea6',
+                      background: COLORS.primary,
                       color: 'white',
                       borderRadius: '10px',
                       fontSize: '12px',
@@ -384,7 +385,7 @@ export default function PresidenteJugadorDocumentos() {
                           const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
                           const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
                           if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
-                            Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                            Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                             return;
                           }
                           handleSubirDocumento(item.tipoId, file);

@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
@@ -51,8 +52,8 @@ function PlayerAvatar({ rutaFoto, nombre, fallbackIcon }) {
       justifyContent: 'center',
       fontSize: '24px',
       fontWeight: 'bold',
-      color: '#94a3b8',
-      background: '#f1f5f9',
+      color: COLORS.slate400,
+      background: COLORS.slate100,
       borderRadius: '12px'
     }}>
       {nombre ? nombre.charAt(0).toUpperCase() : fallbackIcon}
@@ -179,7 +180,7 @@ export default function PresidenteEquipoMisJugadores() {
       `,
       icon: 'info',
       confirmButtonText: 'Cerrar',
-      confirmButtonColor: '#cbd5e1',
+      confirmButtonColor: COLORS.slate300,
       customClass: {
         popup: 'swal2-popup-custom'
       }
@@ -206,7 +207,7 @@ export default function PresidenteEquipoMisJugadores() {
           { label: 'Total Jugadores', value: totalJugadores, filter: 'todos', color: 'var(--primary)', icon: <FaUsers /> },
           { label: 'Miembros Activos', value: activos, filter: 'activos', color: 'var(--secondary)', icon: <FaCheckCircle /> },
           { label: 'Inactivos / Bajas', value: inactivos, filter: 'inactivos', color: 'var(--danger)', icon: <FaUserInjured /> },
-          { label: 'Equipos a cargo', value: equiposUnicos, color: '#6366f1', icon: <FaUsers />, isMetricOnly: true }
+          { label: 'Equipos a cargo', value: equiposUnicos, color: COLORS.indigo, icon: <FaUsers />, isMetricOnly: true }
         ].map((stat, i) => (
           <div
             key={i}
@@ -317,7 +318,7 @@ export default function PresidenteEquipoMisJugadores() {
         </div>
 
         {filteredPlayers.length === 0 ? (
-          <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: COLORS.slate400 }}>
             <FaUser style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }} />
             <p style={{ fontWeight: '700' }}>No se encontraron jugadores que coincidan con tu búsqueda.</p>
           </div>
@@ -348,9 +349,9 @@ export default function PresidenteEquipoMisJugadores() {
                     <span
                       className="status-badge-table player-card-status-badge"
                       style={{
-                        background: player.Estatus ? '#dcfce7' : '#fee2e2',
-                        color: player.Estatus ? '#166534' : '#991b1b',
-                        border: player.Estatus ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                        background: player.Estatus ? COLORS.greenBg : COLORS.dangerBg,
+                        color: player.Estatus ? COLORS.greenDeep : COLORS.dangerDeep,
+                        border: player.Estatus ? `1px solid ${COLORS.greenBgDark}` : `1px solid ${COLORS.dangerBgMedium}`,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px',
@@ -366,17 +367,17 @@ export default function PresidenteEquipoMisJugadores() {
                         className="status-badge-table player-card-status-badge"
                         style={{
                           background:
-                            player.EstatusDocumentos === 'Aprobado' ? '#f0fdf4' :
-                              player.EstatusDocumentos === 'Rechazado' ? '#fef2f2' :
-                                player.EstatusDocumentos === 'En espera' ? '#fffbeb' : '#f8fafc',
+                            player.EstatusDocumentos === 'Aprobado' ? COLORS.greenBg50 :
+                              player.EstatusDocumentos === 'Rechazado' ? COLORS.dangerBgLight :
+                                player.EstatusDocumentos === 'En espera' ? COLORS.warningBgLight : COLORS.slate50,
                           color:
-                            player.EstatusDocumentos === 'Aprobado' ? '#16a34a' :
-                              player.EstatusDocumentos === 'Rechazado' ? '#dc2626' :
-                                player.EstatusDocumentos === 'En espera' ? '#d97706' : '#64748b',
+                            player.EstatusDocumentos === 'Aprobado' ? COLORS.greenDark :
+                              player.EstatusDocumentos === 'Rechazado' ? COLORS.dangerDark :
+                                player.EstatusDocumentos === 'En espera' ? COLORS.warningDark : COLORS.slate500,
                           border:
-                            player.EstatusDocumentos === 'Aprobado' ? '1px solid #bbf7d0' :
-                              player.EstatusDocumentos === 'Rechazado' ? '1px solid #fecaca' :
-                                player.EstatusDocumentos === 'En espera' ? '1px solid #fde68a' : '1px solid #cbd5e1',
+                            player.EstatusDocumentos === 'Aprobado' ? `1px solid ${COLORS.greenBgDark}` :
+                              player.EstatusDocumentos === 'Rechazado' ? `1px solid ${COLORS.dangerBgMedium}` :
+                                player.EstatusDocumentos === 'En espera' ? `1px solid ${COLORS.warningBgDark}` : `1px solid ${COLORS.slate300}`,
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
@@ -385,8 +386,8 @@ export default function PresidenteEquipoMisJugadores() {
                       >
                         {player.EstatusDocumentos === 'Aprobado' && <FaCheckCircle size={10} />}
                         {player.EstatusDocumentos === 'Rechazado' && <FaExclamationCircle size={10} />}
-                        {player.EstatusDocumentos === 'En espera' && <FaExclamationCircle size={10} style={{ color: '#d97706' }} />}
-                        {player.EstatusDocumentos === 'Pendiente' && <FaUser size={10} style={{ color: '#64748b' }} />}
+                        {player.EstatusDocumentos === 'En espera' && <FaExclamationCircle size={10} style={{ color: COLORS.warningDark }} />}
+                        {player.EstatusDocumentos === 'Pendiente' && <FaUser size={10} style={{ color: COLORS.slate500 }} />}
                         DOCS: {player.EstatusDocumentos.toUpperCase()}
                       </span>
                     )}
@@ -403,7 +404,7 @@ export default function PresidenteEquipoMisJugadores() {
                     <button
                       onClick={() => navigate(ROUTES.PRESIDENTE.JUGADOR_DOCUMENTOS.replace(':miembroEquipoId', player.MiembroEquipoId))}
                       className="btn btn-primary btn-sm"
-                      style={{ fontSize: '11px', fontWeight: '800', flex: 1, borderRadius: '10px', background: '#0b4ea6', border: 'none', color: 'white' }}
+                      style={{ fontSize: '11px', fontWeight: '800', flex: 1, borderRadius: '10px', background: COLORS.primary, border: 'none', color: 'white' }}
                     >
                       Docs
                     </button>

@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -57,7 +58,7 @@ const parsearTelefonoE164 = (telefonoCompleto) => {
 
 const normalizarNombreSeguro = (nombre) => {
   if (!nombre) return '';
-  return nombre.toUpperCase().replace(/["']/g, '').trim();
+  return nombre.toUpperCase().replace(/[\u0022\u0027]/g, '').trim();
 };
 
 const DETALLES_SEGUROS = {
@@ -233,8 +234,8 @@ const StepBadge = ({ number, isActive, isDone }) => (
     width: '32px',
     height: '32px',
     borderRadius: '50%',
-    backgroundColor: isDone ? '#10b981' : (isActive ? '#0b4ea6' : '#e2e8f0'),
-    color: (isActive || isDone) ? 'white' : '#64748b',
+    backgroundColor: isDone ? COLORS.success : (isActive ? COLORS.primary : COLORS.slate200),
+    color: (isActive || isDone) ? 'white' : COLORS.slate500,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -264,17 +265,17 @@ export default function CompletarJugadoresEquipo() {
     }
     .document-card:hover {
       transform: translateY(-5px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 15px -3px ${COLORS.shadow10};
     }
     
     .premium-details-card {
       max-width: 1000px;
       margin: 0 auto 30px auto;
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      background: linear-gradient(135deg, ${COLORS.slate800} 0%, ${COLORS.slate900} 100%);
       color: white;
       border-radius: 20px;
       padding: 25px 35px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 15px -3px ${COLORS.shadow28};
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -289,7 +290,7 @@ export default function CompletarJugadoresEquipo() {
       border-radius: 24px;
       padding: 40px;
       box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-      border: 1px solid #e2e8f0;
+      border: 1px solid ${COLORS.slate200};
     }
     
     .no-slots-card {
@@ -300,7 +301,7 @@ export default function CompletarJugadoresEquipo() {
       padding: 40px;
       text-align: center;
       box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-      border: 1px solid #fee2e2;
+      border: 1px solid ${COLORS.dangerBg};
     }
     
     .form-grid-3 {
@@ -321,7 +322,7 @@ export default function CompletarJugadoresEquipo() {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      background: #f1f5f9;
+      background: ${COLORS.slate100};
       padding: 4px;
       border-radius: 12px;
       width: 100%;
@@ -345,14 +346,14 @@ export default function CompletarJugadoresEquipo() {
       background-color: white;
       padding: 30px;
       border-radius: 16px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      border: 1px solid ${COLORS.slate200};
+      box-shadow: 0 4px 6px -1px ${COLORS.shadow05};
       margin-bottom: 30px;
     }
     
     .info-alert-box {
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
+      background: ${COLORS.skyBgLight};
+      border: 1px solid ${COLORS.sky100};
       border-radius: 12px;
       padding: 12px 18px;
       margin-bottom: 20px;
@@ -360,7 +361,7 @@ export default function CompletarJugadoresEquipo() {
       align-items: center;
       gap: 10px;
       font-size: 13px;
-      color: #0369a1;
+      color: ${COLORS.skyDarker};
       font-weight: 600;
     }
     
@@ -376,7 +377,7 @@ export default function CompletarJugadoresEquipo() {
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(15, 23, 42, 0.75);
+      background-color: ${COLORS.overlaySlateDeep};
       backdrop-filter: blur(10px);
       display: flex;
       align-items: center;
@@ -387,17 +388,17 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .seguro-modal-container {
-      background-color: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background-color: ${COLORS.slate800};
+      border: 1px solid ${COLORS.overlayWhite10};
       border-radius: 24px;
       width: 100%;
       max-width: 850px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 25px 50px -12px ${COLORS.overlayBlack};
       display: flex;
       flex-direction: column;
-      color: #f8fafc;
+      color: ${COLORS.slate50};
     }
 
     @media (max-width: 768px) {
@@ -512,7 +513,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .field-error-msg {
-      color: #ef4444;
+      color: ${COLORS.danger};
       font-size: 11px;
       margin-top: 6px;
       font-weight: 700;
@@ -780,7 +781,7 @@ export default function CompletarJugadoresEquipo() {
           title: 'Fecha de nacimiento inválida',
           text: dateError,
           icon: 'warning',
-          confirmButtonColor: '#0b4ea6'
+          confirmButtonColor: COLORS.primary
         });
         setExtractedData(prev => ({ ...prev, fechaNacimiento: '' }));
       }
@@ -797,7 +798,7 @@ export default function CompletarJugadoresEquipo() {
               title: 'CURP duplicado',
               text: `La CURP ya está asignada al Jugador ${duplicate.NombreCompleto || 'del equipo'}. Por favor, ingresa una diferente.`,
               icon: 'warning',
-              confirmButtonColor: '#0b4ea6'
+              confirmButtonColor: COLORS.primary
             });
             setExtractedData(prev => ({ ...prev, curp: '' }));
             setValidationErrors(prev => ({ ...prev, curp: null }));
@@ -986,7 +987,7 @@ export default function CompletarJugadoresEquipo() {
   // Auto-guardado de borrador (debounced)
   useEffect(() => {
     if (!currentSlot?.slot_id) return;
-    
+
     const timer = setTimeout(() => {
       guardarBorradorEnBD(extractedData);
     }, 1000);
@@ -1091,7 +1092,7 @@ export default function CompletarJugadoresEquipo() {
           title: 'Tipo de archivo no permitido',
           text: 'Solo se permiten fotografías en formato JPG, JPEG o PNG.',
           icon: 'error',
-          confirmButtonColor: '#0b4ea6'
+          confirmButtonColor: COLORS.primary
         });
         return;
       }
@@ -1101,7 +1102,7 @@ export default function CompletarJugadoresEquipo() {
           title: 'Tipo de archivo no permitido',
           text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.',
           icon: 'error',
-          confirmButtonColor: '#0b4ea6'
+          confirmButtonColor: COLORS.primary
         });
         return;
       }
@@ -1158,13 +1159,13 @@ export default function CompletarJugadoresEquipo() {
 
           Swal.fire({
             title: 'Error en la fotografía',
-            text: `${data.mensaje || 'La foto no cumple con los requisitos.'} ¿Deseas cargarla de todos modos?`,
+            text: `${data.mensaje || 'La foto no cumple con los requisitos.'}. Podría ser rechazada más adelante ¿Deseas cargarla de todos modos?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, cargar igualmente',
             cancelButtonText: 'No, intentar de nuevo',
-            confirmButtonColor: '#0b4ea6',
-            cancelButtonColor: '#cbd5e1'
+            confirmButtonColor: COLORS.primary,
+            cancelButtonColor: COLORS.slate300
           }).then((result) => {
             if (result.isConfirmed) {
               const reader = new FileReader();
@@ -1889,8 +1890,8 @@ export default function CompletarJugadoresEquipo() {
                 text: "Se perderán los documentos subidos y el progreso actual.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#64748b',
+                confirmButtonColor: COLORS.danger,
+                cancelButtonColor: COLORS.slate500,
                 confirmButtonText: 'Sí, salir',
                 cancelButtonText: 'Continuar registro'
               }).then((result) => {
@@ -1901,13 +1902,13 @@ export default function CompletarJugadoresEquipo() {
             }
           }}
           className="btn btn-outline-secondary"
-          style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+          style={{ padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', background: 'none', border: `1px solid ${COLORS.slate300}`, cursor: 'pointer' }}
         >
           <FaArrowLeft />
         </button>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Completar Jugadores de Equipo</h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Registrar jugadores en espacios pagados restantes.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Completar Jugadores de Equipo</h2>
+          <p style={{ margin: 0, fontSize: '13px', color: COLORS.slate500, marginTop: '4px' }}>Registrar jugadores en espacios pagados restantes.</p>
         </div>
       </div>
 
@@ -1915,9 +1916,9 @@ export default function CompletarJugadoresEquipo() {
       {equipo && (
         <div className="premium-card premium-details-card fade-in">
           <div>
-            <span style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
+            <span style={{ fontSize: '11px', fontWeight: '900', color: COLORS.infoBootstrap, letterSpacing: '1px', textTransform: 'uppercase' }}>Equipo Seleccionado</span>
             <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 8px 0', letterSpacing: '-0.5px' }}>🛡️ {equipo.NombreEquipo}</h1>
-            <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: '#94a3b8', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '15px', fontSize: '13px', color: COLORS.slate400, flexWrap: 'wrap' }}>
               <span><strong>Liga:</strong> {equipo.Liga || 'N/A'}</span>
               <span>•</span>
               <span><strong>Categoría:</strong> {equipo.Categoria || 'LIBRE'} ({equipo.Rama || 'N/A'})</span>
@@ -1926,9 +1927,9 @@ export default function CompletarJugadoresEquipo() {
             </div>
           </div>
 
-          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'right' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', fontWeight: '600' }}>Espacios disponibles</span>
-            <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? '#ef4444' : '#10b981' }}>
+          <div style={{ background: COLORS.overlayWhite05, padding: '12px 20px', borderRadius: '14px', border: `1px solid ${COLORS.overlayWhite10}`, textAlign: 'right' }}>
+            <span style={{ fontSize: '11px', color: COLORS.slate400, display: 'block', fontWeight: '600' }}>Espacios disponibles</span>
+            <span style={{ fontSize: '24px', fontWeight: '950', color: sinSlots ? COLORS.danger : COLORS.success }}>
               {slotsData?.slots_disponibles || 0} espacios
             </span>
           </div>
@@ -1945,19 +1946,19 @@ export default function CompletarJugadoresEquipo() {
           ) : (
             <>
               <div style={{ fontSize: '60px', marginBottom: '20px' }}>⚠️</div>
-              <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ef4444', marginBottom: '10px' }}>Sin espacios disponibles</h2>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.danger, marginBottom: '10px' }}>Sin espacios disponibles</h2>
 
               {!ordenAmpliacion?.tiene_orden ? (
                 // CASO 1: No existe ninguna orden de ampliación
                 <div style={{ textAlign: 'left', marginTop: '10px' }}>
-                  <p style={{ color: '#64748b', marginBottom: '20px', lineHeight: '1.6', textAlign: 'center' }}>
+                  <p style={{ color: COLORS.slate500, marginBottom: '20px', lineHeight: '1.6', textAlign: 'center' }}>
                     El presidente no ha solicitado espacios adicionales. Puedes generar una orden de ampliación administrativa para este equipo.
                   </p>
 
-                  <div style={{ background: '#f8fafc', padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
+                  <div style={{ background: COLORS.slate50, padding: '25px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, marginBottom: '25px' }}>
                     {/* Cantidad de Jugadores */}
                     <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
                         Cantidad de espacios a generar (Jugadores)
                       </label>
                       <input
@@ -1965,21 +1966,21 @@ export default function CompletarJugadoresEquipo() {
                         min="1"
                         value={numJugadoresAmpliacion}
                         onChange={(e) => setNumJugadoresAmpliacion(Math.max(1, parseInt(e.target.value) || 1))}
-                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '15px' }}
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
                       />
                     </div>
 
                     {/* Seguros */}
                     <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
                         Selección de Seguros
                       </label>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
                         {segurosJugador.map(seg => (
-                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: `1px solid ${COLORS.slate200}` }}>
                             <div>
-                              <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '14px' }}>{seg.nombre}</div>
-                              <div style={{ fontSize: '12px', color: '#64748b' }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                              <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{seg.nombre}</div>
+                              <div style={{ fontSize: '12px', color: COLORS.slate500 }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
                             </div>
                             <input
                               type="number"
@@ -1987,7 +1988,7 @@ export default function CompletarJugadoresEquipo() {
                               value={asignacionSegurosAmpliacion[seg.id] || ''}
                               placeholder="0"
                               onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                              style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                              style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.slate300}` }}
                             />
                           </div>
                         ))}
@@ -1995,23 +1996,23 @@ export default function CompletarJugadoresEquipo() {
                     </div>
 
                     {/* Resumen */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                      <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>Resumen de Costos</h4>
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
+                      <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800 }}>Resumen de Costos</h4>
 
                       {segurosJugador.map(seg => {
                         const cant = asignacionSegurosAmpliacion[seg.id] || 0;
                         if (cant === 0) return null;
                         return (
-                          <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: '#64748b' }}>
+                          <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: COLORS.slate500 }}>
                             <span>Seguro {seg.nombre} x{cant}</span>
-                            <span style={{ fontWeight: '700', color: '#1e293b' }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                            <span style={{ fontWeight: '700', color: COLORS.slate800 }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
                           </div>
                         );
                       })}
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: '2px solid #f1f5f9' }}>
-                        <span style={{ fontWeight: '800', color: '#1e293b' }}>TOTAL A PAGAR</span>
-                        <span style={{ fontWeight: '900', color: '#0b4ea6', fontSize: '18px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: `2px solid ${COLORS.slate100}` }}>
+                        <span style={{ fontWeight: '800', color: COLORS.slate800 }}>TOTAL A PAGAR</span>
+                        <span style={{ fontWeight: '900', color: COLORS.primary, fontSize: '18px' }}>
                           ${(
                             Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
                               const s = segurosJugador.find(x => String(x.id) === String(id));
@@ -2026,7 +2027,7 @@ export default function CompletarJugadoresEquipo() {
                     </div>
 
                     {/* Checkbox de aprobación */}
-                    <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', background: '#ecfdf5', padding: '15px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+                    <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', background: COLORS.successBg, padding: '15px', borderRadius: '10px', border: `1px solid ${COLORS.successBgDark}` }}>
                       <input
                         type="checkbox"
                         id="checkAprobarAuto"
@@ -2034,7 +2035,7 @@ export default function CompletarJugadoresEquipo() {
                         onChange={(e) => setAprobarAutomaticamente(e.target.checked)}
                         style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                       />
-                      <label htmlFor="checkAprobarAuto" style={{ fontWeight: '700', color: '#047857', cursor: 'pointer', margin: 0 }}>
+                      <label htmlFor="checkAprobarAuto" style={{ fontWeight: '700', color: COLORS.successDarker, cursor: 'pointer', margin: 0 }}>
                         Aprobar orden automáticamente y generar espacios
                       </label>
                     </div>
@@ -2056,7 +2057,7 @@ export default function CompletarJugadoresEquipo() {
               ) : ordenAmpliacion.accion === 'SUBIR_COMPROBANTE' ? (
                 // CASO 2: Existe orden con estatus NO_ENVIADA
                 <>
-                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                  <p style={{ color: COLORS.slate500, maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
                     Se generó una orden de ampliación (Orden #{ordenAmpliacion.orden_id}) pero aún no se ha subido comprobante de pago.
                   </p>
                   <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
@@ -2076,7 +2077,7 @@ export default function CompletarJugadoresEquipo() {
               ) : ordenAmpliacion.accion === 'EN_REVISION' ? (
                 // CASO 3: Existe orden con estatus ESPERA
                 <>
-                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                  <p style={{ color: COLORS.slate500, maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
                     El presidente ya subió el comprobante de pago de la Orden #{ordenAmpliacion.orden_id}. ¿Deseas aprobar la ampliación?
                   </p>
                   <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
@@ -2110,7 +2111,7 @@ export default function CompletarJugadoresEquipo() {
               ) : ordenAmpliacion.accion === 'REENVIAR_COMPROBANTE' ? (
                 // CASO 4: Existe orden con estatus RECHAZADA
                 <>
-                  <p style={{ color: '#64748b', maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
+                  <p style={{ color: COLORS.slate500, maxWidth: '600px', margin: '0 auto 25px auto', lineHeight: '1.6' }}>
                     La orden de ampliación fue rechazada. Se requiere un nuevo comprobante del presidente.
                   </p>
                   <BotonSecundario
@@ -2125,7 +2126,7 @@ export default function CompletarJugadoresEquipo() {
       ) : (
         <div className="premium-card main-form-card fade-in">
 
-          <div style={{ marginBottom: '30px', borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ marginBottom: '30px', borderBottom: `1px solid ${COLORS.slate100}`, paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p className="required-legend" style={{ margin: 0 }}>
               <span className="required-star">*</span> Indica que el campo es obligatorio.
             </p>
@@ -2135,11 +2136,11 @@ export default function CompletarJugadoresEquipo() {
           <section style={{ marginBottom: '45px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '24px' }}>
               <StepBadge number="1" isActive={!isStep1Done} isDone={isStep1Done} />
-              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Seguro pagado por asignar.</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Seguro pagado por asignar.</h3>
             </div>
 
             <div style={{ animation: 'slideUp 0.4s ease', maxWidth: '800px', margin: '0 auto' }}>
-              <div className="card" style={{ padding: '25px', borderRadius: '16px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <div className="card" style={{ padding: '25px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, background: COLORS.slate50 }}>
                 <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
                   Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
                 </label>
@@ -2154,8 +2155,8 @@ export default function CompletarJugadoresEquipo() {
                         style={{
                           padding: '16px',
                           borderRadius: '12px',
-                          border: isSelected ? '2.5px solid #0b4ea6' : '1px solid #cbd5e1',
-                          backgroundColor: isSelected ? '#eff6ff' : 'white',
+                          border: isSelected ? `2.5px solid ${COLORS.primary}` : `1px solid ${COLORS.slate300}`,
+                          backgroundColor: isSelected ? COLORS.secondaryBg : 'white',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           display: 'flex',
@@ -2164,7 +2165,7 @@ export default function CompletarJugadoresEquipo() {
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? '#0b4ea6' : '#1e293b' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? COLORS.primary : COLORS.slate800 }}>
                             🛡️ {matchedSeguro ? matchedSeguro.nombre : `Seguro ID ${seg.SeguroId}`}
                           </span>
                           {matchedSeguro && (
@@ -2177,7 +2178,7 @@ export default function CompletarJugadoresEquipo() {
                               style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#3b82f6',
+                                color: COLORS.brandBlueLight,
                                 cursor: 'pointer',
                                 fontSize: '16px',
                                 padding: '2px 6px',
@@ -2192,11 +2193,11 @@ export default function CompletarJugadoresEquipo() {
                           )}
                         </div>
                         {matchedSeguro?.precio !== undefined && (
-                          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                          <span style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '600' }}>
                             Precio: ${matchedSeguro.precio} MXN
                           </span>
                         )}
-                        <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '800' }}>
+                        <div style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: COLORS.greenBg, color: COLORS.greenDarker, fontSize: '11px', fontWeight: '800' }}>
                           {seg.Cantidad} disponibles
                         </div>
                       </div>
@@ -2212,7 +2213,7 @@ export default function CompletarJugadoresEquipo() {
             <section className="fade-in" style={{ marginBottom: '45px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
                 <StepBadge number="2" isActive={!isStep2Done} isDone={isStep2Done} />
-                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Carga de Documentación</h3>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
               </div>
 
               <div className="info-alert-box">
@@ -2228,7 +2229,7 @@ export default function CompletarJugadoresEquipo() {
                     style={{
                       backgroundColor: 'white',
                       borderRadius: '20px',
-                      border: documents[doc.key] ? '2px solid #10b981' : '2px dashed #cbd5e1',
+                      border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
                       padding: '15px',
                       textAlign: 'center',
                       transition: 'all 0.3s',
@@ -2238,13 +2239,13 @@ export default function CompletarJugadoresEquipo() {
                   >
                     {/* Indicador de Menor para tutor/credencial */}
                     {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                      <div style={{ position: 'absolute', top: 10, right: 10, background: 'linear-gradient(90deg,#f59e0b,#fbbf24)', borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
+                      <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                     )}
 
                     <div style={{
                       height: '140px',
                       width: '100%',
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: COLORS.slate50,
                       borderRadius: '12px',
                       marginBottom: '10px',
                       position: 'relative',
@@ -2252,7 +2253,7 @@ export default function CompletarJugadoresEquipo() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: '1px solid #f1f5f9'
+                      border: `1px solid ${COLORS.slate100}`
                     }}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
@@ -2263,9 +2264,9 @@ export default function CompletarJugadoresEquipo() {
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                           {documents[doc.key]?.type === 'application/pdf' ? (
-                            <div style={{ color: '#ef4444', fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
                               <FaFilePdf />
-                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '800' }}>PDF</span>
+                              <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
                             </div>
                           ) : (
                             <img
@@ -2279,7 +2280,7 @@ export default function CompletarJugadoresEquipo() {
                           <div className="overlay-actions" style={{
                             position: 'absolute',
                             top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                            backgroundColor: COLORS.overlaySlateGray,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -2303,9 +2304,9 @@ export default function CompletarJugadoresEquipo() {
                               className="btn-zoom"
                               style={{
                                 width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: '#fff', color: '#1e293b', border: 'none',
+                                backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
                               }}
                             >
                               <FaSearchPlus />
@@ -2322,8 +2323,8 @@ export default function CompletarJugadoresEquipo() {
                                     showCancelButton: true,
                                     confirmButtonText: '📷 Tomar con cámara',
                                     cancelButtonText: '📁 Subir archivo',
-                                    confirmButtonColor: '#0b4ea6',
-                                    cancelButtonColor: '#64748b'
+                                    confirmButtonColor: COLORS.primary,
+                                    cancelButtonColor: COLORS.slate500
                                   }).then((result) => {
                                     if (result.isConfirmed) {
                                       setIsCameraOpen(true);
@@ -2338,9 +2339,9 @@ export default function CompletarJugadoresEquipo() {
                               className="btn-change"
                               style={{
                                 width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: '#0ea5e9', color: '#fff', border: 'none',
+                                backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', cursor: 'pointer'
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
                               }}
                             >
                               <FaSyncAlt />
@@ -2359,8 +2360,8 @@ export default function CompletarJugadoresEquipo() {
                                 showCancelButton: true,
                                 confirmButtonText: '📷 Tomar con cámara',
                                 cancelButtonText: '📁 Subir archivo',
-                                confirmButtonColor: '#0b4ea6',
-                                cancelButtonColor: '#64748b'
+                                confirmButtonColor: COLORS.primary,
+                                cancelButtonColor: COLORS.slate500
                               }).then((result) => {
                                 if (result.isConfirmed) {
                                   setIsCameraOpen(true);
@@ -2372,7 +2373,7 @@ export default function CompletarJugadoresEquipo() {
                               document.getElementById(`file-${doc.key}`).click();
                             }
                           }}
-                          style={{ textAlign: 'center', color: '#94a3b8', cursor: 'pointer' }}
+                          style={{ textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}
                         >
                           <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
                           <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
@@ -2380,21 +2381,21 @@ export default function CompletarJugadoresEquipo() {
                       )}
                     </div>
 
-                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: '#1e293b' }}>{doc.title}</h4>
-                    <p style={{ margin: '0 0 6px', fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>{doc.subtitle}</p>
+                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
+                    <p style={{ margin: '0 0 6px', fontSize: '10px', color: COLORS.slate500, lineHeight: 1.4 }}>{doc.subtitle}</p>
                     {doc.key === 'foto' && (
-                       <p style={{ margin: '0 0 8px', fontSize: '10px', color: '#ef4444', fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
-                         Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
-                       </p>
-                     )}
+                      <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                        Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                      </p>
+                    )}
                     <div style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
                       padding: '4px 12px',
                       borderRadius: '20px',
-                      backgroundColor: documents[doc.key] ? '#dcfce7' : '#f1f5f9',
-                      color: documents[doc.key] ? '#166534' : '#64748b',
+                      backgroundColor: documents[doc.key] ? COLORS.greenBg : COLORS.slate100,
+                      color: documents[doc.key] ? COLORS.greenDeep : COLORS.slate500,
                       fontSize: '10px',
                       fontWeight: '800'
                     }}>
@@ -2410,7 +2411,7 @@ export default function CompletarJugadoresEquipo() {
                           style={{
                             width: '100%',
                             padding: '8px 12px',
-                            backgroundColor: '#f59e0b',
+                            backgroundColor: COLORS.warning,
                             color: 'white',
                             border: 'none',
                             borderRadius: '8px',
@@ -2421,11 +2422,11 @@ export default function CompletarJugadoresEquipo() {
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: '4px',
-                            boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
+                            boxShadow: `0 2px 4px ${COLORS.warningBgTranslucent30}`,
                             transition: 'background-color 0.2s'
                           }}
-                          onMouseEnter={e => e.target.style.backgroundColor = '#d97706'}
-                          onMouseLeave={e => e.target.style.backgroundColor = '#f59e0b'}
+                          onMouseEnter={e => e.target.style.backgroundColor = COLORS.warningDark}
+                          onMouseLeave={e => e.target.style.backgroundColor = COLORS.warning}
                         >
                           ⚠️ Cargar igualmente
                         </button>
@@ -2451,7 +2452,7 @@ export default function CompletarJugadoresEquipo() {
 
               {/* Loader temporal OCR */}
               {documents.acta && !extractedData.fechaNacimiento && (
-                <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: '#fffbeb', border: '1px dashed #fbbf24', borderRadius: '10px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
+                <div className="fade-in" style={{ marginTop: '16px', padding: '12px 18px', background: COLORS.warningBgLight, border: `1px dashed ${COLORS.warningLight}`, borderRadius: '10px', fontSize: '12px', color: COLORS.orangeDeep, fontWeight: '600' }}>
                   Analizando el Acta de Nacimiento... Los campos se rellenarán automáticamente en breve. Si no es así, puedes completarlos manualmente.
                 </div>
               )}
@@ -2466,7 +2467,7 @@ export default function CompletarJugadoresEquipo() {
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                   <StepBadge number="3" isActive={true} isDone={false} />
-                  <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Formulario de afiliación completo</h3>
+                  <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
                 </div>
               </div>
 
@@ -2479,11 +2480,11 @@ export default function CompletarJugadoresEquipo() {
                   background: (
                     extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                     extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? '#fff7ed' : '#f0fdf4',
+                  ) ? COLORS.orange50 : COLORS.greenBg50,
                   border: (
                     extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                     extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? '1px solid #ffedd5' : '1px solid #dcfce7',
+                  ) ? `1px solid ${COLORS.orange100}` : `1px solid ${COLORS.greenBg}`,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px'
@@ -2493,12 +2494,12 @@ export default function CompletarJugadoresEquipo() {
                       extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
                   </div>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#9a3412' }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
                       {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                         extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
                         'Discrepancia detectada' : 'Datos validados'}
                     </h4>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#c2410c' }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
                       {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                         extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
                         'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
@@ -2508,27 +2509,27 @@ export default function CompletarJugadoresEquipo() {
                 </div>
               )}
 
-               {/* CAMPOS DEL FORMULARIO */}
+              {/* CAMPOS DEL FORMULARIO */}
               <div className="inner-form-card">
 
                 <div className="form-grid-3">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Nombre(s) <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
+                    <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Paterno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
+                    <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Ap. Materno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
+                    <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                 </div>
 
                 <div className="form-grid-2">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># Camiseta <span className="required-star">*</span></label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
                     <input
                       type="text"
                       maxLength={3}
@@ -2536,12 +2537,12 @@ export default function CompletarJugadoresEquipo() {
                       onChange={e => handleFieldChange('numCamiseta', e.target.value)}
                       onBlur={() => handleBlur('numCamiseta')}
                       placeholder="Ej. 10"
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.numCamiseta ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
                     />
                     {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Posición en el campo <span className="required-star">*</span></label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
                     <select
                       value={extractedData.posicion}
                       onChange={e => {
@@ -2563,7 +2564,7 @@ export default function CompletarJugadoresEquipo() {
                         }
                       }}
                       onBlur={() => handleBlur('posicion')}
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.posicion ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}
                     >
                       <option value="">Posición...</option>
                       {(catalogs?.roles_equipo || []).map(r => (
@@ -2576,9 +2577,9 @@ export default function CompletarJugadoresEquipo() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                       CURP<span className="required-star">*</span>
-                      {isCheckingCurp && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}>Validando...</span>}
+                      {isCheckingCurp && <span style={{ marginLeft: '10px', color: COLORS.success, fontSize: '11px', fontWeight: 'bold' }}>Validando...</span>}
                     </label>
                     <input
                       type="text"
@@ -2592,7 +2593,7 @@ export default function CompletarJugadoresEquipo() {
                           else if (char === 'H') sId = '1'; // Masculino
                         }
                         setExtractedData({ ...extractedData, curp: val, genero: sId });
-                        
+
                         // Real-time duplicate check
                         if (val.length === 18) {
                           const duplicate = obtenerDuplicadoCURP(val);
@@ -2611,7 +2612,7 @@ export default function CompletarJugadoresEquipo() {
                       onBlur={() => handleBlur('curp')}
                       placeholder="ABCD..."
                       maxLength="18"
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.curp ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
                     />
                     {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
                   </div>
@@ -2619,7 +2620,7 @@ export default function CompletarJugadoresEquipo() {
 
                 <div className="form-grid-3">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Fecha Nac. <span className="required-star">*</span></label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Fecha Nac. <span className="required-star">*</span></label>
                     <input
                       type="date"
                       value={extractedData.fechaNacimiento || ''}
@@ -2630,7 +2631,7 @@ export default function CompletarJugadoresEquipo() {
                         setValidationErrors(prev => ({ ...prev, fechaNacimiento: dateError }));
                       }}
                       onBlur={() => handleBlur('fechaNacimiento')}
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.fechaNacimiento ? '#ef4444' : '#cbd5e1'}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.fechaNacimiento ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
                     />
                     {(() => {
                       const val = extractedData.fechaNacimiento;
@@ -2643,31 +2644,31 @@ export default function CompletarJugadoresEquipo() {
                         isNaN(fechaDate.getTime()) ||
                         (parts.length === 3 && (fechaDate.getUTCFullYear() !== parseInt(parts[0], 10) || fechaDate.getUTCMonth() + 1 !== parseInt(parts[1], 10) || fechaDate.getUTCDate() !== parseInt(parts[2], 10)))
                       ) {
-                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>La fecha ingresada no existe en el calendario</div>;
+                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>La fecha ingresada no existe en el calendario</div>;
                       }
 
                       if (fechaDate.getFullYear() < 1900) {
-                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
+                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
                       }
                       if (fechaDate.getFullYear() > hoy.getFullYear()) {
-                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
+                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                       }
 
                       const minAgeDate = new Date(hoy.getFullYear() - 3, hoy.getMonth(), hoy.getDate());
                       if (fechaDate > minAgeDate) {
-                        return <div style={{ color: '#ef4444', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 3 años</div>;
+                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 3 años</div>;
                       }
 
                       return null;
                     })()}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
+                    <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Sexo <span className="required-star">*</span></label>
-                    <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
+                    <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}>
                       <option value="">Seleccione...</option>
                       <option value="1">MASCULINO</option>
                       <option value="2">FEMENINO</option>
@@ -2677,11 +2678,11 @@ export default function CompletarJugadoresEquipo() {
 
                 <div className="form-grid-2">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Correo electrónico <span className="required-star">*</span></label>
-                    <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Correo electrónico <span className="required-star">*</span></label>
+                    <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}># de Teléfono <span className="required-star">*</span></label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono <span className="required-star">*</span></label>
                     <div className="phone-input-row">
                       <select
                         value={extractedData.codigoPais || '+52'}
@@ -2689,7 +2690,7 @@ export default function CompletarJugadoresEquipo() {
                         style={{
                           padding: '10px',
                           borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
+                          border: `1px solid ${COLORS.slate300}`,
                           fontSize: '14px',
                           backgroundColor: 'white',
                           width: '110px',
@@ -2723,7 +2724,7 @@ export default function CompletarJugadoresEquipo() {
                         style={{
                           padding: '10px',
                           borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
+                          border: `1px solid ${COLORS.slate300}`,
                           fontSize: '14px',
                           flexGrow: 1
                         }}
@@ -2735,8 +2736,8 @@ export default function CompletarJugadoresEquipo() {
                 {/* Selector de Nacionalidad */}
                 <section className="fade-in" style={{ marginBottom: '40px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                    <FaGlobeAmericas style={{ color: '#0b4ea6', fontSize: '20px' }} />
-                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', margin: 0 }}>Nacionalidad del jugador</h3>
+                    <FaGlobeAmericas style={{ color: COLORS.primary, fontSize: '20px' }} />
+                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Nacionalidad del jugador</h3>
                   </div>
 
                   <div className="nacionalidad-toggle">
@@ -2748,10 +2749,10 @@ export default function CompletarJugadoresEquipo() {
                         borderRadius: '10px',
                         border: 'none',
                         background: !extractedData.esForaneo ? 'white' : 'transparent',
-                        color: !extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                        color: !extractedData.esForaneo ? COLORS.primary : COLORS.slate500,
                         fontWeight: '800',
                         fontSize: '13px',
-                        boxShadow: !extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                        boxShadow: !extractedData.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                         transition: 'all 0.2s',
                         display: 'flex',
                         alignItems: 'center',
@@ -2769,10 +2770,10 @@ export default function CompletarJugadoresEquipo() {
                         borderRadius: '10px',
                         border: 'none',
                         background: extractedData.esForaneo ? 'white' : 'transparent',
-                        color: extractedData.esForaneo ? '#0b4ea6' : '#64748b',
+                        color: extractedData.esForaneo ? COLORS.primary : COLORS.slate500,
                         fontWeight: '800',
                         fontSize: '13px',
-                        boxShadow: extractedData.esForaneo ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none',
+                        boxShadow: extractedData.esForaneo ? `0 4px 6px -1px ${COLORS.shadow10}` : 'none',
                         transition: 'all 0.2s',
                         display: 'flex',
                         alignItems: 'center',
@@ -2786,12 +2787,12 @@ export default function CompletarJugadoresEquipo() {
                 </section>
 
                 {/* ANTECEDENTES INTERNACIONALES (FORÁNEO) */}
-                <div className="international-info-card" style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '15px', borderRadius: '24px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: '1px solid #ffedd5', paddingBottom: '20px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                <div className="international-info-card" style={{ backgroundColor: COLORS.orange50, border: `1px solid ${COLORS.orange100}`, padding: '15px', borderRadius: '24px', boxShadow: `0 10px 15px -3px ${COLORS.shadow05}`, marginTop: '20px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '25px', borderBottom: `1px solid ${COLORS.orange100}`, paddingBottom: '20px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: COLORS.warningBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.warningDark }}>
                       <FaGlobeAmericas />
                     </div>
-                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#9a3412' }}>Antecedentes internacionales</h4>
+                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: COLORS.orangeDeep }}>Antecedentes internacionales</h4>
                   </div>
 
                   {extractedData.esForaneo ? (
@@ -2865,7 +2866,7 @@ export default function CompletarJugadoresEquipo() {
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '20px' }}>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#9a3412', fontStyle: 'italic' }}>
+                      <p style={{ margin: 0, fontSize: '13px', color: COLORS.orangeDeep, fontStyle: 'italic' }}>
                         Si el jugador es extranjero, habilite esta opción para completar los antecedentes internacionales.
                       </p>
                     </div>
@@ -2906,7 +2907,7 @@ export default function CompletarJugadoresEquipo() {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '300px',
-          backgroundColor: '#f1f5f9',
+          backgroundColor: COLORS.slate100,
           borderRadius: '12px',
           overflow: 'hidden'
         }}>
@@ -2948,18 +2949,18 @@ export default function CompletarJugadoresEquipo() {
           <div style={{ display: 'flex', gap: '10px', marginBottom: '18px', justifyContent: 'center' }}>
             <button
               onClick={() => handleDownloadFormato()}
-              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0b4ea6, #063f82)', color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryActive})`, color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               📥 Descargar Formato
             </button>
           </div>
           <div style={{
-            backgroundColor: '#f0f9ff',
-            border: '1px solid #bae6fd',
+            backgroundColor: COLORS.skyBgLight,
+            border: `1px solid ${COLORS.sky100}`,
             borderRadius: '16px',
             padding: '20px',
             marginBottom: '25px',
-            color: '#0369a1',
+            color: COLORS.skyDarker,
             fontSize: '14px',
             lineHeight: '1.6'
           }}>
@@ -2976,25 +2977,25 @@ export default function CompletarJugadoresEquipo() {
           <div
             onClick={() => document.getElementById('final-signed-form').click()}
             style={{
-              border: signedForm ? '2px solid #10b981' : '2px dashed #0ea5e9',
+              border: signedForm ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.sky}`,
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm ? '#f0fdf4' : '#f8fafc',
+              backgroundColor: signedForm ? COLORS.greenBg50 : COLORS.slate50,
               cursor: 'pointer',
               transition: 'all 0.3s'
             }}
           >
             {signedForm ? (
-              <div style={{ color: '#10b981' }}>
+              <div style={{ color: COLORS.success }}>
                 <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
               </div>
             ) : (
-              <div style={{ color: '#0ea5e9' }}>
+              <div style={{ color: COLORS.sky }}>
                 <FaUpload style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>Haga clic para subir el formato firmado</p>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>Solo se aceptan archivos PDF</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: COLORS.slate500 }}>Solo se aceptan archivos PDF</p>
               </div>
             )}
             <input
@@ -3009,7 +3010,7 @@ export default function CompletarJugadoresEquipo() {
                 const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
                 const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
                 if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
-                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: '#0b4ea6' });
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
                   return;
                 }
                 setSignedForm(file);
@@ -3037,26 +3038,26 @@ export default function CompletarJugadoresEquipo() {
               {/* Header */}
               <div style={{
                 padding: '25px 30px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                borderBottom: `1px solid ${COLORS.overlayWhite08}`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: '15px',
-                background: 'linear-gradient(90deg, #1e293b, #0f172a)'
+                background: `linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900})`
               }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '950', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '950', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Información de Seguro
                   </h3>
-                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: '#ffffff' }}>
+                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: COLORS.white }}>
                     {info.nombre}
                   </h2>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.5)', fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
-                  <div style={{ fontSize: '26px', fontWeight: '900', color: '#34d399' }}>
-                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.6)' }}>M.N.</span>
+                  <div style={{ fontSize: '10px', color: COLORS.overlayWhite50, fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
+                  <div style={{ fontSize: '26px', fontWeight: '900', color: COLORS.successLight }}>
+                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.overlayWhite60 }}>M.N.</span>
                   </div>
                 </div>
               </div>
@@ -3066,13 +3067,13 @@ export default function CompletarJugadoresEquipo() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                       Beneficios Incluidos
                     </h4>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {info.beneficios.map((ben, idx) => (
-                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,0.85)' }}>
-                          <span style={{ color: '#34d399', fontWeight: '900', fontSize: '15px' }}>✓</span>
+                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: COLORS.overlayWhite85 }}>
+                          <span style={{ color: COLORS.successLight, fontWeight: '900', fontSize: '15px' }}>✓</span>
                           <span>{ben}</span>
                         </li>
                       ))}
@@ -3082,40 +3083,40 @@ export default function CompletarJugadoresEquipo() {
                   {/* Right Column - Policy & Scope */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                         Detalles de la Póliza
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.poliza}</div>
+                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.poliza}</div>
                         </div>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>{info.vigencia}</div>
+                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.vigencia}</div>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                         Alcance y Cobertura
                       </h4>
-                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: 'rgba(255, 255, 255, 0.7)', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '12px', padding: '14px' }}>
+                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: COLORS.overlayWhite70, background: COLORS.dangerBgTranslucent05, border: `1px solid ${COLORS.dangerBgTranslucent}`, borderRadius: '12px', padding: '14px' }}>
                         {info.alcance.includes('traslados dentro del mismo estado') ? (
                           <>
                             {info.alcance.replace('traslados dentro del mismo estado.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados dentro del mismo estado.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados dentro del mismo estado.</strong>
                           </>
                         ) : info.alcance.includes('traslados de estado a estado') ? (
                           <>
                             {info.alcance.replace('traslados de estado a estado.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados de estado a estado.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados de estado a estado.</strong>
                           </>
                         ) : info.alcance.includes('traslados entre estados') ? (
                           <>
                             {info.alcance.replace('traslados entre estados.', '')}
-                            <strong style={{ color: '#ef4444' }}>traslados entre estados.</strong>
+                            <strong style={{ color: COLORS.danger }}>traslados entre estados.</strong>
                           </>
                         ) : (
                           info.alcance
@@ -3128,22 +3129,22 @@ export default function CompletarJugadoresEquipo() {
                 {/* Coverages Table (if applicable) */}
                 {info.coberturas.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
                       Montos de Cobertura
                     </h4>
-                    <div style={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+                    <div style={{ borderRadius: '16px', border: `1px solid ${COLORS.overlayWhite08}`, overflowX: 'auto' }}>
                       <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                         <thead>
-                          <tr style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)' }}>Cobertura / Concepto</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: 'rgba(255,255,255,0.6)', textAlign: 'right' }}>Monto Máximo Amparado</th>
+                          <tr style={{ backgroundColor: COLORS.overlayWhite04, borderBottom: `1px solid ${COLORS.overlayWhite08}` }}>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60 }}>Cobertura / Concepto</th>
+                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60, textAlign: 'right' }}>Monto Máximo Amparado</th>
                           </tr>
                         </thead>
                         <tbody>
                           {info.coberturas.map((cob, idx) => (
-                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', backgroundColor: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
-                              <td style={{ padding: '12px 20px', fontWeight: '700', color: '#ffffff' }}>{cob.cobertura}</td>
-                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? '#ef4444' : '#34d399', textAlign: 'right' }}>{cob.monto}</td>
+                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : `1px solid ${COLORS.overlayWhite05}`, backgroundColor: idx % 2 === 0 ? COLORS.overlayWhite01 : 'transparent' }}>
+                              <td style={{ padding: '12px 20px', fontWeight: '700', color: COLORS.white }}>{cob.cobertura}</td>
+                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? COLORS.danger : COLORS.successLight, textAlign: 'right' }}>{cob.monto}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -3156,8 +3157,8 @@ export default function CompletarJugadoresEquipo() {
               {/* Action Footer */}
               <div style={{
                 padding: '20px 30px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                borderTop: `1px solid ${COLORS.overlayWhite08}`,
+                backgroundColor: COLORS.overlaySlateLight,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-end',
@@ -3168,15 +3169,15 @@ export default function CompletarJugadoresEquipo() {
                   type="button"
                   onClick={() => setSeguroDetalle(null)}
                   style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    background: `linear-gradient(135deg, ${COLORS.brandBlueLight} 0%, ${COLORS.secondaryDark} 100%)`,
                     border: 'none',
-                    color: '#ffffff',
+                    color: COLORS.white,
                     padding: '10px 28px',
                     borderRadius: '12px',
                     fontWeight: '900',
                     cursor: 'pointer',
                     fontSize: '14px',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                    boxShadow: `0 4px 12px ${COLORS.brandBlueLight30}`,
                     transition: 'all 0.2s'
                   }}
                 >

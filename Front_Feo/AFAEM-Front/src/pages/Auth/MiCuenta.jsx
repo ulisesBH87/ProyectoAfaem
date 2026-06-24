@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaEnvelope, FaUserShield, FaKey, FaEye, FaEyeSlash, FaLock, FaSave } from 'react-icons/fa';
 import Swal from 'sweetalert2';
@@ -114,7 +115,7 @@ export default function MiCuenta() {
         title: '¡Contraseña cambiada!',
         text: 'Tu contraseña ha sido actualizada correctamente.',
         icon: 'success',
-        confirmButtonColor: '#0b4ea6'
+        confirmButtonColor: COLORS.primary
       });
 
       // Limpiar el formulario
@@ -137,7 +138,7 @@ export default function MiCuenta() {
         title: 'Error',
         text: errorMsg,
         icon: 'error',
-        confirmButtonColor: '#ef4444'
+        confirmButtonColor: COLORS.danger
       });
     } finally {
       setCargando(false);
@@ -177,7 +178,7 @@ export default function MiCuenta() {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <div style={{
                 width: '42px', height: '42px', borderRadius: '12px',
-                background: 'rgba(37,99,235,0.08)', color: 'var(--primary)',
+                background: COLORS.secondaryBgTranslucent, color: 'var(--primary)',
                 display: 'flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0
               }}>
                 <FaUser />
@@ -192,7 +193,7 @@ export default function MiCuenta() {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <div style={{
                 width: '42px', height: '42px', borderRadius: '12px',
-                background: 'rgba(37,99,235,0.08)', color: 'var(--primary)',
+                background: COLORS.secondaryBgTranslucent, color: 'var(--primary)',
                 display: 'flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0
               }}>
                 <FaEnvelope />
@@ -207,7 +208,7 @@ export default function MiCuenta() {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <div style={{
                 width: '42px', height: '42px', borderRadius: '12px',
-                background: 'rgba(37,99,235,0.08)', color: 'var(--primary)',
+                background: COLORS.secondaryBgTranslucent, color: 'var(--primary)',
                 display: 'flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0
               }}>
                 <FaUserShield />
@@ -216,14 +217,14 @@ export default function MiCuenta() {
                 <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rol asignado</div>
                 <div style={{ display: 'inline-block', marginTop: '4px' }}>
                   <span style={{
-                    background: 'rgba(37, 99, 235, 0.08)',
+                    background: COLORS.secondaryBgTranslucent,
                     color: 'var(--primary)',
                     padding: '4px 10px',
                     borderRadius: '12px',
                     fontSize: '11px',
                     fontWeight: '800',
                     textTransform: 'uppercase',
-                    border: '1.5px solid rgba(37, 99, 235, 0.15)'
+                    border: `1.5px solid ${COLORS.secondaryBgTranslucent15}`
                   }}>
                     {user.rol}
                   </span>
@@ -243,11 +244,11 @@ export default function MiCuenta() {
             
             {/* CONTRASEÑA ACTUAL */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: '#25303b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Contraseña actual <span style={{ color: '#dc3545' }}>*</span>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: COLORS.slate800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Contraseña actual <span style={{ color: COLORS.dangerBootstrap }}>*</span>
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <span style={{ position: 'absolute', left: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                <span style={{ position: 'absolute', left: '12px', color: COLORS.slate400, display: 'flex', alignItems: 'center' }}>
                   <FaLock />
                 </span>
                 <input
@@ -259,20 +260,20 @@ export default function MiCuenta() {
                   disabled={cargando}
                   style={{
                     width: '100%', boxSizing: 'border-box', padding: '10px 40px 10px 38px', fontSize: '14px',
-                    border: `1.5px solid ${touched.contrasenaActual && errores.contrasenaActual ? '#dc3545' : '#cbd5e1'}`,
-                    borderRadius: '8px', outline: 'none', background: cargando ? '#f8fafc' : 'white', transition: 'all 0.2s'
+                    border: `1.5px solid ${touched.contrasenaActual && errores.contrasenaActual ? COLORS.dangerBootstrap : COLORS.slate300}`,
+                    borderRadius: '8px', outline: 'none', background: cargando ? COLORS.slate50 : 'white', transition: 'all 0.2s'
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowActual(!showActual)}
-                  style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px', display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: COLORS.slate400, padding: '4px', display: 'flex', alignItems: 'center' }}
                 >
                   {showActual ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
               {touched.contrasenaActual && errores.contrasenaActual && (
-                <span style={{ display: 'block', fontSize: '12px', color: '#dc3545', marginTop: '6px', fontWeight: '600' }}>
+                <span style={{ display: 'block', fontSize: '12px', color: COLORS.dangerBootstrap, marginTop: '6px', fontWeight: '600' }}>
                   ❌ {errores.contrasenaActual}
                 </span>
               )}
@@ -280,11 +281,11 @@ export default function MiCuenta() {
 
             {/* NUEVA CONTRASEÑA */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: '#25303b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Nueva contraseña <span style={{ color: '#dc3545' }}>*</span>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: COLORS.slate800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Nueva contraseña <span style={{ color: COLORS.dangerBootstrap }}>*</span>
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <span style={{ position: 'absolute', left: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                <span style={{ position: 'absolute', left: '12px', color: COLORS.slate400, display: 'flex', alignItems: 'center' }}>
                   <FaKey />
                 </span>
                 <input
@@ -296,14 +297,14 @@ export default function MiCuenta() {
                   disabled={cargando}
                   style={{
                     width: '100%', boxSizing: 'border-box', padding: '10px 40px 10px 38px', fontSize: '14px',
-                    border: `1.5px solid ${touched.nuevaContrasena && errores.nuevaContrasena ? '#dc3545' : '#cbd5e1'}`,
-                    borderRadius: '8px', outline: 'none', background: cargando ? '#f8fafc' : 'white', transition: 'all 0.2s'
+                    border: `1.5px solid ${touched.nuevaContrasena && errores.nuevaContrasena ? COLORS.dangerBootstrap : COLORS.slate300}`,
+                    borderRadius: '8px', outline: 'none', background: cargando ? COLORS.slate50 : 'white', transition: 'all 0.2s'
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNueva(!showNueva)}
-                  style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px', display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: COLORS.slate400, padding: '4px', display: 'flex', alignItems: 'center' }}
                 >
                   {showNueva ? <FaEyeSlash /> : <FaEye />}
                 </button>
@@ -313,7 +314,7 @@ export default function MiCuenta() {
               {touched.nuevaContrasena && (
                 <div style={{
                   marginTop: '10px', padding: '12px 14px', borderRadius: '10px',
-                  background: 'rgba(248, 250, 252, 0.9)', border: '1px solid #e2e8f0',
+                  background: COLORS.overlayWhite90, border: `1px solid ${COLORS.slate200}`,
                   display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px'
                 }}>
                   {[
@@ -326,11 +327,11 @@ export default function MiCuenta() {
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{
                         fontSize: '12px', fontWeight: '800',
-                        color: ok ? '#16a34a' : '#dc3545'
+                        color: ok ? COLORS.greenDark : COLORS.dangerBootstrap
                       }}>
                         {ok ? '✓' : '×'}
                       </span>
-                      <span style={{ fontSize: '12px', color: ok ? '#16a34a' : '#64748b', fontWeight: ok ? '700' : '500' }}>
+                      <span style={{ fontSize: '12px', color: ok ? COLORS.greenDark : COLORS.slate500, fontWeight: ok ? '700' : '500' }}>
                         {label}
                       </span>
                     </div>
@@ -339,12 +340,12 @@ export default function MiCuenta() {
               )}
 
               {touched.nuevaContrasena && errores.nuevaContrasena && nuevaContrasena && !passwordRulesOk && (
-                <span style={{ display: 'block', fontSize: '12px', color: '#dc3545', marginTop: '6px', fontWeight: '600' }}>
+                <span style={{ display: 'block', fontSize: '12px', color: COLORS.dangerBootstrap, marginTop: '6px', fontWeight: '600' }}>
                   ❌ Completa todos los requisitos de seguridad.
                 </span>
               )}
               {touched.nuevaContrasena && errores.nuevaContrasena && nuevaContrasena && passwordRulesOk && (
-                <span style={{ display: 'block', fontSize: '12px', color: '#dc3545', marginTop: '6px', fontWeight: '600' }}>
+                <span style={{ display: 'block', fontSize: '12px', color: COLORS.dangerBootstrap, marginTop: '6px', fontWeight: '600' }}>
                   ❌ {errores.nuevaContrasena}
                 </span>
               )}
@@ -352,11 +353,11 @@ export default function MiCuenta() {
 
             {/* CONFIRMAR NUEVA CONTRASEÑA */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: '#25303b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Confirmar nueva contraseña <span style={{ color: '#dc3545' }}>*</span>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '6px', color: COLORS.slate800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Confirmar nueva contraseña <span style={{ color: COLORS.dangerBootstrap }}>*</span>
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <span style={{ position: 'absolute', left: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                <span style={{ position: 'absolute', left: '12px', color: COLORS.slate400, display: 'flex', alignItems: 'center' }}>
                   <FaKey />
                 </span>
                 <input
@@ -368,20 +369,20 @@ export default function MiCuenta() {
                   disabled={cargando}
                   style={{
                     width: '100%', boxSizing: 'border-box', padding: '10px 40px 10px 38px', fontSize: '14px',
-                    border: `1.5px solid ${touched.confirmarContrasena && errores.confirmarContrasena ? '#dc3545' : '#cbd5e1'}`,
-                    borderRadius: '8px', outline: 'none', background: cargando ? '#f8fafc' : 'white', transition: 'all 0.2s'
+                    border: `1.5px solid ${touched.confirmarContrasena && errores.confirmarContrasena ? COLORS.dangerBootstrap : COLORS.slate300}`,
+                    borderRadius: '8px', outline: 'none', background: cargando ? COLORS.slate50 : 'white', transition: 'all 0.2s'
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmar(!showConfirmar)}
-                  style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px', display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: COLORS.slate400, padding: '4px', display: 'flex', alignItems: 'center' }}
                 >
                   {showConfirmar ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
               {touched.confirmarContrasena && errores.confirmarContrasena && (
-                <span style={{ display: 'block', fontSize: '12px', color: '#dc3545', marginTop: '6px', fontWeight: '600' }}>
+                <span style={{ display: 'block', fontSize: '12px', color: COLORS.dangerBootstrap, marginTop: '6px', fontWeight: '600' }}>
                   ❌ {errores.confirmarContrasena}
                 </span>
               )}
@@ -394,11 +395,11 @@ export default function MiCuenta() {
               style={{
                 width: '100%', padding: '12px 24px', borderRadius: '12px',
                 background: cargando || !esFormularioValido && (touched.contrasenaActual || touched.nuevaContrasena || touched.confirmarContrasena)
-                  ? '#94a3b8' : 'linear-gradient(135deg, #0b4ea6 0%, #1e40af 100%)',
+                  ? COLORS.slate400 : `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondaryHover} 100%)`,
                 color: 'white', border: 'none', fontWeight: '700', fontSize: '14px',
                 cursor: cargando || !esFormularioValido && (touched.contrasenaActual || touched.nuevaContrasena || touched.confirmarContrasena) ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: cargando || !esFormularioValido && (touched.contrasenaActual || touched.nuevaContrasena || touched.confirmarContrasena) ? 'none' : '0 4px 12px rgba(11, 78, 166, 0.2)',
+                boxShadow: cargando || !esFormularioValido && (touched.contrasenaActual || touched.nuevaContrasena || touched.confirmarContrasena) ? 'none' : `0 4px 12px ${COLORS.primaryBgTranslucent20}`,
                 transition: 'all 0.2s', marginTop: '8px'
               }}
             >

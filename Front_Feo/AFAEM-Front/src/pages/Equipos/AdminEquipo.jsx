@@ -1,3 +1,4 @@
+import COLORS from '../../styles/colors';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
@@ -116,11 +117,11 @@ export default function AdminEquipo() {
 
   const _getStatusColor = (status) => {
     switch (status) {
-      case 'aprobado': return '#28a745';
-      case 'rechazado': return '#dc3545';
-      case 'en_proceso': return '#ffc107';
-      case 'pendiente': return '#6c757d';
-      default: return '#0b4ea6';
+      case 'aprobado': return COLORS.greenDark;
+      case 'rechazado': return COLORS.dangerBootstrap;
+      case 'en_proceso': return COLORS.warningBootstrap;
+      case 'pendiente': return COLORS.gray500;
+      default: return COLORS.primary;
     }
   };
 
@@ -142,8 +143,8 @@ export default function AdminEquipo() {
           <div style="display:flex; align-items:center; gap: 15px; margin-bottom: 15px;">
             <div style="font-size: 40px">${jugador.foto || '👤'}</div>
             <div>
-              <h3 style="margin:0; color:#0b4ea6; font-size:18px;">${jugador.nombre}</h3>
-              <span style="font-size:12px; color:#64748b; text-transform:uppercase;">ID: ${jugador.id}</span>
+              <h3 style="margin:0; color:${COLORS.primary}; font-size:18px;">${jugador.nombre}</h3>
+              <span style="font-size:12px; color:${COLORS.slate500}; text-transform:uppercase;">ID: ${jugador.id}</span>
             </div>
           </div>
           <p><strong>Edad:</strong> ${jugador.edad} años</p>
@@ -153,7 +154,7 @@ export default function AdminEquipo() {
         </div>
       `,
       confirmButtonText: 'Cerrar',
-      confirmButtonColor: '#0b4ea6'
+      confirmButtonColor: COLORS.primary
     });
   };
 
@@ -164,8 +165,8 @@ export default function AdminEquipo() {
       showCancelButton: true,
       confirmButtonText: 'Modificar Datos',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#0b4ea6',
-      cancelButtonColor: '#94a3b8'
+      confirmButtonColor: COLORS.primary,
+      cancelButtonColor: COLORS.slate400
     });
   };
 
@@ -182,8 +183,8 @@ export default function AdminEquipo() {
       showCancelButton: true,
       confirmButtonText: 'Sí, finalizar y enviar',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#0b4ea6',
-      cancelButtonColor: '#94a3b8'
+      confirmButtonColor: COLORS.primary,
+      cancelButtonColor: COLORS.slate400
     });
 
     if (isConfirmed) {
@@ -195,7 +196,7 @@ export default function AdminEquipo() {
           title: '¡Registro Enviado!',
           text: 'La documentación del equipo ha sido enviada correctamente. El administrador revisará los datos pronto.',
           icon: 'success',
-          confirmButtonColor: '#0b4ea6'
+          confirmButtonColor: COLORS.primary
         });
 
         // Recargar datos para actualizar la UI
@@ -225,7 +226,7 @@ export default function AdminEquipo() {
             borderRadius: '12px',
             padding: '30px',
             marginBottom: '30px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            boxShadow: `0 1px 3px ${COLORS.shadow10}`,
             border: '1px solid var(--border-color)'
           }}>
             <div style={{
@@ -240,14 +241,14 @@ export default function AdminEquipo() {
                   width: '100px',
                   height: '100px',
                   borderRadius: '12px',
-                  backgroundColor: '#f1f5f9',
+                  backgroundColor: COLORS.slate100,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '40px',
                   fontWeight: 'bold',
-                  color: '#0b4ea6',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  color: COLORS.primary,
+                  boxShadow: `0 2px 8px ${COLORS.shadow10}`,
                   flexShrink: 0
                 }}>
                   {team.logo || '⚽'}
@@ -257,7 +258,7 @@ export default function AdminEquipo() {
                 <div style={{ flex: 1 }}>
                   <h1 style={{
                     margin: '0 0 15px 0',
-                    color: '#0b4ea6',
+                    color: COLORS.primary,
                     fontSize: '24px',
                     fontWeight: '700',
                     lineHeight: '1.3'
@@ -274,7 +275,7 @@ export default function AdminEquipo() {
                   }}>
                     <div>
                       <small style={{
-                        color: '#64748b',
+                        color: COLORS.slate500,
                         fontSize: '11px',
                         fontWeight: '600',
                         textTransform: 'uppercase',
@@ -283,7 +284,7 @@ export default function AdminEquipo() {
                         Modalidad
                       </small>
                       <div style={{
-                        color: '#1e293b',
+                        color: COLORS.slate800,
                         fontWeight: '700',
                         fontSize: '14px',
                         marginTop: '4px'
@@ -295,7 +296,7 @@ export default function AdminEquipo() {
                     </div>
                     <div>
                       <small style={{
-                        color: '#64748b',
+                        color: COLORS.slate500,
                         fontSize: '11px',
                         fontWeight: '600',
                         textTransform: 'uppercase',
@@ -304,7 +305,7 @@ export default function AdminEquipo() {
                         Jugadores
                       </small>
                       <div style={{
-                        color: '#1e293b',
+                        color: COLORS.slate800,
                         fontWeight: '700',
                         fontSize: '14px',
                         marginTop: '4px'
@@ -314,7 +315,7 @@ export default function AdminEquipo() {
                     </div>
                     <div>
                       <small style={{
-                        color: '#64748b',
+                        color: COLORS.slate500,
                         fontSize: '11px',
                         fontWeight: '600',
                         textTransform: 'uppercase',
@@ -323,7 +324,7 @@ export default function AdminEquipo() {
                         Entrenadores
                       </small>
                       <div style={{
-                        color: '#1e293b',
+                        color: COLORS.slate800,
                         fontWeight: '700',
                         fontSize: '14px',
                         marginTop: '4px'
@@ -336,8 +337,8 @@ export default function AdminEquipo() {
                   {/* ESTADO */}
                   <span style={{
                     display: 'inline-block',
-                    backgroundColor: team.status === 'activo' ? '#dcfce7' : '#fef3c7',
-                    color: team.status === 'activo' ? '#166534' : '#92400e',
+                    backgroundColor: team.status === 'activo' ? COLORS.greenBg : COLORS.warningBg,
+                    color: team.status === 'activo' ? COLORS.greenDeep : COLORS.orangeDeep,
                     padding: '6px 12px',
                     borderRadius: '6px',
                     fontSize: '11px',
@@ -357,7 +358,7 @@ export default function AdminEquipo() {
                     etiqueta="✅ Finalizar Registro"
                     alHacerClick={handleFinalizarRegistro}
                     tamanio="medio"
-                    estilo={{ backgroundColor: '#166534', borderColor: '#166534' }}
+                    estilo={{ backgroundColor: COLORS.greenDeep, borderColor: COLORS.greenDeep }}
                   />
                 )}
                 <BotonPrimario
@@ -396,8 +397,8 @@ export default function AdminEquipo() {
                 cursor: 'pointer',
                 fontSize: '15px',
                 fontWeight: activeTab === 'jugadores' ? '700' : '600',
-                color: activeTab === 'jugadores' ? '#0b4ea6' : '#64748b',
-                borderBottom: activeTab === 'jugadores' ? '3px solid #0b4ea6' : 'none',
+                color: activeTab === 'jugadores' ? COLORS.primary : COLORS.slate500,
+                borderBottom: activeTab === 'jugadores' ? `3px solid ${COLORS.primary}` : 'none',
                 marginBottom: '-2px',
                 transition: 'all 0.3s',
                 position: 'relative'
@@ -417,8 +418,8 @@ export default function AdminEquipo() {
                 cursor: 'pointer',
                 fontSize: '15px',
                 fontWeight: activeTab === 'entrenadores' ? '700' : '600',
-                color: activeTab === 'entrenadores' ? '#0b4ea6' : '#64748b',
-                borderBottom: activeTab === 'entrenadores' ? '3px solid #0b4ea6' : 'none',
+                color: activeTab === 'entrenadores' ? COLORS.primary : COLORS.slate500,
+                borderBottom: activeTab === 'entrenadores' ? `3px solid ${COLORS.primary}` : 'none',
                 marginBottom: '-2px',
                 transition: 'all 0.3s'
               }}
@@ -448,8 +449,8 @@ export default function AdminEquipo() {
                   alignItems: 'center',
                   gap: '12px'
                 }}>
-                  <span style={{ color: '#64748b' }}>Total registrados:</span>
-                  <span style={{ color: '#0b4ea6', fontWeight: '700' }}>
+                  <span style={{ color: COLORS.slate500 }}>Total registrados:</span>
+                  <span style={{ color: COLORS.primary, fontWeight: '700' }}>
                     {players.length} / 25
                   </span>
                   <BotonPrimario
@@ -475,7 +476,7 @@ export default function AdminEquipo() {
               }}>
                 <label style={{
                   fontSize: '12px',
-                  color: '#64748b',
+                  color: COLORS.slate500,
                   fontWeight: '700',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
@@ -514,15 +515,15 @@ export default function AdminEquipo() {
                         overflow: 'hidden',
                         backgroundColor: 'white',
                         transition: 'all 0.3s ease',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        boxShadow: `0 1px 3px ${COLORS.shadow10}`,
                         cursor: 'pointer'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.12)';
+                        e.currentTarget.style.boxShadow = `0 8px 16px ${COLORS.shadow10}`;
                         e.currentTarget.style.transform = 'translateY(-4px)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+                        e.currentTarget.style.boxShadow = `0 1px 3px ${COLORS.shadow10}`;
                         e.currentTarget.style.transform = 'translateY(0)';
                       }}
                     >
@@ -530,7 +531,7 @@ export default function AdminEquipo() {
                       <div style={{
                         width: '100%',
                         height: '160px',
-                        backgroundColor: '#f1f5f9',
+                        backgroundColor: COLORS.slate100,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -547,7 +548,7 @@ export default function AdminEquipo() {
                           margin: '0 0 10px 0',
                           fontSize: '13px',
                           fontWeight: '700',
-                          color: '#1e293b',
+                          color: COLORS.slate800,
                           lineHeight: '1.4'
                         }}>
                           {player.nombre}
@@ -557,7 +558,7 @@ export default function AdminEquipo() {
                           display: 'flex',
                           justifyContent: 'space-between',
                           fontSize: '12px',
-                          color: '#64748b',
+                          color: COLORS.slate500,
                           marginBottom: '12px',
                           fontWeight: '500'
                         }}>
@@ -604,9 +605,9 @@ export default function AdminEquipo() {
                 <div style={{
                   padding: '60px 40px',
                   textAlign: 'center',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: COLORS.slate50,
                   borderRadius: '8px',
-                  color: '#64748b',
+                  color: COLORS.slate500,
                   border: '1px solid var(--border-color)'
                 }}>
                   <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
@@ -639,8 +640,8 @@ export default function AdminEquipo() {
                   alignItems: 'center',
                   gap: '12px'
                 }}>
-                  <span style={{ color: '#64748b' }}>Total registrados:</span>
-                  <span style={{ color: '#0b4ea6', fontWeight: '700' }}>
+                  <span style={{ color: COLORS.slate500 }}>Total registrados:</span>
+                  <span style={{ color: COLORS.primary, fontWeight: '700' }}>
                     {trainers.length}
                   </span>
                   <BotonPrimario
@@ -666,7 +667,7 @@ export default function AdminEquipo() {
               }}>
                 <label style={{
                   fontSize: '12px',
-                  color: '#64748b',
+                  color: COLORS.slate500,
                   fontWeight: '700',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
@@ -705,15 +706,15 @@ export default function AdminEquipo() {
                         overflow: 'hidden',
                         backgroundColor: 'white',
                         transition: 'all 0.3s ease',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                        boxShadow: `0 1px 3px ${COLORS.shadow10}`,
                         cursor: 'pointer'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.12)';
+                        e.currentTarget.style.boxShadow = `0 8px 16px ${COLORS.shadow10}`;
                         e.currentTarget.style.transform = 'translateY(-4px)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+                        e.currentTarget.style.boxShadow = `0 1px 3px ${COLORS.shadow10}`;
                         e.currentTarget.style.transform = 'translateY(0)';
                       }}
                     >
@@ -721,7 +722,7 @@ export default function AdminEquipo() {
                       <div style={{
                         width: '100%',
                         height: '160px',
-                        backgroundColor: '#f1f5f9',
+                        backgroundColor: COLORS.slate100,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -738,7 +739,7 @@ export default function AdminEquipo() {
                           margin: '0 0 10px 0',
                           fontSize: '13px',
                           fontWeight: '700',
-                          color: '#1e293b',
+                          color: COLORS.slate800,
                           lineHeight: '1.4'
                         }}>
                           {trainer.nombre}
@@ -748,7 +749,7 @@ export default function AdminEquipo() {
                           display: 'flex',
                           justifyContent: 'space-between',
                           fontSize: '12px',
-                          color: '#64748b',
+                          color: COLORS.slate500,
                           marginBottom: '12px',
                           fontWeight: '500'
                         }}>
@@ -794,9 +795,9 @@ export default function AdminEquipo() {
                 <div style={{
                   padding: '60px 40px',
                   textAlign: 'center',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: COLORS.slate50,
                   borderRadius: '8px',
-                  color: '#64748b',
+                  color: COLORS.slate500,
                   border: '1px solid var(--border-color)'
                 }}>
                   <div style={{ fontSize: '32px', marginBottom: '12px' }}>👨‍🏫</div>
