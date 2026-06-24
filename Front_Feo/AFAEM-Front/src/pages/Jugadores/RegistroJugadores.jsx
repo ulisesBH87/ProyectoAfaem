@@ -46,11 +46,23 @@ const fileToBase64 = (file) => new Promise((resolve, reject) => {
 
 const base64ToFile = async (dataurl, filename) => {
   try {
-    const res = await fetch(dataurl);
-    const blob = await res.blob();
-    return new File([blob], filename, { type: blob.type });
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
   } catch (err) {
-    throw err;
+    try {
+      const res = await fetch(dataurl);
+      const blob = await res.blob();
+      return new File([blob], filename, { type: blob.type });
+    } catch (fetchErr) {
+      throw fetchErr;
+    }
   }
 };
 
@@ -1571,7 +1583,14 @@ export default function RegistroJugadores() {
         }
       });
     }
-  }, [currentPlayerIndex]);
+  }, [
+    currentPlayerIndex,
+    currentDocuments.acta,
+    currentDocuments.ine,
+    currentDocuments.ineTutor,
+    currentDocuments.identificacionMenor,
+    currentDocuments.foto
+  ]);
 
   // Efecto para autovalidación de CURP con debounce
   useEffect(() => {
@@ -4203,7 +4222,53 @@ export default function RegistroJugadores() {
       >
         <div style={{ width: '100%', height: previewDoc.type === 'pdf' ? '70vh' : 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           {previewDoc.type === 'pdf' ? (
-            <iframe src={previewDoc.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
+            /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '30px 20px',
+                textAlign: 'center',
+                background: COLORS.slate900,
+                borderRadius: '16px',
+                border: `1px dashed ${COLORS.slate600}`,
+                color: 'white',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <div style={{ fontSize: '48px', color: COLORS.danger, marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FaFilePdf />
+                </div>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '800' }}>Vista previa no disponible</h3>
+                <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: COLORS.slate300, lineHeight: '1.5' }}>
+                  Los navegadores móviles no permiten ver archivos PDF integrados en la pantalla. Haz clic abajo para abrirlo directamente en tu dispositivo.
+                </p>
+                <a
+                  href={previewDoc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    backgroundColor: COLORS.primary,
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    textDecoration: 'none',
+                    boxShadow: `0 4px 12px ${COLORS.primaryBgTranslucent25}`,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  📥 Abrir PDF Completo
+                </a>
+              </div>
+            ) : (
+              <iframe src={previewDoc.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
+            )
           ) : (
             <img src={previewDoc.url} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px' }} />
           )}

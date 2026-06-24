@@ -1262,7 +1262,7 @@ export default function AdminPresidentes() {
       <div className="pres-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 30 }}>
         {[
           { icon: <FaFileAlt />, bg: COLORS.warningDarkTranslucent, color: COLORS.warningDark, label: 'PENDIENTES', val: stats.pendientes, key: 'pendientes' },
-          { icon: <FaUserTie />, bg: COLORS.secondaryBg, color: COLORS.blue, label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
+          { icon: <FaUserTie />, bg: COLORS.secondaryBg, color: COLORS.primary, label: 'TOTAL REGISTROS', val: stats.total, key: 'todos' },
           { icon: <FaCheck />, bg: COLORS.greenBg, color: COLORS.success, label: 'ACTIVOS', val: stats.activos, key: 'activos' },
           { icon: <FaTimes />, bg: COLORS.dangerBg, color: COLORS.danger, label: 'INACTIVOS', val: stats.inactivos, key: 'inactivos' },
           { icon: <FaUser />, bg: COLORS.secondaryBg, color: COLORS.secondaryHover, label: 'PRESIDENTES', val: stats.presidentes, key: 'solo_presidentes' },

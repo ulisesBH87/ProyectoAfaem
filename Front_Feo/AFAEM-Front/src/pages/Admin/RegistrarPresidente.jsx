@@ -115,10 +115,10 @@ export default function RegistrarPresidente() {
     }}>
       <style>{`
         .rp-page-wrapper {
-          padding: 28px 36px;
+          padding: 20px 24px;
         }
         .rp-container {
-          padding: 32px 36px;
+          padding: 24px 30px;
         }
         .rp-grid-3cols {
           display: grid;
@@ -129,6 +129,12 @@ export default function RegistrarPresidente() {
         .rp-grid-3cols-equal {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .rp-grid-4cols-equal {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
           gap: 16px;
           margin-bottom: 16px;
         }
@@ -157,8 +163,12 @@ export default function RegistrarPresidente() {
         }
         .rp-grid-docs {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 18px;
+        }
+        .rp-document-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
         }
         .rp-step-bar-line {
           position: relative;
@@ -184,6 +194,7 @@ export default function RegistrarPresidente() {
           .rp-container {
             padding: 24px 16px !important;
           }
+          .rp-grid-4cols-equal,
           .rp-grid-3cols,
           .rp-grid-3cols-equal,
           .rp-grid-2cols,
@@ -242,135 +253,138 @@ export default function RegistrarPresidente() {
           transform: translateY(0);
         }
       `}</style>
-      {/* Header de página */}
-      <PageHeader onBack={() => navigate(ROUTES.ADMIN.PRESIDENTES)} esEntrenador={esEntrenador} />
 
-      {/* Contenedor principal con decoración */}
-      <div className="rp-container" style={{
-        background: C.surface, borderRadius: 20,
-        border: `1px solid ${C.cardBorder}`,
-        boxShadow: `0 24px 60px ${COLORS.overlayBlack}`,
-        position: 'relative', overflow: 'hidden',
-      }}>
-        {/* Línea decorativa superior */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-          background: `linear-gradient(90deg, ${C.amberDark}, ${C.orange}, ${C.amber})`,
-        }} />
+      <div style={{ maxWidth: '1350px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        {/* Header de página */}
+        <PageHeader onBack={() => navigate(ROUTES.ADMIN.PRESIDENTES)} esEntrenador={esEntrenador} />
 
-        {/* Barra de progreso de pasos */}
-        <StepBar paso={paso} setPaso={setPaso} stepStatus={stepStatus} />
+        {/* Contenedor principal con decoración */}
+        <div className="rp-container" style={{
+          background: C.surface, borderRadius: 20,
+          border: `1px solid ${C.cardBorder}`,
+          boxShadow: `0 24px 60px ${COLORS.overlayBlack}`,
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {/* Línea decorativa superior */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+            background: `linear-gradient(90deg, ${C.amberDark}, ${C.orange}, ${C.amber})`,
+          }} />
 
-        {/* ── Paso 1: Documentos ── */}
-        {paso === 1 && (
-          <Step1Documentos
-            ocrResults={ocrResults}
-            documents={documents}
-            previews={previews}
-            detailsOpen={detailsOpen}
-            setDetailsOpen={setDetailsOpen}
-            fotoError={fotoError}
-            fotoFallida={fotoFallida}
-            fotoArchivo={fotoArchivo}
-            forzarFoto={forzarFoto}
-            handleFileUpload={handleFileUpload}
-            previewDoc={previewDoc}
-            setPreviewDoc={setPreviewDoc}
-          />
-        )}
+          {/* Barra de progreso de pasos */}
+          <StepBar paso={paso} setPaso={setPaso} stepStatus={stepStatus} />
 
-        {/* ── Paso 2: Cuenta ── */}
-        {paso === 2 && (
-          <Step2Cuenta
-            cuenta={cuenta}
-            setCuentaField={setCuentaField}
-            cuentaErrors={cuentaErrors}
-            codigoPaisCuenta={codigoPaisCuenta}
-            setCodigoPaisCuenta={setCodigoPaisCuenta}
-            codigoPaisOpcionalCuenta={codigoPaisOpcionalCuenta}
-            setCodigoPaisOpcionalCuenta={setCodigoPaisOpcionalCuenta}
-            isCheckingCurp={isCheckingCurp}
-          />
-        )}
+          {/* ── Paso 1: Documentos ── */}
+          {paso === 1 && (
+            <Step1Documentos
+              ocrResults={ocrResults}
+              documents={documents}
+              previews={previews}
+              detailsOpen={detailsOpen}
+              setDetailsOpen={setDetailsOpen}
+              fotoError={fotoError}
+              fotoFallida={fotoFallida}
+              fotoArchivo={fotoArchivo}
+              forzarFoto={forzarFoto}
+              handleFileUpload={handleFileUpload}
+              previewDoc={previewDoc}
+              setPreviewDoc={setPreviewDoc}
+            />
+          )}
 
-        {/* ── Paso 3: Cuotas ── */}
-        {paso === 3 && (
-          <Step3Cuotas
-            numPersonas={numPersonas}
-            setNumPersonas={setNumPersonas}
-            segurosJugadores={segurosJugadores}
-            segurosPresidente={segurosPresidente}
-            asignacion={asignacion}
-            setAsignacion={setAsignacion}
-            cargandoSeguros={cargandoSeguros}
-            totalAsignados={totalAsignados}
-            segurosRequeridos={segurosRequeridos}
-            totalPagar={totalPagar}
-            voucher={voucher}
-            setVoucher={setVoucher}
-            equipo={equipo}
-            setEquipo={setEquipo}
-            tipoAfiliacion={tipoAfiliacion}
-            asociacion={asociacion}
-            liga={liga}
-            setLiga={setLiga}
-            ligasCatalogo={ligasCatalogo}
-            esEntrenador={esEntrenador}
-            equiposSinEntrenador={equiposSinEntrenador}
-            selectedEquipoId={selectedEquipoId}
-            handleEquipoSelectChange={handleEquipoSelectChange}
-            nombreEquipoValido={nombreEquipoValido}
-            nombreEquipoMensaje={nombreEquipoMensaje}
-            verificandoNombre={verificandoNombre}
-          />
-        )}
+          {/* ── Paso 2: Cuenta ── */}
+          {paso === 2 && (
+            <Step2Cuenta
+              cuenta={cuenta}
+              setCuentaField={setCuentaField}
+              cuentaErrors={cuentaErrors}
+              codigoPaisCuenta={codigoPaisCuenta}
+              setCodigoPaisCuenta={setCodigoPaisCuenta}
+              codigoPaisOpcionalCuenta={codigoPaisOpcionalCuenta}
+              setCodigoPaisOpcionalCuenta={setCodigoPaisOpcionalCuenta}
+              isCheckingCurp={isCheckingCurp}
+            />
+          )}
 
-        {/* ── Paso 4: Afiliación ── */}
-        {paso === 4 && (
-          <Step4Afiliacion
-            documents={documents}
-            previews={previews}
-            detailsOpen={detailsOpen}
-            setDetailsOpen={setDetailsOpen}
-            handleFileUpload={handleFileUpload}
-            descargarFormato={handleDescargarFormato}
-            previewDoc={previewDoc}
-            setPreviewDoc={setPreviewDoc}
-            pasosAnterioresLlenos={pasosAnterioresLlenos}
-          />
-        )}
+          {/* ── Paso 3: Cuotas ── */}
+          {paso === 3 && (
+            <Step3Cuotas
+              numPersonas={numPersonas}
+              setNumPersonas={setNumPersonas}
+              segurosJugadores={segurosJugadores}
+              segurosPresidente={segurosPresidente}
+              asignacion={asignacion}
+              setAsignacion={setAsignacion}
+              cargandoSeguros={cargandoSeguros}
+              totalAsignados={totalAsignados}
+              segurosRequeridos={segurosRequeridos}
+              totalPagar={totalPagar}
+              voucher={voucher}
+              setVoucher={setVoucher}
+              equipo={equipo}
+              setEquipo={setEquipo}
+              tipoAfiliacion={tipoAfiliacion}
+              asociacion={asociacion}
+              liga={liga}
+              setLiga={setLiga}
+              ligasCatalogo={ligasCatalogo}
+              esEntrenador={esEntrenador}
+              equiposSinEntrenador={equiposSinEntrenador}
+              selectedEquipoId={selectedEquipoId}
+              handleEquipoSelectChange={handleEquipoSelectChange}
+              nombreEquipoValido={nombreEquipoValido}
+              nombreEquipoMensaje={nombreEquipoMensaje}
+              verificandoNombre={verificandoNombre}
+            />
+          )}
 
-        {/* ── Footer de navegación ── */}
-        <div className="rp-wizard-footer">
-          <button
-            onClick={() => paso > 1 ? setPaso(p => p - 1) : navigate(ROUTES.ADMIN.PRESIDENTES)}
-            style={{
-              padding: '10px 22px', borderRadius: 10,
-              border: `1px solid ${C.inputBorder}`, background: COLORS.overlayWhite03,
-              color: C.textMid, fontWeight: 700, cursor: 'pointer', fontSize: 14, transition: 'all .2s',
-            }}
-          >
-            {paso > 1 ? '← Anterior' : 'Cancelar'}
-          </button>
+          {/* ── Paso 4: Afiliación ── */}
+          {paso === 4 && (
+            <Step4Afiliacion
+              documents={documents}
+              previews={previews}
+              detailsOpen={detailsOpen}
+              setDetailsOpen={setDetailsOpen}
+              handleFileUpload={handleFileUpload}
+              descargarFormato={handleDescargarFormato}
+              previewDoc={previewDoc}
+              setPreviewDoc={setPreviewDoc}
+              pasosAnterioresLlenos={pasosAnterioresLlenos}
+            />
+          )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 12, color: C.textDim }}>Paso {paso} de {PASOS.length}</span>
+          {/* ── Footer de navegación ── */}
+          <div className="rp-wizard-footer">
             <button
-              onClick={paso === 4 ? procesarRegistro : avanzar}
-              disabled={loading}
+              onClick={() => paso > 1 ? setPaso(p => p - 1) : navigate(ROUTES.ADMIN.PRESIDENTES)}
               style={{
-                padding: '11px 28px', borderRadius: 10,
-                background: loading ? COLORS.overlayWhite10 : `linear-gradient(135deg, ${C.amberDark}, ${C.orange})`,
-                border: 'none',
-                color: loading ? C.textDim : 'white',
-                fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: 14, display: 'flex', alignItems: 'center', gap: 9,
-                boxShadow: loading ? 'none' : `0 6px 20px ${COLORS.warningDarkTranslucent35}`,
-                transition: 'all .2s',
+                padding: '10px 22px', borderRadius: 10,
+                border: `1px solid ${C.inputBorder}`, background: COLORS.overlayWhite03,
+                color: C.textMid, fontWeight: 700, cursor: 'pointer', fontSize: 14, transition: 'all .2s',
               }}
             >
-              {loading ? '⏳ Procesando…' : paso === 4 ? '✓ Finalizar Registro' : 'Continuar →'}
+              {paso > 1 ? '← Anterior' : 'Cancelar'}
             </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, color: C.textDim }}>Paso {paso} de {PASOS.length}</span>
+              <button
+                onClick={paso === 4 ? procesarRegistro : avanzar}
+                disabled={loading}
+                style={{
+                  padding: '11px 28px', borderRadius: 10,
+                  background: loading ? COLORS.overlayWhite10 : `linear-gradient(135deg, ${C.amberDark}, ${C.orange})`,
+                  border: 'none',
+                  color: loading ? C.textDim : 'white',
+                  fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer',
+                  fontSize: 14, display: 'flex', alignItems: 'center', gap: 9,
+                  boxShadow: loading ? 'none' : `0 6px 20px ${COLORS.warningDarkTranslucent35}`,
+                  transition: 'all .2s',
+                }}
+              >
+                {loading ? '⏳ Procesando…' : paso === 4 ? '✓ Finalizar Registro' : 'Continuar →'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
