@@ -34,6 +34,7 @@ export default function PasswordField({ label, value, onChange, error, showStren
           placeholder="••••••••"
           value={value}
           onChange={onChange}
+          autoComplete="new-password"
           style={{
             ...fieldStyles.input,
             paddingRight: 42,

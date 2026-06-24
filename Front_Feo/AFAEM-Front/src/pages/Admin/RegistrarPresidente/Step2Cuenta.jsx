@@ -38,6 +38,7 @@ export default function Step2Cuenta({
           <input
             style={{ ...fieldStyles.input, textTransform: 'uppercase', borderColor: cuentaErrors.nombre ? C.rose : C.inputBorder }}
             type="text" placeholder="Ej: JUAN CARLOS"
+            autoComplete="off"
             value={cuenta.nombre} onChange={e => setCuentaField('nombre', e.target.value)}
           />
           {cuentaErrors.nombre && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.nombre}</span>}
@@ -47,6 +48,7 @@ export default function Step2Cuenta({
           <input
             style={{ ...fieldStyles.input, textTransform: 'uppercase', borderColor: cuentaErrors.primerApellido ? C.rose : C.inputBorder }}
             type="text" placeholder="Ej: GARCÍA"
+            autoComplete="off"
             value={cuenta.primerApellido} onChange={e => setCuentaField('primerApellido', e.target.value)}
           />
           {cuentaErrors.primerApellido && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.primerApellido}</span>}
@@ -56,6 +58,7 @@ export default function Step2Cuenta({
           <input
             style={{ ...fieldStyles.input, textTransform: 'uppercase' }}
             type="text" placeholder="Ej: LÓPEZ"
+            autoComplete="off"
             value={cuenta.segundoApellido} onChange={e => setCuentaField('segundoApellido', e.target.value)}
           />
         </div>
@@ -64,6 +67,7 @@ export default function Step2Cuenta({
           <input
             style={{ ...fieldStyles.input, textTransform: 'uppercase', borderColor: cuentaErrors.correo ? C.rose : C.inputBorder }}
             type="email" placeholder="PRESIDENTE@CORREO.COM"
+            autoComplete="new-password"
             value={cuenta.correo} onChange={e => setCuentaField('correo', e.target.value)}
           />
           {cuentaErrors.correo && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.correo}</span>}
