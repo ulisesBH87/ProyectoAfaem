@@ -89,7 +89,7 @@ export default function DocumentCard({
       style={{
         position: 'relative', background: C.card,
         border: `1px solid ${uploaded ? COLORS.greenBgTranslucent20 : C.cardBorder}`,
-        borderRadius: 16, padding: '18px 20px', paddingTop: 45,
+        borderRadius: 14, padding: '12px 14px', paddingTop: 34,
         display: 'flex', flexDirection: 'column',
         transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s',
         cursor: 'pointer',
@@ -97,11 +97,11 @@ export default function DocumentCard({
     >
       {/* Pill de estado */}
       <div style={{
-        position: 'absolute', top: 14, right: 14,
-        padding: '3px 10px', borderRadius: 20,
-        fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px',
+        position: 'absolute', top: 10, right: 10,
+        padding: '2px 8px', borderRadius: 20,
+        fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px',
         background: statusBg, color: statusColor,
-        display: 'flex', alignItems: 'center', gap: 5, zIndex: 2,
+        display: 'flex', alignItems: 'center', gap: 4, zIndex: 2,
       }}>
         <div style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor }} />
         {statusLabel}
@@ -110,8 +110,8 @@ export default function DocumentCard({
       {/* Área de preview */}
       <div
         style={{
-          height: 140, width: '100%', background: COLORS.gray900, borderRadius: 12,
-          marginBottom: 14, overflow: 'hidden',
+          height: 105, width: '100%', background: COLORS.gray900, borderRadius: 10,
+          marginBottom: 10, overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
         }}
         onMouseEnter={e => { const o = e.currentTarget.querySelector('.overlay-actions'); if (o) o.style.opacity = '1'; }}
@@ -131,9 +131,9 @@ export default function DocumentCard({
         {previews[doc.documento] ? (
           <>
             {(documents[doc.documento]?.type === 'application/pdf' || previews[doc.documento] === 'pdf') ? (
-              <div style={{ color: COLORS.danger, fontSize: 42, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+              <div style={{ color: COLORS.danger, fontSize: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <FaFilePdf />
-                <span style={{ fontSize: 10, color: COLORS.slate500, fontWeight: 800 }}>PDF</span>
+                <span style={{ fontSize: 9, color: COLORS.slate500, fontWeight: 800 }}>PDF</span>
               </div>
             ) : (
               <img src={previews[doc.documento]} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -150,12 +150,12 @@ export default function DocumentCard({
                 type="button"
                 onClick={e => { e.stopPropagation(); onOpenPreview(doc, previews[doc.documento], documents[doc.documento]); }}
                 style={{
-                  width: 36, height: 36, borderRadius: '50%', backgroundColor: COLORS.white,
+                  width: 32, height: 32, borderRadius: '50%', backgroundColor: COLORS.white,
                   color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center',
                   justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer',
                 }}
               >
-                <FaSearchPlus />
+                <FaSearchPlus style={{ fontSize: 13 }} />
               </button>
               <button
                 type="button"
@@ -183,32 +183,32 @@ export default function DocumentCard({
                   }
                 }}
                 style={{
-                  width: 36, height: 36, borderRadius: '50%', backgroundColor: COLORS.sky,
+                  width: 32, height: 32, borderRadius: '50%', backgroundColor: COLORS.sky,
                   color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center',
                   justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer',
                 }}
               >
-                <FaSyncAlt />
+                <FaSyncAlt style={{ fontSize: 13 }} />
               </button>
             </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', color: COLORS.gray500, opacity: disabledUpload ? 0.5 : 1 }}>
-            <FaUpload style={{ fontSize: 28, marginBottom: 6 }} />
-            <p style={{ fontSize: 11 }}>Sin archivo</p>
+            <FaUpload style={{ fontSize: 24, marginBottom: 4 }} />
+            <p style={{ fontSize: 10 }}>Sin archivo</p>
           </div>
         )}
       </div>
 
       {/* Nombre y archivo */}
-      <div style={{ marginBottom: 12 }}>
-        <h4 style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 800 }}>{doc.nombre}</h4>
+      <div style={{ marginBottom: 8 }}>
+        <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 800 }}>{doc.nombre}</h4>
         {isPhoto && (
-          <p style={{ margin: '5px 0 8px', fontSize: 11, color: C.textDim, fontStyle: 'italic', lineHeight: 1.4 }}>
+          <p style={{ margin: '4px 0 6px', fontSize: 10.5, color: C.textDim, fontStyle: 'italic', lineHeight: 1.35 }}>
             Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
           </p>
         )}
-        <p style={{ margin: 0, fontSize: 11, color: C.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <p style={{ margin: 0, fontSize: 10.5, color: C.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {uploaded ? `📎 ${documents[doc.documento].name}` : 'No seleccionado'}
         </p>
       </div>
@@ -217,8 +217,8 @@ export default function DocumentCard({
       {isPhoto && fotoError && (
         <div style={{
           background: COLORS.dangerLightTranslucent, border: `1px solid ${COLORS.dangerLightTranslucent20}`,
-          borderRadius: 8, padding: '8px 12px', fontSize: 11.5, color: C.rose,
-          marginBottom: 10, display: 'flex', alignItems: 'center', gap: 7,
+          borderRadius: 8, padding: '6px 10px', fontSize: 10.5, color: C.rose,
+          marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <FaExclamationTriangle style={{ flexShrink: 0 }} /> {fotoError}
         </div>
@@ -227,9 +227,9 @@ export default function DocumentCard({
       {/* Bypass foto */}
       {isPhoto && fotoFallida && fotoArchivo && (
         <button onClick={forzarFoto} style={{
-          width: '100%', padding: '7px 12px',
+          width: '100%', padding: '6px 10px',
           border: `1px solid ${COLORS.warningBgTranslucent40}`, background: COLORS.warningBgTranslucent08,
-          color: C.amber, borderRadius: 8, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', marginBottom: 10,
+          color: C.amber, borderRadius: 8, fontSize: 10.5, fontWeight: 700, cursor: 'pointer', marginBottom: 8,
         }}>
           ⚠️ Omitir validación y usar esta foto
         </button>
