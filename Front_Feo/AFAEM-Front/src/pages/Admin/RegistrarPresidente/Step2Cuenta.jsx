@@ -31,8 +31,8 @@ export default function Step2Cuenta({
         </p>
       </div>
 
-      {/* Nombre y apellidos */}
-      <div className="rp-grid-3cols">
+      {/* Fila 1: Nombre, Primer Apellido, Segundo Apellido y Correo */}
+      <div className="rp-grid-4cols-equal">
         <div>
           <label style={fieldStyles.label}>Nombre(s) <span style={{ color: C.amber }}>*</span></label>
           <input
@@ -59,10 +59,6 @@ export default function Step2Cuenta({
             value={cuenta.segundoApellido} onChange={e => setCuentaField('segundoApellido', e.target.value)}
           />
         </div>
-      </div>
-
-      {/* Correo y teléfono */}
-      <div className="rp-grid-2cols">
         <div>
           <label style={fieldStyles.label}>Correo Electrónico <span style={{ color: C.amber }}>*</span></label>
           <input
@@ -72,6 +68,10 @@ export default function Step2Cuenta({
           />
           {cuentaErrors.correo && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.correo}</span>}
         </div>
+      </div>
+
+      {/* Fila 2: Teléfono, Segundo Teléfono y CURP */}
+      <div className="rp-grid-3cols-equal">
         <div>
           <label style={fieldStyles.label}>Teléfono (10 dígitos) <span style={{ color: C.amber }}>*</span></label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -85,10 +85,6 @@ export default function Step2Cuenta({
           </div>
           {cuentaErrors.telefono && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.telefono}</span>}
         </div>
-      </div>
-
-      {/* Teléfono opcional */}
-      <div className="rp-grid-2cols">
         <div>
           <label style={fieldStyles.label}>Segundo Teléfono (Opcional)</label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -101,11 +97,6 @@ export default function Step2Cuenta({
             />
           </div>
         </div>
-        <div></div>
-      </div>
-
-      {/* CURP y sexo */}
-      <div className="rp-grid-2to1">
         <div>
           <label style={fieldStyles.label}>
             CURP <span style={{ color: C.amber }}>*</span>
@@ -118,6 +109,10 @@ export default function Step2Cuenta({
           />
           {cuentaErrors.curp && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.curp}</span>}
         </div>
+      </div>
+
+      {/* Fila 3: Sexo, Fecha de nacimiento y Nacionalidad */}
+      <div className="rp-grid-3cols-equal">
         <div>
           <label style={fieldStyles.label}>Sexo</label>
           <select style={fieldStyles.select} value={cuenta.sexoId} onChange={e => setCuentaField('sexoId', e.target.value)}>
@@ -127,10 +122,6 @@ export default function Step2Cuenta({
             <option value="3">Otro</option>
           </select>
         </div>
-      </div>
-
-      {/* Fecha de nacimiento y nacionalidad */}
-      <div className="rp-grid-2cols">
         <div>
           <label style={fieldStyles.label}>Fecha de Nacimiento</label>
           <input

@@ -40,13 +40,61 @@ export default function DocumentCard({
   const statusColor = (ocrDone || uploaded) ? C.green : COLORS.warning;
   const statusBg = (ocrDone || uploaded) ? COLORS.greenBgTranslucent10 : COLORS.warningBgTranslucent10;
 
+  const triggerUploadFlow = (e) => {
+    // Evitar que se dispare la carga de archivo si se hace clic en elementos interactivos
+    if (
+      e.target.tagName === 'BUTTON' ||
+      e.target.tagName === 'A' ||
+      e.target.tagName === 'INPUT' ||
+      e.target.closest('button') ||
+      e.target.closest('a') ||
+      e.target.closest('.overlay-actions')
+    ) {
+      return;
+    }
+
+    if (disabledUpload) {
+      Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
+      return;
+    }
+
+    if (isPhoto) {
+      Swal.fire({
+        title: 'Selecciona una opción',
+        text: '¿Cómo deseas cargar la fotografía?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '📷 Tomar con cámara',
+        cancelButtonText: '📁 Subir archivo',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          const input = document.getElementById(`file-${doc.documento}`);
+          if (input) input.click();
+        }
+      });
+    } else {
+      const input = document.getElementById(`file-${doc.documento}`);
+      if (input) input.click();
+    }
+  };
+
   return (
-    <div style={{
-      position: 'relative', background: C.card,
-      border: `1px solid ${uploaded ? COLORS.greenBgTranslucent20 : C.cardBorder}`,
-      borderRadius: 16, padding: '18px 20px', paddingTop: 45,
-      display: 'flex', flexDirection: 'column', transition: 'border-color .2s',
-    }}>
+    <div
+      className="rp-document-card"
+      onClick={triggerUploadFlow}
+      style={{
+        position: 'relative', background: C.card,
+        border: `1px solid ${uploaded ? COLORS.greenBgTranslucent20 : C.cardBorder}`,
+        borderRadius: 16, padding: '18px 20px', paddingTop: 45,
+        display: 'flex', flexDirection: 'column',
+        transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s',
+        cursor: 'pointer',
+      }}
+    >
       {/* Pill de estado */}
       <div style={{
         position: 'absolute', top: 14, right: 14,
@@ -145,33 +193,7 @@ export default function DocumentCard({
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', color: COLORS.gray500, cursor: disabledUpload ? 'not-allowed' : 'pointer', opacity: disabledUpload ? 0.5 : 1 }}
-            onClick={() => {
-              if (disabledUpload) {
-                Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
-                return;
-              }
-              if (isPhoto) {
-                Swal.fire({
-                  title: 'Selecciona una opción',
-                  text: '¿Cómo deseas cargar la fotografía?',
-                  icon: 'question',
-                  showCancelButton: true,
-                  confirmButtonText: '📷 Tomar con cámara',
-                  cancelButtonText: '📁 Subir archivo',
-                  confirmButtonColor: COLORS.primary,
-                  cancelButtonColor: COLORS.slate500
-                }).then((result) => {
-                  if (result.isConfirmed) {
-                    setIsCameraOpen(true);
-                  } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    document.getElementById(`file-${doc.documento}`).click();
-                  }
-                });
-              } else {
-                document.getElementById(`file-${doc.documento}`).click();
-              }
-            }}>
+          <div style={{ textAlign: 'center', color: COLORS.gray500, opacity: disabledUpload ? 0.5 : 1 }}>
             <FaUpload style={{ fontSize: 28, marginBottom: 6 }} />
             <p style={{ fontSize: 11 }}>Sin archivo</p>
           </div>

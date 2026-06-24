@@ -239,8 +239,8 @@ export default function Step3Cuotas({
       <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: '20px 22px', marginBottom: 22 }}>
         <h3 style={{ marginTop: 0, marginBottom: 16, color: C.text, fontSize: 16 }}>Datos del Expediente</h3>
         
-        {/* Fila 1: Equipo */}
-        <div className="rp-grid-1cols" style={{ marginBottom: 16 }}>
+        {/* Fila única: Nombre del equipo, Cargo, Asociación y Liga Destino */}
+        <div className="rp-grid-4cols-equal">
           <div>
             <label style={fieldStyles.label}>Nombre del Equipo <span style={{ color: C.amber }}>*</span></label>
             {esEntrenador ? (
@@ -276,10 +276,6 @@ export default function Step3Cuotas({
               </span>
             )}
           </div>
-        </div>
-
-        {/* Fila 2: Afiliación, Asociación, Liga */}
-        <div className="rp-grid-3cols-equal">
           <div>
             <label style={fieldStyles.label}>Cargo / Tipo de Afiliación</label>
             <select

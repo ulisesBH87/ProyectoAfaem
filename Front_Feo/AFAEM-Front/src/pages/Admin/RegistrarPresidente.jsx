@@ -132,6 +132,12 @@ export default function RegistrarPresidente() {
           gap: 16px;
           margin-bottom: 16px;
         }
+        .rp-grid-4cols-equal {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 16px;
+        }
         .rp-grid-2cols {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -157,8 +163,12 @@ export default function RegistrarPresidente() {
         }
         .rp-grid-docs {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 18px;
+        }
+        .rp-document-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
         }
         .rp-step-bar-line {
           position: relative;
@@ -184,6 +194,7 @@ export default function RegistrarPresidente() {
           .rp-container {
             padding: 24px 16px !important;
           }
+          .rp-grid-4cols-equal,
           .rp-grid-3cols,
           .rp-grid-3cols-equal,
           .rp-grid-2cols,
