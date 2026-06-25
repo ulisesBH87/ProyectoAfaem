@@ -415,6 +415,61 @@ export function useRegistrarPresidente() {
     }
   }, [paso]);
 
+  // ── Sincronizar ocrResults con cuenta ────────────────────────────────────
+  useEffect(() => {
+    if (ocrResults && (ocrResults.curp || ocrResults.nombre || ocrResults.fecha_nac || ocrResults.nacionalidad || ocrResults.sexo)) {
+      setCuenta(prev => {
+        const next = { ...prev };
+
+        if (ocrResults.nombres) {
+          next.nombre = ocrResults.nombres.toUpperCase();
+        }
+        if (ocrResults.apellido_paterno) {
+          next.primerApellido = ocrResults.apellido_paterno.toUpperCase();
+        }
+        if (ocrResults.apellido_materno) {
+          next.segundoApellido = ocrResults.apellido_materno.toUpperCase();
+        }
+
+        // If separate names aren't in ocrResults but full name is, split it
+        if (!ocrResults.nombres && !ocrResults.apellido_paterno && ocrResults.nombre && ocrResults.nombre !== 'No detectado') {
+          const parts = ocrResults.nombre.toUpperCase().split(' ');
+          if (parts.length >= 3) {
+            next.primerApellido = parts[0];
+            next.segundoApellido = parts[1];
+            next.nombre = parts.slice(2).join(' ');
+          } else {
+            next.nombre = ocrResults.nombre.toUpperCase();
+          }
+        }
+
+        if (ocrResults.curp && ocrResults.curp !== 'No detectado') {
+          next.curp = ocrResults.curp.toUpperCase();
+        }
+
+        if (ocrResults.nacionalidad && ocrResults.nacionalidad !== 'No detectado') {
+          next.nacionalidad = ocrResults.nacionalidad.toUpperCase();
+        }
+
+        if (ocrResults.fecha_nac && ocrResults.fecha_nac !== 'No detectada') {
+          const parts = ocrResults.fecha_nac.split('/');
+          if (parts.length === 3) {
+            next.fechaNacimiento = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+
+        if (ocrResults.sexo) {
+          const s = ocrResults.sexo.toUpperCase();
+          if (s === 'MASCULINO') next.sexoId = '1';
+          else if (s === 'FEMENINO') next.sexoId = '2';
+          else if (s === 'OTRO' || s === 'NO BINARIO') next.sexoId = '3';
+        }
+
+        return next;
+      });
+    }
+  }, [ocrResults]);
+
   // ── Manejo de subida de archivos ─────────────────────────────────────────
   const handleFileUpload = (docKey, file) => {
     if (!file) return;

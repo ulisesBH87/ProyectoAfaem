@@ -1253,22 +1253,66 @@ function PreRegistroPresidente() {
     if (!rawText) return currentData;
     const data = { ...currentData };
 
+    // Intentar emparejar layout cruzado/macho en una sola línea
+    const cleanText = rawText.replace(/\s+/g, ' ').toUpperCase();
+    const mashedMatch = cleanText.match(/DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)(?:$|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO))/i);
+    if (mashedMatch) {
+      const nombresVal = mashedMatch[1].trim();
+      const ap1Val = mashedMatch[2].trim();
+      const ap2Val = mashedMatch[3].trim();
+      
+      data.nombre = `${ap1Val} ${ap2Val} ${nombresVal}`.replace(/\s+/g, ' ').toUpperCase();
+      data.nombres = nombresVal.toUpperCase();
+      data.apellido_paterno = ap1Val.toUpperCase();
+      data.apellido_materno = ap2Val.toUpperCase();
+      
+      const rest = mashedMatch[4].trim();
+      if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
+        data.nacionalidad = rest.toUpperCase();
+      } else if (cleanText.includes('NACIONALIDAD')) {
+        const nacMatch = cleanText.match(/(?:NACIONALIDAD|PAIS)\s+([A-Z\s]+)/i);
+        if (nacMatch) data.nacionalidad = nacMatch[1].trim().toUpperCase();
+      }
+      return data;
+    }
+
     // 1. RESCATE DE NOMBRE (Especialmente para actas digitales mexicanas)
     // Buscamos patrones de etiquetas seguidas de valores en líneas subsecuentes
-    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2) {
+    const firstWord = data.nombre ? data.nombre.split(' ')[0] : '';
+    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2 || firstWord.length <= 1) {
       // Intento 1: Formato "Nombre(s) \n VALOR \n Primer Apellido \n VALOR ..."
       const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
 
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) nombres = lines[i + 1];
-        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1 = lines[i + 1];
-        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2 = lines[i + 1];
+        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) {
+          const nextVal = lines[i + 1].toUpperCase();
+          if ((nextVal === 'S' || nextVal === '(S)' || nextVal.length <= 1) && i + 2 < lines.length) {
+            nombres = lines[i + 2];
+          } else {
+            nombres = lines[i + 1];
+          }
+        }
+        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap1 = val;
+          }
+        }
+        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap2 = val;
+          }
+        }
       }
 
       if (nombres && ap1) {
         data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
+        data.nombres = nombres.toUpperCase();
+        data.apellido_paterno = ap1.toUpperCase();
+        data.apellido_materno = ap2.toUpperCase();
       }
     }
 
@@ -1340,10 +1384,24 @@ function PreRegistroPresidente() {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
         const value = row.querySelector('.valor')?.textContent?.trim() || '';
         if (label.includes('curp')) extractedData.curp = value;
-        if (label.includes('nombre')) extractedData.nombre = value;
+        if (label.includes('nombre completo')) extractedData.nombre = value;
+        else if (label.includes('nombres')) extractedData.nombres = value;
+        else if (label.includes('nombre')) extractedData.nombre = value;
+        if (label.includes('apellido paterno')) extractedData.apellido_paterno = value;
+        if (label.includes('apellido materno')) extractedData.apellido_materno = value;
         if (label.includes('nacionalidad')) extractedData.nacionalidad = value;
-        if (label.includes('fecha de nacimiento')) extractedData.fecha_nac = value;
+        if (label.includes('fecha de nacimiento')) {
+          let dateVal = value;
+          if (dateVal.includes('-')) {
+            const p = dateVal.split('-');
+            if (p.length === 3 && p[0].length === 4) {
+              dateVal = `${p[2]}/${p[1]}/${p[0]}`;
+            }
+          }
+          extractedData.fecha_nac = dateVal;
+        }
         if (label.includes('edad')) extractedData.edad = value;
+        if (label.includes('sexo')) extractedData.sexo = value;
         if (label.includes('documento')) extractedData.documento = value;
       });
 
