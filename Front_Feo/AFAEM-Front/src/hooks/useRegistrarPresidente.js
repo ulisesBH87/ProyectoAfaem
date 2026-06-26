@@ -487,7 +487,12 @@ export function useRegistrarPresidente() {
       procesarFoto(file);
     } else {
       setDocuments(prev => ({ ...prev, [docKey]: file }));
-      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCR(docKey, file);
+      if (['actaNacimiento', 'identificacion'].includes(docKey)) {
+        procesarOCR(docKey, file, () => {
+          setPreviews(prev => ({ ...prev, [docKey]: null }));
+          setDocuments(prev => ({ ...prev, [docKey]: null }));
+        });
+      }
     }
   };
 

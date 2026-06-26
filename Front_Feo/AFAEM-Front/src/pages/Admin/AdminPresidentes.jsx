@@ -542,6 +542,36 @@ export default function AdminPresidentes() {
       if (rawText && (docKey === 'actaNacimiento' || extracted.documento?.includes('ACTA'))) {
         extracted = mejorarExtraccionActa(rawText, extracted);
       }
+
+      // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+      const isActaField = ['acta', 'actaNacimiento'].includes(docKey);
+      const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(docKey);
+      const isOcrActa = (extracted.documento || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+      const isOcrIne = (extracted.documento || '').toUpperCase() === 'INE';
+
+      if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+        Swal.close();
+        const result = await Swal.fire({
+          title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+          text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Cargar de todos modos',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#1a3b5c',
+          cancelButtonColor: '#cbd5e1'
+        });
+
+        if (!result.isConfirmed) {
+          setDocuments(prev => {
+            const updated = { ...prev };
+            delete updated[docKey];
+            return updated;
+          });
+          return;
+        }
+      }
+
       setOcrResults(prev => ({ ...prev, ...extracted, [docKey]: `OCR Procesado: ${extracted.nombre}` }));
       Swal.fire({
         title: extracted.nombre ? '¡Lectura Exitosa!' : 'Documento procesado',

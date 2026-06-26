@@ -366,6 +366,7 @@ export default function AdminCrearJugador() {
         let curpEncontrada = '';
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
+        let documentoEncontrado = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -390,6 +391,7 @@ export default function AdminCrearJugador() {
           }
 
           if (label.includes('curp')) curpEncontrada = value;
+          if (label.includes('documento')) documentoEncontrado = value;
           
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
@@ -407,6 +409,32 @@ export default function AdminCrearJugador() {
             fechaNacEncontrada = finalDate;
           }
         });
+
+        // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+        const isActaField = ['acta', 'actaNacimiento'].includes(documentKey);
+        const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(documentKey);
+        const isOcrActa = (documentoEncontrado || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+        const isOcrIne = (documentoEncontrado || '').toUpperCase() === 'INE';
+
+        if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+          Swal.close();
+          const result = await Swal.fire({
+            title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+            text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Cargar de todos modos',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: COLORS.primary || '#1a3b5c',
+            cancelButtonColor: COLORS.slate300 || '#cbd5e1'
+          });
+
+          if (!result.isConfirmed) {
+            setDocuments(prev => ({ ...prev, [documentKey]: null }));
+            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            return;
+          }
+        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
