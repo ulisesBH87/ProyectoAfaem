@@ -3458,195 +3458,6 @@ function PreRegistroPresidente() {
               </div>
             </div>
 
-            {/* OPCIÓN DE LLENADO MANUAL DE OCR */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '25px' }}>
-              <button
-                type="button"
-                onClick={() => setMostrarFormularioManual(!mostrarFormularioManual)}
-                className="doc-action-btn"
-                style={{
-                  padding: '10px 24px',
-                  borderRadius: '12px',
-                  border: `1px solid ${COLORS.brandBlueLight30}`,
-                  background: mostrarFormularioManual ? COLORS.brandBlueLight16 : COLORS.overlayWhite04,
-                  color: COLORS.brandBlueLight,
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
-              </button>
-            </div>
-
-            {mostrarFormularioManual && (
-              <div style={{
-                background: `linear-gradient(135deg, ${COLORS.brandBlueLight06} 0%, ${COLORS.overlaySlateSuperLight} 100%)`,
-                border: `1px solid ${COLORS.brandBlueLight20}`,
-                borderRadius: '24px',
-                padding: '28px',
-                marginBottom: '35px',
-                backdropFilter: 'blur(8px)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${COLORS.brandBlueLight50}, transparent)` }} />
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <div style={{ width: '5px', height: '24px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Formulario Manual de Identidad</h4>
-                </div>
-
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: '1.5' }}>
-                  Si el sistema automático de lectura no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Nombre Completo *</label>
-                    <input
-                      type="text"
-                      placeholder="APELLIDOS NOMBRES"
-                      value={ocrResults.nombre || ''}
-                      onChange={(e) => handleManualOcrChange('nombre', e.target.value.toUpperCase())}
-                      className="premium-input"
-                      disabled={true}
-                      style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
-                    />
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">CURP *</label>
-                    <input
-                      type="text"
-                      placeholder="18 caracteres alfanuméricos"
-                      maxLength={18}
-                      value={ocrResults.curp || ''}
-                      onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
-                      className="premium-input"
-                      disabled={!!user.usuario?.curp}
-                      style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : {}}
-                    />
-                    {curpExistente && (
-                      <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
-                        Esta CURP ya está registrada a otra persona.
-                      </div>
-                    )}
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Nacionalidad *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. MEXICANA"
-                      value={ocrResults.nacionalidad || ''}
-                      onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase())}
-                      className="premium-input"
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Fecha de Nacimiento *</label>
-                    <input
-                      type="date"
-                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
-                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
-                      className="premium-input"
-                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
-                    />
-                    {(() => {
-                      const val = convertToYYYYMMDD(ocrResults.fecha_nac);
-                      if (!val) return null;
-                      const fechaDate = new Date(val);
-                      if (fechaDate.getFullYear() < 1900) {
-                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
-                      }
-                      if (fechaDate.getFullYear() > new Date().getFullYear()) {
-                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
-                      }
-                      const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
-                      if (fechaDate > limitDate) {
-                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>Debes tener más de 18 años</div>;
-                      }
-                      return null;
-                    })()}
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Sexo *</label>
-                    <select
-                      value={ocrResults.sexo || ''}
-                      onChange={(e) => handleManualOcrChange('sexo', e.target.value)}
-                      className="premium-input"
-                      style={user.usuario?.sexoId ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : { cursor: 'pointer' }}
-                      disabled={!!user.usuario?.sexoId}
-                    >
-                      <option value="">Selecciona...</option>
-                      <option value="MASCULINO">Masculino</option>
-                      <option value="FEMENINO">Femenino</option>
-                      <option value="NO BINARIO">OTRO</option>
-                    </select>
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Teléfono registrado*</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <select
-                        value={codigoPais}
-                        onChange={(e) => setCodigoPais(e.target.value)}
-                        className="premium-input"
-                        disabled={true}
-                        style={{
-                          width: '100px',
-                          padding: '12px 16px',
-                          background: COLORS.overlayWhite05,
-                          border: `1px solid ${COLORS.overlayWhite10}`,
-                          borderRadius: '12px',
-                          color: 'white',
-                          fontSize: '14px',
-                          outline: 'none',
-                          cursor: 'not-allowed',
-                          backdropFilter: 'blur(4px)'
-                        }}
-                      >
-                        <option value="+52" style={{ background: COLORS.indigo950, color: 'white' }}>México +52</option>
-                        <option value="+1" style={{ background: COLORS.indigo950, color: 'white' }}>EE.UU./Canadá +1</option>
-                        <option value="+34" style={{ background: COLORS.indigo950, color: 'white' }}>España +34</option>
-                        <option value="+54" style={{ background: COLORS.indigo950, color: 'white' }}>Argentina +54</option>
-                        <option value="+55" style={{ background: COLORS.indigo950, color: 'white' }}>Brasil +55</option>
-                        <option value="+56" style={{ background: COLORS.indigo950, color: 'white' }}>Chile +56</option>
-                        <option value="+57" style={{ background: COLORS.indigo950, color: 'white' }}>Colombia +57</option>
-                        <option value="+506" style={{ background: COLORS.indigo950, color: 'white' }}>Costa Rica +506</option>
-                        <option value="+593" style={{ background: COLORS.indigo950, color: 'white' }}>Ecuador +593</option>
-                        <option value="+503" style={{ background: COLORS.indigo950, color: 'white' }}>El Salvador +503</option>
-                        <option value="+502" style={{ background: COLORS.indigo950, color: 'white' }}>Guatemala +502</option>
-                        <option value="+504" style={{ background: COLORS.indigo950, color: 'white' }}>Honduras +504</option>
-                        <option value="+505" style={{ background: COLORS.indigo950, color: 'white' }}>Nicaragua +505</option>
-                        <option value="+507" style={{ background: COLORS.indigo950, color: 'white' }}>Panamá +507</option>
-                        <option value="+595" style={{ background: COLORS.indigo950, color: 'white' }}>Paraguay +595</option>
-                        <option value="+51" style={{ background: COLORS.indigo950, color: 'white' }}>Perú +51</option>
-                        <option value="+598" style={{ background: COLORS.indigo950, color: 'white' }}>Uruguay +598</option>
-                        <option value="+58" style={{ background: COLORS.indigo950, color: 'white' }}>Venezuela +58</option>
-                      </select>
-                      <input
-                        type="tel"
-                        placeholder="10 dígitos"
-                        maxLength={10}
-                        value={ocrResults.telefono || ''}
-                        onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
-                        className="premium-input"
-                        disabled={true}
-                        readOnly={true}
-                        style={{ cursor: 'not-allowed', flexGrow: 1, backgroundColor: COLORS.overlayWhite05 }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* TARJETAS DE DOCUMENTOS */}
             {(() => {
               const esMayorDeEdad = (() => {
@@ -3964,6 +3775,195 @@ function PreRegistroPresidente() {
                 </div>
               );
             })()}
+
+            {/* OPCIÓN DE LLENADO MANUAL DE OCR */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '25px' }}>
+              <button
+                type="button"
+                onClick={() => setMostrarFormularioManual(!mostrarFormularioManual)}
+                className="doc-action-btn"
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '12px',
+                  border: `1px solid ${COLORS.brandBlueLight30}`,
+                  background: mostrarFormularioManual ? COLORS.brandBlueLight16 : COLORS.overlayWhite04,
+                  color: COLORS.brandBlueLight,
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
+              </button>
+            </div>
+
+            {mostrarFormularioManual && (
+              <div style={{
+                background: `linear-gradient(135deg, ${COLORS.brandBlueLight06} 0%, ${COLORS.overlaySlateSuperLight} 100%)`,
+                border: `1px solid ${COLORS.brandBlueLight20}`,
+                borderRadius: '24px',
+                padding: '28px',
+                marginBottom: '35px',
+                backdropFilter: 'blur(8px)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${COLORS.brandBlueLight50}, transparent)` }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ width: '5px', height: '24px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Formulario Manual de Identidad</h4>
+                </div>
+
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: '1.5' }}>
+                  Si el sistema automático de lectura no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Nombre Completo *</label>
+                    <input
+                      type="text"
+                      placeholder="APELLIDOS NOMBRES"
+                      value={ocrResults.nombre || ''}
+                      onChange={(e) => handleManualOcrChange('nombre', e.target.value.toUpperCase())}
+                      className="premium-input"
+                      disabled={true}
+                      style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
+                    />
+                  </div>
+                  <div className="premium-input-group">
+                    <label className="premium-label">CURP *</label>
+                    <input
+                      type="text"
+                      placeholder="18 caracteres alfanuméricos"
+                      maxLength={18}
+                      value={ocrResults.curp || ''}
+                      onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
+                      className="premium-input"
+                      disabled={!!user.usuario?.curp}
+                      style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : {}}
+                    />
+                    {curpExistente && (
+                      <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
+                        Esta CURP ya está registrada a otra persona.
+                      </div>
+                    )}
+                  </div>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Nacionalidad *</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. MEXICANA"
+                      value={ocrResults.nacionalidad || ''}
+                      onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase())}
+                      className="premium-input"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Fecha de Nacimiento *</label>
+                    <input
+                      type="date"
+                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
+                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
+                      className="premium-input"
+                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
+                    />
+                    {(() => {
+                      const val = convertToYYYYMMDD(ocrResults.fecha_nac);
+                      if (!val) return null;
+                      const fechaDate = new Date(val);
+                      if (fechaDate.getFullYear() < 1900) {
+                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
+                      }
+                      if (fechaDate.getFullYear() > new Date().getFullYear()) {
+                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
+                      }
+                      const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
+                      if (fechaDate > limitDate) {
+                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>Debes tener más de 18 años</div>;
+                      }
+                      return null;
+                    })()}
+                  </div>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Sexo *</label>
+                    <select
+                      value={ocrResults.sexo || ''}
+                      onChange={(e) => handleManualOcrChange('sexo', e.target.value)}
+                      className="premium-input"
+                      style={user.usuario?.sexoId ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : { cursor: 'pointer' }}
+                      disabled={!!user.usuario?.sexoId}
+                    >
+                      <option value="">Selecciona...</option>
+                      <option value="MASCULINO">Masculino</option>
+                      <option value="FEMENINO">Femenino</option>
+                      <option value="NO BINARIO">OTRO</option>
+                    </select>
+                  </div>
+                  <div className="premium-input-group">
+                    <label className="premium-label">Teléfono registrado*</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select
+                        value={codigoPais}
+                        onChange={(e) => setCodigoPais(e.target.value)}
+                        className="premium-input"
+                        disabled={true}
+                        style={{
+                          width: '100px',
+                          padding: '12px 16px',
+                          background: COLORS.overlayWhite05,
+                          border: `1px solid ${COLORS.overlayWhite10}`,
+                          borderRadius: '12px',
+                          color: 'white',
+                          fontSize: '14px',
+                          outline: 'none',
+                          cursor: 'not-allowed',
+                          backdropFilter: 'blur(4px)'
+                        }}
+                      >
+                        <option value="+52" style={{ background: COLORS.indigo950, color: 'white' }}>México +52</option>
+                        <option value="+1" style={{ background: COLORS.indigo950, color: 'white' }}>EE.UU./Canadá +1</option>
+                        <option value="+34" style={{ background: COLORS.indigo950, color: 'white' }}>España +34</option>
+                        <option value="+54" style={{ background: COLORS.indigo950, color: 'white' }}>Argentina +54</option>
+                        <option value="+55" style={{ background: COLORS.indigo950, color: 'white' }}>Brasil +55</option>
+                        <option value="+56" style={{ background: COLORS.indigo950, color: 'white' }}>Chile +56</option>
+                        <option value="+57" style={{ background: COLORS.indigo950, color: 'white' }}>Colombia +57</option>
+                        <option value="+506" style={{ background: COLORS.indigo950, color: 'white' }}>Costa Rica +506</option>
+                        <option value="+593" style={{ background: COLORS.indigo950, color: 'white' }}>Ecuador +593</option>
+                        <option value="+503" style={{ background: COLORS.indigo950, color: 'white' }}>El Salvador +503</option>
+                        <option value="+502" style={{ background: COLORS.indigo950, color: 'white' }}>Guatemala +502</option>
+                        <option value="+504" style={{ background: COLORS.indigo950, color: 'white' }}>Honduras +504</option>
+                        <option value="+505" style={{ background: COLORS.indigo950, color: 'white' }}>Nicaragua +505</option>
+                        <option value="+507" style={{ background: COLORS.indigo950, color: 'white' }}>Panamá +507</option>
+                        <option value="+595" style={{ background: COLORS.indigo950, color: 'white' }}>Paraguay +595</option>
+                        <option value="+51" style={{ background: COLORS.indigo950, color: 'white' }}>Perú +51</option>
+                        <option value="+598" style={{ background: COLORS.indigo950, color: 'white' }}>Uruguay +598</option>
+                        <option value="+58" style={{ background: COLORS.indigo950, color: 'white' }}>Venezuela +58</option>
+                      </select>
+                      <input
+                        type="tel"
+                        placeholder="10 dígitos"
+                        maxLength={10}
+                        value={ocrResults.telefono || ''}
+                        onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
+                        className="premium-input"
+                        disabled={true}
+                        readOnly={true}
+                        style={{ cursor: 'not-allowed', flexGrow: 1, backgroundColor: COLORS.overlayWhite05 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* BOTONES DE NAVEGACIÓN */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: `1px solid ${COLORS.overlayWhite06}` }}>
