@@ -1192,7 +1192,7 @@ export default function CompletarJugadoresEquipo() {
     }
 
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
-    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
+    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'identificacionMenor') {
       Swal.fire({
         title: 'Analizando Documento...',
         html: 'Extrayendo información. Por favor espere.',
@@ -1275,7 +1275,7 @@ export default function CompletarJugadoresEquipo() {
 
         // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
         const isActaField = ['acta', 'actaNacimiento'].includes(documentKey);
-        const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(documentKey);
+        const isIneField = ['ine', 'ineTutor', 'identificacion', 'identificacionMenor'].includes(documentKey);
         const isOcrActa = (documentoEncontrado || '').toUpperCase() === 'ACTA DE NACIMIENTO';
         const isOcrIne = (documentoEncontrado || '').toUpperCase() === 'INE';
 
