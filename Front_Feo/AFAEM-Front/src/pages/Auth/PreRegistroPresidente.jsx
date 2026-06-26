@@ -1261,10 +1261,13 @@ function PreRegistroPresidente() {
       const ap1Val = mashedMatch[2].trim();
       const ap2Val = mashedMatch[3].trim();
       
-      data.nombre = `${ap1Val} ${ap2Val} ${nombresVal}`.replace(/\s+/g, ' ').toUpperCase();
+      data.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
       data.nombres = nombresVal.toUpperCase();
       data.apellido_paterno = ap1Val.toUpperCase();
       data.apellido_materno = ap2Val.toUpperCase();
+      data.nombreSolo = nombresVal.toUpperCase();
+      data.primerApellido = ap1Val.toUpperCase();
+      data.segundoApellido = ap2Val.toUpperCase();
       
       const rest = mashedMatch[4].trim();
       if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
@@ -1309,10 +1312,13 @@ function PreRegistroPresidente() {
       }
 
       if (nombres && ap1) {
-        data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
+        data.nombre = `${nombres} ${ap1} ${ap2}`.replace(/\s+/g, ' ').toUpperCase();
         data.nombres = nombres.toUpperCase();
         data.apellido_paterno = ap1.toUpperCase();
         data.apellido_materno = ap2.toUpperCase();
+        data.nombreSolo = nombres.toUpperCase();
+        data.primerApellido = ap1.toUpperCase();
+        data.segundoApellido = ap2.toUpperCase();
       }
     }
 
@@ -1377,20 +1383,53 @@ function PreRegistroPresidente() {
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, "text/html");
 
-      let extractedData = {};
-      const rows = doc.querySelectorAll('.dato-fila');
+      const cleanVal = (val) => {
+        if (!val) return '';
+        const cleaned = val.trim();
+        const lower = cleaned.toLowerCase();
+        if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+          return '';
+        }
+        return cleaned;
+      };
 
+      let nombreEncontrado = '';
+      let nombresEncontrados = '';
+      let apellidoPaternoEncontrado = '';
+      let apellidoMaternoEncontrado = '';
+      let curpEncontrada = '';
+      let fechaNacEncontrada = '';
+      let nacionalidadEncontrada = '';
+      let edadEncontrada = '';
+      let sexoEncontrado = '';
+      let documentoEncontrado = '';
+
+      const rows = doc.querySelectorAll('.dato-fila');
       rows.forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const value = row.querySelector('.valor')?.textContent?.trim() || '';
-        if (label.includes('curp')) extractedData.curp = value;
-        if (label.includes('nombre completo')) extractedData.nombre = value;
-        else if (label.includes('nombres')) extractedData.nombres = value;
-        else if (label.includes('nombre')) extractedData.nombre = value;
-        if (label.includes('apellido paterno')) extractedData.apellido_paterno = value;
-        if (label.includes('apellido materno')) extractedData.apellido_materno = value;
-        if (label.includes('nacionalidad')) extractedData.nacionalidad = value;
-        if (label.includes('fecha de nacimiento')) {
+        const value = cleanVal(row.querySelector('.valor')?.textContent);
+
+        if (!value) return;
+
+        if (label.includes('nombres')) {
+          nombresEncontrados = value;
+        } else if (label.includes('nombre completo') || label === 'nombre') {
+          nombreEncontrado = value;
+        } else if (label.includes('nombre')) {
+          if (!nombresEncontrados) nombresEncontrados = value;
+        }
+
+        if (label.includes('apellido paterno') || label.includes('paterno')) {
+          apellidoPaternoEncontrado = value;
+        }
+        if (label.includes('apellido materno') || label.includes('materno')) {
+          apellidoMaternoEncontrado = value;
+        }
+
+        if (label.includes('curp')) curpEncontrada = value;
+        if (label.includes('nacionalidad')) nacionalidadEncontrada = value;
+
+        if (label.includes('fecha de nacimiento') || label.includes('fecha nac') || (label.includes('nacimiento') && !label.includes('lugar'))) {
           let dateVal = value;
           if (dateVal.includes('-')) {
             const p = dateVal.split('-');
@@ -1398,12 +1437,62 @@ function PreRegistroPresidente() {
               dateVal = `${p[2]}/${p[1]}/${p[0]}`;
             }
           }
-          extractedData.fecha_nac = dateVal;
+          fechaNacEncontrada = dateVal;
         }
-        if (label.includes('edad')) extractedData.edad = value;
-        if (label.includes('sexo')) extractedData.sexo = value;
-        if (label.includes('documento')) extractedData.documento = value;
+
+        if (label.includes('edad')) edadEncontrada = value;
+        if (label.includes('sexo')) sexoEncontrado = value;
+        if (label.includes('documento')) documentoEncontrado = value;
       });
+
+      let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+
+      if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+        firstName = nombresEncontrados;
+        lastNamePaterno = apellidoPaternoEncontrado;
+        lastNameMaterno = apellidoMaternoEncontrado;
+      } else if (nombreEncontrado) {
+        const parts = nombreEncontrado.split(' ');
+        if (parts.length === 4) {
+          firstName = parts.slice(0, 2).join(' ');
+          lastNamePaterno = parts[2];
+          lastNameMaterno = parts[3];
+        } else if (parts.length === 3) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+          lastNameMaterno = parts[2];
+        } else if (parts.length === 2) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+        } else {
+          firstName = nombreEncontrado;
+        }
+      }
+
+      const fullNombre = [firstName, lastNamePaterno, lastNameMaterno].filter(Boolean).join(' ') || nombreEncontrado;
+
+      let detectedSexo = sexoEncontrado;
+      if (curpEncontrada && curpEncontrada.length >= 11) {
+        const char = curpEncontrada.charAt(10).toUpperCase();
+        if (char === 'M') detectedSexo = 'FEMENINO';
+        else if (char === 'H') detectedSexo = 'MASCULINO';
+      }
+
+      let extractedData = {
+        curp: curpEncontrada || '',
+        nombre: fullNombre || '',
+        nombres: firstName || '',
+        apellido_paterno: lastNamePaterno || '',
+        apellido_materno: lastNameMaterno || '',
+        nombreSolo: firstName || '',
+        primerApellido: lastNamePaterno || '',
+        segundoApellido: lastNameMaterno || '',
+        nacionalidad: nacionalidadEncontrada || '',
+        fecha_nac: fechaNacEncontrada || '',
+        edad: edadEncontrada || '',
+        sexo: detectedSexo || '',
+        documento: documentoEncontrado || ''
+      };
 
       // --- REFUERZO DESDE EL FRONTEND (RESCATE DE TEXTO CRUDO) ---
       const rawText = doc.querySelector('pre')?.textContent;
@@ -1522,15 +1611,19 @@ function PreRegistroPresidente() {
         if (nombreSolo) safeSetField(form, 'Nombres', nombreSolo.toUpperCase());
       } else if (nombre && nombre !== "No detectado") {
         const parts = nombre.split(' ');
-        if (parts.length >= 3) {
-          safeSetField(form, 'Apellido Paterno', parts[0]);
-          safeSetField(form, 'Apellido Materno', parts[1]);
-          safeSetField(form, 'Nombres', parts.slice(2).join(' '));
+        if (parts.length === 4) {
+          safeSetField(form, 'Nombres', parts.slice(0, 2).join(' ').toUpperCase());
+          safeSetField(form, 'Apellido Paterno', parts[2].toUpperCase());
+          safeSetField(form, 'Apellido Materno', parts[3].toUpperCase());
+        } else if (parts.length === 3) {
+          safeSetField(form, 'Nombres', parts[0].toUpperCase());
+          safeSetField(form, 'Apellido Paterno', parts[1].toUpperCase());
+          safeSetField(form, 'Apellido Materno', parts[2].toUpperCase());
         } else if (parts.length === 2) {
-          safeSetField(form, 'Apellido Paterno', parts[0]);
-          safeSetField(form, 'Nombres', parts[1]);
+          safeSetField(form, 'Nombres', parts[0].toUpperCase());
+          safeSetField(form, 'Apellido Paterno', parts[1].toUpperCase());
         } else {
-          safeSetField(form, 'Nombres', nombre);
+          safeSetField(form, 'Nombres', nombre.toUpperCase());
         }
       }
 
@@ -1698,9 +1791,17 @@ function PreRegistroPresidente() {
     }
 
     if (field === 'curp') {
+      let extra = {};
+      if (value.length >= 11) {
+        const char = value.charAt(10).toUpperCase();
+        if (char === 'M') extra.sexo = 'FEMENINO';
+        else if (char === 'H') extra.sexo = 'MASCULINO';
+      }
+
       setOcrResults(prev => ({
         ...prev,
         [field]: value,
+        ...extra,
         actaNacimiento: prev.actaNacimiento || 'Manual',
         identificacion: prev.identificacion || 'Manual'
       }));

@@ -1299,7 +1299,7 @@ export default function CompletarJugadoresEquipo() {
           // Auto-detectar género por CURP
           let detectedGenero = extractedData.genero;
           if (curpEncontrada && curpEncontrada.length >= 11) {
-            const char = curpEncontrada.charAt(10);
+            const char = curpEncontrada.charAt(10).toUpperCase();
             if (char === 'M') detectedGenero = '2'; // Femenino
             else if (char === 'H') detectedGenero = '1'; // Masculino
           }

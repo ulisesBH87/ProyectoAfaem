@@ -433,13 +433,22 @@ export default function AdminCrearJugador() {
             }
           }
 
+          // Auto-detectar género por CURP
+          let detectedGenero = extractedData.genero;
+          if (curpEncontrada && curpEncontrada.length >= 11) {
+            const char = curpEncontrada.charAt(10).toUpperCase();
+            if (char === 'M') detectedGenero = '2'; // Femenino
+            else if (char === 'H') detectedGenero = '1'; // Masculino
+          }
+
           const ocrResult = {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
             curp: curpEncontrada || '',
             fechaNacimiento: fechaNacEncontrada || '',
-            lugarNacimiento: lugarNacEncontrado || ''
+            lugarNacimiento: lugarNacEncontrado || '',
+            genero: detectedGenero
           };
 
           setOcrDataOriginal(ocrResult);
@@ -1380,9 +1389,9 @@ export default function AdminCrearJugador() {
                     const val = e.target.value.toUpperCase();
                     let sId = extractedData.genero;
                     if (val.length >= 11) {
-                      const char = val.charAt(10);
-                      if (char === 'M') sId = 2; // Femenino
-                      else if (char === 'H') sId = 1; // Masculino
+                      const char = val.charAt(10).toUpperCase();
+                      if (char === 'M') sId = '2'; // Femenino
+                      else if (char === 'H') sId = '1'; // Masculino
                     }
                     setExtractedData({ ...extractedData, curp: val, genero: sId });
                   }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
@@ -1407,10 +1416,10 @@ export default function AdminCrearJugador() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
-                  <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white' }}>
+                  <select value={extractedData.genero !== undefined && extractedData.genero !== null ? String(extractedData.genero) : ""} onChange={e => setExtractedData({ ...extractedData, genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white' }}>
                     <option value="">Seleccione...</option>
-                    <option value={1}>MASCULINO</option>
-                    <option value={2}>FEMENINO</option>
+                    <option value="1">MASCULINO</option>
+                    <option value="2">FEMENINO</option>
                   </select>
                 </div>
               </div>
