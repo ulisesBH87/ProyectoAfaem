@@ -9,6 +9,9 @@ from google.cloud import vision
 from datetime import datetime
 import fitz
 import unicodedata
+import cv2
+import numpy as np
+
 
 try:
     from dotenv import load_dotenv
@@ -117,12 +120,12 @@ def letters_match_or_similar(c1, c2):
 
 def curp_coincide_con_nombre(curp, nombres, ap1, ap2):
     if not curp or curp == "No detectado" or len(curp) < 4:
-        return False
+        return False, False
     c_n = nombres.strip().upper() if nombres else ""
     c_ap1 = ap1.strip().upper() if ap1 else ""
     c_ap2 = ap2.strip().upper() if ap2 else ""
     if not c_n or not c_ap1:
-        return False
+        return False, False
     n_words = c_n.split()
     first_name = ""
     if len(n_words) > 1 and n_words[0] in ["MARIA", "MA", "MA.", "M.", "JOSE", "J", "J."]:
@@ -130,20 +133,147 @@ def curp_coincide_con_nombre(curp, nombres, ap1, ap2):
     else:
         first_name = n_words[0] if n_words else ""
     if not first_name:
-        return False
+        return False, False
     l_ap1 = c_ap1[0] if c_ap1 else ""
     l_ap2 = c_ap2[0] if c_ap2 else ""
     l_n = first_name[0] if first_name else ""
     curp_prefix = curp[:4].upper()
     
-    m0 = letters_match_or_similar(curp_prefix[0], l_ap1)
     m3 = letters_match_or_similar(curp_prefix[3], l_n)
-    
+    if not m3:
+        return False, False
+        
     if l_ap2:
-        m2 = letters_match_or_similar(curp_prefix[2], l_ap2)
-        return m0 and m2 and m3
+        m0_standard = letters_match_or_similar(curp_prefix[0], l_ap1)
+        m2_standard = letters_match_or_similar(curp_prefix[2], l_ap2)
+        if m0_standard and m2_standard:
+            return True, False
+            
+        m0_swapped = letters_match_or_similar(curp_prefix[2], l_ap1)
+        m2_swapped = letters_match_or_similar(curp_prefix[0], l_ap2)
+        if m0_swapped and m2_swapped:
+            return True, True
     else:
-        return m0 and m3
+        m0_standard = letters_match_or_similar(curp_prefix[0], l_ap1)
+        if m0_standard:
+            return True, False
+        m0_swapped = letters_match_or_similar(curp_prefix[2], l_ap1)
+        if m0_swapped:
+            return True, True
+            
+    return False, False
+
+def limpiar_basura_del_nombre(campo):
+    if not campo: return ""
+    palabras = campo.split()
+    palabras_limpias = []
+    ruidos = ["EXICA", "MEXICA", "UNISEXICA", "ROSINI", "ROS", "ESTADOS", "UNIDOS", "MEXICANOS", "ECHA"]
+    for p in palabras:
+        p_up = p.upper()
+        if p_up in ruidos:
+            continue
+        cleaned_word = p_up
+        for r in ruidos:
+            if r in cleaned_word and cleaned_word != r:
+                cleaned_word = cleaned_word.replace(r, "")
+        if cleaned_word:
+            palabras_limpias.append(cleaned_word)
+    return " ".join(palabras_limpias).strip()
+
+def extraer_por_proximidad_etiquetas(texto_crudo, curp):
+    raw_lines = [l.strip() for l in texto_crudo.split('\n') if l.strip()]
+    lines_up = [l.upper() for l in raw_lines]
+    
+    idx_nombre = -1
+    idx_ap1 = -1
+    idx_ap2 = -1
+    
+    for idx, l in enumerate(lines_up):
+        if any(kw in l for kw in ["FILIACION", "FILIACIÓN", "PROGENITORES", "PADRES"]):
+            break
+            
+        if "NOMBRE(S)" in l or "NOMBRE" == l or "NOMBRES" in l:
+            if idx_nombre == -1:
+                idx_nombre = idx
+        elif "PRIMER APELLIDO" in l or "PATERNO" in l:
+            if idx_ap1 == -1:
+                idx_ap1 = idx
+        elif "SEGUNDO APELLIDO" in l or "MATERNO" in l:
+            if idx_ap2 == -1:
+                idx_ap2 = idx
+                
+    candidatos_nombres = []
+    candidatos_ap1 = []
+    candidatos_ap2 = []
+    
+    def es_linea_valida(linea):
+        norm = normalizar_texto(linea)
+        if not norm: return False
+        if contiene_basura(norm): return False
+        for etiqueta in ["SEXO", "HOMBRE", "MUJER", "CURP", "FECHA", "LUGAR", "NACIMIENTO", "ESTADO", "REGISTRO", "APELLIDO"]:
+            if etiqueta in norm:
+                return False
+        return True
+
+    if idx_nombre != -1:
+        for offset in [-1, 1, -2, 2]:
+            neighbor_idx = idx_nombre + offset
+            if 0 <= neighbor_idx < len(raw_lines):
+                val = raw_lines[neighbor_idx].strip()
+                if es_linea_valida(val):
+                    candidatos_nombres.append(val)
+                    
+    if idx_ap1 != -1:
+        for offset in [-1, 1, -2, 2]:
+            neighbor_idx = idx_ap1 + offset
+            if 0 <= neighbor_idx < len(raw_lines):
+                val = raw_lines[neighbor_idx].strip()
+                if es_linea_valida(val):
+                    candidatos_ap1.append(val)
+                    
+    if idx_ap2 != -1:
+        for offset in [-1, 1, -2, 2]:
+            neighbor_idx = idx_ap2 + offset
+            if 0 <= neighbor_idx < len(raw_lines):
+                val = raw_lines[neighbor_idx].strip()
+                if es_linea_valida(val):
+                    candidatos_ap2.append(val)
+                    
+    curp_prefix = curp[:4].upper() if curp and curp != "No detectado" else ""
+    
+    for c_nom in candidatos_nombres:
+        for c_a1 in candidatos_ap1:
+            for c_a2 in candidatos_ap2:
+                nom_clean = limpiar_basura_del_nombre(c_nom)
+                a1_clean = limpiar_basura_del_nombre(c_a1)
+                a2_clean = limpiar_basura_del_nombre(c_a2)
+                
+                if not nom_clean or not a1_clean or not a2_clean:
+                    continue
+                    
+                if curp_prefix:
+                    coincide, invertido = curp_coincide_con_nombre(curp, nom_clean, a1_clean, a2_clean)
+                    if coincide:
+                        paterno = a2_clean if invertido else a1_clean
+                        materno = a1_clean if invertido else a2_clean
+                        return {
+                            "nombres": nom_clean,
+                            "apellido_paterno": paterno,
+                            "apellido_materno": materno,
+                            "nombre_completo": f"{nom_clean} {paterno} {materno}".strip(),
+                            "origen": "Etiqueta Proximidad Match"
+                        }
+                else:
+                    return {
+                        "nombres": nom_clean,
+                        "apellido_paterno": a1_clean,
+                        "apellido_materno": a2_clean,
+                        "nombre_completo": f"{nom_clean} {a1_clean} {a2_clean}".strip(),
+                        "origen": "Etiqueta Proximidad Match (Sin CURP)"
+                    }
+                    
+    return None
+
 
 def validar_candidato_nombre(nombres, ap1, ap2, discarded_list=None):
     n_val = normalizar_texto(nombres)
@@ -209,10 +339,14 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
                 ap2 = partes[i+1] if i+1 < n else ""
                 
                 if validar_candidato_nombre(nombres, ap1, ap2, discarded_list):
-                    if curp_coincide_con_nombre(curp, nombres, ap1, ap2):
+                    coincide, invertido = curp_coincide_con_nombre(curp, nombres, ap1, ap2)
+                    if coincide:
+                        paterno = limpiar_basura_del_nombre(ap2 if invertido else ap1)
+                        materno = limpiar_basura_del_nombre(ap1 if invertido else ap2)
+                        nombres_limpios = limpiar_basura_del_nombre(nombres)
                         return {
-                            "nombres": nombres, "apellido_paterno": ap1, "apellido_materno": ap2,
-                            "nombre_completo": f"{nombres} {ap1} {ap2}".strip(), "origen": f"Proximity/Line Match (standard) at line {original_idx}"
+                            "nombres": nombres_limpios, "apellido_paterno": paterno, "apellido_materno": materno,
+                            "nombre_completo": f"{nombres_limpios} {paterno} {materno}".strip(), "origen": f"Proximity/Line Match (standard) at line {original_idx}"
                         }
                     else:
                         if discarded_list is not None:
@@ -229,10 +363,14 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
                 nombres = " ".join(partes[2:])
                 
                 if validar_candidato_nombre(nombres, ap1, ap2, discarded_list):
-                    if curp_coincide_con_nombre(curp, nombres, ap1, ap2):
+                    coincide, invertido = curp_coincide_con_nombre(curp, nombres, ap1, ap2)
+                    if coincide:
+                        paterno = limpiar_basura_del_nombre(ap2 if invertido else ap1)
+                        materno = limpiar_basura_del_nombre(ap1 if invertido else ap2)
+                        nombres_limpios = limpiar_basura_del_nombre(nombres)
                         return {
-                            "nombres": nombres, "apellido_paterno": ap1, "apellido_materno": ap2,
-                            "nombre_completo": f"{nombres} {ap1} {ap2}".strip(), "origen": f"Proximity/Line Match (reverse) at line {original_idx}"
+                            "nombres": nombres_limpios, "apellido_paterno": paterno, "apellido_materno": materno,
+                            "nombre_completo": f"{nombres_limpios} {paterno} {materno}".strip(), "origen": f"Proximity/Line Match (reverse) at line {original_idx}"
                         }
                     else:
                         if discarded_list is not None:
@@ -421,10 +559,19 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
             if contiene_basura(ap2) or ap2 in INVALID_SINGLE_WORDS: ap2 = ""
 
             if validar_candidato_nombre(nombres, ap1, ap2, discarded_list):
-                if curp == "No detectado" or curp_coincide_con_nombre(curp, nombres, ap1, ap2):
+                coincide, invertido = False, False
+                if curp == "No detectado":
+                    coincide = True
+                else:
+                    coincide, invertido = curp_coincide_con_nombre(curp, nombres, ap1, ap2)
+                
+                if coincide:
+                    paterno = limpiar_basura_del_nombre(ap2 if invertido else ap1)
+                    materno = limpiar_basura_del_nombre(ap1 if invertido else ap2)
+                    nombres_limpios = limpiar_basura_del_nombre(nombres)
                     candidatos_encontrados.append({
-                        "nombres": nombres, "apellido_paterno": ap1, "apellido_materno": ap2,
-                        "nombre_completo": f"{nombres} {ap1} {ap2}".strip(), "origen": "Anchor Regex Match"
+                        "nombres": nombres_limpios, "apellido_paterno": paterno, "apellido_materno": materno,
+                        "nombre_completo": f"{nombres_limpios} {paterno} {materno}".strip(), "origen": "Anchor Regex Match"
                     })
                 else:
                     discarded_list.append(f"({nombres}, {ap1}, {ap2}) [Anchor Regex] -> Discarded: Does not match CURP prefix")
@@ -470,10 +617,18 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
                 if contiene_basura(ap2_val) or ap2_val in INVALID_SINGLE_WORDS: ap2_val = ""
 
                 if validar_candidato_nombre(nombres_val, ap1_val, ap2_val, discarded_list):
-                    if curp == "No detectado" or curp_coincide_con_nombre(curp, nombres_val, ap1_val, ap2_val):
+                    coincide, invertido = False, False
+                    if curp == "No detectado":
+                        coincide = True
+                    else:
+                        coincide, invertido = curp_coincide_con_nombre(curp, nombres_val, ap1_val, ap2_val)
+                    if coincide:
+                        paterno = limpiar_basura_del_nombre(ap2_val if invertido else ap1_val)
+                        materno = limpiar_basura_del_nombre(ap1_val if invertido else ap2_val)
+                        nombres_limpios = limpiar_basura_del_nombre(nombres_val)
                         candidatos_encontrados.append({
-                            "nombres": nombres_val, "apellido_paterno": ap1_val, "apellido_materno": ap2_val,
-                            "nombre_completo": f"{nombres_val} {ap1_val} {ap2_val}".strip(), "origen": "Simple Regex Match"
+                            "nombres": nombres_limpios, "apellido_paterno": paterno, "apellido_materno": materno,
+                            "nombre_completo": f"{nombres_limpios} {paterno} {materno}".strip(), "origen": "Simple Regex Match"
                         })
                     else:
                         discarded_list.append(f"({nombres_val}, {ap1_val}, {ap2_val}) [Simple Regex] -> Discarded: Does not match CURP prefix")
@@ -485,6 +640,12 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
             res_curp = buscar_nombre_por_curp(texto_crudo, curp, discarded_list, first_header_idx)
             if res_curp:
                 candidatos_encontrados.append(res_curp)
+
+        # Fallback de proximidad por etiquetas si no se encontró candidato lineal
+        if not candidatos_encontrados:
+            res_prox = extraer_por_proximidad_etiquetas(texto_crudo, curp)
+            if res_prox:
+                candidatos_encontrados.append(res_prox)
 
         # Print/Log candidate verification diagnostics
         try:
@@ -679,6 +840,31 @@ def comparar_documentos(datos_identidad, texto_formato):
             
     return resultado_comparacion
 
+def preprocesar_imagen_canales(image_content):
+    try:
+        nparr = np.frombuffer(image_content, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return image_content
+        # Separar canales y quedarnos con el verde para eliminar la marca de agua
+        b, g, r = cv2.split(img)
+        
+        # Estimar el fondo (marca de agua + iluminación) dilatando la imagen
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
+        background = cv2.morphologyEx(g, cv2.MORPH_DILATE, kernel)
+        
+        # Dividir la imagen por su fondo estimado para neutralizar la marca de agua y sombras
+        normalized = cv2.divide(g, background, scale=255)
+        
+        # Umbralización binaria simple sobre la imagen normalizada
+        _, thresh = cv2.threshold(normalized, 180, 255, cv2.THRESH_BINARY)
+        
+        _, encoded_img = cv2.imencode(".png", thresh)
+        return encoded_img.tobytes()
+    except Exception as e:
+        print(f"[ERROR PREPROCESAMIENTO] {e}")
+        return image_content
+
 def ejecutar_vision_ocr(filename, content):
     if filename.endswith('.pdf'):
         doc = fitz.open(stream=content, filetype="pdf")
@@ -687,6 +873,9 @@ def ejecutar_vision_ocr(filename, content):
         image_content = pix.tobytes("png")
     else:
         image_content = content
+
+    # Aplicar preprocesamiento de canales para eliminar marcas de agua
+    image_content = preprocesar_imagen_canales(image_content)
 
     img_b64 = base64.b64encode(image_content).decode('utf-8')
     client = vision.ImageAnnotatorClient()

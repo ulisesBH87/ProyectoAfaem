@@ -15,8 +15,20 @@ export function useOCR() {
     if (!rawText) return data;
     const d = { ...data };
 
+    // Cortar rawText para excluir todo lo que esté después de filiación y anotaciones
+    const filiacionKeywords = ["FILIACION", "FILIACIÓN", "DATOS DE FILIACION", "DATOS DE FILIACIÓN", "DATOS DE LOS PADRES", "PADRES", "PROGENITORES", "ANOTACIONES MARGINALES"];
+    let cutIdx = -1;
+    const rawTextUpper = rawText.toUpperCase();
+    for (const kw of filiacionKeywords) {
+      const idx = rawTextUpper.indexOf(kw);
+      if (idx !== -1 && (cutIdx === -1 || idx < cutIdx)) {
+        cutIdx = idx;
+      }
+    }
+    const rawTextCleaned = cutIdx !== -1 ? rawText.substring(0, cutIdx) : rawText;
+
     // Intentar emparejar layout cruzado/macho en una sola línea
-    const cleanText = rawText.replace(/\s+/g, ' ').toUpperCase();
+    const cleanText = rawTextCleaned.replace(/\s+/g, ' ').toUpperCase();
     const mashedMatch = cleanText.match(/DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)(?:$|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO))/i);
     if (mashedMatch) {
       const nombresVal = mashedMatch[1].trim();
@@ -43,7 +55,7 @@ export function useOCR() {
 
     const firstWord = d.nombre ? d.nombre.split(' ')[0] : '';
     if (!d.nombre || d.nombre === 'No detectado' || d.nombre.split(' ').length < 2 || firstWord.length <= 1) {
-      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = rawTextCleaned.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
@@ -84,7 +96,7 @@ export function useOCR() {
         ENERO: '01', FEBRERO: '02', MARZO: '03', ABRIL: '04', MAYO: '05', JUNIO: '06',
         JULIO: '07', AGOSTO: '08', SEPTIEMBRE: '09', OCTUBRE: '10', NOVIEMBRE: '11', DICIEMBRE: '12',
       };
-      const m = rawText.match(/(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i);
+      const m = rawTextCleaned.match(/(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i);
       if (m && MESES[m[2].toUpperCase()]) {
         d.fecha_nac = `${m[1].padStart(2, '0')}/${MESES[m[2].toUpperCase()]}/${m[3]}`;
       }
