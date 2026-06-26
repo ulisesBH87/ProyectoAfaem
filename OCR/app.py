@@ -82,12 +82,13 @@ def normalizar_texto(texto):
 
 BLACKLISTED_WORDS = [
     "CLAVE", "UNICA", "REGISTRO", "REGISTF", "CURP",
-    "POBLACION", "ESTADOS", "UNIDOS", "MEXICANOS",
+    "POBLACION", "ESTADOS", "UNIDOS", "UNITS", "UNITOS", "MEXICA", "MEXICAL", "MEXICANO", "MEXICANOS",
     "ACTA", "NACIMIENTO", "REGISTRO CIVIL", "ENTIDAD", "MUNICIPIO",
     "LOCALIDAD", "OFICIALIA", "LIBRO", "FOJA", "TOMO", "NACIONALIDAD", "SEXO", "SEXC",
     "NOMORE", "NOMRES", "NOMRE", "NOMBRES", "APELIDO", "APELIDOS", "APELLIDO", "APELLIDOS",
     "GOBIERNO", "MEXICO", "MARCA", "AGUA", "SELLO", "CIVIL",
-    "FEMENINO", "MASCULINO", "REGISTRADO", "REGISTRADA", "FECHA", "LUGAR"
+    "FEMENINO", "MASCULINO", "REGISTRADO", "REGISTRADA", "FECHA", "LUGAR",
+    "TADOS", "INICIO", "INILOS", "OS", "CO", "COMPARECIO", "FOLIO"
 ]
 
 INVALID_SINGLE_WORDS = ["DE", "DEL", "LA", "LAS", "LOS", "EL", "Y"]
@@ -353,6 +354,33 @@ def extraer_nombre_mrz(texto_crudo):
         }
     return None
 
+def corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto_crudo):
+    if not curp or curp == "No detectado" or len(curp) < 4:
+        return ap1, ap2
+        
+    curp_prefix = curp[:4].upper()
+    words_in_text = set(normalizar_texto(texto_crudo).split())
+    
+    def corregir_apellido(ap, curp_char):
+        if not ap or ap == "No detectado" or len(ap) < 2:
+            return ap
+            
+        ap_norm = normalizar_texto(ap)
+        
+        # Check if we can find a longer version in text that matches CURP better (e.g. ROJA -> ROJAS)
+        for w in words_in_text:
+            if w != ap_norm and w.startswith(ap_norm) and len(w) <= len(ap_norm) + 2:
+                # Check if this word starts with curp_char
+                if letters_match_or_similar(curp_char, w[0]):
+                    if w not in BLACKLISTED_WORDS:
+                        return w
+        return ap
+        
+    new_ap1 = corregir_apellido(ap1, curp_prefix[0])
+    new_ap2 = corregir_apellido(ap2, curp_prefix[2])
+    
+    return new_ap1, new_ap2
+
 def corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo):
     # Normalize inputs
     n_norm = normalizar_texto(nombres) if nombres else ""
@@ -412,7 +440,7 @@ def corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo):
     
     return new_ap1, new_ap2
 
-def extraer_nombre_acta_por_lineas_crudas(texto_crudo):
+def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", texto_original=None):
     log_lines = []
     log_lines.append("\n=== EXTRAER NOMBRE ACTA POR LINEAS CRUDAS START ===")
     
@@ -479,6 +507,16 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo):
                     log_lines.append(f"    -> Cleaned S-contamination from ap2: '{ap2}' -> '{ap2_clean}'")
                     ap2 = ap2_clean
                     
+                # CURP / Evidence correction
+                txt_for_evidence = texto_original if texto_original else texto_crudo
+                ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, txt_for_evidence)
+                if ap1_ev != ap1:
+                    log_lines.append(f"    -> Corrected ap1 with CURP/evidence: '{ap1}' -> '{ap1_ev}'")
+                    ap1 = ap1_ev
+                if ap2_ev != ap2:
+                    log_lines.append(f"    -> Corrected ap2 with CURP/evidence: '{ap2}' -> '{ap2_ev}'")
+                    ap2 = ap2_ev
+                    
                 nombre_completo = f"{nombres} {ap1} {ap2}".strip()
                 
                 log_lines.append(f"    -> Result: Nombres='{nombres}', Ap1='{ap1}', Ap2='{ap2}', Completo='{nombre_completo}'")
@@ -511,7 +549,7 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo):
         
     return None
 
-def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
+def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None):
     """Extrae datos basándose en anclas y estructura, no borrando basura"""
     texto_norm = normalizar_texto(texto_crudo)
     lineas = [normalizar_texto(l) for l in texto_crudo.split('\n') if l.strip()]
@@ -684,6 +722,14 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
             if ap2_clean != ap2:
                 ap2 = ap2_clean
                 
+            # CURP / Evidence correction
+            txt_for_evidence = texto_original if texto_original else texto_crudo
+            ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, txt_for_evidence)
+            if ap1_ev != ap1:
+                ap1 = ap1_ev
+            if ap2_ev != ap2:
+                ap2 = ap2_ev
+                
             datos["nombres"] = nombres
             datos["apellido_paterno"] = ap1
             datos["apellido_materno"] = ap2
@@ -691,7 +737,7 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp):
             datos["origen"] = final_cand.get("origen", "Desconocido")
             return datos
         else:
-            res_raw = extraer_nombre_acta_por_lineas_crudas(texto_crudo)
+            res_raw = extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp=curp, texto_original=texto_original)
             if res_raw:
                 datos["nombres"] = res_raw["nombres"]
                 datos["apellido_paterno"] = res_raw["apellido_paterno"]
@@ -803,6 +849,13 @@ def procesar_texto(texto, vision_response=None):
             if ap2_clean != ap2:
                 ap2 = ap2_clean
                 
+            # CURP / Evidence correction
+            ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto)
+            if ap1_ev != ap1:
+                ap1 = ap1_ev
+            if ap2_ev != ap2:
+                ap2 = ap2_ev
+                
             info_doc = {
                 "nombres": nombres,
                 "apellido_paterno": ap1,
@@ -819,7 +872,7 @@ def procesar_texto(texto, vision_response=None):
 
     # Fallback to standard intelligence extraction if layout failed or wasn't run
     if not info_doc or not info_doc["nombres"] or info_doc["nombres"] == "No detectado":
-        info_doc = extraer_datos_inteligentes(texto_para_procesar, tipo_doc, curp)
+        info_doc = extraer_datos_inteligentes(texto_para_procesar, tipo_doc, curp, texto_original=texto)
 
     # Extraer Datos Fijos de CURP (Lo más seguro)
     if curp != "No detectado":
@@ -1057,6 +1110,23 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                 y_start = max(w['y_range'][1] for w in line)
                 log_lines.append(f"Start Header matched: '{line_txt}' -> y_start={y_start}")
                 break
+
+    # Adjust y_start if labels appear above it
+    y_label_min = None
+    for line in all_lines:
+        line_txt = normalizar_texto(" ".join(w['text'] for w in line))
+        LABEL_WORDS_CHECK = [
+            "NOMBRE", "NOMBRES", "APELLIDO", "APELLIDOS", "PATERNO", "MATERNO",
+            "SEXO", "FECHA DE NACIMIENTO", "LUGAR DE NACIMIENTO"
+        ]
+        if any(lw in line_txt for lw in LABEL_WORDS_CHECK):
+            line_y_min = min(w['y_range'][0] for w in line)
+            if y_label_min is None or line_y_min < y_label_min:
+                y_label_min = line_y_min
+
+    if y_start is not None and y_label_min is not None and y_label_min < y_start:
+        log_lines.append(f"Adjusting y_start because label was found above header: y_start={y_start} -> {y_label_min - 20}")
+        y_start = y_label_min - 20
                 
     END_VARIANTS = [
         "DATOS DE FILIACION DE LA PERSONA REGISTRADA",
@@ -1102,7 +1172,9 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
         "DATOS", "PERSONA", "CURP", "CRIP",
         "SEXO", "SEXC", "FECHA", "NACIMIENTO", "LUGAR",
         "CUAUTLA", "MORELOS", "HOMBRE", "MUJER", "MEXICANA", "MEXICANO", "FEMENINO", "MASCULINO",
-        "ESTADOS", "UNIDOS", "MEXICANOS", "GOBIERNO", "MARCA", "AGUA", "SELLO", "CIVIL"
+        "ESTADOS", "UNIDOS", "MEXICANOS", "GOBIERNO", "MARCA", "AGUA", "SELLO", "CIVIL",
+        "UNITS", "UNITOS", "MEXICA", "MEXICAL", "TADOS", "INICIO", "INILOS", "OS", "CO",
+        "COMPARECIO", "OFICIALIA", "LIBRO", "ACTA", "REGISTRO", "FOLIO"
     ]
 
     def merge_boxes(b1, b2):
@@ -1521,11 +1593,29 @@ def evaluar_calidad_extraccion(datos):
             if any(lw in field_up.split() for lw in LABEL_WORDS):
                 score -= 10
                 
+    # Penalize forbidden words with strong negative score
+    FORBIDDEN_WORDS = [
+        "UNIDOS", "UNITS", "UNITOS", "MEXICA", "MEXICAL", "MEXICANO", "MEXICANOS",
+        "ESTADOS", "TADOS", "INICIO", "INILOS", "OS", "CO", "COMPARECIO",
+        "OFICIALIA", "LIBRO", "ACTA", "REGISTRO", "FOLIO"
+    ]
+    for field in [nombres, ap_pat, ap_mat]:
+        if field and field != "No detectado":
+            field_up = normalizar_texto(field)
+            if any(fw in field_up.split() for fw in FORBIDDEN_WORDS):
+                score -= 20
+                
     # Penalize watermarked contamination (ends with 'S' and matches watermark words nearby)
     for field in [ap_pat, ap_mat]:
         if field and field != "No detectado" and len(field) > 2:
             if field.upper().endswith('S') and any(w in field.upper() for w in ["ESTADOS", "UNIDOS", "MEXICANOS", "GOBIERNO", "CIVIL"]):
                 score -= 3
+
+    # Strong negative penalty for CURP mismatch (if CURP exists and has length >= 4)
+    if curp and curp != "No detectado" and len(curp) >= 4:
+        if nombres and ap_pat and nombres != "No detectado" and ap_pat != "No detectado":
+            if not curp_coincide_con_nombre(curp, nombres, ap_pat, ap_mat):
+                score -= 15
 
     # 3. Origen / Confidence evaluation
     origen = datos.get("origen", "")
@@ -1601,6 +1691,21 @@ def ejecutar_vision_ocr(filename, content):
                     datos_original[field_key] = limpiar_contaminacion_s(datos_original.get(field_key), texto_preprocesado)
                     datos_preprocesado[field_key] = limpiar_contaminacion_s(datos_preprocesado.get(field_key), texto_original)
                     
+                # Apply CURP/Evidence correction
+                ap1_orig_c, ap2_orig_c = corregir_apellidos_con_evidencia_y_curp(
+                    datos_original['nombres'], datos_original['apellido_paterno'], datos_original['apellido_materno'], 
+                    datos_original['curp'], texto_original
+                )
+                datos_original['apellido_paterno'] = ap1_orig_c
+                datos_original['apellido_materno'] = ap2_orig_c
+
+                ap1_prep_c, ap2_prep_c = corregir_apellidos_con_evidencia_y_curp(
+                    datos_preprocesado['nombres'], datos_preprocesado['apellido_paterno'], datos_preprocesado['apellido_materno'], 
+                    datos_preprocesado['curp'], texto_preprocesado
+                )
+                datos_preprocesado['apellido_paterno'] = ap1_prep_c
+                datos_preprocesado['apellido_materno'] = ap2_prep_c
+
                 # Re-calculate name_completo after cleaning
                 datos_original['nombre_completo'] = f"{datos_original['nombres']} {datos_original['apellido_paterno']} {datos_original['apellido_materno']}".strip()
                 datos_preprocesado['nombre_completo'] = f"{datos_preprocesado['nombres']} {datos_preprocesado['apellido_paterno']} {datos_preprocesado['apellido_materno']}".strip()
