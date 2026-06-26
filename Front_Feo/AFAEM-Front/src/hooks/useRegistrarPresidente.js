@@ -434,10 +434,17 @@ export function useRegistrarPresidente() {
         // If separate names aren't in ocrResults but full name is, split it
         if (!ocrResults.nombres && !ocrResults.apellido_paterno && ocrResults.nombre && ocrResults.nombre !== 'No detectado') {
           const parts = ocrResults.nombre.toUpperCase().split(' ');
-          if (parts.length >= 3) {
-            next.primerApellido = parts[0];
-            next.segundoApellido = parts[1];
-            next.nombre = parts.slice(2).join(' ');
+          if (parts.length === 4) {
+            next.nombre = parts.slice(0, 2).join(' ');
+            next.primerApellido = parts[2];
+            next.segundoApellido = parts[3];
+          } else if (parts.length === 3) {
+            next.nombre = parts[0];
+            next.primerApellido = parts[1];
+            next.segundoApellido = parts[2];
+          } else if (parts.length === 2) {
+            next.nombre = parts[0];
+            next.primerApellido = parts[1];
           } else {
             next.nombre = ocrResults.nombre.toUpperCase();
           }
@@ -480,7 +487,12 @@ export function useRegistrarPresidente() {
       procesarFoto(file);
     } else {
       setDocuments(prev => ({ ...prev, [docKey]: file }));
-      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCR(docKey, file);
+      if (['actaNacimiento', 'identificacion'].includes(docKey)) {
+        procesarOCR(docKey, file, () => {
+          setPreviews(prev => ({ ...prev, [docKey]: null }));
+          setDocuments(prev => ({ ...prev, [docKey]: null }));
+        });
+      }
     }
   };
 

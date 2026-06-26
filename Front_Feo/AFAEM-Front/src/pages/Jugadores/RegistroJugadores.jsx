@@ -1877,7 +1877,7 @@ export default function RegistroJugadores() {
     }
 
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
-    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
+    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'identificacionMenor') {
       Swal.fire({
         title: 'Analizando Documento...',
         html: 'Extrayendo información. Por favor espere.',
@@ -1897,20 +1897,55 @@ export default function RegistroJugadores() {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, "text/html");
 
+        const cleanVal = (val) => {
+          if (!val) return '';
+          const cleaned = val.trim();
+          const lower = cleaned.toLowerCase();
+          if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+            return '';
+          }
+          return cleaned;
+        };
+
         let nombreEncontrado = '';
+        let nombresEncontrados = '';
+        let apellidoPaternoEncontrado = '';
+        let apellidoMaternoEncontrado = '';
         let curpEncontrada = '';
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
+        let documentoEncontrado = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
           const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-          const value = row.querySelector('.valor')?.textContent?.trim() || '';
+          const value = cleanVal(row.querySelector('.valor')?.textContent);
 
-          if (label.includes('nombre')) nombreEncontrado = value;
+          if (!value) return;
+
+          if (label.includes('nombres')) {
+            nombresEncontrados = value;
+          } else if (label.includes('nombre completo') || label === 'nombre') {
+            nombreEncontrado = value;
+          } else if (label.includes('nombre')) {
+            if (!nombresEncontrados) nombresEncontrados = value;
+          }
+
+          if (label.includes('apellido paterno') || label.includes('paterno')) {
+            apellidoPaternoEncontrado = value;
+          }
+          if (label.includes('apellido materno') || label.includes('materno')) {
+            apellidoMaternoEncontrado = value;
+          }
+
           if (label.includes('curp')) curpEncontrada = value;
-          if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
-          if (label.includes('nacimiento') || label.includes('fecha nac')) {
+          if (label.includes('documento')) documentoEncontrado = value;
+          
+          if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
+            lugarNacEncontrado = value;
+          }
+
+          if ((label.includes('nacimiento') && !label.includes('lugar')) || label.includes('fecha nac')) {
             let finalDate = value;
             if (value.includes('/')) {
               const p = value.split('/');
@@ -1923,25 +1958,61 @@ export default function RegistroJugadores() {
           }
         });
 
-        if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
-          const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+        // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+        const isActaField = ['acta', 'actaNacimiento'].includes(documentKey);
+        const isIneField = ['ine', 'ineTutor', 'identificacion', 'identificacionMenor'].includes(documentKey);
+        const isOcrActa = (documentoEncontrado || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+        const isOcrIne = (documentoEncontrado || '').toUpperCase() === 'INE';
+
+        if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+          Swal.close();
+          const result = await Swal.fire({
+            title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+            text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Cargar de todos modos',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: COLORS.primary || '#1a3b5c',
+            cancelButtonColor: COLORS.slate300 || '#cbd5e1'
+          });
+
+          if (!result.isConfirmed) {
+            updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            return;
+          }
+        }
+
+        if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
 
-          if (parts.length >= 3) {
-            lastNamePaterno = parts[0];
-            lastNameMaterno = parts[1];
-            firstName = parts.slice(2).join(' ');
-          } else if (parts.length === 2) {
-            lastNamePaterno = parts[0];
-            firstName = parts[1];
-          } else {
-            firstName = nombreEncontrado;
+          if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+            firstName = nombresEncontrados;
+            lastNamePaterno = apellidoPaternoEncontrado;
+            lastNameMaterno = apellidoMaternoEncontrado;
+          } else if (nombreEncontrado) {
+            const parts = nombreEncontrado.split(' ');
+            if (parts.length === 4) {
+              firstName = parts.slice(0, 2).join(' ');
+              lastNamePaterno = parts[2];
+              lastNameMaterno = parts[3];
+            } else if (parts.length === 3) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+              lastNameMaterno = parts[2];
+            } else if (parts.length === 2) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+            } else {
+              firstName = nombreEncontrado;
+            }
           }
 
           // Auto-detectar género por CURP
           let detectedGenero = currentDatos.genero;
           if (curpEncontrada && curpEncontrada.length >= 11) {
-            const char = curpEncontrada.charAt(10);
+            const char = curpEncontrada.charAt(10).toUpperCase();
             if (char === 'M') detectedGenero = '2'; // Femenino
             else if (char === 'H') detectedGenero = '1'; // Masculino
           }
@@ -1965,10 +2036,10 @@ export default function RegistroJugadores() {
 
           Swal.fire({
             title: '¡Lectura Exitosa!',
-            text: `Se detectó a: ${nombreEncontrado || 'el documento'}`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
+            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+            icon: nombreEncontrado ? 'success' : 'warning',
+            timer: nombreEncontrado ? 2000 : 3500,
+            showConfirmButton: !nombreEncontrado
           });
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');

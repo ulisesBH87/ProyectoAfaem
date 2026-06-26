@@ -304,6 +304,13 @@ export default function CompletarJugadoresEquipo() {
       border: 1px solid ${COLORS.dangerBg};
     }
     
+    .form-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    
     .form-grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -423,7 +430,7 @@ export default function CompletarJugadoresEquipo() {
         border-radius: 16px;
       }
       
-      .form-grid-3, .form-grid-2 {
+      .form-grid-4, .form-grid-3, .form-grid-2 {
         grid-template-columns: 1fr;
         gap: 12px;
         margin-bottom: 15px;
@@ -1192,7 +1199,7 @@ export default function CompletarJugadoresEquipo() {
     }
 
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
-    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
+    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'identificacionMenor') {
       Swal.fire({
         title: 'Analizando Documento...',
         html: 'Extrayendo información. Por favor espere.',
@@ -1212,20 +1219,55 @@ export default function CompletarJugadoresEquipo() {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, "text/html");
 
+        const cleanVal = (val) => {
+          if (!val) return '';
+          const cleaned = val.trim();
+          const lower = cleaned.toLowerCase();
+          if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+            return '';
+          }
+          return cleaned;
+        };
+
         let nombreEncontrado = '';
+        let nombresEncontrados = '';
+        let apellidoPaternoEncontrado = '';
+        let apellidoMaternoEncontrado = '';
         let curpEncontrada = '';
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
+        let documentoEncontrado = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
           const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-          const value = row.querySelector('.valor')?.textContent?.trim() || '';
+          const value = cleanVal(row.querySelector('.valor')?.textContent);
 
-          if (label.includes('nombre')) nombreEncontrado = value;
+          if (!value) return;
+
+          if (label.includes('nombres')) {
+            nombresEncontrados = value;
+          } else if (label.includes('nombre completo') || label === 'nombre') {
+            nombreEncontrado = value;
+          } else if (label.includes('nombre')) {
+            if (!nombresEncontrados) nombresEncontrados = value;
+          }
+
+          if (label.includes('apellido paterno') || label.includes('paterno')) {
+            apellidoPaternoEncontrado = value;
+          }
+          if (label.includes('apellido materno') || label.includes('materno')) {
+            apellidoMaternoEncontrado = value;
+          }
+
           if (label.includes('curp')) curpEncontrada = value;
-          if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
-          if (label.includes('nacimiento') || label.includes('fecha nac')) {
+          if (label.includes('documento')) documentoEncontrado = value;
+          
+          if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
+            lugarNacEncontrado = value;
+          }
+
+          if ((label.includes('nacimiento') && !label.includes('lugar')) || label.includes('fecha nac')) {
             let finalDate = value;
             if (value.includes('/')) {
               const p = value.split('/');
@@ -1238,25 +1280,61 @@ export default function CompletarJugadoresEquipo() {
           }
         });
 
-        if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
-          const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+        // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+        const isActaField = ['acta', 'actaNacimiento'].includes(documentKey);
+        const isIneField = ['ine', 'ineTutor', 'identificacion', 'identificacionMenor'].includes(documentKey);
+        const isOcrActa = (documentoEncontrado || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+        const isOcrIne = (documentoEncontrado || '').toUpperCase() === 'INE';
+
+        if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+          Swal.close();
+          const result = await Swal.fire({
+            title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+            text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Cargar de todos modos',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: COLORS.primary || '#1a3b5c',
+            cancelButtonColor: COLORS.slate300 || '#cbd5e1'
+          });
+
+          if (!result.isConfirmed) {
+            setDocuments(prev => ({ ...prev, [documentKey]: null }));
+            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            return;
+          }
+        }
+
+        if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
 
-          if (parts.length >= 3) {
-            lastNamePaterno = parts[0];
-            lastNameMaterno = parts[1];
-            firstName = parts.slice(2).join(' ');
-          } else if (parts.length === 2) {
-            lastNamePaterno = parts[0];
-            firstName = parts[1];
-          } else {
-            firstName = nombreEncontrado;
+          if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+            firstName = nombresEncontrados;
+            lastNamePaterno = apellidoPaternoEncontrado;
+            lastNameMaterno = apellidoMaternoEncontrado;
+          } else if (nombreEncontrado) {
+            const parts = nombreEncontrado.split(' ');
+            if (parts.length === 4) {
+              firstName = parts.slice(0, 2).join(' ');
+              lastNamePaterno = parts[2];
+              lastNameMaterno = parts[3];
+            } else if (parts.length === 3) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+              lastNameMaterno = parts[2];
+            } else if (parts.length === 2) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+            } else {
+              firstName = nombreEncontrado;
+            }
           }
 
           // Auto-detectar género por CURP
           let detectedGenero = extractedData.genero;
           if (curpEncontrada && curpEncontrada.length >= 11) {
-            const char = curpEncontrada.charAt(10);
+            const char = curpEncontrada.charAt(10).toUpperCase();
             if (char === 'M') detectedGenero = '2'; // Femenino
             else if (char === 'H') detectedGenero = '1'; // Masculino
           }
@@ -1276,10 +1354,10 @@ export default function CompletarJugadoresEquipo() {
 
           Swal.fire({
             title: '¡Lectura Exitosa!',
-            text: `Se detectó a: ${nombreEncontrado || 'el documento'}`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
+            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+            icon: nombreEncontrado ? 'success' : 'warning',
+            timer: nombreEncontrado ? 2000 : 3500,
+            showConfirmButton: !nombreEncontrado
           });
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
@@ -2473,37 +2551,26 @@ export default function CompletarJugadoresEquipo() {
 
               {/* AVISO DE DISCREPANCIA OCR */}
               {ocrDataOriginal && (
+                extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+              ) && (
                 <div className="fade-in" style={{
                   marginBottom: '20px',
                   padding: '16px',
                   borderRadius: '12px',
-                  background: (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? COLORS.orange50 : COLORS.greenBg50,
-                  border: (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? `1px solid ${COLORS.orange100}` : `1px solid ${COLORS.greenBg}`,
+                  background: COLORS.orange50,
+                  border: `1px solid ${COLORS.orange100}`,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px'
                 }}>
-                  <div style={{ fontSize: '20px' }}>
-                    {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
-                  </div>
+                  <div style={{ fontSize: '20px' }}>⚠️</div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                      {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                        'Discrepancia detectada' : 'Datos validados'}
+                      Discrepancia detectada
                     </h4>
                     <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                      {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                        'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
-                        'La información coincide correctamente con la extracción inteligente de tus documentos.'}
+                      La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
                     </p>
                   </div>
                 </div>
@@ -2512,7 +2579,7 @@ export default function CompletarJugadoresEquipo() {
               {/* CAMPOS DEL FORMULARIO */}
               <div className="inner-form-card">
 
-                <div className="form-grid-3">
+                <div className="form-grid-4">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
                     <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
@@ -2525,57 +2592,6 @@ export default function CompletarJugadoresEquipo() {
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
                     <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
-                </div>
-
-                <div className="form-grid-2">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
-                    <input
-                      type="text"
-                      maxLength={3}
-                      value={extractedData.numCamiseta}
-                      onChange={e => handleFieldChange('numCamiseta', e.target.value)}
-                      onBlur={() => handleBlur('numCamiseta')}
-                      placeholder="Ej. 10"
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
-                    />
-                    {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
-                    <select
-                      value={extractedData.posicion}
-                      onChange={e => {
-                        const val = parseInt(e.target.value) || '';
-                        setExtractedData(prev => ({ ...prev, posicion: val }));
-                        if (val) {
-                          const duplicate = obtenerDuplicadoPosicion(val);
-                          if (duplicate) {
-                            const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(val))?.nombre || 'esta posición';
-                            setValidationErrors(prev => ({
-                              ...prev,
-                              posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
-                            }));
-                          } else {
-                            setValidationErrors(prev => ({ ...prev, posicion: null }));
-                          }
-                        } else {
-                          setValidationErrors(prev => ({ ...prev, posicion: null }));
-                        }
-                      }}
-                      onBlur={() => handleBlur('posicion')}
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}
-                    >
-                      <option value="">Posición...</option>
-                      {(catalogs?.roles_equipo || []).map(r => (
-                        <option key={r.id} value={r.id}>{r.nombre}</option>
-                      ))}
-                    </select>
-                    {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                       CURP<span className="required-star">*</span>
@@ -2673,6 +2689,54 @@ export default function CompletarJugadoresEquipo() {
                       <option value="1">MASCULINO</option>
                       <option value="2">FEMENINO</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="form-grid-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
+                    <input
+                      type="text"
+                      maxLength={3}
+                      value={extractedData.numCamiseta}
+                      onChange={e => handleFieldChange('numCamiseta', e.target.value)}
+                      onBlur={() => handleBlur('numCamiseta')}
+                      placeholder="Ej. 10"
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                    />
+                    {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
+                    <select
+                      value={extractedData.posicion}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) || '';
+                        setExtractedData(prev => ({ ...prev, posicion: val }));
+                        if (val) {
+                          const duplicate = obtenerDuplicadoPosicion(val);
+                          if (duplicate) {
+                            const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(val))?.nombre || 'esta posición';
+                            setValidationErrors(prev => ({
+                              ...prev,
+                              posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
+                            }));
+                          } else {
+                            setValidationErrors(prev => ({ ...prev, posicion: null }));
+                          }
+                        } else {
+                          setValidationErrors(prev => ({ ...prev, posicion: null }));
+                        }
+                      }}
+                      onBlur={() => handleBlur('posicion')}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}
+                    >
+                      <option value="">Posición...</option>
+                      {(catalogs?.roles_equipo || []).map(r => (
+                        <option key={r.id} value={r.id}>{r.nombre}</option>
+                      ))}
+                    </select>
+                    {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
                   </div>
                 </div>
 

@@ -23,10 +23,13 @@ export function useOCR() {
       const ap1Val = mashedMatch[2].trim();
       const ap2Val = mashedMatch[3].trim();
       
-      d.nombre = `${ap1Val} ${ap2Val} ${nombresVal}`.replace(/\s+/g, ' ').toUpperCase();
+      d.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
       d.nombres = nombresVal.toUpperCase();
       d.apellido_paterno = ap1Val.toUpperCase();
       d.apellido_materno = ap2Val.toUpperCase();
+      d.nombreSolo = nombresVal.toUpperCase();
+      d.primerApellido = ap1Val.toUpperCase();
+      d.segundoApellido = ap2Val.toUpperCase();
       
       const rest = mashedMatch[4].trim();
       if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
@@ -66,10 +69,13 @@ export function useOCR() {
         }
       }
       if (nombres && ap1) {
-        d.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
+        d.nombre = `${nombres} ${ap1} ${ap2}`.replace(/\s+/g, ' ').toUpperCase();
         d.nombres = nombres.toUpperCase();
         d.apellido_paterno = ap1.toUpperCase();
         d.apellido_materno = ap2.toUpperCase();
+        d.nombreSolo = nombres.toUpperCase();
+        d.primerApellido = ap1.toUpperCase();
+        d.segundoApellido = ap2.toUpperCase();
       }
     }
 
@@ -88,7 +94,7 @@ export function useOCR() {
   };
 
   // ── Procesar documento vía OCR ───────────────────────────────────────────
-  const procesarOCR = async (docKey, file) => {
+  const procesarOCR = async (docKey, file, onCancel) => {
     Swal.fire({
       title: 'Analizando documento…',
       html: 'Extrayendo información. <b>Por favor espere.</b>',
@@ -105,18 +111,52 @@ export function useOCR() {
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
 
-      let extracted = {};
+      const cleanVal = (val) => {
+        if (!val) return '';
+        const cleaned = val.trim();
+        const lower = cleaned.toLowerCase();
+        if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+          return '';
+        }
+        return cleaned;
+      };
+
+      let nombreEncontrado = '';
+      let nombresEncontrados = '';
+      let apellidoPaternoEncontrado = '';
+      let apellidoMaternoEncontrado = '';
+      let curpEncontrada = '';
+      let fechaNacEncontrada = '';
+      let nacionalidadEncontrada = '';
+      let edadEncontrada = '';
+      let sexoEncontrado = '';
+      let documentoEncontrado = '';
+
       doc.querySelectorAll('.dato-fila').forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const val = row.querySelector('.valor')?.textContent?.trim() || '';
-        if (label.includes('curp')) extracted.curp = val;
-        if (label.includes('nombre completo')) extracted.nombre = val;
-        else if (label.includes('nombres')) extracted.nombres = val;
-        else if (label.includes('nombre')) extracted.nombre = val;
-        if (label.includes('apellido paterno')) extracted.apellido_paterno = val;
-        if (label.includes('apellido materno')) extracted.apellido_materno = val;
-        if (label.includes('nacionalidad')) extracted.nacionalidad = val;
-        if (label.includes('fecha de nacimiento')) {
+        const val = cleanVal(row.querySelector('.valor')?.textContent);
+
+        if (!val) return;
+
+        if (label.includes('nombres')) {
+          nombresEncontrados = val;
+        } else if (label.includes('nombre completo') || label === 'nombre') {
+          nombreEncontrado = val;
+        } else if (label.includes('nombre')) {
+          if (!nombresEncontrados) nombresEncontrados = val;
+        }
+
+        if (label.includes('apellido paterno') || label.includes('paterno')) {
+          apellidoPaternoEncontrado = val;
+        }
+        if (label.includes('apellido materno') || label.includes('materno')) {
+          apellidoMaternoEncontrado = val;
+        }
+
+        if (label.includes('curp')) curpEncontrada = val;
+        if (label.includes('nacionalidad')) nacionalidadEncontrada = val;
+
+        if (label.includes('fecha de nacimiento') || label.includes('fecha nac') || (label.includes('nacimiento') && !label.includes('lugar'))) {
           let dateVal = val;
           if (dateVal.includes('-')) {
             const p = dateVal.split('-');
@@ -124,16 +164,91 @@ export function useOCR() {
               dateVal = `${p[2]}/${p[1]}/${p[0]}`;
             }
           }
-          extracted.fecha_nac = dateVal;
+          fechaNacEncontrada = dateVal;
         }
-        if (label.includes('edad')) extracted.edad = val;
-        if (label.includes('sexo')) extracted.sexo = val;
-        if (label.includes('documento')) extracted.documento = val;
+
+        if (label.includes('edad')) edadEncontrada = val;
+        if (label.includes('sexo')) sexoEncontrado = val;
+        if (label.includes('documento')) documentoEncontrado = val;
       });
+
+      let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+
+      if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+        firstName = nombresEncontrados;
+        lastNamePaterno = apellidoPaternoEncontrado;
+        lastNameMaterno = apellidoMaternoEncontrado;
+      } else if (nombreEncontrado) {
+        const parts = nombreEncontrado.split(' ');
+        if (parts.length === 4) {
+          firstName = parts.slice(0, 2).join(' ');
+          lastNamePaterno = parts[2];
+          lastNameMaterno = parts[3];
+        } else if (parts.length === 3) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+          lastNameMaterno = parts[2];
+        } else if (parts.length === 2) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+        } else {
+          firstName = nombreEncontrado;
+        }
+      }
+
+      const fullNombre = [firstName, lastNamePaterno, lastNameMaterno].filter(Boolean).join(' ') || nombreEncontrado;
+
+      let detectedSexo = sexoEncontrado;
+      if (curpEncontrada && curpEncontrada.length >= 11) {
+        const char = curpEncontrada.charAt(10).toUpperCase();
+        if (char === 'M') detectedSexo = 'FEMENINO';
+        else if (char === 'H') detectedSexo = 'MASCULINO';
+      }
+
+      let extracted = {
+        curp: curpEncontrada || '',
+        nombre: fullNombre || '',
+        nombres: firstName || '',
+        apellido_paterno: lastNamePaterno || '',
+        apellido_materno: lastNameMaterno || '',
+        nombreSolo: firstName || '',
+        primerApellido: lastNamePaterno || '',
+        segundoApellido: lastNameMaterno || '',
+        nacionalidad: nacionalidadEncontrada || '',
+        fecha_nac: fechaNacEncontrada || '',
+        edad: edadEncontrada || '',
+        sexo: detectedSexo || '',
+        documento: documentoEncontrado || ''
+      };
 
       const rawText = doc.querySelector('pre')?.textContent;
       if (rawText && (docKey === 'actaNacimiento' || extracted.documento?.includes('ACTA'))) {
         extracted = mejorarActa(rawText, extracted);
+      }
+
+      // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+      const isActaField = ['acta', 'actaNacimiento'].includes(docKey);
+      const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(docKey);
+      const isOcrActa = (extracted.documento || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+      const isOcrIne = (extracted.documento || '').toUpperCase() === 'INE';
+
+      if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+        Swal.close();
+        const result = await Swal.fire({
+          title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+          text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Cargar de todos modos',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#1a3b5c',
+          cancelButtonColor: '#cbd5e1'
+        });
+
+        if (!result.isConfirmed) {
+          if (onCancel) onCancel();
+          return;
+        }
       }
 
       setOcrResults(prev => ({ ...prev, ...extracted, [docKey]: `OCR: ${extracted.nombre || 'ok'}` }));

@@ -349,20 +349,55 @@ export default function AdminCrearJugador() {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, "text/html");
 
+        const cleanVal = (val) => {
+          if (!val) return '';
+          const cleaned = val.trim();
+          const lower = cleaned.toLowerCase();
+          if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+            return '';
+          }
+          return cleaned;
+        };
+
         let nombreEncontrado = '';
+        let nombresEncontrados = '';
+        let apellidoPaternoEncontrado = '';
+        let apellidoMaternoEncontrado = '';
         let curpEncontrada = '';
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
+        let documentoEncontrado = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
           const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-          const value = row.querySelector('.valor')?.textContent?.trim() || '';
+          const value = cleanVal(row.querySelector('.valor')?.textContent);
 
-          if (label.includes('nombre')) nombreEncontrado = value;
+          if (!value) return;
+
+          if (label.includes('nombres')) {
+            nombresEncontrados = value;
+          } else if (label.includes('nombre completo') || label === 'nombre') {
+            nombreEncontrado = value;
+          } else if (label.includes('nombre')) {
+            if (!nombresEncontrados) nombresEncontrados = value;
+          }
+
+          if (label.includes('apellido paterno') || label.includes('paterno')) {
+            apellidoPaternoEncontrado = value;
+          }
+          if (label.includes('apellido materno') || label.includes('materno')) {
+            apellidoMaternoEncontrado = value;
+          }
+
           if (label.includes('curp')) curpEncontrada = value;
-          if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
-          if (label.includes('nacimiento') || label.includes('fecha nac')) {
+          if (label.includes('documento')) documentoEncontrado = value;
+          
+          if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
+            lugarNacEncontrado = value;
+          }
+
+          if ((label.includes('nacimiento') && !label.includes('lugar')) || label.includes('fecha nac')) {
             let finalDate = value;
             if (value.includes('/')) {
               const p = value.split('/');
@@ -375,19 +410,63 @@ export default function AdminCrearJugador() {
           }
         });
 
-        if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
-          const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+        // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+        const isActaField = ['acta', 'actaNacimiento'].includes(documentKey);
+        const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(documentKey);
+        const isOcrActa = (documentoEncontrado || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+        const isOcrIne = (documentoEncontrado || '').toUpperCase() === 'INE';
+
+        if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+          Swal.close();
+          const result = await Swal.fire({
+            title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+            text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Cargar de todos modos',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: COLORS.primary || '#1a3b5c',
+            cancelButtonColor: COLORS.slate300 || '#cbd5e1'
+          });
+
+          if (!result.isConfirmed) {
+            setDocuments(prev => ({ ...prev, [documentKey]: null }));
+            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            return;
+          }
+        }
+
+        if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
 
-          if (parts.length >= 3) {
-            lastNamePaterno = parts[0];
-            lastNameMaterno = parts[1];
-            firstName = parts.slice(2).join(' ');
-          } else if (parts.length === 2) {
-            lastNamePaterno = parts[0];
-            firstName = parts[1];
-          } else {
-            firstName = nombreEncontrado;
+          if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+            firstName = nombresEncontrados;
+            lastNamePaterno = apellidoPaternoEncontrado;
+            lastNameMaterno = apellidoMaternoEncontrado;
+          } else if (nombreEncontrado) {
+            const parts = nombreEncontrado.split(' ');
+            if (parts.length === 4) {
+              firstName = parts.slice(0, 2).join(' ');
+              lastNamePaterno = parts[2];
+              lastNameMaterno = parts[3];
+            } else if (parts.length === 3) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+              lastNameMaterno = parts[2];
+            } else if (parts.length === 2) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+            } else {
+              firstName = nombreEncontrado;
+            }
+          }
+
+          // Auto-detectar género por CURP
+          let detectedGenero = extractedData.genero;
+          if (curpEncontrada && curpEncontrada.length >= 11) {
+            const char = curpEncontrada.charAt(10).toUpperCase();
+            if (char === 'M') detectedGenero = '2'; // Femenino
+            else if (char === 'H') detectedGenero = '1'; // Masculino
           }
 
           const ocrResult = {
@@ -396,7 +475,8 @@ export default function AdminCrearJugador() {
             apellidoMaterno: lastNameMaterno || '',
             curp: curpEncontrada || '',
             fechaNacimiento: fechaNacEncontrada || '',
-            lugarNacimiento: lugarNacEncontrado || ''
+            lugarNacimiento: lugarNacEncontrado || '',
+            genero: detectedGenero
           };
 
           setOcrDataOriginal(ocrResult);
@@ -408,10 +488,10 @@ export default function AdminCrearJugador() {
 
           Swal.fire({
             title: '¡Lectura Exitosa!',
-            text: `Se detectó a: ${nombreEncontrado || 'el documento'}`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
+            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+            icon: nombreEncontrado ? 'success' : 'warning',
+            timer: nombreEncontrado ? 2000 : 3500,
+            showConfirmButton: !nombreEncontrado
           });
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
@@ -1337,9 +1417,9 @@ export default function AdminCrearJugador() {
                     const val = e.target.value.toUpperCase();
                     let sId = extractedData.genero;
                     if (val.length >= 11) {
-                      const char = val.charAt(10);
-                      if (char === 'M') sId = 2; // Femenino
-                      else if (char === 'H') sId = 1; // Masculino
+                      const char = val.charAt(10).toUpperCase();
+                      if (char === 'M') sId = '2'; // Femenino
+                      else if (char === 'H') sId = '1'; // Masculino
                     }
                     setExtractedData({ ...extractedData, curp: val, genero: sId });
                   }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
@@ -1364,10 +1444,10 @@ export default function AdminCrearJugador() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
-                  <select value={extractedData.genero || ""} onChange={e => setExtractedData({ ...extractedData, genero: parseInt(e.target.value) || '' })} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white' }}>
+                  <select value={extractedData.genero !== undefined && extractedData.genero !== null ? String(extractedData.genero) : ""} onChange={e => setExtractedData({ ...extractedData, genero: e.target.value })} style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white' }}>
                     <option value="">Seleccione...</option>
-                    <option value={1}>MASCULINO</option>
-                    <option value={2}>FEMENINO</option>
+                    <option value="1">MASCULINO</option>
+                    <option value="2">FEMENINO</option>
                   </select>
                 </div>
               </div>
