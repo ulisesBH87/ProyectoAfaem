@@ -2193,6 +2193,17 @@ function PreRegistroPresidente() {
           gap: 12px;
           min-width: 0;
         }
+        .insurance-card-list-responsive {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 15px;
+          min-width: 0;
+        }
+        @media (max-width: 580px) {
+          .insurance-card-list-responsive {
+            grid-template-columns: 1fr;
+          }
+        }
         .insurance-player-card {
           display: flex;
           flex-direction: row;
@@ -2808,7 +2819,7 @@ function PreRegistroPresidente() {
                       <div className="insurance-grid">
                         <div className="insurance-section">
                           <div className="insurance-col-title">Seguros Jugadores.</div>
-                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                          <div className="insurance-card-list-responsive">
                             {segurosJugadores.map(seg => {
                               const cantAsignada = Number(asignacionSeguros[seg.id] || 0);
                               return (
@@ -2859,7 +2870,7 @@ function PreRegistroPresidente() {
                                           setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
                                           setError(null);
                                         }}
-                                        style={{ width: '55px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.overlayWhite15}`, backgroundColor: COLORS.overlayWhite05, color: 'white', fontWeight: 'bold' }}
+                                        style={{ width: '40px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.overlayWhite15}`, backgroundColor: COLORS.overlayWhite05, color: 'white', fontWeight: 'bold' }}
                                       />
                                     </div>
                                   </div>
@@ -2901,7 +2912,7 @@ function PreRegistroPresidente() {
                           <div className="insurance-col-title">
                             Seguros Presidente.
                           </div>
-                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                          <div className="insurance-card-list-responsive">
                             {segurosPresidente.map(seg => {
                               const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
 
