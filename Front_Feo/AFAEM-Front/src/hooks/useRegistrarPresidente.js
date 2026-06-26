@@ -536,6 +536,9 @@ export function useRegistrarPresidente() {
   // ── Manejo de subida de archivos ─────────────────────────────────────────
   const handleFileUpload = (docKey, file) => {
     if (!file) return;
+    const previousDocument = documents[docKey] || null;
+    const previousPreview = previews[docKey] || null;
+    const previousOcrMarker = ocrResults[docKey];
     const preview = URL.createObjectURL(file);
     setPreviews(prev => ({ ...prev, [docKey]: preview }));
 
@@ -545,8 +548,24 @@ export function useRegistrarPresidente() {
       setDocuments(prev => ({ ...prev, [docKey]: file }));
       if (['actaNacimiento', 'identificacion'].includes(docKey)) {
         procesarOCR(docKey, file, () => {
-          setPreviews(prev => ({ ...prev, [docKey]: null }));
-          setDocuments(prev => ({ ...prev, [docKey]: null }));
+          setPreviews(prev => {
+            const next = { ...prev };
+            if (previousPreview) next[docKey] = previousPreview;
+            else delete next[docKey];
+            return next;
+          });
+          setDocuments(prev => {
+            const next = { ...prev };
+            if (previousDocument) next[docKey] = previousDocument;
+            else delete next[docKey];
+            return next;
+          });
+          setOcrResults(prev => {
+            const next = { ...prev };
+            if (previousOcrMarker) next[docKey] = previousOcrMarker;
+            else delete next[docKey];
+            return next;
+          });
         });
       }
     }
