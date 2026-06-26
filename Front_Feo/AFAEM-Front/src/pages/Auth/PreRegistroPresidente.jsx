@@ -1559,11 +1559,11 @@ function PreRegistroPresidente() {
         });
       } else {
         Swal.fire({
-          title: 'Documento procesado',
-          text: 'Se leyó el documento pero no se pudo extraer el nombre automáticamente.',
-          icon: 'info',
-          timer: 2000,
-          showConfirmButton: false
+          title: '¡Lectura Exitosa!',
+          text: 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+          icon: 'warning',
+          timer: 3500,
+          showConfirmButton: true
         });
       }
 

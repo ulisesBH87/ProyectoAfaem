@@ -2036,10 +2036,10 @@ export default function RegistroJugadores() {
 
           Swal.fire({
             title: '¡Lectura Exitosa!',
-            text: `Se detectó a: ${nombreEncontrado || 'el documento'}`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
+            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+            icon: nombreEncontrado ? 'success' : 'warning',
+            timer: nombreEncontrado ? 2000 : 3500,
+            showConfirmButton: !nombreEncontrado
           });
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');

@@ -573,11 +573,13 @@ export default function AdminPresidentes() {
       }
 
       setOcrResults(prev => ({ ...prev, ...extracted, [docKey]: `OCR Procesado: ${extracted.nombre}` }));
-      Swal.fire({
-        title: extracted.nombre ? '¡Lectura Exitosa!' : 'Documento procesado',
-        text: extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Se leyó el documento pero no se extrajo el nombre automáticamente.',
-        icon: 'success', timer: 2000, showConfirmButton: false
-      });
+       Swal.fire({
+         title: '¡Lectura Exitosa!',
+         text: extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+         icon: extracted.nombre ? 'success' : 'warning',
+         timer: extracted.nombre ? 2000 : 3500,
+         showConfirmButton: !extracted.nombre
+       });
     } catch (_err) {
       Swal.fire({ title: 'Error', text: 'No se pudo leer el documento de forma automática. Podrás continuar manualmente.', icon: 'warning' });
     }
