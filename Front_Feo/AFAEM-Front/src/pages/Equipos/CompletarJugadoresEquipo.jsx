@@ -2559,54 +2559,6 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                 </div>
 
-                <div className="form-grid-2">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
-                    <input
-                      type="text"
-                      maxLength={3}
-                      value={extractedData.numCamiseta}
-                      onChange={e => handleFieldChange('numCamiseta', e.target.value)}
-                      onBlur={() => handleBlur('numCamiseta')}
-                      placeholder="Ej. 10"
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
-                    />
-                    {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
-                    <select
-                      value={extractedData.posicion}
-                      onChange={e => {
-                        const val = parseInt(e.target.value) || '';
-                        setExtractedData(prev => ({ ...prev, posicion: val }));
-                        if (val) {
-                          const duplicate = obtenerDuplicadoPosicion(val);
-                          if (duplicate) {
-                            const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(val))?.nombre || 'esta posición';
-                            setValidationErrors(prev => ({
-                              ...prev,
-                              posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
-                            }));
-                          } else {
-                            setValidationErrors(prev => ({ ...prev, posicion: null }));
-                          }
-                        } else {
-                          setValidationErrors(prev => ({ ...prev, posicion: null }));
-                        }
-                      }}
-                      onBlur={() => handleBlur('posicion')}
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}
-                    >
-                      <option value="">Posición...</option>
-                      {(catalogs?.roles_equipo || []).map(r => (
-                        <option key={r.id} value={r.id}>{r.nombre}</option>
-                      ))}
-                    </select>
-                    {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
-                  </div>
-                </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
@@ -2705,6 +2657,54 @@ export default function CompletarJugadoresEquipo() {
                       <option value="1">MASCULINO</option>
                       <option value="2">FEMENINO</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="form-grid-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
+                    <input
+                      type="text"
+                      maxLength={3}
+                      value={extractedData.numCamiseta}
+                      onChange={e => handleFieldChange('numCamiseta', e.target.value)}
+                      onBlur={() => handleBlur('numCamiseta')}
+                      placeholder="Ej. 10"
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                    />
+                    {validationErrors.numCamiseta && <span className="field-error-msg">❌ {validationErrors.numCamiseta}</span>}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
+                    <select
+                      value={extractedData.posicion}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) || '';
+                        setExtractedData(prev => ({ ...prev, posicion: val }));
+                        if (val) {
+                          const duplicate = obtenerDuplicadoPosicion(val);
+                          if (duplicate) {
+                            const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(val))?.nombre || 'esta posición';
+                            setValidationErrors(prev => ({
+                              ...prev,
+                              posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.NombreCompleto}.`
+                            }));
+                          } else {
+                            setValidationErrors(prev => ({ ...prev, posicion: null }));
+                          }
+                        } else {
+                          setValidationErrors(prev => ({ ...prev, posicion: null }));
+                        }
+                      }}
+                      onBlur={() => handleBlur('posicion')}
+                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' }}
+                    >
+                      <option value="">Posición...</option>
+                      {(catalogs?.roles_equipo || []).map(r => (
+                        <option key={r.id} value={r.id}>{r.nombre}</option>
+                      ))}
+                    </select>
+                    {validationErrors.posicion && <span className="field-error-msg">❌ {validationErrors.posicion}</span>}
                   </div>
                 </div>
 

@@ -3176,68 +3176,6 @@ export default function ConfigurarEquipo() {
                       </div>
                     </div>
 
-                    <div className="form-inputs-grid-2">
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
-                        <input
-                          type="text"
-                          maxLength={3}
-                          value={extractedData.numCamiseta}
-                          onChange={e => {
-                            const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                            handleFieldChange('numCamiseta', val);
-                          }}
-                          onBlur={handleBlur}
-                          placeholder="Ej. 10"
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`,
-                            boxShadow: validationErrors.numCamiseta ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
-                            fontSize: '14px',
-                            width: '100%',
-                            boxSizing: 'border-box'
-                          }}
-                        />
-                        {validationErrors.numCamiseta && (
-                          <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
-                            {validationErrors.numCamiseta}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
-                        <select
-                          value={extractedData.posicion}
-                          onChange={e => {
-                            const val = parseInt(e.target.value) || '';
-                            handleFieldChange('posicion', val);
-                            guardarBorradorEnBD({ ...extractedData, posicion: val });
-                          }}
-                          style={{
-                            padding: '10px',
-                            borderRadius: '8px',
-                            border: `1.5px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`,
-                            boxShadow: validationErrors.posicion ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
-                            fontSize: '14px',
-                            backgroundColor: 'white',
-                            width: '100%',
-                            boxSizing: 'border-box'
-                          }}
-                        >
-                          <option value="">Posición...</option>
-                          {(catalogs?.roles_equipo || []).map(r => (
-                            <option key={r.id} value={r.id}>{r.nombre}</option>
-                          ))}
-                        </select>
-                        {validationErrors.posicion && (
-                          <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
-                            {validationErrors.posicion}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
@@ -3251,9 +3189,9 @@ export default function ConfigurarEquipo() {
                             const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
                             let sId = extractedData.genero;
                             if (val.length >= 11) {
-                              const char = val.charAt(10);
-                              if (char === 'M') sId = '2'; // Femenino
-                              else if (char === 'H') sId = '1'; // Masculino
+                                const char = val.charAt(10);
+                                if (char === 'M') sId = '2'; // Femenino
+                                else if (char === 'H') sId = '1'; // Masculino
                             }
                             const updated = { ...extractedData, curp: val, genero: sId };
                             setExtractedData(updated);
@@ -3326,6 +3264,68 @@ export default function ConfigurarEquipo() {
                           <option value="1">MASCULINO</option>
                           <option value="2">FEMENINO</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div className="form-inputs-grid-2">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># Camiseta <span className="required-star">*</span></label>
+                        <input
+                          type="text"
+                          maxLength={3}
+                          value={extractedData.numCamiseta}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 3);
+                            handleFieldChange('numCamiseta', val);
+                          }}
+                          onBlur={handleBlur}
+                          placeholder="Ej. 10"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`,
+                            boxShadow: validationErrors.numCamiseta ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
+                            fontSize: '14px',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        {validationErrors.numCamiseta && (
+                          <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                            {validationErrors.numCamiseta}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Posición en el campo <span className="required-star">*</span></label>
+                        <select
+                          value={extractedData.posicion}
+                          onChange={e => {
+                            const val = parseInt(e.target.value) || '';
+                            handleFieldChange('posicion', val);
+                            guardarBorradorEnBD({ ...extractedData, posicion: val });
+                          }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: `1.5px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`,
+                            boxShadow: validationErrors.posicion ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
+                            fontSize: '14px',
+                            backgroundColor: 'white',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <option value="">Posición...</option>
+                          {(catalogs?.roles_equipo || []).map(r => (
+                            <option key={r.id} value={r.id}>{r.nombre}</option>
+                          ))}
+                        </select>
+                        {validationErrors.posicion && (
+                          <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
+                            {validationErrors.posicion}
+                          </div>
+                        )}
                       </div>
                     </div>
 
