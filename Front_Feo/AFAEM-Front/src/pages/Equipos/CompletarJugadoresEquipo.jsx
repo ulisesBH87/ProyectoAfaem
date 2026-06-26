@@ -2516,37 +2516,26 @@ export default function CompletarJugadoresEquipo() {
 
               {/* AVISO DE DISCREPANCIA OCR */}
               {ocrDataOriginal && (
+                extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
+                extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
+              ) && (
                 <div className="fade-in" style={{
                   marginBottom: '20px',
                   padding: '16px',
                   borderRadius: '12px',
-                  background: (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? COLORS.orange50 : COLORS.greenBg50,
-                  border: (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) ? `1px solid ${COLORS.orange100}` : `1px solid ${COLORS.greenBg}`,
+                  background: COLORS.orange50,
+                  border: `1px solid ${COLORS.orange100}`,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px'
                 }}>
-                  <div style={{ fontSize: '20px' }}>
-                    {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                      extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ? '⚠️' : '✅'}
-                  </div>
+                  <div style={{ fontSize: '20px' }}>⚠️</div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                      {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                        'Discrepancia detectada' : 'Datos validados'}
+                      Discrepancia detectada
                     </h4>
                     <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                      {(extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                        extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()) ?
-                        'La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.' :
-                        'La información coincide correctamente con la extracción inteligente de tus documentos.'}
+                      La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
                     </p>
                   </div>
                 </div>
