@@ -1140,17 +1140,47 @@ export default function AdminJugadores() {
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, 'text/html');
 
+      const cleanVal = (val) => {
+        if (!val) return '';
+        const cleaned = val.trim();
+        const lower = cleaned.toLowerCase();
+        if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+          return '';
+        }
+        return cleaned;
+      };
+
       let nombreEncontrado = '';
+      let nombresEncontrados = '';
+      let apellidoPaternoEncontrado = '';
+      let apellidoMaternoEncontrado = '';
       let curpEncontrada = '';
       let fechaNacEncontrada = '';
 
       const rows = doc.querySelectorAll('.dato-fila');
       rows.forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const value = row.querySelector('.valor')?.textContent?.trim() || '';
-        if (label.includes('nombre')) nombreEncontrado = value;
+        const value = cleanVal(row.querySelector('.valor')?.textContent);
+
+        if (!value) return;
+
+        if (label.includes('nombres')) {
+          nombresEncontrados = value;
+        } else if (label.includes('nombre completo') || label === 'nombre') {
+          nombreEncontrado = value;
+        } else if (label.includes('nombre')) {
+          if (!nombresEncontrados) nombresEncontrados = value;
+        }
+
+        if (label.includes('apellido paterno') || label.includes('paterno')) {
+          apellidoPaternoEncontrado = value;
+        }
+        if (label.includes('apellido materno') || label.includes('materno')) {
+          apellidoMaternoEncontrado = value;
+        }
+
         if (label.includes('curp')) curpEncontrada = value;
-        if (label.includes('nacimiento') || label.includes('fecha nac')) {
+        if ((label.includes('nacimiento') && !label.includes('lugar')) || label.includes('fecha nac')) {
           let finalDate = value;
           if (value.includes('/')) {
             const p = value.split('/');
@@ -1163,18 +1193,36 @@ export default function AdminJugadores() {
       });
 
       // Fallback: buscar en texto plano si los selectores no devuelven nada
-      if (!nombreEncontrado && !curpEncontrada) {
+      if (!nombresEncontrados && !apellidoPaternoEncontrado && !nombreEncontrado && !curpEncontrada) {
         const textoCompleto = doc.body?.innerText || '';
         const curpMatch = textoCompleto.match(/[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d/i);
         if (curpMatch) curpEncontrada = curpMatch[0].toUpperCase();
       }
 
-      if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
-        const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+      if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
         let firstName = '', lastNameP = '', lastNameM = '';
-        if (parts.length >= 3) { lastNameP = parts[0]; lastNameM = parts[1]; firstName = parts.slice(2).join(' '); }
-        else if (parts.length === 2) { lastNameP = parts[0]; firstName = parts[1]; }
-        else { firstName = nombreEncontrado; }
+
+        if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+          firstName = nombresEncontrados;
+          lastNameP = apellidoPaternoEncontrado;
+          lastNameM = apellidoMaternoEncontrado;
+        } else if (nombreEncontrado) {
+          const parts = nombreEncontrado.split(' ');
+          if (parts.length === 4) {
+            firstName = parts.slice(0, 2).join(' ');
+            lastNameP = parts[2];
+            lastNameM = parts[3];
+          } else if (parts.length === 3) {
+            firstName = parts[0];
+            lastNameP = parts[1];
+            lastNameM = parts[2];
+          } else if (parts.length === 2) {
+            firstName = parts[0];
+            lastNameP = parts[1];
+          } else {
+            firstName = nombreEncontrado;
+          }
+        }
 
         setDatosEditables(prev => ({
           ...prev,

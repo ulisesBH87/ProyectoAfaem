@@ -1664,7 +1664,20 @@ export default function ConfigurarEquipo() {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, "text/html");
 
+        const cleanVal = (val) => {
+          if (!val) return '';
+          const cleaned = val.trim();
+          const lower = cleaned.toLowerCase();
+          if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+            return '';
+          }
+          return cleaned;
+        };
+
         let nombreEncontrado = '';
+        let nombresEncontrados = '';
+        let apellidoPaternoEncontrado = '';
+        let apellidoMaternoEncontrado = '';
         let curpEncontrada = '';
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
@@ -1672,12 +1685,32 @@ export default function ConfigurarEquipo() {
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
           const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-          const value = row.querySelector('.valor')?.textContent?.trim() || '';
+          const value = cleanVal(row.querySelector('.valor')?.textContent);
 
-          if (label.includes('nombre')) nombreEncontrado = value;
+          if (!value) return;
+
+          if (label.includes('nombres')) {
+            nombresEncontrados = value;
+          } else if (label.includes('nombre completo') || label === 'nombre') {
+            nombreEncontrado = value;
+          } else if (label.includes('nombre')) {
+            if (!nombresEncontrados) nombresEncontrados = value;
+          }
+
+          if (label.includes('apellido paterno') || label.includes('paterno')) {
+            apellidoPaternoEncontrado = value;
+          }
+          if (label.includes('apellido materno') || label.includes('materno')) {
+            apellidoMaternoEncontrado = value;
+          }
+
           if (label.includes('curp')) curpEncontrada = value;
-          if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
-          if (label.includes('nacimiento') || label.includes('fecha nac')) {
+          
+          if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
+            lugarNacEncontrado = value;
+          }
+
+          if ((label.includes('nacimiento') && !label.includes('lugar')) || label.includes('fecha nac')) {
             let finalDate = value;
             if (value.includes('/')) {
               const p = value.split('/');
@@ -1690,19 +1723,29 @@ export default function ConfigurarEquipo() {
           }
         });
 
-        if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
-          const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+        if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
 
-          if (parts.length >= 3) {
-            lastNamePaterno = parts[0];
-            lastNameMaterno = parts[1];
-            firstName = parts.slice(2).join(' ');
-          } else if (parts.length === 2) {
-            lastNamePaterno = parts[0];
-            firstName = parts[1];
-          } else {
-            firstName = nombreEncontrado;
+          if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+            firstName = nombresEncontrados;
+            lastNamePaterno = apellidoPaternoEncontrado;
+            lastNameMaterno = apellidoMaternoEncontrado;
+          } else if (nombreEncontrado) {
+            const parts = nombreEncontrado.split(' ');
+            if (parts.length === 4) {
+              firstName = parts.slice(0, 2).join(' ');
+              lastNamePaterno = parts[2];
+              lastNameMaterno = parts[3];
+            } else if (parts.length === 3) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+              lastNameMaterno = parts[2];
+            } else if (parts.length === 2) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+            } else {
+              firstName = nombreEncontrado;
+            }
           }
 
           // Auto-detectar género por CURP
