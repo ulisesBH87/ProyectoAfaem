@@ -304,6 +304,13 @@ export default function CompletarJugadoresEquipo() {
       border: 1px solid ${COLORS.dangerBg};
     }
     
+    .form-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    
     .form-grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -423,7 +430,7 @@ export default function CompletarJugadoresEquipo() {
         border-radius: 16px;
       }
       
-      .form-grid-3, .form-grid-2 {
+      .form-grid-4, .form-grid-3, .form-grid-2 {
         grid-template-columns: 1fr;
         gap: 12px;
         margin-bottom: 15px;
@@ -2572,7 +2579,7 @@ export default function CompletarJugadoresEquipo() {
               {/* CAMPOS DEL FORMULARIO */}
               <div className="inner-form-card">
 
-                <div className="form-grid-3">
+                <div className="form-grid-4">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
                     <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
@@ -2585,9 +2592,6 @@ export default function CompletarJugadoresEquipo() {
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
                     <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                       CURP<span className="required-star">*</span>
