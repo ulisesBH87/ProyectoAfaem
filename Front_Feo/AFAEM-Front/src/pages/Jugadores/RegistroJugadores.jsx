@@ -2888,9 +2888,19 @@ export default function RegistroJugadores() {
                 fontWeight: '900',
                 color: COLORS.slate800,
                 userSelect: 'none',
-                lineHeight: '1.2'
+                lineHeight: '1.2',
+                textAlign: 'center',
+                maxWidth: '600px',
+                wordBreak: 'break-word'
               }}>
-                Jugador {currentPlayerIndex + 1}
+                {(() => {
+                  const nombre = activePlayer?.datos?.nombreJugador || '';
+                  const apellido = activePlayer?.datos?.apellidoPaterno || '';
+                  if (nombre.trim()) {
+                    return `${nombre.trim()} ${apellido.trim()}`.trim().toUpperCase();
+                  }
+                  return `Jugador ${currentPlayerIndex + 1}`;
+                })()}
               </span>
               <div style={{
                 display: 'inline-flex',
@@ -4098,7 +4108,6 @@ export default function RegistroJugadores() {
                       <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
                       <p style={{ fontSize: '13px', color: COLORS.slate500, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
                         Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
-                        <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
                       </p>
 
                       {!pasos1a5Completos && (
@@ -4300,7 +4309,8 @@ export default function RegistroJugadores() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '10px',
-                    width: '320px'
+                    width: '100%',
+                    maxWidth: '320px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
@@ -4331,7 +4341,8 @@ export default function RegistroJugadores() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      width: '320px'
+                      width: '100%',
+                      maxWidth: '320px'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = COLORS.successBg;
