@@ -1889,9 +1889,15 @@ export default function RegistroJugadores() {
       try {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
-
-        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataOcr
+        });
+        if (!response.ok) throw new Error('Error al analizar el documento');
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -1940,7 +1946,7 @@ export default function RegistroJugadores() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
-          
+
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
           }

@@ -1133,7 +1133,14 @@ export default function AdminJugadores() {
     try {
       const formDataOcr = new FormData();
       formDataOcr.append('file_id', file);
-      const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const response = await fetch(`${API_BASE}/documentos/ocr`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formDataOcr
+      });
       if (!response.ok) throw new Error('Error al conectar');
 
       const htmlText = await response.text();

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Swal from 'sweetalert2';
+import { API_BASE } from '../config/config';
 import { toDDMMYYYY } from '../pages/Admin/RegistrarPresidente/constants';
 
 /**
@@ -118,7 +119,14 @@ export function useOCR() {
     try {
       const fd = new FormData();
       fd.append('file_id', file);
-      const res = await fetch('/ocr-api', { method: 'POST', body: fd });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const res = await fetch(`${API_BASE}/documentos/ocr`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: fd
+      });
       if (!res.ok) throw new Error();
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');

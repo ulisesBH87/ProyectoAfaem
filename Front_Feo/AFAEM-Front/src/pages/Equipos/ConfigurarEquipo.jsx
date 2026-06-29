@@ -1656,9 +1656,15 @@ export default function ConfigurarEquipo() {
       try {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
-
-        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataOcr
+        });
+        if (!response.ok) throw new Error('Error al analizar el documento');
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -1707,7 +1713,7 @@ export default function ConfigurarEquipo() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
-          
+
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
           }
@@ -3164,27 +3170,27 @@ export default function ConfigurarEquipo() {
                     extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                     extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
                   ) && (
-                    <div className="fade-in" style={{
-                      marginBottom: '20px',
-                      padding: '16px',
-                      borderRadius: '12px',
-                      background: COLORS.orange50,
-                      border: `1px solid ${COLORS.orange100}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px'
-                    }}>
-                      <div style={{ fontSize: '20px' }}>⚠️</div>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                          Discrepancia detectada
-                        </h4>
-                        <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                          La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                        </p>
+                      <div className="fade-in" style={{
+                        marginBottom: '20px',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        background: COLORS.orange50,
+                        border: `1px solid ${COLORS.orange100}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}>
+                        <div style={{ fontSize: '20px' }}>⚠️</div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
+                            Discrepancia detectada
+                          </h4>
+                          <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
+                            La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* CAMPOS DEL FORMULARIO */}
                   <div className="dashboard-card" style={{ border: `1px solid ${COLORS.slate200}`, marginBottom: '30px' }}>
@@ -3214,9 +3220,9 @@ export default function ConfigurarEquipo() {
                             const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
                             let sId = extractedData.genero;
                             if (val.length >= 11) {
-                                const char = val.charAt(10);
-                                if (char === 'M') sId = '2'; // Femenino
-                                else if (char === 'H') sId = '1'; // Masculino
+                              const char = val.charAt(10);
+                              if (char === 'M') sId = '2'; // Femenino
+                              else if (char === 'H') sId = '1'; // Masculino
                             }
                             const updated = { ...extractedData, curp: val, genero: sId };
                             setExtractedData(updated);

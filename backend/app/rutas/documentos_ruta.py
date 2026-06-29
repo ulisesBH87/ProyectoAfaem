@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+import requests
 from sqlalchemy.orm import Session
 from typing import Optional, List, Union
 import os
@@ -170,4 +171,110 @@ async def obtener_documento(
         raise HTTPException(status_code=404, detail="El archivo físico no existe en el servidor")
 
     return FileResponse(ruta_absoluta)
+
+
+from app.core.seguridad import obtener_usuario_o_sesion_temporal
+from datetime import datetime
+
+
+async def obtener_usuario_o_sesion_temporal_con_log(request: Request, db: Session = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    try:
+        with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+            f.write(f"[{datetime.now().isoformat()}] --- OCR Request ---\n")
+            f.write(f"Path: {request.url.path}\n")
+            f.write(f"Authorization Header: {auth_header}\n")
+    except Exception as e:
+        print(f"[OCR PROXY] Error writing to ocr_proxy.log: {e}")
+        
+    try:
+        payload = await obtener_usuario_o_sesion_temporal(request, db)
+        try:
+            # Si es usuario, sacamos el id. Si es temp_session, sacamos el usuario_id.
+            sub_id = payload.get("usuario_id") or (payload.get("usuario").UsuarioId if payload.get("usuario") else None)
+            with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+                f.write(f"Auth Success: type={payload.get('type')}, sub={sub_id}\n")
+        except Exception as e:
+            print(f"[OCR PROXY] Log success write error: {e}")
+        return payload
+    except HTTPException as exc:
+        try:
+            with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+                f.write(f"Auth Failure: status_code={exc.status_code}, detail={exc.detail}\n")
+        except Exception:
+            pass
+        raise exc
+    except Exception as exc:
+        try:
+            with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+                f.write(f"Auth Failure: unexpected error={str(exc)}\n")
+        except Exception:
+            pass
+        raise exc
+
+
+@router.post("/ocr")
+def procesar_ocr_seguro(
+    file_id: UploadFile = File(...),
+    file_formato: Optional[UploadFile] = File(None),
+    token_payload = Depends(obtener_usuario_o_sesion_temporal_con_log)
+):
+    """
+    Recibe un documento de identidad y opcionalmente un formato de afiliación,
+    valida la sesión (usuario o invitado) y los reenvía internamente al servicio OCR local.
+    """
+    print(f"[OCR PROXY] Recibida petición OCR. Archivo: {file_id.filename}. Token type: {token_payload.get('type')}")
+    
+    # 1. Leer los archivos subidos para reenviarlos
+    files = {
+        "file_id": (file_id.filename, file_id.file.read(), file_id.content_type)
+    }
+    if file_formato:
+        files["file_formato"] = (file_formato.filename, file_formato.file.read(), file_formato.content_type)
+
+    # 2. Reenviar al microservicio OCR en el puerto 5001
+    ocr_url = "http://127.0.0.1:5001/"
+    try:
+        #print(f"[OCR PROXY] Reenviando a servicio local Flask en {ocr_url}...")
+        try:
+            with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+                f.write(f"Reenviando a Flask en {ocr_url}\n")
+        except Exception:
+            pass
+            
+        respuesta = requests.post(ocr_url, files=files, timeout=60.0)
+        print(f"[OCR PROXY] Servicio Flask retornó status_code: {respuesta.status_code}")
+        
+        try:
+            with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+                f.write(f"Flask response status: {respuesta.status_code}\n")
+        except Exception:
+            pass
+            
+        if respuesta.status_code != 200:
+            print(f"[OCR PROXY] Error del servicio Flask: {respuesta.text[:500]}")
+            try:
+                with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+                    f.write(f"Flask returned error: {respuesta.text[:500]}\n")
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=respuesta.status_code,
+                detail="Error interno"
+            )
+            
+        # Devolver el HTML tal cual para que el frontend lo parsee
+        return HTMLResponse(content=respuesta.text, status_code=200)
+        
+    except requests.RequestException as exc:
+        print(f"[OCR PROXY] Error de conexión")
+        try:
+            with open("ocr_proxy.log", "a", encoding="utf-8") as f:
+                f.write(f"Flask connection failed\n")
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=503,
+            detail=f"Ocurrió un error interno. Inténtalo de nuevo más tarde"
+        )
 

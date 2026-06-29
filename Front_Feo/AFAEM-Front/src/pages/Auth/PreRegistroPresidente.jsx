@@ -1260,7 +1260,7 @@ function PreRegistroPresidente() {
       const nombresVal = mashedMatch[1].trim();
       const ap1Val = mashedMatch[2].trim();
       const ap2Val = mashedMatch[3].trim();
-      
+
       data.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
       data.nombres = nombresVal.toUpperCase();
       data.apellido_paterno = ap1Val.toUpperCase();
@@ -1268,7 +1268,7 @@ function PreRegistroPresidente() {
       data.nombreSolo = nombresVal.toUpperCase();
       data.primerApellido = ap1Val.toUpperCase();
       data.segundoApellido = ap2Val.toUpperCase();
-      
+
       const rest = mashedMatch[4].trim();
       if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
         data.nacionalidad = rest.toUpperCase();
@@ -1369,14 +1369,16 @@ function PreRegistroPresidente() {
     try {
       const formData = new FormData();
       formData.append('file_id', file);
-
-      // Usamos el proxy configurado en vite.config.js
-      const response = await fetch('/ocr-api', {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const response = await fetch(`${API_BASE}/documentos/ocr`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
 
-      if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+      if (!response.ok) throw new Error('Ocurrió un error al cargar el documento');
 
       // Parsea el HTML del OCR para extraer los datos
       const htmlText = await response.text();
