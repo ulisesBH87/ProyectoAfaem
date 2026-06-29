@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
   FaArrowRight,
+  FaArrowUp,
   FaSave,
   FaUpload,
   FaFilePdf,
@@ -3038,6 +3039,17 @@ export default function RegistroJugadores() {
               </div>
             ) : (
               <>
+                <p style={{
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  color: COLORS.slate500,
+                  fontWeight: '600',
+                  marginBottom: '20px',
+                  marginTop: '-5px',
+                  userSelect: 'none'
+                }}>
+                  Toca el paso que desees para revisarlo o hacer cambios
+                </p>
                 {/* INDICADOR DE PROGRESO (STEPPER WIZARD) */}
                 <div className="stepper-container">
                   <div className="stepper-line">
@@ -4256,14 +4268,14 @@ export default function RegistroJugadores() {
                   Todos los datos de tus jugadores están listos
                 </h3>
                 <p style={{ fontSize: '14px', color: COLORS.greenDarker, margin: '0 0 20px 0', fontWeight: '600' }}>
-                  ¿Deseas realizar el registro o modificar alguno?
+                  Puedes realizar cambios antes de hacer el registro
                 </p>
                 <button
                   type="button"
                   onClick={handleRegistrarGrupoClick}
                   disabled={uploading}
                   style={{
-                    padding: '14px 40px',
+                    padding: '14px 20px',
                     borderRadius: '14px',
                     border: 'none',
                     background: `linear-gradient(135deg, ${COLORS.success}, ${COLORS.successDark})`,
@@ -4275,7 +4287,9 @@ export default function RegistroJugadores() {
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '10px'
+                    justifyContent: 'center',
+                    gap: '10px',
+                    width: '320px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
@@ -4288,6 +4302,38 @@ export default function RegistroJugadores() {
                 >
                   {uploading ? 'Registrando grupo...' : 'Registrar todos los jugadores'} <FaSave />
                 </button>
+                <div style={{ marginTop: '15px' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: '14px',
+                      border: `1.5px solid ${COLORS.success}`,
+                      background: 'transparent',
+                      color: COLORS.greenDeep,
+                      fontWeight: '800',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      width: '320px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = COLORS.successBg;
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    Revisar/hacer cambios <FaArrowUp />
+                  </button>
+                </div>
               </div>
             );
           })()}
