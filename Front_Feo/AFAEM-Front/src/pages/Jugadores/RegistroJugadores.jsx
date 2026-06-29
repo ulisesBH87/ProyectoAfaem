@@ -1427,9 +1427,15 @@ export default function RegistroJugadores() {
         const duplicate = obtenerDuplicadoPosicion(cleanValue, jugadores[currentPlayerIndex]?.numero);
         if (duplicate) {
           const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(cleanValue))?.nombre || 'esta posición';
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicado = nombreDup.trim()
+            ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}.`
+            : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`;
+          
           setValidationErrors(prev => ({
             ...prev,
-            posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`
+            posicion: msgDuplicado
           }));
         } else {
           setValidationErrors(prev => ({ ...prev, posicion: null }));
@@ -1471,9 +1477,15 @@ export default function RegistroJugadores() {
         const duplicate = obtenerDuplicadoPosicion(datos.posicion, player.numero);
         if (duplicate) {
           const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(datos.posicion))?.nombre || 'esta posición';
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicadoText = nombreDup.trim()
+            ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}. Por favor, elige otra posición.`
+            : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`;
+          
           Swal.fire({
             title: 'Posición duplicada',
-            text: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`,
+            text: msgDuplicadoText,
             icon: 'warning',
             confirmButtonColor: COLORS.primary
           });
