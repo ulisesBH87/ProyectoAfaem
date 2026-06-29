@@ -2873,6 +2873,17 @@ export default function RegistroJugadores() {
               justifyContent: 'center'
             }}>
               <span style={{
+                fontSize: '11px',
+                color: COLORS.slate500,
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '6px',
+                userSelect: 'none'
+              }}>
+                Toca las flechas para cambiar de jugador
+              </span>
+              <span style={{
                 fontSize: '28px',
                 fontWeight: '900',
                 color: COLORS.slate800,
@@ -4404,6 +4415,17 @@ export default function RegistroJugadores() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
+                  <span style={{
+                    fontSize: '11px',
+                    color: COLORS.slate500,
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '6px',
+                    userSelect: 'none'
+                  }}>
+                    Toca las flechas para cambiar de jugador
+                  </span>
                   <span style={{
                     fontSize: '28px',
                     fontWeight: '900',
