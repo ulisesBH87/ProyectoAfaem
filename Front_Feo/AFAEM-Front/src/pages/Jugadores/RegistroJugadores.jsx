@@ -2337,7 +2337,7 @@ export default function RegistroJugadores() {
   const handleRegistrarGrupoClick = () => {
     Swal.fire({
       title: '¿Confirmar registro grupal?',
-      text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer.',
+      text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer. Si deseas hacer cambios, presiona "Cancelar"',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: COLORS.success,
