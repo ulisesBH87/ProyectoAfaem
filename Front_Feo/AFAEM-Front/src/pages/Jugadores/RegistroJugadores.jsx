@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
   FaArrowRight,
+  FaArrowUp,
   FaSave,
   FaUpload,
   FaFilePdf,
@@ -1889,9 +1890,15 @@ export default function RegistroJugadores() {
       try {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
-
-        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataOcr
+        });
+        if (!response.ok) throw new Error('Error al analizar el documento');
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -1940,7 +1947,7 @@ export default function RegistroJugadores() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
-          
+
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
           }
@@ -2330,7 +2337,7 @@ export default function RegistroJugadores() {
   const handleRegistrarGrupoClick = () => {
     Swal.fire({
       title: '¿Confirmar registro grupal?',
-      text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer.',
+      text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer. Si deseas hacer cambios, presiona "Cancelar"',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: COLORS.success,
@@ -2866,13 +2873,34 @@ export default function RegistroJugadores() {
               justifyContent: 'center'
             }}>
               <span style={{
+                fontSize: '11px',
+                color: COLORS.slate500,
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '6px',
+                userSelect: 'none'
+              }}>
+                Toca las flechas para cambiar de jugador
+              </span>
+              <span style={{
                 fontSize: '28px',
                 fontWeight: '900',
                 color: COLORS.slate800,
                 userSelect: 'none',
-                lineHeight: '1.2'
+                lineHeight: '1.2',
+                textAlign: 'center',
+                maxWidth: '600px',
+                wordBreak: 'break-word'
               }}>
-                Jugador {currentPlayerIndex + 1}
+                {(() => {
+                  const nombre = activePlayer?.datos?.nombreJugador || '';
+                  const apellido = activePlayer?.datos?.apellidoPaterno || '';
+                  if (nombre.trim()) {
+                    return `${nombre.trim()} ${apellido.trim()}`.trim().toUpperCase();
+                  }
+                  return `Jugador ${currentPlayerIndex + 1}`;
+                })()}
               </span>
               <div style={{
                 display: 'inline-flex',
@@ -3032,6 +3060,17 @@ export default function RegistroJugadores() {
               </div>
             ) : (
               <>
+                <p style={{
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  color: COLORS.slate500,
+                  fontWeight: '600',
+                  marginBottom: '20px',
+                  marginTop: '-5px',
+                  userSelect: 'none'
+                }}>
+                  Toca el paso que desees para revisarlo o hacer cambios
+                </p>
                 {/* INDICADOR DE PROGRESO (STEPPER WIZARD) */}
                 <div className="stepper-container">
                   <div className="stepper-line">
@@ -4069,7 +4108,6 @@ export default function RegistroJugadores() {
                       <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
                       <p style={{ fontSize: '13px', color: COLORS.slate500, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
                         Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
-                        <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
                       </p>
 
                       {!pasos1a5Completos && (
@@ -4250,14 +4288,14 @@ export default function RegistroJugadores() {
                   Todos los datos de tus jugadores están listos
                 </h3>
                 <p style={{ fontSize: '14px', color: COLORS.greenDarker, margin: '0 0 20px 0', fontWeight: '600' }}>
-                  ¿Deseas realizar el registro o modificar alguno?
+                  Puedes realizar cambios antes de hacer el registro
                 </p>
                 <button
                   type="button"
                   onClick={handleRegistrarGrupoClick}
                   disabled={uploading}
                   style={{
-                    padding: '14px 40px',
+                    padding: '14px 20px',
                     borderRadius: '14px',
                     border: 'none',
                     background: `linear-gradient(135deg, ${COLORS.success}, ${COLORS.successDark})`,
@@ -4269,7 +4307,10 @@ export default function RegistroJugadores() {
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '10px'
+                    justifyContent: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    maxWidth: '320px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
@@ -4282,6 +4323,39 @@ export default function RegistroJugadores() {
                 >
                   {uploading ? 'Registrando grupo...' : 'Registrar todos los jugadores'} <FaSave />
                 </button>
+                <div style={{ marginTop: '15px' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: '14px',
+                      border: `1.5px solid ${COLORS.success}`,
+                      background: 'transparent',
+                      color: COLORS.greenDeep,
+                      fontWeight: '800',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      maxWidth: '320px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = COLORS.successBg;
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    Revisar/hacer cambios <FaArrowUp />
+                  </button>
+                </div>
               </div>
             );
           })()}
@@ -4352,6 +4426,17 @@ export default function RegistroJugadores() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
+                  <span style={{
+                    fontSize: '11px',
+                    color: COLORS.slate500,
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '6px',
+                    userSelect: 'none'
+                  }}>
+                    Toca las flechas para cambiar de jugador
+                  </span>
                   <span style={{
                     fontSize: '28px',
                     fontWeight: '900',

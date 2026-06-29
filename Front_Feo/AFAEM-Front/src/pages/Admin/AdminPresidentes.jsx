@@ -425,7 +425,14 @@ export default function AdminPresidentes() {
     Swal.fire({ title: 'Analizando Documento...', html: 'Extrayendo información . <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     try {
       const fd = new FormData(); fd.append('file_id', file);
-      const res = await fetch('/ocr-api', { method: 'POST', body: fd });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const res = await fetch(`${API_BASE}/documentos/ocr`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: fd
+      });
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
