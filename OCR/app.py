@@ -20,6 +20,18 @@ except ImportError:
     pass
 
 credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if credentials_path:
+    # Repair common backslash escape sequence replacements caused by environment/dotenv parsers
+    # (e.g. \f in \faemocr becoming form-feed \x0c, or \a in \afaemocr becoming bell \x07)
+    credentials_path = (
+        credentials_path.replace('\x0c', '\\f')
+        .replace('\x07', '\\a')
+        .replace('\x08', '\\b')
+        .replace('\x09', '\\t')
+        .replace('\x0a', '\\n')
+        .replace('\x0d', '\\r')
+    )
+
 if not credentials_path:
     credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "afaemocr-e6153e55388c.json")
 elif not os.path.isabs(credentials_path):
