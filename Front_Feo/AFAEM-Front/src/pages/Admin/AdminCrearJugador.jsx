@@ -1643,7 +1643,7 @@ export default function AdminCrearJugador() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '1800px', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />

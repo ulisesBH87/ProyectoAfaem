@@ -3638,7 +3638,7 @@ export default function ConfigurarEquipo() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '100%', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />

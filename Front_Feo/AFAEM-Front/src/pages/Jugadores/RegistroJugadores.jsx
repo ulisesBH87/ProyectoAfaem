@@ -1012,7 +1012,8 @@ export default function RegistroJugadores() {
     ine: null,
     ineTutor: null,
     identificacionMenor: null,
-    foto: null
+    foto: null,
+    signedForm: null
   });
 
   const [catalogs, setCatalogs] = useState({
@@ -1732,7 +1733,8 @@ export default function RegistroJugadores() {
       ine: null,
       ineTutor: null,
       identificacionMenor: null,
-      foto: null
+      foto: null,
+      signedForm: null
     });
 
     const player = jugadores[currentPlayerIndex];
@@ -1757,13 +1759,28 @@ export default function RegistroJugadores() {
         }
       });
     }
+
+    if (player?.signedForm) {
+      const file = player.signedForm;
+      if (file.type?.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviews(prev => ({ ...prev, signedForm: reader.result }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const url = URL.createObjectURL(file);
+        setPreviews(prev => ({ ...prev, signedForm: url }));
+      }
+    }
   }, [
     currentPlayerIndex,
     currentDocuments.acta,
     currentDocuments.ine,
     currentDocuments.ineTutor,
     currentDocuments.identificacionMenor,
-    currentDocuments.foto
+    currentDocuments.foto,
+    jugadores[currentPlayerIndex]?.signedForm
   ]);
 
   // Efecto para autovalidación de CURP con debounce
@@ -4172,28 +4189,31 @@ export default function RegistroJugadores() {
 
                       <div
                         onClick={() => {
-                          if (pasos1a5Completos) {
+                          if (pasos1a5Completos && !currentPlayer?.signedForm) {
                             document.getElementById('final-signed-form').click();
                           }
                         }}
+                        className={currentPlayer?.signedForm ? "document-card" : ""}
                         style={{
                           border: currentPlayer?.signedForm ? `2px solid ${COLORS.success}` : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`),
                           borderRadius: '20px',
                           padding: '35px 20px',
                           backgroundColor: currentPlayer?.signedForm ? COLORS.greenBg50 : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100),
-                          cursor: pasos1a5Completos ? 'pointer' : 'not-allowed',
+                          cursor: (pasos1a5Completos && !currentPlayer?.signedForm) ? 'pointer' : 'default',
                           transition: 'all 0.3s',
                           textAlign: 'center',
                           maxWidth: '600px',
                           margin: '0 auto',
-                          opacity: pasos1a5Completos ? 1 : 0.6
+                          opacity: pasos1a5Completos ? 1 : 0.6,
+                          position: 'relative',
+                          overflow: 'hidden'
                         }}
                       >
                         {currentPlayer?.signedForm ? (
                           <div style={{ color: COLORS.success }}>
                             <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
                             <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado, cargado, y listo</p>
                           </div>
                         ) : (
                           <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400 }}>
@@ -4202,6 +4222,61 @@ export default function RegistroJugadores() {
                             <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
                           </div>
                         )}
+
+                        {currentPlayer?.signedForm && (
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: COLORS.overlaySlateGray,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)',
+                            zIndex: 2
+                          }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewDoc({
+                                  open: true,
+                                  url: previews.signedForm,
+                                  type: 'pdf',
+                                  title: 'Formato de Afiliación Oficial'
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaSearchPlus />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                document.getElementById('final-signed-form').click();
+                              }}
+                              className="btn-change"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaSyncAlt />
+                            </button>
+                          </div>
+                        )}
+
                         <input
                           type="file"
                           id="final-signed-form"
@@ -4589,7 +4664,7 @@ export default function RegistroJugadores() {
                 </a>
               </div>
             ) : (
-              <iframe src={previewDoc.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
+              <iframe src={`${previewDoc.url}#toolbar=0&navpanes=0`} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
             )
           ) : (
             <img src={previewDoc.url} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px' }} />

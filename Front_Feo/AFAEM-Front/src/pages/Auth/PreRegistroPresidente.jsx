@@ -4552,7 +4552,7 @@ function PreRegistroPresidente() {
               />
             ) : previewDoc.file.type === 'application/pdf' ? (
               <iframe
-                src={previewUrl}
+                src={`${previewUrl}#toolbar=0&navpanes=0`}
                 title={previewDoc.title}
                 style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
               />
