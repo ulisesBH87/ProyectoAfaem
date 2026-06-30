@@ -1412,9 +1412,15 @@ export default function RegistroJugadores() {
       if (cleanValue !== '') {
         const duplicate = obtenerDuplicadoCamiseta(cleanValue, jugadores[currentPlayerIndex]?.numero);
         if (duplicate) {
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicado = nombreDup.trim()
+            ? `El número de camiseta #${cleanValue} ya está asignado a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}.`
+            : `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.numero}.`;
+
           setValidationErrors(prev => ({
             ...prev,
-            numCamiseta: `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.numero}.`
+            numCamiseta: msgDuplicado
           }));
         } else {
           setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
@@ -1432,7 +1438,7 @@ export default function RegistroJugadores() {
           const msgDuplicado = nombreDup.trim()
             ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}.`
             : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`;
-          
+
           setValidationErrors(prev => ({
             ...prev,
             posicion: msgDuplicado
@@ -1462,9 +1468,15 @@ export default function RegistroJugadores() {
       if (datos.numCamiseta) {
         const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta, player.numero);
         if (duplicate) {
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicadoText = nombreDup.trim()
+            ? `El número #${datos.numCamiseta} ya está asignado a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}. Por favor, elige otro número.`
+            : `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`;
+
           Swal.fire({
             title: 'Número de camiseta duplicado',
-            text: `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`,
+            text: msgDuplicadoText,
             icon: 'warning',
             confirmButtonColor: COLORS.primary
           });
@@ -1482,7 +1494,7 @@ export default function RegistroJugadores() {
           const msgDuplicadoText = nombreDup.trim()
             ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}. Por favor, elige otra posición.`
             : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`;
-          
+
           Swal.fire({
             title: 'Posición duplicada',
             text: msgDuplicadoText,
@@ -2886,7 +2898,7 @@ export default function RegistroJugadores() {
             }}>
               <span style={{
                 fontSize: '11px',
-                color: COLORS.slate500,
+                color: COLORS.danger,
                 fontWeight: '700',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
@@ -3075,7 +3087,7 @@ export default function RegistroJugadores() {
                 <p style={{
                   textAlign: 'center',
                   fontSize: '13px',
-                  color: COLORS.slate500,
+                  color: COLORS.black,
                   fontWeight: '600',
                   marginBottom: '20px',
                   marginTop: '-5px',
@@ -4118,7 +4130,7 @@ export default function RegistroJugadores() {
                     {/* Descarga de formato prellenado y carga del formato firmado */}
                     <div style={{ borderTop: `1px solid ${COLORS.slate200}`, paddingTop: '25px', marginBottom: '20px' }}>
                       <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
-                      <p style={{ fontSize: '13px', color: COLORS.slate500, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                      <p style={{ fontSize: '13px', color: COLORS.dangerAccent, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
                         Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
                       </p>
 
@@ -4266,8 +4278,8 @@ export default function RegistroJugadores() {
                       Siguiente <FaArrowRight />
                     </button>
                   ) : (
-                    <span style={{ fontSize: '13px', color: COLORS.slate500, fontWeight: '600', fontStyle: 'italic' }}>
-                      * Envío grupal al final de la página
+                    <span style={{ fontSize: '13px', color: COLORS.dangerAccent, fontWeight: '600', fontStyle: 'italic' }}>
+                      * Podrás hacer en el registro grupal cuando llenes los datos de todos tus jugadores
                     </span>
                   )}
                 </div>
@@ -4300,7 +4312,7 @@ export default function RegistroJugadores() {
                   Todos los datos de tus jugadores están listos
                 </h3>
                 <p style={{ fontSize: '14px', color: COLORS.greenDarker, margin: '0 0 20px 0', fontWeight: '600' }}>
-                  Puedes realizar cambios antes de hacer el registro
+                  Puedes revisar los datos o realizar cambios antes de hacer el registro
                 </p>
                 <button
                   type="button"
@@ -4365,7 +4377,7 @@ export default function RegistroJugadores() {
                       e.currentTarget.style.transform = 'none';
                     }}
                   >
-                    Revisar/hacer cambios <FaArrowUp />
+                    Revisar / Hacer cambios <FaArrowUp />
                   </button>
                 </div>
               </div>
@@ -4440,7 +4452,7 @@ export default function RegistroJugadores() {
                 }}>
                   <span style={{
                     fontSize: '11px',
-                    color: COLORS.slate500,
+                    color: COLORS.dangerAccent,
                     fontWeight: '700',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
