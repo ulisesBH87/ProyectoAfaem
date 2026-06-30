@@ -232,8 +232,8 @@ def procesar_ocr_seguro(
     if file_formato:
         files["file_formato"] = (file_formato.filename, file_formato.file.read(), file_formato.content_type)
 
-    # 2. Reenviar al microservicio OCR en el puerto 5001
-    ocr_url = "http://127.0.0.1:5001/"
+    # 2. Reenviar al microservicio OCR en el puerto 8001 (o el asignado en el servidor)
+    ocr_url = "http://127.0.0.1:8001/"
     try:
         #print(f"[OCR PROXY] Reenviando a servicio local Flask en {ocr_url}...")
         try:
@@ -260,21 +260,21 @@ def procesar_ocr_seguro(
                 pass
             raise HTTPException(
                 status_code=respuesta.status_code,
-                detail="Error interno"
+                detail=f"Error interno OCR (Status {respuesta.status_code}): {respuesta.text[:200]}"
             )
             
         # Devolver el HTML tal cual para que el frontend lo parsee
         return HTMLResponse(content=respuesta.text, status_code=200)
         
     except requests.RequestException as exc:
-        print(f"[OCR PROXY] Error de conexión")
+        print(f"[OCR PROXY] Error de conexión: {str(exc)}")
         try:
             with open("ocr_proxy.log", "a", encoding="utf-8") as f:
-                f.write(f"Flask connection failed\n")
+                f.write(f"Flask connection failed: {str(exc)}\n")
         except Exception:
             pass
         raise HTTPException(
             status_code=503,
-            detail=f"Ocurrió un error interno. Inténtalo de nuevo más tarde"
+            detail=f"Ocurrió un error interno (RequestException): {str(exc)}"
         )
 
