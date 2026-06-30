@@ -1562,6 +1562,9 @@ export default function ConfigurarEquipo() {
       return;
     }
 
+    const prevDoc = documents[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
+
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
     // Generar Previsualización
@@ -1688,6 +1691,7 @@ export default function ConfigurarEquipo() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -1713,6 +1717,9 @@ export default function ConfigurarEquipo() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
 
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
@@ -1751,10 +1758,16 @@ export default function ConfigurarEquipo() {
           });
 
           if (!result.isConfirmed) {
-            setDocuments(prev => ({ ...prev, [documentKey]: null }));
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            setDocuments(prev => ({ ...prev, [documentKey]: prevDoc }));
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out CURP to block registration completion
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -1805,13 +1818,22 @@ export default function ConfigurarEquipo() {
           setExtractedData(merged);
           guardarBorradorEnBD(merged);
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+              icon: nombreEncontrado ? 'success' : 'warning',
+              timer: nombreEncontrado ? 2000 : 3500,
+              showConfirmButton: !nombreEncontrado
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -3216,26 +3238,18 @@ export default function ConfigurarEquipo() {
                         <input
                           type="text"
                           value={extractedData.curp || ''}
-                          onChange={(e) => {
-                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                            let sId = extractedData.genero;
-                            if (val.length >= 11) {
-                              const char = val.charAt(10);
-                              if (char === 'M') sId = '2'; // Femenino
-                              else if (char === 'H') sId = '1'; // Masculino
-                            }
-                            const updated = { ...extractedData, curp: val, genero: sId };
-                            setExtractedData(updated);
-                          }}
+                          readOnly
                           onBlur={handleBlur}
-                          placeholder="ABCD..."
+                          placeholder="Se auto-completará con el documento de identidad"
                           maxLength="18"
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
                             border: `1.5px solid ${curpExistente ? COLORS.danger : COLORS.slate300}`,
                             boxShadow: curpExistente ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            backgroundColor: '#f1f5f9',
+                            cursor: 'not-allowed'
                           }}
                         />
                         {curpExistente && (

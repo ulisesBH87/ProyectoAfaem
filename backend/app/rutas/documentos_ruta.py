@@ -233,6 +233,7 @@ def procesar_ocr_seguro(
         files["file_formato"] = (file_formato.filename, file_formato.file.read(), file_formato.content_type)
 
     # 2. Reenviar al microservicio OCR en el puerto 8001 (o el asignado en el servidor)
+    #5001 para pruebas locales
     ocr_url = "http://127.0.0.1:8001/"
     try:
         #print(f"[OCR PROXY] Reenviando a servicio local Flask en {ocr_url}...")

@@ -1838,6 +1838,9 @@ export default function RegistroJugadores() {
       return;
     }
 
+    const prevDoc = jugadores[currentPlayerIndex]?.documentos?.[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
+
     updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
 
     // Generar Previsualización
@@ -1963,6 +1966,7 @@ export default function RegistroJugadores() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -1988,6 +1992,9 @@ export default function RegistroJugadores() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
 
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
@@ -2026,10 +2033,16 @@ export default function RegistroJugadores() {
           });
 
           if (!result.isConfirmed) {
-            updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            updatePlayerDocuments(currentPlayerIndex, { [documentKey]: prevDoc });
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out the invalid CURP so the user is blocked
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -2082,13 +2095,22 @@ export default function RegistroJugadores() {
             guardarBorradorEnBD(currentPlayer.slotId, merged);
           }
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+              icon: nombreEncontrado ? 'success' : 'warning',
+              timer: nombreEncontrado ? 2000 : 3500,
+              showConfirmButton: !nombreEncontrado
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -3605,24 +3627,13 @@ export default function RegistroJugadores() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                             CURP <span className="required-star">*</span>
-                            {isCheckingCurp && <span style={{ marginLeft: '10px', color: COLORS.success, fontSize: '10px' }}>Validando...</span>}
                           </label>
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
-                            onChange={(e) => {
-                              const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                              let sId = currentDatos.genero;
-                              if (val.length >= 11) {
-                                const char = val.charAt(10);
-                                if (char === 'M') sId = '2'; // Femenino
-                                else if (char === 'H') sId = '1'; // Masculino
-                              }
-                              updatePlayerDatos(currentPlayerIndex, { curp: val, genero: sId });
-                              setValidationErrors(prev => ({ ...prev, curp: null }));
-                            }}
+                            readOnly
                             onBlur={handleBlur}
-                            placeholder="ABCD..."
+                            placeholder="Se auto-completará con el documento de identidad"
                             maxLength="18"
                             style={{
                               padding: '10px',
@@ -3630,6 +3641,8 @@ export default function RegistroJugadores() {
                               border: `1.5px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none',
+                              backgroundColor: '#f1f5f9',
+                              cursor: 'not-allowed',
                               boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />

@@ -18,12 +18,6 @@ export default defineConfig({
       ignored: ['**/backend/**', '**/uploads/**', '**/.git/**'],
     },
     proxy: {
-      '/ocr-api': {
-        target: 'http://127.0.0.1:5001',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/ocr-api/, ''),
-      },
       // Backend Proxies (Usando 127.0.0.1 para mayor estabilidad)
       '/auth': {
         target: 'http://127.0.0.1:8000',

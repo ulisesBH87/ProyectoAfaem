@@ -421,7 +421,7 @@ export default function AdminPresidentes() {
     return data;
   };
 
-  const procesarOCRReal = async (docKey, file) => {
+  const procesarOCRReal = async (docKey, file, prevDoc) => {
     Swal.fire({ title: 'Analizando Documento...', html: 'Extrayendo información . <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     try {
       const fd = new FormData(); fd.append('file_id', file);
@@ -572,7 +572,11 @@ export default function AdminPresidentes() {
         if (!result.isConfirmed) {
           setDocuments(prev => {
             const updated = { ...prev };
-            delete updated[docKey];
+            if (prevDoc) {
+              updated[docKey] = prevDoc;
+            } else {
+              delete updated[docKey];
+            }
             return updated;
           });
           return;
@@ -612,8 +616,9 @@ export default function AdminPresidentes() {
     if (docKey === 'fotografia') {
       procesarFotografia(file);
     } else {
+      const prevDoc = documents[docKey] || null;
       setDocuments(prev => ({ ...prev, [docKey]: file }));
-      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCRReal(docKey, file);
+      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCRReal(docKey, file, prevDoc);
     }
   };
 
@@ -1702,8 +1707,8 @@ export default function AdminPresidentes() {
                 etiqueta="CURP"
                 nombre="curp"
                 valor={datosEditables.curp}
-                onChange={manejarCambioInput}
-                placeholder="CURP de 18 caracteres"
+                placeholder="Se auto-completará con el documento de identidad"
+                deshabilitado={true}
               />
               <EntradaSeleccion
                 etiqueta="Estatus del Presidente"
