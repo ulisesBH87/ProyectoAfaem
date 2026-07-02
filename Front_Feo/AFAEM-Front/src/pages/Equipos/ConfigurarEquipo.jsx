@@ -3527,13 +3527,13 @@ export default function ConfigurarEquipo() {
                             <EntradaFormulario
                               etiqueta="Nacionalidad del jugador"
                               valor={extractedData.nacionalidadJugador}
-                              alCambiar={val => handleFieldChange('nacionalidadJugador', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadJugador', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                             <EntradaFormulario
                               etiqueta="País de residencia actual"
                               valor={extractedData.paisResidencia}
-                              alCambiar={val => handleFieldChange('paisResidencia', val)}
+                              alCambiar={e => handleFieldChange('paisResidencia', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                           </div>
@@ -3542,8 +3542,8 @@ export default function ConfigurarEquipo() {
                             <EntradaSeleccion
                               etiqueta="¿El jugador ha vivido en el extranjero?"
                               valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                              alCambiar={val => {
-                                const boolVal = val === '1';
+                              alCambiar={e => {
+                                const boolVal = e.target.value === '1';
                                 handleFieldChange('haVividoExtranjero', boolVal);
                                 guardarBorradorEnBD({ ...extractedData, haVividoExtranjero: boolVal });
                               }}
@@ -3554,7 +3554,7 @@ export default function ConfigurarEquipo() {
                               <EntradaFormulario
                                 etiqueta="¿En qué país?"
                                 valor={extractedData.dondeVividoExtranjero}
-                                alCambiar={val => handleFieldChange('dondeVividoExtranjero', val)}
+                                alCambiar={e => handleFieldChange('dondeVividoExtranjero', e.target.value)}
                                 alPerderEnfoque={handleBlur}
                                 obligatorio={true}
                               />
@@ -3565,13 +3565,13 @@ export default function ConfigurarEquipo() {
                             <EntradaFormulario
                               etiqueta="Nacionalidad del padre"
                               valor={extractedData.nacionalidadPadre}
-                              alCambiar={val => handleFieldChange('nacionalidadPadre', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadPadre', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                             <EntradaFormulario
                               etiqueta="Nacionalidad de la madre"
                               valor={extractedData.nacionalidadMadre}
-                              alCambiar={val => handleFieldChange('nacionalidadMadre', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadMadre', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                           </div>
@@ -3579,23 +3579,23 @@ export default function ConfigurarEquipo() {
                           <EntradaFormulario
                             etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                             valor={extractedData.registroAsociacionExtranjera}
-                            alCambiar={val => handleFieldChange('registroAsociacionExtranjera', val)}
+                            alCambiar={e => handleFieldChange('registroAsociacionExtranjera', e.target.value)}
                             alPerderEnfoque={handleBlur}
                             filas={2}
                             obligatorio={true}
                           />
 
                           <div className="abuelos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
-                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={val => handleFieldChange('nacAbuelaMaterna', val)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => handleFieldChange('nacAbueloPaterno', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => handleFieldChange('nacAbuelaPaterna', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => handleFieldChange('nacAbueloMaterno', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => handleFieldChange('nacAbuelaMaterna', e.target.value)} alPerderEnfoque={handleBlur} />
                           </div>
 
                           <EntradaFormulario
                             etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                             valor={extractedData.juegoClubExtranjero}
-                            alCambiar={val => handleFieldChange('juegoClubExtranjero', val)}
+                            alCambiar={e => handleFieldChange('juegoClubExtranjero', e.target.value)}
                             alPerderEnfoque={handleBlur}
                             filas={3}
                             obligatorio={true}

@@ -3974,8 +3974,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad del jugador"
                                 valor={currentDatos.nacionalidadJugador}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadJugador', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadJugador', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadJugador: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3984,8 +3984,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="País de residencia actual"
                                 valor={currentDatos.paisResidencia}
-                                alCambiar={val => {
-                                  handleFieldChange('paisResidencia', val);
+                                alCambiar={e => {
+                                  handleFieldChange('paisResidencia', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, paisResidencia: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3997,8 +3997,8 @@ export default function RegistroJugadores() {
                               <EntradaSeleccion
                                 etiqueta="¿El jugador ha vivido en el extranjero?"
                                 valor={currentDatos.haVividoExtranjero ? '1' : '0'}
-                                alCambiar={val => {
-                                  const boolVal = val === '1';
+                                alCambiar={e => {
+                                  const boolVal = e.target.value === '1';
                                   handleFieldChange('haVividoExtranjero', boolVal);
                                   setValidationErrors(prev => ({ ...prev, haVividoExtranjero: null }));
                                   if (currentPlayer?.slotId) {
@@ -4012,8 +4012,8 @@ export default function RegistroJugadores() {
                                 <EntradaFormulario
                                   etiqueta="¿En qué país?"
                                   valor={currentDatos.dondeVividoExtranjero}
-                                  alCambiar={val => {
-                                    handleFieldChange('dondeVividoExtranjero', val);
+                                  alCambiar={e => {
+                                    handleFieldChange('dondeVividoExtranjero', e.target.value);
                                     setValidationErrors(prev => ({ ...prev, dondeVividoExtranjero: null }));
                                   }}
                                   alPerderEnfoque={handleBlur}
@@ -4027,8 +4027,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad del padre"
                                 valor={currentDatos.nacionalidadPadre}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadPadre', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadPadre', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadPadre: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -4037,8 +4037,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad de la madre"
                                 valor={currentDatos.nacionalidadMadre}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadMadre', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadMadre', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadMadre: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -4049,8 +4049,8 @@ export default function RegistroJugadores() {
                             <EntradaFormulario
                               etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                               valor={currentDatos.registroAsociacionExtranjera}
-                              alCambiar={val => {
-                                handleFieldChange('registroAsociacionExtranjera', val);
+                              alCambiar={e => {
+                                handleFieldChange('registroAsociacionExtranjera', e.target.value);
                                 setValidationErrors(prev => ({ ...prev, registroAsociacionExtranjera: null }));
                               }}
                               alPerderEnfoque={handleBlur}
@@ -4060,17 +4060,17 @@ export default function RegistroJugadores() {
                             />
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
-                              <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={val => { handleFieldChange('nacAbueloPaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
-                              <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={val => { handleFieldChange('nacAbuelaPaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
-                              <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={val => { handleFieldChange('nacAbueloMaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
-                              <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={val => { handleFieldChange('nacAbuelaMaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
+                              <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={e => { handleFieldChange('nacAbueloPaterno', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={e => { handleFieldChange('nacAbuelaPaterna', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
+                              <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={e => { handleFieldChange('nacAbueloMaterno', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={e => { handleFieldChange('nacAbuelaMaterna', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
                             </div>
 
                             <EntradaFormulario
                               etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                               valor={currentDatos.juegoClubExtranjero}
-                              alCambiar={val => {
-                                handleFieldChange('juegoClubExtranjero', val);
+                              alCambiar={e => {
+                                handleFieldChange('juegoClubExtranjero', e.target.value);
                                 setValidationErrors(prev => ({ ...prev, juegoClubExtranjero: null }));
                               }}
                               alPerderEnfoque={handleBlur}
