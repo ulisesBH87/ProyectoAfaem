@@ -290,6 +290,7 @@ export default function RegistroJugadores() {
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
   const [invitationTeams, setInvitationTeams] = useState([]);
   const [noPendingTeams, setNoPendingTeams] = useState(false);
+  const [missingOcrFields, setMissingOcrFields] = useState([]);
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
@@ -971,10 +972,12 @@ export default function RegistroJugadores() {
     setValidationErrors(errors);
 
     if (Object.keys(errors).length > 0) {
-      const firstError = Object.values(errors)[0];
+      const errorListHtml = `<ul style="text-align: left; font-size: 14px; line-height: 1.6; color: ${COLORS.slate700 || '#334155'}; margin-left: 20px;">` +
+        Object.values(errors).map(err => `<li>${err}</li>`).join('') +
+        '</ul>';
       Swal.fire({
-        title: 'Campos requeridos',
-        text: firstError,
+        title: 'Campos requeridos / Datos erróneos:',
+        html: errorListHtml,
         icon: 'warning',
         confirmButtonColor: COLORS.primary
       });
@@ -1025,6 +1028,7 @@ export default function RegistroJugadores() {
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
   const selectedInvitationTeam = invitationTeams.find(
     (team) => String(team.equipo_temporal_id) === String(teamId)
   ) || null;
@@ -1975,7 +1979,7 @@ export default function RegistroJugadores() {
       if (!result.isConfirmed) {
         Swal.fire({
           title: 'Carga cancelada',
-          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para identificar si es menor de edad.',
+          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para actualizar el formulario.',
           icon: 'info',
           confirmButtonColor: COLORS.primary
         });
@@ -2159,6 +2163,17 @@ export default function RegistroJugadores() {
             guardarBorradorEnBD(currentPlayer.slotId, merged);
           }
 
+          const missing = [];
+          if (!ocrResult.nombreJugador) missing.push('nombreJugador');
+          if (!ocrResult.apellidoPaterno) missing.push('apellidoPaterno');
+          if (!ocrResult.apellidoMaterno) missing.push('apellidoMaterno');
+          if (!ocrResult.curp) missing.push('curp');
+          if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
+          if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
+          if (!currentDatos.correo) missing.push('correo');
+          if (!currentDatos.telefono) missing.push('telefono');
+          setMissingOcrFields(missing);
+
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
@@ -2167,12 +2182,29 @@ export default function RegistroJugadores() {
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
           } else {
+            const labels = {
+              nombreJugador: 'Nombre(s)',
+              apellidoPaterno: 'Apellido Paterno',
+              apellidoMaterno: 'Apellido Materno',
+              curp: 'CURP',
+              fechaNacimiento: 'Fecha de Nacimiento',
+              lugarNacimiento: 'Lugar de Nacimiento',
+              correo: 'Correo electrónico',
+              telefono: 'Número de teléfono'
+            };
+            const missingLabels = missing.map(m => labels[m]).filter(Boolean);
+
+            let text = nombreEncontrado ? `Se detectó a: ${nombreEncontrado}.` : 'Lectura del documento completada.';
+            if (missingLabels.length > 0) {
+              text += `\n\nPor favor, completa manualmente los campos resaltados en amarillo: ${missingLabels.join(', ')}.`;
+            }
+
             Swal.fire({
               title: '¡Lectura Exitosa!',
-              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-              icon: nombreEncontrado ? 'success' : 'warning',
-              timer: nombreEncontrado ? 2000 : 3500,
-              showConfirmButton: !nombreEncontrado
+              text: text,
+              icon: 'success',
+              confirmButtonText: 'Aceptar',
+              confirmButtonColor: COLORS.primary
             });
           }
         } else {
@@ -3704,12 +3736,24 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.nombreJugador ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.nombreJugador
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none',
                               boxShadow: validationErrors.nombreJugador ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.nombreJugador && <span className="field-error-msg">❌ {validationErrors.nombreJugador}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3727,12 +3771,24 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.apellidoPaterno ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.apellidoPaterno
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none',
                               boxShadow: validationErrors.apellidoPaterno ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.apellidoPaterno && <span className="field-error-msg">❌ {validationErrors.apellidoPaterno}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3750,12 +3806,24 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.apellidoMaterno ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.apellidoMaterno
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none',
                               boxShadow: validationErrors.apellidoMaterno ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.apellidoMaterno && <span className="field-error-msg">❌ {validationErrors.apellidoMaterno}</span>}
                         </div>
                       </div>
@@ -3775,14 +3843,23 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.curp
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('curp') && !currentDatos.curp
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               outline: 'none',
-                              backgroundColor: '#f1f5f9',
-                              cursor: 'not-allowed',
+                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : '#f1f5f9',
+                              cursor: missingOcrFields.includes('curp') && !currentDatos.curp ? 'text' : 'not-allowed',
                               boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('curp') && !currentDatos.curp && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
                         </div>
                       </div>
@@ -3805,11 +3882,23 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.fechaNacimiento ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.fechaNacimiento
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
+                          {missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.fechaNacimiento && <span className="field-error-msg">❌ {validationErrors.fechaNacimiento}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3827,11 +3916,23 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.lugarNacimiento ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.lugarNacimiento
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
+                          {missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.lugarNacimiento && <span className="field-error-msg">❌ {validationErrors.lugarNacimiento}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3881,11 +3982,23 @@ export default function RegistroJugadores() {
                               boxSizing: 'border-box',
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.correo ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.correo
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('correo') && !currentDatos.correo
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('correo') && !currentDatos.correo
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
+                          {missingOcrFields.includes('correo') && !currentDatos.correo && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.correo && <span className="field-error-msg">❌ {validationErrors.correo}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3935,7 +4048,14 @@ export default function RegistroJugadores() {
                               style={{
                                 padding: '10px',
                                 borderRadius: '8px',
-                                border: `1.5px solid ${validationErrors.telefono ? COLORS.danger : COLORS.slate300}`,
+                                border: validationErrors.telefono
+                                  ? `1.5px solid ${COLORS.danger}`
+                                  : (missingOcrFields.includes('telefono') && !currentDatos.telefono
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`),
+                                backgroundColor: missingOcrFields.includes('telefono') && !currentDatos.telefono
+                                  ? '#fef3c7'
+                                  : 'white',
                                 fontSize: '14px',
                                 flexGrow: 1,
                                 outline: 'none',
@@ -3943,6 +4063,11 @@ export default function RegistroJugadores() {
                               }}
                             />
                           </div>
+                          {missingOcrFields.includes('telefono') && !currentDatos.telefono && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.telefono && <span className="field-error-msg">❌ {validationErrors.telefono}</span>}
                         </div>
                       </div>
@@ -4343,12 +4468,35 @@ export default function RegistroJugadores() {
                             document.getElementById('final-signed-form').click();
                           }
                         }}
+                        onDragEnter={(e) => { if (pasos1a5Completos) { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(true); } }}
+                        onDragOver={(e) => { if (pasos1a5Completos) { e.preventDefault(); e.stopPropagation(); } }}
+                        onDragLeave={(e) => { if (pasos1a5Completos) { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(false); } }}
+                        onDrop={(e) => {
+                          if (!pasos1a5Completos) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDraggingSignedForm(false);
+                          const file = e.dataTransfer.files[0];
+                          if (file && file.type === 'application/pdf') {
+                            updatePlayerSignedForm(currentPlayerIndex, file);
+                          } else if (file) {
+                            Swal.fire('Error', 'Solo se permiten archivos PDF para el formato firmado.', 'error');
+                          }
+                        }}
                         className={currentPlayer?.signedForm ? "document-card" : ""}
                         style={{
-                          border: currentPlayer?.signedForm ? `2px solid ${COLORS.success}` : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`),
+                          border: currentPlayer?.signedForm 
+                            ? `2px solid ${COLORS.success}` 
+                            : (isDraggingSignedForm 
+                              ? `2px solid ${COLORS.primary}` 
+                              : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`)),
                           borderRadius: '20px',
                           padding: '35px 20px',
-                          backgroundColor: currentPlayer?.signedForm ? COLORS.greenBg50 : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100),
+                          backgroundColor: currentPlayer?.signedForm 
+                            ? COLORS.greenBg50 
+                            : (isDraggingSignedForm 
+                              ? 'rgba(26, 59, 92, 0.05)' 
+                              : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100)),
                           cursor: (pasos1a5Completos && !currentPlayer?.signedForm) ? 'pointer' : 'default',
                           transition: 'all 0.3s',
                           textAlign: 'center',
@@ -4390,14 +4538,14 @@ export default function RegistroJugadores() {
                             <button
                               type="button"
                               onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewDoc({
-                                  open: true,
-                                  url: previews.signedForm,
-                                  type: 'pdf',
-                                  title: 'Formato de Afiliación Oficial'
-                                });
-                              }}
+                                  e.stopPropagation();
+                                  setPreviewDoc({
+                                    open: true,
+                                    url: previews.signedForm,
+                                    type: 'pdf',
+                                    title: 'Formato de Afiliación Oficial'
+                                  });
+                                }}
                               className="btn-zoom"
                               style={{
                                 width: '36px', height: '36px', borderRadius: '50%',
@@ -4423,6 +4571,22 @@ export default function RegistroJugadores() {
                               }}
                             >
                               <FaSyncAlt />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updatePlayerSignedForm(currentPlayerIndex, null);
+                              }}
+                              className="btn-delete"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaTrash />
                             </button>
                           </div>
                         )}

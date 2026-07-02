@@ -659,6 +659,8 @@ export default function CompletarJugadoresEquipo() {
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [missingOcrFields, setMissingOcrFields] = useState([]);
+  const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
 
   const handleResetForm = async () => {
     const result = await Swal.fire({
@@ -1288,7 +1290,7 @@ export default function CompletarJugadoresEquipo() {
       if (!result.isConfirmed) {
         Swal.fire({
           title: 'Carga cancelada',
-          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para identificar si es menor de edad.',
+          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para actualizar el formulario.',
           icon: 'info',
           confirmButtonColor: COLORS.primary
         });
@@ -1468,6 +1470,17 @@ export default function CompletarJugadoresEquipo() {
           setOcrDataOriginal(ocrResult);
           setExtractedData(prev => ({ ...prev, ...ocrResult }));
 
+          const missing = [];
+          if (!ocrResult.nombreJugador) missing.push('nombreJugador');
+          if (!ocrResult.apellidoPaterno) missing.push('apellidoPaterno');
+          if (!ocrResult.apellidoMaterno) missing.push('apellidoMaterno');
+          if (!ocrResult.curp) missing.push('curp');
+          if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
+          if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
+          if (!extractedData.correo) missing.push('correo');
+          if (!extractedData.telefono) missing.push('telefono');
+          setMissingOcrFields(missing);
+
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
@@ -1476,12 +1489,29 @@ export default function CompletarJugadoresEquipo() {
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
           } else {
+            const labels = {
+              nombreJugador: 'Nombre(s)',
+              apellidoPaterno: 'Apellido Paterno',
+              apellidoMaterno: 'Apellido Materno',
+              curp: 'CURP',
+              fechaNacimiento: 'Fecha de Nacimiento',
+              lugarNacimiento: 'Lugar de Nacimiento',
+              correo: 'Correo electrónico',
+              telefono: 'Número de teléfono'
+            };
+            const missingLabels = missing.map(m => labels[m]).filter(Boolean);
+
+            let text = nombreEncontrado ? `Se detectó a: ${nombreEncontrado}.` : 'Lectura del documento completada.';
+            if (missingLabels.length > 0) {
+              text += `\n\nPor favor, completa manualmente los campos resaltados en amarillo: ${missingLabels.join(', ')}.`;
+            }
+
             Swal.fire({
               title: '¡Lectura Exitosa!',
-              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-              icon: nombreEncontrado ? 'success' : 'warning',
-              timer: nombreEncontrado ? 2000 : 3500,
-              showConfirmButton: !nombreEncontrado
+              text: text,
+              icon: 'success',
+              confirmButtonText: 'Aceptar',
+              confirmButtonColor: COLORS.primary
             });
           }
         } else {
@@ -2765,15 +2795,96 @@ export default function CompletarJugadoresEquipo() {
                 <div className="form-grid-4">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.nombreJugador}
+                      onChange={e => handleFieldChange('nombreJugador', e.target.value)}
+                      placeholder="Ej. Juan"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.nombreJugador
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      </span>
+                    )}
+                    {validationErrors.nombreJugador && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.nombreJugador}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.apellidoPaterno}
+                      onChange={e => handleFieldChange('apellidoPaterno', e.target.value)}
+                      placeholder="Ej. Pérez"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.apellidoPaterno
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      </span>
+                    )}
+                    {validationErrors.apellidoPaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoPaterno}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.apellidoMaterno}
+                      onChange={e => handleFieldChange('apellidoMaterno', e.target.value)}
+                      placeholder="Ej. Gómez"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.apellidoMaterno
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      </span>
+                    )}
+                    {validationErrors.apellidoMaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoMaterno}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
@@ -2790,14 +2901,23 @@ export default function CompletarJugadoresEquipo() {
                       style={{
                         padding: '10px',
                         borderRadius: '8px',
-                        border: `1px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`,
+                        border: validationErrors.curp
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('curp') && !extractedData.curp
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
                         fontSize: '14px',
                         width: '100%',
                         boxSizing: 'border-box',
-                        backgroundColor: '#f1f5f9',
-                        cursor: 'not-allowed'
+                        backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : '#f1f5f9',
+                        cursor: missingOcrFields.includes('curp') && !extractedData.curp ? 'text' : 'not-allowed'
                       }}
                     />
+                    {missingOcrFields.includes('curp') && !extractedData.curp && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      </span>
+                    )}
                     {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
                   </div>
                 </div>
@@ -2815,8 +2935,27 @@ export default function CompletarJugadoresEquipo() {
                         setValidationErrors(prev => ({ ...prev, fechaNacimiento: dateError }));
                       }}
                       onBlur={() => handleBlur('fechaNacimiento')}
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.fechaNacimiento ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.fechaNacimiento
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
                     />
+                    {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      </span>
+                    )}
                     {(() => {
                       const val = extractedData.fechaNacimiento;
                       if (!val) return null;
@@ -2848,7 +2987,31 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.lugarNacimiento || ''}
+                      onChange={e => handleFieldChange('lugarNacimiento', e.target.value)}
+                      placeholder="Ej. Monterrey, NL"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                          ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                          : `1px solid ${COLORS.slate300}`,
+                        backgroundColor: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
@@ -2911,7 +3074,31 @@ export default function CompletarJugadoresEquipo() {
                 <div className="form-grid-2">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Correo electrónico <span className="required-star">*</span></label>
-                    <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="email"
+                      maxLength={60}
+                      value={extractedData.correo}
+                      onChange={e => handleFieldChange('correo', e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: missingOcrFields.includes('correo') && !extractedData.correo
+                          ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                          : `1px solid ${COLORS.slate300}`,
+                        backgroundColor: missingOcrFields.includes('correo') && !extractedData.correo
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('correo') && !extractedData.correo && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        Completa manualmente.
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono <span className="required-star">*</span></label>
@@ -2956,12 +3143,22 @@ export default function CompletarJugadoresEquipo() {
                         style={{
                           padding: '10px',
                           borderRadius: '8px',
-                          border: `1px solid ${COLORS.slate300}`,
+                          border: missingOcrFields.includes('telefono') && !extractedData.telefono
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`,
+                          backgroundColor: missingOcrFields.includes('telefono') && !extractedData.telefono
+                            ? '#fef3c7'
+                            : 'white',
                           fontSize: '14px',
                           flexGrow: 1
                         }}
                       />
                     </div>
+                    {missingOcrFields.includes('telefono') && !extractedData.telefono && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        Completa manualmente.
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -3207,14 +3404,44 @@ export default function CompletarJugadoresEquipo() {
           </div>
 
           <div
-            onClick={() => document.getElementById('final-signed-form').click()}
+            onClick={() => { if (!signedForm) document.getElementById('final-signed-form').click(); }}
+            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(true); }}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(false); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingSignedForm(false);
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
+                  return;
+                }
+                setSignedForm(file);
+              }
+            }}
+            className={signedForm ? "document-card" : ""}
             style={{
-              border: signedForm ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.sky}`,
+              border: signedForm 
+                ? `2px solid ${COLORS.success}` 
+                : (isDraggingSignedForm 
+                  ? `2px solid ${COLORS.primary}` 
+                  : `2px dashed ${COLORS.sky}`),
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm ? COLORS.greenBg50 : COLORS.slate50,
-              cursor: 'pointer',
-              transition: 'all 0.3s'
+              backgroundColor: signedForm 
+                ? COLORS.greenBg50 
+                : (isDraggingSignedForm 
+                  ? 'rgba(26, 59, 92, 0.05)' 
+                  : COLORS.slate50),
+              cursor: !signedForm ? 'pointer' : 'default',
+              transition: 'all 0.3s',
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
             {signedForm ? (
@@ -3222,6 +3449,76 @@ export default function CompletarJugadoresEquipo() {
                 <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+
+                {/* Overlay actions when hover */}
+                <div className="overlay-actions" style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: COLORS.overlaySlateGray,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease',
+                  backdropFilter: 'blur(2px)',
+                  zIndex: 2
+                }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = typeof signedForm === 'string' ? signedForm : URL.createObjectURL(signedForm);
+                      setPreviewDoc({
+                        open: true,
+                        url: url,
+                        type: 'pdf',
+                        title: 'Formato de Afiliación Oficial'
+                      });
+                    }}
+                    className="btn-zoom"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSearchPlus />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.getElementById('final-signed-form').click();
+                    }}
+                    className="btn-change"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSyncAlt />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSignedForm(null);
+                    }}
+                    className="btn-delete"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             ) : (
               <div style={{ color: COLORS.sky }}>

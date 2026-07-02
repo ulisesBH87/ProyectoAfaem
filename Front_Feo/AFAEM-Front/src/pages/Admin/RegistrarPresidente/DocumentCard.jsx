@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaUpload, FaFilePdf, FaSearchPlus, FaSyncAlt, FaExclamationTriangle, FaCamera } from 'react-icons/fa';
+import { FaUpload, FaFilePdf, FaSearchPlus, FaSyncAlt, FaExclamationTriangle, FaCamera, FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { C } from './constants';
 import CameraCaptureModal from '../../../components/Common/CameraCaptureModal';
@@ -195,6 +195,20 @@ export default function DocumentCard({
                 }}
               >
                 <FaSyncAlt style={{ fontSize: 13 }} />
+              </button>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  handleFileUpload(doc.documento, null);
+                }}
+                style={{
+                  width: 32, height: 32, borderRadius: '50%', backgroundColor: COLORS.danger,
+                  color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer',
+                }}
+              >
+                <FaTrash style={{ fontSize: 13 }} />
               </button>
             </div>
           </>

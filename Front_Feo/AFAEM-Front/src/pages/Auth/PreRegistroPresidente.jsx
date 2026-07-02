@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock, FaCamera } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock, FaCamera, FaTrash } from 'react-icons/fa';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -3714,24 +3714,50 @@ function PreRegistroPresidente() {
                             </button>
                           )}
                           {hasLocalFile && documents[doc.documento] && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
-                              }}
-                              className="doc-action-btn"
-                              style={{
-                                border: `1px solid ${COLORS.brandBlueLight50}`,
-                                background: COLORS.brandBlueLight10,
-                                color: COLORS.secondaryLight,
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                flex: 1
-                              }}
-                            >
-                              👁 Ver
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
+                                }}
+                                className="doc-action-btn"
+                                style={{
+                                  border: `1px solid ${COLORS.brandBlueLight50}`,
+                                  background: COLORS.brandBlueLight10,
+                                  color: COLORS.secondaryLight,
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  flex: 1
+                                }}
+                              >
+                                👁 Ver
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDocuments(prev => ({ ...prev, [doc.documento]: null }));
+                                  if (setPreviews) {
+                                    setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                                  }
+                                }}
+                                className="doc-action-btn"
+                                style={{
+                                  border: `1px solid ${COLORS.dangerBgTranslucent30}`,
+                                  background: COLORS.dangerBgTranslucent10,
+                                  color: COLORS.dangerLight,
+                                  cursor: 'pointer',
+                                  flex: '0 0 auto',
+                                  width: '40px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </>
                           )}
                           {!hasLocalFile && docGuardado && (
                             <button
@@ -4221,24 +4247,50 @@ function PreRegistroPresidente() {
                         </button>
                       )}
                       {hasLocalFile && documents[doc.documento] && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
-                          }}
-                          className="doc-action-btn"
-                          style={{
-                            border: `1px solid ${COLORS.brandBlueLight50}`,
-                            background: COLORS.brandBlueLight10,
-                            color: COLORS.secondaryLight,
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            flex: 1
-                          }}
-                        >
-                          👁 Ver
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
+                            }}
+                            className="doc-action-btn"
+                            style={{
+                              border: `1px solid ${COLORS.brandBlueLight50}`,
+                              background: COLORS.brandBlueLight10,
+                              color: COLORS.secondaryLight,
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              flex: 1
+                            }}
+                          >
+                            👁 Ver
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDocuments(prev => ({ ...prev, [doc.documento]: null }));
+                              if (setPreviews) {
+                                setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                              }
+                            }}
+                            className="doc-action-btn"
+                            style={{
+                              border: `1px solid ${COLORS.dangerBgTranslucent30}`,
+                              background: COLORS.dangerBgTranslucent10,
+                              color: COLORS.dangerLight,
+                              cursor: 'pointer',
+                              flex: '0 0 auto',
+                              width: '40px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <FaTrash />
+                          </button>
+                        </>
                       )}
                       {!hasLocalFile && docGuardado && (
                         <button

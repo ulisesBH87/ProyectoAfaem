@@ -162,7 +162,7 @@ export function useRegistrarPresidente() {
   // ── Paso 3: Documentos ───────────────────────────────────────────────────
   const [equipo, setEquipo] = useState('');
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
-  const [asociacion] = useState('AFAEM');
+  const [asociacion] = useState('Asociación de Morelos');
   const [liga, setLiga] = useState('');
   const [documents, setDocuments] = useState({});
   const [previews, setPreviews] = useState({});

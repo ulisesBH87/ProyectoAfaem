@@ -201,13 +201,15 @@ export default function AdminCrearJugador() {
 
   // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
   const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
-  const [dragActive, setDragActive] = useState({});
+  const [failedPhoto, setFailedPhoto] = useState(null);
+  const [missingOcrFields, setMissingOcrFields] = useState([]);
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [signedFormPreview, setSignedFormPreview] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
 
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!extractedData.equipoSeleccionado;
@@ -416,7 +418,7 @@ export default function AdminCrearJugador() {
       if (!result.isConfirmed) {
         Swal.fire({
           title: 'Carga cancelada',
-          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para identificar si es menor de edad.',
+          text: 'Por favor, carga Por favor, carga primero el Acta de Nacimiento del jugador para actualizar el formulario. el Acta de Nacimiento del jugador para actualizar el formulario.',
           icon: 'info',
           confirmButtonColor: COLORS.primary
         });
@@ -601,6 +603,15 @@ export default function AdminCrearJugador() {
             ...ocrResult
           }));
 
+          const missing = [];
+          if (!ocrResult.nombreJugador) missing.push('nombreJugador');
+          if (!ocrResult.apellidoPaterno) missing.push('apellidoPaterno');
+          if (!ocrResult.apellidoMaterno) missing.push('apellidoMaterno');
+          if (!ocrResult.curp) missing.push('curp');
+          if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
+          if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
+          setMissingOcrFields(missing);
+
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
@@ -609,12 +620,27 @@ export default function AdminCrearJugador() {
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
           } else {
+            const labels = {
+              nombreJugador: 'Nombre(s)',
+              apellidoPaterno: 'Apellido Paterno',
+              apellidoMaterno: 'Apellido Materno',
+              curp: 'CURP',
+              fechaNacimiento: 'Fecha de Nacimiento',
+              lugarNacimiento: 'Lugar de Nacimiento'
+            };
+            const missingLabels = missing.map(m => labels[m]).filter(Boolean);
+
+            let text = nombreEncontrado ? `Se detectó a: ${nombreEncontrado}.` : 'Lectura del documento completada.';
+            if (missingLabels.length > 0) {
+              text += `\n\nPor favor, completa manualmente los campos resaltados en amarillo: ${missingLabels.join(', ')}.`;
+            }
+
             Swal.fire({
               title: '¡Lectura Exitosa!',
-              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-              icon: nombreEncontrado ? 'success' : 'warning',
-              timer: nombreEncontrado ? 2000 : 3500,
-              showConfirmButton: !nombreEncontrado
+              text: text,
+              icon: 'success',
+              confirmButtonText: 'Aceptar',
+              confirmButtonColor: COLORS.primary
             });
           }
         } else {
@@ -695,9 +721,9 @@ export default function AdminCrearJugador() {
       safeSetField(form, 'Correo electrónico', correoACJ, correoACJFs);
       safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
 
-      // La Asociación y campo fill_24 (empírico para Tipo Afiliación / Asociación) deben ser "AFAEM"
-      safeSetField(form, 'Asociación', 'AFAEM');
-      safeSetField(form, 'fill_24', 'AFAEM');
+      // La Asociación y campo fill_24 (empírico para Tipo Afiliación / Asociación) deben ser "Asociación de Morelos"
+      safeSetField(form, 'Asociación', 'Asociación de Morelos');
+      safeSetField(form, 'fill_24', 'Asociación de Morelos');
 
       const ligaVal = extractedData.liga || '';
       const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
@@ -1636,15 +1662,78 @@ export default function AdminCrearJugador() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.nombreJugador}
+                    onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })}
+                    placeholder="Ej. Juan"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.apellidoPaterno}
+                    onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })}
+                    placeholder="Ej. Pérez"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.apellidoMaterno}
+                    onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })}
+                    placeholder="Ej. Gómez"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1676,12 +1765,19 @@ export default function AdminCrearJugador() {
                     style={{
                       padding: '10px',
                       borderRadius: '8px',
-                      border: `1px solid ${COLORS.slate300}`,
+                      border: missingOcrFields.includes('curp') && !extractedData.curp
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
                       fontSize: '14px',
-                      backgroundColor: '#f1f5f9',
-                      cursor: 'not-allowed'
+                      backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : '#f1f5f9',
+                      cursor: missingOcrFields.includes('curp') && !extractedData.curp ? 'text' : 'not-allowed'
                     }}
                   />
+                  {missingOcrFields.includes('curp') && !extractedData.curp && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1694,12 +1790,48 @@ export default function AdminCrearJugador() {
                     min={minDateStr}
                     max={today}
                     onChange={e => setExtractedData({ ...extractedData, fechaNacimiento: e.target.value })}
-                    style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }}
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
                   />
+                  {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.lugarNacimiento || ''}
+                    onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })}
+                    placeholder="Ej. Monterrey, NL"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
@@ -1947,14 +2079,44 @@ export default function AdminCrearJugador() {
           </div>
 
           <div
-            onClick={() => document.getElementById('final-signed-form').click()}
+            onClick={() => { if (!signedForm) document.getElementById('final-signed-form').click(); }}
+            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(true); }}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(false); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingSignedForm(false);
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
+                  return;
+                }
+                setSignedForm(file);
+              }
+            }}
+            className={signedForm ? "document-card" : ""}
             style={{
-              border: signedForm ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.sky}`,
+              border: signedForm
+                ? `2px solid ${COLORS.success}`
+                : (isDraggingSignedForm
+                  ? `2px solid ${COLORS.primary}`
+                  : `2px dashed ${COLORS.sky}`),
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm ? COLORS.greenBg50 : COLORS.slate50,
-              cursor: 'pointer',
-              transition: 'all 0.3s'
+              backgroundColor: signedForm
+                ? COLORS.greenBg50
+                : (isDraggingSignedForm
+                  ? 'rgba(26, 59, 92, 0.05)'
+                  : COLORS.slate50),
+              cursor: !signedForm ? 'pointer' : 'default',
+              transition: 'all 0.3s',
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
             {signedForm ? (
@@ -1962,6 +2124,76 @@ export default function AdminCrearJugador() {
                 <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+
+                {/* Overlay actions when hover */}
+                <div className="overlay-actions" style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: COLORS.overlaySlateGray,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease',
+                  backdropFilter: 'blur(2px)',
+                  zIndex: 2
+                }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = typeof signedForm === 'string' ? signedForm : URL.createObjectURL(signedForm);
+                      setPreviewDoc({
+                        open: true,
+                        url: url,
+                        type: 'pdf',
+                        title: 'Formato de Afiliación Oficial'
+                      });
+                    }}
+                    className="btn-zoom"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSearchPlus />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.getElementById('final-signed-form').click();
+                    }}
+                    className="btn-change"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSyncAlt />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSignedForm(null);
+                    }}
+                    className="btn-delete"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             ) : (
               <div style={{ color: COLORS.sky }}>
