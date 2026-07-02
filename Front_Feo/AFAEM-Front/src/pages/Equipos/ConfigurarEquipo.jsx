@@ -1744,7 +1744,7 @@ export default function ConfigurarEquipo() {
     }
 
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
-    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'identificacionMenor') {
+    if (documentKey === 'acta' || documentKey === 'ine') {
       Swal.fire({
         title: 'Analizando Documento...',
         html: 'Extrayendo información. Por favor espere.',
