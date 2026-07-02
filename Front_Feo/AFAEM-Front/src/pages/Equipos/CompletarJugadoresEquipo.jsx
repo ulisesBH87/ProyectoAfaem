@@ -12,7 +12,8 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaTrash
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -659,6 +660,84 @@ export default function CompletarJugadoresEquipo() {
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
+  const handleResetForm = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar formulario?',
+      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, limpiar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+
+    if (result.isConfirmed) {
+      const resetDatos = {
+        nombreJugador: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        curp: '',
+        genero: '1',
+        fechaNacimiento: '',
+        lugarNacimiento: 'MÉXICO',
+        correo: '',
+        codigoPais: '+52',
+        telefono: '',
+        posicion: '',
+        numCamiseta: '',
+        esForaneo: false,
+        nacionalidadJugador: 'MEXICANA',
+        paisResidencia: 'MÉXICO',
+        haVividoExtranjero: false,
+        dondeVividoExtranjero: '',
+        nacionalidadPadre: 'MEXICANA',
+        nacionalidadMadre: 'MEXICANA',
+        registroAsociacionExtranjera: 'NO',
+        nacAbueloPaterno: 'MEXICANA',
+        nacAbuelaPaterna: 'MEXICANA',
+        nacAbueloMaterno: 'MEXICANA',
+        nacAbuelaMaterna: 'MEXICANA',
+        juegoClubExtranjero: 'NO',
+        nui: ''
+      };
+      setExtractedData(resetDatos);
+      setValidationErrors({});
+
+      // Guardar borrador vacío en BD si existe slot de borrador
+      const slotConBorrador = slotsData?.rawSlots?.find(
+        s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
+      );
+      if (slotConBorrador?.slot_id) {
+        guardarBorradorEnBD(resetDatos);
+      }
+
+      Swal.fire({
+        title: 'Formulario Limpiado',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  const handleRemoveDocument = async (docKey) => {
+    const result = await Swal.fire({
+      title: '¿Quitar documento?',
+      text: 'Se eliminará el documento cargado actualmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, quitar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+    if (result.isConfirmed) {
+      setDocuments(prev => ({ ...prev, [docKey]: null }));
+      setPreviews(prev => ({ ...prev, [docKey]: null }));
+    }
+  };
+
   const [ordenAmpliacion, setOrdenAmpliacion] = useState(null);
   const [cargandoOrdenAmpliacion, setCargandoOrdenAmpliacion] = useState(false);
 
@@ -1192,6 +1271,30 @@ export default function CompletarJugadoresEquipo() {
         }
       } catch (err) {
         Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+      }
+    }
+
+    if (documentKey === 'ine' && !extractedData?.fechaNacimiento) {
+      const result = await Swal.fire({
+        title: '¿De quién es esta identificación?',
+        text: 'Si este registro es para un menor de edad, debes subir primero el Acta de Nacimiento para que el sistema configure el formulario correctamente. ¿Esta identificación pertenece al jugador (mayor de edad)?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, es del jugador',
+        cancelButtonText: 'No, es del tutor / menor de edad',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      });
+      if (!result.isConfirmed) {
+        Swal.fire({
+          title: 'Carga cancelada',
+          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para identificar si es menor de edad.',
+          icon: 'info',
+          confirmButtonColor: COLORS.primary
+        });
+        setDocuments(prev => ({ ...prev, [documentKey]: null }));
+        setPreviews(prev => ({ ...prev, [documentKey]: null }));
+        return;
       }
     }
 
@@ -2466,6 +2569,20 @@ export default function CompletarJugadoresEquipo() {
                             >
                               <FaSyncAlt />
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDocument(doc.key)}
+                              className="btn-delete"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer',
+                                marginLeft: '6px'
+                              }}
+                            >
+                              <FaTrash />
+                            </button>
                           </div>
                         </div>
                       ) : (
@@ -2585,9 +2702,33 @@ export default function CompletarJugadoresEquipo() {
           {showStep3 && (
             <section className="fade-in" style={{ marginBottom: '40px' }}>
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <StepBadge number="3" isActive={true} isDone={false} />
-                  <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <StepBadge number="3" isActive={true} isDone={false} />
+                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: `1px solid ${COLORS.danger}`,
+                      background: 'white',
+                      color: COLORS.danger,
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.target.style.background = COLORS.dangerBgLight; }}
+                    onMouseLeave={e => { e.target.style.background = 'white'; }}
+                  >
+                    <FaTrash /> Limpiar formulario
+                  </button>
                 </div>
               </div>
 

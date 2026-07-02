@@ -10,7 +10,8 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaTrash
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -246,6 +247,74 @@ export default function AdminCrearJugador() {
     fetchTeamCatalog();
   }, []);
 
+  const handleResetForm = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar formulario?',
+      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, limpiar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+
+    if (result.isConfirmed) {
+      setExtractedData({
+        nombreJugador: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        curp: '',
+        genero: '1',
+        fechaNacimiento: '',
+        lugarNacimiento: 'MÉXICO',
+        correo: '',
+        codigoPais: '+52',
+        telefono: '',
+        posicion: '',
+        numCamiseta: '',
+        esForaneo: false,
+        nacionalidadJugador: 'MEXICANA',
+        paisResidencia: 'MÉXICO',
+        haVividoExtranjero: false,
+        dondeVividoExtranjero: '',
+        nacionalidadPadre: 'MEXICANA',
+        nacionalidadMadre: 'MEXICANA',
+        registroAsociacionExtranjera: 'NO',
+        nacAbueloPaterno: 'MEXICANA',
+        nacAbuelaPaterna: 'MEXICANA',
+        nacAbueloMaterno: 'MEXICANA',
+        nacAbuelaMaterna: 'MEXICANA',
+        juegoClubExtranjero: 'NO',
+        nui: ''
+      });
+      setValidationErrors({});
+      Swal.fire({
+        title: 'Formulario Limpiado',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  const handleRemoveDocument = async (docKey) => {
+    const result = await Swal.fire({
+      title: '¿Quitar documento?',
+      text: 'Se eliminará el documento cargado actualmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, quitar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+    if (result.isConfirmed) {
+      setDocuments(prev => ({ ...prev, [docKey]: null }));
+      setPreviews(prev => ({ ...prev, [docKey]: null }));
+    }
+  };
+
   // PROCESAR OCR
   const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
   const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
@@ -330,6 +399,30 @@ export default function AdminCrearJugador() {
 
       } catch (err) {
         Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+      }
+    }
+
+    if (documentKey === 'identificacion' && !extractedData?.fechaNacimiento) {
+      const result = await Swal.fire({
+        title: '¿De quién es esta identificación?',
+        text: 'Si este registro es para un menor de edad, debes subir primero el Acta de Nacimiento para que el sistema configure el formulario correctamente. ¿Esta identificación pertenece al jugador (mayor de edad)?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, es del jugador',
+        cancelButtonText: 'No, es del tutor / menor de edad',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      });
+      if (!result.isConfirmed) {
+        Swal.fire({
+          title: 'Carga cancelada',
+          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para identificar si es menor de edad.',
+          icon: 'info',
+          confirmButtonColor: COLORS.primary
+        });
+        setDocuments(prev => ({ ...prev, [documentKey]: null }));
+        setPreviews(prev => ({ ...prev, [documentKey]: null }));
+        return;
       }
     }
 
@@ -1159,6 +1252,22 @@ export default function AdminCrearJugador() {
                           >
                             <FaSyncAlt />
                           </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveDocument(doc.key);
+                            }}
+                            className="btn-delete"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '50%',
+                              backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                            }}
+                          >
+                            <FaTrash />
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -1240,6 +1349,7 @@ export default function AdminCrearJugador() {
                           <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
                             <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: documents[doc.key]?.type === 'application/pdf' ? 'pdf' : 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
                             <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${doc.key}`).click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSyncAlt /></button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveDocument(doc.key); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.danger, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaTrash /></button>
                           </div>
                         </div>
                       ) : (
@@ -1297,6 +1407,7 @@ export default function AdminCrearJugador() {
                         <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease' }}>
                           <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews.documentoEstudiante, type: documents.documentoEstudiante?.type === 'application/pdf' ? 'pdf' : 'image', title: 'Documento de Estudiante' }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSearchPlus /></button>
                           <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById('file-documentoEstudiante').click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSyncAlt /></button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveDocument('documentoEstudiante'); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.danger, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTrash /></button>
                         </div>
                       </div>
                     ) : (
@@ -1324,9 +1435,6 @@ export default function AdminCrearJugador() {
                     <div
                       key={doc.key}
                       className="document-card"
-                      onClick={() => {
-                        // We handle double click or dialog flow in the button/body, let's keep click target
-                      }}
                       onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
                       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                       onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
@@ -1377,6 +1485,7 @@ export default function AdminCrearJugador() {
                                   document.getElementById(`file-${doc.key}`).click();
                                 }
                               }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSyncAlt /></button>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveDocument(doc.key); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.danger, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaTrash /></button>
                             </div>
                           </div>
                         ) : (
@@ -1453,9 +1562,33 @@ export default function AdminCrearJugador() {
         {showStep3 && (
           <section className="fade-in" style={{ marginBottom: '40px' }}>
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <StepBadge number="3" isActive={true} isDone={false} />
-                <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <StepBadge number="3" isActive={true} isDone={false} />
+                  <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleResetForm}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${COLORS.danger}`,
+                    background: 'white',
+                    color: COLORS.danger,
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => { e.target.style.background = COLORS.dangerBgLight; }}
+                  onMouseLeave={e => { e.target.style.background = 'white'; }}
+                >
+                  <FaTrash /> Limpiar formulario
+                </button>
               </div>
             </div>
 

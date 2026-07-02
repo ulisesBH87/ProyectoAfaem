@@ -17,7 +17,8 @@ import {
   FaGlobeAmericas,
   FaExclamationTriangle,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaTrash
 } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { PDFDocument } from 'pdf-lib';
@@ -1525,6 +1526,51 @@ export default function RegistroJugadores() {
     }
   };
 
+  const handleResetForm = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar formulario?',
+      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, limpiar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+
+    if (result.isConfirmed) {
+      setJugadores(prev => {
+        const next = [...prev];
+        const currentPlayerState = next[currentPlayerIndex];
+        if (currentPlayerState) {
+          const resetDatos = {
+            ...defaultPlayerDatos,
+            equipo: currentPlayerState.datos?.equipo || '',
+            liga: currentPlayerState.datos?.liga || '',
+            categoria: currentPlayerState.datos?.categoria || 'LIBRE',
+            presidente: currentPlayerState.datos?.presidente || 'No disponible'
+          };
+          next[currentPlayerIndex] = normalizePlayer({
+            ...currentPlayerState,
+            datos: resetDatos
+          });
+
+          if (currentPlayerState.slotId) {
+            guardarBorradorEnBD(currentPlayerState.slotId, resetDatos);
+          }
+        }
+        return next;
+      });
+      setValidationErrors({});
+      Swal.fire({
+        title: 'Formulario Limpiado',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  };
+
   // EFECTO 1: CARGAR INVITACIÓN (Solo corre al inicio si es flujo público)
   useEffect(() => {
     const fetchInvitation = async () => {
@@ -1912,6 +1958,30 @@ export default function RegistroJugadores() {
         }
       } catch (err) {
         Swal.fire('Error de validación', err.message || 'No se pudo procesar la foto.', 'error');
+      }
+    }
+
+    if (documentKey === 'ine' && !currentDatos?.fechaNacimiento) {
+      const result = await Swal.fire({
+        title: '¿De quién es esta identificación?',
+        text: 'Si este registro es para un menor de edad, debes subir primero el Acta de Nacimiento para que el sistema configure el formulario correctamente. ¿Esta identificación pertenece al jugador (mayor de edad)?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, es del jugador',
+        cancelButtonText: 'No, es del tutor / menor de edad',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      });
+      if (!result.isConfirmed) {
+        Swal.fire({
+          title: 'Carga cancelada',
+          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para identificar si es menor de edad.',
+          icon: 'info',
+          confirmButtonColor: COLORS.primary
+        });
+        updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+        setPreviews(prev => ({ ...prev, [documentKey]: null }));
+        return;
       }
     }
 
@@ -3434,6 +3504,35 @@ export default function RegistroJugadores() {
                                   >
                                     <FaSyncAlt />
                                   </button>
+                                  <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const result = await Swal.fire({
+                                        title: '¿Quitar documento?',
+                                        text: 'Se eliminará el documento cargado actualmente.',
+                                        icon: 'warning',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Sí, quitar',
+                                        cancelButtonText: 'Cancelar',
+                                        confirmButtonColor: COLORS.danger,
+                                        cancelButtonColor: COLORS.slate400
+                                      });
+                                      if (result.isConfirmed) {
+                                        updatePlayerDocuments(currentPlayerIndex, { [doc.key]: null });
+                                        setPreviews(prev => ({ ...prev, [doc.key]: null }));
+                                      }
+                                    }}
+                                    className="btn-delete"
+                                    style={{
+                                      width: '36px', height: '36px', borderRadius: '50%',
+                                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                    }}
+                                  >
+                                    <FaTrash />
+                                  </button>
                                 </div>
                               </div>
                             ) : (
@@ -3559,9 +3658,33 @@ export default function RegistroJugadores() {
                 {/* PASO 2: INFORMACIÓN PERSONAL */}
                 {currentStep === 2 && (
                   <section className="wizard-step-container">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                      <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Información Personal</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Información Personal</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResetForm}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${COLORS.danger}`,
+                          background: 'white',
+                          color: COLORS.danger,
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => { e.target.style.background = COLORS.dangerBgLight; }}
+                        onMouseLeave={e => { e.target.style.background = 'white'; }}
+                      >
+                        <FaTrash /> Limpiar formulario
+                      </button>
                     </div>
 
                     <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`, padding: '24px' }}>
