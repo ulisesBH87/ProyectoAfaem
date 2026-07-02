@@ -673,7 +673,7 @@ async def registrar_grupo(
         try:
             validacion_fecha(datos.get("fechaNacimiento"))
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Error en {nombre_completo}")
+            raise HTTPException(status_code=400, detail=f"Error en {nombre_completo}: {str(e)}")
         if not datos.get("lugarNacimiento", "").strip():
             raise HTTPException(status_code=400, detail=f"El lugar de nacimiento de {nombre_completo} es obligatorio.")
         if not datos.get("genero"):

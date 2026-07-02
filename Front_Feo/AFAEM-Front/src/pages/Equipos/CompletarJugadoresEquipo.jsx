@@ -735,8 +735,8 @@ export default function CompletarJugadoresEquipo() {
       edad--;
     }
 
-    if (edad < 3) {
-      return 'El jugador debe tener al menos 3 años de edad.';
+    if (edad < 2) {
+      return 'El jugador debe tener al menos 2 años de edad.';
     }
 
     if (edad > 125) {
@@ -1781,9 +1781,9 @@ export default function CompletarJugadoresEquipo() {
         return;
       }
 
-      const minAgeDate = new Date(hoy.getFullYear() - 3, hoy.getMonth(), hoy.getDate());
+      const minAgeDate = new Date(hoy.getFullYear() - 2, hoy.getMonth(), hoy.getDate());
       if (fechaDate > minAgeDate) {
-        Swal.fire('Atención', 'El jugador debe tener al menos 3 años de edad.', 'warning');
+        Swal.fire('Atención', 'El jugador debe tener al menos 2 años de edad.', 'warning');
         return;
       }
     }
@@ -2683,9 +2683,9 @@ export default function CompletarJugadoresEquipo() {
                         return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                       }
 
-                      const minAgeDate = new Date(hoy.getFullYear() - 3, hoy.getMonth(), hoy.getDate());
+                      const minAgeDate = new Date(hoy.getFullYear() - 2, hoy.getMonth(), hoy.getDate());
                       if (fechaDate > minAgeDate) {
-                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 3 años</div>;
+                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 2 años</div>;
                       }
 
                       return null;

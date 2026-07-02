@@ -1136,8 +1136,8 @@ export default function RegistroJugadores() {
       edad--;
     }
 
-    if (edad < 3) {
-      return 'El jugador debe tener al menos 3 años de edad.';
+    if (edad < 2) {
+      return 'El jugador debe tener al menos 2 años de edad.';
     }
 
     if (edad > 125) {
