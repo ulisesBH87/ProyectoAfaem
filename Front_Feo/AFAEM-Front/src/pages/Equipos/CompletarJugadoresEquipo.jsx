@@ -1115,6 +1115,9 @@ export default function CompletarJugadoresEquipo() {
       }
     }
 
+    const prevDoc = documents[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
+
     if (documentKey !== 'foto') {
       setDocuments(prev => ({ ...prev, [documentKey]: file }));
     }
@@ -1243,6 +1246,7 @@ export default function CompletarJugadoresEquipo() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -1268,7 +1272,10 @@ export default function CompletarJugadoresEquipo() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
-          
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
+
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
           }
@@ -1306,10 +1313,16 @@ export default function CompletarJugadoresEquipo() {
           });
 
           if (!result.isConfirmed) {
-            setDocuments(prev => ({ ...prev, [documentKey]: null }));
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            setDocuments(prev => ({ ...prev, [documentKey]: prevDoc }));
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out CURP to block step completion
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -1358,13 +1371,22 @@ export default function CompletarJugadoresEquipo() {
           setOcrDataOriginal(ocrResult);
           setExtractedData(prev => ({ ...prev, ...ocrResult }));
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+              icon: nombreEncontrado ? 'success' : 'warning',
+              timer: nombreEncontrado ? 2000 : 3500,
+              showConfirmButton: !nombreEncontrado
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -2560,27 +2582,27 @@ export default function CompletarJugadoresEquipo() {
                 extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
                 extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
               ) && (
-                <div className="fade-in" style={{
-                  marginBottom: '20px',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  background: COLORS.orange50,
-                  border: `1px solid ${COLORS.orange100}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}>
-                  <div style={{ fontSize: '20px' }}>⚠️</div>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                      Discrepancia detectada
-                    </h4>
-                    <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                      La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                    </p>
+                  <div className="fade-in" style={{
+                    marginBottom: '20px',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background: COLORS.orange50,
+                    border: `1px solid ${COLORS.orange100}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{ fontSize: '20px' }}>⚠️</div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
+                        Discrepancia detectada
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
+                        La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* CAMPOS DEL FORMULARIO */}
               <div className="inner-form-card">
@@ -2606,35 +2628,20 @@ export default function CompletarJugadoresEquipo() {
                     <input
                       type="text"
                       value={extractedData.curp || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                        let sId = extractedData.genero;
-                        if (val.length >= 11) {
-                          const char = val.charAt(10);
-                          if (char === 'M') sId = '2'; // Femenino
-                          else if (char === 'H') sId = '1'; // Masculino
-                        }
-                        setExtractedData({ ...extractedData, curp: val, genero: sId });
-
-                        // Real-time duplicate check
-                        if (val.length === 18) {
-                          const duplicate = obtenerDuplicadoCURP(val);
-                          if (duplicate) {
-                            setValidationErrors(prev => ({
-                              ...prev,
-                              curp: `Esta CURP ya se encuentra registrada en el equipo con el Jugador ${duplicate.NombreCompleto}.`
-                            }));
-                          } else {
-                            setValidationErrors(prev => ({ ...prev, curp: null }));
-                          }
-                        } else {
-                          setValidationErrors(prev => ({ ...prev, curp: null }));
-                        }
-                      }}
+                      readOnly
                       onBlur={() => handleBlur('curp')}
-                      placeholder="ABCD..."
+                      placeholder="Se auto-completará con el documento de identidad"
                       maxLength="18"
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: `1px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`,
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        backgroundColor: '#f1f5f9',
+                        cursor: 'not-allowed'
+                      }}
                     />
                     {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
                   </div>
@@ -2983,7 +2990,7 @@ export default function CompletarJugadoresEquipo() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '100%', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />

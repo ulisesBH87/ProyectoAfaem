@@ -1012,7 +1012,8 @@ export default function RegistroJugadores() {
     ine: null,
     ineTutor: null,
     identificacionMenor: null,
-    foto: null
+    foto: null,
+    signedForm: null
   });
 
   const [catalogs, setCatalogs] = useState({
@@ -1412,9 +1413,15 @@ export default function RegistroJugadores() {
       if (cleanValue !== '') {
         const duplicate = obtenerDuplicadoCamiseta(cleanValue, jugadores[currentPlayerIndex]?.numero);
         if (duplicate) {
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicado = nombreDup.trim()
+            ? `El número de camiseta #${cleanValue} ya está asignado a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}.`
+            : `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.numero}.`;
+
           setValidationErrors(prev => ({
             ...prev,
-            numCamiseta: `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.numero}.`
+            numCamiseta: msgDuplicado
           }));
         } else {
           setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
@@ -1427,9 +1434,15 @@ export default function RegistroJugadores() {
         const duplicate = obtenerDuplicadoPosicion(cleanValue, jugadores[currentPlayerIndex]?.numero);
         if (duplicate) {
           const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(cleanValue))?.nombre || 'esta posición';
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicado = nombreDup.trim()
+            ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}.`
+            : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`;
+
           setValidationErrors(prev => ({
             ...prev,
-            posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`
+            posicion: msgDuplicado
           }));
         } else {
           setValidationErrors(prev => ({ ...prev, posicion: null }));
@@ -1456,9 +1469,15 @@ export default function RegistroJugadores() {
       if (datos.numCamiseta) {
         const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta, player.numero);
         if (duplicate) {
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicadoText = nombreDup.trim()
+            ? `El número #${datos.numCamiseta} ya está asignado a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}. Por favor, elige otro número.`
+            : `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`;
+
           Swal.fire({
             title: 'Número de camiseta duplicado',
-            text: `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`,
+            text: msgDuplicadoText,
             icon: 'warning',
             confirmButtonColor: COLORS.primary
           });
@@ -1471,9 +1490,15 @@ export default function RegistroJugadores() {
         const duplicate = obtenerDuplicadoPosicion(datos.posicion, player.numero);
         if (duplicate) {
           const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(datos.posicion))?.nombre || 'esta posición';
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicadoText = nombreDup.trim()
+            ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}. Por favor, elige otra posición.`
+            : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`;
+
           Swal.fire({
             title: 'Posición duplicada',
-            text: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`,
+            text: msgDuplicadoText,
             icon: 'warning',
             confirmButtonColor: COLORS.primary
           });
@@ -1708,7 +1733,8 @@ export default function RegistroJugadores() {
       ine: null,
       ineTutor: null,
       identificacionMenor: null,
-      foto: null
+      foto: null,
+      signedForm: null
     });
 
     const player = jugadores[currentPlayerIndex];
@@ -1733,13 +1759,28 @@ export default function RegistroJugadores() {
         }
       });
     }
+
+    if (player?.signedForm) {
+      const file = player.signedForm;
+      if (file.type?.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviews(prev => ({ ...prev, signedForm: reader.result }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const url = URL.createObjectURL(file);
+        setPreviews(prev => ({ ...prev, signedForm: url }));
+      }
+    }
   }, [
     currentPlayerIndex,
     currentDocuments.acta,
     currentDocuments.ine,
     currentDocuments.ineTutor,
     currentDocuments.identificacionMenor,
-    currentDocuments.foto
+    currentDocuments.foto,
+    jugadores[currentPlayerIndex]?.signedForm
   ]);
 
   // Efecto para autovalidación de CURP con debounce
@@ -1796,6 +1837,9 @@ export default function RegistroJugadores() {
       });
       return;
     }
+
+    const prevDoc = jugadores[currentPlayerIndex]?.documentos?.[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
 
     updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
 
@@ -1922,6 +1966,7 @@ export default function RegistroJugadores() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -1947,6 +1992,9 @@ export default function RegistroJugadores() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
 
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
@@ -1985,10 +2033,16 @@ export default function RegistroJugadores() {
           });
 
           if (!result.isConfirmed) {
-            updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            updatePlayerDocuments(currentPlayerIndex, { [documentKey]: prevDoc });
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out the invalid CURP so the user is blocked
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -2041,13 +2095,22 @@ export default function RegistroJugadores() {
             guardarBorradorEnBD(currentPlayer.slotId, merged);
           }
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+              icon: nombreEncontrado ? 'success' : 'warning',
+              timer: nombreEncontrado ? 2000 : 3500,
+              showConfirmButton: !nombreEncontrado
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -2874,7 +2937,7 @@ export default function RegistroJugadores() {
             }}>
               <span style={{
                 fontSize: '11px',
-                color: COLORS.slate500,
+                color: COLORS.danger,
                 fontWeight: '700',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
@@ -3063,7 +3126,7 @@ export default function RegistroJugadores() {
                 <p style={{
                   textAlign: 'center',
                   fontSize: '13px',
-                  color: COLORS.slate500,
+                  color: COLORS.black,
                   fontWeight: '600',
                   marginBottom: '20px',
                   marginTop: '-5px',
@@ -3564,24 +3627,13 @@ export default function RegistroJugadores() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                             CURP <span className="required-star">*</span>
-                            {isCheckingCurp && <span style={{ marginLeft: '10px', color: COLORS.success, fontSize: '10px' }}>Validando...</span>}
                           </label>
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
-                            onChange={(e) => {
-                              const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                              let sId = currentDatos.genero;
-                              if (val.length >= 11) {
-                                const char = val.charAt(10);
-                                if (char === 'M') sId = '2'; // Femenino
-                                else if (char === 'H') sId = '1'; // Masculino
-                              }
-                              updatePlayerDatos(currentPlayerIndex, { curp: val, genero: sId });
-                              setValidationErrors(prev => ({ ...prev, curp: null }));
-                            }}
+                            readOnly
                             onBlur={handleBlur}
-                            placeholder="ABCD..."
+                            placeholder="Se auto-completará con el documento de identidad"
                             maxLength="18"
                             style={{
                               padding: '10px',
@@ -3589,6 +3641,8 @@ export default function RegistroJugadores() {
                               border: `1.5px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`,
                               fontSize: '14px',
                               outline: 'none',
+                              backgroundColor: '#f1f5f9',
+                              cursor: 'not-allowed',
                               boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
@@ -3920,8 +3974,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad del jugador"
                                 valor={currentDatos.nacionalidadJugador}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadJugador', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadJugador', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadJugador: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3930,8 +3984,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="País de residencia actual"
                                 valor={currentDatos.paisResidencia}
-                                alCambiar={val => {
-                                  handleFieldChange('paisResidencia', val);
+                                alCambiar={e => {
+                                  handleFieldChange('paisResidencia', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, paisResidencia: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3943,8 +3997,8 @@ export default function RegistroJugadores() {
                               <EntradaSeleccion
                                 etiqueta="¿El jugador ha vivido en el extranjero?"
                                 valor={currentDatos.haVividoExtranjero ? '1' : '0'}
-                                alCambiar={val => {
-                                  const boolVal = val === '1';
+                                alCambiar={e => {
+                                  const boolVal = e.target.value === '1';
                                   handleFieldChange('haVividoExtranjero', boolVal);
                                   setValidationErrors(prev => ({ ...prev, haVividoExtranjero: null }));
                                   if (currentPlayer?.slotId) {
@@ -3958,8 +4012,8 @@ export default function RegistroJugadores() {
                                 <EntradaFormulario
                                   etiqueta="¿En qué país?"
                                   valor={currentDatos.dondeVividoExtranjero}
-                                  alCambiar={val => {
-                                    handleFieldChange('dondeVividoExtranjero', val);
+                                  alCambiar={e => {
+                                    handleFieldChange('dondeVividoExtranjero', e.target.value);
                                     setValidationErrors(prev => ({ ...prev, dondeVividoExtranjero: null }));
                                   }}
                                   alPerderEnfoque={handleBlur}
@@ -3973,8 +4027,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad del padre"
                                 valor={currentDatos.nacionalidadPadre}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadPadre', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadPadre', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadPadre: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3983,8 +4037,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad de la madre"
                                 valor={currentDatos.nacionalidadMadre}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadMadre', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadMadre', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadMadre: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3995,8 +4049,8 @@ export default function RegistroJugadores() {
                             <EntradaFormulario
                               etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                               valor={currentDatos.registroAsociacionExtranjera}
-                              alCambiar={val => {
-                                handleFieldChange('registroAsociacionExtranjera', val);
+                              alCambiar={e => {
+                                handleFieldChange('registroAsociacionExtranjera', e.target.value);
                                 setValidationErrors(prev => ({ ...prev, registroAsociacionExtranjera: null }));
                               }}
                               alPerderEnfoque={handleBlur}
@@ -4006,17 +4060,17 @@ export default function RegistroJugadores() {
                             />
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
-                              <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={val => { handleFieldChange('nacAbueloPaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
-                              <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={val => { handleFieldChange('nacAbuelaPaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
-                              <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={val => { handleFieldChange('nacAbueloMaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
-                              <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={val => { handleFieldChange('nacAbuelaMaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
+                              <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={e => { handleFieldChange('nacAbueloPaterno', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={e => { handleFieldChange('nacAbuelaPaterna', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
+                              <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={e => { handleFieldChange('nacAbueloMaterno', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={e => { handleFieldChange('nacAbuelaMaterna', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
                             </div>
 
                             <EntradaFormulario
                               etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                               valor={currentDatos.juegoClubExtranjero}
-                              alCambiar={val => {
-                                handleFieldChange('juegoClubExtranjero', val);
+                              alCambiar={e => {
+                                handleFieldChange('juegoClubExtranjero', e.target.value);
                                 setValidationErrors(prev => ({ ...prev, juegoClubExtranjero: null }));
                               }}
                               alPerderEnfoque={handleBlur}
@@ -4106,7 +4160,7 @@ export default function RegistroJugadores() {
                     {/* Descarga de formato prellenado y carga del formato firmado */}
                     <div style={{ borderTop: `1px solid ${COLORS.slate200}`, paddingTop: '25px', marginBottom: '20px' }}>
                       <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
-                      <p style={{ fontSize: '13px', color: COLORS.slate500, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                      <p style={{ fontSize: '13px', color: COLORS.dangerAccent, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
                         Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
                       </p>
 
@@ -4148,28 +4202,31 @@ export default function RegistroJugadores() {
 
                       <div
                         onClick={() => {
-                          if (pasos1a5Completos) {
+                          if (pasos1a5Completos && !currentPlayer?.signedForm) {
                             document.getElementById('final-signed-form').click();
                           }
                         }}
+                        className={currentPlayer?.signedForm ? "document-card" : ""}
                         style={{
                           border: currentPlayer?.signedForm ? `2px solid ${COLORS.success}` : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`),
                           borderRadius: '20px',
                           padding: '35px 20px',
                           backgroundColor: currentPlayer?.signedForm ? COLORS.greenBg50 : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100),
-                          cursor: pasos1a5Completos ? 'pointer' : 'not-allowed',
+                          cursor: (pasos1a5Completos && !currentPlayer?.signedForm) ? 'pointer' : 'default',
                           transition: 'all 0.3s',
                           textAlign: 'center',
                           maxWidth: '600px',
                           margin: '0 auto',
-                          opacity: pasos1a5Completos ? 1 : 0.6
+                          opacity: pasos1a5Completos ? 1 : 0.6,
+                          position: 'relative',
+                          overflow: 'hidden'
                         }}
                       >
                         {currentPlayer?.signedForm ? (
                           <div style={{ color: COLORS.success }}>
                             <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
                             <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado, cargado, y listo</p>
                           </div>
                         ) : (
                           <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400 }}>
@@ -4178,6 +4235,61 @@ export default function RegistroJugadores() {
                             <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
                           </div>
                         )}
+
+                        {currentPlayer?.signedForm && (
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: COLORS.overlaySlateGray,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)',
+                            zIndex: 2
+                          }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewDoc({
+                                  open: true,
+                                  url: previews.signedForm,
+                                  type: 'pdf',
+                                  title: 'Formato de Afiliación Oficial'
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaSearchPlus />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                document.getElementById('final-signed-form').click();
+                              }}
+                              className="btn-change"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaSyncAlt />
+                            </button>
+                          </div>
+                        )}
+
                         <input
                           type="file"
                           id="final-signed-form"
@@ -4254,8 +4366,8 @@ export default function RegistroJugadores() {
                       Siguiente <FaArrowRight />
                     </button>
                   ) : (
-                    <span style={{ fontSize: '13px', color: COLORS.slate500, fontWeight: '600', fontStyle: 'italic' }}>
-                      * Envío grupal al final de la página
+                    <span style={{ fontSize: '13px', color: COLORS.dangerAccent, fontWeight: '600', fontStyle: 'italic' }}>
+                      * Podrás hacer en el registro grupal cuando llenes los datos de todos tus jugadores
                     </span>
                   )}
                 </div>
@@ -4288,7 +4400,7 @@ export default function RegistroJugadores() {
                   Todos los datos de tus jugadores están listos
                 </h3>
                 <p style={{ fontSize: '14px', color: COLORS.greenDarker, margin: '0 0 20px 0', fontWeight: '600' }}>
-                  Puedes realizar cambios antes de hacer el registro
+                  Puedes revisar los datos o realizar cambios antes de hacer el registro
                 </p>
                 <button
                   type="button"
@@ -4353,7 +4465,7 @@ export default function RegistroJugadores() {
                       e.currentTarget.style.transform = 'none';
                     }}
                   >
-                    Revisar/hacer cambios <FaArrowUp />
+                    Revisar / Hacer cambios <FaArrowUp />
                   </button>
                 </div>
               </div>
@@ -4428,7 +4540,7 @@ export default function RegistroJugadores() {
                 }}>
                   <span style={{
                     fontSize: '11px',
-                    color: COLORS.slate500,
+                    color: COLORS.dangerAccent,
                     fontWeight: '700',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
@@ -4565,7 +4677,7 @@ export default function RegistroJugadores() {
                 </a>
               </div>
             ) : (
-              <iframe src={previewDoc.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
+              <iframe src={`${previewDoc.url}#toolbar=0&navpanes=0`} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
             )
           ) : (
             <img src={previewDoc.url} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px' }} />

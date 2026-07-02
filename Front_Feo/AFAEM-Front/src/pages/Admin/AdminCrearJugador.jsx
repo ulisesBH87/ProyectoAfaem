@@ -263,6 +263,9 @@ export default function AdminCrearJugador() {
       return;
     }
 
+    const prevDoc = documents[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
+
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
     // Generar Previsualización
@@ -375,6 +378,7 @@ export default function AdminCrearJugador() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -400,6 +404,9 @@ export default function AdminCrearJugador() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
 
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
@@ -438,10 +445,16 @@ export default function AdminCrearJugador() {
           });
 
           if (!result.isConfirmed) {
-            setDocuments(prev => ({ ...prev, [documentKey]: null }));
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            setDocuments(prev => ({ ...prev, [documentKey]: prevDoc }));
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out CURP to block player creation
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -494,13 +507,22 @@ export default function AdminCrearJugador() {
             ...ocrResult
           }));
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+              icon: nombreEncontrado ? 'success' : 'warning',
+              timer: nombreEncontrado ? 2000 : 3500,
+              showConfirmButton: !nombreEncontrado
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -1421,16 +1443,21 @@ export default function AdminCrearJugador() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>CURP o Identificador <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.curp || ''} onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    let sId = extractedData.genero;
-                    if (val.length >= 11) {
-                      const char = val.charAt(10).toUpperCase();
-                      if (char === 'M') sId = '2'; // Femenino
-                      else if (char === 'H') sId = '1'; // Masculino
-                    }
-                    setExtractedData({ ...extractedData, curp: val, genero: sId });
-                  }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.curp || ''}
+                    readOnly
+                    placeholder="Se auto-completará con el documento de identidad"
+                    maxLength="18"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: `1px solid ${COLORS.slate300}`,
+                      fontSize: '14px',
+                      backgroundColor: '#f1f5f9',
+                      cursor: 'not-allowed'
+                    }}
+                  />
                 </div>
               </div>
 
@@ -1643,7 +1670,7 @@ export default function AdminCrearJugador() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '1800px', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />

@@ -1241,10 +1241,11 @@ function PreRegistroPresidente() {
       });
       procesarFotografia(file);
     } else {
+      const prevDoc = documents[documentKey] || null;
       setDocuments(prev => ({ ...prev, [documentKey]: file }));
       // Invocar OCR real al subir
       if (['actaNacimiento', 'identificacion'].includes(documentKey)) {
-        procesarOCRReal(documentKey, file);
+        procesarOCRReal(documentKey, file, prevDoc);
       }
     }
   };
@@ -1355,7 +1356,7 @@ function PreRegistroPresidente() {
     return data;
   };
 
-  const procesarOCRReal = async (docKey, file) => {
+  const procesarOCRReal = async (docKey, file, prevDoc) => {
     Swal.fire({
       title: 'Analizando Documento...',
       html: 'Extrayendo información. <b>Por favor espere.</b>',
@@ -1524,7 +1525,11 @@ function PreRegistroPresidente() {
         if (!result.isConfirmed) {
           setDocuments(prev => {
             const updated = { ...prev };
-            delete updated[docKey];
+            if (prevDoc) {
+              updated[docKey] = prevDoc;
+            } else {
+              delete updated[docKey];
+            }
             return updated;
           });
           return;
@@ -3817,13 +3822,12 @@ function PreRegistroPresidente() {
                   <label className="premium-label">CURP *</label>
                   <input
                     type="text"
-                    placeholder="18 caracteres alfanuméricos"
+                    placeholder="Se auto-completará con el documento de identidad"
                     maxLength={18}
                     value={ocrResults.curp || ''}
-                    onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
+                    readOnly
                     className="premium-input"
-                    disabled={!!user.usuario?.curp}
-                    style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : {}}
+                    style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
                   />
                   {curpExistente && (
                     <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
@@ -4552,7 +4556,7 @@ function PreRegistroPresidente() {
               />
             ) : previewDoc.file.type === 'application/pdf' ? (
               <iframe
-                src={previewUrl}
+                src={`${previewUrl}#toolbar=0&navpanes=0`}
                 title={previewDoc.title}
                 style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
               />

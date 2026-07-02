@@ -1562,6 +1562,9 @@ export default function ConfigurarEquipo() {
       return;
     }
 
+    const prevDoc = documents[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
+
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
     // Generar Previsualización
@@ -1688,6 +1691,7 @@ export default function ConfigurarEquipo() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -1713,6 +1717,9 @@ export default function ConfigurarEquipo() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
 
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
@@ -1751,10 +1758,16 @@ export default function ConfigurarEquipo() {
           });
 
           if (!result.isConfirmed) {
-            setDocuments(prev => ({ ...prev, [documentKey]: null }));
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            setDocuments(prev => ({ ...prev, [documentKey]: prevDoc }));
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out CURP to block registration completion
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -1805,13 +1818,22 @@ export default function ConfigurarEquipo() {
           setExtractedData(merged);
           guardarBorradorEnBD(merged);
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+              icon: nombreEncontrado ? 'success' : 'warning',
+              timer: nombreEncontrado ? 2000 : 3500,
+              showConfirmButton: !nombreEncontrado
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -3216,26 +3238,18 @@ export default function ConfigurarEquipo() {
                         <input
                           type="text"
                           value={extractedData.curp || ''}
-                          onChange={(e) => {
-                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                            let sId = extractedData.genero;
-                            if (val.length >= 11) {
-                              const char = val.charAt(10);
-                              if (char === 'M') sId = '2'; // Femenino
-                              else if (char === 'H') sId = '1'; // Masculino
-                            }
-                            const updated = { ...extractedData, curp: val, genero: sId };
-                            setExtractedData(updated);
-                          }}
+                          readOnly
                           onBlur={handleBlur}
-                          placeholder="ABCD..."
+                          placeholder="Se auto-completará con el documento de identidad"
                           maxLength="18"
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
                             border: `1.5px solid ${curpExistente ? COLORS.danger : COLORS.slate300}`,
                             boxShadow: curpExistente ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            backgroundColor: '#f1f5f9',
+                            cursor: 'not-allowed'
                           }}
                         />
                         {curpExistente && (
@@ -3513,13 +3527,13 @@ export default function ConfigurarEquipo() {
                             <EntradaFormulario
                               etiqueta="Nacionalidad del jugador"
                               valor={extractedData.nacionalidadJugador}
-                              alCambiar={val => handleFieldChange('nacionalidadJugador', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadJugador', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                             <EntradaFormulario
                               etiqueta="País de residencia actual"
                               valor={extractedData.paisResidencia}
-                              alCambiar={val => handleFieldChange('paisResidencia', val)}
+                              alCambiar={e => handleFieldChange('paisResidencia', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                           </div>
@@ -3528,8 +3542,8 @@ export default function ConfigurarEquipo() {
                             <EntradaSeleccion
                               etiqueta="¿El jugador ha vivido en el extranjero?"
                               valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                              alCambiar={val => {
-                                const boolVal = val === '1';
+                              alCambiar={e => {
+                                const boolVal = e.target.value === '1';
                                 handleFieldChange('haVividoExtranjero', boolVal);
                                 guardarBorradorEnBD({ ...extractedData, haVividoExtranjero: boolVal });
                               }}
@@ -3540,7 +3554,7 @@ export default function ConfigurarEquipo() {
                               <EntradaFormulario
                                 etiqueta="¿En qué país?"
                                 valor={extractedData.dondeVividoExtranjero}
-                                alCambiar={val => handleFieldChange('dondeVividoExtranjero', val)}
+                                alCambiar={e => handleFieldChange('dondeVividoExtranjero', e.target.value)}
                                 alPerderEnfoque={handleBlur}
                                 obligatorio={true}
                               />
@@ -3551,13 +3565,13 @@ export default function ConfigurarEquipo() {
                             <EntradaFormulario
                               etiqueta="Nacionalidad del padre"
                               valor={extractedData.nacionalidadPadre}
-                              alCambiar={val => handleFieldChange('nacionalidadPadre', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadPadre', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                             <EntradaFormulario
                               etiqueta="Nacionalidad de la madre"
                               valor={extractedData.nacionalidadMadre}
-                              alCambiar={val => handleFieldChange('nacionalidadMadre', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadMadre', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                           </div>
@@ -3565,23 +3579,23 @@ export default function ConfigurarEquipo() {
                           <EntradaFormulario
                             etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                             valor={extractedData.registroAsociacionExtranjera}
-                            alCambiar={val => handleFieldChange('registroAsociacionExtranjera', val)}
+                            alCambiar={e => handleFieldChange('registroAsociacionExtranjera', e.target.value)}
                             alPerderEnfoque={handleBlur}
                             filas={2}
                             obligatorio={true}
                           />
 
                           <div className="abuelos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
-                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={val => handleFieldChange('nacAbuelaMaterna', val)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => handleFieldChange('nacAbueloPaterno', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => handleFieldChange('nacAbuelaPaterna', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => handleFieldChange('nacAbueloMaterno', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => handleFieldChange('nacAbuelaMaterna', e.target.value)} alPerderEnfoque={handleBlur} />
                           </div>
 
                           <EntradaFormulario
                             etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                             valor={extractedData.juegoClubExtranjero}
-                            alCambiar={val => handleFieldChange('juegoClubExtranjero', val)}
+                            alCambiar={e => handleFieldChange('juegoClubExtranjero', e.target.value)}
                             alPerderEnfoque={handleBlur}
                             filas={3}
                             obligatorio={true}
@@ -3638,7 +3652,7 @@ export default function ConfigurarEquipo() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '100%', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />

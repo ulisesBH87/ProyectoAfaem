@@ -42,36 +42,99 @@ app = Flask(__name__)
 
 # --- TUS FUNCIONES DE API Y CÁLCULO SE MANTIENEN INTACTAS ---
 
+VERIFIED_CURPS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verified_curps.json")
+
+def cargar_cache_curps():
+    import json
+    if os.path.exists(VERIFIED_CURPS_FILE):
+        try:
+            with open(VERIFIED_CURPS_FILE, "r", encoding="utf-8") as f:
+                return set(json.load(f))
+        except Exception as e:
+            print(f"[ERROR] No se pudo leer el cache de CURPs: {str(e)}")
+    return set()
+
+def guardar_cache_curps(cache):
+    import json
+    try:
+        with open(VERIFIED_CURPS_FILE, "w", encoding="utf-8") as f:
+            json.dump(list(cache), f, indent=4)
+    except Exception as e:
+        print(f"[ERROR] No se pudo guardar el cache de CURPs: {str(e)}")
+
+def validar_tlaloc(curp, token):
+    if not curp or curp == "No detectado":
+        return {"verificado": False, "mensaje": "Sin CURP para verificar"}
+        
+    curp_norm = curp.strip().upper()
+    cache = cargar_cache_curps()
+    if curp_norm in cache:
+        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)"}
+
+    url = "https://api.tlaloc.sh/mx/v1/curp"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+    params = {"curp": curp_norm}
+    try:
+        respuesta = requests.get(url, params=params, headers=headers)
+        if respuesta.status_code == 200:
+            datos_api = respuesta.json()
+            if "curp" in datos_api and "nombres" in datos_api:
+                cache.add(curp_norm)
+                guardar_cache_curps(cache)
+                return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Tlaloc)"}
+        elif respuesta.status_code == 404:
+            return {"verificado": False, "mensaje": "CURP no encontrada en RENAPO"}
+        return {"verificado": False, "mensaje": f"API Tlaloc respondio con codigo {respuesta.status_code}"}
+    except Exception as e:
+        print(f"[ERROR] Error de conexion con la API de Tlaloc: {str(e)}")
+        return {"verificado": False, "mensaje": "Error de conexion con la API de Tlaloc"}
+
 def validar_verificamex(curp):
     if not curp or curp == "No detectado":
         return {"verificado": False, "mensaje": "Sin CURP para verificar"}
         
-    url = "https://api.verificamex.com/identity/v1/scraping/renapo"
+    curp_norm = curp.strip().upper()
+    cache = cargar_cache_curps()
+    if curp_norm in cache:
+        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)"}
+        
+    # 1. Intentar validar con Verificamex primero si esta configurado
     token = os.getenv("VERIFICAMEX_API_TOKEN")
-    
-    if not token or token == "TU_TOKEN_DE_VERIFICAMEX_AQUI":
-        print("[WARNING] VERIFICAMEX_API_TOKEN no configurado en variables de entorno. Ejecutando en modo Simulación.")
-        return {"verificado": True, "mensaje": "CURP Validada en RENAPO (Simulación)"}
+    if token and token != "TU_TOKEN_DE_VERIFICAMEX_AQUI":
+        url = "https://api.verificamex.com/identity/v1/scraping/renapo"
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}"
+        }
+        payload = {"curp": curp_norm}
         
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}"
-    }
-    payload = {"curp": curp}
-    
-    try:
-        respuesta = requests.post(url, json=payload, headers=headers)
-        
-        if respuesta.status_code == 200:
-            datos_api = respuesta.json()
-            if "data" in datos_api and "citizen" in datos_api["data"]:
-                return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO"}
+        try:
+            respuesta = requests.post(url, json=payload, headers=headers)
             
-        return {"verificado": False, "mensaje": "CURP Rechazada o No Encontrada"}
-    except Exception as e:
-        print(f"[ERROR] Error de conexión con la API de Verificamex: {str(e)}")
-        return {"verificado": False, "mensaje": "Error de conexión con la API"}
+            if respuesta.status_code == 200:
+                datos_api = respuesta.json()
+                if "data" in datos_api and "citizen" in datos_api["data"]:
+                    cache.add(curp_norm)
+                    guardar_cache_curps(cache)
+                    return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO"}
+                
+            return {"verificado": False, "mensaje": "CURP Rechazada o No Encontrada"}
+        except Exception as e:
+            print(f"[ERROR] Error de conexion con la API de Verificamex: {str(e)}")
+            return {"verificado": False, "mensaje": "Error de conexion con la API"}
+
+    # 2. Intentar validar con Tlaloc de respaldo si esta configurado
+    tlaloc_token = os.getenv("TLALOC_API_KEY") or os.getenv("TLALOC")
+    if tlaloc_token and tlaloc_token != "TU_TOKEN_DE_TLALOC_AQUI":
+        return validar_tlaloc(curp_norm, tlaloc_token)
+
+    # 3. Fallback a Simulacion si ninguno esta configurado
+    print("[WARNING] Ni VERIFICAMEX_API_TOKEN ni TLALOC/TLALOC_API_KEY configurados en variables de entorno. Ejecutando en modo Simulacion.")
+    return {"verificado": True, "mensaje": "CURP Validada en RENAPO (Simulacion)"}
 
 def calcular_datos_curp(curp):
     try:
