@@ -166,7 +166,7 @@ export default function AdminCrearJugador() {
     tipoAfiliacion: 'JUGADOR',
     posicion: '',
     numCamiseta: '',
-    asociacion: 'AFAEM',
+    asociacion: 'Asociación de Morelos',
     liga: '',
     equipo: '',
     categoria: '',

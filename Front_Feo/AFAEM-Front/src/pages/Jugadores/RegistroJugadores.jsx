@@ -2284,7 +2284,7 @@ export default function RegistroJugadores() {
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
       safeSetField(form, 'Teléfono', (currentDatos.codigoPais || '+52') + (currentDatos.telefono || ''));
-      safeSetField(form, 'Asociación', 'AFAEM');
+      safeSetField(form, 'Asociación', 'Asociación de Morelos');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(currentSeguroId));

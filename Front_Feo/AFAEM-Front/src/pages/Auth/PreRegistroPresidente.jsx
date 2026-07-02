@@ -352,7 +352,7 @@ function PreRegistroPresidente() {
   const [, setFotoPreview] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState({});
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
-  const [asociacion, setAsociacion] = useState('AFAEM');
+  const [asociacion, setAsociacion] = useState('Asociación de Morelos');
   const [liga, setLiga] = useState('');
   const [cargoSeleccionado, setCargoSeleccionado] = useState('Presidente Equipo');
   const [ligasCatalogo, setLigasCatalogo] = useState([]);
@@ -4112,7 +4112,7 @@ function PreRegistroPresidente() {
                       const file = e.dataTransfer.files[0];
                       if (file) {
                         if (!validarArchivoPermitido(file)) return;
-                        
+
                         try {
                           const metadata = JSON.parse(localStorage.getItem('afaem_doc_metadata') || '{}');
                           const previousFile = metadata[doc.documento];
