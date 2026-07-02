@@ -489,6 +489,7 @@ export default function ConfigurarEquipo() {
     identificacionMenor: null,
     foto: null
   });
+  const [dragActive, setDragActive] = useState({});
 
   // Datos extraídos o capturados del jugador
   const [extractedData, setExtractedData] = useState({
@@ -542,14 +543,7 @@ export default function ConfigurarEquipo() {
   };
 
   const obtenerDuplicadoPosicion = (posicionId) => {
-    if (!posicionId) return null;
-    const posVal = parseInt(posicionId, 10);
-    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
-    const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicionId))?.nombre;
-    if (!posNombre) return null;
-    return registeredPlayers.find(p =>
-      p.Rol && p.Rol.trim().toUpperCase() === posNombre.trim().toUpperCase()
-    );
+    return null;
   };
 
   const [curpExistente, setCurpExistente] = useState(false);
@@ -1912,9 +1906,17 @@ export default function ConfigurarEquipo() {
       }
 
       // Rellenar campos básicos
-      safeSetField(form, 'Nombres', extractedData.nombreJugador);
-      safeSetField(form, 'Apellido Paterno', extractedData.apellidoPaterno);
-      safeSetField(form, 'Apellido Materno', extractedData.apellidoMaterno);
+      const nombreVal = extractedData.nombreJugador || '';
+      const nombreFs = nombreVal.length > 35 ? 6 : nombreVal.length > 25 ? 7 : nombreVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Nombres', nombreVal, nombreFs);
+
+      const apPaternoVal = extractedData.apellidoPaterno || '';
+      const apPaternoFs = apPaternoVal.length > 35 ? 6 : apPaternoVal.length > 25 ? 7 : apPaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Paterno', apPaternoVal, apPaternoFs);
+
+      const apMaternoVal = extractedData.apellidoMaterno || '';
+      const apMaternoFs = apMaternoVal.length > 35 ? 6 : apMaternoVal.length > 25 ? 7 : apMaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Materno', apMaternoVal, apMaternoFs);
       safeSetField(form, 'CURP o Clave Única de Registro de Población', extractedData.curp);
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
@@ -1934,8 +1936,13 @@ export default function ConfigurarEquipo() {
         try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
-      safeSetField(form, 'Liga', (equipo?.Liga || '').split('(')[0].trim());
-      safeSetField(form, 'Equipo', equipo?.NombreEquipo || '');
+      const ligaVal = (equipo?.Liga || '').split('(')[0].trim();
+      const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Liga', ligaVal, ligaFs);
+
+      const equipoVal = equipo?.NombreEquipo || '';
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
       safeSetField(form, 'Categoría', equipo?.Categoria || '');
 
       // Traducir el ID de posición a su nombre en texto
@@ -2975,8 +2982,19 @@ export default function ConfigurarEquipo() {
                       <div
                         key={doc.key}
                         className="document-card-custom"
+                        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                          const file = e.dataTransfer.files[0];
+                          if (file) handleFileUpload(doc.key, file);
+                        }}
                         style={{
-                          border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                          backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
+                          border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
                           backgroundImage: (documents[doc.key] && documents[doc.key].type !== 'application/pdf' && previews[doc.key]) ? `linear-gradient(${COLORS.overlaySlateDark}, ${COLORS.overlaySlateDeep}), url(${previews[doc.key]})` : 'none',
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',

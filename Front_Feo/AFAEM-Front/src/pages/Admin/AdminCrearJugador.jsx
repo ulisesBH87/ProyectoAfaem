@@ -200,6 +200,7 @@ export default function AdminCrearJugador() {
 
   // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
   const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
+  const [dragActive, setDragActive] = useState({});
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
@@ -579,9 +580,17 @@ export default function AdminCrearJugador() {
       }
 
       // RELLENAR CAMPOS BÁSICOS
-      safeSetField(form, 'Nombres', extractedData.nombreJugador);
-      safeSetField(form, 'Apellido Paterno', extractedData.apellidoPaterno);
-      safeSetField(form, 'Apellido Materno', extractedData.apellidoMaterno);
+      const nombreVal = extractedData.nombreJugador || '';
+      const nombreFs = nombreVal.length > 35 ? 6 : nombreVal.length > 25 ? 7 : nombreVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Nombres', nombreVal, nombreFs);
+
+      const apPaternoVal = extractedData.apellidoPaterno || '';
+      const apPaternoFs = apPaternoVal.length > 35 ? 6 : apPaternoVal.length > 25 ? 7 : apPaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Paterno', apPaternoVal, apPaternoFs);
+
+      const apMaternoVal = extractedData.apellidoMaterno || '';
+      const apMaternoFs = apMaternoVal.length > 35 ? 6 : apMaternoVal.length > 25 ? 7 : apMaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Materno', apMaternoVal, apMaternoFs);
       safeSetField(form, 'CURP o Clave Única de Registro de Población', extractedData.curp);
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
@@ -597,8 +606,13 @@ export default function AdminCrearJugador() {
       safeSetField(form, 'Asociación', 'AFAEM');
       safeSetField(form, 'fill_24', 'AFAEM');
 
-      safeSetField(form, 'Liga', extractedData.liga);
-      safeSetField(form, 'Equipo', extractedData.equipo);
+      const ligaVal = extractedData.liga || '';
+      const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Liga', ligaVal, ligaFs);
+
+      const equipoVal = extractedData.equipo || '';
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
       safeSetField(form, 'Categoría', extractedData.categoria);
 
       // Traducir el ID de Posición a su Nombre string
@@ -1041,15 +1055,27 @@ export default function AdminCrearJugador() {
                 <div
                   key={doc.key}
                   className="document-card"
+                  onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleFileUpload(doc.key, file);
+                  }}
                   style={{
-                    backgroundColor: 'white',
+                    backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
                     borderRadius: '20px',
-                    border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                    border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
                     padding: '15px',
                     textAlign: 'center',
                     transition: 'all 0.3s',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    cursor: 'pointer'
                   }}
                 >
                   <div style={{
@@ -1065,16 +1091,6 @@ export default function AdminCrearJugador() {
                     justifyContent: 'center',
                     border: `1px solid ${COLORS.slate100}`
                   }}
-
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                    }}
-
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const file = e.dataTransfer.files[0];
-                      handleFileUpload(doc.key, file);
-                    }}
                   >
                     {previews[doc.key] ? (
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -1189,7 +1205,32 @@ export default function AdminCrearJugador() {
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}
               >
                 {[{ key: 'identificacion', title: 'Identificación (INE / Pasaporte)' }].map(doc => (
-                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                  <div
+                    key={doc.key}
+                    className="document-card"
+                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) handleFileUpload(doc.key, file);
+                    }}
+                    style={{
+                      backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
+                      borderRadius: '20px',
+                      border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                      padding: '15px',
+                      textAlign: 'center',
+                      transition: 'all 0.3s',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.slate50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.slate100}` }}>
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -1221,7 +1262,31 @@ export default function AdminCrearJugador() {
             {/* ── Documento Estudiante para menores (aparece tras OCR del acta) ── */}
             {documents.actaNacimiento && extractedData.fechaNacimiento && esMenorDeEdad && (
               <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                <div className="document-card" style={{ borderRadius: '20px', border: documents.documentoEstudiante ? `2px solid ${COLORS.success}` : `2px solid ${COLORS.warningLight}`, background: documents.documentoEstudiante ? COLORS.successBgTranslucent04 : `linear-gradient(135deg,${COLORS.warningBgLight} 0%,${COLORS.warningBg} 100%)`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                <div
+                  className="document-card"
+                  onClick={() => document.getElementById('file-documentoEstudiante').click()}
+                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, documentoEstudiante: true })); }}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, documentoEstudiante: false })); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(prev => ({ ...prev, documentoEstudiante: false }));
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleFileUpload('documentoEstudiante', file);
+                  }}
+                  style={{
+                    borderRadius: '20px',
+                    border: dragActive.documentoEstudiante ? `2px solid ${COLORS.primary}` : (documents.documentoEstudiante ? `2px solid ${COLORS.success}` : `2px solid ${COLORS.warningLight}`),
+                    background: dragActive.documentoEstudiante ? 'rgba(26, 59, 92, 0.05)' : (documents.documentoEstudiante ? COLORS.successBgTranslucent04 : `linear-gradient(135deg,${COLORS.warningBgLight} 0%,${COLORS.warningBg} 100%)`),
+                    padding: '15px',
+                    textAlign: 'center',
+                    transition: 'all 0.3s',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    cursor: 'pointer'
+                  }}
+                >
                   <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                   <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.yellow50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.warningBgDark}` }}>
                     {previews.documentoEstudiante ? (
@@ -1256,7 +1321,33 @@ export default function AdminCrearJugador() {
               <>
                 <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
                   {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
-                    <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                    <div
+                      key={doc.key}
+                      className="document-card"
+                      onClick={() => {
+                        // We handle double click or dialog flow in the button/body, let's keep click target
+                      }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                        const file = e.dataTransfer.files[0];
+                        if (file) handleFileUpload(doc.key, file);
+                      }}
+                      style={{
+                        backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
+                        borderRadius: '20px',
+                        border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                        padding: '15px',
+                        textAlign: 'center',
+                        transition: 'all 0.3s',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
                       <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.slate50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.slate100}` }}>
                         {previews[doc.key] ? (
                           <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>

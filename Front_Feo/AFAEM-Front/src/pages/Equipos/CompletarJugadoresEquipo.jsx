@@ -607,6 +607,7 @@ export default function CompletarJugadoresEquipo() {
     combinaciones: []
   });
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
+  const [dragActive, setDragActive] = useState({});
 
   // Datos extraídos o capturados del jugador
   const [extractedData, setExtractedData] = useState({
@@ -756,14 +757,7 @@ export default function CompletarJugadoresEquipo() {
   };
 
   const obtenerDuplicadoPosicion = (posicionId) => {
-    if (!posicionId) return null;
-    const posVal = parseInt(posicionId, 10);
-    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
-    const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicionId))?.nombre;
-    if (!posNombre) return null;
-    return registeredPlayers.find(p =>
-      p.Rol && p.Rol.trim().toUpperCase() === posNombre.trim().toUpperCase()
-    );
+    return null;
   };
 
   const obtenerDuplicadoCURP = (curpVal) => {
@@ -1528,9 +1522,17 @@ export default function CompletarJugadoresEquipo() {
       }
 
       // Rellenar campos básicos
-      safeSetField(form, 'Nombres', extractedData.nombreJugador);
-      safeSetField(form, 'Apellido Paterno', extractedData.apellidoPaterno);
-      safeSetField(form, 'Apellido Materno', extractedData.apellidoMaterno);
+      const nombreVal = extractedData.nombreJugador || '';
+      const nombreFs = nombreVal.length > 35 ? 6 : nombreVal.length > 25 ? 7 : nombreVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Nombres', nombreVal, nombreFs);
+
+      const apPaternoVal = extractedData.apellidoPaterno || '';
+      const apPaternoFs = apPaternoVal.length > 35 ? 6 : apPaternoVal.length > 25 ? 7 : apPaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Paterno', apPaternoVal, apPaternoFs);
+
+      const apMaternoVal = extractedData.apellidoMaterno || '';
+      const apMaternoFs = apMaternoVal.length > 35 ? 6 : apMaternoVal.length > 25 ? 7 : apMaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Materno', apMaternoVal, apMaternoFs);
       safeSetField(form, 'CURP o Clave Única de Registro de Población', extractedData.curp);
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
@@ -1551,8 +1553,13 @@ export default function CompletarJugadoresEquipo() {
         try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
-      safeSetField(form, 'Liga', (equipo?.Liga || '').split('(')[0].trim());
-      safeSetField(form, 'Equipo', equipo?.NombreEquipo || '');
+      const ligaVal = (equipo?.Liga || '').split('(')[0].trim();
+      const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Liga', ligaVal, ligaFs);
+
+      const equipoVal = equipo?.NombreEquipo || '';
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
       safeSetField(form, 'Categoría', equipo?.Categoria || '');
 
       // Traducir el ID de posición a su nombre en texto
@@ -2332,15 +2339,27 @@ export default function CompletarJugadoresEquipo() {
                   <div
                     key={doc.key}
                     className="document-card"
+                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) handleFileUpload(doc.key, file);
+                    }}
                     style={{
-                      backgroundColor: 'white',
+                      backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
                       borderRadius: '20px',
-                      border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                      border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
                       padding: '15px',
                       textAlign: 'center',
                       transition: 'all 0.3s',
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      cursor: 'pointer'
                     }}
                   >
                     {/* Indicador de Menor para tutor/credencial */}
@@ -2361,11 +2380,6 @@ export default function CompletarJugadoresEquipo() {
                       justifyContent: 'center',
                       border: `1px solid ${COLORS.slate100}`
                     }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        handleFileUpload(doc.key, e.dataTransfer.files[0]);
-                      }}
                     >
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>

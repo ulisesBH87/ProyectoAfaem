@@ -297,6 +297,7 @@ function PreRegistroPresidente() {
 
   // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
+  const [dragActive, setDragActive] = useState({});
   const [documentosGuardados, setDocumentosGuardados] = useState([]);
   const [ocrResults, setOcrResults] = useState(() => {
     try {
@@ -1640,28 +1641,37 @@ function PreRegistroPresidente() {
 
       const { nombreSolo, primerApellido, segundoApellido, nombre, curp, fecha_nac, nacionalidad } = ocrResults;
 
-      // Rellenar Nombre(s), Apellido Paterno, Apellido Materno
+      let nombresVal = '';
+      let apPaternoVal = '';
+      let apMaternoVal = '';
+
       if (nombreSolo || primerApellido || segundoApellido) {
-        if (primerApellido) safeSetField(form, 'Apellido Paterno', primerApellido.toUpperCase());
-        if (segundoApellido) safeSetField(form, 'Apellido Materno', segundoApellido.toUpperCase());
-        if (nombreSolo) safeSetField(form, 'Nombres', nombreSolo.toUpperCase());
+        if (nombreSolo) nombresVal = nombreSolo.toUpperCase();
+        if (primerApellido) apPaternoVal = primerApellido.toUpperCase();
+        if (segundoApellido) apMaternoVal = segundoApellido.toUpperCase();
       } else if (nombre && nombre !== "No detectado") {
         const parts = nombre.split(' ');
         if (parts.length === 4) {
-          safeSetField(form, 'Nombres', parts.slice(0, 2).join(' ').toUpperCase());
-          safeSetField(form, 'Apellido Paterno', parts[2].toUpperCase());
-          safeSetField(form, 'Apellido Materno', parts[3].toUpperCase());
+          nombresVal = parts.slice(0, 2).join(' ').toUpperCase();
+          apPaternoVal = parts[2].toUpperCase();
+          apMaternoVal = parts[3].toUpperCase();
         } else if (parts.length === 3) {
-          safeSetField(form, 'Nombres', parts[0].toUpperCase());
-          safeSetField(form, 'Apellido Paterno', parts[1].toUpperCase());
-          safeSetField(form, 'Apellido Materno', parts[2].toUpperCase());
+          nombresVal = parts[0].toUpperCase();
+          apPaternoVal = parts[1].toUpperCase();
+          apMaternoVal = parts[2].toUpperCase();
         } else if (parts.length === 2) {
-          safeSetField(form, 'Nombres', parts[0].toUpperCase());
-          safeSetField(form, 'Apellido Paterno', parts[1].toUpperCase());
+          nombresVal = parts[0].toUpperCase();
+          apPaternoVal = parts[1].toUpperCase();
         } else {
-          safeSetField(form, 'Nombres', nombre.toUpperCase());
+          nombresVal = nombre.toUpperCase();
         }
       }
+
+      const getFs = (val) => val.length > 35 ? 6 : val.length > 25 ? 7 : val.length > 18 ? 8 : 10;
+
+      if (nombresVal) safeSetField(form, 'Nombres', nombresVal, getFs(nombresVal));
+      if (apPaternoVal) safeSetField(form, 'Apellido Paterno', apPaternoVal, getFs(apPaternoVal));
+      if (apMaternoVal) safeSetField(form, 'Apellido Materno', apMaternoVal, getFs(apMaternoVal));
 
       // CURP
       if (curp && curp !== "No detectado") {
@@ -1707,12 +1717,13 @@ function PreRegistroPresidente() {
         const selectedLigaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
         if (selectedLigaObj) {
           const nameStr = selectedLigaObj.nombre.split('(')[0].trim().toUpperCase();
-          // Hacemos la letra más pequeña si el nombre de la liga es largo para evitar desbordes
-          const fontSize = nameStr.length > 25 ? 6 : (nameStr.length > 15 ? 8 : 10);
+          const fontSize = nameStr.length > 35 ? 6 : nameStr.length > 25 ? 7 : nameStr.length > 18 ? 8 : 10;
           safeSetField(form, 'Liga', nameStr, fontSize);
         }
       }
-      safeSetField(form, 'Equipo', (ocrResults.equipo || '').toUpperCase());
+      const equipoVal = (ocrResults.equipo || '').toUpperCase();
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
 
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
@@ -3554,8 +3565,34 @@ function PreRegistroPresidente() {
                             document.getElementById(`file-${doc.documento}`).click();
                           }
                         }}
+                        onDragEnter={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: true })); } }}
+                        onDragOver={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); } }}
+                        onDragLeave={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: false })); } }}
+                        onDrop={(e) => {
+                          if (isApproved) return;
+                          if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                          }
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragActive(prev => ({ ...prev, [doc.documento]: false }));
+                          const file = e.dataTransfer.files[0];
+                          if (file) {
+                            if (!validarArchivoPermitido(file)) return;
+                            if (docGuardado) {
+                              handleReemplazarDocumento(docAfiliacionId, file);
+                              setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                            } else {
+                              handleFileUpload(doc.documento, file);
+                            }
+                          }
+                        }}
                         style={{
-                          cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer')
+                          cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'),
+                          border: dragActive[doc.documento] ? `2px solid ${COLORS.primary}` : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                          backgroundColor: dragActive[doc.documento] ? 'rgba(26, 59, 92, 0.05)' : undefined
                         }}
                       >
                         {/* Top sheen */}
@@ -4064,8 +4101,50 @@ function PreRegistroPresidente() {
                         document.getElementById(`file-val-${doc.documento}`).click();
                       }
                     }}
+                    onDragEnter={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: true })); } }}
+                    onDragOver={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); } }}
+                    onDragLeave={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: false })); } }}
+                    onDrop={async (e) => {
+                      if (isApproved) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) {
+                        if (!validarArchivoPermitido(file)) return;
+                        
+                        try {
+                          const metadata = JSON.parse(localStorage.getItem('afaem_doc_metadata') || '{}');
+                          const previousFile = metadata[doc.documento];
+                          if (previousFile && previousFile.size === file.size) {
+                            const result = await Swal.fire({
+                              title: '¿Subir el mismo archivo?',
+                              text: 'Parece que estás intentando subir exactamente el mismo archivo que subiste anteriormente. Por favor, asegúrate de subir el documento con las correcciones correspondientes. ¿Deseas continuar de todos modos?',
+                              icon: 'warning',
+                              showCancelButton: true,
+                              confirmButtonText: 'Sí, subir',
+                              cancelButtonText: 'Cancelar',
+                              confirmButtonColor: COLORS.primary,
+                              cancelButtonColor: COLORS.slate400
+                            });
+                            if (!result.isConfirmed) return;
+                          }
+                        } catch (err) {
+                          console.warn("Error verifying file metadata duplicate:", err);
+                        }
+
+                        if (docGuardado) {
+                          handleReemplazarDocumento(docAfiliacionId, file);
+                          setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                        } else {
+                          handleFileUpload(doc.documento, file);
+                        }
+                      }
+                    }}
                     style={{
-                      cursor: isApproved ? 'default' : 'pointer'
+                      cursor: isApproved ? 'default' : 'pointer',
+                      border: dragActive[`val-${doc.documento}`] ? `2px solid ${COLORS.primary}` : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                      backgroundColor: dragActive[`val-${doc.documento}`] ? 'rgba(26, 59, 92, 0.05)' : undefined
                     }}
                   >
                     {/* Top sheen */}

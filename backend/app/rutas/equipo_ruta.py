@@ -391,23 +391,7 @@ async def agregar_jugador_equipo_existente(
             ):
                 raise HTTPException(400, f"El número de camiseta {camista_num} ya está asignado a otro jugador en este equipo.")
 
-        # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
-        if rol_id != 11:
-            dup_rol = db.query(MiembrosEquipo).filter(
-                MiembrosEquipo.EquipoID == equipo_jugando.EquiposJugandoId,
-                MiembrosEquipo.RolEnEquipo == rol_id,
-                MiembrosEquipo.Eliminado == False
-            ).first()
-            if dup_rol or any(
-                isinstance(obj, MiembrosEquipo) and
-                obj.EquipoID == equipo_jugando.EquiposJugandoId and
-                obj.RolEnEquipo == rol_id and
-                not obj.Eliminado
-                for obj in db.new
-            ):
-                from app.modelos.rol_equipo_modelo import RolesDeEquipo
-                rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_id).scalar() or "esta posición"
-                raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
 
         nuevo_miembro = MiembrosEquipo(
             PersonaId=nueva_persona.PersonaId,

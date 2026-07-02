@@ -32,6 +32,7 @@ export default function DocumentCard({
   disabledUpload,
 }) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const uploaded = !!documents[doc.documento];
   const ocrDone = doc.ocr && ocrResults[doc.documento];
   const isPhoto = doc.documento === 'fotografia';
@@ -86,9 +87,25 @@ export default function DocumentCard({
     <div
       className="rp-document-card"
       onClick={triggerUploadFlow}
+      onDragEnter={e => { if (!disabledUpload) { e.preventDefault(); e.stopPropagation(); setIsDragging(true); } }}
+      onDragOver={e => { if (!disabledUpload) { e.preventDefault(); e.stopPropagation(); } }}
+      onDragLeave={e => { if (!disabledUpload) { e.preventDefault(); e.stopPropagation(); setIsDragging(false); } }}
+      onDrop={e => {
+        if (disabledUpload) {
+          e.preventDefault();
+          e.stopPropagation();
+          Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileUpload(doc.documento, file);
+      }}
       style={{
-        position: 'relative', background: C.card,
-        border: `1px solid ${uploaded ? COLORS.greenBgTranslucent20 : C.cardBorder}`,
+        position: 'relative', background: isDragging ? 'rgba(26, 59, 92, 0.05)' : C.card,
+        border: isDragging ? `2px solid ${COLORS.primary}` : `1px solid ${uploaded ? COLORS.greenBgTranslucent20 : C.cardBorder}`,
         borderRadius: 14, padding: '12px 14px', paddingTop: 34,
         display: 'flex', flexDirection: 'column',
         transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s',
@@ -116,17 +133,6 @@ export default function DocumentCard({
         }}
         onMouseEnter={e => { const o = e.currentTarget.querySelector('.overlay-actions'); if (o) o.style.opacity = '1'; }}
         onMouseLeave={e => { const o = e.currentTarget.querySelector('.overlay-actions'); if (o) o.style.opacity = '0'; }}
-        onDragOver={e => { if (!disabledUpload) e.preventDefault(); }}
-        onDrop={e => { 
-          if (disabledUpload) {
-            e.preventDefault();
-            Swal.fire('Atención', 'Debes llenar todos los campos y subir los demás documentos antes de subir el Formato de Afiliación.', 'warning');
-            return;
-          }
-          e.preventDefault(); 
-          const file = e.dataTransfer.files[0]; 
-          if (file) handleFileUpload(doc.documento, file); 
-        }}
       >
         {previews[doc.documento] ? (
           <>
