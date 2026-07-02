@@ -1247,8 +1247,7 @@ export default function AdminJugadores() {
           ...(lastNameP && { primerApellido: lastNameP }),
           ...(lastNameM && { segundoApellido: lastNameM }),
           ...(curpEncontrada && { curp: curpEncontrada }),
-          ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada }),
-          ...(NUI && { NUI: NUI })
+          ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada })
         }));
         setHaCambiado(true);
 
