@@ -5,13 +5,12 @@ import requests
 import difflib
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, request
-from google.cloud import vision
+import pytesseract
 from datetime import datetime
 import fitz
 import unicodedata
 import cv2
 import numpy as np
-
 
 try:
     from dotenv import load_dotenv
@@ -19,28 +18,17 @@ try:
 except ImportError:
     pass
 
-credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if credentials_path:
-    # Repair common backslash escape sequence replacements caused by environment/dotenv parsers
-    # (e.g. \f in \faemocr becoming form-feed \x0c, or \a in \afaemocr becoming bell \x07)
-    credentials_path = (
-        credentials_path.replace('\x0c', '\\f')
-        .replace('\x07', '\\a')
-        .replace('\x08', '\\b')
-        .replace('\x09', '\\t')
-        .replace('\x0a', '\\n')
-        .replace('\x0d', '\\r')
-    )
+# Configuración de ruta para ejecutable de Tesseract
+tesseract_cmd = os.getenv("TESSERACT_CMD")
+if not tesseract_cmd:
+    typical_win_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if os.path.exists(typical_win_path):
+        tesseract_cmd = typical_win_path
 
-if not credentials_path:
-    credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "afaemocr-e6153e55388c.json")
-elif not os.path.isabs(credentials_path):
-    credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), credentials_path)
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+if tesseract_cmd:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
 app = Flask(__name__)
-
-# --- TUS FUNCIONES DE API Y CÁLCULO SE MANTIENEN INTACTAS ---
 
 VERIFIED_CURPS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verified_curps.json")
 
@@ -143,7 +131,7 @@ def calcular_datos_curp(curp):
         fecha_nac = datetime(anio, mm, dd)
         hoy = datetime.now()
         edad = hoy.year - anio - ((hoy.month, hoy.day) < (mm, dd))
-        return edad, fecha_nac.strftime("%Y-%m-%d")
+        return edad, fecha_nac.strftime("%d/%m/%Y")
     except:
         return "No calculada", "No detectada"
 
@@ -152,7 +140,6 @@ def calcular_datos_curp(curp):
 def normalizar_texto(texto):
     """Quita acentos y caracteres raros para estandarizar el texto"""
     if not texto: return ""
-    # Remove parenthesized (S) or (s) to avoid turning into a standalone 'S'
     texto = re.sub(r'\([Ss]\)', '', texto)
     texto = unicodedata.normalize('NFKD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
     texto = re.sub(r'[^A-Z0-9\s<]', ' ', texto.upper())
@@ -352,7 +339,6 @@ def extraer_por_proximidad_etiquetas(texto_crudo, curp):
                     
     return None
 
-
 def validar_candidato_nombre(nombres, ap1, ap2, discarded_list=None):
     n_val = normalizar_texto(nombres)
     a1_val = normalizar_texto(ap1)
@@ -368,7 +354,6 @@ def validar_candidato_nombre(nombres, ap1, ap2, discarded_list=None):
             discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Field length > 30 characters")
         return False
         
-    # Reject fields containing digits
     for field_val, field_name in [(n_val, "Nombres"), (a1_val, "Paterno"), (a2_val, "Materno")]:
         if field_val and any(c.isdigit() for c in field_val):
             if discarded_list is not None:
@@ -385,6 +370,19 @@ def validar_candidato_nombre(nombres, ap1, ap2, discarded_list=None):
                     discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Field '{field_name}' contains blacklist word '{w}'")
                 return False
                 
+    # Filtrar palabras demasiado cortas que no sean preposiciones o abreviaturas comunes
+    ALLOWED_SHORT_WORDS = {"DE", "DEL", "LA", "LAS", "LOS", "EL", "Y", "MA", "ME", "DO", "DI", "DA", "UN", "AL", "TO", "FE", "JO"}
+    for field_val, field_name in [(n_val, "Nombres"), (a1_val, "Paterno"), (a2_val, "Materno")]:
+        if not field_val:
+            continue
+        words = field_val.split()
+        for w in words:
+            if len(w) <= 2:
+                if w not in ALLOWED_SHORT_WORDS and not w.endswith('.'):
+                    if discarded_list is not None:
+                        discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Field '{field_name}' contains invalid short word '{w}'")
+                    return False
+
     if n_val in INVALID_SINGLE_WORDS:
         if discarded_list is not None:
             discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Nombres is a single grammatical word '{n_val}'")
@@ -413,7 +411,6 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
         if norm and not contiene_basura(norm):
             lineas.append((idx, norm))
             
-    # Scan standard order: NOMBRES APELLIDO1 APELLIDO2
     for original_idx, line in lineas:
         partes = line.split()
         n = len(partes)
@@ -437,7 +434,6 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
                         if discarded_list is not None:
                             discarded_list.append(f"({nombres}, {ap1}, {ap2}) -> Discarded: Does not match CURP prefix")
                         
-    # Scan reverse order: APELLIDO1 APELLIDO2 NOMBRES
     for original_idx, line in lineas:
         partes = line.split()
         n = len(partes)
@@ -466,7 +462,6 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
 def extraer_curp_segura(texto):
     """Extrae la CURP usando Expresiones Regulares estrictas"""
     texto_limpio = texto.replace(" ", "").replace("\n", "").upper()
-    # Patrón estricto de CURP Mexicana
     match = re.search(r'[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d', texto_limpio)
     return match.group(0) if match else "No detectado"
 
@@ -481,7 +476,6 @@ def determinar_tipo_documento(texto_up):
         return "CURP"
     return "DOCUMENTO NO RECONOCIDO"
 
-# --- EL CEREBRO DE EXTRACCIÓN (NUEVO) ---
 def obtener_estado_curp(curp):
     estados = {
         "AS": "AGUASCALIENTES",
@@ -518,25 +512,18 @@ def obtener_estado_curp(curp):
         "ZS": "ZACATECAS",
         "NE": "NACIDO EN EL EXTRANJERO"
     }
-
     if curp and len(curp) >= 13:
         clave_estado = curp[11:13]
         return estados.get(clave_estado, "No detectado")
-
     return "No detectado"
-
 
 def extraer_nombre_mrz(texto_crudo):
     """Busca el nombre en las líneas de código <<< (INE reverso y Pasaporte)"""
     texto_lineal = texto_crudo.replace(" ", "")
-    
-    # 1. Intentar formato INE reverso (IDMEX)
-    # Ej: IDMEX1234567891<<1234... \n 900101M2512314MEX<02<<...\n APELLIDO<PATERNO<MATERNO<<NOMBRES<
     lineas = texto_crudo.split('\n')
     for i, linea in enumerate(lineas):
         l_limpia = linea.replace(" ", "")
         if "<<" in l_limpia and not l_limpia.startswith("IDMEX") and not l_limpia[0].isdigit():
-            # Suele ser la tercera línea del MRZ
             partes = l_limpia.split("<<")
             if len(partes) >= 2:
                 apellidos = partes[0].replace("<", " ").strip()
@@ -553,7 +540,6 @@ def extraer_nombre_mrz(texto_crudo):
                         "origen": "MRZ Match"
                     }
 
-    # 2. Intentar formato Pasaporte (P<MEX)
     match_pasaporte = re.search(r'P<MEX([A-Z<]+)<<([A-Z<]+)', texto_lineal)
     if match_pasaporte:
         apellidos = match_pasaporte.group(1).replace("<", " ").strip()
@@ -579,11 +565,8 @@ def corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto_crudo
             return ap
             
         ap_norm = normalizar_texto(ap)
-        
-        # Check if we can find a longer version in text that matches CURP better (e.g. ROJA -> ROJAS)
         for w in words_in_text:
             if w != ap_norm and w.startswith(ap_norm) and len(w) <= len(ap_norm) + 2:
-                # Check if this word starts with curp_char
                 if letters_match_or_similar(curp_char, w[0]):
                     if w not in BLACKLISTED_WORDS:
                         return w
@@ -595,33 +578,24 @@ def corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto_crudo
     return new_ap1, new_ap2
 
 def corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo):
-    # Normalize inputs
     n_norm = normalizar_texto(nombres) if nombres else ""
     ap1_norm = normalizar_texto(ap1) if ap1 else ""
     ap2_norm = normalizar_texto(ap2) if ap2 else ""
     
     lineas = [normalizar_texto(l) for l in texto_crudo.split('\n') if l.strip()]
     
-    # Function to check one surname
     def corregir_uno(apellido, resto_completo):
         if not apellido or len(apellido) <= 2 or not apellido.endswith('S'):
             return apellido
             
         sin_s = apellido[:-1]
-        
-        # Check A: Does the singular form appear in another line of the text?
-        # e.g., "GALICIA" appears as a standalone word in some line of texto_crudo
         for l in lineas:
-            # Make sure we don't look at a line that is just the current candidate name line
-            # or the line containing the exact full name we are validating.
             if l == resto_completo or l == f"{n_norm} {ap1_norm} {ap2_norm}".strip():
                 continue
             words_in_line = l.split()
             if sin_s in words_in_line and apellido not in words_in_line:
                 return sin_s
                 
-        # Check B: Is the word isolated?
-        # A word is isolated if it appears as a line of its own (or with minor noise)
         is_isolated = False
         for l in lineas:
             if l == apellido:
@@ -629,8 +603,6 @@ def corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo):
                 break
                 
         if is_isolated:
-            # Is the rest of the name present in another line?
-            # The rest of the name can be just nombres, or nombres + other surname
             resto_candidates = [n_norm, f"{n_norm} {ap1_norm}".strip(), f"{n_norm} {ap2_norm}".strip()]
             resto_found = False
             for rc in resto_candidates:
@@ -660,7 +632,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
     raw_lines = texto_crudo.split('\n')
     lines_norm = [normalizar_texto(l) for l in raw_lines]
     
-    # 2. Buscar líneas de etiquetas que contengan al menos dos de estas palabras: NOMBRE, PRIMER, SEGUNDO, APELLIDO
     LABEL_WORDS = {"NOMBRE", "PRIMER", "SEGUNDO", "APELLIDO"}
     
     for idx, l in enumerate(lines_norm):
@@ -669,8 +640,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
         if len(matching) >= 2:
             log_lines.append(f"Label line matched at index {idx}: '{l}' (matched: {list(matching)})")
             
-            # 3. Revisar las 1 a 3 líneas anteriores
-            # Check idx-1, idx-2, idx-3
             for offset in [1, 2, 3]:
                 prev_idx = idx - offset
                 if prev_idx < 0:
@@ -681,37 +650,30 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
                 
                 log_lines.append(f"  Evaluating candidate line at index {prev_idx}: '{candidate_raw}'")
                 
-                # Check A: Tenga entre 3 y 5 palabras
                 if not (3 <= len(candidate_words) <= 5):
                     log_lines.append(f"    -> Discarded: word count is {len(candidate_words)} (must be between 3 and 5)")
                     continue
                     
-                # Check B: No contenga números
                 if any(c.isdigit() for c in candidate_raw):
                     log_lines.append(f"    -> Discarded: contains digits")
                     continue
                     
-                # Check C: No contenga palabras basura
                 NOISE_WORDS = {"SEXO", "FECHA", "NACIMIENTO", "LUGAR", "CUAUTLA", "MORELOS", "HOMBRE", "MUJER", "MEXICANOS", "UNIDOS", "ESTADOS"}
                 found_noise = NOISE_WORDS & set(candidate_words)
                 if found_noise:
                     log_lines.append(f"    -> Discarded: contains noise/garbage words {list(found_noise)}")
                     continue
                     
-                # Check D: Esté en mayúsculas o sea normalizable a mayúsculas
                 if not any(c.isalpha() for c in candidate_norm):
                     log_lines.append(f"    -> Discarded: does not contain alphabetic characters")
                     continue
                     
-                # Found candidate!
                 log_lines.append(f"    -> SELECTED CANDIDATE: '{candidate_raw}'")
                 
-                # Split candidate:
                 ap2 = candidate_words[-1]
                 ap1 = candidate_words[-2]
                 nombres = " ".join(candidate_words[:-2])
                 
-                # S-contamination cleanup
                 ap1_clean, ap2_clean = corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo)
                 if ap1_clean != ap1:
                     log_lines.append(f"    -> Cleaned S-contamination from ap1: '{ap1}' -> '{ap1_clean}'")
@@ -720,7 +682,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
                     log_lines.append(f"    -> Cleaned S-contamination from ap2: '{ap2}' -> '{ap2_clean}'")
                     ap2 = ap2_clean
                     
-                # CURP / Evidence correction
                 txt_for_evidence = texto_original if texto_original else texto_crudo
                 ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, txt_for_evidence)
                 if ap1_ev != ap1:
@@ -735,7 +696,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
                 log_lines.append(f"    -> Result: Nombres='{nombres}', Ap1='{ap1}', Ap2='{ap2}', Completo='{nombre_completo}'")
                 log_lines.append("=== EXTRAER NOMBRE ACTA POR LINEAS CRUDAS END ===")
                 
-                # Log to ocr_output.log
                 try:
                     with open("ocr_output.log", "a", encoding="utf-8") as f_log:
                         f_log.write("\n".join(log_lines) + "\n")
@@ -753,7 +713,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
     log_lines.append("  No matching candidate found in the evaluated lines before labels.")
     log_lines.append("=== EXTRAER NOMBRE ACTA POR LINEAS CRUDAS END ===")
     
-    # Log to ocr_output.log
     try:
         with open("ocr_output.log", "a", encoding="utf-8") as f_log:
             f_log.write("\n".join(log_lines) + "\n")
@@ -763,7 +722,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
     return None
 
 def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None):
-    """Extrae datos basándose en anclas y estructura, no borrando basura"""
     texto_norm = normalizar_texto(texto_crudo)
     lineas = [normalizar_texto(l) for l in texto_crudo.split('\n') if l.strip()]
     
@@ -772,7 +730,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
         "apellido_paterno": "No detectado", "apellido_materno": "No detectado"
     }
 
-    # PRIORIDAD 1: Si hay MRZ, es la verdad absoluta.
     mrz_datos = extraer_nombre_mrz(texto_crudo)
     if mrz_datos:
         return mrz_datos
@@ -780,9 +737,7 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
     discarded_list = []
     candidatos_encontrados = []
 
-    # PRIORIDAD 2: Extracción por anclas según documento
     if tipo_doc == "INE":
-        # En el INE frontal, el nombre suele estar en 3 líneas debajo de la palabra "NOMBRE"
         for i, linea in enumerate(lineas):
             if linea == "NOMBRE":
                 if i + 3 < len(lineas):
@@ -790,7 +745,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                     ap2 = lineas[i+2]
                     nombres = lineas[i+3]
                     
-                    # Evitar que se coma otras etiquetas si el nombre es corto
                     if "DOMICILIO" not in nombres and "EDAD" not in ap1:
                         datos["apellido_paterno"] = ap1
                         datos["apellido_materno"] = ap2
@@ -801,8 +755,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
 
     elif tipo_doc == "ACTA DE NACIMIENTO":
         matched_candidate = None
-
-        # Determine header line index to ignore lines before headers
         header_keywords = ["ESTADOS UNIDOS MEXICANOS", "REGISTRO CIVIL", "ACTA DE NACIMIENTO", "CERTIFICADO DE NACIMIENTO"]
         first_header_idx = 0
         for idx, l in enumerate(lineas):
@@ -810,7 +762,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 first_header_idx = idx
                 break
 
-        # Try mashed layout first: DATOS DEL REGISTRADO [nombres] NOMBRE [ap1] PRIMER APELLIDO [ap2] SEGUNDO APELLIDO
         patron_mashed = re.search(
             r'DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)($|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO)\b)',
             texto_norm
@@ -820,7 +771,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
         if patron_mashed:
             patron = patron_mashed
         else:
-            # Buscar estructura oficial moderna standard
             patron = re.search(
                 r'NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)($|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO)\b)',
                 texto_norm
@@ -831,12 +781,10 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             ap1 = patron.group(2).strip()
             ap2 = patron.group(3).strip()
 
-            # Clean leading single-letter noise (often OCR noise like 'S' from 'NOMBRE(S)')
             n_words = nombres.split()
             if n_words and len(n_words[0]) <= 1:
                 nombres = " ".join(n_words[1:])
 
-            # Clean blacklisted words from each field
             if contiene_basura(nombres) or nombres in INVALID_SINGLE_WORDS: nombres = ""
             if contiene_basura(ap1) or ap1 in INVALID_SINGLE_WORDS: ap1 = ""
             if contiene_basura(ap2) or ap2 in INVALID_SINGLE_WORDS: ap2 = ""
@@ -861,7 +809,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             else:
                 discarded_list.append(f"({nombres}, {ap1}, {ap2}) [Anchor Regex] -> Rejected: Failed validation checks")
 
-        # Fallback simple
         patron_simple = re.search(
             r'DATOS\s+DEL\s+REGISTRADO.*?NOMBRE\s+([A-Z\s]+)',
             texto_norm
@@ -869,24 +816,18 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
 
         if patron_simple:
             nombre_linea = patron_simple.group(1).strip()
-
-            # Cortar basura frecuente
             nombre_linea = re.split(
                 r'FECHA|SEXO|CURP|NACIONALIDAD|ENTIDAD|MUNICIPIO',
                 nombre_linea
             )[0].strip()
 
-            # Limpiar palabras basura del OCR
             PALABRAS_BASURA = [
                 "OFICIALIA", "LIBRO", "ACTA", "LOCALIDAD", "MUNICIPIO", "ENTIDAD", "CRIP", "REGISTRADO", "DATOS"
             ]
-
             for basura in PALABRAS_BASURA:
                 nombre_linea = nombre_linea.replace(basura, "")
 
-            # Limpiar espacios dobles
             nombre_linea = re.sub(r'\s+', ' ', nombre_linea).strip()
-
             partes = nombre_linea.split()
 
             if len(partes) >= 3:
@@ -894,7 +835,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 ap1_val = partes[-2]
                 ap2_val = partes[-1]
 
-                # Clean blacklisted words from each field
                 if contiene_basura(nombres_val) or nombres_val in INVALID_SINGLE_WORDS: nombres_val = ""
                 if contiene_basura(ap1_val) or ap1_val in INVALID_SINGLE_WORDS: ap1_val = ""
                 if contiene_basura(ap2_val) or ap2_val in INVALID_SINGLE_WORDS: ap2_val = ""
@@ -918,19 +858,16 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 else:
                     discarded_list.append(f"({nombres_val}, {ap1_val}, {ap2_val}) [Simple Regex] -> Rejected: Failed validation checks")
 
-        # Fallback to candidate line search matching CURP
         if curp != "No detectado":
             res_curp = buscar_nombre_por_curp(texto_crudo, curp, discarded_list, first_header_idx)
             if res_curp:
                 candidatos_encontrados.append(res_curp)
 
-        # Fallback de proximidad por etiquetas si no se encontró candidato lineal
         if not candidatos_encontrados:
             res_prox = extraer_por_proximidad_etiquetas(texto_crudo, curp)
             if res_prox:
                 candidatos_encontrados.append(res_prox)
 
-        # Print/Log candidate verification diagnostics
         try:
             with open("ocr_output.log", "a", encoding="utf-8") as log_file:
                 log_file.write("\n=== OCR NAME CANDIDATES SEARCH DIAGNOSTICS ===\n")
@@ -945,7 +882,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
         except Exception as e:
             print(f"[ERROR] Failed to write diagnostics to log: {str(e)}")
 
-        # Decision
         if candidatos_encontrados:
             final_cand = candidatos_encontrados[0]
             nombres = final_cand["nombres"]
@@ -958,7 +894,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             if ap2_clean != ap2:
                 ap2 = ap2_clean
                 
-            # CURP / Evidence correction
             txt_for_evidence = texto_original if texto_original else texto_crudo
             ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, txt_for_evidence)
             if ap1_ev != ap1:
@@ -981,14 +916,11 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 datos["nombre_completo"] = res_raw["nombre_completo"]
                 datos["origen"] = res_raw["origen"]
                 return datos
-            # Return empty/No detectado fields rather than incorrect labels
             return datos
 
-    # PRIORIDAD 3: Rescate Genérico si todo falla (for non birth certificates)
     if curp != "No detectado":
         for i, linea in enumerate(lineas):
             if curp in linea.replace(" ", ""):
-                # El nombre suele estar arriba de la CURP
                 if i > 0 and len(lineas[i-1].split()) >= 2:
                     candidato = lineas[i-1]
                     partes = candidato.split()
@@ -1047,7 +979,6 @@ def procesar_texto(texto, vision_response=None):
     except Exception as log_ex:
         print(f"[ERROR] Failed to write initial OCR logs: {str(log_ex)}")
 
-    # Slice the text to only include the registered person's data (exclude parents/filiacion data)
     texto_upper = texto.upper()
     filiacion_idx = -1
     for keyword in ["FILIACION", "FILIACIÓN", "DATOS DE FILIACION", "DATOS DE FILIACIÓN", "DATOS DE LOS PADRES", "PADRES", "PROGENITORES"]:
@@ -1063,9 +994,8 @@ def procesar_texto(texto, vision_response=None):
 
     texto_norm = normalizar_texto(texto_para_procesar)
     tipo_doc = determinar_tipo_documento(texto_norm)
-    curp = extraer_curp_segura(texto) # Scan full text for CURP
+    curp = extraer_curp_segura(texto)
     
-    # Extraer Nombres
     info_doc = None
     edad = "No calculada"
     fecha_nac = "No detectada"
@@ -1085,7 +1015,6 @@ def procesar_texto(texto, vision_response=None):
             if ap2_clean != ap2:
                 ap2 = ap2_clean
                 
-            # CURP / Evidence correction
             ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto)
             if ap1_ev != ap1:
                 ap1 = ap1_ev
@@ -1106,28 +1035,25 @@ def procesar_texto(texto, vision_response=None):
             if spatial_data["lugar_nacimiento"] != "No detectado":
                 lugar_nac = spatial_data["lugar_nacimiento"]
 
-    # Fallback to standard intelligence extraction if layout failed or wasn't run
     if not info_doc or not info_doc["nombres"] or info_doc["nombres"] == "No detectado":
         info_doc = extraer_datos_inteligentes(texto_para_procesar, tipo_doc, curp, texto_original=texto)
 
-    # Extraer Datos Fijos de CURP (Lo más seguro)
     if curp != "No detectado":
         edad, curp_fecha = calcular_datos_curp(curp)
         if fecha_nac == "No detectada" or not fecha_nac:
             fecha_nac = curp_fecha
         letra_sexo = curp[10]
-        curp_sexo = "MASCULINO" if letra_sexo == 'H' else "FEMENINO" if letra_sexo == 'M' else "OTRO"
+        curp_sexo = "HOMBRE" if letra_sexo == 'H' else "MUJER" if letra_sexo == 'M' else "OTRO"
         if sexo == "No detectado" or not sexo:
             sexo = curp_sexo
     else:
         if sexo == "No detectado" or not sexo:
             texto_upper_proc = texto_norm.upper()
             if "FEMENINO" in texto_upper_proc or "MUJER" in texto_upper_proc:
-                sexo = "FEMENINO"
+                sexo = "MUJER"
             elif "MASCULINO" in texto_upper_proc or "HOMBRE" in texto_upper_proc:
-                sexo = "MASCULINO"
+                sexo = "HOMBRE"
 
-    # Ubicaciones y Estado
     lugar_nac_text, lugar_res = extraer_ubicaciones(texto_para_procesar, tipo_doc)
     if lugar_nac == "No detectado" or not lugar_nac:
         lugar_nac = lugar_nac_text
@@ -1154,6 +1080,7 @@ def procesar_texto(texto, vision_response=None):
         "fecha_nac": fecha_nac,
         "edad": f"{edad} años" if isinstance(edad, int) else edad,
         "estado": estado,
+        "clasificacion": estado,
         "validacion": validacion_api,
         "texto_crudo": texto
     }
@@ -1205,23 +1132,13 @@ def preprocesar_imagen_acta(image_content):
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img is None:
             return None
-            
-        # 1. Convierte a escala de grises maximizando canales de color para desvanecer marcas de agua claras/verdes/grises
         gray = np.max(img, axis=2)
-        
-        # 2. Aumentar contraste del texto principal con CLAHE
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         contrast = clahe.apply(gray)
-        
-        # 3. Aplicar binarización adaptativa (Gaussian) para remover sombreado y patrones de fondo
         binarized = cv2.adaptiveThreshold(
             contrast, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 25, 15
         )
-        
-        # 4. Limpieza ligera de ruido (median blur)
         cleaned = cv2.medianBlur(binarized, 3)
-        
-        # Codificar de vuelta a bytes PNG
         _, encoded_img = cv2.imencode('.png', cleaned)
         return encoded_img.tobytes()
     except Exception as e:
@@ -1253,10 +1170,6 @@ def limpiar_contaminacion_s(valor, ocr_text_alternativo):
     return " ".join(palabras_limpias)
 
 def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
-    """
-    Extrae los datos del acta de nacimiento usando las coordenadas de las palabras (boundingPoly).
-    Retorna un diccionario con: nombres, apellido_paterno, apellido_materno, sexo, fecha_nac, lugar_nacimiento, origen.
-    """
     if not vision_response:
         return None
 
@@ -1269,7 +1182,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
     if not annotations or len(annotations) <= 1:
         return None
 
-    # Build the words list with coordinates
     words = []
     for annot in annotations[1:]:
         if hasattr(annot, 'description'):
@@ -1328,7 +1240,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
         avg_y = sum(w['y'] for w in line) / len(line)
         log_lines.append(f"  Line {idx:02d} (Y={avg_y:.1f}): {line_txt}")
     
-    # Identify Vertical Region
     y_start = None
     y_end = None
     
@@ -1347,7 +1258,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                 log_lines.append(f"Start Header matched: '{line_txt}' -> y_start={y_start}")
                 break
 
-    # Adjust y_start if labels appear above it
     y_label_min = None
     for line in all_lines:
         line_txt = normalizar_texto(" ".join(w['text'] for w in line))
@@ -1433,11 +1343,9 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             w = line[i]
             norm = normalizar_texto(w['text'])
             
-            # Check two-word phrases first
             if i + 1 < len(line):
                 w_next = line[i+1]
                 phrase2 = normalizar_texto(w['text'] + " " + w_next['text'])
-                
                 if phrase2 in ["PRIMER APELLIDO", "APELLIDO PATERNO", "APELLIDOPATERNO"]:
                     labels["primer_apellido"] = merge_boxes(w, w_next)
                     i += 2
@@ -1455,7 +1363,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                     i += 2
                     continue
                     
-            # Check three-word phrases
             if i + 2 < len(line):
                 w_next = line[i+1]
                 w_next2 = line[i+2]
@@ -1469,7 +1376,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                     i += 3
                     continue
 
-            # Single word fallbacks
             if norm in ["NOMBRE", "NOMBRES", "NOMBRE(S)", "NOMBRES(S)"] or "NOMBRE" in norm or "NOMRE" in norm:
                 labels["nombres"] = w
             elif "PATERNO" in norm or "PRIMER" in norm:
@@ -1549,10 +1455,12 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
     for v_idx, relative_pos in val_lines_to_try:
         value_line = region_lines[v_idx]
         
-        # Partition value line
         line_words = []
         for w in value_line:
             wt = w['text'].strip()
+            # Ignorar palabras con caracteres de control, paréntesis o signos raros
+            if not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑüÜ\.\-]+$', wt):
+                continue
             norm = normalizar_texto(wt)
             if not norm or wt in [":", ",", ";", "-", "/"] or norm in EXCLUDED_NAME_WORDS or norm in BLACKLISTED_WORDS:
                 continue
@@ -1637,6 +1545,8 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             words_cand = []
             for w in line:
                 wt = w['text'].strip()
+                if not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑüÜ\.\-]+$', wt):
+                    continue
                 norm = normalizar_texto(wt)
                 if not norm or wt in [":", ",", ";", "-", "/"] or norm in EXCLUDED_NAME_WORDS or norm in BLACKLISTED_WORDS:
                     continue
@@ -1655,7 +1565,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                     log_lines.append(f"  Fallback line '{' '.join(words_cand)}' discarded: {', '.join(discard_reasons)}")
         return None, None, None
 
-    # Fallback to complete line parser if fields are empty
     if not val_nombres or not val_ap1:
         log_lines.append("Fields empty or layout parsing failed, running fallback complete line search...")
         fallback_n, fallback_ap1, fallback_ap2 = fallback_nombre_linea_completa(region_lines, label_line_idx)
@@ -1666,7 +1575,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             origen_names = "Layout Fallback Complete Line"
             log_lines.append(f"Fallback extracted: Nombres='{val_nombres}', Ap1='{val_ap1}', Ap2='{val_ap2}'")
 
-    # Metadata parser
     meta_labels = {}
     for line in region_lines:
         line_labels = find_labels_in_line(line)
@@ -1689,18 +1597,14 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                 continue
             
             dx = abs(w['x'] - lcx)
-            
-            # Below label: Y increases downwards
             dy_below = w['y'] - lcy
             if 5 < dy_below < 80 and dx < 100:
                 below_candidates.append(w)
                 
-            # Above label
             dy_above = lcy - w['y']
             if 5 < dy_above < 80 and dx < 100:
                 above_candidates.append(w)
                 
-            # Right next to label Y center
             dy_right = abs(w['y'] - lcy)
             dx_right = w['x'] - lcx
             if dy_right < 15 and 10 < dx_right < 300:
@@ -1731,13 +1635,12 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
     if "lugar_nacimiento" in meta_labels:
         val_lugar = obtener_valor_campo_coordenadas(meta_labels["lugar_nacimiento"], region_words)
 
-    # Format and clean extracted metadata
     if val_sexo:
         sex_upper = normalizar_texto(val_sexo)
         if "FEM" in sex_upper or "MUJ" in sex_upper:
-            val_sexo = "FEMENINO"
+            val_sexo = "MUJER"
         elif "MAS" in sex_upper or "HOM" in sex_upper:
-            val_sexo = "MASCULINO"
+            val_sexo = "HOMBRE"
         else:
             val_sexo = ""
             
@@ -1755,12 +1658,12 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             dd_val = match_slash.group(1).zfill(2)
             mm_val = match_slash.group(2).zfill(2)
             yyyy_val = match_slash.group(3)
-            val_fecha = f"{yyyy_val}-{mm_val}-{dd_val}"
+            val_fecha = f"{dd_val}/{mm_val}/{yyyy_val}"
         elif match_written and match_written.group(2) in MESES:
             dd_val = match_written.group(1).zfill(2)
             mm_val = MESES[match_written.group(2)]
             yyyy_val = match_written.group(3)
-            val_fecha = f"{yyyy_val}-{mm_val}-{dd_val}"
+            val_fecha = f"{dd_val}/{mm_val}/{yyyy_val}"
         else:
             val_fecha = ""
             
@@ -1797,17 +1700,14 @@ def evaluar_calidad_extraccion(datos):
     score = 0
     es_acta = datos.get("documento") == "ACTA DE NACIMIENTO"
     
-    # 1. CURP evaluation
     curp = datos.get("curp")
     if curp and curp != "No detectado" and len(curp) == 18:
         score += 3
         
-    # 2. Names and Surnames evaluation
     nombres = datos.get("nombres", "No detectado")
     ap_pat = datos.get("apellido_paterno", "No detectado")
     ap_mat = datos.get("apellido_materno", "No detectado")
     
-    # Penalize empty fields
     if not nombres or nombres == "No detectado" or nombres.strip() == "":
         score -= 5
     else:
@@ -1821,7 +1721,6 @@ def evaluar_calidad_extraccion(datos):
     if ap_mat and ap_mat != "No detectado" and ap_mat.strip() != "":
         score += 2 if es_acta else 1
         
-    # Penalize using label words as data
     LABEL_WORDS = ["PRIMER", "APELLIDO", "SEGUNDO", "NOMBRE", "NOMBRES", "SEXO", "FECHA", "NACIMIENTO", "LUGAR"]
     for field in [nombres, ap_pat, ap_mat]:
         if field and field != "No detectado":
@@ -1829,7 +1728,6 @@ def evaluar_calidad_extraccion(datos):
             if any(lw in field_up.split() for lw in LABEL_WORDS):
                 score -= 10
                 
-    # Penalize forbidden words with strong negative score
     FORBIDDEN_WORDS = [
         "UNIDOS", "UNITS", "UNITOS", "MEXICA", "MEXICAL", "MEXICANO", "MEXICANOS",
         "ESTADOS", "TADOS", "INICIO", "INILOS", "OS", "CO", "COMPARECIO",
@@ -1841,19 +1739,16 @@ def evaluar_calidad_extraccion(datos):
             if any(fw in field_up.split() for fw in FORBIDDEN_WORDS):
                 score -= 20
                 
-    # Penalize watermarked contamination (ends with 'S' and matches watermark words nearby)
     for field in [ap_pat, ap_mat]:
         if field and field != "No detectado" and len(field) > 2:
             if field.upper().endswith('S') and any(w in field.upper() for w in ["ESTADOS", "UNIDOS", "MEXICANOS", "GOBIERNO", "CIVIL"]):
                 score -= 3
 
-    # Strong negative penalty for CURP mismatch (if CURP exists and has length >= 4)
     if curp and curp != "No detectado" and len(curp) >= 4:
         if nombres and ap_pat and nombres != "No detectado" and ap_pat != "No detectado":
             if not curp_coincide_con_nombre(curp, nombres, ap_pat, ap_mat):
                 score -= 15
 
-    # 3. Origen / Confidence evaluation
     origen = datos.get("origen", "")
     if "Spatial Layout Parser" in origen:
         score += 4
@@ -1868,7 +1763,6 @@ def evaluar_calidad_extraccion(datos):
     elif "Proximity/Line Match" in origen:
         score += 1
         
-    # 4. Metadata evaluation
     fecha_nac = datos.get("fecha_nac")
     if fecha_nac and fecha_nac != "No detectada" and fecha_nac.strip() != "":
         score += 2 if es_acta else 1
@@ -1889,26 +1783,86 @@ def preprocesar_imagen_canales(image_content):
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img is None:
             return image_content
-        # Separar canales y quedarnos con el verde para eliminar la marca de agua
         b, g, r = cv2.split(img)
-        
-        # Estimar el fondo (marca de agua + iluminación) dilatando la imagen
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
         background = cv2.morphologyEx(g, cv2.MORPH_DILATE, kernel)
-        
-        # Dividir la imagen por su fondo estimado para neutralizar la marca de agua y sombras
         normalized = cv2.divide(g, background, scale=255)
-        
-        # Umbralización binaria simple sobre la imagen normalizada
         _, thresh = cv2.threshold(normalized, 180, 255, cv2.THRESH_BINARY)
-        
         _, encoded_img = cv2.imencode(".png", thresh)
         return encoded_img.tobytes()
     except Exception as e:
         print(f"[ERROR PREPROCESAMIENTO] {e}")
         return image_content
 
-def ejecutar_vision_ocr(filename, content):
+# --- ADAPTADOR TESSERACT OCR LOCAL ---
+
+def run_tesseract_on_bytes(image_content):
+    try:
+        nparr = np.frombuffer(image_content, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return None, None
+
+        # Configurar carpeta local de tessdata
+        tessdata_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tessdata").replace('\\', '/')
+        config = f'--tessdata-dir {tessdata_dir}'
+
+        # Ejecutar Tesseract
+        texto_original = pytesseract.image_to_string(img, lang='spa+eng', config=config)
+        data = pytesseract.image_to_data(img, lang='spa+eng', output_type=pytesseract.Output.DICT, config=config)
+
+        annotations = []
+
+        # El primer elemento representa todo el texto
+        class MockAnnotationPrincipal:
+            def __init__(self, desc):
+                self.description = desc
+
+        annotations.append(MockAnnotationPrincipal(texto_original))
+
+        # Los siguientes elementos representan cada palabra individual con sus coordenadas
+        n_words = len(data['text'])
+        for i in range(n_words):
+            word_text = data['text'][i].strip()
+            if not word_text:
+                continue
+            
+            left = data['left'][i]
+            top = data['top'][i]
+            width = data['width'][i]
+            height = data['height'][i]
+
+            class MockVertex:
+                def __init__(self, x, y):
+                    self.x = x
+                    self.y = y
+
+            class MockPoly:
+                def __init__(self, left, top, width, height):
+                    self.vertices = [
+                        MockVertex(left, top),
+                        MockVertex(left + width, top),
+                        MockVertex(left + width, top + height),
+                        MockVertex(left, top + height)
+                    ]
+
+            class MockWordAnnotation:
+                def __init__(self, text, left, top, width, height):
+                    self.description = text
+                    self.bounding_poly = MockPoly(left, top, width, height)
+
+            annotations.append(MockWordAnnotation(word_text, left, top, width, height))
+
+        class MockVisionResponse:
+            def __init__(self, annots):
+                self.text_annotations = annots
+
+        return texto_original, MockVisionResponse(annotations)
+    except Exception as e:
+        print(f"[ERROR TESSERACT RUN] {e}")
+        return None, None
+
+def ejecutar_tesseract_ocr(filename, content):
     if filename.endswith('.pdf'):
         doc = fitz.open(stream=content, filetype="pdf")
         page = doc.load_page(0) 
@@ -1917,20 +1871,14 @@ def ejecutar_vision_ocr(filename, content):
     else:
         image_content = content
 
-    # Aplicar preprocesamiento de canales para eliminar marcas de agua
     image_content = preprocesar_imagen_canales(image_content)
-
     img_b64 = base64.b64encode(image_content).decode('utf-8')
-    client = vision.ImageAnnotatorClient()
-    image = vision.Image(content=image_content)
-    response = client.document_text_detection(image=image)
-    
-    texto_original = response.text_annotations[0].description if response.text_annotations else None
+
+    texto_original, response = run_tesseract_on_bytes(image_content)
     
     if not texto_original:
         return None, None, None, None
         
-    # Determinamos si el documento es un acta de nacimiento
     es_acta_por_nombre = any(k in filename.lower() for k in ["acta", "nacimiento", "birth", "cert"])
     texto_norm = normalizar_texto(texto_original)
     es_acta = (determinar_tipo_documento(texto_norm) == "ACTA DE NACIMIENTO") or es_acta_por_nombre
@@ -1938,24 +1886,19 @@ def ejecutar_vision_ocr(filename, content):
     if not es_acta:
         return texto_original, img_b64, response, None
         
-    # Proceso dual solo para actas de nacimiento
     preprocessed_content = preprocesar_imagen_acta(image_content)
     if preprocessed_content:
         try:
-            image_prep = vision.Image(content=preprocessed_content)
-            response_prep = client.document_text_detection(image=image_prep)
-            texto_preprocesado = response_prep.text_annotations[0].description if response_prep.text_annotations else None
+            texto_preprocesado, response_prep = run_tesseract_on_bytes(preprocessed_content)
             
             if texto_preprocesado:
                 datos_original = procesar_texto(texto_original, response)
                 datos_preprocesado = procesar_texto(texto_preprocesado, response_prep)
                 
-                # Cross-clean trailing 'S' watermark contamination
                 for field_key in ['nombres', 'apellido_paterno', 'apellido_materno']:
                     datos_original[field_key] = limpiar_contaminacion_s(datos_original.get(field_key), texto_preprocesado)
                     datos_preprocesado[field_key] = limpiar_contaminacion_s(datos_preprocesado.get(field_key), texto_original)
                     
-                # Apply CURP/Evidence correction
                 ap1_orig_c, ap2_orig_c = corregir_apellidos_con_evidencia_y_curp(
                     datos_original['nombres'], datos_original['apellido_paterno'], datos_original['apellido_materno'], 
                     datos_original['curp'], texto_original
@@ -1970,14 +1913,12 @@ def ejecutar_vision_ocr(filename, content):
                 datos_preprocesado['apellido_paterno'] = ap1_prep_c
                 datos_preprocesado['apellido_materno'] = ap2_prep_c
 
-                # Re-calculate name_completo after cleaning
                 datos_original['nombre_completo'] = f"{datos_original['nombres']} {datos_original['apellido_paterno']} {datos_original['apellido_materno']}".strip()
                 datos_preprocesado['nombre_completo'] = f"{datos_preprocesado['nombres']} {datos_preprocesado['apellido_paterno']} {datos_preprocesado['apellido_materno']}".strip()
                 
                 score_orig = evaluar_calidad_extraccion(datos_original)
                 score_prep = evaluar_calidad_extraccion(datos_preprocesado)
                 
-                # Guardar internamente en log
                 try:
                     with open("ocr_output.log", "a", encoding="utf-8") as log_file:
                         log_file.write("\n=== OCR DUAL-FLOW ACTA DE NACIMIENTO COMPARISON ===\n")
@@ -1988,15 +1929,13 @@ def ejecutar_vision_ocr(filename, content):
                 except Exception as log_ex:
                     print(f"[ERROR] Failed to write comparison logs: {str(log_ex)}")
                 
-                # Usar el preprocesado solo si mejora la extracción de campos relevantes
                 if score_prep > score_orig:
                     return texto_preprocesado, img_b64, response_prep, datos_preprocesado
                 else:
                     return texto_original, img_b64, response, datos_original
         except Exception as e:
-            print(f"[ERROR] Error calling Vision on preprocessed image: {str(e)}")
+            print(f"[ERROR] Error running Tesseract on preprocessed image: {str(e)}")
             
-    # Fallback to parsing original if preprocessing dual-flow fails
     datos_original = procesar_texto(texto_original, response)
     return texto_original, img_b64, response, datos_original
 
@@ -2019,11 +1958,11 @@ def index():
                     form_content = archivo_formato.read()
 
                 with ThreadPoolExecutor(max_workers=2) as executor:
-                    futuro_id = executor.submit(ejecutar_vision_ocr, id_name, id_content)
+                    futuro_id = executor.submit(ejecutar_tesseract_ocr, id_name, id_content)
                     
                     futuro_formato = None
                     if form_content:
-                        futuro_formato = executor.submit(ejecutar_vision_ocr, form_name, form_content)
+                        futuro_formato = executor.submit(ejecutar_tesseract_ocr, form_name, form_content)
                         
                     texto_id, img_id_b64, response_id, datos_id = futuro_id.result()
                     texto_formato, img_form_b64, response_formato, datos_formato = (futuro_formato.result() if futuro_formato else (None, None, None, None))
