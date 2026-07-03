@@ -224,7 +224,7 @@ def crear_token_sesion_temporal(usuario_id: int, invitacion_id: int = None) -> s
     return token
 
 
-async def obtener_usuario_o_sesion_temporal(request: Request, db: Session = Depends(get_db)):
+def obtener_usuario_o_sesion_temporal(request: Request, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(

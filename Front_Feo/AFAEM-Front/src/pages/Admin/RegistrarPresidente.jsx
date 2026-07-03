@@ -138,6 +138,15 @@ export default function RegistrarPresidente() {
           gap: 16px;
           margin-bottom: 16px;
         }
+        .rp-grid-4cols-equal label,
+        .rp-grid-3cols-equal label,
+        .rp-grid-3cols label,
+        .rp-grid-2cols label {
+          min-height: 32px;
+          display: flex;
+          align-items: flex-end;
+          flex-wrap: wrap;
+        }
         .rp-grid-2cols {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -204,6 +213,13 @@ export default function RegistrarPresidente() {
           .rp-grid-docs {
             grid-template-columns: 1fr !important;
             gap: 16px !important;
+          }
+          .rp-grid-4cols-equal label,
+          .rp-grid-3cols-equal label,
+          .rp-grid-3cols label,
+          .rp-grid-2cols label {
+            min-height: auto !important;
+            display: block !important;
           }
           .rp-step-bar-line {
             max-width: 40px !important;

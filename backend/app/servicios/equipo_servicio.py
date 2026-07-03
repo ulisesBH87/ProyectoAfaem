@@ -170,6 +170,8 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
         # 3. Sumar +1 a la CantidadJugadores en la tabla EquiposJugando
         eq_jugando.CantidadJugadores = (eq_jugando.CantidadJugadores or 0) + 1
             
+        from app.core.borrador_utils import borrar_archivos_borrador_de_slot
+        borrar_archivos_borrador_de_slot(slot.DatosBorrador)
         slot.DatosBorrador = None
     else:
         # Si el equipo real no existe, persistimos los metadatos en DatosBorrador
@@ -182,6 +184,7 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
 
 def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
     import json
+    from app.core.borrador_utils import procesar_borrador_cargar
 
     equipo = equipo_repositorio.obtener_equipo_temporal(db, equipo_temporal_id)
 
@@ -288,7 +291,7 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
                 "slot_id": s.EquipoTemporalJugadorId,
                 "completo": s.Completo,
                 "seguro_id": s.SeguroId,
-                "datos_borrador": json.loads(s.DatosBorrador) if s.DatosBorrador else None,
+                "datos_borrador": procesar_borrador_cargar(json.loads(s.DatosBorrador)) if s.DatosBorrador else None,
                 "persona": {
                     "persona_id": s.PersonaId
                 } if s.PersonaId else None
@@ -516,6 +519,8 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                     db.add(nuevo_miembro)
                 
                 # Limpiar DatosBorrador ya que se vinculó al equipo real
+                from app.core.borrador_utils import borrar_archivos_borrador_de_slot
+                borrar_archivos_borrador_de_slot(s_comp.DatosBorrador)
                 s_comp.DatosBorrador = None
             
             equipo_repositorio.actualizar_orden(db, solicitud_id)

@@ -80,7 +80,7 @@ def crear_solicitud_endpoint(solicitud: CrearSolicitud, db:Session=Depends(get_d
     return resultado
 
 @router.get("/descargar-formato-afiliacion")
-async def descargar_formato(
+def descargar_formato(
     nombre: str = Query(...),
     curp: str = Query(...),
     fecha_nac: str = Query(...),

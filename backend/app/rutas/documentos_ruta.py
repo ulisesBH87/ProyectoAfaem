@@ -48,7 +48,7 @@ async def subir_documento(
 
 
 @router.get("/{documento_id}")
-async def obtener_documento(
+def obtener_documento(
     documento_id: int,
     request: Request,
     db: Session = Depends(get_db)
@@ -177,7 +177,7 @@ from app.core.seguridad import obtener_usuario_o_sesion_temporal
 from datetime import datetime
 
 
-async def obtener_usuario_o_sesion_temporal_con_log(request: Request, db: Session = Depends(get_db)):
+def obtener_usuario_o_sesion_temporal_con_log(request: Request, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     try:
         with open("ocr_proxy.log", "a", encoding="utf-8") as f:
@@ -188,7 +188,7 @@ async def obtener_usuario_o_sesion_temporal_con_log(request: Request, db: Sessio
         print(f"[OCR PROXY] Error writing to ocr_proxy.log: {e}")
         
     try:
-        payload = await obtener_usuario_o_sesion_temporal(request, db)
+        payload = obtener_usuario_o_sesion_temporal(request, db)
         try:
             # Si es usuario, sacamos el id. Si es temp_session, sacamos el usuario_id.
             sub_id = payload.get("usuario_id") or (payload.get("usuario").UsuarioId if payload.get("usuario") else None)
