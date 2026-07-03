@@ -555,6 +555,8 @@ def actualizar_slot_repo(db, equipo_id: int, persona_id: int, seguro_id: int, li
     # Asignar persona al slot (NO tocar SeguroId)
     slot.PersonaId = persona_id
     slot.Completo = True
+    from app.core.borrador_utils import borrar_archivos_borrador_de_slot
+    borrar_archivos_borrador_de_slot(slot.DatosBorrador)
     slot.DatosBorrador = None
 
     return slot
