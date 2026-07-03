@@ -26,6 +26,7 @@ import { validarFotografia } from '../../services/foto';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -1029,6 +1030,7 @@ export default function RegistroJugadores() {
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
   const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
   const selectedInvitationTeam = invitationTeams.find(
     (team) => String(team.equipo_temporal_id) === String(teamId)
@@ -1406,6 +1408,8 @@ export default function RegistroJugadores() {
       cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
     } else if (field === 'correo') {
       cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'telefono') {
       cleanValue = value.replace(/\D/g, '').slice(0, 10);
     } else if (field === 'numCamiseta') {
@@ -2241,6 +2245,19 @@ export default function RegistroJugadores() {
     document.getElementById(`file-${documentKey}`)?.click();
   };
 
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        openDocumentFilePicker(documentKey);
+      }
+    });
+  };
+
   const openPhotoUploadOptions = () => {
     Swal.fire({
       title: 'Selecciona una opción',
@@ -2261,8 +2278,12 @@ export default function RegistroJugadores() {
   };
 
   const handleDocumentCardClick = (documentKey) => {
-    if (documentKey === 'foto') {
+    if (isPhotoCaptureKey(documentKey)) {
       openPhotoUploadOptions();
+      return;
+    }
+    if (documentKey !== 'signedForm') {
+      openDocumentCaptureOptions(documentKey);
       return;
     }
     openDocumentFilePicker(documentKey);
@@ -3767,7 +3788,8 @@ export default function RegistroJugadores() {
                     <CameraCaptureModal
                       isOpen={isCameraOpen}
                       onClose={() => setIsCameraOpen(false)}
-                      onCapture={(file) => handleFileUpload('foto', file)}
+                      onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                      captureKind={getCameraCaptureKind(cameraTargetKey)}
                     />
 
                     {/* Loader temporal OCR */}
@@ -3928,9 +3950,9 @@ export default function RegistroJugadores() {
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
-                            readOnly
+                            onChange={e => handleFieldChange('curp', e.target.value)}
                             onBlur={handleBlur}
-                            placeholder="Se auto-completará con el documento de identidad"
+                            placeholder="Ingresa o corrige la CURP"
                             maxLength="18"
                             style={{
                               padding: '10px',
@@ -3942,8 +3964,8 @@ export default function RegistroJugadores() {
                                   : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               outline: 'none',
-                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : '#f1f5f9',
-                              cursor: missingOcrFields.includes('curp') && !currentDatos.curp ? 'text' : 'not-allowed',
+                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : 'white',
+                              cursor: 'text',
                               boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />

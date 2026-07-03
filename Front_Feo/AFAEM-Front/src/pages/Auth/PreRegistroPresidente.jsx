@@ -18,6 +18,7 @@ import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 import Modal from '../../components/partials/Forms/Modal';
 import { useRBAC } from '../../hooks/useRBAC';
 import { openSecurePath } from '../../utils/secureFetch';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 
 const convertToDDMMYYYY = (dateStr) => {
   if (!dateStr) return '';
@@ -367,23 +368,36 @@ function PreRegistroPresidente() {
   const [fotoArchivoPendiente, setFotoArchivoPendiente] = useState(null);
 
 
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [cameraTargetKey, setCameraTargetKey] = useState(null);
+const [isCameraOpen, setIsCameraOpen] = useState(false);
+const [cameraTargetKey, setCameraTargetKey] = useState(null);
+const DOC_AFILIACION_IDS = {
+  actaNacimiento: 8,
+  identificacion: 38,
+  fotografia: 37,
+  formatoAfiliacion: 10,
+};
 
-  const handleCameraPhotoCaptured = (file) => {
-    if (cameraTargetKey === 'file-val-fotografia') {
-      const docAfiliacionId = 37;
-      const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === docAfiliacionId);
-      if (docGuardado) {
-        handleReemplazarDocumento(docAfiliacionId, file);
-        setDocuments(prev => ({ ...prev, fotografia: file }));
-      } else {
-        handleFileUpload('fotografia', file);
-      }
-    } else {
-      handleFileUpload('fotografia', file);
+const handleCameraPhotoCaptured = (file) => {
+  if (!cameraTargetKey) return;
+
+  const targetKey = cameraTargetKey.replace(/^file-val-/, '').replace(/^file-/, '');
+  const isValidationFlow = cameraTargetKey.startsWith('file-val-');
+  const docAfiliacionId = DOC_AFILIACION_IDS[targetKey];
+
+  if (isValidationFlow && docAfiliacionId) {
+    const docGuardado = documentosGuardados.find(
+      (d) => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId)
+    );
+
+    if (docGuardado) {
+      handleReemplazarDocumento(docAfiliacionId, file);
+      setDocuments((prev) => ({ ...prev, [targetKey]: file }));
+      return;
     }
-  };
+  }
+
+  handleFileUpload(targetKey, file);
+};
 
   const segurosPresidente = catalogoSeguros.filter((seg) =>
     ['TIPO G', 'SIN SEGURO'].includes(seg.nombre.toUpperCase().trim())
@@ -3543,6 +3557,18 @@ function PreRegistroPresidente() {
                           if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
                             return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
                           }
+                          if (doc.documento !== 'formatoAfiliacion') {
+                            const inputId = `file-${doc.documento}`;
+                            Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
+                              if (result.isConfirmed) {
+                                setCameraTargetKey(inputId);
+                                setIsCameraOpen(true);
+                              } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                document.getElementById(inputId)?.click();
+                              }
+                            });
+                            return;
+                          }
                           if (doc.documento === 'fotografia') {
                             Swal.fire({
                               title: 'Selecciona una opción',
@@ -3677,6 +3703,18 @@ function PreRegistroPresidente() {
                                 e.stopPropagation();
                                 if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
                                   return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                                }
+                                if (doc.documento !== 'formatoAfiliacion') {
+                                  const inputId = `file-${doc.documento}`;
+                                  Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
+                                    if (result.isConfirmed) {
+                                      setCameraTargetKey(inputId);
+                                      setIsCameraOpen(true);
+                                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                      document.getElementById(inputId)?.click();
+                                    }
+                                  });
+                                  return;
                                 }
                                 if (doc.documento === 'fotografia') {
                                   Swal.fire({
@@ -4105,6 +4143,18 @@ function PreRegistroPresidente() {
                     className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
                     onClick={() => {
                       if (isApproved) return;
+                      if (doc.documento !== 'formatoAfiliacion') {
+                        const inputId = `file-val-${doc.documento}`;
+                        Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
+                          if (result.isConfirmed) {
+                            setCameraTargetKey(inputId);
+                            setIsCameraOpen(true);
+                          } else if (result.dismiss === Swal.DismissReason.cancel) {
+                            document.getElementById(inputId)?.click();
+                          }
+                        });
+                        return;
+                      }
                       if (doc.documento === 'fotografia') {
                         Swal.fire({
                           title: 'Selecciona una opción',
@@ -4212,6 +4262,18 @@ function PreRegistroPresidente() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (doc.documento !== 'formatoAfiliacion') {
+                              const inputId = `file-val-${doc.documento}`;
+                              Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
+                                if (result.isConfirmed) {
+                                  setCameraTargetKey(inputId);
+                                  setIsCameraOpen(true);
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                  document.getElementById(inputId)?.click();
+                                }
+                              });
+                              return;
+                            }
                             if (doc.documento === 'fotografia') {
                               Swal.fire({
                                 title: 'Selecciona una opción',
@@ -4721,6 +4783,7 @@ function PreRegistroPresidente() {
           isOpen={isCameraOpen}
           onClose={() => setIsCameraOpen(false)}
           onCapture={handleCameraPhotoCaptured}
+          captureKind={getCameraCaptureKind(cameraTargetKey?.replace(/^file-val-/, '').replace(/^file-/, '') || 'fotografia')}
         />
       )}
     </div>

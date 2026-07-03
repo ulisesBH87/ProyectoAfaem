@@ -27,6 +27,7 @@ import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -559,6 +560,7 @@ export default function ConfigurarEquipo() {
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
 
   const handleResetForm = async () => {
     const result = await Swal.fire({
@@ -690,6 +692,8 @@ export default function ConfigurarEquipo() {
       }
     } else if (field === 'lugarNacimiento') {
       cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'correo') {
       cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
     } else if (field === 'telefono' || field === 'numCamiseta') {
@@ -1990,6 +1994,23 @@ export default function ConfigurarEquipo() {
     });
   };
 
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
+    });
+  };
+
+  const handleDocumentCardClick = (documentKey) => {
+    openDocumentCaptureOptions(documentKey);
+  };
+
   // AUXILIAR PARA ESCRITURA EN PDF
   const safeSetField = (form, fieldName, value, fontSize) => {
     if (!value) return;
@@ -3136,6 +3157,8 @@ export default function ConfigurarEquipo() {
                         }}
                         onClick={() => {
                           if (!documents[doc.key]) {
+                            handleDocumentCardClick(doc.key);
+                            return;
                             if (doc.key === 'foto') {
                               Swal.fire({
                                 title: 'Selecciona una opción',
@@ -3224,6 +3247,8 @@ export default function ConfigurarEquipo() {
                                   <button
                                     type="button"
                                     onClick={() => {
+                                      handleDocumentCardClick(doc.key);
+                                      return;
                                       if (doc.key === 'foto') {
                                         Swal.fire({
                                           title: 'Selecciona una opción',
@@ -3324,7 +3349,8 @@ export default function ConfigurarEquipo() {
                   <CameraCaptureModal
                     isOpen={isCameraOpen}
                     onClose={() => setIsCameraOpen(false)}
-                    onCapture={(file) => handleFileUpload('foto', file)}
+                    onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                    captureKind={getCameraCaptureKind(cameraTargetKey)}
                   />
 
                   {/* Loader temporal OCR */}
@@ -3499,9 +3525,9 @@ export default function ConfigurarEquipo() {
                         <input
                           type="text"
                           value={extractedData.curp || ''}
-                          readOnly
+                          onChange={e => handleFieldChange('curp', e.target.value)}
                           onBlur={handleBlur}
-                          placeholder="Se auto-completará con el documento de identidad"
+                          placeholder="Ingresa o corrige la CURP"
                           maxLength="18"
                           style={{
                             padding: '10px',
@@ -3513,8 +3539,8 @@ export default function ConfigurarEquipo() {
                                 : `1.5px solid ${COLORS.slate300}`),
                             boxShadow: curpExistente ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
                             fontSize: '14px',
-                            backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : '#f1f5f9',
-                            cursor: missingOcrFields.includes('curp') && !extractedData.curp ? 'text' : 'not-allowed'
+                            backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : 'white',
+                            cursor: 'text'
                           }}
                         />
                         {missingOcrFields.includes('curp') && !extractedData.curp && (

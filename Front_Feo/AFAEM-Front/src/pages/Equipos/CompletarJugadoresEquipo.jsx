@@ -23,6 +23,7 @@ import teamsService from '../../services/teams';
 import { verificarCurp } from '../../services/auth';
 import { API_BASE } from '../../config/config';
 import { openSecurePath } from '../../utils/secureFetch';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -659,6 +660,7 @@ export default function CompletarJugadoresEquipo() {
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
   const [missingOcrFields, setMissingOcrFields] = useState([]);
   const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
 
@@ -1134,6 +1136,8 @@ export default function CompletarJugadoresEquipo() {
       if (field === 'lugarNacimiento') {
         cleanValue = cleanValue.slice(0, 30);
       }
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'correo') {
       cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
     } else if (field === 'telefono') {
@@ -1604,6 +1608,19 @@ export default function CompletarJugadoresEquipo() {
       icon: 'success',
       timer: 1500,
       showConfirmButton: false
+    });
+  };
+
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
     });
   };
 
@@ -2568,6 +2585,8 @@ export default function CompletarJugadoresEquipo() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                openDocumentCaptureOptions(doc.key);
+                                return;
                                 if (doc.key === 'foto') {
                                   Swal.fire({
                                     title: 'Selecciona una opción',
@@ -2619,6 +2638,8 @@ export default function CompletarJugadoresEquipo() {
                         /* ESTADO VACÍO */
                         <div
                           onClick={() => {
+                            openDocumentCaptureOptions(doc.key);
+                            return;
                             if (doc.key === 'foto') {
                               Swal.fire({
                                 title: 'Selecciona una opción',
@@ -2714,7 +2735,8 @@ export default function CompletarJugadoresEquipo() {
               <CameraCaptureModal
                 isOpen={isCameraOpen}
                 onClose={() => setIsCameraOpen(false)}
-                onCapture={(file) => handleFileUpload('foto', file)}
+                onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                captureKind={getCameraCaptureKind(cameraTargetKey)}
               />
 
               {/* Loader temporal OCR */}
@@ -2894,9 +2916,9 @@ export default function CompletarJugadoresEquipo() {
                     <input
                       type="text"
                       value={extractedData.curp || ''}
-                      readOnly
+                      onChange={e => handleFieldChange('curp', e.target.value)}
                       onBlur={() => handleBlur('curp')}
-                      placeholder="Se auto-completará con el documento de identidad"
+                      placeholder="Ingresa o corrige la CURP"
                       maxLength="18"
                       style={{
                         padding: '10px',
@@ -2909,8 +2931,8 @@ export default function CompletarJugadoresEquipo() {
                         fontSize: '14px',
                         width: '100%',
                         boxSizing: 'border-box',
-                        backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : '#f1f5f9',
-                        cursor: missingOcrFields.includes('curp') && !extractedData.curp ? 'text' : 'not-allowed'
+                        backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : 'white',
+                        cursor: 'text'
                       }}
                     />
                     {missingOcrFields.includes('curp') && !extractedData.curp && (
