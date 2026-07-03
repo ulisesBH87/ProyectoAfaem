@@ -181,6 +181,7 @@ const DETALLES_SEGUROS = {
  * Paso 3 del wizard: asginación de seguros y resumen de pago.
  */
 export default function Step3Cuotas({
+  ocrResults,
   numPersonas, setNumPersonas,
   segurosJugadores, segurosPresidente,
   asignacion, setAsignacion,
@@ -420,6 +421,55 @@ export default function Step3Cuotas({
             <div style={{ fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Monto Estimado</div>
             <div style={{ fontSize: 26, fontWeight: 900, color: C.amber, marginTop: 6 }}>${totalPagar.toLocaleString()}</div>
           </div>
+
+          {voucher && ocrResults && (
+            <div style={{
+              background: ocrResults.voucherMonto !== undefined
+                ? (Math.abs((ocrResults.voucherMonto || 0) - totalPagar) < 0.01
+                  ? COLORS.greenBgTranslucent07
+                  : COLORS.warningBgTranslucent07)
+                : COLORS.overlayWhite04,
+              border: `1px solid ${ocrResults.voucherMonto !== undefined
+                ? (Math.abs((ocrResults.voucherMonto || 0) - totalPagar) < 0.01
+                  ? COLORS.greenBgTranslucent18
+                  : COLORS.warningBgTranslucent18)
+                : COLORS.overlayWhite10}`,
+              borderRadius: 18,
+              padding: '14px 18px',
+              fontSize: 13,
+              color: 'white',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6
+            }}>
+              <div style={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: C.textMid, textAlign: 'left' }}>
+                Validación de Comprobante
+              </div>
+              {ocrResults.voucherMonto !== undefined ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                    <span>Monto detectado:</span>
+                    <strong style={{ color: Math.abs(ocrResults.voucherMonto - totalPagar) < 0.01 ? COLORS.successLight : C.amberLight }}>
+                      ${ocrResults.voucherMonto.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+                  {Math.abs(ocrResults.voucherMonto - totalPagar) < 0.01 ? (
+                    <div style={{ color: COLORS.successLight, fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, textAlign: 'left' }}>
+                      <span>✓</span> El monto del comprobante coincide con el total estimado.
+                    </div>
+                  ) : (
+                    <div style={{ color: C.amberLight, fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, textAlign: 'left', lineHeight: '1.4' }}>
+                      <span>⚠️ Advertencia:</span> El comprobante subido parece ser por un monto distinto al estimado (${totalPagar.toLocaleString()}). Verifica el archivo.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ color: C.textDim, fontSize: 11, fontStyle: 'italic', textAlign: 'left' }}>
+                  Procesando comprobante o no se pudo detectar el monto automáticamente.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -349,16 +349,69 @@ export default function AdminPresidentes() {
   const mejorarExtraccionActa = (rawText, currentData) => {
     if (!rawText) return currentData;
     const data = { ...currentData };
-    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2) {
+
+    // Intentar emparejar layout cruzado/macho en una sola línea
+    const cleanText = rawText.replace(/\s+/g, ' ').toUpperCase();
+    const mashedMatch = cleanText.match(/DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)(?:$|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO))/i);
+    if (mashedMatch) {
+      const nombresVal = mashedMatch[1].trim();
+      const ap1Val = mashedMatch[2].trim();
+      const ap2Val = mashedMatch[3].trim();
+      
+      data.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
+      data.nombres = nombresVal.toUpperCase();
+      data.apellido_paterno = ap1Val.toUpperCase();
+      data.apellido_materno = ap2Val.toUpperCase();
+      data.nombreSolo = nombresVal.toUpperCase();
+      data.primerApellido = ap1Val.toUpperCase();
+      data.segundoApellido = ap2Val.toUpperCase();
+      
+      const rest = mashedMatch[4].trim();
+      if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
+        data.nacionalidad = rest.toUpperCase();
+      } else if (cleanText.includes('NACIONALIDAD')) {
+        const nacMatch = cleanText.match(/(?:NACIONALIDAD|PAIS)\s+([A-Z\s]+)/i);
+        if (nacMatch) data.nacionalidad = nacMatch[1].trim().toUpperCase();
+      }
+      return data;
+    }
+
+    const firstWord = data.nombre ? data.nombre.split(' ')[0] : '';
+    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2 || firstWord.length <= 1) {
       const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) nombres = lines[i + 1];
-        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1 = lines[i + 1];
-        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2 = lines[i + 1];
+        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) {
+          const nextVal = lines[i + 1].toUpperCase();
+          if ((nextVal === 'S' || nextVal === '(S)' || nextVal.length <= 1) && i + 2 < lines.length) {
+            nombres = lines[i + 2];
+          } else {
+            nombres = lines[i + 1];
+          }
+        }
+        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap1 = val;
+          }
+        }
+        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap2 = val;
+          }
+        }
       }
-      if (nombres && ap1) data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
+      if (nombres && ap1) {
+        data.nombre = `${nombres} ${ap1} ${ap2}`.replace(/\s+/g, ' ').toUpperCase();
+        data.nombres = nombres.toUpperCase();
+        data.apellido_paterno = ap1.toUpperCase();
+        data.apellido_materno = ap2.toUpperCase();
+        data.nombreSolo = nombres.toUpperCase();
+        data.primerApellido = ap1.toUpperCase();
+        data.segundoApellido = ap2.toUpperCase();
+      }
     }
     if (!data.fecha_nac || data.fecha_nac === 'No detectada') {
       const meses = { ENERO: '01', FEBRERO: '02', MARZO: '03', ABRIL: '04', MAYO: '05', JUNIO: '06', JULIO: '07', AGOSTO: '08', SEPTIEMBRE: '09', OCTUBRE: '10', NOVIEMBRE: '11', DICIEMBRE: '12' };
@@ -368,35 +421,176 @@ export default function AdminPresidentes() {
     return data;
   };
 
-  const procesarOCRReal = async (docKey, file) => {
+  const procesarOCRReal = async (docKey, file, prevDoc) => {
     Swal.fire({ title: 'Analizando Documento...', html: 'Extrayendo información . <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     try {
       const fd = new FormData(); fd.append('file_id', file);
-      const res = await fetch('/ocr-api', { method: 'POST', body: fd });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const res = await fetch(`${API_BASE}/documentos/ocr`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: fd
+      });
       if (!res.ok) throw new Error('Error al conectar con el servidor');
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
-      let extracted = {};
+      const cleanVal = (val) => {
+        if (!val) return '';
+        const cleaned = val.trim();
+        const lower = cleaned.toLowerCase();
+        if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+          return '';
+        }
+        return cleaned;
+      };
+
+      let nombreEncontrado = '';
+      let nombresEncontrados = '';
+      let apellidoPaternoEncontrado = '';
+      let apellidoMaternoEncontrado = '';
+      let curpEncontrada = '';
+      let fechaNacEncontrada = '';
+      let nacionalidadEncontrada = '';
+      let edadEncontrada = '';
+      let sexoEncontrado = '';
+      let documentoEncontrado = '';
+
       doc.querySelectorAll('.dato-fila').forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const val = row.querySelector('.valor')?.textContent?.trim() || '';
-        if (label.includes('curp')) extracted.curp = val;
-        if (label.includes('nombre')) extracted.nombre = val;
-        if (label.includes('nacionalidad')) extracted.nacionalidad = val;
-        if (label.includes('fecha de nacimiento')) extracted.fecha_nac = val;
-        if (label.includes('edad')) extracted.edad = val;
-        if (label.includes('documento')) extracted.documento = val;
+        const val = cleanVal(row.querySelector('.valor')?.textContent);
+
+        if (!val) return;
+
+        if (label.includes('nombres')) {
+          nombresEncontrados = val;
+        } else if (label.includes('nombre completo') || label === 'nombre') {
+          nombreEncontrado = val;
+        } else if (label.includes('nombre')) {
+          if (!nombresEncontrados) nombresEncontrados = val;
+        }
+
+        if (label.includes('apellido paterno') || label.includes('paterno')) {
+          apellidoPaternoEncontrado = val;
+        }
+        if (label.includes('apellido materno') || label.includes('materno')) {
+          apellidoMaternoEncontrado = val;
+        }
+
+        if (label.includes('curp')) curpEncontrada = val;
+        if (label.includes('nacionalidad')) nacionalidadEncontrada = val;
+
+        if (label.includes('fecha de nacimiento') || label.includes('fecha nac') || (label.includes('nacimiento') && !label.includes('lugar'))) {
+          let dateVal = val;
+          if (dateVal.includes('-')) {
+            const p = dateVal.split('-');
+            if (p.length === 3 && p[0].length === 4) {
+              dateVal = `${p[2]}/${p[1]}/${p[0]}`;
+            }
+          }
+          fechaNacEncontrada = dateVal;
+        }
+
+        if (label.includes('edad')) edadEncontrada = val;
+        if (label.includes('sexo')) sexoEncontrado = val;
+        if (label.includes('documento')) documentoEncontrado = val;
       });
+
+      let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+
+      if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+        firstName = nombresEncontrados;
+        lastNamePaterno = apellidoPaternoEncontrado;
+        lastNameMaterno = apellidoMaternoEncontrado;
+      } else if (nombreEncontrado) {
+        const parts = nombreEncontrado.split(' ');
+        if (parts.length === 4) {
+          firstName = parts.slice(0, 2).join(' ');
+          lastNamePaterno = parts[2];
+          lastNameMaterno = parts[3];
+        } else if (parts.length === 3) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+          lastNameMaterno = parts[2];
+        } else if (parts.length === 2) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+        } else {
+          firstName = nombreEncontrado;
+        }
+      }
+
+      const fullNombre = [firstName, lastNamePaterno, lastNameMaterno].filter(Boolean).join(' ') || nombreEncontrado;
+
+      let detectedSexo = sexoEncontrado;
+      if (curpEncontrada && curpEncontrada.length >= 11) {
+        const char = curpEncontrada.charAt(10).toUpperCase();
+        if (char === 'M') detectedSexo = 'FEMENINO';
+        else if (char === 'H') detectedSexo = 'MASCULINO';
+      }
+
+      let extracted = {
+        curp: curpEncontrada || '',
+        nombre: fullNombre || '',
+        nombres: firstName || '',
+        apellido_paterno: lastNamePaterno || '',
+        apellido_materno: lastNameMaterno || '',
+        nombreSolo: firstName || '',
+        primerApellido: lastNamePaterno || '',
+        segundoApellido: lastNameMaterno || '',
+        nacionalidad: nacionalidadEncontrada || '',
+        fecha_nac: fechaNacEncontrada || '',
+        edad: edadEncontrada || '',
+        sexo: detectedSexo || '',
+        documento: documentoEncontrado || ''
+      };
       const rawText = doc.querySelector('pre')?.textContent;
       if (rawText && (docKey === 'actaNacimiento' || extracted.documento?.includes('ACTA'))) {
         extracted = mejorarExtraccionActa(rawText, extracted);
       }
+
+      // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+      const isActaField = ['acta', 'actaNacimiento'].includes(docKey);
+      const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(docKey);
+      const isOcrActa = (extracted.documento || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+      const isOcrIne = (extracted.documento || '').toUpperCase() === 'INE';
+
+      if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+        Swal.close();
+        const result = await Swal.fire({
+          title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+          text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Cargar de todos modos',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#1a3b5c',
+          cancelButtonColor: '#cbd5e1'
+        });
+
+        if (!result.isConfirmed) {
+          setDocuments(prev => {
+            const updated = { ...prev };
+            if (prevDoc) {
+              updated[docKey] = prevDoc;
+            } else {
+              delete updated[docKey];
+            }
+            return updated;
+          });
+          return;
+        }
+      }
+
       setOcrResults(prev => ({ ...prev, ...extracted, [docKey]: `OCR Procesado: ${extracted.nombre}` }));
-      Swal.fire({
-        title: extracted.nombre ? '¡Lectura Exitosa!' : 'Documento procesado',
-        text: extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Se leyó el documento pero no se extrajo el nombre automáticamente.',
-        icon: 'success', timer: 2000, showConfirmButton: false
-      });
+       Swal.fire({
+         title: '¡Lectura Exitosa!',
+         text: extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+         icon: extracted.nombre ? 'success' : 'warning',
+         timer: extracted.nombre ? 2000 : 3500,
+         showConfirmButton: !extracted.nombre
+       });
     } catch (_err) {
       Swal.fire({ title: 'Error', text: 'No se pudo leer el documento de forma automática. Podrás continuar manualmente.', icon: 'warning' });
     }
@@ -422,8 +616,9 @@ export default function AdminPresidentes() {
     if (docKey === 'fotografia') {
       procesarFotografia(file);
     } else {
+      const prevDoc = documents[docKey] || null;
       setDocuments(prev => ({ ...prev, [docKey]: file }));
-      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCRReal(docKey, file);
+      if (['actaNacimiento', 'identificacion'].includes(docKey)) procesarOCRReal(docKey, file, prevDoc);
     }
   };
 
@@ -445,15 +640,26 @@ export default function AdminPresidentes() {
         } catch (_e) { /* silenciar */ }
       }
 
-      const { nombre, curp, fecha_nac, nacionalidad } = ocrResults;
-      if (nombre && nombre !== 'No detectado') {
+      const { nombre, curp, fecha_nac, nacionalidad, nombreSolo, primerApellido, segundoApellido } = ocrResults;
+      if (nombreSolo || primerApellido || segundoApellido) {
+        if (primerApellido) form.getTextField('Apellido Paterno')?.setText(primerApellido.toUpperCase());
+        if (segundoApellido) form.getTextField('Apellido Materno')?.setText(segundoApellido.toUpperCase());
+        if (nombreSolo) form.getTextField('Nombres')?.setText(nombreSolo.toUpperCase());
+      } else if (nombre && nombre !== 'No detectado') {
         const parts = nombre.split(' ');
-        if (parts.length >= 3) {
-          form.getTextField('Apellido Paterno')?.setText(parts[0]);
-          form.getTextField('Apellido Materno')?.setText(parts[1]);
-          form.getTextField('Nombres')?.setText(parts.slice(2).join(' '));
+        if (parts.length === 4) {
+          form.getTextField('Nombres')?.setText(parts.slice(0, 2).join(' ').toUpperCase());
+          form.getTextField('Apellido Paterno')?.setText(parts[2].toUpperCase());
+          form.getTextField('Apellido Materno')?.setText(parts[3].toUpperCase());
+        } else if (parts.length === 3) {
+          form.getTextField('Nombres')?.setText(parts[0].toUpperCase());
+          form.getTextField('Apellido Paterno')?.setText(parts[1].toUpperCase());
+          form.getTextField('Apellido Materno')?.setText(parts[2].toUpperCase());
+        } else if (parts.length === 2) {
+          form.getTextField('Nombres')?.setText(parts[0].toUpperCase());
+          form.getTextField('Apellido Paterno')?.setText(parts[1].toUpperCase());
         } else {
-          form.getTextField('Nombres')?.setText(nombre);
+          form.getTextField('Nombres')?.setText(nombre.toUpperCase());
         }
       }
       if (curp && curp !== 'No detectado') form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
@@ -1501,8 +1707,8 @@ export default function AdminPresidentes() {
                 etiqueta="CURP"
                 nombre="curp"
                 valor={datosEditables.curp}
-                onChange={manejarCambioInput}
-                placeholder="CURP de 18 caracteres"
+                placeholder="Se auto-completará con el documento de identidad"
+                deshabilitado={true}
               />
               <EntradaSeleccion
                 etiqueta="Estatus del Presidente"

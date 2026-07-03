@@ -153,23 +153,7 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
                 ):
                     raise HTTPException(400, f"El número de camiseta {numero_camiseta} ya está asignado a otro jugador en este equipo.")
             
-            # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
-            if rol_en_equipo != 11:
-                dup_rol = db.query(MiembrosEquipo).filter(
-                    MiembrosEquipo.EquipoID == eq_jugando.EquiposJugandoId,
-                    MiembrosEquipo.RolEnEquipo == rol_en_equipo,
-                    MiembrosEquipo.Eliminado == False
-                ).first()
-                if dup_rol or any(
-                    isinstance(obj, MiembrosEquipo) and
-                    obj.EquipoID == eq_jugando.EquiposJugandoId and
-                    obj.RolEnEquipo == rol_en_equipo and
-                    not obj.Eliminado
-                    for obj in db.new
-                ):
-                    from app.modelos.rol_equipo_modelo import RolesDeEquipo
-                    rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_en_equipo).scalar() or "esta posición"
-                    raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
 
             nuevo_miembro = MiembrosEquipo(
                 PersonaId=persona_id,
@@ -517,23 +501,7 @@ async def crear_equipo_completo_servicio(form_data, db, usuario):
                         ):
                             raise HTTPException(400, f"El número de camiseta {numero_camiseta} ya está asignado a otro jugador en este equipo.")
                     
-                    # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
-                    if rol_en_equipo != 11:
-                        dup_rol = db.query(MiembrosEquipo).filter(
-                            MiembrosEquipo.EquipoID == equipo_jugando.EquiposJugandoId,
-                            MiembrosEquipo.RolEnEquipo == rol_en_equipo,
-                            MiembrosEquipo.Eliminado == False
-                        ).first()
-                        if dup_rol or any(
-                            isinstance(obj, MiembrosEquipo) and
-                            obj.EquipoID == equipo_jugando.EquiposJugandoId and
-                            obj.RolEnEquipo == rol_en_equipo and
-                            not obj.Eliminado
-                            for obj in db.new
-                        ):
-                            from app.modelos.rol_equipo_modelo import RolesDeEquipo
-                            rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_en_equipo).scalar() or "esta posición"
-                            raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
 
                     nuevo_miembro = MiembrosEquipo(
                         PersonaId=s_comp.PersonaId,

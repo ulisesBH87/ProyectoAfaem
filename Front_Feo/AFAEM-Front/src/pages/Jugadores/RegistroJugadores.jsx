@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import {
   FaArrowLeft,
   FaArrowRight,
+  FaArrowUp,
   FaSave,
   FaUpload,
   FaFilePdf,
@@ -16,7 +17,8 @@ import {
   FaGlobeAmericas,
   FaExclamationTriangle,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaTrash
 } from 'react-icons/fa';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import { PDFDocument } from 'pdf-lib';
@@ -288,6 +290,7 @@ export default function RegistroJugadores() {
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
   const [invitationTeams, setInvitationTeams] = useState([]);
   const [noPendingTeams, setNoPendingTeams] = useState(false);
+  const [missingOcrFields, setMissingOcrFields] = useState([]);
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
@@ -629,10 +632,160 @@ export default function RegistroJugadores() {
       background-color: ${COLORS.dangerBgLight} !important;
       box-shadow: 0 0 0 3px ${COLORS.dangerBgTranslucent10} !important;
     }
+
+    /* Paso 5 Seguros */
+    .seguro-wizard-card {
+      background: ${COLORS.slate50};
+      border-radius: 16px;
+      padding: 25px;
+    }
+    .seguro-wizard-label {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .seguro-wizard-sublabel {
+      font-size: 10px;
+      margin-bottom: 12px;
+    }
+    .seguro-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .seguro-card-item {
+      padding: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+    .seguro-card-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+    .seguro-card-title {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .seguro-card-badge {
+      margin-top: 5px;
+      display: inline-flex;
+      align-self: start;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .seguro-modal-container {
+      background-color: ${COLORS.slate800};
+      border: 1px solid ${COLORS.overlayWhite10};
+      border-radius: 24px;
+      width: 100%;
+      max-width: 750px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px ${COLORS.overlayBlack};
+      display: flex;
+      flex-direction: column;
+      color: white;
+    }
+    .seguro-modal-header {
+      padding: 24px 30px;
+      border-bottom: 1px solid ${COLORS.overlayWhite08};
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      background: linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900});
+    }
+    .seguro-modal-content {
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .seguro-modal-footer {
+      padding: 20px 30px;
+      border-top: 1px solid ${COLORS.overlayWhite08};
+      background-color: ${COLORS.overlaySlateLight};
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .seguro-wizard-card {
+        padding: 15px !important;
+        border-radius: 12px !important;
+      }
+      .seguro-wizard-label {
+        font-size: 12px !important;
+        margin-bottom: 6px !important;
+      }
+      .seguro-wizard-sublabel {
+        font-size: 9px !important;
+        margin-bottom: 8px !important;
+      }
+      .seguro-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .seguro-card-item {
+        padding: 12px !important;
+      }
+      .seguro-card-title {
+        font-size: 12.5px !important;
+      }
+      .seguro-card-badge {
+        font-size: 10px !important;
+        padding: 2px 6px !important;
+      }
+      .seguro-modal-container {
+        border-radius: 18px;
+        max-height: 95vh;
+      }
+      .seguro-modal-header {
+        padding: 18px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .seguro-modal-header > div:last-child {
+        text-align: left !important;
+        align-self: flex-start;
+      }
+      .seguro-modal-content {
+        padding: 18px 20px;
+        gap: 18px;
+      }
+      .seguro-modal-content > div:first-child {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+      }
+      .seguro-modal-footer {
+        padding: 15px 20px;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        border-bottom-left-radius: 18px;
+        border-bottom-right-radius: 18px;
+      }
+      .seguro-modal-footer button {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+      }
+    }
   `;
 
   // ESTADOS
   const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState({});
   const [slotsInfo, setSlotsInfo] = useState({ disponibles: 0, total: 0 });
   const [loadingSlots, setLoadingSlots] = useState(true);
   const [slotsData, setSlotsData] = useState(null);
@@ -704,14 +857,7 @@ export default function RegistroJugadores() {
   };
 
   const obtenerDuplicadoPosicion = (posicionId, playerNumero) => {
-    if (!posicionId) return null;
-    const posVal = parseInt(posicionId, 10);
-    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
-    return jugadores.find(p =>
-      p.numero !== playerNumero &&
-      p.datos?.posicion &&
-      parseInt(p.datos.posicion, 10) === posVal
-    );
+    return null;
   };
 
   // Función que verifica requisitos sin lanzar alertas ni modificar estado
@@ -826,10 +972,12 @@ export default function RegistroJugadores() {
     setValidationErrors(errors);
 
     if (Object.keys(errors).length > 0) {
-      const firstError = Object.values(errors)[0];
+      const errorListHtml = `<ul style="text-align: left; font-size: 14px; line-height: 1.6; color: ${COLORS.slate700 || '#334155'}; margin-left: 20px;">` +
+        Object.values(errors).map(err => `<li>${err}</li>`).join('') +
+        '</ul>';
       Swal.fire({
-        title: 'Campos requeridos',
-        text: firstError,
+        title: 'Campos requeridos / Datos erróneos:',
+        html: errorListHtml,
         icon: 'warning',
         confirmButtonColor: COLORS.primary
       });
@@ -862,7 +1010,8 @@ export default function RegistroJugadores() {
     ine: null,
     ineTutor: null,
     identificacionMenor: null,
-    foto: null
+    foto: null,
+    signedForm: null
   });
 
   const [catalogs, setCatalogs] = useState({
@@ -879,6 +1028,7 @@ export default function RegistroJugadores() {
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
   const selectedInvitationTeam = invitationTeams.find(
     (team) => String(team.equipo_temporal_id) === String(teamId)
   ) || null;
@@ -985,8 +1135,8 @@ export default function RegistroJugadores() {
       edad--;
     }
 
-    if (edad < 3) {
-      return 'El jugador debe tener al menos 3 años de edad.';
+    if (edad < 2) {
+      return 'El jugador debe tener al menos 2 años de edad.';
     }
 
     if (edad > 125) {
@@ -1262,9 +1412,15 @@ export default function RegistroJugadores() {
       if (cleanValue !== '') {
         const duplicate = obtenerDuplicadoCamiseta(cleanValue, jugadores[currentPlayerIndex]?.numero);
         if (duplicate) {
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicado = nombreDup.trim()
+            ? `El número de camiseta #${cleanValue} ya está asignado a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}.`
+            : `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.numero}.`;
+
           setValidationErrors(prev => ({
             ...prev,
-            numCamiseta: `El número de camiseta #${cleanValue} ya está asignado al Jugador ${duplicate.numero}.`
+            numCamiseta: msgDuplicado
           }));
         } else {
           setValidationErrors(prev => ({ ...prev, numCamiseta: null }));
@@ -1277,9 +1433,15 @@ export default function RegistroJugadores() {
         const duplicate = obtenerDuplicadoPosicion(cleanValue, jugadores[currentPlayerIndex]?.numero);
         if (duplicate) {
           const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(cleanValue))?.nombre || 'esta posición';
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicado = nombreDup.trim()
+            ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}.`
+            : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`;
+
           setValidationErrors(prev => ({
             ...prev,
-            posicion: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}.`
+            posicion: msgDuplicado
           }));
         } else {
           setValidationErrors(prev => ({ ...prev, posicion: null }));
@@ -1306,9 +1468,15 @@ export default function RegistroJugadores() {
       if (datos.numCamiseta) {
         const duplicate = obtenerDuplicadoCamiseta(datos.numCamiseta, player.numero);
         if (duplicate) {
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicadoText = nombreDup.trim()
+            ? `El número #${datos.numCamiseta} ya está asignado a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}. Por favor, elige otro número.`
+            : `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`;
+
           Swal.fire({
             title: 'Número de camiseta duplicado',
-            text: `El número #${datos.numCamiseta} ya está asignado al Jugador ${duplicate.numero}. Por favor, elige otro número.`,
+            text: msgDuplicadoText,
             icon: 'warning',
             confirmButtonColor: COLORS.primary
           });
@@ -1321,9 +1489,15 @@ export default function RegistroJugadores() {
         const duplicate = obtenerDuplicadoPosicion(datos.posicion, player.numero);
         if (duplicate) {
           const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(datos.posicion))?.nombre || 'esta posición';
+          const nombreDup = duplicate.datos?.nombreJugador || '';
+          const apellidoDup = duplicate.datos?.apellidoPaterno || '';
+          const msgDuplicadoText = nombreDup.trim()
+            ? `La posición de ${posNombre} ya está asignada a ${`${nombreDup.trim()} ${apellidoDup.trim()}`.trim().toUpperCase()}. Por favor, elige otra posición.`
+            : `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`;
+
           Swal.fire({
             title: 'Posición duplicada',
-            text: `La posición de ${posNombre} ya está asignada al Jugador ${duplicate.numero}. Por favor, elige otra posición.`,
+            text: msgDuplicadoText,
             icon: 'warning',
             confirmButtonColor: COLORS.primary
           });
@@ -1353,6 +1527,51 @@ export default function RegistroJugadores() {
       if (player.slotId) {
         guardarBorradorEnBD(player.slotId, datos);
       }
+    }
+  };
+
+  const handleResetForm = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar formulario?',
+      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, limpiar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+
+    if (result.isConfirmed) {
+      setJugadores(prev => {
+        const next = [...prev];
+        const currentPlayerState = next[currentPlayerIndex];
+        if (currentPlayerState) {
+          const resetDatos = {
+            ...defaultPlayerDatos,
+            equipo: currentPlayerState.datos?.equipo || '',
+            liga: currentPlayerState.datos?.liga || '',
+            categoria: currentPlayerState.datos?.categoria || 'LIBRE',
+            presidente: currentPlayerState.datos?.presidente || 'No disponible'
+          };
+          next[currentPlayerIndex] = normalizePlayer({
+            ...currentPlayerState,
+            datos: resetDatos
+          });
+
+          if (currentPlayerState.slotId) {
+            guardarBorradorEnBD(currentPlayerState.slotId, resetDatos);
+          }
+        }
+        return next;
+      });
+      setValidationErrors({});
+      Swal.fire({
+        title: 'Formulario Limpiado',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
     }
   };
 
@@ -1558,7 +1777,8 @@ export default function RegistroJugadores() {
       ine: null,
       ineTutor: null,
       identificacionMenor: null,
-      foto: null
+      foto: null,
+      signedForm: null
     });
 
     const player = jugadores[currentPlayerIndex];
@@ -1583,13 +1803,28 @@ export default function RegistroJugadores() {
         }
       });
     }
+
+    if (player?.signedForm) {
+      const file = player.signedForm;
+      if (file.type?.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviews(prev => ({ ...prev, signedForm: reader.result }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const url = URL.createObjectURL(file);
+        setPreviews(prev => ({ ...prev, signedForm: url }));
+      }
+    }
   }, [
     currentPlayerIndex,
     currentDocuments.acta,
     currentDocuments.ine,
     currentDocuments.ineTutor,
     currentDocuments.identificacionMenor,
-    currentDocuments.foto
+    currentDocuments.foto,
+    jugadores[currentPlayerIndex]?.signedForm
   ]);
 
   // Efecto para autovalidación de CURP con debounce
@@ -1646,6 +1881,9 @@ export default function RegistroJugadores() {
       });
       return;
     }
+
+    const prevDoc = jugadores[currentPlayerIndex]?.documentos?.[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
 
     updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
 
@@ -1727,8 +1965,32 @@ export default function RegistroJugadores() {
       }
     }
 
+    if (documentKey === 'ine' && !currentDatos?.fechaNacimiento) {
+      const result = await Swal.fire({
+        title: '¿De quién es esta identificación?',
+        text: 'Si este registro es para un menor de edad, debes subir primero el Acta de Nacimiento para que el sistema configure el formulario correctamente. ¿Esta identificación pertenece al jugador (mayor de edad)?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, es del jugador',
+        cancelButtonText: 'No, es del tutor / menor de edad',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      });
+      if (!result.isConfirmed) {
+        Swal.fire({
+          title: 'Carga cancelada',
+          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para actualizar el formulario.',
+          icon: 'info',
+          confirmButtonColor: COLORS.primary
+        });
+        updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+        setPreviews(prev => ({ ...prev, [documentKey]: null }));
+        return;
+      }
+    }
+
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
-    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'ineTutor') {
+    if (documentKey === 'acta' || documentKey === 'ine') {
       Swal.fire({
         title: 'Analizando Documento...',
         html: 'Extrayendo información. Por favor espere.',
@@ -1740,28 +2002,73 @@ export default function RegistroJugadores() {
       try {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
-
-        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataOcr
+        });
+        if (!response.ok) throw new Error('Error al analizar el documento');
 
         const htmlText = await response.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, "text/html");
 
+        const cleanVal = (val) => {
+          if (!val) return '';
+          const cleaned = val.trim();
+          const lower = cleaned.toLowerCase();
+          if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+            return '';
+          }
+          return cleaned;
+        };
+
         let nombreEncontrado = '';
+        let nombresEncontrados = '';
+        let apellidoPaternoEncontrado = '';
+        let apellidoMaternoEncontrado = '';
         let curpEncontrada = '';
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
+        let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
           const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-          const value = row.querySelector('.valor')?.textContent?.trim() || '';
+          const value = cleanVal(row.querySelector('.valor')?.textContent);
 
-          if (label.includes('nombre')) nombreEncontrado = value;
+          if (!value) return;
+
+          if (label.includes('nombres')) {
+            nombresEncontrados = value;
+          } else if (label.includes('nombre completo') || label === 'nombre') {
+            nombreEncontrado = value;
+          } else if (label.includes('nombre')) {
+            if (!nombresEncontrados) nombresEncontrados = value;
+          }
+
+          if (label.includes('apellido paterno') || label.includes('paterno')) {
+            apellidoPaternoEncontrado = value;
+          }
+          if (label.includes('apellido materno') || label.includes('materno')) {
+            apellidoMaternoEncontrado = value;
+          }
+
           if (label.includes('curp')) curpEncontrada = value;
-          if (label.includes('lugar de nacimiento') || label.includes('entidad')) lugarNacEncontrado = value;
-          if (label.includes('nacimiento') || label.includes('fecha nac')) {
+          if (label.includes('documento')) documentoEncontrado = value;
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
+
+          if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
+            lugarNacEncontrado = value;
+          }
+
+          if ((label.includes('nacimiento') && !label.includes('lugar')) || label.includes('fecha nac')) {
             let finalDate = value;
             if (value.includes('/')) {
               const p = value.split('/');
@@ -1774,25 +2081,67 @@ export default function RegistroJugadores() {
           }
         });
 
-        if (nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
-          const parts = nombreEncontrado ? nombreEncontrado.split(' ') : [];
+        // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+        const isActaField = ['acta', 'actaNacimiento'].includes(documentKey);
+        const isIneField = ['ine', 'ineTutor', 'identificacion', 'identificacionMenor'].includes(documentKey);
+        const isOcrActa = (documentoEncontrado || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+        const isOcrIne = (documentoEncontrado || '').toUpperCase() === 'INE';
+
+        if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+          Swal.close();
+          const result = await Swal.fire({
+            title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+            text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Cargar de todos modos',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: COLORS.primary || '#1a3b5c',
+            cancelButtonColor: COLORS.slate300 || '#cbd5e1'
+          });
+
+          if (!result.isConfirmed) {
+            updatePlayerDocuments(currentPlayerIndex, { [documentKey]: prevDoc });
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
+            return;
+          }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out the invalid CURP so the user is blocked
+        }
+
+        if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
 
-          if (parts.length >= 3) {
-            lastNamePaterno = parts[0];
-            lastNameMaterno = parts[1];
-            firstName = parts.slice(2).join(' ');
-          } else if (parts.length === 2) {
-            lastNamePaterno = parts[0];
-            firstName = parts[1];
-          } else {
-            firstName = nombreEncontrado;
+          if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+            firstName = nombresEncontrados;
+            lastNamePaterno = apellidoPaternoEncontrado;
+            lastNameMaterno = apellidoMaternoEncontrado;
+          } else if (nombreEncontrado) {
+            const parts = nombreEncontrado.split(' ');
+            if (parts.length === 4) {
+              firstName = parts.slice(0, 2).join(' ');
+              lastNamePaterno = parts[2];
+              lastNameMaterno = parts[3];
+            } else if (parts.length === 3) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+              lastNameMaterno = parts[2];
+            } else if (parts.length === 2) {
+              firstName = parts[0];
+              lastNamePaterno = parts[1];
+            } else {
+              firstName = nombreEncontrado;
+            }
           }
 
           // Auto-detectar género por CURP
           let detectedGenero = currentDatos.genero;
           if (curpEncontrada && curpEncontrada.length >= 11) {
-            const char = curpEncontrada.charAt(10);
+            const char = curpEncontrada.charAt(10).toUpperCase();
             if (char === 'M') detectedGenero = '2'; // Femenino
             else if (char === 'H') detectedGenero = '1'; // Masculino
           }
@@ -1814,13 +2163,50 @@ export default function RegistroJugadores() {
             guardarBorradorEnBD(currentPlayer.slotId, merged);
           }
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: `Se detectó a: ${nombreEncontrado || 'el documento'}`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
-          });
+          const missing = [];
+          if (!ocrResult.nombreJugador) missing.push('nombreJugador');
+          if (!ocrResult.apellidoPaterno) missing.push('apellidoPaterno');
+          if (!ocrResult.apellidoMaterno) missing.push('apellidoMaterno');
+          if (!ocrResult.curp) missing.push('curp');
+          if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
+          if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
+          if (!currentDatos.correo) missing.push('correo');
+          if (!currentDatos.telefono) missing.push('telefono');
+          setMissingOcrFields(missing);
+
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            const labels = {
+              nombreJugador: 'Nombre(s)',
+              apellidoPaterno: 'Apellido Paterno',
+              apellidoMaterno: 'Apellido Materno',
+              curp: 'CURP',
+              fechaNacimiento: 'Fecha de Nacimiento',
+              lugarNacimiento: 'Lugar de Nacimiento',
+              correo: 'Correo electrónico',
+              telefono: 'Número de teléfono'
+            };
+            const missingLabels = missing.map(m => labels[m]).filter(Boolean);
+
+            let text = nombreEncontrado ? `Se detectó a: ${nombreEncontrado}.` : 'Lectura del documento completada.';
+            if (missingLabels.length > 0) {
+              text += `\n\nPor favor, completa manualmente los campos resaltados en amarillo: ${missingLabels.join(', ')}.`;
+            }
+
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: text,
+              icon: 'success',
+              confirmButtonText: 'Aceptar',
+              confirmButtonColor: COLORS.primary
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -1909,9 +2295,17 @@ export default function RegistroJugadores() {
       }
 
       // Rellenar campos básicos
-      safeSetField(form, 'Nombres', currentDatos.nombreJugador);
-      safeSetField(form, 'Apellido Paterno', currentDatos.apellidoPaterno);
-      safeSetField(form, 'Apellido Materno', currentDatos.apellidoMaterno);
+      const nombreVal = currentDatos.nombreJugador || '';
+      const nombreFs = nombreVal.length > 35 ? 6 : nombreVal.length > 25 ? 7 : nombreVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Nombres', nombreVal, nombreFs);
+
+      const apPaternoVal = currentDatos.apellidoPaterno || '';
+      const apPaternoFs = apPaternoVal.length > 35 ? 6 : apPaternoVal.length > 25 ? 7 : apPaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Paterno', apPaternoVal, apPaternoFs);
+
+      const apMaternoVal = currentDatos.apellidoMaterno || '';
+      const apMaternoFs = apMaternoVal.length > 35 ? 6 : apMaternoVal.length > 25 ? 7 : apMaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Materno', apMaternoVal, apMaternoFs);
       safeSetField(form, 'CURP o Clave Única de Registro de Población', currentDatos.curp);
       safeSetField(form, 'Fecha de Nacimiento', currentDatos.fechaNacimiento);
       safeSetField(form, 'Sexo', currentDatos.genero === '1' ? 'MASCULINO' : 'FEMENINO');
@@ -1922,7 +2316,7 @@ export default function RegistroJugadores() {
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
       safeSetField(form, 'Teléfono', (currentDatos.codigoPais || '+52') + (currentDatos.telefono || ''));
-      safeSetField(form, 'Asociación', 'AFAEM');
+      safeSetField(form, 'Asociación', 'Asociación de Morelos');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(currentSeguroId));
@@ -1931,8 +2325,13 @@ export default function RegistroJugadores() {
         try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
-      safeSetField(form, 'Liga', (currentDatos.liga || '').split('(')[0].trim());
-      safeSetField(form, 'Equipo', currentDatos.equipo || '');
+      const ligaVal = (currentDatos.liga || '').split('(')[0].trim();
+      const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Liga', ligaVal, ligaFs);
+
+      const equipoVal = currentDatos.equipo || '';
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
       safeSetField(form, 'Categoría', currentDatos.categoria || '');
 
       // Traducir el ID de posición a su nombre en texto
@@ -2110,7 +2509,7 @@ export default function RegistroJugadores() {
   const handleRegistrarGrupoClick = () => {
     Swal.fire({
       title: '¿Confirmar registro grupal?',
-      text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer.',
+      text: 'Se registrarán todos los jugadores de la invitación al mismo tiempo. Esta acción no se puede deshacer. Si deseas hacer cambios, presiona "Cancelar"',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: COLORS.success,
@@ -2646,13 +3045,34 @@ export default function RegistroJugadores() {
               justifyContent: 'center'
             }}>
               <span style={{
+                fontSize: '11px',
+                color: COLORS.danger,
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '6px',
+                userSelect: 'none'
+              }}>
+                Toca las flechas para cambiar de jugador
+              </span>
+              <span style={{
                 fontSize: '28px',
                 fontWeight: '900',
                 color: COLORS.slate800,
                 userSelect: 'none',
-                lineHeight: '1.2'
+                lineHeight: '1.2',
+                textAlign: 'center',
+                maxWidth: '600px',
+                wordBreak: 'break-word'
               }}>
-                Jugador {currentPlayerIndex + 1}
+                {(() => {
+                  const nombre = activePlayer?.datos?.nombreJugador || '';
+                  const apellido = activePlayer?.datos?.apellidoPaterno || '';
+                  if (nombre.trim()) {
+                    return `${nombre.trim()} ${apellido.trim()}`.trim().toUpperCase();
+                  }
+                  return `Jugador ${currentPlayerIndex + 1}`;
+                })()}
               </span>
               <div style={{
                 display: 'inline-flex',
@@ -2812,6 +3232,17 @@ export default function RegistroJugadores() {
               </div>
             ) : (
               <>
+                <p style={{
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  color: COLORS.black,
+                  fontWeight: '600',
+                  marginBottom: '20px',
+                  marginTop: '-5px',
+                  userSelect: 'none'
+                }}>
+                  Toca el paso que desees para revisarlo o hacer cambios
+                </p>
                 {/* INDICADOR DE PROGRESO (STEPPER WIZARD) */}
                 <div className="stepper-container">
                   <div className="stepper-line">
@@ -2867,14 +3298,14 @@ export default function RegistroJugadores() {
                     </div>
 
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                      <div className="card" style={{ padding: '25px', borderRadius: '16px', border: `1.5px solid ${validationErrors.seguroId ? COLORS.danger : COLORS.slate200}`, background: COLORS.slate50 }}>
-                        <label className="form-label" style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px', display: 'block' }}>
-                          Seleccione el seguro comprado que desea para esta inscripción: <span className="required-star">*</span>
+                      <div className="card seguro-wizard-card" style={{ border: `1.5px solid ${validationErrors.seguroId ? COLORS.danger : COLORS.slate200}` }}>
+                        <label className="form-label seguro-wizard-label" style={{ fontWeight: '700', display: 'block' }}>
+                          Estos son tus seguros comprados. Selecciona el seguro deseado para este jugador: <span className="required-star">*</span>
                         </label>
-                        <label className="form-label" style={{ fontWeight: '700', fontSize: '10px', marginBottom: '12px', display: 'block' }}>
+                        <label className="form-label seguro-wizard-sublabel" style={{ fontWeight: '700', display: 'block' }}>
                           Vuelve a tocar para deseleccionar el seguro
                         </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                        <div className="seguro-cards-grid">
                           {slotsData?.seguros?.map((seg) => {
                             const isSelected = String(currentSeguroId) === String(seg.seguro_id);
 
@@ -2901,9 +3332,8 @@ export default function RegistroJugadores() {
                                   }
                                   setSeguroDetalle(seg);
                                 }}
+                                className="seguro-card-item"
                                 style={{
-                                  padding: '16px',
-                                  borderRadius: '12px',
                                   border: isSelected
                                     ? `2.5px solid ${COLORS.primary}`
                                     : noDisponible
@@ -2916,25 +3346,19 @@ export default function RegistroJugadores() {
                                       : 'white',
                                   cursor: noDisponible ? 'not-allowed' : 'pointer',
                                   opacity: noDisponible ? 0.6 : 1,
-                                  transition: 'all 0.2s',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '6px'
                                 }}
                               >
-                                <span style={{ fontSize: '14px', fontWeight: '800', color: isSelected ? COLORS.primary : noDisponible ? COLORS.slate400 : COLORS.slate800 }}>
-                                  🛡️ {seg.nombre}
-                                </span>
-                                <div style={{
-                                  marginTop: '5px',
-                                  display: 'inline-flex',
-                                  alignSelf: 'start',
-                                  padding: '2px 8px',
-                                  borderRadius: '20px',
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', width: '100%' }}>
+                                  <span className="seguro-card-title" style={{ fontWeight: '800', color: isSelected ? COLORS.primary : noDisponible ? COLORS.slate400 : COLORS.slate800 }}>
+                                    🛡️ {seg.nombre}
+                                  </span>
+                                  {isSelected && (
+                                    <FaCheckCircle style={{ color: COLORS.primary, fontSize: '16px', flexShrink: 0, marginTop: '2px' }} />
+                                  )}
+                                </div>
+                                <div className="seguro-card-badge" style={{
                                   background: noDisponible ? COLORS.dangerBg : COLORS.greenBg,
                                   color: noDisponible ? COLORS.danger : COLORS.greenDarker,
-                                  fontSize: '11px',
-                                  fontWeight: '800'
                                 }}>
                                   {noDisponible ? '🚫 SIN ESPACIOS' : `${disponiblesLocales} disponibles`}
                                 </div>
@@ -2985,15 +3409,27 @@ export default function RegistroJugadores() {
                         <div
                           key={doc.key}
                           className="document-card"
+                          onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                            const file = e.dataTransfer.files[0];
+                            if (file) handleFileUpload(doc.key, file);
+                          }}
                           style={{
-                            backgroundColor: 'white',
+                            backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
                             borderRadius: '20px',
-                            border: currentDocuments[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                            border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (currentDocuments[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
                             padding: '15px',
                             textAlign: 'center',
                             transition: 'all 0.3s',
                             position: 'relative',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            cursor: 'pointer'
                           }}
                         >
                           {/* Indicador de Menor para tutor/credencial */}
@@ -3014,11 +3450,6 @@ export default function RegistroJugadores() {
                             justifyContent: 'center',
                             border: `1px solid ${COLORS.slate100}`
                           }}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              handleFileUpload(doc.key, e.dataTransfer.files[0]);
-                            }}
                           >
                             {previews[doc.key] ? (
                               <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -3104,6 +3535,35 @@ export default function RegistroJugadores() {
                                     }}
                                   >
                                     <FaSyncAlt />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const result = await Swal.fire({
+                                        title: '¿Quitar documento?',
+                                        text: 'Se eliminará el documento cargado actualmente.',
+                                        icon: 'warning',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Sí, quitar',
+                                        cancelButtonText: 'Cancelar',
+                                        confirmButtonColor: COLORS.danger,
+                                        cancelButtonColor: COLORS.slate400
+                                      });
+                                      if (result.isConfirmed) {
+                                        updatePlayerDocuments(currentPlayerIndex, { [doc.key]: null });
+                                        setPreviews(prev => ({ ...prev, [doc.key]: null }));
+                                      }
+                                    }}
+                                    className="btn-delete"
+                                    style={{
+                                      width: '36px', height: '36px', borderRadius: '50%',
+                                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                    }}
+                                  >
+                                    <FaTrash />
                                   </button>
                                 </div>
                               </div>
@@ -3230,9 +3690,33 @@ export default function RegistroJugadores() {
                 {/* PASO 2: INFORMACIÓN PERSONAL */}
                 {currentStep === 2 && (
                   <section className="wizard-step-container">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                      <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Información Personal</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <StepBadge number="2" isActive={true} isDone={esPasoCompleto(2)} />
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Información Personal</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResetForm}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${COLORS.danger}`,
+                          background: 'white',
+                          color: COLORS.danger,
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => { e.target.style.background = COLORS.dangerBgLight; }}
+                        onMouseLeave={e => { e.target.style.background = 'white'; }}
+                      >
+                        <FaTrash /> Limpiar formulario
+                      </button>
                     </div>
 
                     <div className="form-wrapper-responsive" style={{ backgroundColor: 'white', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, boxShadow: `0 4px 6px -1px ${COLORS.shadow05}`, padding: '24px' }}>
@@ -3252,12 +3736,24 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.nombreJugador ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.nombreJugador
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none',
                               boxShadow: validationErrors.nombreJugador ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.nombreJugador && <span className="field-error-msg">❌ {validationErrors.nombreJugador}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3275,12 +3771,24 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.apellidoPaterno ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.apellidoPaterno
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none',
                               boxShadow: validationErrors.apellidoPaterno ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.apellidoPaterno && <span className="field-error-msg">❌ {validationErrors.apellidoPaterno}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3298,12 +3806,24 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.apellidoMaterno ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.apellidoMaterno
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none',
                               boxShadow: validationErrors.apellidoMaterno ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.apellidoMaterno && <span className="field-error-msg">❌ {validationErrors.apellidoMaterno}</span>}
                         </div>
                       </div>
@@ -3312,34 +3832,34 @@ export default function RegistroJugadores() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
                             CURP <span className="required-star">*</span>
-                            {isCheckingCurp && <span style={{ marginLeft: '10px', color: COLORS.success, fontSize: '10px' }}>Validando...</span>}
                           </label>
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
-                            onChange={(e) => {
-                              const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                              let sId = currentDatos.genero;
-                              if (val.length >= 11) {
-                                const char = val.charAt(10);
-                                if (char === 'M') sId = '2'; // Femenino
-                                else if (char === 'H') sId = '1'; // Masculino
-                              }
-                              updatePlayerDatos(currentPlayerIndex, { curp: val, genero: sId });
-                              setValidationErrors(prev => ({ ...prev, curp: null }));
-                            }}
+                            readOnly
                             onBlur={handleBlur}
-                            placeholder="ABCD..."
+                            placeholder="Se auto-completará con el documento de identidad"
                             maxLength="18"
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.curp
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('curp') && !currentDatos.curp
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               outline: 'none',
+                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : '#f1f5f9',
+                              cursor: missingOcrFields.includes('curp') && !currentDatos.curp ? 'text' : 'not-allowed',
                               boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
+                          {missingOcrFields.includes('curp') && !currentDatos.curp && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
                         </div>
                       </div>
@@ -3362,11 +3882,23 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.fechaNacimiento ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.fechaNacimiento
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
+                          {missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.fechaNacimiento && <span className="field-error-msg">❌ {validationErrors.fechaNacimiento}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3384,11 +3916,23 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.lugarNacimiento ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.lugarNacimiento
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
+                          {missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.lugarNacimiento && <span className="field-error-msg">❌ {validationErrors.lugarNacimiento}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3438,11 +3982,23 @@ export default function RegistroJugadores() {
                               boxSizing: 'border-box',
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.correo ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.correo
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (missingOcrFields.includes('correo') && !currentDatos.correo
+                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                  : `1.5px solid ${COLORS.slate300}`),
+                              backgroundColor: missingOcrFields.includes('correo') && !currentDatos.correo
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
+                          {missingOcrFields.includes('correo') && !currentDatos.correo && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.correo && <span className="field-error-msg">❌ {validationErrors.correo}</span>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -3492,7 +4048,14 @@ export default function RegistroJugadores() {
                               style={{
                                 padding: '10px',
                                 borderRadius: '8px',
-                                border: `1.5px solid ${validationErrors.telefono ? COLORS.danger : COLORS.slate300}`,
+                                border: validationErrors.telefono
+                                  ? `1.5px solid ${COLORS.danger}`
+                                  : (missingOcrFields.includes('telefono') && !currentDatos.telefono
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`),
+                                backgroundColor: missingOcrFields.includes('telefono') && !currentDatos.telefono
+                                  ? '#fef3c7'
+                                  : 'white',
                                 fontSize: '14px',
                                 flexGrow: 1,
                                 outline: 'none',
@@ -3500,6 +4063,11 @@ export default function RegistroJugadores() {
                               }}
                             />
                           </div>
+                          {missingOcrFields.includes('telefono') && !currentDatos.telefono && (
+                            <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              Completa manualmente.
+                            </span>
+                          )}
                           {validationErrors.telefono && <span className="field-error-msg">❌ {validationErrors.telefono}</span>}
                         </div>
                       </div>
@@ -3668,8 +4236,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad del jugador"
                                 valor={currentDatos.nacionalidadJugador}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadJugador', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadJugador', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadJugador: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3678,8 +4246,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="País de residencia actual"
                                 valor={currentDatos.paisResidencia}
-                                alCambiar={val => {
-                                  handleFieldChange('paisResidencia', val);
+                                alCambiar={e => {
+                                  handleFieldChange('paisResidencia', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, paisResidencia: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3691,8 +4259,8 @@ export default function RegistroJugadores() {
                               <EntradaSeleccion
                                 etiqueta="¿El jugador ha vivido en el extranjero?"
                                 valor={currentDatos.haVividoExtranjero ? '1' : '0'}
-                                alCambiar={val => {
-                                  const boolVal = val === '1';
+                                alCambiar={e => {
+                                  const boolVal = e.target.value === '1';
                                   handleFieldChange('haVividoExtranjero', boolVal);
                                   setValidationErrors(prev => ({ ...prev, haVividoExtranjero: null }));
                                   if (currentPlayer?.slotId) {
@@ -3706,8 +4274,8 @@ export default function RegistroJugadores() {
                                 <EntradaFormulario
                                   etiqueta="¿En qué país?"
                                   valor={currentDatos.dondeVividoExtranjero}
-                                  alCambiar={val => {
-                                    handleFieldChange('dondeVividoExtranjero', val);
+                                  alCambiar={e => {
+                                    handleFieldChange('dondeVividoExtranjero', e.target.value);
                                     setValidationErrors(prev => ({ ...prev, dondeVividoExtranjero: null }));
                                   }}
                                   alPerderEnfoque={handleBlur}
@@ -3721,8 +4289,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad del padre"
                                 valor={currentDatos.nacionalidadPadre}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadPadre', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadPadre', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadPadre: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3731,8 +4299,8 @@ export default function RegistroJugadores() {
                               <EntradaFormulario
                                 etiqueta="Nacionalidad de la madre"
                                 valor={currentDatos.nacionalidadMadre}
-                                alCambiar={val => {
-                                  handleFieldChange('nacionalidadMadre', val);
+                                alCambiar={e => {
+                                  handleFieldChange('nacionalidadMadre', e.target.value);
                                   setValidationErrors(prev => ({ ...prev, nacionalidadMadre: null }));
                                 }}
                                 alPerderEnfoque={handleBlur}
@@ -3743,8 +4311,8 @@ export default function RegistroJugadores() {
                             <EntradaFormulario
                               etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                               valor={currentDatos.registroAsociacionExtranjera}
-                              alCambiar={val => {
-                                handleFieldChange('registroAsociacionExtranjera', val);
+                              alCambiar={e => {
+                                handleFieldChange('registroAsociacionExtranjera', e.target.value);
                                 setValidationErrors(prev => ({ ...prev, registroAsociacionExtranjera: null }));
                               }}
                               alPerderEnfoque={handleBlur}
@@ -3754,17 +4322,17 @@ export default function RegistroJugadores() {
                             />
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%' }}>
-                              <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={val => { handleFieldChange('nacAbueloPaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
-                              <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={val => { handleFieldChange('nacAbuelaPaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
-                              <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={val => { handleFieldChange('nacAbueloMaterno', val); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
-                              <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={val => { handleFieldChange('nacAbuelaMaterna', val); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
+                              <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={currentDatos.nacAbueloPaterno} alCambiar={e => { handleFieldChange('nacAbueloPaterno', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbueloPaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloPaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={currentDatos.nacAbuelaPaterna} alCambiar={e => { handleFieldChange('nacAbuelaPaterna', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbuelaPaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaPaterna} />
+                              <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={currentDatos.nacAbueloMaterno} alCambiar={e => { handleFieldChange('nacAbueloMaterno', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbueloMaterno: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbueloMaterno} />
+                              <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={currentDatos.nacAbuelaMaterna} alCambiar={e => { handleFieldChange('nacAbuelaMaterna', e.target.value); setValidationErrors(prev => ({ ...prev, nacAbuelaMaterna: null })); }} alPerderEnfoque={handleBlur} error={validationErrors.nacAbuelaMaterna} />
                             </div>
 
                             <EntradaFormulario
                               etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                               valor={currentDatos.juegoClubExtranjero}
-                              alCambiar={val => {
-                                handleFieldChange('juegoClubExtranjero', val);
+                              alCambiar={e => {
+                                handleFieldChange('juegoClubExtranjero', e.target.value);
                                 setValidationErrors(prev => ({ ...prev, juegoClubExtranjero: null }));
                               }}
                               alPerderEnfoque={handleBlur}
@@ -3854,9 +4422,8 @@ export default function RegistroJugadores() {
                     {/* Descarga de formato prellenado y carga del formato firmado */}
                     <div style={{ borderTop: `1px solid ${COLORS.slate200}`, paddingTop: '25px', marginBottom: '20px' }}>
                       <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, marginBottom: '12px', textAlign: 'center' }}>Formato de Afiliación Oficial</h4>
-                      <p style={{ fontSize: '13px', color: COLORS.slate500, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                      <p style={{ fontSize: '13px', color: COLORS.dangerAccent, textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
                         Descarga el formato prellenado con los datos del jugador, fírmalo y súbelo escaneado.
-                        <strong> Si aún no tienes la firma, puedes inscribir al jugador y subir el formato firmado después.</strong>
                       </p>
 
                       {!pasos1a5Completos && (
@@ -3897,28 +4464,54 @@ export default function RegistroJugadores() {
 
                       <div
                         onClick={() => {
-                          if (pasos1a5Completos) {
+                          if (pasos1a5Completos && !currentPlayer?.signedForm) {
                             document.getElementById('final-signed-form').click();
                           }
                         }}
+                        onDragEnter={(e) => { if (pasos1a5Completos) { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(true); } }}
+                        onDragOver={(e) => { if (pasos1a5Completos) { e.preventDefault(); e.stopPropagation(); } }}
+                        onDragLeave={(e) => { if (pasos1a5Completos) { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(false); } }}
+                        onDrop={(e) => {
+                          if (!pasos1a5Completos) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDraggingSignedForm(false);
+                          const file = e.dataTransfer.files[0];
+                          if (file && file.type === 'application/pdf') {
+                            updatePlayerSignedForm(currentPlayerIndex, file);
+                          } else if (file) {
+                            Swal.fire('Error', 'Solo se permiten archivos PDF para el formato firmado.', 'error');
+                          }
+                        }}
+                        className={currentPlayer?.signedForm ? "document-card" : ""}
                         style={{
-                          border: currentPlayer?.signedForm ? `2px solid ${COLORS.success}` : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`),
+                          border: currentPlayer?.signedForm 
+                            ? `2px solid ${COLORS.success}` 
+                            : (isDraggingSignedForm 
+                              ? `2px solid ${COLORS.primary}` 
+                              : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`)),
                           borderRadius: '20px',
                           padding: '35px 20px',
-                          backgroundColor: currentPlayer?.signedForm ? COLORS.greenBg50 : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100),
-                          cursor: pasos1a5Completos ? 'pointer' : 'not-allowed',
+                          backgroundColor: currentPlayer?.signedForm 
+                            ? COLORS.greenBg50 
+                            : (isDraggingSignedForm 
+                              ? 'rgba(26, 59, 92, 0.05)' 
+                              : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100)),
+                          cursor: (pasos1a5Completos && !currentPlayer?.signedForm) ? 'pointer' : 'default',
                           transition: 'all 0.3s',
                           textAlign: 'center',
                           maxWidth: '600px',
                           margin: '0 auto',
-                          opacity: pasos1a5Completos ? 1 : 0.6
+                          opacity: pasos1a5Completos ? 1 : 0.6,
+                          position: 'relative',
+                          overflow: 'hidden'
                         }}
                       >
                         {currentPlayer?.signedForm ? (
                           <div style={{ color: COLORS.success }}>
                             <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
                             <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado cargado y listo</p>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado, cargado, y listo</p>
                           </div>
                         ) : (
                           <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400 }}>
@@ -3927,6 +4520,77 @@ export default function RegistroJugadores() {
                             <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
                           </div>
                         )}
+
+                        {currentPlayer?.signedForm && (
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: COLORS.overlaySlateGray,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)',
+                            zIndex: 2
+                          }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewDoc({
+                                    open: true,
+                                    url: previews.signedForm,
+                                    type: 'pdf',
+                                    title: 'Formato de Afiliación Oficial'
+                                  });
+                                }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaSearchPlus />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                document.getElementById('final-signed-form').click();
+                              }}
+                              className="btn-change"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaSyncAlt />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updatePlayerSignedForm(currentPlayerIndex, null);
+                              }}
+                              className="btn-delete"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                              }}
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        )}
+
                         <input
                           type="file"
                           id="final-signed-form"
@@ -4003,8 +4667,8 @@ export default function RegistroJugadores() {
                       Siguiente <FaArrowRight />
                     </button>
                   ) : (
-                    <span style={{ fontSize: '13px', color: COLORS.slate500, fontWeight: '600', fontStyle: 'italic' }}>
-                      * Envío grupal al final de la página
+                    <span style={{ fontSize: '13px', color: COLORS.dangerAccent, fontWeight: '600', fontStyle: 'italic' }}>
+                      * Podrás hacer en el registro grupal cuando llenes los datos de todos tus jugadores
                     </span>
                   )}
                 </div>
@@ -4037,14 +4701,14 @@ export default function RegistroJugadores() {
                   Todos los datos de tus jugadores están listos
                 </h3>
                 <p style={{ fontSize: '14px', color: COLORS.greenDarker, margin: '0 0 20px 0', fontWeight: '600' }}>
-                  ¿Deseas realizar el registro o modificar alguno?
+                  Puedes revisar los datos o realizar cambios antes de hacer el registro
                 </p>
                 <button
                   type="button"
                   onClick={handleRegistrarGrupoClick}
                   disabled={uploading}
                   style={{
-                    padding: '14px 40px',
+                    padding: '14px 20px',
                     borderRadius: '14px',
                     border: 'none',
                     background: `linear-gradient(135deg, ${COLORS.success}, ${COLORS.successDark})`,
@@ -4056,7 +4720,10 @@ export default function RegistroJugadores() {
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '10px'
+                    justifyContent: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    maxWidth: '320px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
@@ -4069,6 +4736,39 @@ export default function RegistroJugadores() {
                 >
                   {uploading ? 'Registrando grupo...' : 'Registrar todos los jugadores'} <FaSave />
                 </button>
+                <div style={{ marginTop: '15px' }}>
+                  <button
+                    type="button"
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    style={{
+                      padding: '12px 20px',
+                      borderRadius: '14px',
+                      border: `1.5px solid ${COLORS.success}`,
+                      background: 'transparent',
+                      color: COLORS.greenDeep,
+                      fontWeight: '800',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      maxWidth: '320px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = COLORS.successBg;
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    Revisar / Hacer cambios <FaArrowUp />
+                  </button>
+                </div>
               </div>
             );
           })()}
@@ -4139,6 +4839,17 @@ export default function RegistroJugadores() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
+                  <span style={{
+                    fontSize: '11px',
+                    color: COLORS.dangerAccent,
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '6px',
+                    userSelect: 'none'
+                  }}>
+                    Toca las flechas para cambiar de jugador
+                  </span>
                   <span style={{
                     fontSize: '28px',
                     fontWeight: '900',
@@ -4267,7 +4978,7 @@ export default function RegistroJugadores() {
                 </a>
               </div>
             ) : (
-              <iframe src={previewDoc.url} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
+              <iframe src={`${previewDoc.url}#toolbar=0&navpanes=0`} title="Document Preview" style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px' }} />
             )
           ) : (
             <img src={previewDoc.url} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '12px' }} />
@@ -4302,33 +5013,12 @@ export default function RegistroJugadores() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 9999,
-            padding: '20px',
+            padding: /Mobi|Android/i.test(navigator.userAgent) ? '10px' : '20px',
             animation: 'fadeIn 0.2s ease-out'
           }}>
-            <div style={{
-              backgroundColor: COLORS.slate800,
-              border: `1px solid ${COLORS.overlayWhite10}`,
-              borderRadius: '24px',
-              width: '100%',
-              maxWidth: '850px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: `0 25px 50px -12px ${COLORS.overlayBlack}`,
-              display: 'flex',
-              flexDirection: 'column',
-              color: 'white'
-            }}>
+            <div className="seguro-modal-container">
               {/* Header */}
-              <div style={{
-                padding: '25px 30px',
-                borderBottom: `1px solid ${COLORS.overlayWhite08}`,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '15px',
-                background: `linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900})`
-              }}>
+              <div className="seguro-modal-header">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Seguro de Jugador
@@ -4346,7 +5036,7 @@ export default function RegistroJugadores() {
               </div>
 
               {/* Content */}
-              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div className="seguro-modal-content">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
                   {/* Left Column - Benefits */}
                   <div>
@@ -4438,17 +5128,7 @@ export default function RegistroJugadores() {
               </div>
 
               {/* Action Footer */}
-              <div style={{
-                padding: '20px 30px',
-                borderTop: `1px solid ${COLORS.overlayWhite08}`,
-                backgroundColor: COLORS.overlaySlateLight,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '12px',
-                borderBottomLeftRadius: '24px',
-                borderBottomRightRadius: '24px'
-              }}>
+              <div className="seguro-modal-footer">
                 <button
                   type="button"
                   onClick={() => setSeguroDetalle(null)}

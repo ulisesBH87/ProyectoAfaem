@@ -68,7 +68,7 @@ export default function PasswordField({ label, value, onChange, error, showStren
             }} />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-            {[['6+', 'minLen'], ['a-z', 'hasLower'], ['A-Z', 'hasUpper'], ['0-9', 'hasDigit'], ['#@!', 'hasSpecial']].map(([l, k]) => (
+            {[['6 Caracteres o más', 'minLen'], ['Una minúscula', 'hasLower'], ['Una mayúscula', 'hasUpper'], ['Un dígito (0-9)', 'hasDigit'], ['Un caracter especial', 'hasSpecial']].map(([l, k]) => (
               <span key={k} style={{ fontSize: 10, color: pwInfo.rules[k] ? C.green : C.textDim }}>
                 {pwInfo.rules[k] ? '✓' : '○'} {l}
               </span>

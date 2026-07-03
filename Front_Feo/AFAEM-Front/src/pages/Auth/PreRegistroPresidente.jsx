@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock, FaCamera } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock, FaCamera, FaTrash } from 'react-icons/fa';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -297,6 +297,7 @@ function PreRegistroPresidente() {
 
   // PASO 2: Documentos
   const [documents, setDocuments] = useState({});
+  const [dragActive, setDragActive] = useState({});
   const [documentosGuardados, setDocumentosGuardados] = useState([]);
   const [ocrResults, setOcrResults] = useState(() => {
     try {
@@ -351,7 +352,7 @@ function PreRegistroPresidente() {
   const [, setFotoPreview] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState({});
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
-  const [asociacion, setAsociacion] = useState('AFAEM');
+  const [asociacion, setAsociacion] = useState('Asociación de Morelos');
   const [liga, setLiga] = useState('');
   const [cargoSeleccionado, setCargoSeleccionado] = useState('Presidente Equipo');
   const [ligasCatalogo, setLigasCatalogo] = useState([]);
@@ -364,7 +365,7 @@ function PreRegistroPresidente() {
   // Estados para validación fallida de fotografía y captura manual de OCR
   const [fotoValidacionFallida, setFotoValidacionFallida] = useState(false);
   const [fotoArchivoPendiente, setFotoArchivoPendiente] = useState(null);
-  const [mostrarFormularioManual, setMostrarFormularioManual] = useState(false);
+
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraTargetKey, setCameraTargetKey] = useState(null);
@@ -1241,10 +1242,11 @@ function PreRegistroPresidente() {
       });
       procesarFotografia(file);
     } else {
+      const prevDoc = documents[documentKey] || null;
       setDocuments(prev => ({ ...prev, [documentKey]: file }));
       // Invocar OCR real al subir
       if (['actaNacimiento', 'identificacion'].includes(documentKey)) {
-        procesarOCRReal(documentKey, file);
+        procesarOCRReal(documentKey, file, prevDoc);
       }
     }
   };
@@ -1253,22 +1255,72 @@ function PreRegistroPresidente() {
     if (!rawText) return currentData;
     const data = { ...currentData };
 
+    // Intentar emparejar layout cruzado/macho en una sola línea
+    const cleanText = rawText.replace(/\s+/g, ' ').toUpperCase();
+    const mashedMatch = cleanText.match(/DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)(?:$|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO))/i);
+    if (mashedMatch) {
+      const nombresVal = mashedMatch[1].trim();
+      const ap1Val = mashedMatch[2].trim();
+      const ap2Val = mashedMatch[3].trim();
+
+      data.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
+      data.nombres = nombresVal.toUpperCase();
+      data.apellido_paterno = ap1Val.toUpperCase();
+      data.apellido_materno = ap2Val.toUpperCase();
+      data.nombreSolo = nombresVal.toUpperCase();
+      data.primerApellido = ap1Val.toUpperCase();
+      data.segundoApellido = ap2Val.toUpperCase();
+
+      const rest = mashedMatch[4].trim();
+      if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
+        data.nacionalidad = rest.toUpperCase();
+      } else if (cleanText.includes('NACIONALIDAD')) {
+        const nacMatch = cleanText.match(/(?:NACIONALIDAD|PAIS)\s+([A-Z\s]+)/i);
+        if (nacMatch) data.nacionalidad = nacMatch[1].trim().toUpperCase();
+      }
+      return data;
+    }
+
     // 1. RESCATE DE NOMBRE (Especialmente para actas digitales mexicanas)
     // Buscamos patrones de etiquetas seguidas de valores en líneas subsecuentes
-    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2) {
+    const firstWord = data.nombre ? data.nombre.split(' ')[0] : '';
+    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2 || firstWord.length <= 1) {
       // Intento 1: Formato "Nombre(s) \n VALOR \n Primer Apellido \n VALOR ..."
       const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
 
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) nombres = lines[i + 1];
-        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1 = lines[i + 1];
-        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2 = lines[i + 1];
+        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) {
+          const nextVal = lines[i + 1].toUpperCase();
+          if ((nextVal === 'S' || nextVal === '(S)' || nextVal.length <= 1) && i + 2 < lines.length) {
+            nombres = lines[i + 2];
+          } else {
+            nombres = lines[i + 1];
+          }
+        }
+        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap1 = val;
+          }
+        }
+        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap2 = val;
+          }
+        }
       }
 
       if (nombres && ap1) {
-        data.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
+        data.nombre = `${nombres} ${ap1} ${ap2}`.replace(/\s+/g, ' ').toUpperCase();
+        data.nombres = nombres.toUpperCase();
+        data.apellido_paterno = ap1.toUpperCase();
+        data.apellido_materno = ap2.toUpperCase();
+        data.nombreSolo = nombres.toUpperCase();
+        data.primerApellido = ap1.toUpperCase();
+        data.segundoApellido = ap2.toUpperCase();
       }
     }
 
@@ -1305,7 +1357,7 @@ function PreRegistroPresidente() {
     return data;
   };
 
-  const procesarOCRReal = async (docKey, file) => {
+  const procesarOCRReal = async (docKey, file, prevDoc) => {
     Swal.fire({
       title: 'Analizando Documento...',
       html: 'Extrayendo información. <b>Por favor espere.</b>',
@@ -1319,38 +1371,170 @@ function PreRegistroPresidente() {
     try {
       const formData = new FormData();
       formData.append('file_id', file);
-
-      // Usamos el proxy configurado en vite.config.js
-      const response = await fetch('/ocr-api', {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const response = await fetch(`${API_BASE}/documentos/ocr`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
 
-      if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+      if (!response.ok) throw new Error('Ocurrió un error al cargar el documento');
 
       // Parsea el HTML del OCR para extraer los datos
       const htmlText = await response.text();
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, "text/html");
 
-      let extractedData = {};
-      const rows = doc.querySelectorAll('.dato-fila');
+      const cleanVal = (val) => {
+        if (!val) return '';
+        const cleaned = val.trim();
+        const lower = cleaned.toLowerCase();
+        if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+          return '';
+        }
+        return cleaned;
+      };
 
+      let nombreEncontrado = '';
+      let nombresEncontrados = '';
+      let apellidoPaternoEncontrado = '';
+      let apellidoMaternoEncontrado = '';
+      let curpEncontrada = '';
+      let fechaNacEncontrada = '';
+      let nacionalidadEncontrada = '';
+      let edadEncontrada = '';
+      let sexoEncontrado = '';
+      let documentoEncontrado = '';
+
+      const rows = doc.querySelectorAll('.dato-fila');
       rows.forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const value = row.querySelector('.valor')?.textContent?.trim() || '';
-        if (label.includes('curp')) extractedData.curp = value;
-        if (label.includes('nombre')) extractedData.nombre = value;
-        if (label.includes('nacionalidad')) extractedData.nacionalidad = value;
-        if (label.includes('fecha de nacimiento')) extractedData.fecha_nac = value;
-        if (label.includes('edad')) extractedData.edad = value;
-        if (label.includes('documento')) extractedData.documento = value;
+        const value = cleanVal(row.querySelector('.valor')?.textContent);
+
+        if (!value) return;
+
+        if (label.includes('nombres')) {
+          nombresEncontrados = value;
+        } else if (label.includes('nombre completo') || label === 'nombre') {
+          nombreEncontrado = value;
+        } else if (label.includes('nombre')) {
+          if (!nombresEncontrados) nombresEncontrados = value;
+        }
+
+        if (label.includes('apellido paterno') || label.includes('paterno')) {
+          apellidoPaternoEncontrado = value;
+        }
+        if (label.includes('apellido materno') || label.includes('materno')) {
+          apellidoMaternoEncontrado = value;
+        }
+
+        if (label.includes('curp')) curpEncontrada = value;
+        if (label.includes('nacionalidad')) nacionalidadEncontrada = value;
+
+        if (label.includes('fecha de nacimiento') || label.includes('fecha nac') || (label.includes('nacimiento') && !label.includes('lugar'))) {
+          let dateVal = value;
+          if (dateVal.includes('-')) {
+            const p = dateVal.split('-');
+            if (p.length === 3 && p[0].length === 4) {
+              dateVal = `${p[2]}/${p[1]}/${p[0]}`;
+            }
+          }
+          fechaNacEncontrada = dateVal;
+        }
+
+        if (label.includes('edad')) edadEncontrada = value;
+        if (label.includes('sexo')) sexoEncontrado = value;
+        if (label.includes('documento')) documentoEncontrado = value;
       });
+
+      let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+
+      if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+        firstName = nombresEncontrados;
+        lastNamePaterno = apellidoPaternoEncontrado;
+        lastNameMaterno = apellidoMaternoEncontrado;
+      } else if (nombreEncontrado) {
+        const parts = nombreEncontrado.split(' ');
+        if (parts.length === 4) {
+          firstName = parts.slice(0, 2).join(' ');
+          lastNamePaterno = parts[2];
+          lastNameMaterno = parts[3];
+        } else if (parts.length === 3) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+          lastNameMaterno = parts[2];
+        } else if (parts.length === 2) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+        } else {
+          firstName = nombreEncontrado;
+        }
+      }
+
+      const fullNombre = [firstName, lastNamePaterno, lastNameMaterno].filter(Boolean).join(' ') || nombreEncontrado;
+
+      let detectedSexo = sexoEncontrado;
+      if (curpEncontrada && curpEncontrada.length >= 11) {
+        const char = curpEncontrada.charAt(10).toUpperCase();
+        if (char === 'M') detectedSexo = 'FEMENINO';
+        else if (char === 'H') detectedSexo = 'MASCULINO';
+      }
+
+      let extractedData = {
+        curp: curpEncontrada || '',
+        nombre: fullNombre || '',
+        nombres: firstName || '',
+        apellido_paterno: lastNamePaterno || '',
+        apellido_materno: lastNameMaterno || '',
+        nombreSolo: firstName || '',
+        primerApellido: lastNamePaterno || '',
+        segundoApellido: lastNameMaterno || '',
+        nacionalidad: nacionalidadEncontrada || '',
+        fecha_nac: fechaNacEncontrada || '',
+        edad: edadEncontrada || '',
+        sexo: detectedSexo || '',
+        documento: documentoEncontrado || ''
+      };
 
       // --- REFUERZO DESDE EL FRONTEND (RESCATE DE TEXTO CRUDO) ---
       const rawText = doc.querySelector('pre')?.textContent;
       if (rawText && (docKey === 'actaNacimiento' || extractedData.documento?.includes('ACTA'))) {
         extractedData = mejorarExtraccionActa(rawText, extractedData);
+      }
+
+      // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+      const isActaField = ['acta', 'actaNacimiento'].includes(docKey);
+      const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(docKey);
+      const isOcrActa = (extractedData.documento || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+      const isOcrIne = (extractedData.documento || '').toUpperCase() === 'INE';
+
+      if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+        Swal.close();
+        const result = await Swal.fire({
+          title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+          text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Cargar de todos modos',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#1a3b5c',
+          cancelButtonColor: '#cbd5e1'
+        });
+
+        if (!result.isConfirmed) {
+          setDocuments(prev => {
+            const updated = { ...prev };
+            if (prevDoc) {
+              updated[docKey] = prevDoc;
+            } else {
+              delete updated[docKey];
+            }
+            return updated;
+          });
+          return;
+        }
       }
 
       setOcrResults(prev => {
@@ -1383,11 +1567,11 @@ function PreRegistroPresidente() {
         });
       } else {
         Swal.fire({
-          title: 'Documento procesado',
-          text: 'Se leyó el documento pero no se pudo extraer el nombre automáticamente.',
-          icon: 'info',
-          timer: 2000,
-          showConfirmButton: false
+          title: '¡Lectura Exitosa!',
+          text: 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+          icon: 'warning',
+          timer: 3500,
+          showConfirmButton: true
         });
       }
 
@@ -1457,24 +1641,37 @@ function PreRegistroPresidente() {
 
       const { nombreSolo, primerApellido, segundoApellido, nombre, curp, fecha_nac, nacionalidad } = ocrResults;
 
-      // Rellenar Nombre(s), Apellido Paterno, Apellido Materno
+      let nombresVal = '';
+      let apPaternoVal = '';
+      let apMaternoVal = '';
+
       if (nombreSolo || primerApellido || segundoApellido) {
-        if (primerApellido) safeSetField(form, 'Apellido Paterno', primerApellido.toUpperCase());
-        if (segundoApellido) safeSetField(form, 'Apellido Materno', segundoApellido.toUpperCase());
-        if (nombreSolo) safeSetField(form, 'Nombres', nombreSolo.toUpperCase());
+        if (nombreSolo) nombresVal = nombreSolo.toUpperCase();
+        if (primerApellido) apPaternoVal = primerApellido.toUpperCase();
+        if (segundoApellido) apMaternoVal = segundoApellido.toUpperCase();
       } else if (nombre && nombre !== "No detectado") {
         const parts = nombre.split(' ');
-        if (parts.length >= 3) {
-          safeSetField(form, 'Apellido Paterno', parts[0]);
-          safeSetField(form, 'Apellido Materno', parts[1]);
-          safeSetField(form, 'Nombres', parts.slice(2).join(' '));
+        if (parts.length === 4) {
+          nombresVal = parts.slice(0, 2).join(' ').toUpperCase();
+          apPaternoVal = parts[2].toUpperCase();
+          apMaternoVal = parts[3].toUpperCase();
+        } else if (parts.length === 3) {
+          nombresVal = parts[0].toUpperCase();
+          apPaternoVal = parts[1].toUpperCase();
+          apMaternoVal = parts[2].toUpperCase();
         } else if (parts.length === 2) {
-          safeSetField(form, 'Apellido Paterno', parts[0]);
-          safeSetField(form, 'Nombres', parts[1]);
+          nombresVal = parts[0].toUpperCase();
+          apPaternoVal = parts[1].toUpperCase();
         } else {
-          safeSetField(form, 'Nombres', nombre);
+          nombresVal = nombre.toUpperCase();
         }
       }
+
+      const getFs = (val) => val.length > 35 ? 6 : val.length > 25 ? 7 : val.length > 18 ? 8 : 10;
+
+      if (nombresVal) safeSetField(form, 'Nombres', nombresVal, getFs(nombresVal));
+      if (apPaternoVal) safeSetField(form, 'Apellido Paterno', apPaternoVal, getFs(apPaternoVal));
+      if (apMaternoVal) safeSetField(form, 'Apellido Materno', apMaternoVal, getFs(apMaternoVal));
 
       // CURP
       if (curp && curp !== "No detectado") {
@@ -1520,12 +1717,13 @@ function PreRegistroPresidente() {
         const selectedLigaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
         if (selectedLigaObj) {
           const nameStr = selectedLigaObj.nombre.split('(')[0].trim().toUpperCase();
-          // Hacemos la letra más pequeña si el nombre de la liga es largo para evitar desbordes
-          const fontSize = nameStr.length > 25 ? 6 : (nameStr.length > 15 ? 8 : 10);
+          const fontSize = nameStr.length > 35 ? 6 : nameStr.length > 25 ? 7 : nameStr.length > 18 ? 8 : 10;
           safeSetField(form, 'Liga', nameStr, fontSize);
         }
       }
-      safeSetField(form, 'Equipo', (ocrResults.equipo || '').toUpperCase());
+      const equipoVal = (ocrResults.equipo || '').toUpperCase();
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
 
       // Fecha automática (A __ de __ del 20__)
       const hoy = new Date();
@@ -1640,9 +1838,17 @@ function PreRegistroPresidente() {
     }
 
     if (field === 'curp') {
+      let extra = {};
+      if (value.length >= 11) {
+        const char = value.charAt(10).toUpperCase();
+        if (char === 'M') extra.sexo = 'FEMENINO';
+        else if (char === 'H') extra.sexo = 'MASCULINO';
+      }
+
       setOcrResults(prev => ({
         ...prev,
         [field]: value,
+        ...extra,
         actaNacimiento: prev.actaNacimiento || 'Manual',
         identificacion: prev.identificacion || 'Manual'
       }));
@@ -2004,6 +2210,17 @@ function PreRegistroPresidente() {
           grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
           gap: 12px;
           min-width: 0;
+        }
+        .insurance-card-list-responsive {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 15px;
+          min-width: 0;
+        }
+        @media (max-width: 580px) {
+          .insurance-card-list-responsive {
+            grid-template-columns: 1fr;
+          }
         }
         .insurance-player-card {
           display: flex;
@@ -2620,7 +2837,7 @@ function PreRegistroPresidente() {
                       <div className="insurance-grid">
                         <div className="insurance-section">
                           <div className="insurance-col-title">Seguros Jugadores.</div>
-                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                          <div className="insurance-card-list-responsive">
                             {segurosJugadores.map(seg => {
                               const cantAsignada = Number(asignacionSeguros[seg.id] || 0);
                               return (
@@ -2671,7 +2888,7 @@ function PreRegistroPresidente() {
                                           setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
                                           setError(null);
                                         }}
-                                        style={{ width: '55px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.overlayWhite15}`, backgroundColor: COLORS.overlayWhite05, color: 'white', fontWeight: 'bold' }}
+                                        style={{ width: '40px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.overlayWhite15}`, backgroundColor: COLORS.overlayWhite05, color: 'white', fontWeight: 'bold' }}
                                       />
                                     </div>
                                   </div>
@@ -2713,7 +2930,7 @@ function PreRegistroPresidente() {
                           <div className="insurance-col-title">
                             Seguros Presidente.
                           </div>
-                          <div className="insurance-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+                          <div className="insurance-card-list-responsive">
                             {segurosPresidente.map(seg => {
                               const checked = Number(asignacionSeguros[seg.id] || 0) > 0;
 
@@ -3259,195 +3476,6 @@ function PreRegistroPresidente() {
               </div>
             </div>
 
-            {/* OPCIÓN DE LLENADO MANUAL DE OCR */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '25px' }}>
-              <button
-                type="button"
-                onClick={() => setMostrarFormularioManual(!mostrarFormularioManual)}
-                className="doc-action-btn"
-                style={{
-                  padding: '10px 24px',
-                  borderRadius: '12px',
-                  border: `1px solid ${COLORS.brandBlueLight30}`,
-                  background: mostrarFormularioManual ? COLORS.brandBlueLight16 : COLORS.overlayWhite04,
-                  color: COLORS.brandBlueLight,
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                {mostrarFormularioManual ? 'Ocultar Captura Manual' : 'Capturar Datos Manualmente'}
-              </button>
-            </div>
-
-            {mostrarFormularioManual && (
-              <div style={{
-                background: `linear-gradient(135deg, ${COLORS.brandBlueLight06} 0%, ${COLORS.overlaySlateSuperLight} 100%)`,
-                border: `1px solid ${COLORS.brandBlueLight20}`,
-                borderRadius: '24px',
-                padding: '28px',
-                marginBottom: '35px',
-                backdropFilter: 'blur(8px)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${COLORS.brandBlueLight50}, transparent)` }} />
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <div style={{ width: '5px', height: '24px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Formulario Manual de Identidad</h4>
-                </div>
-
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: '1.5' }}>
-                  Si el sistema automático de lectura no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Nombre Completo *</label>
-                    <input
-                      type="text"
-                      placeholder="APELLIDOS NOMBRES"
-                      value={ocrResults.nombre || ''}
-                      onChange={(e) => handleManualOcrChange('nombre', e.target.value.toUpperCase())}
-                      className="premium-input"
-                      disabled={true}
-                      style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
-                    />
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">CURP *</label>
-                    <input
-                      type="text"
-                      placeholder="18 caracteres alfanuméricos"
-                      maxLength={18}
-                      value={ocrResults.curp || ''}
-                      onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
-                      className="premium-input"
-                      disabled={!!user.usuario?.curp}
-                      style={user.usuario?.curp ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : {}}
-                    />
-                    {curpExistente && (
-                      <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
-                        Esta CURP ya está registrada a otra persona.
-                      </div>
-                    )}
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Nacionalidad *</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. MEXICANA"
-                      value={ocrResults.nacionalidad || ''}
-                      onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase())}
-                      className="premium-input"
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Fecha de Nacimiento *</label>
-                    <input
-                      type="date"
-                      value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
-                      onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
-                      className="premium-input"
-                      style={{ colorScheme: 'dark', cursor: 'pointer' }}
-                    />
-                    {(() => {
-                      const val = convertToYYYYMMDD(ocrResults.fecha_nac);
-                      if (!val) return null;
-                      const fechaDate = new Date(val);
-                      if (fechaDate.getFullYear() < 1900) {
-                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
-                      }
-                      if (fechaDate.getFullYear() > new Date().getFullYear()) {
-                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
-                      }
-                      const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
-                      if (fechaDate > limitDate) {
-                        return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>Debes tener más de 18 años</div>;
-                      }
-                      return null;
-                    })()}
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Sexo *</label>
-                    <select
-                      value={ocrResults.sexo || ''}
-                      onChange={(e) => handleManualOcrChange('sexo', e.target.value)}
-                      className="premium-input"
-                      style={user.usuario?.sexoId ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : { cursor: 'pointer' }}
-                      disabled={!!user.usuario?.sexoId}
-                    >
-                      <option value="">Selecciona...</option>
-                      <option value="MASCULINO">Masculino</option>
-                      <option value="FEMENINO">Femenino</option>
-                      <option value="NO BINARIO">OTRO</option>
-                    </select>
-                  </div>
-                  <div className="premium-input-group">
-                    <label className="premium-label">Teléfono registrado*</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <select
-                        value={codigoPais}
-                        onChange={(e) => setCodigoPais(e.target.value)}
-                        className="premium-input"
-                        disabled={true}
-                        style={{
-                          width: '100px',
-                          padding: '12px 16px',
-                          background: COLORS.overlayWhite05,
-                          border: `1px solid ${COLORS.overlayWhite10}`,
-                          borderRadius: '12px',
-                          color: 'white',
-                          fontSize: '14px',
-                          outline: 'none',
-                          cursor: 'not-allowed',
-                          backdropFilter: 'blur(4px)'
-                        }}
-                      >
-                        <option value="+52" style={{ background: COLORS.indigo950, color: 'white' }}>México +52</option>
-                        <option value="+1" style={{ background: COLORS.indigo950, color: 'white' }}>EE.UU./Canadá +1</option>
-                        <option value="+34" style={{ background: COLORS.indigo950, color: 'white' }}>España +34</option>
-                        <option value="+54" style={{ background: COLORS.indigo950, color: 'white' }}>Argentina +54</option>
-                        <option value="+55" style={{ background: COLORS.indigo950, color: 'white' }}>Brasil +55</option>
-                        <option value="+56" style={{ background: COLORS.indigo950, color: 'white' }}>Chile +56</option>
-                        <option value="+57" style={{ background: COLORS.indigo950, color: 'white' }}>Colombia +57</option>
-                        <option value="+506" style={{ background: COLORS.indigo950, color: 'white' }}>Costa Rica +506</option>
-                        <option value="+593" style={{ background: COLORS.indigo950, color: 'white' }}>Ecuador +593</option>
-                        <option value="+503" style={{ background: COLORS.indigo950, color: 'white' }}>El Salvador +503</option>
-                        <option value="+502" style={{ background: COLORS.indigo950, color: 'white' }}>Guatemala +502</option>
-                        <option value="+504" style={{ background: COLORS.indigo950, color: 'white' }}>Honduras +504</option>
-                        <option value="+505" style={{ background: COLORS.indigo950, color: 'white' }}>Nicaragua +505</option>
-                        <option value="+507" style={{ background: COLORS.indigo950, color: 'white' }}>Panamá +507</option>
-                        <option value="+595" style={{ background: COLORS.indigo950, color: 'white' }}>Paraguay +595</option>
-                        <option value="+51" style={{ background: COLORS.indigo950, color: 'white' }}>Perú +51</option>
-                        <option value="+598" style={{ background: COLORS.indigo950, color: 'white' }}>Uruguay +598</option>
-                        <option value="+58" style={{ background: COLORS.indigo950, color: 'white' }}>Venezuela +58</option>
-                      </select>
-                      <input
-                        type="tel"
-                        placeholder="10 dígitos"
-                        maxLength={10}
-                        value={ocrResults.telefono || ''}
-                        onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
-                        className="premium-input"
-                        disabled={true}
-                        readOnly={true}
-                        style={{ cursor: 'not-allowed', flexGrow: 1, backgroundColor: COLORS.overlayWhite05 }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* TARJETAS DE DOCUMENTOS */}
             {(() => {
               const esMayorDeEdad = (() => {
@@ -3537,8 +3565,34 @@ function PreRegistroPresidente() {
                             document.getElementById(`file-${doc.documento}`).click();
                           }
                         }}
+                        onDragEnter={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: true })); } }}
+                        onDragOver={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); } }}
+                        onDragLeave={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: false })); } }}
+                        onDrop={(e) => {
+                          if (isApproved) return;
+                          if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                          }
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragActive(prev => ({ ...prev, [doc.documento]: false }));
+                          const file = e.dataTransfer.files[0];
+                          if (file) {
+                            if (!validarArchivoPermitido(file)) return;
+                            if (docGuardado) {
+                              handleReemplazarDocumento(docAfiliacionId, file);
+                              setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                            } else {
+                              handleFileUpload(doc.documento, file);
+                            }
+                          }
+                        }}
                         style={{
-                          cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer')
+                          cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'),
+                          border: dragActive[doc.documento] ? `2px solid ${COLORS.primary}` : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                          backgroundColor: dragActive[doc.documento] ? 'rgba(26, 59, 92, 0.05)' : undefined
                         }}
                       >
                         {/* Top sheen */}
@@ -3660,24 +3714,50 @@ function PreRegistroPresidente() {
                             </button>
                           )}
                           {hasLocalFile && documents[doc.documento] && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
-                              }}
-                              className="doc-action-btn"
-                              style={{
-                                border: `1px solid ${COLORS.brandBlueLight50}`,
-                                background: COLORS.brandBlueLight10,
-                                color: COLORS.secondaryLight,
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                flex: 1
-                              }}
-                            >
-                              👁 Ver
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
+                                }}
+                                className="doc-action-btn"
+                                style={{
+                                  border: `1px solid ${COLORS.brandBlueLight50}`,
+                                  background: COLORS.brandBlueLight10,
+                                  color: COLORS.secondaryLight,
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  flex: 1
+                                }}
+                              >
+                                👁 Ver
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDocuments(prev => ({ ...prev, [doc.documento]: null }));
+                                  if (setPreviews) {
+                                    setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                                  }
+                                }}
+                                className="doc-action-btn"
+                                style={{
+                                  border: `1px solid ${COLORS.dangerBgTranslucent30}`,
+                                  background: COLORS.dangerBgTranslucent10,
+                                  color: COLORS.dangerLight,
+                                  cursor: 'pointer',
+                                  flex: '0 0 auto',
+                                  width: '40px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </>
                           )}
                           {!hasLocalFile && docGuardado && (
                             <button
@@ -3765,6 +3845,168 @@ function PreRegistroPresidente() {
                 </div>
               );
             })()}
+
+            {/* FORMULARIO MANUAL DE IDENTIDAD */}
+            <div style={{
+              background: `linear-gradient(135deg, ${COLORS.brandBlueLight06} 0%, ${COLORS.overlaySlateSuperLight} 100%)`,
+              border: `1px solid ${COLORS.brandBlueLight20}`,
+              borderRadius: '24px',
+              padding: '28px',
+              marginBottom: '35px',
+              backdropFilter: 'blur(8px)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${COLORS.brandBlueLight50}, transparent)` }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '5px', height: '24px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>Formulario Manual de Identidad</h4>
+              </div>
+
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: '1.5' }}>
+                Si el sistema automático de lectura no pudo extraer los datos de tu Acta de Nacimiento o Identificación, puedes llenarlos en este formulario. Estos datos son obligatorios para pre-llenar tu formato de afiliación oficial.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                <div className="premium-input-group">
+                  <label className="premium-label">Nombre Completo *</label>
+                  <input
+                    type="text"
+                    placeholder="APELLIDOS NOMBRES"
+                    value={ocrResults.nombre || ''}
+                    onChange={(e) => handleManualOcrChange('nombre', e.target.value.toUpperCase())}
+                    className="premium-input"
+                    disabled={true}
+                    style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
+                  />
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">CURP *</label>
+                  <input
+                    type="text"
+                    placeholder="Se auto-completará con el documento de identidad"
+                    maxLength={18}
+                    value={ocrResults.curp || ''}
+                    readOnly
+                    className="premium-input"
+                    style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
+                  />
+                  {curpExistente && (
+                    <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
+                      Esta CURP ya está registrada a otra persona.
+                    </div>
+                  )}
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Nacionalidad *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. MEXICANA"
+                    value={ocrResults.nacionalidad || ''}
+                    onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase())}
+                    className="premium-input"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <div className="premium-input-group">
+                  <label className="premium-label">Fecha de Nacimiento *</label>
+                  <input
+                    type="date"
+                    value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
+                    onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
+                    className="premium-input"
+                    style={{ colorScheme: 'dark', cursor: 'pointer' }}
+                  />
+                  {(() => {
+                    const val = convertToYYYYMMDD(ocrResults.fecha_nac);
+                    if (!val) return null;
+                    const fechaDate = new Date(val);
+                    if (fechaDate.getFullYear() < 1900) {
+                      return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
+                    }
+                    if (fechaDate.getFullYear() > new Date().getFullYear()) {
+                      return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
+                    }
+                    const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
+                    if (fechaDate > limitDate) {
+                      return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>Debes tener más de 18 años</div>;
+                    }
+                    return null;
+                  })()}
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Sexo *</label>
+                  <select
+                    value={ocrResults.sexo || ''}
+                    onChange={(e) => handleManualOcrChange('sexo', e.target.value)}
+                    className="premium-input"
+                    style={user.usuario?.sexoId ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : { cursor: 'pointer' }}
+                    disabled={!!user.usuario?.sexoId}
+                  >
+                    <option value="">Selecciona...</option>
+                    <option value="MASCULINO">Masculino</option>
+                    <option value="FEMENINO">Femenino</option>
+                    <option value="NO BINARIO">OTRO</option>
+                  </select>
+                </div>
+                <div className="premium-input-group">
+                  <label className="premium-label">Teléfono registrado*</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                      value={codigoPais}
+                      onChange={(e) => setCodigoPais(e.target.value)}
+                      className="premium-input"
+                      disabled={true}
+                      style={{
+                        width: '100px',
+                        padding: '12px 16px',
+                        background: COLORS.overlayWhite05,
+                        border: `1px solid ${COLORS.overlayWhite10}`,
+                        borderRadius: '12px',
+                        color: 'white',
+                        fontSize: '14px',
+                        outline: 'none',
+                        cursor: 'not-allowed',
+                        backdropFilter: 'blur(4px)'
+                      }}
+                    >
+                      <option value="+52" style={{ background: COLORS.indigo950, color: 'white' }}>México +52</option>
+                      <option value="+1" style={{ background: COLORS.indigo950, color: 'white' }}>EE.UU./Canadá +1</option>
+                      <option value="+34" style={{ background: COLORS.indigo950, color: 'white' }}>España +34</option>
+                      <option value="+54" style={{ background: COLORS.indigo950, color: 'white' }}>Argentina +54</option>
+                      <option value="+55" style={{ background: COLORS.indigo950, color: 'white' }}>Brasil +55</option>
+                      <option value="+56" style={{ background: COLORS.indigo950, color: 'white' }}>Chile +56</option>
+                      <option value="+57" style={{ background: COLORS.indigo950, color: 'white' }}>Colombia +57</option>
+                      <option value="+506" style={{ background: COLORS.indigo950, color: 'white' }}>Costa Rica +506</option>
+                      <option value="+593" style={{ background: COLORS.indigo950, color: 'white' }}>Ecuador +593</option>
+                      <option value="+503" style={{ background: COLORS.indigo950, color: 'white' }}>El Salvador +503</option>
+                      <option value="+502" style={{ background: COLORS.indigo950, color: 'white' }}>Guatemala +502</option>
+                      <option value="+504" style={{ background: COLORS.indigo950, color: 'white' }}>Honduras +504</option>
+                      <option value="+505" style={{ background: COLORS.indigo950, color: 'white' }}>Nicaragua +505</option>
+                      <option value="+507" style={{ background: COLORS.indigo950, color: 'white' }}>Panamá +507</option>
+                      <option value="+595" style={{ background: COLORS.indigo950, color: 'white' }}>Paraguay +595</option>
+                      <option value="+51" style={{ background: COLORS.indigo950, color: 'white' }}>Perú +51</option>
+                      <option value="+598" style={{ background: COLORS.indigo950, color: 'white' }}>Uruguay +598</option>
+                      <option value="+58" style={{ background: COLORS.indigo950, color: 'white' }}>Venezuela +58</option>
+                    </select>
+                    <input
+                      type="tel"
+                      placeholder="10 dígitos"
+                      maxLength={10}
+                      value={ocrResults.telefono || ''}
+                      onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
+                      className="premium-input"
+                      disabled={true}
+                      readOnly={true}
+                      style={{ cursor: 'not-allowed', flexGrow: 1, backgroundColor: COLORS.overlayWhite05 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* BOTONES DE NAVEGACIÓN */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: `1px solid ${COLORS.overlayWhite06}` }}>
@@ -3885,8 +4127,50 @@ function PreRegistroPresidente() {
                         document.getElementById(`file-val-${doc.documento}`).click();
                       }
                     }}
+                    onDragEnter={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: true })); } }}
+                    onDragOver={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); } }}
+                    onDragLeave={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: false })); } }}
+                    onDrop={async (e) => {
+                      if (isApproved) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) {
+                        if (!validarArchivoPermitido(file)) return;
+
+                        try {
+                          const metadata = JSON.parse(localStorage.getItem('afaem_doc_metadata') || '{}');
+                          const previousFile = metadata[doc.documento];
+                          if (previousFile && previousFile.size === file.size) {
+                            const result = await Swal.fire({
+                              title: '¿Subir el mismo archivo?',
+                              text: 'Parece que estás intentando subir exactamente el mismo archivo que subiste anteriormente. Por favor, asegúrate de subir el documento con las correcciones correspondientes. ¿Deseas continuar de todos modos?',
+                              icon: 'warning',
+                              showCancelButton: true,
+                              confirmButtonText: 'Sí, subir',
+                              cancelButtonText: 'Cancelar',
+                              confirmButtonColor: COLORS.primary,
+                              cancelButtonColor: COLORS.slate400
+                            });
+                            if (!result.isConfirmed) return;
+                          }
+                        } catch (err) {
+                          console.warn("Error verifying file metadata duplicate:", err);
+                        }
+
+                        if (docGuardado) {
+                          handleReemplazarDocumento(docAfiliacionId, file);
+                          setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                        } else {
+                          handleFileUpload(doc.documento, file);
+                        }
+                      }
+                    }}
                     style={{
-                      cursor: isApproved ? 'default' : 'pointer'
+                      cursor: isApproved ? 'default' : 'pointer',
+                      border: dragActive[`val-${doc.documento}`] ? `2px solid ${COLORS.primary}` : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                      backgroundColor: dragActive[`val-${doc.documento}`] ? 'rgba(26, 59, 92, 0.05)' : undefined
                     }}
                   >
                     {/* Top sheen */}
@@ -3963,24 +4247,50 @@ function PreRegistroPresidente() {
                         </button>
                       )}
                       {hasLocalFile && documents[doc.documento] && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
-                          }}
-                          className="doc-action-btn"
-                          style={{
-                            border: `1px solid ${COLORS.brandBlueLight50}`,
-                            background: COLORS.brandBlueLight10,
-                            color: COLORS.secondaryLight,
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            flex: 1
-                          }}
-                        >
-                          👁 Ver
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
+                            }}
+                            className="doc-action-btn"
+                            style={{
+                              border: `1px solid ${COLORS.brandBlueLight50}`,
+                              background: COLORS.brandBlueLight10,
+                              color: COLORS.secondaryLight,
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              flex: 1
+                            }}
+                          >
+                            👁 Ver
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDocuments(prev => ({ ...prev, [doc.documento]: null }));
+                              if (setPreviews) {
+                                setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                              }
+                            }}
+                            className="doc-action-btn"
+                            style={{
+                              border: `1px solid ${COLORS.dangerBgTranslucent30}`,
+                              background: COLORS.dangerBgTranslucent10,
+                              color: COLORS.dangerLight,
+                              cursor: 'pointer',
+                              flex: '0 0 auto',
+                              width: '40px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <FaTrash />
+                          </button>
+                        </>
                       )}
                       {!hasLocalFile && docGuardado && (
                         <button
@@ -4377,7 +4687,7 @@ function PreRegistroPresidente() {
               />
             ) : previewDoc.file.type === 'application/pdf' ? (
               <iframe
-                src={previewUrl}
+                src={`${previewUrl}#toolbar=0&navpanes=0`}
                 title={previewDoc.title}
                 style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
               />

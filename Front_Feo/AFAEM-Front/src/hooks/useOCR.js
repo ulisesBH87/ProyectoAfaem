@@ -1,6 +1,81 @@
 import { useState } from 'react';
 import Swal from 'sweetalert2';
+import { API_BASE } from '../config/config';
 import { toDDMMYYYY } from '../pages/Admin/RegistrarPresidente/constants';
+
+export function extraerMontoDeVoucher(rawText) {
+  if (!rawText) return null;
+  
+  const lines = rawText.split('\n').map(l => l.trim().toUpperCase()).filter(Boolean);
+  
+  // Palabras clave que indican que la línea o la siguiente contiene el monto del pago
+  const keywords = ["TOTAL", "IMPORTE", "MONTO", "PAGO", "DEPOSITO", "CANTIDAD", "EFECTIVO", "NETO", "TRANSFERIDO", "TRANSFERENCIA", "MONTO ENVIADO"];
+  
+  let candidates = [];
+
+  // Expresión regular para buscar cantidades con decimales o con signo de pesos
+  // 1. Con signo de pesos, ej: $ 500.00, $500, $1,200.00
+  const regexWithSign = /\$\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/g;
+  // 2. Números con decimales obligatorios, ej: 500.00, 1200.50
+  const regexWithDecimals = /\b([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})\b/g;
+  // 3. Números enteros limpios de 3 a 5 dígitos (para montos sin decimales ni signo de pesos)
+  const regexCleanIntegers = /\b([1-9][0-9]{2,4})\b/g;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const hasKeyword = keywords.some(kw => line.includes(kw));
+    const prevLineHasKeyword = i > 0 && keywords.some(kw => lines[i - 1].includes(kw));
+    const isTargetLine = hasKeyword || prevLineHasKeyword;
+
+    // A. Buscar con signo de pesos (Máxima prioridad)
+    let match;
+    regexWithSign.lastIndex = 0;
+    while ((match = regexWithSign.exec(line)) !== null) {
+      const val = parseFloat(match[1].replace(/,/g, ''));
+      if (!isNaN(val) && val > 0) {
+        candidates.push({ val, priority: isTargetLine ? 10 : 8 });
+      }
+    }
+
+    // B. Buscar con decimales (Prioridad media)
+    regexWithDecimals.lastIndex = 0;
+    while ((match = regexWithDecimals.exec(line)) !== null) {
+      const val = parseFloat(match[1].replace(/,/g, ''));
+      if (!isNaN(val) && val > 0) {
+        if (!candidates.some(c => c.val === val)) {
+          candidates.push({ val, priority: isTargetLine ? 7 : 5 });
+        }
+      }
+    }
+
+    // C. Buscar enteros limpios (Prioridad baja, solo en contexto de palabra clave)
+    if (isTargetLine) {
+      regexCleanIntegers.lastIndex = 0;
+      while ((match = regexCleanIntegers.exec(line)) !== null) {
+        const val = parseFloat(match[1]);
+        if (!isNaN(val) && val > 0) {
+          if (!candidates.some(c => c.val === val)) {
+            candidates.push({ val, priority: 3 });
+          }
+        }
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  // Ordenamos por prioridad (mayor a menor) y luego por valor (mayor a menor)
+  candidates.sort((a, b) => {
+    if (b.priority !== a.priority) {
+      return b.priority - a.priority;
+    }
+    return b.val - a.val;
+  });
+
+  return candidates[0].val;
+}
 
 /**
  * useOCR
@@ -15,17 +90,79 @@ export function useOCR() {
     if (!rawText) return data;
     const d = { ...data };
 
-    if (!d.nombre || d.nombre === 'No detectado' || d.nombre.split(' ').length < 2) {
-      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+    // Cortar rawText para excluir todo lo que esté después de filiación y anotaciones
+    const filiacionKeywords = ["FILIACION", "FILIACIÓN", "DATOS DE FILIACION", "DATOS DE FILIACIÓN", "DATOS DE LOS PADRES", "PADRES", "PROGENITORES", "ANOTACIONES MARGINALES"];
+    let cutIdx = -1;
+    const rawTextUpper = rawText.toUpperCase();
+    for (const kw of filiacionKeywords) {
+      const idx = rawTextUpper.indexOf(kw);
+      if (idx !== -1 && (cutIdx === -1 || idx < cutIdx)) {
+        cutIdx = idx;
+      }
+    }
+    const rawTextCleaned = cutIdx !== -1 ? rawText.substring(0, cutIdx) : rawText;
+
+    // Intentar emparejar layout cruzado/macho en una sola línea
+    const cleanText = rawTextCleaned.replace(/\s+/g, ' ').toUpperCase();
+    const mashedMatch = cleanText.match(/DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)(?:$|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO))/i);
+    if (mashedMatch) {
+      const nombresVal = mashedMatch[1].trim();
+      const ap1Val = mashedMatch[2].trim();
+      const ap2Val = mashedMatch[3].trim();
+      
+      d.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
+      d.nombres = nombresVal.toUpperCase();
+      d.apellido_paterno = ap1Val.toUpperCase();
+      d.apellido_materno = ap2Val.toUpperCase();
+      d.nombreSolo = nombresVal.toUpperCase();
+      d.primerApellido = ap1Val.toUpperCase();
+      d.segundoApellido = ap2Val.toUpperCase();
+      
+      const rest = mashedMatch[4].trim();
+      if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
+        d.nacionalidad = rest.toUpperCase();
+      } else if (cleanText.includes('NACIONALIDAD')) {
+        const nacMatch = cleanText.match(/(?:NACIONALIDAD|PAIS)\s+([A-Z\s]+)/i);
+        if (nacMatch) d.nacionalidad = nacMatch[1].trim().toUpperCase();
+      }
+      return d;
+    }
+
+    const firstWord = d.nombre ? d.nombre.split(' ')[0] : '';
+    if (!d.nombre || d.nombre === 'No detectado' || d.nombre.split(' ').length < 2 || firstWord.length <= 1) {
+      const lines = rawTextCleaned.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) nombres = lines[i + 1];
-        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) ap1 = lines[i + 1];
-        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) ap2 = lines[i + 1];
+        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) {
+          const nextVal = lines[i + 1].toUpperCase();
+          if ((nextVal === 'S' || nextVal === '(S)' || nextVal.length <= 1) && i + 2 < lines.length) {
+            nombres = lines[i + 2];
+          } else {
+            nombres = lines[i + 1];
+          }
+        }
+        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap1 = val;
+          }
+        }
+        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) {
+          const val = lines[i + 1];
+          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+            ap2 = val;
+          }
+        }
       }
       if (nombres && ap1) {
-        d.nombre = `${ap1} ${ap2} ${nombres}`.replace(/\s+/g, ' ').toUpperCase();
+        d.nombre = `${nombres} ${ap1} ${ap2}`.replace(/\s+/g, ' ').toUpperCase();
+        d.nombres = nombres.toUpperCase();
+        d.apellido_paterno = ap1.toUpperCase();
+        d.apellido_materno = ap2.toUpperCase();
+        d.nombreSolo = nombres.toUpperCase();
+        d.primerApellido = ap1.toUpperCase();
+        d.segundoApellido = ap2.toUpperCase();
       }
     }
 
@@ -34,7 +171,7 @@ export function useOCR() {
         ENERO: '01', FEBRERO: '02', MARZO: '03', ABRIL: '04', MAYO: '05', JUNIO: '06',
         JULIO: '07', AGOSTO: '08', SEPTIEMBRE: '09', OCTUBRE: '10', NOVIEMBRE: '11', DICIEMBRE: '12',
       };
-      const m = rawText.match(/(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i);
+      const m = rawTextCleaned.match(/(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i);
       if (m && MESES[m[2].toUpperCase()]) {
         d.fecha_nac = `${m[1].padStart(2, '0')}/${MESES[m[2].toUpperCase()]}/${m[3]}`;
       }
@@ -44,7 +181,7 @@ export function useOCR() {
   };
 
   // ── Procesar documento vía OCR ───────────────────────────────────────────
-  const procesarOCR = async (docKey, file) => {
+  const procesarOCR = async (docKey, file, onCancel) => {
     Swal.fire({
       title: 'Analizando documento…',
       html: 'Extrayendo información. <b>Por favor espere.</b>',
@@ -56,26 +193,177 @@ export function useOCR() {
     try {
       const fd = new FormData();
       fd.append('file_id', file);
-      const res = await fetch('/ocr-api', { method: 'POST', body: fd });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const res = await fetch(`${API_BASE}/documentos/ocr`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: fd
+      });
       if (!res.ok) throw new Error();
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
 
-      let extracted = {};
+      if (docKey === 'voucher') {
+        const rawText = doc.querySelector('pre')?.textContent || '';
+        const montoExtraido = extraerMontoDeVoucher(rawText);
+        setOcrResults(prev => ({
+          ...prev,
+          voucherMonto: montoExtraido,
+          voucherText: rawText
+        }));
+        
+        Swal.fire({
+          title: 'Comprobante procesado',
+          text: montoExtraido 
+            ? `Se detectó un monto de $${montoExtraido.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+            : 'No se logró detectar el monto de forma automática. Se requiere revisión manual.',
+          icon: 'success',
+          timer: 3000,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      const cleanVal = (val) => {
+        if (!val) return '';
+        const cleaned = val.trim();
+        const lower = cleaned.toLowerCase();
+        if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
+          return '';
+        }
+        return cleaned;
+      };
+
+      let nombreEncontrado = '';
+      let nombresEncontrados = '';
+      let apellidoPaternoEncontrado = '';
+      let apellidoMaternoEncontrado = '';
+      let curpEncontrada = '';
+      let fechaNacEncontrada = '';
+      let nacionalidadEncontrada = '';
+      let edadEncontrada = '';
+      let sexoEncontrado = '';
+      let documentoEncontrado = '';
+
       doc.querySelectorAll('.dato-fila').forEach(row => {
         const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const val = row.querySelector('.valor')?.textContent?.trim() || '';
-        if (label.includes('curp')) extracted.curp = val;
-        if (label.includes('nombre')) extracted.nombre = val;
-        if (label.includes('nacionalidad')) extracted.nacionalidad = val;
-        if (label.includes('fecha de nacimiento')) extracted.fecha_nac = val;
-        if (label.includes('edad')) extracted.edad = val;
-        if (label.includes('documento')) extracted.documento = val;
+        const val = cleanVal(row.querySelector('.valor')?.textContent);
+
+        if (!val) return;
+
+        if (label.includes('nombres')) {
+          nombresEncontrados = val;
+        } else if (label.includes('nombre completo') || label === 'nombre') {
+          nombreEncontrado = val;
+        } else if (label.includes('nombre')) {
+          if (!nombresEncontrados) nombresEncontrados = val;
+        }
+
+        if (label.includes('apellido paterno') || label.includes('paterno')) {
+          apellidoPaternoEncontrado = val;
+        }
+        if (label.includes('apellido materno') || label.includes('materno')) {
+          apellidoMaternoEncontrado = val;
+        }
+
+        if (label.includes('curp')) curpEncontrada = val;
+        if (label.includes('nacionalidad')) nacionalidadEncontrada = val;
+
+        if (label.includes('fecha de nacimiento') || label.includes('fecha nac') || (label.includes('nacimiento') && !label.includes('lugar'))) {
+          let dateVal = val;
+          if (dateVal.includes('-')) {
+            const p = dateVal.split('-');
+            if (p.length === 3 && p[0].length === 4) {
+              dateVal = `${p[2]}/${p[1]}/${p[0]}`;
+            }
+          }
+          fechaNacEncontrada = dateVal;
+        }
+
+        if (label.includes('edad')) edadEncontrada = val;
+        if (label.includes('sexo')) sexoEncontrado = val;
+        if (label.includes('documento')) documentoEncontrado = val;
       });
+
+      let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
+
+      if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
+        firstName = nombresEncontrados;
+        lastNamePaterno = apellidoPaternoEncontrado;
+        lastNameMaterno = apellidoMaternoEncontrado;
+      } else if (nombreEncontrado) {
+        const parts = nombreEncontrado.split(' ');
+        if (parts.length === 4) {
+          firstName = parts.slice(0, 2).join(' ');
+          lastNamePaterno = parts[2];
+          lastNameMaterno = parts[3];
+        } else if (parts.length === 3) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+          lastNameMaterno = parts[2];
+        } else if (parts.length === 2) {
+          firstName = parts[0];
+          lastNamePaterno = parts[1];
+        } else {
+          firstName = nombreEncontrado;
+        }
+      }
+
+      const fullNombre = [firstName, lastNamePaterno, lastNameMaterno].filter(Boolean).join(' ') || nombreEncontrado;
+
+      let detectedSexo = sexoEncontrado;
+      if (curpEncontrada && curpEncontrada.length >= 11) {
+        const char = curpEncontrada.charAt(10).toUpperCase();
+        if (char === 'M') detectedSexo = 'FEMENINO';
+        else if (char === 'H') detectedSexo = 'MASCULINO';
+      }
+
+      let extracted = {
+        curp: curpEncontrada || '',
+        nombre: fullNombre || '',
+        nombres: firstName || '',
+        apellido_paterno: lastNamePaterno || '',
+        apellido_materno: lastNameMaterno || '',
+        nombreSolo: firstName || '',
+        primerApellido: lastNamePaterno || '',
+        segundoApellido: lastNameMaterno || '',
+        nacionalidad: nacionalidadEncontrada || '',
+        fecha_nac: fechaNacEncontrada || '',
+        edad: edadEncontrada || '',
+        sexo: detectedSexo || '',
+        documento: documentoEncontrado || ''
+      };
 
       const rawText = doc.querySelector('pre')?.textContent;
       if (rawText && (docKey === 'actaNacimiento' || extracted.documento?.includes('ACTA'))) {
         extracted = mejorarActa(rawText, extracted);
+      }
+
+      // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
+      const isActaField = ['acta', 'actaNacimiento'].includes(docKey);
+      const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(docKey);
+      const isOcrActa = (extracted.documento || '').toUpperCase() === 'ACTA DE NACIMIENTO';
+      const isOcrIne = (extracted.documento || '').toUpperCase() === 'INE';
+
+      if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
+        Swal.close();
+        const result = await Swal.fire({
+          title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
+          text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Cargar de todos modos',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#1a3b5c',
+          cancelButtonColor: '#cbd5e1'
+        });
+
+        if (!result.isConfirmed) {
+          if (onCancel) onCancel();
+          return;
+        }
       }
 
       setOcrResults(prev => ({ ...prev, ...extracted, [docKey]: `OCR: ${extracted.nombre || 'ok'}` }));

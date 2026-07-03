@@ -378,41 +378,25 @@ async def agregar_jugador_equipo_existente(
         # Validar número de camiseta duplicado
         if camista_num is not None:
             dup_camiseta = db.query(MiembrosEquipo).filter(
-                MiembrosEquipo.EquipoID == equipo.EquipoId,
+                MiembrosEquipo.EquipoID == equipo_jugando.EquiposJugandoId,
                 MiembrosEquipo.NumeroCamiseta == camista_num,
                 MiembrosEquipo.Eliminado == False
             ).first()
             if dup_camiseta or any(
                 isinstance(obj, MiembrosEquipo) and
-                obj.EquipoID == equipo.EquipoId and
+                obj.EquipoID == equipo_jugando.EquiposJugandoId and
                 obj.NumeroCamiseta == camista_num and
                 not obj.Eliminado
                 for obj in db.new
             ):
                 raise HTTPException(400, f"El número de camiseta {camista_num} ya está asignado a otro jugador en este equipo.")
 
-        # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
-        if rol_id != 11:
-            dup_rol = db.query(MiembrosEquipo).filter(
-                MiembrosEquipo.EquipoID == equipo.EquipoId,
-                MiembrosEquipo.RolEnEquipo == rol_id,
-                MiembrosEquipo.Eliminado == False
-            ).first()
-            if dup_rol or any(
-                isinstance(obj, MiembrosEquipo) and
-                obj.EquipoID == equipo.EquipoId and
-                obj.RolEnEquipo == rol_id and
-                not obj.Eliminado
-                for obj in db.new
-            ):
-                from app.modelos.rol_equipo_modelo import RolesDeEquipo
-                rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_id).scalar() or "esta posición"
-                raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
 
         nuevo_miembro = MiembrosEquipo(
             PersonaId=nueva_persona.PersonaId,
             RolEnEquipo=rol_id,
-            EquipoID=equipo.EquipoId,
+            EquipoID=equipo_jugando.EquiposJugandoId,
             Estatus=True,
             Eliminado=False,
             NumeroCamiseta=camista_num,
@@ -673,7 +657,7 @@ async def registrar_grupo(
         try:
             validacion_fecha(datos.get("fechaNacimiento"))
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Error en {nombre_completo}")
+            raise HTTPException(status_code=400, detail=f"Error en {nombre_completo}: {str(e)}")
         if not datos.get("lugarNacimiento", "").strip():
             raise HTTPException(status_code=400, detail=f"El lugar de nacimiento de {nombre_completo} es obligatorio.")
         if not datos.get("genero"):
@@ -1525,7 +1509,7 @@ def get_documentos_jugador(miembro_id: int, db: Session = Depends(get_db), usuar
         filter_cond = EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId if presidente.TipoDirectivoId == 2 else EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
         
         is_member = db.query(MiembrosEquipo).join(
-            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
+            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId
         ).filter(
             MiembrosEquipo.PersonaId == miembro.PersonaId,
             MiembrosEquipo.Eliminado == False,
@@ -1646,7 +1630,7 @@ def get_solicitud_documento_jugador(
         filter_cond = EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId if presidente.TipoDirectivoId == 2 else EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId
 
         is_member = db.query(MiembrosEquipo).join(
-            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquipoId
+            EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId
         ).filter(
             MiembrosEquipo.PersonaId == miembro.PersonaId,
             MiembrosEquipo.Eliminado == False,
