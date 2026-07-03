@@ -12,6 +12,8 @@ export default function CameraCaptureModal({
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const previewWrapperRef = useRef(null);
+  const overlayRef = useRef(null);
   const activeStreamRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
@@ -123,6 +125,39 @@ export default function CameraCaptureModal({
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
   };
 
+  const getDocumentCrop = (videoWidth, videoHeight) => {
+    if (!previewWrapperRef.current || !overlayRef.current) return null;
+
+    const wrapperRect = previewWrapperRef.current.getBoundingClientRect();
+    const overlayRect = overlayRef.current.getBoundingClientRect();
+    const wrapperWidth = wrapperRect.width;
+    const wrapperHeight = wrapperRect.height;
+
+    if (!wrapperWidth || !wrapperHeight || !videoWidth || !videoHeight) return null;
+
+    const scale = Math.max(wrapperWidth / videoWidth, wrapperHeight / videoHeight);
+    const renderedWidth = videoWidth * scale;
+    const renderedHeight = videoHeight * scale;
+    const overflowX = (renderedWidth - wrapperWidth) / 2;
+    const overflowY = (renderedHeight - wrapperHeight) / 2;
+
+    const overlayLeft = overlayRect.left - wrapperRect.left;
+    const overlayTop = overlayRect.top - wrapperRect.top;
+    const sourceX = Math.max(0, (overlayLeft + overflowX) / scale);
+    const sourceY = Math.max(0, (overlayTop + overflowY) / scale);
+    const sourceWidth = Math.min(videoWidth - sourceX, overlayRect.width / scale);
+    const sourceHeight = Math.min(videoHeight - sourceY, overlayRect.height / scale);
+
+    if (sourceWidth <= 0 || sourceHeight <= 0) return null;
+
+    return {
+      x: sourceX,
+      y: sourceY,
+      width: sourceWidth,
+      height: sourceHeight,
+    };
+  };
+
   const handleCapture = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
@@ -132,15 +167,34 @@ export default function CameraCaptureModal({
     const width = video.videoWidth || 640;
     const height = video.videoHeight || 480;
 
-    canvas.width = width;
-    canvas.height = height;
+    const documentCrop =
+      captureKind === CAMERA_CAPTURE_KIND.DOCUMENT ? getDocumentCrop(width, height) : null;
+    const outputWidth = Math.round(documentCrop?.width || width);
+    const outputHeight = Math.round(documentCrop?.height || height);
+
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
 
     if (facingMode === 'user') {
-      context.translate(width, 0);
+      context.translate(outputWidth, 0);
       context.scale(-1, 1);
     }
 
-    context.drawImage(video, 0, 0, width, height);
+    if (documentCrop) {
+      context.drawImage(
+        video,
+        documentCrop.x,
+        documentCrop.y,
+        documentCrop.width,
+        documentCrop.height,
+        0,
+        0,
+        outputWidth,
+        outputHeight
+      );
+    } else {
+      context.drawImage(video, 0, 0, width, height, 0, 0, outputWidth, outputHeight);
+    }
     context.setTransform(1, 0, 0, 1, 0, 0);
 
     canvas.toBlob((blob) => {
@@ -185,7 +239,7 @@ export default function CameraCaptureModal({
           </div>
         </div>
 
-        <div className="camera-preview-wrapper">
+        <div ref={previewWrapperRef} className="camera-preview-wrapper">
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           {error ? (
@@ -203,7 +257,10 @@ export default function CameraCaptureModal({
                 className="camera-video"
                 style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
               />
-              <div className={`camera-overlay-guide camera-overlay-guide--${modalConfig.guideVariant}`} />
+              <div
+                ref={overlayRef}
+                className={`camera-overlay-guide camera-overlay-guide--${modalConfig.guideVariant}`}
+              />
 
               <div className={`camera-instructions camera-instructions--${modalConfig.guideVariant}`}>
                 <p>{modalConfig.instructionTitle}</p>

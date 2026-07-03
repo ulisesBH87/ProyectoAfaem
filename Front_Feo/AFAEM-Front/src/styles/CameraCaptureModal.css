@@ -103,8 +103,10 @@
 }
 
 .camera-overlay-guide--document {
-  width: min(76%, 300px);
-  height: min(88%, 360px);
+  width: min(82%, 320px);
+  aspect-ratio: 210 / 297;
+  height: auto;
+  max-height: 84%;
   border-radius: 16px;
 }
 
@@ -300,8 +302,10 @@
     height: 200px;
   }
   .camera-overlay-guide--document {
-    width: min(80%, 260px);
-    height: 92%;
+    width: min(86%, 300px);
+    aspect-ratio: 210 / 297;
+    height: auto;
+    max-height: 82%;
   }
   .camera-instructions {
     top: 10px;
