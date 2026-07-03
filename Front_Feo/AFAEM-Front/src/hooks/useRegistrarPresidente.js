@@ -154,7 +154,7 @@ export function useRegistrarPresidente() {
 
   // ── Paso 2: Cuotas ───────────────────────────────────────────────────────
   const [numPersonas, setNumPersonas] = useState('');
-  const [voucher, setVoucher] = useState(null);
+  const [voucher, setVoucherState] = useState(null);
   const segurosHook = useSeguros();
   const { seguros, segurosPresidente, segurosJugadores, asignacion, setAsignacion, ligasCatalogo, totalAsignados, totalPagar, cargandoSeguros } = segurosHook;
   const segurosRequeridos = Number(numPersonas || 0);
@@ -222,9 +222,25 @@ export function useRegistrarPresidente() {
     return () => clearTimeout(timer);
   }, [equipo, liga, esEntrenador]);
 
-  // ── Hooks de lógica ──────────────────────────────────────────────────────
   const ocrHook = useOCR();
   const { ocrResults, setOcrResults, procesarOCR, preFillFromCuenta } = ocrHook;
+
+  const setVoucher = (file) => {
+    if (!file) {
+      setVoucherState(null);
+      setOcrResults(prev => {
+        const next = { ...prev };
+        delete next.voucherMonto;
+        delete next.voucherText;
+        return next;
+      });
+      return;
+    }
+    setVoucherState(file);
+    procesarOCR('voucher', file, () => {
+      setVoucherState(null);
+    });
+  };
 
   const fotoHook = useFotografia({ setDocuments, setPreviews });
   const { procesarFoto, forzarFoto, fotoError, fotoFallida, fotoArchivo } = fotoHook;

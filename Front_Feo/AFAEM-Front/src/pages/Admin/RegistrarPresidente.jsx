@@ -309,6 +309,7 @@ export default function RegistrarPresidente() {
           {/* ── Paso 3: Cuotas ── */}
           {paso === 3 && (
             <Step3Cuotas
+              ocrResults={ocrResults}
               numPersonas={numPersonas}
               setNumPersonas={setNumPersonas}
               segurosJugadores={segurosJugadores}

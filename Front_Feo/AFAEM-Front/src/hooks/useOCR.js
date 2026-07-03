@@ -3,6 +3,80 @@ import Swal from 'sweetalert2';
 import { API_BASE } from '../config/config';
 import { toDDMMYYYY } from '../pages/Admin/RegistrarPresidente/constants';
 
+export function extraerMontoDeVoucher(rawText) {
+  if (!rawText) return null;
+  
+  const lines = rawText.split('\n').map(l => l.trim().toUpperCase()).filter(Boolean);
+  
+  // Palabras clave que indican que la línea o la siguiente contiene el monto del pago
+  const keywords = ["TOTAL", "IMPORTE", "MONTO", "PAGO", "DEPOSITO", "CANTIDAD", "EFECTIVO", "NETO", "TRANSFERIDO", "TRANSFERENCIA", "MONTO ENVIADO"];
+  
+  let candidates = [];
+
+  // Expresión regular para buscar cantidades con decimales o con signo de pesos
+  // 1. Con signo de pesos, ej: $ 500.00, $500, $1,200.00
+  const regexWithSign = /\$\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/g;
+  // 2. Números con decimales obligatorios, ej: 500.00, 1200.50
+  const regexWithDecimals = /\b([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})\b/g;
+  // 3. Números enteros limpios de 3 a 5 dígitos (para montos sin decimales ni signo de pesos)
+  const regexCleanIntegers = /\b([1-9][0-9]{2,4})\b/g;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const hasKeyword = keywords.some(kw => line.includes(kw));
+    const prevLineHasKeyword = i > 0 && keywords.some(kw => lines[i - 1].includes(kw));
+    const isTargetLine = hasKeyword || prevLineHasKeyword;
+
+    // A. Buscar con signo de pesos (Máxima prioridad)
+    let match;
+    regexWithSign.lastIndex = 0;
+    while ((match = regexWithSign.exec(line)) !== null) {
+      const val = parseFloat(match[1].replace(/,/g, ''));
+      if (!isNaN(val) && val > 0) {
+        candidates.push({ val, priority: isTargetLine ? 10 : 8 });
+      }
+    }
+
+    // B. Buscar con decimales (Prioridad media)
+    regexWithDecimals.lastIndex = 0;
+    while ((match = regexWithDecimals.exec(line)) !== null) {
+      const val = parseFloat(match[1].replace(/,/g, ''));
+      if (!isNaN(val) && val > 0) {
+        if (!candidates.some(c => c.val === val)) {
+          candidates.push({ val, priority: isTargetLine ? 7 : 5 });
+        }
+      }
+    }
+
+    // C. Buscar enteros limpios (Prioridad baja, solo en contexto de palabra clave)
+    if (isTargetLine) {
+      regexCleanIntegers.lastIndex = 0;
+      while ((match = regexCleanIntegers.exec(line)) !== null) {
+        const val = parseFloat(match[1]);
+        if (!isNaN(val) && val > 0) {
+          if (!candidates.some(c => c.val === val)) {
+            candidates.push({ val, priority: 3 });
+          }
+        }
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  // Ordenamos por prioridad (mayor a menor) y luego por valor (mayor a menor)
+  candidates.sort((a, b) => {
+    if (b.priority !== a.priority) {
+      return b.priority - a.priority;
+    }
+    return b.val - a.val;
+  });
+
+  return candidates[0].val;
+}
+
 /**
  * useOCR
  * Encapsula la lógica de extracción OCR: parseo del HTML de respuesta,
@@ -130,6 +204,27 @@ export function useOCR() {
       if (!res.ok) throw new Error();
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+
+      if (docKey === 'voucher') {
+        const rawText = doc.querySelector('pre')?.textContent || '';
+        const montoExtraido = extraerMontoDeVoucher(rawText);
+        setOcrResults(prev => ({
+          ...prev,
+          voucherMonto: montoExtraido,
+          voucherText: rawText
+        }));
+        
+        Swal.fire({
+          title: 'Comprobante procesado',
+          text: montoExtraido 
+            ? `Se detectó un monto de $${montoExtraido.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+            : 'No se logró detectar el monto de forma automática. Se requiere revisión manual.',
+          icon: 'success',
+          timer: 3000,
+          showConfirmButton: false,
+        });
+        return;
+      }
 
       const cleanVal = (val) => {
         if (!val) return '';
