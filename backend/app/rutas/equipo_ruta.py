@@ -848,8 +848,8 @@ def guardar_borrador_jugador(
         except Exception:
             pass
             
-    limpiar_archivos_borrador_obsoletos(datos_antiguos, payload.datos)
-    datos_procesados = procesar_borrador_guardar(payload.datos, slot.EquipoTemporalJugadorId)
+    datos_procesados = procesar_borrador_guardar(payload.datos, slot.EquipoTemporalJugadorId, datos_antiguos)
+    limpiar_archivos_borrador_obsoletos(datos_antiguos, datos_procesados)
     slot.DatosBorrador = json.dumps(datos_procesados, ensure_ascii=False)
     
     curp_duplicada = False
@@ -876,6 +876,11 @@ def crear_o_actualizar_borrador_presidente(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual),
 ):
+    from app.core.borrador_utils import (
+        limpiar_archivos_borrador_obsoletos,
+        procesar_borrador_guardar,
+    )
+
     db.info["es_borrador"] = True
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
@@ -1000,9 +1005,19 @@ def crear_o_actualizar_borrador_presidente(
         if query_curp.first():
             curp_duplicada = True
 
+    datos_antiguos = {}
+    if presidente.DatosBorrador:
+        try:
+            datos_antiguos = json.loads(presidente.DatosBorrador)
+        except Exception:
+            datos_antiguos = {}
+
+    datos_procesados = procesar_borrador_guardar(datos, presidente.PresidenteEquipoId, datos_antiguos)
+    limpiar_archivos_borrador_obsoletos(datos_antiguos, datos_procesados)
+
     # Update JSON data draft column
     presidente.TipoDirectivoId = 2 if datos.get("esEntrenador") else 1
-    presidente.DatosBorrador = json.dumps(datos, ensure_ascii=False)
+    presidente.DatosBorrador = json.dumps(datos_procesados, ensure_ascii=False)
     db.commit()
 
     return {
@@ -1018,6 +1033,8 @@ def obtener_borrador_presidente(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual),
 ):
+    from app.core.borrador_utils import procesar_borrador_cargar
+
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
@@ -1026,7 +1043,7 @@ def obtener_borrador_presidente(
     if not presidente:
         raise HTTPException(status_code=404, detail="Borrador no encontrado")
 
-    datos = json.loads(presidente.DatosBorrador) if presidente.DatosBorrador else {}
+    datos = procesar_borrador_cargar(json.loads(presidente.DatosBorrador)) if presidente.DatosBorrador else {}
     return {"datos": datos}
 
 
@@ -1800,6 +1817,8 @@ async def registrar_presidente_admin(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
+    from app.core.borrador_utils import borrar_archivos_borrador_de_slot
+
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
@@ -1860,6 +1879,7 @@ async def registrar_presidente_admin(
             # Complete President status
             nuevo_presidente.EstatusId = 7 # ACTIVO
             nuevo_presidente.Afiliacion = afiliacion
+            borrar_archivos_borrador_de_slot(nuevo_presidente.DatosBorrador)
             nuevo_presidente.DatosBorrador = None # Clear draft data
 
         else:
@@ -2179,6 +2199,8 @@ async def registrar_entrenador_admin(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
+    from app.core.borrador_utils import borrar_archivos_borrador_de_slot
+
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
@@ -2245,6 +2267,7 @@ async def registrar_entrenador_admin(
             nuevo_directivo.EstatusId = 7 # ACTIVO
             nuevo_directivo.TipoDirectivoId = 2 # ENTRENADOR
             nuevo_directivo.Afiliacion = afiliacion
+            borrar_archivos_borrador_de_slot(nuevo_directivo.DatosBorrador)
             nuevo_directivo.DatosBorrador = None # Clear draft data
         else:
             usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.Eliminado == False).first()

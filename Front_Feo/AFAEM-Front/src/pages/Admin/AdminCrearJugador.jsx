@@ -19,6 +19,7 @@ import { API_BASE } from '../../config/config';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -209,6 +210,7 @@ export default function AdminCrearJugador() {
   const [signedFormPreview, setSignedFormPreview] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('fotografia');
   const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
 
   // DETERMINACIÓN DE PASOS
@@ -315,6 +317,19 @@ export default function AdminCrearJugador() {
       setDocuments(prev => ({ ...prev, [docKey]: null }));
       setPreviews(prev => ({ ...prev, [docKey]: null }));
     }
+  };
+
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
+    });
   };
 
   // PROCESAR OCR
@@ -1490,6 +1505,8 @@ export default function AdminCrearJugador() {
                               <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
                               <button type="button" onClick={(e) => {
                                 e.stopPropagation();
+                                openDocumentCaptureOptions(doc.key);
+                                return;
                                 if (doc.key === 'fotografia') {
                                   Swal.fire({
                                     title: 'Selecciona una opción',
@@ -1516,6 +1533,8 @@ export default function AdminCrearJugador() {
                           </div>
                         ) : (
                           <div onClick={() => {
+                            openDocumentCaptureOptions(doc.key);
+                            return;
                             if (doc.key === 'fotografia') {
                               Swal.fire({
                                 title: 'Selecciona una opción',
@@ -1559,7 +1578,8 @@ export default function AdminCrearJugador() {
                 <CameraCaptureModal
                   isOpen={isCameraOpen}
                   onClose={() => setIsCameraOpen(false)}
-                  onCapture={(file) => handleFileUpload('fotografia', file)}
+                  onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                  captureKind={getCameraCaptureKind(cameraTargetKey)}
                 />
               </>
             )}
@@ -1681,7 +1701,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1706,7 +1726,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1731,7 +1751,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1775,7 +1795,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('curp') && !extractedData.curp && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1804,7 +1824,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1829,7 +1849,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>

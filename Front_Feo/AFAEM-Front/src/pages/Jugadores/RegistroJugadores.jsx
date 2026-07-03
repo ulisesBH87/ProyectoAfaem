@@ -26,6 +26,7 @@ import { validarFotografia } from '../../services/foto';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -286,6 +287,7 @@ export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
   const { tokenIdentificador, tokenSecreto } = useParams();
+  const isMobileDevice = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isPublicFlow = !!(tokenIdentificador && tokenSecreto);
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
   const [invitationTeams, setInvitationTeams] = useState([]);
@@ -1028,6 +1030,7 @@ export default function RegistroJugadores() {
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
   const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
   const selectedInvitationTeam = invitationTeams.find(
     (team) => String(team.equipo_temporal_id) === String(teamId)
@@ -1405,6 +1408,8 @@ export default function RegistroJugadores() {
       cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
     } else if (field === 'correo') {
       cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'telefono') {
       cleanValue = value.replace(/\D/g, '').slice(0, 10);
     } else if (field === 'numCamiseta') {
@@ -2234,6 +2239,54 @@ export default function RegistroJugadores() {
       timer: 1500,
       showConfirmButton: false
     });
+  };
+
+  const openDocumentFilePicker = (documentKey) => {
+    document.getElementById(`file-${documentKey}`)?.click();
+  };
+
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        openDocumentFilePicker(documentKey);
+      }
+    });
+  };
+
+  const openPhotoUploadOptions = () => {
+    Swal.fire({
+      title: 'Selecciona una opción',
+      text: '¿Cómo deseas cargar la fotografía?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '📷 Tomar con cámara',
+      cancelButtonText: '📁 Subir archivo',
+      confirmButtonColor: COLORS.primary,
+      cancelButtonColor: COLORS.slate500
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        openDocumentFilePicker('foto');
+      }
+    });
+  };
+
+  const handleDocumentCardClick = (documentKey) => {
+    if (isPhotoCaptureKey(documentKey)) {
+      openPhotoUploadOptions();
+      return;
+    }
+    if (documentKey !== 'signedForm') {
+      openDocumentCaptureOptions(documentKey);
+      return;
+    }
+    openDocumentFilePicker(documentKey);
   };
 
   // AUXILIAR PARA ESCRITURA EN PDF
@@ -3409,7 +3462,7 @@ export default function RegistroJugadores() {
                         <div
                           key={doc.key}
                           className="document-card"
-                          onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                          onClick={() => handleDocumentCardClick(doc.key)}
                           onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
                           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                           onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
@@ -3454,10 +3507,42 @@ export default function RegistroJugadores() {
                             {previews[doc.key] ? (
                               <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                                 {currentDocuments[doc.key]?.type === 'application/pdf' ? (
-                                  <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                    <FaFilePdf />
-                                    <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
-                                  </div>
+                                  isMobileDevice ? (
+                                    <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                      <FaFilePdf />
+                                      <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
+                                    </div>
+                                  ) : (
+                                    <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: COLORS.white }}>
+                                      <iframe
+                                        src={`${previews[doc.key]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                        title={`Preview ${doc.title}`}
+                                        style={{
+                                          width: '100%',
+                                          height: '100%',
+                                          border: 'none',
+                                          pointerEvents: 'none'
+                                        }}
+                                      />
+                                      <div style={{
+                                        position: 'absolute',
+                                        bottom: '8px',
+                                        left: '8px',
+                                        backgroundColor: COLORS.overlaySlateGray,
+                                        color: COLORS.white,
+                                        fontSize: '10px',
+                                        fontWeight: '800',
+                                        padding: '4px 8px',
+                                        borderRadius: '999px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}>
+                                        <FaFilePdf />
+                                        PDF
+                                      </div>
+                                    </div>
+                                  )
                                 ) : (
                                   <img
                                     src={previews[doc.key]}
@@ -3505,6 +3590,8 @@ export default function RegistroJugadores() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      handleDocumentCardClick(doc.key);
+                                      return;
                                       if (doc.key === 'foto') {
                                         Swal.fire({
                                           title: 'Selecciona una opción',
@@ -3570,7 +3657,10 @@ export default function RegistroJugadores() {
                             ) : (
                               /* ESTADO VACÍO */
                               <div
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDocumentCardClick(doc.key);
+                                  return;
                                   if (doc.key === 'foto') {
                                     Swal.fire({
                                       title: 'Selecciona una opción',
@@ -3604,7 +3694,30 @@ export default function RegistroJugadores() {
                                 }}
                               >
                                 <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                                <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                {doc.key === 'foto' ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDocumentCardClick(doc.key);
+                                    }}
+                                    style={{
+                                      marginTop: '4px',
+                                      padding: '8px 12px',
+                                      borderRadius: '999px',
+                                      border: 'none',
+                                      backgroundColor: COLORS.primary,
+                                      color: COLORS.white,
+                                      fontSize: '10px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Subir archivo
+                                  </button>
+                                ) : (
+                                  <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                )}
                               </div>
                             )}
                           </div>
@@ -3675,7 +3788,8 @@ export default function RegistroJugadores() {
                     <CameraCaptureModal
                       isOpen={isCameraOpen}
                       onClose={() => setIsCameraOpen(false)}
-                      onCapture={(file) => handleFileUpload('foto', file)}
+                      onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                      captureKind={getCameraCaptureKind(cameraTargetKey)}
                     />
 
                     {/* Loader temporal OCR */}
@@ -3751,7 +3865,7 @@ export default function RegistroJugadores() {
                           />
                           {missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
-                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                              No se pudo completar automáticamente
                             </span>
                           )}
                           {validationErrors.nombreJugador && <span className="field-error-msg">❌ {validationErrors.nombreJugador}</span>}
@@ -3786,7 +3900,7 @@ export default function RegistroJugadores() {
                           />
                           {missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
-                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                              No se pudo completar automáticamente
                             </span>
                           )}
                           {validationErrors.apellidoPaterno && <span className="field-error-msg">❌ {validationErrors.apellidoPaterno}</span>}
@@ -3821,7 +3935,7 @@ export default function RegistroJugadores() {
                           />
                           {missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
-                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                              No se pudo completar automáticamente
                             </span>
                           )}
                           {validationErrors.apellidoMaterno && <span className="field-error-msg">❌ {validationErrors.apellidoMaterno}</span>}
@@ -3836,9 +3950,9 @@ export default function RegistroJugadores() {
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
-                            readOnly
+                            onChange={e => handleFieldChange('curp', e.target.value)}
                             onBlur={handleBlur}
-                            placeholder="Se auto-completará con el documento de identidad"
+                            placeholder="Ingresa o corrige la CURP"
                             maxLength="18"
                             style={{
                               padding: '10px',
@@ -3850,14 +3964,14 @@ export default function RegistroJugadores() {
                                   : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               outline: 'none',
-                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : '#f1f5f9',
-                              cursor: missingOcrFields.includes('curp') && !currentDatos.curp ? 'text' : 'not-allowed',
+                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : 'white',
+                              cursor: 'text',
                               boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
                           {missingOcrFields.includes('curp') && !currentDatos.curp && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
-                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                              No se pudo completar automáticamente
                             </span>
                           )}
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
@@ -3896,7 +4010,7 @@ export default function RegistroJugadores() {
                           />
                           {missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
-                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                              No se pudo completar automáticamente
                             </span>
                           )}
                           {validationErrors.fechaNacimiento && <span className="field-error-msg">❌ {validationErrors.fechaNacimiento}</span>}
@@ -3930,7 +4044,7 @@ export default function RegistroJugadores() {
                           />
                           {missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
-                              ⚠️ Faltó detectar en OCR. Completa manualmente.
+                              No se pudo completar automáticamente
                             </span>
                           )}
                           {validationErrors.lugarNacimiento && <span className="field-error-msg">❌ {validationErrors.lugarNacimiento}</span>}
@@ -4485,17 +4599,17 @@ export default function RegistroJugadores() {
                         }}
                         className={currentPlayer?.signedForm ? "document-card" : ""}
                         style={{
-                          border: currentPlayer?.signedForm 
-                            ? `2px solid ${COLORS.success}` 
-                            : (isDraggingSignedForm 
-                              ? `2px solid ${COLORS.primary}` 
+                          border: currentPlayer?.signedForm
+                            ? `2px solid ${COLORS.success}`
+                            : (isDraggingSignedForm
+                              ? `2px solid ${COLORS.primary}`
                               : (pasos1a5Completos ? `2px dashed ${COLORS.sky}` : `2px dashed ${COLORS.slate300}`)),
                           borderRadius: '20px',
                           padding: '35px 20px',
-                          backgroundColor: currentPlayer?.signedForm 
-                            ? COLORS.greenBg50 
-                            : (isDraggingSignedForm 
-                              ? 'rgba(26, 59, 92, 0.05)' 
+                          backgroundColor: currentPlayer?.signedForm
+                            ? COLORS.greenBg50
+                            : (isDraggingSignedForm
+                              ? 'rgba(26, 59, 92, 0.05)'
                               : (pasos1a5Completos ? COLORS.slate50 : COLORS.slate100)),
                           cursor: (pasos1a5Completos && !currentPlayer?.signedForm) ? 'pointer' : 'default',
                           transition: 'all 0.3s',
@@ -4538,14 +4652,14 @@ export default function RegistroJugadores() {
                             <button
                               type="button"
                               onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewDoc({
-                                    open: true,
-                                    url: previews.signedForm,
-                                    type: 'pdf',
-                                    title: 'Formato de Afiliación Oficial'
-                                  });
-                                }}
+                                e.stopPropagation();
+                                setPreviewDoc({
+                                  open: true,
+                                  url: previews.signedForm,
+                                  type: 'pdf',
+                                  title: 'Formato de Afiliación Oficial'
+                                });
+                              }}
                               className="btn-zoom"
                               style={{
                                 width: '36px', height: '36px', borderRadius: '50%',
