@@ -286,6 +286,7 @@ export default function RegistroJugadores() {
   const navigate = useNavigate();
   const location = useLocation();
   const { tokenIdentificador, tokenSecreto } = useParams();
+  const isMobileDevice = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isPublicFlow = !!(tokenIdentificador && tokenSecreto);
   const [teamId, setTeamId] = useState(location.state?.teamId || null);
   const [invitationTeams, setInvitationTeams] = useState([]);
@@ -2236,6 +2237,37 @@ export default function RegistroJugadores() {
     });
   };
 
+  const openDocumentFilePicker = (documentKey) => {
+    document.getElementById(`file-${documentKey}`)?.click();
+  };
+
+  const openPhotoUploadOptions = () => {
+    Swal.fire({
+      title: 'Selecciona una opción',
+      text: '¿Cómo deseas cargar la fotografía?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '📷 Tomar con cámara',
+      cancelButtonText: '📁 Subir archivo',
+      confirmButtonColor: COLORS.primary,
+      cancelButtonColor: COLORS.slate500
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        openDocumentFilePicker('foto');
+      }
+    });
+  };
+
+  const handleDocumentCardClick = (documentKey) => {
+    if (documentKey === 'foto') {
+      openPhotoUploadOptions();
+      return;
+    }
+    openDocumentFilePicker(documentKey);
+  };
+
   // AUXILIAR PARA ESCRITURA EN PDF
   const safeSetField = (form, fieldName, value, fontSize) => {
     if (!value) return;
@@ -3409,7 +3441,7 @@ export default function RegistroJugadores() {
                         <div
                           key={doc.key}
                           className="document-card"
-                          onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                          onClick={() => handleDocumentCardClick(doc.key)}
                           onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
                           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                           onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
@@ -3454,10 +3486,42 @@ export default function RegistroJugadores() {
                             {previews[doc.key] ? (
                               <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                                 {currentDocuments[doc.key]?.type === 'application/pdf' ? (
-                                  <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                    <FaFilePdf />
-                                    <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
-                                  </div>
+                                  isMobileDevice ? (
+                                    <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                      <FaFilePdf />
+                                      <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
+                                    </div>
+                                  ) : (
+                                    <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: COLORS.white }}>
+                                      <iframe
+                                        src={`${previews[doc.key]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                        title={`Preview ${doc.title}`}
+                                        style={{
+                                          width: '100%',
+                                          height: '100%',
+                                          border: 'none',
+                                          pointerEvents: 'none'
+                                        }}
+                                      />
+                                      <div style={{
+                                        position: 'absolute',
+                                        bottom: '8px',
+                                        left: '8px',
+                                        backgroundColor: COLORS.overlaySlateGray,
+                                        color: COLORS.white,
+                                        fontSize: '10px',
+                                        fontWeight: '800',
+                                        padding: '4px 8px',
+                                        borderRadius: '999px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}>
+                                        <FaFilePdf />
+                                        PDF
+                                      </div>
+                                    </div>
+                                  )
                                 ) : (
                                   <img
                                     src={previews[doc.key]}
@@ -3505,6 +3569,8 @@ export default function RegistroJugadores() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      handleDocumentCardClick(doc.key);
+                                      return;
                                       if (doc.key === 'foto') {
                                         Swal.fire({
                                           title: 'Selecciona una opción',
@@ -3570,7 +3636,10 @@ export default function RegistroJugadores() {
                             ) : (
                               /* ESTADO VACÍO */
                               <div
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDocumentCardClick(doc.key);
+                                  return;
                                   if (doc.key === 'foto') {
                                     Swal.fire({
                                       title: 'Selecciona una opción',
@@ -3604,7 +3673,30 @@ export default function RegistroJugadores() {
                                 }}
                               >
                                 <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                                <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                {doc.key === 'foto' ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDocumentCardClick(doc.key);
+                                    }}
+                                    style={{
+                                      marginTop: '4px',
+                                      padding: '8px 12px',
+                                      borderRadius: '999px',
+                                      border: 'none',
+                                      backgroundColor: COLORS.primary,
+                                      color: COLORS.white,
+                                      fontSize: '10px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Subir archivo
+                                  </button>
+                                ) : (
+                                  <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                )}
                               </div>
                             )}
                           </div>
