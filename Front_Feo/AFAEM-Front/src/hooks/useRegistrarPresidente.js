@@ -725,9 +725,12 @@ export function useRegistrarPresidente() {
           confirmButtonColor: C.amberDark,
         });
       } else {
+        const telefonoPresidente = response?.presidente?.telefono;
         const result = await Swal.fire({
           title: 'Cuenta creada correctamente, ¿Enviar mensaje al presidente?',
-          text: '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
+          text: telefonoPresidente
+            ? `¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado (${telefonoPresidente})?`
+            : '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
           icon: 'success',
           showCancelButton: true,
           confirmButtonText: 'Enviar WhatsApp',
