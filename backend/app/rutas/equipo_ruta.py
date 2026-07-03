@@ -63,7 +63,7 @@ def obtener_equipos_temporales_por_usuario(db: Session = Depends(get_db), usuari
     return equipos
 
 @router.get("/slots")
-async def obtener_slots(
+def obtener_slots(
     equipo_temporal_id: int,
     db: Session = Depends(get_db),
     auth_info = Depends(obtener_usuario_o_sesion_temporal)
@@ -90,14 +90,14 @@ async def obtener_slots(
     return slots
 
 @router.get("/hay-slots")
-async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
+def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
     #Servicio de busqueda de slots
     slots = equipo_servicio.hay_slots(db, equipo_id)
 
     return slots
 
 @router.get("/invitacion/{token_identificador}/{token_secreto}", dependencies=[Depends(rate_limit_invitacion)])
-async def validar_invitacion_presidente(request: Request, token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
+def validar_invitacion_presidente(request: Request, token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
     ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip() if request.client else None
     invitacion = validar_invitacion_presidente_repo(db, token_identificador, token_secreto, ip)
 
@@ -630,7 +630,8 @@ async def registrar_grupo(
                 detail=f"El jugador {slot.EquipoTemporalJugadorId} no tiene información capturada."
             )
         try:
-            datos = json.loads(slot.DatosBorrador)
+            from app.core.borrador_utils import procesar_borrador_cargar
+            datos = procesar_borrador_cargar(json.loads(slot.DatosBorrador))
         except Exception:
             raise HTTPException(
                 status_code=400,
@@ -703,7 +704,8 @@ async def registrar_grupo(
     
     try:
         for slot in pending_slots:
-            datos = json.loads(slot.DatosBorrador)
+            from app.core.borrador_utils import procesar_borrador_cargar
+            datos = procesar_borrador_cargar(json.loads(slot.DatosBorrador))
             
             from app.utilidades.validaciones import validacion_fecha
             validated_dob = validacion_fecha(datos.get("fechaNacimiento"))
@@ -838,7 +840,17 @@ def guardar_borrador_jugador(
         if equipo_tem.UsuarioId != usuario_id:
             raise HTTPException(status_code=403, detail="Acceso denegado: el slot no pertenece a esta invitación")
     
-    slot.DatosBorrador = json.dumps(payload.datos, ensure_ascii=False)
+    from app.core.borrador_utils import procesar_borrador_guardar, limpiar_archivos_borrador_obsoletos
+    datos_antiguos = {}
+    if slot.DatosBorrador:
+        try:
+            datos_antiguos = json.loads(slot.DatosBorrador)
+        except Exception:
+            pass
+            
+    limpiar_archivos_borrador_obsoletos(datos_antiguos, payload.datos)
+    datos_procesados = procesar_borrador_guardar(payload.datos, slot.EquipoTemporalJugadorId)
+    slot.DatosBorrador = json.dumps(datos_procesados, ensure_ascii=False)
     
     curp_duplicada = False
     curp = str(payload.datos.get("curp") or "").strip().upper()
@@ -2405,7 +2417,7 @@ async def registrar_entrenador_admin(
 
 
 @router.post("/presidentes/{usuario_id}/enviar-link-registro-whatsapp", response_model=EnvioWhatsAppResponse)
-async def enviar_link_registro_whatsapp(
+def enviar_link_registro_whatsapp(
     usuario_id: int,
     request: Request,
     telefono_destino: Optional[str] = Query(None),
@@ -2531,7 +2543,7 @@ async def enviar_link_registro_whatsapp(
 
 
 @router.post("/presidentes/{usuario_id}/invitacion/link")
-async def obtener_link_invitacion(
+def obtener_link_invitacion(
     usuario_id: int,
     request: Request,
     db: Session = Depends(get_db),
@@ -2589,7 +2601,7 @@ async def obtener_link_invitacion(
 
 
 @router.post("/presidentes/{usuario_id}/invitacion/regenerar")
-async def regenerar_invitacion(
+def regenerar_invitacion(
     usuario_id: int,
     request: Request,
     db: Session = Depends(get_db),
