@@ -74,7 +74,7 @@ def cargar_archivo_borrador(ruta_relativa: str) -> str:
         return ""
 
 
-def procesar_borrador_guardar(datos: dict, slot_id: int) -> dict:
+def procesar_borrador_guardar(datos: dict, slot_id: int, datos_antiguos=None) -> dict:
     """
     Busca documentosBorrador en datos, guarda los que tengan Base64 a disco y los reemplaza con su ruta.
     """
@@ -85,11 +85,22 @@ def procesar_borrador_guardar(datos: dict, slot_id: int) -> dict:
     if not documentos or not isinstance(documentos, dict):
         return datos
         
+    documentos_antiguos = (datos_antiguos or {}).get("documentosBorrador") or {}
+
     for key, doc in documentos.items():
         if isinstance(doc, dict) and doc.get("data") and doc.get("name"):
             base64_data = doc["data"]
             # Solo guardamos si realmente es un Base64 (las rutas no empiezan con 'data:')
             if str(base64_data).startswith("data:"):
+                doc_antiguo = documentos_antiguos.get(key)
+                ruta_antigua = doc_antiguo.get("data") if isinstance(doc_antiguo, dict) else None
+
+                if str(ruta_antigua).startswith("uploads/borradores/"):
+                    base64_antiguo = cargar_archivo_borrador(ruta_antigua)
+                    if base64_antiguo and base64_antiguo == base64_data:
+                        doc["data"] = ruta_antigua
+                        continue
+
                 ruta = guardar_archivo_borrador(base64_data, doc["name"], slot_id, key)
                 doc["data"] = ruta
                 

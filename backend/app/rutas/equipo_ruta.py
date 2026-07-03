@@ -848,8 +848,8 @@ def guardar_borrador_jugador(
         except Exception:
             pass
             
-    limpiar_archivos_borrador_obsoletos(datos_antiguos, payload.datos)
-    datos_procesados = procesar_borrador_guardar(payload.datos, slot.EquipoTemporalJugadorId)
+    datos_procesados = procesar_borrador_guardar(payload.datos, slot.EquipoTemporalJugadorId, datos_antiguos)
+    limpiar_archivos_borrador_obsoletos(datos_antiguos, datos_procesados)
     slot.DatosBorrador = json.dumps(datos_procesados, ensure_ascii=False)
     
     curp_duplicada = False
@@ -1012,8 +1012,8 @@ def crear_o_actualizar_borrador_presidente(
         except Exception:
             datos_antiguos = {}
 
-    limpiar_archivos_borrador_obsoletos(datos_antiguos, datos)
-    datos_procesados = procesar_borrador_guardar(datos, presidente.PresidenteEquipoId)
+    datos_procesados = procesar_borrador_guardar(datos, presidente.PresidenteEquipoId, datos_antiguos)
+    limpiar_archivos_borrador_obsoletos(datos_antiguos, datos_procesados)
 
     # Update JSON data draft column
     presidente.TipoDirectivoId = 2 if datos.get("esEntrenador") else 1
