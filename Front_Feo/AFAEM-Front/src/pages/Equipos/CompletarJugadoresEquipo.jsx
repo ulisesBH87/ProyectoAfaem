@@ -2819,7 +2819,7 @@ export default function CompletarJugadoresEquipo() {
                     />
                     {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
                       <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                        No se pudo completar automáticamente
                       </span>
                     )}
                     {validationErrors.nombreJugador && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.nombreJugador}</span>}
@@ -2850,7 +2850,7 @@ export default function CompletarJugadoresEquipo() {
                     />
                     {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
                       <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                        No se pudo completar automáticamente
                       </span>
                     )}
                     {validationErrors.apellidoPaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoPaterno}</span>}
@@ -2881,7 +2881,7 @@ export default function CompletarJugadoresEquipo() {
                     />
                     {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
                       <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                        No se pudo completar automáticamente
                       </span>
                     )}
                     {validationErrors.apellidoMaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoMaterno}</span>}
@@ -2915,7 +2915,7 @@ export default function CompletarJugadoresEquipo() {
                     />
                     {missingOcrFields.includes('curp') && !extractedData.curp && (
                       <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                        No se pudo completar automáticamente
                       </span>
                     )}
                     {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
@@ -2953,7 +2953,7 @@ export default function CompletarJugadoresEquipo() {
                     />
                     {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
                       <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                        No se pudo completar automáticamente
                       </span>
                     )}
                     {(() => {
@@ -3009,7 +3009,7 @@ export default function CompletarJugadoresEquipo() {
                     />
                     {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
                       <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                        ⚠️ Faltó detectar en OCR. Completa manualmente.
+                        No se pudo completar automáticamente
                       </span>
                     )}
                   </div>
@@ -3426,17 +3426,17 @@ export default function CompletarJugadoresEquipo() {
             }}
             className={signedForm ? "document-card" : ""}
             style={{
-              border: signedForm 
-                ? `2px solid ${COLORS.success}` 
-                : (isDraggingSignedForm 
-                  ? `2px solid ${COLORS.primary}` 
+              border: signedForm
+                ? `2px solid ${COLORS.success}`
+                : (isDraggingSignedForm
+                  ? `2px solid ${COLORS.primary}`
                   : `2px dashed ${COLORS.sky}`),
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm 
-                ? COLORS.greenBg50 
-                : (isDraggingSignedForm 
-                  ? 'rgba(26, 59, 92, 0.05)' 
+              backgroundColor: signedForm
+                ? COLORS.greenBg50
+                : (isDraggingSignedForm
+                  ? 'rgba(26, 59, 92, 0.05)'
                   : COLORS.slate50),
               cursor: !signedForm ? 'pointer' : 'default',
               transition: 'all 0.3s',

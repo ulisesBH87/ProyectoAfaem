@@ -1681,7 +1681,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1706,7 +1706,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1731,7 +1731,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1775,7 +1775,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('curp') && !extractedData.curp && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1804,7 +1804,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
@@ -1829,7 +1829,7 @@ export default function AdminCrearJugador() {
                   />
                   {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
-                      ⚠️ Faltó detectar en OCR. Completa manualmente.
+                      No se pudo completar automáticamente
                     </span>
                   )}
                 </div>
