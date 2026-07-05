@@ -271,7 +271,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .premium-details-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto 30px auto;
       background: linear-gradient(135deg, ${COLORS.slate800} 0%, ${COLORS.slate900} 100%);
       color: white;
@@ -286,7 +286,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .main-form-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto;
       background: white;
       border-radius: 24px;
@@ -296,7 +296,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .no-slots-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto;
       background: white;
       border-radius: 24px;
