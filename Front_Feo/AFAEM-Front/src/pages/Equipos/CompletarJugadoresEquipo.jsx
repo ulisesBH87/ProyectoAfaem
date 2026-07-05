@@ -1561,7 +1561,8 @@ export default function CompletarJugadoresEquipo() {
           CantidadJugadores: Number(numJugadoresAmpliacion),
           Seguros: segurosPayload,
           TipoSolicitud: 3, // JUGADOR
-          EquipoId: Number(equipoId)
+          EquipoId: Number(equipoId),
+          PresidenteId: equipo?.PresidenteEquipoId || null
         })
       });
 
@@ -2231,8 +2232,8 @@ export default function CompletarJugadoresEquipo() {
 
                   <div style={{ background: COLORS.slate50, padding: '25px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, marginBottom: '25px' }}>
                     {/* Cantidad de Jugadores */}
-                    <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
+                    <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <label style={{ fontWeight: '800', color: COLORS.slate800, margin: 0 }}>
                         Cantidad de espacios a generar (Jugadores)
                       </label>
                       <input
@@ -2240,7 +2241,7 @@ export default function CompletarJugadoresEquipo() {
                         min="0"
                         value={numJugadoresAmpliacion}
                         onChange={(e) => setNumJugadoresAmpliacion(Math.max(0, parseInt(e.target.value) || 0))}
-                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
+                        style={{ width: '120px', padding: '10px 12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
                       />
                     </div>
 
@@ -2802,32 +2803,7 @@ export default function CompletarJugadoresEquipo() {
                 </div>
               </div>
 
-              {/* AVISO DE DISCREPANCIA OCR */}
-              {ocrDataOriginal && (
-                extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-              ) && (
-                  <div className="fade-in" style={{
-                    marginBottom: '20px',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    background: COLORS.orange50,
-                    border: `1px solid ${COLORS.orange100}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}>
-                    <div style={{ fontSize: '20px' }}>⚠️</div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                        Discrepancia detectada
-                      </h4>
-                      <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                        La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                      </p>
-                    </div>
-                  </div>
-                )}
+
 
               {/* CAMPOS DEL FORMULARIO */}
               <div className="inner-form-card">

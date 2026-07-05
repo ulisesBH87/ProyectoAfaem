@@ -3355,32 +3355,7 @@ export default function ConfigurarEquipo() {
                     </div>
                   </div>
 
-                  {/* AVISO DE DISCREPANCIA OCR */}
-                  {ocrDataOriginal && (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) && (
-                      <div className="fade-in" style={{
-                        marginBottom: '20px',
-                        padding: '16px',
-                        borderRadius: '12px',
-                        background: COLORS.orange50,
-                        border: `1px solid ${COLORS.orange100}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px'
-                      }}>
-                        <div style={{ fontSize: '20px' }}>⚠️</div>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                            Discrepancia detectada
-                          </h4>
-                          <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                            La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                          </p>
-                        </div>
-                      </div>
-                    )}
+
 
                   {/* CAMPOS DEL FORMULARIO */}
                   <div className="dashboard-card" style={{ border: `1px solid ${COLORS.slate200}`, marginBottom: '30px' }}>
