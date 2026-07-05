@@ -8,7 +8,7 @@ import COLORS from '../../../styles/colors';
  */
 export default function PageHeader({ onBack, esEntrenador }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 32 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 16 }}>
       <button
         onClick={onBack}
         style={{

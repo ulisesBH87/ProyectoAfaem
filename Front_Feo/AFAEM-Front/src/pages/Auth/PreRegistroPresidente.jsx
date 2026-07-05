@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock, FaCamera, FaTrash } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaFileAlt, FaClock, FaCamera, FaTrash } from 'react-icons/fa';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -273,6 +273,7 @@ function PreRegistroPresidente() {
   // Estados para modal de beneficios de seguros
   const [seguroDetalle, setSeguroDetalle] = useState(null);
   const [cantidadModal, setCantidadModal] = useState(0);
+  const [comprobanteDragActive, setComprobanteDragActive] = useState(false);
 
   useEffect(() => {
     if (seguroDetalle) {
@@ -368,36 +369,36 @@ function PreRegistroPresidente() {
   const [fotoArchivoPendiente, setFotoArchivoPendiente] = useState(null);
 
 
-const [isCameraOpen, setIsCameraOpen] = useState(false);
-const [cameraTargetKey, setCameraTargetKey] = useState(null);
-const DOC_AFILIACION_IDS = {
-  actaNacimiento: 8,
-  identificacion: 38,
-  fotografia: 37,
-  formatoAfiliacion: 10,
-};
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState(null);
+  const DOC_AFILIACION_IDS = {
+    actaNacimiento: 8,
+    identificacion: 38,
+    fotografia: 37,
+    formatoAfiliacion: 10,
+  };
 
-const handleCameraPhotoCaptured = (file) => {
-  if (!cameraTargetKey) return;
+  const handleCameraPhotoCaptured = (file) => {
+    if (!cameraTargetKey) return;
 
-  const targetKey = cameraTargetKey.replace(/^file-val-/, '').replace(/^file-/, '');
-  const isValidationFlow = cameraTargetKey.startsWith('file-val-');
-  const docAfiliacionId = DOC_AFILIACION_IDS[targetKey];
+    const targetKey = cameraTargetKey.replace(/^file-val-/, '').replace(/^file-/, '');
+    const isValidationFlow = cameraTargetKey.startsWith('file-val-');
+    const docAfiliacionId = DOC_AFILIACION_IDS[targetKey];
 
-  if (isValidationFlow && docAfiliacionId) {
-    const docGuardado = documentosGuardados.find(
-      (d) => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId)
-    );
+    if (isValidationFlow && docAfiliacionId) {
+      const docGuardado = documentosGuardados.find(
+        (d) => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId)
+      );
 
-    if (docGuardado) {
-      handleReemplazarDocumento(docAfiliacionId, file);
-      setDocuments((prev) => ({ ...prev, [targetKey]: file }));
-      return;
+      if (docGuardado) {
+        handleReemplazarDocumento(docAfiliacionId, file);
+        setDocuments((prev) => ({ ...prev, [targetKey]: file }));
+        return;
+      }
     }
-  }
 
-  handleFileUpload(targetKey, file);
-};
+    handleFileUpload(targetKey, file);
+  };
 
   const segurosPresidente = catalogoSeguros.filter((seg) =>
     ['TIPO G', 'SIN SEGURO'].includes(seg.nombre.toUpperCase().trim())
@@ -696,6 +697,14 @@ const handleCameraPhotoCaptured = (file) => {
     return true;
   };
 
+  const manejarArchivoComprobante = (file) => {
+    if (file && validarArchivoPermitido(file)) {
+      setComprobantePago(file);
+      return true;
+    }
+    return false;
+  };
+
   const resolverFlujoBackend = async (data, token) => {
     setTieneEstadoBackend(true);
 
@@ -772,12 +781,12 @@ const handleCameraPhotoCaptured = (file) => {
       }
 
       if (estatusSolicitud === 1) {
-        setPasoActual(5); // Paso 3: Validación
+        setPasoActual(5); // PASO 3: VALIDACIÓN
         return;
       }
 
       if (estatusSolicitud === 3) {
-        setPasoActual(5); // Paso 3: Validación
+        setPasoActual(5); // PASO 3: VALIDACIÓN
         await Swal.fire({
           title: 'Tu solicitud tiene observaciones',
           //text: `Motivo general: ${observacionesSolicitud}. Por favor, revisa el estado de tus documentos y reemplaza los que fueron rechazados.`,
@@ -893,7 +902,7 @@ const handleCameraPhotoCaptured = (file) => {
   const requisitos = [
     { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
     { documento: 'identificacion', nombre: 'Identificación oficial' },
-    { documento: 'fotografia', nombre: 'Fotografía (Imagen)' },
+    { documento: 'fotografia', nombre: 'Fotografía' },
     { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', hasDownload: true }
   ];
 
@@ -2187,55 +2196,98 @@ const handleCameraPhotoCaptured = (file) => {
   return (
     <div className="fade-in prereg-dark-page" style={{
       minHeight: '100vh',
-      background: `linear-gradient(135deg, ${COLORS.slate900} 0%, ${COLORS.primaryHover} 40%, ${COLORS.indigo950} 100%)`,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '40px 20px',
+      padding: '20px 20px',
       position: 'relative',
     }}>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+        .prereg-dark-page {
+          font-family: 'Outfit', 'Inter', -apple-system, sans-serif !important;
+          background: radial-gradient(circle at 50% 0%, #0d1425 0%, #030712 100%) !important;
+
+          /* DESIGN SYSTEM COLOR TOKENS */
+          --color-bg: #030712;
+          --color-surface: #090d16;
+          --color-card: #0f1524;
+          --color-card-hover: #161e30;
+          --color-card-selected: #111c38;
+
+          --color-border: rgba(255, 255, 255, 0.04);
+          --color-border-hover: rgba(56, 189, 248, 0.2);
+          --color-border-active: rgba(56, 189, 248, 0.6);
+
+          --color-text: #f9fafb;
+          --color-text-secondary: #9ca3af;
+          --color-text-muted: #6b7280;
+
+          --color-primary: #38bdf8;
+          --color-primary-hover: #0ea5e9;
+          --color-primary-active: #0284c7;
+          --color-success: #10b981;
+          --color-danger: #ef4444;
+
+          /* DEPRECATED COMPATIBILITY WRAPPERS */
+          --text-main: var(--color-text);
+          --text-muted: var(--color-text-secondary);
+          --border-light: var(--color-border);
+          --card-bg: var(--color-card);
+          --bg-main: var(--color-bg);
+          --bg-surface: var(--color-surface);
+          --bg-glass: var(--color-surface);
+        }
+
         .cuotas-layout {
           display: grid;
-          grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.95fr);
-          gap: 20px;
+          grid-template-columns: minmax(0, 2fr) minmax(240px, 0.5fr);
+          gap: 32px;
           align-items: start;
         }
+
         .insurance-layout-left,
         .insurance-layout-right {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 24px;
           min-width: 0;
         }
+
         .insurance-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 12px;
+          gap: 24px;
         }
+
         .insurance-section {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          min-width: 0;
-        }
-        .insurance-card-list {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
           gap: 12px;
           min-width: 0;
         }
+
+        .insurance-card-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 20px;
+          min-width: 0;
+        }
+
         .insurance-card-list-responsive {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 15px;
+          gap: 20px;
           min-width: 0;
         }
+
         @media (max-width: 580px) {
           .insurance-card-list-responsive {
             grid-template-columns: 1fr;
           }
         }
+
         .insurance-player-card {
           display: flex;
           flex-direction: row;
@@ -2245,60 +2297,62 @@ const handleCameraPhotoCaptured = (file) => {
           flex-wrap: nowrap;
           min-width: 0;
         }
+
         .insurance-player-content {
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 4px;
           flex: 1;
           min-width: 0;
         }
+
         .insurance-player-name {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 800;
-          color: var(--text-main);
-          line-height: 1.2;
-          white-space: normal;
-          word-break: normal;
-          overflow-wrap: break-word;
+          color: var(--color-text);
+          line-height: 1.25;
           margin: 0;
         }
+
         .insurance-player-price {
-          font-size: 12.5px;
-          color: ${COLORS.brandBlueLight};
+          font-size: 13px;
+          color: var(--color-text);
           font-weight: 700;
           white-space: nowrap;
           line-height: 1.2;
         }
+
         .insurance-player-description {
-          font-size: 11px;
-          color: var(--text-muted);
+          font-size: 11.5px;
+          color: var(--color-text-secondary);
           margin: 0;
-          white-space: normal;
-          word-break: normal;
-          overflow-wrap: break-word;
-          line-height: 1.3;
+          line-height: 1.35;
         }
+
         .insurance-player-card .insurance-input {
           flex: 0 0 76px;
           width: 76px;
           min-width: 76px;
           max-width: 100%;
         }
+
         .insurance-col-title {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 800;
-          color: ${COLORS.overlayWhite85};
+          color: var(--color-text);
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          border-bottom: 1px solid ${COLORS.overlayWhite08};
-          padding-bottom: 6px;
-          margin-bottom: 5px;
+          letter-spacing: 0.75px;
+          border-bottom: 2px solid var(--color-border);
+          padding-bottom: 8px;
+          margin-bottom: 8px;
         }
+
         .summary-stack {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 12px;
+          gap: 16px;
         }
+
         @media (max-width: 768px) {
           .cuotas-layout {
             grid-template-columns: 1fr;
@@ -2307,315 +2361,481 @@ const handleCameraPhotoCaptured = (file) => {
             grid-template-columns: 1fr;
           }
         }
+
         @media (min-width: 769px) and (max-width: 1100px) {
           .cuotas-layout {
-            grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.95fr);
+            grid-template-columns: minmax(0, 2fr) minmax(240px, 0.5fr);
           }
-        }
-        /* ====== DARK MODE SCOPE: Override global light vars for this page ====== */
-        .prereg-dark-page {
-          --text-main: ${COLORS.overlayWhite92};
-          --text-muted: ${COLORS.overlayWhite45};
-          --border-light: ${COLORS.overlayWhite08};
-          --card-bg: ${COLORS.overlayWhite04};
-          --bg-main: ${COLORS.primaryBgTranslucent};
-          --bg-surface: ${COLORS.overlayWhite06};
-          --bg-glass: ${COLORS.overlayWhite05};
-        }
-        /* Force the card to be dark/transparent on this page */
-        .prereg-dark-page .card {
-          background: ${COLORS.overlayWhite06};
-          border: 1px solid ${COLORS.overlayWhite10};
-          box-shadow: 0 20px 60px ${COLORS.overlayBlack}, 0 0 0 1px ${COLORS.overlayWhite06};
-        }
-        .prereg-dark-page .glass {
-          background: ${COLORS.overlayWhite05};
-          border: 1px solid ${COLORS.overlayWhite08};
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-        }
-        /* Summary/bank cards also need dark treatment */
-        .prereg-dark-page .summary-card {
-          background: ${COLORS.overlayWhite04};
-          border-color: ${COLORS.overlayWhite08};
-        }
-        .prereg-dark-page .summary-card h5 { color: ${COLORS.overlayWhite85}; }
-        .prereg-dark-page .summary-row { color: ${COLORS.overlayWhite60}; border-color: ${COLORS.overlayWhite06}; }
-        .prereg-dark-page .total-row { color: ${COLORS.overlayWhite90}; border-color: ${COLORS.overlayWhite08}; }
-        .prereg-dark-page .bank-info-label { color: ${COLORS.overlayWhite45}; }
-        .prereg-dark-page .bank-info-value { color: ${COLORS.overlayWhite90}; }
-        .prereg-dark-page .referencia-badge { background: ${COLORS.brandBlueLight16}; color: ${COLORS.brandBlueLight}; border: 1px solid ${COLORS.brandBlueLight20}; }
-        .prereg-dark-page .assigned-bar {
-          background: ${COLORS.overlayWhite04};
-          border: 1px solid ${COLORS.overlayWhite08};
-          color: ${COLORS.overlayWhite60};
-          padding: 8px 14px;
-          margin-top: 8px;
-          font-size: 13px;
-          border-radius: 10px;
-        }
-        .prereg-dark-page .pago-card {
-          background: ${COLORS.overlayWhite04} !important;
-          border: 1px solid ${COLORS.overlayWhite08} !important;
-          border-radius: 18px !important;
-          padding: 26px !important;
-          box-shadow: 0 8px 32px 0 ${COLORS.shadow28} !important;
-          backdrop-filter: blur(10px) !important;
-          -webkit-backdrop-filter: blur(10px) !important;
-        }
-        @media (max-width: 768px) {
-          .prereg-dark-page .pago-card {
-            padding: 16px !important;
-          }
-        }
-        .prereg-dark-page .input-label { color: ${COLORS.overlayWhite60}; }
-        .prereg-dark-page .section-title-small { color: ${COLORS.overlayWhite90}; }
-        .prereg-dark-page .input-number {
-          background: ${COLORS.overlayWhite10};
-          border: 1.5px solid ${COLORS.overlayWhite30};
-          color: white;
-          border-radius: 12px;
-          padding: 10px 14px;
-          transition: all 0.2s ease;
-        }
-        .prereg-dark-page .input-number:focus {
-          background: ${COLORS.brandBlueLight16};
-          border-color: ${COLORS.brandBlueLight};
-          box-shadow: 0 0 0 3px ${COLORS.brandBlueLight20};
-          outline: none;
-        }
-        .prereg-dark-page .insurance-input {
-          background: ${COLORS.overlayWhite08};
-          border: 1.5px solid ${COLORS.overlayWhite15};
-          color: white;
-          border-radius: 10px;
-          width: 76px;
-          height: 34px;
-          text-align: center;
-          font-weight: 800;
-          font-size: 14px;
-          outline: none;
-          box-sizing: border-box;
-          transition: all 0.2s ease;
-        }
-        .prereg-dark-page .insurance-input:focus {
-          background: ${COLORS.brandBlueLight10} !important;
-          border-color: ${COLORS.brandBlueLight} !important;
-          box-shadow: 0 0 0 3px ${COLORS.brandBlueLight16};
-        }
-        .prereg-dark-page .insurance-input.error-state {
-          border-color: ${COLORS.danger} !important;
-          background: ${COLORS.dangerBgTranslucent10} !important;
-          color: ${COLORS.dangerLight} !important;
-        }
-        .prereg-dark-page .btn-nav-gray {
-          background: ${COLORS.overlayWhite06};
-          border: 1px solid ${COLORS.overlayWhite10};
-          color: ${COLORS.overlayWhite60};
-          border-radius: 12px; padding: 12px 28px; font-weight: 700;
-        }
-        .prereg-dark-page .btn-nav-gray:hover {
-          background: ${COLORS.overlayWhite10};
-        }
-        .prereg-dark-page .btn-nav-blue {
-          background: linear-gradient(135deg, ${COLORS.secondary}, ${COLORS.primary});
-          color: white; border: none;
-          border-radius: 12px; padding: 12px 28px; font-weight: 700;
-          box-shadow: 0 4px 16px ${COLORS.primaryBgTranslucent40};
-        }
-        .prereg-dark-page .btn-nav-blue:disabled { opacity: 0.4; }
-        .prereg-dark-page .footer-nav {
-          display: flex; justify-content: space-between;
-          padding-top: 20px; margin-top: 10px;
-          border-top: 1px solid ${COLORS.overlayWhite06};
-        }
-        .prereg-dark-page .welcome-content {
-          background: transparent;
         }
 
-        @keyframes glowPulse {
-          0%, 100% { box-shadow: 0 0 0 0 ${COLORS.successTransparent}; }
-          50% { box-shadow: 0 0 18px 5px ${COLORS.successBgTranslucent18}; }
+        /* Force main container cards to look dark/glass-elevated */
+        .prereg-dark-page .card {
+          background: var(--color-surface) !important;
+          border: 1px solid var(--color-border) !important;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+          border-radius: 28px !important;
         }
-        @keyframes connectorFill {
-          from { width: 0%; } to { width: 100%; }
+
+        .prereg-dark-page .glass {
+          background: var(--color-surface) !important;
+          border: 1px solid var(--color-border) !important;
+          backdrop-filter: blur(24px) !important;
+          -webkit-backdrop-filter: blur(24px) !important;
+        }
+
+        /* Stepper header styling */
+        .prereg-dark-page .card > div:first-child {
+          background: rgba(255, 255, 255, 0.005) !important;
+          border-bottom: 1px solid var(--color-border) !important;
+        }
+
+        /* Summary/bank cards dark system overrides */
+        .prereg-dark-page .summary-card {
+          background: var(--color-card) !important;
+          border: 1px solid var(--color-border) !important;
+          border-radius: 20px !important;
+          padding: 20px !important;
+        }
+
+        .prereg-dark-page .summary-card h5 { 
+          color: var(--color-text); 
+          font-weight: 800; 
+          font-size: 15px; 
+        }
+
+        .prereg-dark-page .summary-stack > div {
+          background: var(--color-card) !important;
+          border: 1px solid var(--color-border) !important;
+          border-radius: 16px !important;
+        }
+
+        .prereg-dark-page .summary-row { 
+          color: var(--color-text-secondary); 
+          border-color: var(--color-border) !important; 
+          font-size: 13.5px;
+        }
+
+        .prereg-dark-page .total-row { 
+          color: var(--color-text); 
+          border-color: rgba(255, 255, 255, 0.08) !important; 
+          font-size: 16px;
+          font-weight: 800;
+        }
+
+        .prereg-dark-page .bank-info-label { color: var(--color-text-muted); font-weight: 600; }
+        .prereg-dark-page .bank-info-value { color: var(--color-text); font-weight: 700; }
+        .prereg-dark-page .referencia-badge { 
+          background: rgba(56, 189, 248, 0.08) !important; 
+          color: var(--color-primary); 
+          border: 1px solid rgba(56, 189, 248, 0.15) !important; 
+          border-radius: 12px;
+          padding: 6px 14px;
+          font-weight: 800;
+        }
+
+        .prereg-dark-page .assigned-bar {
+          background: var(--color-card) !important;
+          border: 1px solid var(--color-border) !important;
+          color: var(--color-text);
+          padding: 10px 16px;
+          margin-top: 10px;
+          font-size: 13px;
+          font-weight: 700;
+          border-radius: 12px;
+        }
+
+        .prereg-dark-page .pago-card {
+          background: var(--color-card) !important;
+          border: 1px solid var(--color-border) !important;
+          border-radius: 24px !important;
+          padding: 30px !important;
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45) !important;
+        }
+
+        @media (max-width: 768px) {
+          .prereg-dark-page .pago-card {
+            padding: 20px !important;
+          }
+        }
+
+        .prereg-dark-page .input-label { 
+          color: var(--color-text-secondary); 
+          font-weight: 700;
+        }
+
+        .prereg-dark-page .section-title-small { 
+          color: var(--color-text); 
+          font-weight: 800;
+        }
+
+        .prereg-dark-page .input-number {
+          background: #030712 !important;
+          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+          color: var(--color-text) !important;
+          border-radius: 12px;
+          padding: 12px 16px;
+          transition: all 0.25s ease !important;
+          font-weight: 800;
+        }
+
+        .prereg-dark-page .input-number:focus {
+          background: #000000 !important;
+          border-color: var(--color-primary) !important;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+          outline: none;
+        }
+
+        .prereg-dark-page .insurance-input {
+          background: #030712 !important;
+          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+          color: var(--color-text) !important;
+          border-radius: 10px;
+          width: 76px;
+          height: 38px;
+          text-align: center;
+          font-weight: 800;
+          font-size: 15px;
+          outline: none;
+          box-sizing: border-box;
+          transition: all 0.25s ease !important;
+        }
+
+        .prereg-dark-page .insurance-input:focus {
+          background: #000000 !important;
+          border-color: var(--color-primary) !important;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+        }
+
+        .prereg-dark-page .insurance-input.error-state {
+          border-color: var(--color-danger) !important;
+          background: rgba(239, 68, 68, 0.08) !important;
+          color: #fca5a5 !important;
+        }
+
+        .prereg-dark-page .btn-nav-gray {
+          background: rgba(255, 255, 255, 0.03) !important;
+          border: 1px solid var(--color-border) !important;
+          color: var(--color-text-secondary) !important;
+          border-radius: 14px; 
+          padding: 12px 30px; 
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s !important;
+        }
+
+        .prereg-dark-page .btn-nav-gray:hover {
+          background: rgba(255, 255, 255, 0.06) !important;
+          color: var(--color-text) !important;
+        }
+
+        .prereg-dark-page .btn-nav-blue {
+          background: linear-gradient(135deg, var(--color-primary), var(--color-primary-active)) !important;
+          color: white !important; 
+          border: none !important;
+          border-radius: 14px; 
+          padding: 12px 30px; 
+          font-weight: 800;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15) !important;
+          transition: all 0.2s !important;
+        }
+
+        .prereg-dark-page .btn-nav-blue:hover {
+          transform: translateY(-1.5px) !important;
+          box-shadow: 0 8px 24px rgba(56, 189, 248, 0.3) !important;
+        }
+
+        .prereg-dark-page .btn-nav-blue:disabled { 
+          opacity: 0.3 !important; 
+          cursor: not-allowed !important;
+          transform: none !important;
+          box-shadow: none !important;
+        }
+
+        .prereg-dark-page .btn-premium {
+          background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%) !important;
+          border: none !important;
+          color: white !important;
+          font-weight: 800;
+          font-size: 14.5px;
+          text-transform: uppercase;
+          letter-spacing: 0.75px;
+          border-radius: 14px;
+          padding: 14px 44px;
+          cursor: pointer;
+          box-shadow: 0 8px 24px rgba(56, 189, 248, 0.2) !important;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        .prereg-dark-page .btn-premium:hover {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 12px 32px rgba(56, 189, 248, 0.35) !important;
+          filter: brightness(1.08) !important;
+        }
+
+        .prereg-dark-page .footer-nav {
+          display: flex; 
+          justify-content: space-between;
+          padding-top: 24px; 
+          margin-top: 16px;
+          border-top: 1px solid var(--color-border) !important;
         }
 
         .insurance-card {
-          background: ${COLORS.overlayWhite03};
-          border: 1px solid ${COLORS.overlayWhite08};
-          border-radius: 12px; padding: 12px 14px;
-          display: flex; justify-content: space-between; align-items: center;
-          margin-bottom: 0; transition: all 0.3s ease;
+          background: var(--color-card) !important;
+          border: 1px solid var(--color-border) !important;
+          border-radius: 16px; 
+          padding: 16px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
+
         .insurance-card:hover {
-          background: ${COLORS.overlayWhite06};
-          border-color: ${COLORS.brandBlueLight30};
-          transform: translateX(4px);
-          box-shadow: 0 4px 20px ${COLORS.primaryBgTranslucent};
+          background: var(--color-card-hover) !important;
+          border-color: var(--color-border-hover) !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25) !important;
         }
+
         .insurance-card.active-insurance {
-          border-color: ${COLORS.brandBlueLight};
-          background: ${COLORS.brandBlueLight08};
-          box-shadow: 0 0 15px ${COLORS.brandBlueLight16};
+          border-color: var(--color-border-active) !important;
+          background: var(--color-card-selected) !important;
+          box-shadow: 0 0 20px rgba(56, 189, 248, 0.12) !important;
         }
+
         .insurance-radio {
           appearance: none;
           -webkit-appearance: none;
-          width: 24px;
-          height: 24px;
-          border: 2px solid ${COLORS.overlayWhite30};
+          width: 22px;
+          height: 22px;
+          border: 2px solid rgba(255, 255, 255, 0.15) !important;
           border-radius: 50%;
           outline: none;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: all 0.25s ease !important;
           position: relative;
-          background: transparent;
+          background: rgba(0, 0, 0, 0.2) !important;
         }
+
         .insurance-radio:checked {
-          border-color: ${COLORS.brandBlueLight};
-          background: transparent;
-          box-shadow: 0 0 8px ${COLORS.brandBlueLight50};
+          border-color: var(--color-primary) !important;
+          box-shadow: 0 0 8px rgba(56, 189, 248, 0.2) !important;
         }
+
         .insurance-radio:checked::after {
           content: '';
-          width: 12px;
-          height: 12px;
+          width: 10px;
+          height: 10px;
           border-radius: 50%;
-          background: ${COLORS.brandBlueLight};
+          background: var(--color-primary) !important;
           display: block;
         }
-        .insurance-info h4 { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
-        .insurance-info p { font-size: 11.5px; color: var(--text-muted); margin: 0; }
+
+        .insurance-info h4 { font-size: 14.5px; font-weight: 800; color: var(--color-text); margin: 0 0 4px; }
+        .insurance-info p { font-size: 11.5px; color: var(--color-text-secondary); margin: 0; }
 
         /* GLASS DOC CARDS */
         .doc-glass-card {
-          background: ${COLORS.overlayWhite03};
-          border: 1px dashed ${COLORS.overlayWhite12};
-          border-radius: 20px; padding: 16px 14px;
-          display: flex; flex-direction: column; align-items: center; text-align: center;
-          position: relative; overflow: hidden;
-          transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
-          backdrop-filter: blur(8px);
+          background: var(--color-card) !important;
+          border: 1.5px dashed var(--color-border) !important;
+          border-radius: 24px; 
+          padding: 24px 16px;
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          text-align: center;
+          position: relative; 
+          overflow: hidden;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          backdrop-filter: blur(10px) !important;
         }
+
         .doc-glass-card:hover {
-          transform: translateY(-6px);
-          background: ${COLORS.overlayWhite06};
-          border-color: ${COLORS.brandBlueLight30}; border-style: solid;
-          box-shadow: 0 16px 40px ${COLORS.shadow28}, 0 0 0 1px ${COLORS.brandBlueLight10};
+          transform: translateY(-6px) !important;
+          background: var(--color-card-hover) !important;
+          border-color: var(--color-border-active) !important; 
+          border-style: solid !important;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
         }
+
         .doc-glass-card.uploaded {
-          background: ${COLORS.successBgTranslucent05};
-          border: 1px solid ${COLORS.successBgTranslucent30};
-          animation: glowPulse 2s ease-in-out 1;
+          background: rgba(16, 185, 129, 0.02) !important;
+          border: 1.5px solid rgba(16, 185, 129, 0.15) !important;
+          box-shadow: 0 10px 20px rgba(16, 185, 129, 0.05) !important;
         }
-        .doc-glass-card.uploaded:hover { border-color: ${COLORS.successBgTranslucent40}; box-shadow: 0 16px 40px ${COLORS.successBgTranslucent10}; }
-        .doc-glass-card .top-sheen {
-          position: absolute; top: 0; left: 0; right: 0; height: 1px;
+
+        .doc-glass-card.uploaded:hover { 
+          border-color: rgba(16, 185, 129, 0.3) !important; 
+          box-shadow: 0 20px 40px rgba(16, 185, 129, 0.1) !important; 
         }
+
         .doc-glass-icon {
-          width: 50px; height: 50px; border-radius: 16px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 24px; margin-bottom: 10px;
-          transition: transform 0.3s ease;
+          width: 92px; 
+          height: 74px; 
+          border-radius: 18px;
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          font-size: 26px; 
+          margin-bottom: 12px;
+          background: rgba(255, 255, 255, 0.02) !important;
+          border: 1px solid var(--color-border) !important;
+          color: var(--color-text-secondary) !important;
+          transition: all 0.3s ease !important;
         }
-        .doc-glass-card:hover .doc-glass-icon { transform: scale(1.08); }
+
+        .doc-glass-card:hover .doc-glass-icon { 
+          transform: scale(1.08) rotate(2deg) !important; 
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+
         .doc-status-pill {
-          position: absolute; top: 10px; right: 10px;
-          padding: 3px 8px; border-radius: 20px;
-          font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
-          display: flex; align-items: center; gap: 5px;
+          position: absolute; 
+          top: 12px; 
+          right: 12px;
+          padding: 4px 10px; 
+          border-radius: 20px;
+          font-size: 9px; 
+          font-weight: 800; 
+          text-transform: uppercase; 
+          letter-spacing: 0.8px;
+          display: flex; 
+          align-items: center; 
+          gap: 5px;
         }
+
         .doc-status-dot { width: 5px; height: 5px; border-radius: 50%; }
+
         .doc-action-btn {
-          flex: 1; padding: 10px 12px; border-radius: 12px;
-          font-size: 12px; font-weight: 700; cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex; align-items: center; justify-content: center; gap: 6px;
+          flex: 1; 
+          padding: 10px 14px; 
+          border-radius: 12px;
+          font-size: 12px; 
+          font-weight: 800; 
+          cursor: pointer;
+          transition: all 0.2s ease !important;
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          gap: 6px;
         }
-        .doc-action-btn:hover { transform: translateY(-1px); }
+
+        .doc-action-btn:hover { transform: translateY(-1.5px) !important; }
+
         .doc-download-btn {
-          flex: 1; padding: 10px 12px; border-radius: 12px;
-          font-size: 12px; font-weight: 700; cursor: pointer;
-          background: ${COLORS.brandBlueLight08}; border: 1px solid ${COLORS.brandBlueLight20};
-          color: ${COLORS.brandBlueLight}; transition: all 0.2s ease;
-          display: flex; align-items: center; justify-content: center; gap: 6px;
+          flex: 1; 
+          padding: 10px 14px; 
+          border-radius: 12px;
+          font-size: 12px; 
+          font-weight: 800; 
+          cursor: pointer;
+          background: rgba(56, 189, 248, 0.05) !important; 
+          border: 1px solid rgba(56, 189, 248, 0.15) !important;
+          color: var(--color-primary) !important; 
+          transition: all 0.2s ease !important;
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          gap: 6px;
         }
+
         .doc-download-btn:hover {
-          background: ${COLORS.brandBlueLight16}; border-color: ${COLORS.brandBlueLight50};
-          transform: translateY(-1px); box-shadow: 0 4px 12px ${COLORS.brandBlueLight20};
+          background: rgba(56, 189, 248, 0.1) !important; 
+          border-color: rgba(56, 189, 248, 0.3) !important;
+          transform: translateY(-1.5px) !important; 
+          box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15) !important;
         }
+
         .ocr-panel {
-          width: 100%; margin-top: 12px;
-          background: ${COLORS.primaryBgTranslucent}; border: 1px solid ${COLORS.brandBlueLight12};
-          border-radius: 14px; padding: 14px; animation: fadeIn 0.3s ease;
+          width: 100%; 
+          margin-top: 14px;
+          background: rgba(0, 0, 0, 0.2) !important; 
+          border: 1px solid rgba(56, 189, 248, 0.1) !important;
+          border-radius: 16px; 
+          padding: 16px;
         }
 
         /* PREMIUM INPUTS */
         .premium-input-group { display: flex; flex-direction: column; gap: 6px; }
+        
         .premium-label {
-          font-size: 10px; font-weight: 800; color: ${COLORS.overlayWhite40};
-          text-transform: uppercase; letter-spacing: 1.2px;
+          font-size: 10px; 
+          font-weight: 800; 
+          color: var(--color-text-muted) !important;
+          text-transform: uppercase; 
+          letter-spacing: 1.2px;
         }
+
         .premium-input {
-          width: 100%; box-sizing: border-box;
-          padding: 13px 16px;
-          background: ${COLORS.overlayWhite05};
-          border: 1px solid ${COLORS.overlayWhite10};
-          border-radius: 12px; font-size: 14px; font-weight: 600;
-          color: var(--text-main); outline: none;
-          transition: all 0.25s ease; backdrop-filter: blur(4px);
+          width: 100%; 
+          box-sizing: border-box;
+          padding: 14px 18px;
+          background: var(--color-card) !important;
+          border: 1px solid var(--color-border) !important;
+          border-radius: 14px; 
+          font-size: 14.5px; 
+          font-weight: 600;
+          color: var(--color-text); 
+          outline: none;
+          transition: all 0.25s ease !important;
         }
+
         .premium-input:focus {
-          background: ${COLORS.brandBlueLight10};
-          border-color: ${COLORS.brandBlueLight50};
-          box-shadow: 0 0 0 3px ${COLORS.brandBlueLight12};
+          background: rgba(0, 0, 0, 0.25) !important;
+          border-color: var(--color-primary) !important;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
         }
-        .premium-input::placeholder { color: ${COLORS.overlayWhite25}; }
-        .premium-input option { background: ${COLORS.indigo950}; color: white; }
 
-        /* PILL progress dots for Paso 3 */
+        .premium-input::placeholder { color: var(--color-text-muted) !important; }
+        .premium-input option { background: #0b0f19; color: white; }
+
         .progress-pill {
-          height: 8px; border-radius: 4px;
-          transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+          height: 8px; 
+          border-radius: 4px;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
-        /* LOGO CONSTRAINTS */
         .afaem-logo {
           height: 75px;
           width: auto;
           object-fit: contain;
-          filter: drop-shadow(0 0 12px ${COLORS.overlayWhite25});
+          filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.2));
         }
+
         .fmf-logos {
           display: flex;
           gap: 15px;
           align-items: center;
         }
+
         .fmf-logos img {
           height: 48px;
           width: auto;
           object-fit: contain;
           opacity: 0.85;
-          transition: opacity 0.3s;
+          transition: opacity 0.3s !important;
         }
+
         .fmf-logos img:hover {
           opacity: 1;
         }
+
         .doc-cards-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 16px;
           margin-bottom: 35px;
         }
+
         @media (max-width: 900px) {
           .doc-cards-grid {
             grid-template-columns: repeat(2, 1fr);
           }
         }
+
         @media (max-width: 480px) {
           .doc-cards-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -2625,7 +2845,7 @@ const handleCameraPhotoCaptured = (file) => {
       `}</style>
 
       {/* HEADER LOGOS */}
-      <div style={{ width: '95%', maxWidth: '1400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+      <div style={{ width: '95%', maxWidth: '1400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <img
           src={AfaemLogo}
           alt="AFAEM"
@@ -2655,29 +2875,26 @@ const handleCameraPhotoCaptured = (file) => {
         {/* ===== GLASS STEPPER HEADER (PASO 1, 2 Y 3) ===== */}
         {(pasoActual === 1 || pasoActual === 3 || pasoActual === 5) && (
           <div style={{
-            padding: '18px 30px 14px',
+            padding: '12px 24px 10px',
             borderBottom: `1px solid ${COLORS.overlayWhite08}`,
             background: COLORS.overlayWhite03,
             backdropFilter: 'blur(10px)',
           }}>
-            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: COLORS.overlayWhite30, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px' }}>
+            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: COLORS.overlayWhite90, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px' }}>
               PROCESO DE ACTIVACIÓN
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* STEP 1 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '40px', height: '40px', borderRadius: '12px',
+                  width: '18px', height: '18px', borderRadius: '999px',
                   background: pasoActual === 1 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : COLORS.successBgTranslucent10,
                   border: pasoActual === 1 ? `1px solid ${COLORS.brandBlueLight50}` : `1px solid ${COLORS.successBgTranslucent30}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 1 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                }}>
-                  {pasoActual > 1 ? <span style={{ color: COLORS.successLight, fontSize: '16px' }}>✓</span> : <FaMoneyBillWave style={{ color: 'white' }} />}
-                </div>
+                }} />
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 1 ? COLORS.brandBlueLight : COLORS.successLightTranslucent80 }}>
-                  Paso 1: Cuotas
+                  PASO 1: CUOTAS
                 </span>
               </div>
 
@@ -2696,17 +2913,14 @@ const handleCameraPhotoCaptured = (file) => {
               {/* STEP 2 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '40px', height: '40px', borderRadius: '12px',
+                  width: '18px', height: '18px', borderRadius: '999px',
                   background: pasoActual === 3 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : (pasoActual > 3 ? COLORS.successBgTranslucent10 : COLORS.overlayWhite04),
                   border: pasoActual === 3 ? `1px solid ${COLORS.brandBlueLight50}` : (pasoActual > 3 ? `1px solid ${COLORS.successBgTranslucent30}` : `1px solid ${COLORS.overlayWhite10}`),
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 3 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                }}>
-                  {pasoActual > 3 ? <span style={{ color: COLORS.successLight, fontSize: '16px' }}>✓</span> : <FaFileAlt style={{ color: pasoActual === 3 ? 'white' : COLORS.overlayWhite25 }} />}
-                </div>
+                }} />
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 3 ? COLORS.brandBlueLight : (pasoActual > 3 ? COLORS.successLightTranslucent80 : COLORS.overlayWhite25) }}>
-                  Paso 2: Documentos
+                  PASO 2: DOCUMENTOS
                 </span>
               </div>
 
@@ -2725,20 +2939,14 @@ const handleCameraPhotoCaptured = (file) => {
               {/* STEP 3 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '40px', height: '40px', borderRadius: '12px',
+                  width: '18px', height: '18px', borderRadius: '999px',
                   background: pasoActual === 5 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : COLORS.overlayWhite04,
                   border: pasoActual === 5 ? `1px solid ${COLORS.brandBlueLight50}` : `1px solid ${COLORS.overlayWhite10}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 5 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                }}>
-                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="18" width="18" xmlns="http://www.w3.org/2000/svg" style={{ color: pasoActual === 5 ? 'white' : COLORS.overlayWhite25 }}>
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                </div>
+                }} />
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 5 ? COLORS.brandBlueLight : COLORS.overlayWhite25 }}>
-                  Paso 3: Validación
+                  PASO 3: VALIDACIÓN
                 </span>
               </div>
             </div>
@@ -2747,7 +2955,7 @@ const handleCameraPhotoCaptured = (file) => {
 
         {/* PASO 1: CUOTAS */}
         {pasoActual === 1 && (
-          <div className="content-body" style={{ padding: '24px 30px' }}>
+          <div className="content-body" style={{ padding: '16px 24px' }}>
             {error && (
               <div style={{
                 marginBottom: '20px',
@@ -2782,7 +2990,7 @@ const handleCameraPhotoCaptured = (file) => {
                 </p>
               </div>
             )}
-            <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px' }}>Selecciona los seguros para tus jugadores</h3>
+            <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '28px', fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>Distribución de seguros</h3>
 
             <div className="cuotas-layout">
               <div className="insurance-layout-left">
@@ -2815,31 +3023,33 @@ const handleCameraPhotoCaptured = (file) => {
                   </div>
                 ) : (
                   <div className="pago-card">
-                    <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '15px' }}>
-                      <label className="input-label" style={{ textAlign: 'left', fontSize: '13px', margin: 0, color: COLORS.overlayWhite90 }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength="2"
-                        className="input-number"
-                        value={numPersonas}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          setNumPersonas(val === '' ? '' : parseInt(val, 10));
-                          setError(null);
-                        }}
-                        style={{ marginTop: '0', width: '80px', textAlign: 'center' }}
-                      />
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.015)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      marginBottom: '24px'
+                    }}>
+                      <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '20px', width: '100%', flexWrap: 'wrap' }}>
+                        <div style={{ flex: '1', minWidth: '240px', textAlign: 'left' }}>
+                          <label className="input-label" style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-text)', lineHeight: '1.4' }}>Ingresa la cantidad total de seguros que deseas pagar para tus jugadores</label>
+                        </div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength="2"
+                          className="input-number"
+                          value={numPersonas}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setNumPersonas(val === '' ? '' : parseInt(val, 10));
+                            setError(null);
+                          }}
+                          style={{ marginTop: '0', width: '100px', height: '48px', fontSize: '20px', textAlign: 'center', borderRadius: '12px' }}
+                        />
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 12px' }}>
-                      <div style={{ width: '4px', height: '18px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
-                      <p style={{ fontSize: '12px', fontWeight: '800', color: COLORS.overlayWhite85, margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        DISTRIBUCIÓN DE SEGUROS
-                      </p>
-                      <span style={{ fontSize: '10px', padding: '2px 8px', background: COLORS.dangerBgTranslucent30, color: COLORS.dangerLight, border: `1.5px solid ${COLORS.danger}`, borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
-                    </div>
-
                     {cargandoSeguros ? (
                       <div className="insurance-card">
                         <div className="insurance-info">
@@ -2884,8 +3094,10 @@ const handleCameraPhotoCaptured = (file) => {
                                     </div>
                                   )}
                                   <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginBottom: '12px', textAlign: 'left' }}>
-                                    <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
-                                    <span className="insurance-player-price" style={{ fontSize: '11px', color: COLORS.overlayWhite60 }}>${seg.precio} c/u</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '10px' }}>
+                                      <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
+                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: 'white', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
+                                    </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }} onClick={(e) => e.stopPropagation()}>
                                       <span style={{ fontSize: '11px', color: COLORS.overlayWhite70, fontWeight: '600' }}>Cantidad:</span>
@@ -2931,7 +3143,7 @@ const handleCameraPhotoCaptured = (file) => {
                                       e.currentTarget.style.backgroundColor = cantAsignada > 0 ? COLORS.brandBlueLight10 : COLORS.overlayWhite04;
                                     }}
                                   >
-                                    Ver Beneficios / Asignar
+                                    Ver Beneficios
                                   </button>
                                 </div>
                               );
@@ -2990,8 +3202,10 @@ const handleCameraPhotoCaptured = (file) => {
                                     }}
                                     style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginBottom: '12px', cursor: 'pointer', textAlign: 'left' }}
                                   >
-                                    <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
-                                    <span className="insurance-player-price" style={{ fontSize: '11px', color: COLORS.overlayWhite60 }}>${seg.precio} c/u</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '10px' }}>
+                                      <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
+                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: 'white', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
+                                    </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                                       <input
@@ -3093,6 +3307,21 @@ const handleCameraPhotoCaptured = (file) => {
                       <span style={{ color: COLORS.overlayWhite70 }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
                       <span style={{ color: COLORS.brandBlueLight }}>${totalMostrado}</span>
                     </div>
+                    <button
+                      className="btn-nav-blue"
+                      onClick={irSiguientePaso}
+                      disabled={!ordenPendienteId ? (numPersonas <= 0 || totalAsignados !== segurosRequeridos) : !comprobantePago}
+                      title={!ordenPendienteId
+                        ? (numPersonas <= 0
+                          ? 'Ingresa la cantidad de jugadores para continuar'
+                          : (totalAsignados !== segurosRequeridos
+                            ? 'La cantidad de seguros asignados debe coincidir con la cantidad total de seguros a pagar'
+                            : ''))
+                        : ''}
+                      style={{ padding: '10px 24px', marginTop: '16px', width: '100%' }}
+                    >
+                      {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -3102,10 +3331,13 @@ const handleCameraPhotoCaptured = (file) => {
               <div style={{
                 marginTop: '20px',
                 background: COLORS.primaryBgTranslucent,
-                border: `1.5px dashed ${COLORS.brandBlueLight30}`,
+                border: `1.5px dashed ${comprobanteDragActive ? COLORS.brandBlueLight : COLORS.brandBlueLight30}`,
                 borderRadius: '16px',
                 padding: '18px 20px',
                 backdropFilter: 'blur(8px)',
+                transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+                boxShadow: comprobanteDragActive ? `0 0 0 3px ${COLORS.brandBlueLight20}` : 'none',
+                backgroundColor: comprobanteDragActive ? COLORS.brandBlueLight10 : COLORS.primaryBgTranslucent,
               }}>
                 <p style={{ fontSize: '13px', fontWeight: '800', color: COLORS.brandBlueLight, marginBottom: '4px' }}>
                   Paso 2: Sube tu comprobante de pago
@@ -3113,7 +3345,33 @@ const handleCameraPhotoCaptured = (file) => {
                 <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                   Adjunta el comprobante (PDF o imagen) para procesar tu registro.
                 </p>
-                <div className="file-input-custom" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div
+                  className="file-input-custom"
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setComprobanteDragActive(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!comprobanteDragActive) setComprobanteDragActive(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.currentTarget.contains(e.relatedTarget)) return;
+                    setComprobanteDragActive(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setComprobanteDragActive(false);
+                    const file = e.dataTransfer?.files?.[0];
+                    manejarArchivoComprobante(file);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}
+                >
                   <input
                     type="file"
                     id="comprobante"
@@ -3121,9 +3379,7 @@ const handleCameraPhotoCaptured = (file) => {
                     accept=".pdf,.png,.jpg,.jpeg"
                     onChange={(e) => {
                       const file = e.target.files[0];
-                      if (file && validarArchivoPermitido(file)) {
-                        setComprobantePago(file);
-                      } else {
+                      if (!manejarArchivoComprobante(file)) {
                         e.target.value = '';
                       }
                     }}
@@ -3135,6 +3391,16 @@ const handleCameraPhotoCaptured = (file) => {
                   >
                     {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
                   </button>
+                  {comprobantePago && (
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={() => setPreviewDoc({ file: comprobantePago, title: 'Comprobante de pago' })}
+                      style={{ padding: '8px 16px' }}
+                    >
+                      Ver archivo
+                    </button>
+                  )}
                   {ordenPendienteId && (
                     <button
                       type="button"
@@ -3148,22 +3414,16 @@ const handleCameraPhotoCaptured = (file) => {
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
                   </span>
+                  <span style={{ width: '100%', fontSize: '11px', color: comprobanteDragActive ? COLORS.brandBlueLight : 'var(--text-muted)' }}>
+                    Arrastra y suelta tu comprobante aquí, o selecciónalo manualmente.
+                  </span>
                 </div>
               </div>
             )}
 
 
             <div className="footer-nav">
-              <button className="btn-nav-gray" onClick={irPasoAnterior} style={{ padding: '10px 24px' }}>Anterior</button>
-              <button
-                className="btn-nav-blue"
-                onClick={irSiguientePaso}
-                disabled={!ordenPendienteId ? (numPersonas <= 0) : !comprobantePago}
-                title={!ordenPendienteId && (numPersonas <= 0) ? 'Ingresa la cantidad de jugadores para continuar' : ''}
-                style={{ padding: '10px 24px' }}
-              >
-                {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
-              </button>
+              <button className="btn-nav-gray" onClick={irPasoAnterior} style={{ padding: '10px 24px' }}>Regresar</button>
             </div>
           </div>
         )}
@@ -3355,12 +3615,11 @@ const handleCameraPhotoCaptured = (file) => {
                   </p>
 
                   <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>📄 Documentos a preparar:</h4>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>Documentos a preparar:</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
                       <span>• Acta de nacimiento</span>
                       <span>• Fotografía reciente</span>
                       <span>• Identificación oficial</span>
-                      <span>• Formato de afiliación</span>
                     </div>
                   </div>
 
@@ -3633,7 +3892,14 @@ const handleCameraPhotoCaptured = (file) => {
                           background: isUploaded ? `linear-gradient(135deg,${COLORS.successBgTranslucent10},${COLORS.greenMediumTranslucent})` : `linear-gradient(135deg,${COLORS.primaryBgTranslucent},${COLORS.overlaySlateSuperLight})`,
                           border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px solid ${COLORS.brandBlueLight12}`,
                         }}>
-                          <span>{icons[doc.documento]}</span>
+                          {isUploaded ? (
+                            <span>{icons[doc.documento]}</span>
+                          ) : (
+                            <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                              <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                              <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                            </div>
+                          )}
                         </div>
                         {/* Title */}
                         <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? COLORS.successLight : 'var(--text-main)', margin: '0 0 5px' }}>
@@ -3748,7 +4014,7 @@ const handleCameraPhotoCaptured = (file) => {
                                 flex: 1
                               }}
                             >
-                              {hasLocalFile ? '🔄 Cambiar' : (docGuardado ? '🔄 Reemplazar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir'))}
+                              {hasLocalFile ? 'Cambiar' : (docGuardado ? 'Reemplazar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir'))}
                             </button>
                           )}
                           {hasLocalFile && documents[doc.documento] && (
@@ -3822,6 +4088,7 @@ const handleCameraPhotoCaptured = (file) => {
                             id={`file-${doc.documento}`}
                             style={{ display: 'none' }}
                             accept=".pdf,.png,.jpg,.jpeg"
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => {
                               const file = e.target.files[0];
                               if (!file) return;
@@ -3838,45 +4105,6 @@ const handleCameraPhotoCaptured = (file) => {
                             }}
                           />
                         </div>
-                        {/* OCR toggle */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }));
-                          }}
-                          style={{ marginTop: '12px', background: 'none', border: 'none', color: COLORS.overlayWhite30, fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
-                        >
-                          {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
-                        </button>
-                        {detailsOpen[doc.documento] && (
-                          <div className="ocr-panel">
-                            {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {[
-                                  { label: 'Nombre', value: ocrResults.nombre },
-                                  { label: 'CURP', value: ocrResults.curp },
-                                  { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
-                                  { label: 'Edad', value: ocrResults.edad },
-                                  { label: 'Nacionalidad', value: ocrResults.nacionalidad },
-                                  { label: 'Sexo', value: ocrResults.sexo },
-                                  { label: 'Teléfono', value: ocrResults.telefono },
-                                  { label: 'Equipo', value: ocrResults.equipo },
-                                ].map((row, i) => (
-                                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                                    <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
-                                    <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{row.value || '—'}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : doc.documento === 'fotografia' ? (
-                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📸 Validación automática de rostro, calidad y formato.</p>
-                            ) : doc.documento === 'formatoAfiliacion' ? (
-                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📝 Descarga el formato, fírmalo físicamente y súbelo aquí.</p>
-                            ) : (
-                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>Sube el documento primero para ver los datos extraídos.</p>
-                            )}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -3926,9 +4154,8 @@ const handleCameraPhotoCaptured = (file) => {
                     placeholder="Se auto-completará con el documento de identidad"
                     maxLength={18}
                     value={ocrResults.curp || ''}
-                    readOnly
+                    onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
                     className="premium-input"
-                    style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
                   />
                   {curpExistente && (
                     <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
@@ -3952,16 +4179,25 @@ const handleCameraPhotoCaptured = (file) => {
                 <div className="premium-input-group">
                   <label className="premium-label">Fecha de Nacimiento *</label>
                   <input
-                    type="date"
-                    value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
-                    onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
+                    type="text"
+                    value={ocrResults.fecha_nac || ''}
+                    onChange={(e) => handleManualOcrChange('fecha_nac', e.target.value)}
+                    placeholder="DD/MM/AAAA"
                     className="premium-input"
-                    style={{ colorScheme: 'dark', cursor: 'pointer' }}
                   />
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '4px', display: 'block' }}>
+                    Día/Mes/Año (ej: 25/12/1990)
+                  </span>
                   {(() => {
-                    const val = convertToYYYYMMDD(ocrResults.fecha_nac);
+                    const dateStr = ocrResults.fecha_nac || '';
+                    const parts = dateStr.split('/');
+                    if (parts.length !== 3 || !parts[2] || parts[2].length !== 4) return null;
+
+                    const val = convertToYYYYMMDD(dateStr);
                     if (!val) return null;
                     const fechaDate = new Date(val);
+                    if (isNaN(fechaDate.getTime())) return null;
+
                     if (fechaDate.getFullYear() < 1900) {
                       return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
                     }
@@ -4131,7 +4367,7 @@ const handleCameraPhotoCaptured = (file) => {
                 } else if (hasLocalFile) {
                   statusLabel = 'Listo'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
                 } else {
-                  statusLabel = 'Pendiente'; statusColor = COLORS.warning; statusDotColor = COLORS.warningDark; statusBg = COLORS.warningBgTranslucent12;
+                  statusLabel = 'Pendiente'; statusColor = COLORS.warning; statusDotColor = COLORS.warning; statusBg = COLORS.warningBgTranslucent12;
                 }
 
                 const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
@@ -4235,7 +4471,14 @@ const handleCameraPhotoCaptured = (file) => {
                       background: isUploaded ? `linear-gradient(135deg,${COLORS.successBgTranslucent10},${COLORS.greenMediumTranslucent})` : `linear-gradient(135deg,${COLORS.primaryBgTranslucent},${COLORS.overlaySlateSuperLight})`,
                       border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px solid ${COLORS.brandBlueLight12}`,
                     }}>
-                      <span>{icons[doc.documento]}</span>
+                      {isUploaded ? (
+                        <span>{icons[doc.documento]}</span>
+                      ) : (
+                        <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                        </div>
+                      )}
                     </div>
                     {/* Title */}
                     <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? COLORS.successLight : 'var(--text-main)', margin: '0 0 5px' }}>
@@ -4379,6 +4622,7 @@ const handleCameraPhotoCaptured = (file) => {
                         id={`file-val-${doc.documento}`}
                         style={{ display: 'none' }}
                         accept=".pdf,.png,.jpg,.jpeg"
+                        onClick={(e) => e.stopPropagation()}
                         onChange={async (e) => {
                           const file = e.target.files[0];
                           if (!file) return;
@@ -4742,17 +4986,25 @@ const handleCameraPhotoCaptured = (file) => {
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
             {previewDoc.file.type.startsWith('image/') ? (
-              <img
-                src={previewUrl}
-                alt={previewDoc.title}
-                style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
-              />
+              previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={previewDoc.title}
+                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
+                />
+              ) : (
+                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+              )
             ) : previewDoc.file.type === 'application/pdf' ? (
-              <iframe
-                src={`${previewUrl}#toolbar=0&navpanes=0`}
-                title={previewDoc.title}
-                style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
-              />
+              previewUrl ? (
+                <iframe
+                  src={`${previewUrl}#toolbar=0&navpanes=0`}
+                  title={previewDoc.title}
+                  style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
+                />
+              ) : (
+                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+              )
             ) : (
               <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate500 }}>
                 <p style={{ fontSize: '16px', fontWeight: 'bold' }}>No se puede previsualizar este tipo de archivo directamente.</p>
@@ -4791,5 +5043,7 @@ const handleCameraPhotoCaptured = (file) => {
 }
 
 export default PreRegistroPresidente;
+
+
 
 
