@@ -2513,7 +2513,7 @@ export default function CompletarJugadoresEquipo() {
                     }}
                   >
                     {/* Indicador de Menor para tutor/credencial */}
-                    {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
+                    {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
                       <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                     )}
 
