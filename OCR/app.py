@@ -1884,29 +1884,12 @@ def evaluar_calidad_extraccion(datos):
     return score
 
 def preprocesar_imagen_canales(image_content):
-    try:
-        nparr = np.frombuffer(image_content, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is None:
-            return image_content
-        # Separar canales y quedarnos con el verde para eliminar la marca de agua
-        b, g, r = cv2.split(img)
-        
-        # Estimar el fondo (marca de agua + iluminación) dilatando la imagen
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
-        background = cv2.morphologyEx(g, cv2.MORPH_DILATE, kernel)
-        
-        # Dividir la imagen por su fondo estimado para neutralizar la marca de agua y sombras
-        normalized = cv2.divide(g, background, scale=255)
-        
-        # Umbralización binaria simple sobre la imagen normalizada
-        _, thresh = cv2.threshold(normalized, 180, 255, cv2.THRESH_BINARY)
-        
-        _, encoded_img = cv2.imencode(".png", thresh)
-        return encoded_img.tobytes()
-    except Exception as e:
-        print(f"[ERROR PREPROCESAMIENTO] {e}")
-        return image_content
+    """
+    Retorna la imagen original intacta.
+    Se desactivó el escalado de grises y binarización para evitar problemas con la legibilidad
+    y guardado de documentos a color en el sistema.
+    """
+    return image_content
 
 def ejecutar_vision_ocr(filename, content):
     if filename.endswith('.pdf'):
