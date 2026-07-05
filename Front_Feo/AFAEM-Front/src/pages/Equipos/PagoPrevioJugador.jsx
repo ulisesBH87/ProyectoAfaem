@@ -435,6 +435,7 @@ export default function PagoPrevioJugador() {
           <input
             id={uploadInputId}
             type="file"
+            onClick={(e) => e.stopPropagation()}
             onChange={handleSeleccionarComprobante}
             disabled={uploadingComprobante}
             style={{ display: 'none' }}
@@ -649,6 +650,7 @@ export default function PagoPrevioJugador() {
                     <input
                       id={uploadInputId}
                       type="file"
+                      onClick={(e) => e.stopPropagation()}
                       onChange={handleSeleccionarComprobante}
                       style={{ display: 'none' }}
                       accept=".pdf,.jpg,.jpeg,.png"

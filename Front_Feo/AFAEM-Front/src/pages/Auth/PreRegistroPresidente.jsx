@@ -4088,6 +4088,7 @@ function PreRegistroPresidente() {
                             id={`file-${doc.documento}`}
                             style={{ display: 'none' }}
                             accept=".pdf,.png,.jpg,.jpeg"
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => {
                               const file = e.target.files[0];
                               if (!file) return;
@@ -4357,7 +4358,7 @@ function PreRegistroPresidente() {
                 } else if (hasLocalFile) {
                   statusLabel = 'Listo'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
                 } else {
-                  statusLabel = 'Pendiente'; statusColor = COLORS.warning; statusDotColor = COLORS.warningDark; statusBg = COLORS.warningBgTranslucent12;
+                  statusLabel = 'Pendiente'; statusColor = COLORS.warning; statusDotColor = COLORS.warning; statusBg = COLORS.warningBgTranslucent12;
                 }
 
                 const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
@@ -4612,6 +4613,7 @@ function PreRegistroPresidente() {
                         id={`file-val-${doc.documento}`}
                         style={{ display: 'none' }}
                         accept=".pdf,.png,.jpg,.jpeg"
+                        onClick={(e) => e.stopPropagation()}
                         onChange={async (e) => {
                           const file = e.target.files[0];
                           if (!file) return;

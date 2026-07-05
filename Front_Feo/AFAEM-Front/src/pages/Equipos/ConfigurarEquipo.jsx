@@ -1495,6 +1495,7 @@ export default function ConfigurarEquipo() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     style={{ display: 'none' }}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -2809,6 +2810,7 @@ export default function ConfigurarEquipo() {
                     id="team-logo-upload"
                     accept=".jpg,.jpeg,.png"
                     style={{ display: 'none' }}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       const file = e.target.files[0];
                       if (!file) return;
@@ -3158,27 +3160,6 @@ export default function ConfigurarEquipo() {
                         onClick={() => {
                           if (!documents[doc.key]) {
                             handleDocumentCardClick(doc.key);
-                            return;
-                            if (doc.key === 'foto') {
-                              Swal.fire({
-                                title: 'Selecciona una opción',
-                                text: '¿Cómo deseas cargar la fotografía?',
-                                icon: 'question',
-                                showCancelButton: true,
-                                confirmButtonText: '📷 Tomar con cámara',
-                                cancelButtonText: '📁 Subir archivo',
-                                confirmButtonColor: COLORS.primary,
-                                cancelButtonColor: COLORS.slate500
-                              }).then((result) => {
-                                if (result.isConfirmed) {
-                                  setIsCameraOpen(true);
-                                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                  document.getElementById(`file-${doc.key}`).click();
-                                }
-                              });
-                            } else {
-                              document.getElementById(`file-${doc.key}`).click();
-                            }
                           }
                         }}
                       >
@@ -3246,30 +3227,7 @@ export default function ConfigurarEquipo() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      handleDocumentCardClick(doc.key);
-                                      return;
-                                      if (doc.key === 'foto') {
-                                        Swal.fire({
-                                          title: 'Selecciona una opción',
-                                          text: '¿Cómo deseas cargar la fotografía?',
-                                          icon: 'question',
-                                          showCancelButton: true,
-                                          confirmButtonText: '📷 Tomar con cámara',
-                                          cancelButtonText: '📁 Subir archivo',
-                                          confirmButtonColor: COLORS.primary,
-                                          cancelButtonColor: COLORS.slate500
-                                        }).then((result) => {
-                                          if (result.isConfirmed) {
-                                            setIsCameraOpen(true);
-                                          } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                            document.getElementById(`file-${doc.key}`).click();
-                                          }
-                                        });
-                                      } else {
-                                        document.getElementById(`file-${doc.key}`).click();
-                                      }
-                                    }}
+                                    onClick={() => handleDocumentCardClick(doc.key)}
                                     className="doc-action-btn change"
                                     title="Cambiar archivo"
                                   >
@@ -3340,6 +3298,7 @@ export default function ConfigurarEquipo() {
                           id={`file-${doc.key}`}
                           style={{ display: 'none' }}
                           accept=".pdf,.jpg,.jpeg,.png"
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                         />
                       </div>
@@ -4111,6 +4070,7 @@ export default function ConfigurarEquipo() {
               id="final-signed-form"
               style={{ display: 'none' }}
               accept=".pdf,.jpg,.jpeg,.png"
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 const file = e.target.files[0];
                 if (!file) return;

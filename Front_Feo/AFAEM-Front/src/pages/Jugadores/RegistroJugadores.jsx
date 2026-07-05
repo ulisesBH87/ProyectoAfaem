@@ -3839,6 +3839,7 @@ export default function RegistroJugadores() {
                             id={`file-${doc.key}`}
                             style={{ display: 'none' }}
                             accept=".pdf,.jpg,.jpeg,.png"
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                           />
                         </div>
@@ -4816,6 +4817,7 @@ export default function RegistroJugadores() {
                           id="final-signed-form"
                           style={{ display: 'none' }}
                           accept=".pdf"
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             if (pasos1a5Completos && e.target.files[0]) {
                               updatePlayerSignedForm(currentPlayerIndex, e.target.files[0]);

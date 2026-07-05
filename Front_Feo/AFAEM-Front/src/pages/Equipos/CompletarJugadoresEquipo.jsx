@@ -2726,6 +2726,7 @@ export default function CompletarJugadoresEquipo() {
                       id={`file-${doc.key}`}
                       style={{ display: 'none' }}
                       accept={doc.key === 'foto' ? ".jpg,.jpeg,.png" : ".pdf,.jpg,.jpeg,.png"}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                     />
                   </div>
