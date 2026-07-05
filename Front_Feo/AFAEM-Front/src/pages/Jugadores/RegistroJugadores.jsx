@@ -261,8 +261,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -1064,18 +1064,18 @@ export default function RegistroJugadores() {
     posicion: '',
     numCamiseta: '',
     esForaneo: false,
-    nacionalidadJugador: 'MEXICANA',
-    paisResidencia: 'MÉXICO',
+    nacionalidadJugador: '',
+    paisResidencia: '',
     haVividoExtranjero: false,
     dondeVividoExtranjero: '',
-    nacionalidadPadre: 'MEXICANA',
-    nacionalidadMadre: 'MEXICANA',
-    registroAsociacionExtranjera: 'NO',
-    nacAbueloPaterno: 'MEXICANA',
-    nacAbuelaPaterna: 'MEXICANA',
-    nacAbueloMaterno: 'MEXICANA',
-    nacAbuelaMaterna: 'MEXICANA',
-    juegoClubExtranjero: 'NO',
+    nacionalidadPadre: '',
+    nacionalidadMadre: '',
+    registroAsociacionExtranjera: '',
+    nacAbueloPaterno: '',
+    nacAbuelaPaterna: '',
+    nacAbueloMaterno: '',
+    nacAbuelaMaterna: '',
+    juegoClubExtranjero: '',
     nui: ''
   };
 
@@ -1610,7 +1610,7 @@ export default function RegistroJugadores() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -1633,7 +1633,15 @@ export default function RegistroJugadores() {
           };
           next[currentPlayerIndex] = normalizePlayer({
             ...currentPlayerState,
-            datos: resetDatos
+            datos: resetDatos,
+            documentos: {
+              acta: null,
+              ine: null,
+              ineTutor: null,
+              identificacionMenor: null,
+              foto: null
+            },
+            signedForm: null
           });
 
           if (currentPlayerState.slotId) {
@@ -1752,7 +1760,7 @@ export default function RegistroJugadores() {
           .filter(seguro => {
             const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
             const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-            return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+            return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
           })
           .map(seguro => String(seguro.id))
       );

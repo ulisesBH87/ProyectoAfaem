@@ -220,8 +220,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -346,12 +346,12 @@ export default function ConfigurarEquipo() {
   const segurosPresidente = (catalogs.seguros || []).filter(seguro => {
     const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-    return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+    return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
   });
   const segurosJugador = (catalogs.seguros || []).filter(seguro => {
     const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+    return (!['TIPO G', 'TIPO J'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
   const seguroJugadorIds = new Set(segurosJugador.map(seguro => String(seguro.id)));
   const segurosPresidenteIds = new Set(segurosPresidente.map(seguro => String(seguro.id)));
@@ -565,7 +565,7 @@ export default function ConfigurarEquipo() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -604,6 +604,21 @@ export default function ConfigurarEquipo() {
         nui: ''
       };
       setExtractedData(resetDatos);
+      setDocuments({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setPreviews({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setSignedForm(null);
       setValidationErrors({});
 
       // Guardar borrador vacío en BD si existe slot de borrador
@@ -768,7 +783,7 @@ export default function ConfigurarEquipo() {
             .filter(seguro => {
               const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
               const tipoPersonaId = Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
-              return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+              return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
             })
             .map(seguro => String(seguro.id))
         );

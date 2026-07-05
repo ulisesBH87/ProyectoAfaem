@@ -254,7 +254,7 @@ export default function AdminCrearJugador() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -292,6 +292,22 @@ export default function AdminCrearJugador() {
         juegoClubExtranjero: 'NO',
         nui: ''
       });
+      setDocuments({
+        actaNacimiento: null,
+        identificacion: null,
+        fotografia: null,
+        formatoAfiliacion: null,
+        documentoEstudiante: null
+      });
+      setPreviews({
+        actaNacimiento: null,
+        identificacion: null,
+        fotografia: null,
+        formatoAfiliacion: null,
+        documentoEstudiante: null
+      });
+      setSignedForm(null);
+      setSignedFormPreview(null);
       setValidationErrors({});
       Swal.fire({
         title: 'Formulario Limpiado',

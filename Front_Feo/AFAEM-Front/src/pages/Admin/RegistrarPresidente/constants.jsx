@@ -78,7 +78,7 @@ export const REQUISITOS = [
 // ─── Catálogo de roles / tipo de afiliación ───────────────────────────────────
 export const CATALOGO_ROLES = [
   { valor: 'TIPO G', etiqueta: 'TIPO G' },
-  { valor: 'SIN SEGURO', etiqueta: 'SIN SEGURO' },
+  { valor: 'TIPO J', etiqueta: 'TIPO J' },
 ];
 
 // ─── Ligas por defecto (fallback cuando el API no responde) ──────────────────
