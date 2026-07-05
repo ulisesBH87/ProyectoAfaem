@@ -12,7 +12,8 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaTrash
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -22,6 +23,7 @@ import teamsService from '../../services/teams';
 import { verificarCurp } from '../../services/auth';
 import { API_BASE } from '../../config/config';
 import { openSecurePath } from '../../utils/secureFetch';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -269,7 +271,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .premium-details-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto 30px auto;
       background: linear-gradient(135deg, ${COLORS.slate800} 0%, ${COLORS.slate900} 100%);
       color: white;
@@ -284,7 +286,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .main-form-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto;
       background: white;
       border-radius: 24px;
@@ -294,7 +296,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .no-slots-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto;
       background: white;
       border-radius: 24px;
@@ -607,6 +609,7 @@ export default function CompletarJugadoresEquipo() {
     combinaciones: []
   });
   const [loadingCatalogs, setLoadingCatalogs] = useState(true);
+  const [dragActive, setDragActive] = useState({});
 
   // Datos extraídos o capturados del jugador
   const [extractedData, setExtractedData] = useState({
@@ -657,12 +660,93 @@ export default function CompletarJugadoresEquipo() {
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
+  const [missingOcrFields, setMissingOcrFields] = useState([]);
+  const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
+
+  const handleResetForm = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar formulario?',
+      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, limpiar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+
+    if (result.isConfirmed) {
+      const resetDatos = {
+        nombreJugador: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        curp: '',
+        genero: '1',
+        fechaNacimiento: '',
+        lugarNacimiento: 'MÉXICO',
+        correo: '',
+        codigoPais: '+52',
+        telefono: '',
+        posicion: '',
+        numCamiseta: '',
+        esForaneo: false,
+        nacionalidadJugador: 'MEXICANA',
+        paisResidencia: 'MÉXICO',
+        haVividoExtranjero: false,
+        dondeVividoExtranjero: '',
+        nacionalidadPadre: 'MEXICANA',
+        nacionalidadMadre: 'MEXICANA',
+        registroAsociacionExtranjera: 'NO',
+        nacAbueloPaterno: 'MEXICANA',
+        nacAbuelaPaterna: 'MEXICANA',
+        nacAbueloMaterno: 'MEXICANA',
+        nacAbuelaMaterna: 'MEXICANA',
+        juegoClubExtranjero: 'NO',
+        nui: ''
+      };
+      setExtractedData(resetDatos);
+      setValidationErrors({});
+
+      // Guardar borrador vacío en BD si existe slot de borrador
+      const slotConBorrador = slotsData?.rawSlots?.find(
+        s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
+      );
+      if (slotConBorrador?.slot_id) {
+        guardarBorradorEnBD(resetDatos);
+      }
+
+      Swal.fire({
+        title: 'Formulario Limpiado',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  const handleRemoveDocument = async (docKey) => {
+    const result = await Swal.fire({
+      title: '¿Quitar documento?',
+      text: 'Se eliminará el documento cargado actualmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, quitar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+    if (result.isConfirmed) {
+      setDocuments(prev => ({ ...prev, [docKey]: null }));
+      setPreviews(prev => ({ ...prev, [docKey]: null }));
+    }
+  };
 
   const [ordenAmpliacion, setOrdenAmpliacion] = useState(null);
   const [cargandoOrdenAmpliacion, setCargandoOrdenAmpliacion] = useState(false);
 
   // Estados para creación de ampliación administrativa
-  const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(1);
+  const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(0);
   const [asignacionSegurosAmpliacion, setAsignacionSegurosAmpliacion] = useState({});
   const [aprobarAutomaticamente, setAprobarAutomaticamente] = useState(true);
   const [procesandoAmpliacionAdmin, setProcesandoAmpliacionAdmin] = useState(false);
@@ -674,6 +758,17 @@ export default function CompletarJugadoresEquipo() {
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
     return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
+
+  // Calcular la suma de seguros asignados en la ampliación administrativa
+  const totalSegurosAsignados = React.useMemo(() => {
+    return Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
+      const s = segurosJugador.find(x => String(x.id) === String(id));
+      if (s) {
+        return acc + (Number(cant) || 0);
+      }
+      return acc;
+    }, 0);
+  }, [asignacionSegurosAmpliacion, segurosJugador]);
 
   const abrirModalDetalle = (seguro) => {
     setSeguroDetalle(seguro);
@@ -735,8 +830,8 @@ export default function CompletarJugadoresEquipo() {
       edad--;
     }
 
-    if (edad < 3) {
-      return 'El jugador debe tener al menos 3 años de edad.';
+    if (edad < 2) {
+      return 'El jugador debe tener al menos 2 años de edad.';
     }
 
     if (edad > 125) {
@@ -756,14 +851,7 @@ export default function CompletarJugadoresEquipo() {
   };
 
   const obtenerDuplicadoPosicion = (posicionId) => {
-    if (!posicionId) return null;
-    const posVal = parseInt(posicionId, 10);
-    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
-    const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicionId))?.nombre;
-    if (!posNombre) return null;
-    return registeredPlayers.find(p =>
-      p.Rol && p.Rol.trim().toUpperCase() === posNombre.trim().toUpperCase()
-    );
+    return null;
   };
 
   const obtenerDuplicadoCURP = (curpVal) => {
@@ -1059,6 +1147,8 @@ export default function CompletarJugadoresEquipo() {
       if (field === 'lugarNacimiento') {
         cleanValue = cleanValue.slice(0, 30);
       }
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'correo') {
       cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
     } else if (field === 'telefono') {
@@ -1114,6 +1204,9 @@ export default function CompletarJugadoresEquipo() {
         return;
       }
     }
+
+    const prevDoc = documents[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
 
     if (documentKey !== 'foto') {
       setDocuments(prev => ({ ...prev, [documentKey]: file }));
@@ -1198,8 +1291,32 @@ export default function CompletarJugadoresEquipo() {
       }
     }
 
+    if (documentKey === 'ine' && !extractedData?.fechaNacimiento) {
+      const result = await Swal.fire({
+        title: '¿De quién es esta identificación?',
+        text: 'Si este registro es para un menor de edad, debes subir primero el Acta de Nacimiento para que el sistema configure el formulario correctamente. ¿Esta identificación pertenece al jugador (mayor de edad)?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, es del jugador',
+        cancelButtonText: 'No, es del tutor / menor de edad',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      });
+      if (!result.isConfirmed) {
+        Swal.fire({
+          title: 'Carga cancelada',
+          text: 'Por favor, carga primero el Acta de Nacimiento del jugador para actualizar el formulario.',
+          icon: 'info',
+          confirmButtonColor: COLORS.primary
+        });
+        setDocuments(prev => ({ ...prev, [documentKey]: null }));
+        setPreviews(prev => ({ ...prev, [documentKey]: null }));
+        return;
+      }
+    }
+
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
-    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'identificacionMenor') {
+    if (documentKey === 'acta' || documentKey === 'ine') {
       Swal.fire({
         title: 'Analizando Documento...',
         html: 'Extrayendo información. Por favor espere.',
@@ -1211,8 +1328,14 @@ export default function CompletarJugadoresEquipo() {
       try {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
-
-        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
+        const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataOcr
+        });
         if (!response.ok) throw new Error('Error al obtener la información.');
 
         const htmlText = await response.text();
@@ -1237,6 +1360,7 @@ export default function CompletarJugadoresEquipo() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -1262,7 +1386,10 @@ export default function CompletarJugadoresEquipo() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
-          
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
+
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
           }
@@ -1300,10 +1427,16 @@ export default function CompletarJugadoresEquipo() {
           });
 
           if (!result.isConfirmed) {
-            setDocuments(prev => ({ ...prev, [documentKey]: null }));
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            setDocuments(prev => ({ ...prev, [documentKey]: prevDoc }));
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out CURP to block step completion
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -1352,13 +1485,50 @@ export default function CompletarJugadoresEquipo() {
           setOcrDataOriginal(ocrResult);
           setExtractedData(prev => ({ ...prev, ...ocrResult }));
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          const missing = [];
+          if (!ocrResult.nombreJugador) missing.push('nombreJugador');
+          if (!ocrResult.apellidoPaterno) missing.push('apellidoPaterno');
+          if (!ocrResult.apellidoMaterno) missing.push('apellidoMaterno');
+          if (!ocrResult.curp) missing.push('curp');
+          if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
+          if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
+          if (!extractedData.correo) missing.push('correo');
+          if (!extractedData.telefono) missing.push('telefono');
+          setMissingOcrFields(missing);
+
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            const labels = {
+              nombreJugador: 'Nombre(s)',
+              apellidoPaterno: 'Apellido Paterno',
+              apellidoMaterno: 'Apellido Materno',
+              curp: 'CURP',
+              fechaNacimiento: 'Fecha de Nacimiento',
+              lugarNacimiento: 'Lugar de Nacimiento',
+              correo: 'Correo electrónico',
+              telefono: 'Número de teléfono'
+            };
+            const missingLabels = missing.map(m => labels[m]).filter(Boolean);
+
+            let text = nombreEncontrado ? `Se detectó a: ${nombreEncontrado}.` : 'Lectura del documento completada.';
+            if (missingLabels.length > 0) {
+              text += `\n\nPor favor, completa manualmente los campos resaltados en amarillo: ${missingLabels.join(', ')}.`;
+            }
+
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: text,
+              icon: 'success',
+              confirmButtonText: 'Aceptar',
+              confirmButtonColor: COLORS.primary
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -1391,7 +1561,8 @@ export default function CompletarJugadoresEquipo() {
           CantidadJugadores: Number(numJugadoresAmpliacion),
           Seguros: segurosPayload,
           TipoSolicitud: 3, // JUGADOR
-          EquipoId: Number(equipoId)
+          EquipoId: Number(equipoId),
+          PresidenteId: equipo?.PresidenteEquipoId || null
         })
       });
 
@@ -1452,6 +1623,19 @@ export default function CompletarJugadoresEquipo() {
     });
   };
 
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
+    });
+  };
+
   // AUXILIAR PARA ESCRITURA EN PDF
   const safeSetField = (form, fieldName, value, fontSize) => {
     if (!value) return;
@@ -1500,9 +1684,17 @@ export default function CompletarJugadoresEquipo() {
       }
 
       // Rellenar campos básicos
-      safeSetField(form, 'Nombres', extractedData.nombreJugador);
-      safeSetField(form, 'Apellido Paterno', extractedData.apellidoPaterno);
-      safeSetField(form, 'Apellido Materno', extractedData.apellidoMaterno);
+      const nombreVal = extractedData.nombreJugador || '';
+      const nombreFs = nombreVal.length > 35 ? 6 : nombreVal.length > 25 ? 7 : nombreVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Nombres', nombreVal, nombreFs);
+
+      const apPaternoVal = extractedData.apellidoPaterno || '';
+      const apPaternoFs = apPaternoVal.length > 35 ? 6 : apPaternoVal.length > 25 ? 7 : apPaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Paterno', apPaternoVal, apPaternoFs);
+
+      const apMaternoVal = extractedData.apellidoMaterno || '';
+      const apMaternoFs = apMaternoVal.length > 35 ? 6 : apMaternoVal.length > 25 ? 7 : apMaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Materno', apMaternoVal, apMaternoFs);
       safeSetField(form, 'CURP o Clave Única de Registro de Población', extractedData.curp);
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
@@ -1513,8 +1705,8 @@ export default function CompletarJugadoresEquipo() {
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
       safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
-      safeSetField(form, 'Asociación', 'AFAEM');
-      safeSetField(form, 'fill_24', 'AFAEM');
+      safeSetField(form, 'Asociación', 'Asociación de Morelos');
+      safeSetField(form, 'fill_24', 'Asociación de Morelos');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(selectedSeguroId));
@@ -1523,8 +1715,13 @@ export default function CompletarJugadoresEquipo() {
         try { form.getTextField('fill_20')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
-      safeSetField(form, 'Liga', (equipo?.Liga || '').split('(')[0].trim());
-      safeSetField(form, 'Equipo', equipo?.NombreEquipo || '');
+      const ligaVal = (equipo?.Liga || '').split('(')[0].trim();
+      const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Liga', ligaVal, ligaFs);
+
+      const equipoVal = equipo?.NombreEquipo || '';
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
       safeSetField(form, 'Categoría', equipo?.Categoria || '');
 
       // Traducir el ID de posición a su nombre en texto
@@ -1753,9 +1950,9 @@ export default function CompletarJugadoresEquipo() {
         return;
       }
 
-      const minAgeDate = new Date(hoy.getFullYear() - 3, hoy.getMonth(), hoy.getDate());
+      const minAgeDate = new Date(hoy.getFullYear() - 2, hoy.getMonth(), hoy.getDate());
       if (fechaDate > minAgeDate) {
-        Swal.fire('Atención', 'El jugador debe tener al menos 3 años de edad.', 'warning');
+        Swal.fire('Atención', 'El jugador debe tener al menos 2 años de edad.', 'warning');
         return;
       }
     }
@@ -2035,72 +2232,78 @@ export default function CompletarJugadoresEquipo() {
 
                   <div style={{ background: COLORS.slate50, padding: '25px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, marginBottom: '25px' }}>
                     {/* Cantidad de Jugadores */}
-                    <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
+                    <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <label style={{ fontWeight: '800', color: COLORS.slate800, margin: 0 }}>
                         Cantidad de espacios a generar (Jugadores)
                       </label>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         value={numJugadoresAmpliacion}
-                        onChange={(e) => setNumJugadoresAmpliacion(Math.max(1, parseInt(e.target.value) || 1))}
-                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
+                        onChange={(e) => setNumJugadoresAmpliacion(Math.max(0, parseInt(e.target.value) || 0))}
+                        style={{ width: '120px', padding: '10px 12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
                       />
                     </div>
 
-                    {/* Seguros */}
-                    <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
-                        Selección de Seguros
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-                        {segurosJugador.map(seg => (
-                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: `1px solid ${COLORS.slate200}` }}>
-                            <div>
-                              <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{seg.nombre}</div>
-                              <div style={{ fontSize: '12px', color: COLORS.slate500 }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                    <div style={{ display: 'flex', gap: '25px', flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: '25px' }}>
+                      {/* Lado izquierdo: Seguros */}
+                      <div style={{ flex: '1 1 60%', minWidth: '300px' }}>
+                        <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
+                          Selección de Seguros
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+                          {segurosJugador.map(seg => (
+                            <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: `1px solid ${COLORS.slate200}` }}>
+                              <div>
+                                <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{seg.nombre}</div>
+                                <div style={{ fontSize: '12px', color: COLORS.slate500 }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                              </div>
+                              <input
+                                type="number"
+                                min="0"
+                                value={asignacionSegurosAmpliacion[seg.id] || ''}
+                                placeholder="0"
+                                onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.slate300}` }}
+                              />
                             </div>
-                            <input
-                              type="number"
-                              min="0"
-                              value={asignacionSegurosAmpliacion[seg.id] || ''}
-                              placeholder="0"
-                              onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                              style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.slate300}` }}
-                            />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Resumen */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
-                      <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800 }}>Resumen de Costos</h4>
+                      {/* Lado derecho: Resumen */}
+                      <div style={{ flex: '1 1 35%', minWidth: '280px' }}>
+                        {/* Spacer para alinear verticalmente con la etiqueta de Selección de Seguros */}
+                        <div style={{ height: '31px' }}></div>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
+                          <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800 }}>Resumen de Costos</h4>
 
-                      {segurosJugador.map(seg => {
-                        const cant = asignacionSegurosAmpliacion[seg.id] || 0;
-                        if (cant === 0) return null;
-                        return (
-                          <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: COLORS.slate500 }}>
-                            <span>Seguro {seg.nombre} x{cant}</span>
-                            <span style={{ fontWeight: '700', color: COLORS.slate800 }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                          {segurosJugador.map(seg => {
+                            const cant = asignacionSegurosAmpliacion[seg.id] || 0;
+                            if (cant === 0) return null;
+                            return (
+                              <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: COLORS.slate500 }}>
+                                <span>Seguro {seg.nombre} x{cant}</span>
+                                <span style={{ fontWeight: '700', color: COLORS.slate800 }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                              </div>
+                            );
+                          })}
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: `2px solid ${COLORS.slate100}` }}>
+                            <span style={{ fontWeight: '800', color: COLORS.slate800 }}>TOTAL A PAGAR</span>
+                            <span style={{ fontWeight: '900', color: COLORS.primary, fontSize: '18px' }}>
+                              ${(
+                                Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
+                                  const s = segurosJugador.find(x => String(x.id) === String(id));
+                                  if (s) {
+                                    return acc + (cant * Number(s.precio || 0));
+                                  }
+                                  return acc;
+                                }, 0)
+                              ).toFixed(2)}
+                            </span>
                           </div>
-                        );
-                      })}
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: `2px solid ${COLORS.slate100}` }}>
-                        <span style={{ fontWeight: '800', color: COLORS.slate800 }}>TOTAL A PAGAR</span>
-                        <span style={{ fontWeight: '900', color: COLORS.primary, fontSize: '18px' }}>
-                          ${(
-                            Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
-                              const s = segurosJugador.find(x => String(x.id) === String(id));
-                              if (s) {
-                                return acc + (cant * Number(s.precio || 0));
-                              }
-                              return acc;
-                            }, 0)
-                          ).toFixed(2)}
-                        </span>
+                        </div>
                       </div>
                     </div>
 
@@ -2127,7 +2330,7 @@ export default function CompletarJugadoresEquipo() {
                     <BotonPrimario
                       etiqueta={procesandoAmpliacionAdmin ? "Procesando..." : "Generar Ampliación"}
                       alHacerClick={handleGenerarAmpliacionAdmin}
-                      deshabilitado={procesandoAmpliacionAdmin}
+                      deshabilitado={procesandoAmpliacionAdmin || numJugadoresAmpliacion <= 0 || numJugadoresAmpliacion !== totalSegurosAsignados}
                       estilo={{ padding: '12px 24px', fontSize: '15px', minWidth: '200px' }}
                     />
                   </div>
@@ -2304,19 +2507,31 @@ export default function CompletarJugadoresEquipo() {
                   <div
                     key={doc.key}
                     className="document-card"
+                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) handleFileUpload(doc.key, file);
+                    }}
                     style={{
-                      backgroundColor: 'white',
+                      backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
                       borderRadius: '20px',
-                      border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                      border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
                       padding: '15px',
                       textAlign: 'center',
                       transition: 'all 0.3s',
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      cursor: 'pointer'
                     }}
                   >
                     {/* Indicador de Menor para tutor/credencial */}
-                    {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
+                    {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
                       <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                     )}
 
@@ -2333,11 +2548,6 @@ export default function CompletarJugadoresEquipo() {
                       justifyContent: 'center',
                       border: `1px solid ${COLORS.slate100}`
                     }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        handleFileUpload(doc.key, e.dataTransfer.files[0]);
-                      }}
                     >
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -2393,6 +2603,8 @@ export default function CompletarJugadoresEquipo() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                openDocumentCaptureOptions(doc.key);
+                                return;
                                 if (doc.key === 'foto') {
                                   Swal.fire({
                                     title: 'Selecciona una opción',
@@ -2424,12 +2636,28 @@ export default function CompletarJugadoresEquipo() {
                             >
                               <FaSyncAlt />
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDocument(doc.key)}
+                              className="btn-delete"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer',
+                                marginLeft: '6px'
+                              }}
+                            >
+                              <FaTrash />
+                            </button>
                           </div>
                         </div>
                       ) : (
                         /* ESTADO VACÍO */
                         <div
                           onClick={() => {
+                            openDocumentCaptureOptions(doc.key);
+                            return;
                             if (doc.key === 'foto') {
                               Swal.fire({
                                 title: 'Selecciona una opción',
@@ -2516,6 +2744,7 @@ export default function CompletarJugadoresEquipo() {
                       id={`file-${doc.key}`}
                       style={{ display: 'none' }}
                       accept={doc.key === 'foto' ? ".jpg,.jpeg,.png" : ".pdf,.jpg,.jpeg,.png"}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                     />
                   </div>
@@ -2525,7 +2754,8 @@ export default function CompletarJugadoresEquipo() {
               <CameraCaptureModal
                 isOpen={isCameraOpen}
                 onClose={() => setIsCameraOpen(false)}
-                onCapture={(file) => handleFileUpload('foto', file)}
+                onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                captureKind={getCameraCaptureKind(cameraTargetKey)}
               />
 
               {/* Loader temporal OCR */}
@@ -2543,38 +2773,37 @@ export default function CompletarJugadoresEquipo() {
           {showStep3 && (
             <section className="fade-in" style={{ marginBottom: '40px' }}>
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <StepBadge number="3" isActive={true} isDone={false} />
-                  <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <StepBadge number="3" isActive={true} isDone={false} />
+                    <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetForm}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: `1px solid ${COLORS.danger}`,
+                      background: 'white',
+                      color: COLORS.danger,
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.target.style.background = COLORS.dangerBgLight; }}
+                    onMouseLeave={e => { e.target.style.background = 'white'; }}
+                  >
+                    <FaTrash /> Limpiar formulario
+                  </button>
                 </div>
               </div>
 
-              {/* AVISO DE DISCREPANCIA OCR */}
-              {ocrDataOriginal && (
-                extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-              ) && (
-                <div className="fade-in" style={{
-                  marginBottom: '20px',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  background: COLORS.orange50,
-                  border: `1px solid ${COLORS.orange100}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}>
-                  <div style={{ fontSize: '20px' }}>⚠️</div>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                      Discrepancia detectada
-                    </h4>
-                    <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                      La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                    </p>
-                  </div>
-                </div>
-              )}
+
 
               {/* CAMPOS DEL FORMULARIO */}
               <div className="inner-form-card">
@@ -2582,15 +2811,96 @@ export default function CompletarJugadoresEquipo() {
                 <div className="form-grid-4">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.nombreJugador}
+                      onChange={e => handleFieldChange('nombreJugador', e.target.value)}
+                      placeholder="Ej. Juan"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.nombreJugador
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        No se pudo completar automáticamente
+                      </span>
+                    )}
+                    {validationErrors.nombreJugador && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.nombreJugador}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.apellidoPaterno}
+                      onChange={e => handleFieldChange('apellidoPaterno', e.target.value)}
+                      placeholder="Ej. Pérez"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.apellidoPaterno
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        No se pudo completar automáticamente
+                      </span>
+                    )}
+                    {validationErrors.apellidoPaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoPaterno}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.apellidoMaterno}
+                      onChange={e => handleFieldChange('apellidoMaterno', e.target.value)}
+                      placeholder="Ej. Gómez"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.apellidoMaterno
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        No se pudo completar automáticamente
+                      </span>
+                    )}
+                    {validationErrors.apellidoMaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoMaterno}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
@@ -2600,36 +2910,30 @@ export default function CompletarJugadoresEquipo() {
                     <input
                       type="text"
                       value={extractedData.curp || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                        let sId = extractedData.genero;
-                        if (val.length >= 11) {
-                          const char = val.charAt(10);
-                          if (char === 'M') sId = '2'; // Femenino
-                          else if (char === 'H') sId = '1'; // Masculino
-                        }
-                        setExtractedData({ ...extractedData, curp: val, genero: sId });
-
-                        // Real-time duplicate check
-                        if (val.length === 18) {
-                          const duplicate = obtenerDuplicadoCURP(val);
-                          if (duplicate) {
-                            setValidationErrors(prev => ({
-                              ...prev,
-                              curp: `Esta CURP ya se encuentra registrada en el equipo con el Jugador ${duplicate.NombreCompleto}.`
-                            }));
-                          } else {
-                            setValidationErrors(prev => ({ ...prev, curp: null }));
-                          }
-                        } else {
-                          setValidationErrors(prev => ({ ...prev, curp: null }));
-                        }
-                      }}
+                      onChange={e => handleFieldChange('curp', e.target.value)}
                       onBlur={() => handleBlur('curp')}
-                      placeholder="ABCD..."
+                      placeholder="Ingresa o corrige la CURP"
                       maxLength="18"
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.curp ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.curp
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('curp') && !extractedData.curp
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : 'white',
+                        cursor: 'text'
+                      }}
                     />
+                    {missingOcrFields.includes('curp') && !extractedData.curp && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        No se pudo completar automáticamente
+                      </span>
+                    )}
                     {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
                   </div>
                 </div>
@@ -2647,8 +2951,27 @@ export default function CompletarJugadoresEquipo() {
                         setValidationErrors(prev => ({ ...prev, fechaNacimiento: dateError }));
                       }}
                       onBlur={() => handleBlur('fechaNacimiento')}
-                      style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${validationErrors.fechaNacimiento ? COLORS.danger : COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: validationErrors.fechaNacimiento
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`),
+                        backgroundColor: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
                     />
+                    {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        No se pudo completar automáticamente
+                      </span>
+                    )}
                     {(() => {
                       const val = extractedData.fechaNacimiento;
                       if (!val) return null;
@@ -2670,9 +2993,9 @@ export default function CompletarJugadoresEquipo() {
                         return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                       }
 
-                      const minAgeDate = new Date(hoy.getFullYear() - 3, hoy.getMonth(), hoy.getDate());
+                      const minAgeDate = new Date(hoy.getFullYear() - 2, hoy.getMonth(), hoy.getDate());
                       if (fechaDate > minAgeDate) {
-                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 3 años</div>;
+                        return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 2 años</div>;
                       }
 
                       return null;
@@ -2680,7 +3003,31 @@ export default function CompletarJugadoresEquipo() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                    <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={extractedData.lugarNacimiento || ''}
+                      onChange={e => handleFieldChange('lugarNacimiento', e.target.value)}
+                      placeholder="Ej. Monterrey, NL"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                          ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                          : `1px solid ${COLORS.slate300}`,
+                        backgroundColor: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        No se pudo completar automáticamente
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
@@ -2743,7 +3090,31 @@ export default function CompletarJugadoresEquipo() {
                 <div className="form-grid-2">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Correo electrónico <span className="required-star">*</span></label>
-                    <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                    <input
+                      type="email"
+                      maxLength={60}
+                      value={extractedData.correo}
+                      onChange={e => handleFieldChange('correo', e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: missingOcrFields.includes('correo') && !extractedData.correo
+                          ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                          : `1px solid ${COLORS.slate300}`,
+                        backgroundColor: missingOcrFields.includes('correo') && !extractedData.correo
+                          ? '#fef3c7'
+                          : 'white',
+                        fontSize: '14px',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {missingOcrFields.includes('correo') && !extractedData.correo && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        Completa manualmente.
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono <span className="required-star">*</span></label>
@@ -2788,12 +3159,22 @@ export default function CompletarJugadoresEquipo() {
                         style={{
                           padding: '10px',
                           borderRadius: '8px',
-                          border: `1px solid ${COLORS.slate300}`,
+                          border: missingOcrFields.includes('telefono') && !extractedData.telefono
+                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                            : `1px solid ${COLORS.slate300}`,
+                          backgroundColor: missingOcrFields.includes('telefono') && !extractedData.telefono
+                            ? '#fef3c7'
+                            : 'white',
                           fontSize: '14px',
                           flexGrow: 1
                         }}
                       />
                     </div>
+                    {missingOcrFields.includes('telefono') && !extractedData.telefono && (
+                      <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                        Completa manualmente.
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -2977,7 +3358,7 @@ export default function CompletarJugadoresEquipo() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '100%', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />
@@ -3039,14 +3420,44 @@ export default function CompletarJugadoresEquipo() {
           </div>
 
           <div
-            onClick={() => document.getElementById('final-signed-form').click()}
+            onClick={() => { if (!signedForm) document.getElementById('final-signed-form').click(); }}
+            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(true); }}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(false); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingSignedForm(false);
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
+                  return;
+                }
+                setSignedForm(file);
+              }
+            }}
+            className={signedForm ? "document-card" : ""}
             style={{
-              border: signedForm ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.sky}`,
+              border: signedForm
+                ? `2px solid ${COLORS.success}`
+                : (isDraggingSignedForm
+                  ? `2px solid ${COLORS.primary}`
+                  : `2px dashed ${COLORS.sky}`),
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm ? COLORS.greenBg50 : COLORS.slate50,
-              cursor: 'pointer',
-              transition: 'all 0.3s'
+              backgroundColor: signedForm
+                ? COLORS.greenBg50
+                : (isDraggingSignedForm
+                  ? 'rgba(26, 59, 92, 0.05)'
+                  : COLORS.slate50),
+              cursor: !signedForm ? 'pointer' : 'default',
+              transition: 'all 0.3s',
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
             {signedForm ? (
@@ -3054,6 +3465,76 @@ export default function CompletarJugadoresEquipo() {
                 <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+
+                {/* Overlay actions when hover */}
+                <div className="overlay-actions" style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: COLORS.overlaySlateGray,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease',
+                  backdropFilter: 'blur(2px)',
+                  zIndex: 2
+                }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = typeof signedForm === 'string' ? signedForm : URL.createObjectURL(signedForm);
+                      setPreviewDoc({
+                        open: true,
+                        url: url,
+                        type: 'pdf',
+                        title: 'Formato de Afiliación Oficial'
+                      });
+                    }}
+                    className="btn-zoom"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSearchPlus />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.getElementById('final-signed-form').click();
+                    }}
+                    className="btn-change"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSyncAlt />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSignedForm(null);
+                    }}
+                    className="btn-delete"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             ) : (
               <div style={{ color: COLORS.sky }}>

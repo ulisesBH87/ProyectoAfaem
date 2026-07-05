@@ -28,6 +28,7 @@ def parse_y_validar_fecha(fecha_str: str) -> date:
     # Regex to enforce exactly 4-digit years
     regex_iso = re.compile(r'^\d{4}-\d{2}-\d{2}$')
     regex_slash = re.compile(r'^\d{2}/\d{2}/\d{4}$')
+    regex_slash_yyyy = re.compile(r'^\d{4}/\d{2}/\d{2}$')
     
     if regex_iso.match(fecha_str):
         parts = fecha_str.split('-')
@@ -35,6 +36,9 @@ def parse_y_validar_fecha(fecha_str: str) -> date:
     elif regex_slash.match(fecha_str):
         parts = fecha_str.split('/')
         day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+    elif regex_slash_yyyy.match(fecha_str):
+        parts = fecha_str.split('/')
+        year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
     else:
         raise ValueError("Ingresa una fecha válida.")
         
@@ -64,8 +68,8 @@ def validacion_fecha(value):
         (hoy.month, hoy.day) < (value.month, value.day)
     )
 
-    if age < 5:
-        raise ValueError("El jugador debe tener al menos 5 años de edad.")
+    if age < 2:
+        raise ValueError("El jugador debe tener al menos 2 años de edad.")
 
     if age > 125:
         raise ValueError("Ingresa una fecha válida.")

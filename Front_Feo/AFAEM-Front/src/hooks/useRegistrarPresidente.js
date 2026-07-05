@@ -58,6 +58,8 @@ export function useRegistrarPresidente() {
   const [cargandoBorrador, setCargandoBorrador] = useState(false);
   const toastTimeoutRef = useRef(null);
   const hasLoadedRef = useRef(false);
+  const cuentaFieldsEditadosRef = useRef(new Set());
+  const ultimaCurpValidadaRef = useRef(null);
 
   // ── Estado del wizard ────────────────────────────────────────────────────
   const [paso, setPaso] = useState(1);
@@ -104,13 +106,16 @@ export function useRegistrarPresidente() {
 
   const setCuentaField = (field, val) =>
     setCuenta(prev => {
+      cuentaFieldsEditadosRef.current.add(field);
+      const normalizedValue = (field === 'contrasena' || field === 'confirmarContrasena')
+        ? val
+        : (typeof val === 'string' ? val.toUpperCase() : val);
       const next = {
         ...prev,
-        [field]: (field === 'contrasena' || field === 'confirmarContrasena')
-          ? val
-          : (typeof val === 'string' ? val.toUpperCase() : val),
+        [field]: normalizedValue,
       };
       if (field === 'curp') {
+        ultimaCurpValidadaRef.current = null;
         setIsCurpDuplicated(false);
         setCuentaErrors(errs => {
           if (errs.curp === 'Esta CURP ya se encuentra registrada.') {
@@ -119,6 +124,11 @@ export function useRegistrarPresidente() {
           }
           return errs;
         });
+        setOcrResults(prevOcr => (
+          prevOcr.curp === normalizedValue
+            ? prevOcr
+            : { ...prevOcr, curp: normalizedValue }
+        ));
       }
       return next;
     });
@@ -144,7 +154,7 @@ export function useRegistrarPresidente() {
 
   // ── Paso 2: Cuotas ───────────────────────────────────────────────────────
   const [numPersonas, setNumPersonas] = useState('');
-  const [voucher, setVoucher] = useState(null);
+  const [voucher, setVoucherState] = useState(null);
   const segurosHook = useSeguros();
   const { seguros, segurosPresidente, segurosJugadores, asignacion, setAsignacion, ligasCatalogo, totalAsignados, totalPagar, cargandoSeguros } = segurosHook;
   const segurosRequeridos = Number(numPersonas || 0);
@@ -152,7 +162,7 @@ export function useRegistrarPresidente() {
   // ── Paso 3: Documentos ───────────────────────────────────────────────────
   const [equipo, setEquipo] = useState('');
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
-  const [asociacion] = useState('AFAEM');
+  const [asociacion] = useState('Asociación de Morelos');
   const [liga, setLiga] = useState('');
   const [documents, setDocuments] = useState({});
   const [previews, setPreviews] = useState({});
@@ -212,9 +222,25 @@ export function useRegistrarPresidente() {
     return () => clearTimeout(timer);
   }, [equipo, liga, esEntrenador]);
 
-  // ── Hooks de lógica ──────────────────────────────────────────────────────
   const ocrHook = useOCR();
   const { ocrResults, setOcrResults, procesarOCR, preFillFromCuenta } = ocrHook;
+
+  const setVoucher = (file) => {
+    if (!file) {
+      setVoucherState(null);
+      setOcrResults(prev => {
+        const next = { ...prev };
+        delete next.voucherMonto;
+        delete next.voucherText;
+        return next;
+      });
+      return;
+    }
+    setVoucherState(file);
+    procesarOCR('voucher', file, () => {
+      setVoucherState(null);
+    });
+  };
 
   const fotoHook = useFotografia({ setDocuments, setPreviews });
   const { procesarFoto, forzarFoto, fotoError, fotoFallida, fotoArchivo } = fotoHook;
@@ -319,7 +345,11 @@ export function useRegistrarPresidente() {
       const save = async () => {
         let isChecking = false;
         try {
-          if (cuenta.curp && cuenta.curp.length === 18) {
+          const curpActual = cuenta.curp?.trim() || '';
+          const validarCurpEnEsteGuardado =
+            curpActual.length === 18 && curpActual !== ultimaCurpValidadaRef.current;
+
+          if (validarCurpEnEsteGuardado) {
             setIsCheckingCurp(true);
             isChecking = true;
           }
@@ -357,18 +387,57 @@ export function useRegistrarPresidente() {
             window.history.pushState({ path: newUrl }, '', newUrl);
           }
 
-          if (resData && resData.curp_duplicada) {
-            setIsCurpDuplicated(true);
-            setCuentaErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
-          } else {
-            setIsCurpDuplicated(false);
-            setCuentaErrors(prev => {
-              if (prev.curp === 'Esta CURP ya se encuentra registrada.') {
-                const { curp, ...rest } = prev;
-                return rest;
+          if (resData && resData.datos && resData.datos.documentosBorrador) {
+            const returnedDocs = resData.datos.documentosBorrador;
+            const updatedDocs = {};
+            const updatedPreviews = {};
+            let changed = false;
+            for (const key of Object.keys(returnedDocs)) {
+              const docData = returnedDocs[key];
+              if (docData && docData.data && docData.name) {
+                if (String(docData.data).startsWith('data:')) {
+                  const currentDoc = documents[key];
+                  try {
+                    const file = await base64ToFile(docData.data, docData.name);
+                    if (!currentDoc || currentDoc.size !== file.size) {
+                      updatedDocs[key] = file;
+                      updatedPreviews[key] = URL.createObjectURL(file);
+                      changed = true;
+                    }
+                  } catch (e) {
+                    console.warn(`Error al actualizar previsualización de borrador:`, e);
+                  }
+                }
               }
-              return prev;
-            });
+            }
+            if (changed) {
+              setDocuments(prev => ({ ...prev, ...updatedDocs }));
+              setPreviews(prev => {
+                Object.keys(updatedPreviews).forEach(k => {
+                  if (prev[k] && prev[k].startsWith('blob:')) {
+                    URL.revokeObjectURL(prev[k]);
+                  }
+                });
+                return { ...prev, ...updatedPreviews };
+              });
+            }
+          }
+
+          if (validarCurpEnEsteGuardado) {
+            ultimaCurpValidadaRef.current = curpActual;
+            if (resData && resData.curp_duplicada) {
+              setIsCurpDuplicated(true);
+              setCuentaErrors(prev => ({ ...prev, curp: 'Esta CURP ya se encuentra registrada.' }));
+            } else {
+              setIsCurpDuplicated(false);
+              setCuentaErrors(prev => {
+                if (prev.curp === 'Esta CURP ya se encuentra registrada.') {
+                  const { curp, ...rest } = prev;
+                  return rest;
+                }
+                return prev;
+              });
+            }
           }
 
           triggerToast();
@@ -420,19 +489,31 @@ export function useRegistrarPresidente() {
     if (ocrResults && (ocrResults.curp || ocrResults.nombre || ocrResults.fecha_nac || ocrResults.nacionalidad || ocrResults.sexo)) {
       setCuenta(prev => {
         const next = { ...prev };
+        let changed = false;
 
-        if (ocrResults.nombres) {
+        if (ocrResults.nombres && !cuentaFieldsEditadosRef.current.has('nombre') && next.nombre !== ocrResults.nombres.toUpperCase()) {
           next.nombre = ocrResults.nombres.toUpperCase();
+          changed = true;
         }
-        if (ocrResults.apellido_paterno) {
+        if (ocrResults.apellido_paterno && !cuentaFieldsEditadosRef.current.has('primerApellido') && next.primerApellido !== ocrResults.apellido_paterno.toUpperCase()) {
           next.primerApellido = ocrResults.apellido_paterno.toUpperCase();
+          changed = true;
         }
-        if (ocrResults.apellido_materno) {
+        if (ocrResults.apellido_materno && !cuentaFieldsEditadosRef.current.has('segundoApellido') && next.segundoApellido !== ocrResults.apellido_materno.toUpperCase()) {
           next.segundoApellido = ocrResults.apellido_materno.toUpperCase();
+          changed = true;
         }
 
         // If separate names aren't in ocrResults but full name is, split it
-        if (!ocrResults.nombres && !ocrResults.apellido_paterno && ocrResults.nombre && ocrResults.nombre !== 'No detectado') {
+        if (
+          !cuentaFieldsEditadosRef.current.has('nombre') &&
+          !cuentaFieldsEditadosRef.current.has('primerApellido') &&
+          !cuentaFieldsEditadosRef.current.has('segundoApellido') &&
+          !ocrResults.nombres &&
+          !ocrResults.apellido_paterno &&
+          ocrResults.nombre &&
+          ocrResults.nombre !== 'No detectado'
+        ) {
           const parts = ocrResults.nombre.toUpperCase().split(' ');
           if (parts.length === 4) {
             next.nombre = parts.slice(0, 2).join(' ');
@@ -448,38 +529,88 @@ export function useRegistrarPresidente() {
           } else {
             next.nombre = ocrResults.nombre.toUpperCase();
           }
+          changed = true;
         }
 
-        if (ocrResults.curp && ocrResults.curp !== 'No detectado') {
+        if (
+          ocrResults.curp &&
+          ocrResults.curp !== 'No detectado' &&
+          !cuentaFieldsEditadosRef.current.has('curp') &&
+          next.curp !== ocrResults.curp.toUpperCase()
+        ) {
           next.curp = ocrResults.curp.toUpperCase();
+          changed = true;
         }
 
-        if (ocrResults.nacionalidad && ocrResults.nacionalidad !== 'No detectado') {
+        if (
+          ocrResults.nacionalidad &&
+          ocrResults.nacionalidad !== 'No detectado' &&
+          !cuentaFieldsEditadosRef.current.has('nacionalidad') &&
+          next.nacionalidad !== ocrResults.nacionalidad.toUpperCase()
+        ) {
           next.nacionalidad = ocrResults.nacionalidad.toUpperCase();
+          changed = true;
         }
 
-        if (ocrResults.fecha_nac && ocrResults.fecha_nac !== 'No detectada') {
+        if (
+          ocrResults.fecha_nac &&
+          ocrResults.fecha_nac !== 'No detectada' &&
+          !cuentaFieldsEditadosRef.current.has('fechaNacimiento')
+        ) {
           const parts = ocrResults.fecha_nac.split('/');
           if (parts.length === 3) {
-            next.fechaNacimiento = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            const fechaFormateada = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            if (next.fechaNacimiento !== fechaFormateada) {
+              next.fechaNacimiento = fechaFormateada;
+              changed = true;
+            }
           }
         }
 
-        if (ocrResults.sexo) {
+        if (ocrResults.sexo && !cuentaFieldsEditadosRef.current.has('sexoId')) {
           const s = ocrResults.sexo.toUpperCase();
-          if (s === 'MASCULINO') next.sexoId = '1';
-          else if (s === 'FEMENINO') next.sexoId = '2';
-          else if (s === 'OTRO' || s === 'NO BINARIO') next.sexoId = '3';
+          const sexoIdDetectado =
+            s === 'MASCULINO' ? '1'
+              : s === 'FEMENINO' ? '2'
+                : (s === 'OTRO' || s === 'NO BINARIO') ? '3'
+                  : next.sexoId;
+          if (next.sexoId !== sexoIdDetectado) {
+            next.sexoId = sexoIdDetectado;
+            changed = true;
+          }
         }
 
-        return next;
+        return changed ? next : prev;
       });
     }
   }, [ocrResults]);
 
   // ── Manejo de subida de archivos ─────────────────────────────────────────
   const handleFileUpload = (docKey, file) => {
-    if (!file) return;
+    if (!file) {
+      setPreviews(prev => {
+        const next = { ...prev };
+        if (next[docKey] && next[docKey].startsWith('blob:')) {
+          URL.revokeObjectURL(next[docKey]);
+        }
+        delete next[docKey];
+        return next;
+      });
+      setDocuments(prev => {
+        const next = { ...prev };
+        delete next[docKey];
+        return next;
+      });
+      setOcrResults(prev => {
+        const next = { ...prev };
+        delete next[docKey];
+        return next;
+      });
+      return;
+    }
+    const previousDocument = documents[docKey] || null;
+    const previousPreview = previews[docKey] || null;
+    const previousOcrMarker = ocrResults[docKey];
     const preview = URL.createObjectURL(file);
     setPreviews(prev => ({ ...prev, [docKey]: preview }));
 
@@ -489,8 +620,24 @@ export function useRegistrarPresidente() {
       setDocuments(prev => ({ ...prev, [docKey]: file }));
       if (['actaNacimiento', 'identificacion'].includes(docKey)) {
         procesarOCR(docKey, file, () => {
-          setPreviews(prev => ({ ...prev, [docKey]: null }));
-          setDocuments(prev => ({ ...prev, [docKey]: null }));
+          setPreviews(prev => {
+            const next = { ...prev };
+            if (previousPreview) next[docKey] = previousPreview;
+            else delete next[docKey];
+            return next;
+          });
+          setDocuments(prev => {
+            const next = { ...prev };
+            if (previousDocument) next[docKey] = previousDocument;
+            else delete next[docKey];
+            return next;
+          });
+          setOcrResults(prev => {
+            const next = { ...prev };
+            if (previousOcrMarker) next[docKey] = previousOcrMarker;
+            else delete next[docKey];
+            return next;
+          });
         });
       }
     }
@@ -634,9 +781,12 @@ export function useRegistrarPresidente() {
           confirmButtonColor: C.amberDark,
         });
       } else {
+        const telefonoPresidente = response?.presidente?.telefono;
         const result = await Swal.fire({
           title: 'Cuenta creada correctamente, ¿Enviar mensaje al presidente?',
-          text: '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
+          text: telefonoPresidente
+            ? `¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado (${telefonoPresidente})?`
+            : '¿Desea enviar por WhatsApp el enlace de registro de jugadores al presidente recién creado?',
           icon: 'success',
           showCancelButton: true,
           confirmButtonText: 'Enviar WhatsApp',

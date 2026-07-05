@@ -1133,7 +1133,14 @@ export default function AdminJugadores() {
     try {
       const formDataOcr = new FormData();
       formDataOcr.append('file_id', file);
-      const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+      const response = await fetch(`${API_BASE}/documentos/ocr`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formDataOcr
+      });
       if (!response.ok) throw new Error('Error al conectar');
 
       const htmlText = await response.text();
@@ -1156,6 +1163,7 @@ export default function AdminJugadores() {
       let apellidoMaternoEncontrado = '';
       let curpEncontrada = '';
       let fechaNacEncontrada = '';
+      let verificacionRenapo = '';
 
       const rows = doc.querySelectorAll('.dato-fila');
       rows.forEach(row => {
@@ -1180,6 +1188,9 @@ export default function AdminJugadores() {
         }
 
         if (label.includes('curp')) curpEncontrada = value;
+        if (label.includes('verificación renapo') || label.includes('renapo')) {
+          verificacionRenapo = value;
+        }
         if ((label.includes('nacimiento') && !label.includes('lugar')) || label.includes('fecha nac')) {
           let finalDate = value;
           if (value.includes('/')) {
@@ -1192,11 +1203,17 @@ export default function AdminJugadores() {
         }
       });
 
+      const curpOriginalCapturada = curpEncontrada;
+      const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+      if (curpNoValida) {
+        curpEncontrada = '';
+      }
+
       // Fallback: buscar en texto plano si los selectores no devuelven nada
       if (!nombresEncontrados && !apellidoPaternoEncontrado && !nombreEncontrado && !curpEncontrada) {
         const textoCompleto = doc.body?.innerText || '';
         const curpMatch = textoCompleto.match(/[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d/i);
-        if (curpMatch) curpEncontrada = curpMatch[0].toUpperCase();
+        if (curpMatch && !curpNoValida) curpEncontrada = curpMatch[0].toUpperCase();
       }
 
       if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -1230,11 +1247,20 @@ export default function AdminJugadores() {
           ...(lastNameP && { primerApellido: lastNameP }),
           ...(lastNameM && { segundoApellido: lastNameM }),
           ...(curpEncontrada && { curp: curpEncontrada }),
-          ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada }),
-          ...(NUI && { NUI: NUI })
+          ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada })
         }));
         setHaCambiado(true);
-        Swal.fire({ title: '¡Lectura exitosa!', text: `Se detectó: ${nombreEncontrado || curpEncontrada}`, icon: 'success', timer: 2000, showConfirmButton: false });
+
+        if (curpNoValida) {
+          Swal.fire({
+            title: 'CURP no validada',
+            text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+            icon: 'warning',
+            confirmButtonColor: COLORS.primary || '#1a3b5c'
+          });
+        } else {
+          Swal.fire({ title: '¡Lectura exitosa!', text: `Se detectó: ${nombreEncontrado || curpEncontrada}`, icon: 'success', timer: 2000, showConfirmButton: false });
+        }
       } else {
         throw new Error('No se detectaron datos legibles en este documento.');
       }

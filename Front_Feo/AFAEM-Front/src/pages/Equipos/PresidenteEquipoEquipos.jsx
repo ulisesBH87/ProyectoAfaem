@@ -313,15 +313,21 @@ export default function PresidenteEquipoEquipos() {
       <div className="metrics-grid">
         {[
           { label: 'Equipos Registrados', value: totalEquipos, filter: 'todos', color: 'var(--primary)', icon: <FaShieldAlt /> },
-          { label: 'Jugadores Totales', value: jugadoresTotales, color: 'var(--secondary)', icon: <FaUsers />, isMetricOnly: true },
+          { label: 'Jugadores Totales', value: jugadoresTotales, color: 'var(--secondary)', icon: <FaUsers />, action: () => navigate(ROUTES.PRESIDENTE.MIS_JUGADORES) },
           { label: 'Equipos Activos', value: teams.filter(t => t.Estatus).length, filter: 'activos', color: COLORS.success, icon: <FaCheckCircle /> }
         ].map((stat, i) => (
           <div
             key={i}
-            onClick={() => stat.filter && setFiltroEstatus(stat.filter)}
+            onClick={() => {
+              if (stat.action) {
+                stat.action();
+              } else if (stat.filter) {
+                setFiltroEstatus(stat.filter);
+              }
+            }}
             className={`metric-card ${filtroEstatus === stat.filter ? 'active' : ''}`}
             style={{
-              cursor: stat.isMetricOnly ? 'default' : 'pointer',
+              cursor: 'pointer',
               border: filtroEstatus === stat.filter ? `2px solid ${stat.color}` : '1.5px solid var(--border-light)',
               boxShadow: filtroEstatus === stat.filter ? `0 12px 20px ${stat.color}15` : 'none'
             }}

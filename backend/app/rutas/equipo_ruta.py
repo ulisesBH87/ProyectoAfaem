@@ -63,7 +63,7 @@ def obtener_equipos_temporales_por_usuario(db: Session = Depends(get_db), usuari
     return equipos
 
 @router.get("/slots")
-async def obtener_slots(
+def obtener_slots(
     equipo_temporal_id: int,
     db: Session = Depends(get_db),
     auth_info = Depends(obtener_usuario_o_sesion_temporal)
@@ -90,14 +90,14 @@ async def obtener_slots(
     return slots
 
 @router.get("/hay-slots")
-async def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
+def hay_slots(equipo_id: int, db: Session = Depends(get_db)):
     #Servicio de busqueda de slots
     slots = equipo_servicio.hay_slots(db, equipo_id)
 
     return slots
 
 @router.get("/invitacion/{token_identificador}/{token_secreto}", dependencies=[Depends(rate_limit_invitacion)])
-async def validar_invitacion_presidente(request: Request, token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
+def validar_invitacion_presidente(request: Request, token_identificador: str, token_secreto: str, db: Session = Depends(get_db)):
     ip = request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip() if request.client else None
     invitacion = validar_invitacion_presidente_repo(db, token_identificador, token_secreto, ip)
 
@@ -391,23 +391,7 @@ async def agregar_jugador_equipo_existente(
             ):
                 raise HTTPException(400, f"El número de camiseta {camista_num} ya está asignado a otro jugador en este equipo.")
 
-        # Validar rol/posición duplicada (excepto Cambio / Banca que es RolId = 11)
-        if rol_id != 11:
-            dup_rol = db.query(MiembrosEquipo).filter(
-                MiembrosEquipo.EquipoID == equipo_jugando.EquiposJugandoId,
-                MiembrosEquipo.RolEnEquipo == rol_id,
-                MiembrosEquipo.Eliminado == False
-            ).first()
-            if dup_rol or any(
-                isinstance(obj, MiembrosEquipo) and
-                obj.EquipoID == equipo_jugando.EquiposJugandoId and
-                obj.RolEnEquipo == rol_id and
-                not obj.Eliminado
-                for obj in db.new
-            ):
-                from app.modelos.rol_equipo_modelo import RolesDeEquipo
-                rol_nombre = db.query(RolesDeEquipo.NombreRol).filter(RolesDeEquipo.RolId == rol_id).scalar() or "esta posición"
-                raise HTTPException(400, f"La posición de {rol_nombre} ya está ocupada por otro jugador en este equipo.")
+
 
         nuevo_miembro = MiembrosEquipo(
             PersonaId=nueva_persona.PersonaId,
@@ -646,7 +630,8 @@ async def registrar_grupo(
                 detail=f"El jugador {slot.EquipoTemporalJugadorId} no tiene información capturada."
             )
         try:
-            datos = json.loads(slot.DatosBorrador)
+            from app.core.borrador_utils import procesar_borrador_cargar
+            datos = procesar_borrador_cargar(json.loads(slot.DatosBorrador))
         except Exception:
             raise HTTPException(
                 status_code=400,
@@ -673,7 +658,7 @@ async def registrar_grupo(
         try:
             validacion_fecha(datos.get("fechaNacimiento"))
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Error en {nombre_completo}")
+            raise HTTPException(status_code=400, detail=f"Error en {nombre_completo}: {str(e)}")
         if not datos.get("lugarNacimiento", "").strip():
             raise HTTPException(status_code=400, detail=f"El lugar de nacimiento de {nombre_completo} es obligatorio.")
         if not datos.get("genero"):
@@ -719,7 +704,8 @@ async def registrar_grupo(
     
     try:
         for slot in pending_slots:
-            datos = json.loads(slot.DatosBorrador)
+            from app.core.borrador_utils import procesar_borrador_cargar
+            datos = procesar_borrador_cargar(json.loads(slot.DatosBorrador))
             
             from app.utilidades.validaciones import validacion_fecha
             validated_dob = validacion_fecha(datos.get("fechaNacimiento"))
@@ -854,7 +840,17 @@ def guardar_borrador_jugador(
         if equipo_tem.UsuarioId != usuario_id:
             raise HTTPException(status_code=403, detail="Acceso denegado: el slot no pertenece a esta invitación")
     
-    slot.DatosBorrador = json.dumps(payload.datos, ensure_ascii=False)
+    from app.core.borrador_utils import procesar_borrador_guardar, limpiar_archivos_borrador_obsoletos
+    datos_antiguos = {}
+    if slot.DatosBorrador:
+        try:
+            datos_antiguos = json.loads(slot.DatosBorrador)
+        except Exception:
+            pass
+            
+    datos_procesados = procesar_borrador_guardar(payload.datos, slot.EquipoTemporalJugadorId, datos_antiguos)
+    limpiar_archivos_borrador_obsoletos(datos_antiguos, datos_procesados)
+    slot.DatosBorrador = json.dumps(datos_procesados, ensure_ascii=False)
     
     curp_duplicada = False
     curp = str(payload.datos.get("curp") or "").strip().upper()
@@ -866,7 +862,8 @@ def guardar_borrador_jugador(
     db.commit()
     return {
         "mensaje": "Borrador guardado correctamente",
-        "curp_duplicada": curp_duplicada
+        "curp_duplicada": curp_duplicada,
+        "datos": datos_procesados
     }
 
 
@@ -880,6 +877,11 @@ def crear_o_actualizar_borrador_presidente(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual),
 ):
+    from app.core.borrador_utils import (
+        limpiar_archivos_borrador_obsoletos,
+        procesar_borrador_guardar,
+    )
+
     db.info["es_borrador"] = True
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
@@ -1004,16 +1006,27 @@ def crear_o_actualizar_borrador_presidente(
         if query_curp.first():
             curp_duplicada = True
 
+    datos_antiguos = {}
+    if presidente.DatosBorrador:
+        try:
+            datos_antiguos = json.loads(presidente.DatosBorrador)
+        except Exception:
+            datos_antiguos = {}
+
+    datos_procesados = procesar_borrador_guardar(datos, presidente.PresidenteEquipoId, datos_antiguos)
+    limpiar_archivos_borrador_obsoletos(datos_antiguos, datos_procesados)
+
     # Update JSON data draft column
     presidente.TipoDirectivoId = 2 if datos.get("esEntrenador") else 1
-    presidente.DatosBorrador = json.dumps(datos, ensure_ascii=False)
+    presidente.DatosBorrador = json.dumps(datos_procesados, ensure_ascii=False)
     db.commit()
 
     return {
         "presidente_id": presidente.PresidenteEquipoId,
         "usuario_id": usuario_db.UsuarioId,
         "mensaje": "Borrador guardado correctamente",
-        "curp_duplicada": curp_duplicada
+        "curp_duplicada": curp_duplicada,
+        "datos": datos_procesados
     }
 
 @router.get("/borrador-presidente/{borrador_id}")
@@ -1022,6 +1035,8 @@ def obtener_borrador_presidente(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual),
 ):
+    from app.core.borrador_utils import procesar_borrador_cargar
+
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
@@ -1030,7 +1045,7 @@ def obtener_borrador_presidente(
     if not presidente:
         raise HTTPException(status_code=404, detail="Borrador no encontrado")
 
-    datos = json.loads(presidente.DatosBorrador) if presidente.DatosBorrador else {}
+    datos = procesar_borrador_cargar(json.loads(presidente.DatosBorrador)) if presidente.DatosBorrador else {}
     return {"datos": datos}
 
 
@@ -1157,7 +1172,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             foto_subquery.label("RutaFoto"),
             MiembrosEquipo.NumeroCamiseta,
             seguro_subquery.label("SeguroNombre"),
-            MiembrosEquipo.EquipoID.label("EquipoId")
+            MiembrosEquipo.EquipoID.label("EquipoId"),
+            Personas.NUI
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
          .join(EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId)\
@@ -1192,21 +1208,22 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             docs_requeridos = 5 if es_menor else 4
             required_docs_ids = [22, 33, 36, 25, 28] if es_menor else [22, 26, 25, 28]
 
-            approved_count = db.query(DocumentosEntregados.DocumentoAfiliacionId).filter(
-                DocumentosEntregados.PersonaId == r.PersonaId,
-                DocumentosEntregados.DocumentoAfiliacionId.in_(required_docs_ids),
-                DocumentosEntregados.EstadoValidacionId == 2
-            ).distinct().count()
+            # Obtener el estatus de los documentos más recientes por tipo
+            latest_statuses = []
+            for doc_type_id in required_docs_ids:
+                latest_doc = db.query(DocumentosEntregados.EstadoValidacionId).filter(
+                    DocumentosEntregados.PersonaId == r.PersonaId,
+                    DocumentosEntregados.DocumentoAfiliacionId == doc_type_id
+                ).order_by(DocumentosEntregados.FechaEntrega.desc()).first()
+                if latest_doc:
+                    latest_statuses.append(latest_doc[0])
+                else:
+                    latest_statuses.append(None)
 
-            rejected_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
-                DocumentosEntregados.PersonaId == r.PersonaId,
-                DocumentosEntregados.EstadoValidacionId == 3
-            ).count()
-
-            pending_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
-                DocumentosEntregados.PersonaId == r.PersonaId,
-                DocumentosEntregados.EstadoValidacionId == 1
-            ).count()
+            # Calcular los conteos basados en el documento más reciente de cada tipo
+            approved_count = sum(1 for s in latest_statuses if str(s) == "2" or s == 2)
+            rejected_count = sum(1 for s in latest_statuses if str(s) == "3" or s == 3)
+            pending_count = sum(1 for s in latest_statuses if str(s) == "1" or s == 1)
 
             if rejected_count > 0:
                 estatus_docs = "Rechazado"
@@ -1804,6 +1821,8 @@ async def registrar_presidente_admin(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
+    from app.core.borrador_utils import borrar_archivos_borrador_de_slot
+
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
@@ -1864,6 +1883,7 @@ async def registrar_presidente_admin(
             # Complete President status
             nuevo_presidente.EstatusId = 7 # ACTIVO
             nuevo_presidente.Afiliacion = afiliacion
+            borrar_archivos_borrador_de_slot(nuevo_presidente.DatosBorrador)
             nuevo_presidente.DatosBorrador = None # Clear draft data
 
         else:
@@ -2183,6 +2203,8 @@ async def registrar_entrenador_admin(
     db: Session = Depends(get_db),
     usuario = Depends(obtener_usuario_actual)
 ):
+    from app.core.borrador_utils import borrar_archivos_borrador_de_slot
+
     rol_id = getattr(usuario, 'RolId', None)
     if rol_id != 1:
         raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
@@ -2249,6 +2271,7 @@ async def registrar_entrenador_admin(
             nuevo_directivo.EstatusId = 7 # ACTIVO
             nuevo_directivo.TipoDirectivoId = 2 # ENTRENADOR
             nuevo_directivo.Afiliacion = afiliacion
+            borrar_archivos_borrador_de_slot(nuevo_directivo.DatosBorrador)
             nuevo_directivo.DatosBorrador = None # Clear draft data
         else:
             usuario_existente = db.query(Usuario).filter(Usuario.Correo == correo, Usuario.Eliminado == False).first()
@@ -2421,7 +2444,7 @@ async def registrar_entrenador_admin(
 
 
 @router.post("/presidentes/{usuario_id}/enviar-link-registro-whatsapp", response_model=EnvioWhatsAppResponse)
-async def enviar_link_registro_whatsapp(
+def enviar_link_registro_whatsapp(
     usuario_id: int,
     request: Request,
     telefono_destino: Optional[str] = Query(None),
@@ -2547,7 +2570,7 @@ async def enviar_link_registro_whatsapp(
 
 
 @router.post("/presidentes/{usuario_id}/invitacion/link")
-async def obtener_link_invitacion(
+def obtener_link_invitacion(
     usuario_id: int,
     request: Request,
     db: Session = Depends(get_db),
@@ -2605,7 +2628,7 @@ async def obtener_link_invitacion(
 
 
 @router.post("/presidentes/{usuario_id}/invitacion/regenerar")
-async def regenerar_invitacion(
+def regenerar_invitacion(
     usuario_id: int,
     request: Request,
     db: Session = Depends(get_db),

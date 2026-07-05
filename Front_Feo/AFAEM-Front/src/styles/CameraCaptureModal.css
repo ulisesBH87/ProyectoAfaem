@@ -14,6 +14,8 @@
   z-index: 9999;
   padding: 16px;
   animation: fadeIn 0.3s ease;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 .camera-capture-container {
@@ -21,12 +23,15 @@
   border-radius: 24px;
   width: 100%;
   max-width: 520px;
+  max-height: 92vh;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overscroll-behavior: contain;
+  touch-action: manipulation;
 }
 
 .camera-capture-header {
@@ -97,6 +102,14 @@
   animation: pulseGuide 2s infinite ease-in-out;
 }
 
+.camera-overlay-guide--document {
+  width: min(82%, 320px);
+  aspect-ratio: 210 / 297;
+  height: auto;
+  max-height: 84%;
+  border-radius: 16px;
+}
+
 /* Glassmorphism Instructions Panel */
 .camera-instructions {
   position: absolute;
@@ -126,6 +139,45 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
+}
+
+.camera-overlay-guide--document + .camera-instructions .camera-instruction-list {
+  grid-template-columns: 1fr;
+}
+
+.camera-instructions--document {
+  top: auto;
+  bottom: 12px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 420px;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(3px);
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.camera-instructions--document p {
+  margin-bottom: 4px;
+  font-size: 10px;
+  letter-spacing: 0.35px;
+  color: #bfdbfe;
+}
+
+.camera-instructions--document .camera-instruction-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 10px;
+}
+
+.camera-instructions--document .camera-instruction-item {
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0.94;
 }
 
 .camera-instruction-item {
@@ -235,16 +287,25 @@
 /* Responsiveness */
 @media (max-width: 480px) {
   .camera-capture-container {
-    padding: 16px;
-    gap: 16px;
+    padding: 14px;
+    gap: 12px;
     border-radius: 20px;
+    max-height: 96vh;
   }
   .camera-preview-wrapper {
-    height: 320px;
+    height: 62vh;
+    min-height: 500px;
+    max-height: 68vh;
   }
   .camera-overlay-guide {
     width: 150px;
     height: 200px;
+  }
+  .camera-overlay-guide--document {
+    width: min(86%, 300px);
+    aspect-ratio: 210 / 297;
+    height: auto;
+    max-height: 82%;
   }
   .camera-instructions {
     top: 10px;
@@ -258,5 +319,79 @@
   }
   .camera-instruction-item {
     font-size: 10.5px;
+  }
+  .camera-instructions--document {
+    top: auto;
+    bottom: 8px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    width: auto;
+    max-width: none;
+    padding: 6px 8px;
+  }
+  .camera-instructions--document p {
+    font-size: 9px;
+  }
+  .camera-instructions--document .camera-instruction-list {
+    gap: 3px 8px;
+  }
+  .camera-instructions--document .camera-instruction-item {
+    font-size: 8.5px;
+  }
+  .camera-controls {
+    gap: 10px;
+  }
+  .camera-btn-capture,
+  .camera-btn-cancel {
+    padding: 10px 16px;
+  }
+}
+
+.camera-instructions-flat {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.camera-instructions-flat p {
+  margin: 0 0 10px 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #0b4ea6;
+}
+
+.camera-instructions-flat .camera-instruction-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px 20px;
+}
+
+.camera-instructions-flat .camera-instruction-item {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 480px) {
+  .camera-instructions-flat {
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+  .camera-instructions-flat p {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+  .camera-instructions-flat .camera-instruction-item {
+    font-size: 11px;
   }
 }

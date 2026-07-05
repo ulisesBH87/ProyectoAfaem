@@ -416,6 +416,7 @@
                                 <span class="estado-badge {% if datos.validacion.verificado %}estado-verificado{% else %}estado-rechazado{% endif %}">
                                     {{ datos.validacion.mensaje }}
                                 </span>
+                                <span class="valor" style="display:none;">{% if datos.validacion.verificado %}VERIFICADO{% else %}RECHAZADO{% endif %}</span>
                             </div>
 
                             <div class="dato-fila"><span class="etiqueta">Fecha de Nacimiento:</span> <span class="valor">{{ datos.fecha_nac }}</span></div>

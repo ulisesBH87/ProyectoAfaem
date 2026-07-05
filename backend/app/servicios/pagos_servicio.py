@@ -200,8 +200,16 @@ class PagosServicio:
             ruta_absoluta = os.path.join(target_dir, nombre_archivo)
             ruta_db = os.path.join("uploads", upload_subfolder, nombre_archivo).replace("\\", "/")
 
+            file_bytes = await archivo.read()
+            try:
+                from app.utilidades.procesador_documentos import procesar_documento_subido
+                file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
+            except Exception as e:
+                import logging
+                logging.getLogger("pagos_servicio").error(f"Error procesando comprobante de pago: {e}")
+
             with open(ruta_absoluta, "wb") as buffer:
-                buffer.write(await archivo.read())
+                buffer.write(file_bytes)
                 pagos_repositorio.actualizar_comprobante_repo(self.db, orden_id, ruta_db)
 
                 # Actualizar Estatus Presidente a PAGO_EN_REVISION

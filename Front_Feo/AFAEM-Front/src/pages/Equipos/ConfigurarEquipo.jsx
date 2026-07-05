@@ -17,7 +17,8 @@ import {
   FaMoneyBillWave,
   FaClock,
   FaTimesCircle,
-  FaInfoCircle
+  FaInfoCircle,
+  FaTrash
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
@@ -26,6 +27,7 @@ import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -489,6 +491,7 @@ export default function ConfigurarEquipo() {
     identificacionMenor: null,
     foto: null
   });
+  const [dragActive, setDragActive] = useState({});
 
   // Datos extraídos o capturados del jugador
   const [extractedData, setExtractedData] = useState({
@@ -542,14 +545,7 @@ export default function ConfigurarEquipo() {
   };
 
   const obtenerDuplicadoPosicion = (posicionId) => {
-    if (!posicionId) return null;
-    const posVal = parseInt(posicionId, 10);
-    if (posVal === 11) return null; // Permite duplicados para RolId = 11 (Cambio / Banca)
-    const posNombre = catalogs?.roles_equipo?.find(r => String(r.id) === String(posicionId))?.nombre;
-    if (!posNombre) return null;
-    return registeredPlayers.find(p =>
-      p.Rol && p.Rol.trim().toUpperCase() === posNombre.trim().toUpperCase()
-    );
+    return null;
   };
 
   const [curpExistente, setCurpExistente] = useState(false);
@@ -558,11 +554,91 @@ export default function ConfigurarEquipo() {
   // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
   const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
   const [failedPhoto, setFailedPhoto] = useState(null);
+  const [missingOcrFields, setMissingOcrFields] = useState([]);
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
+
+  const handleResetForm = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar formulario?',
+      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, limpiar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+
+    if (result.isConfirmed) {
+      const resetDatos = {
+        nombreJugador: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        curp: '',
+        genero: '1',
+        fechaNacimiento: '',
+        lugarNacimiento: 'MÉXICO',
+        correo: '',
+        codigoPais: '+52',
+        telefono: '',
+        posicion: '',
+        numCamiseta: '',
+        esForaneo: false,
+        nacionalidadJugador: 'MEXICANA',
+        paisResidencia: 'MÉXICO',
+        haVividoExtranjero: false,
+        dondeVividoExtranjero: '',
+        nacionalidadPadre: 'MEXICANA',
+        nacionalidadMadre: 'MEXICANA',
+        registroAsociacionExtranjera: 'NO',
+        nacAbueloPaterno: 'MEXICANA',
+        nacAbuelaPaterna: 'MEXICANA',
+        nacAbueloMaterno: 'MEXICANA',
+        nacAbuelaMaterna: 'MEXICANA',
+        juegoClubExtranjero: 'NO',
+        nui: ''
+      };
+      setExtractedData(resetDatos);
+      setValidationErrors({});
+
+      // Guardar borrador vacío en BD si existe slot de borrador
+      const slotConBorrador = slotsData?.rawSlots?.find(
+        s => String(s.seguro_id) === String(selectedSeguroId) && !s.completo
+      );
+      if (slotConBorrador?.slot_id) {
+        guardarBorradorEnBD(resetDatos);
+      }
+
+      Swal.fire({
+        title: 'Formulario Limpiado',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  const handleRemoveDocument = async (docKey) => {
+    const result = await Swal.fire({
+      title: '¿Quitar documento?',
+      text: 'Se eliminará el documento cargado actualmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, quitar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+    if (result.isConfirmed) {
+      setDocuments(prev => ({ ...prev, [docKey]: null }));
+      setPreviews(prev => ({ ...prev, [docKey]: null }));
+    }
+  };
 
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!selectedSeguroId;
@@ -616,6 +692,8 @@ export default function ConfigurarEquipo() {
       }
     } else if (field === 'lugarNacimiento') {
       cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'correo') {
       cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
     } else if (field === 'telefono' || field === 'numCamiseta') {
@@ -1417,6 +1495,7 @@ export default function ConfigurarEquipo() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     style={{ display: 'none' }}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -1562,6 +1641,9 @@ export default function ConfigurarEquipo() {
       return;
     }
 
+    const prevDoc = documents[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
+
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
     // Generar Previsualización
@@ -1643,8 +1725,32 @@ export default function ConfigurarEquipo() {
       }
     }
 
+    if (documentKey === 'ine' && !extractedData?.fechaNacimiento) {
+      const result = await Swal.fire({
+        title: '¿De quién es esta identificación?',
+        text: 'Si este registro es para un menor de edad, debes subir primero el Acta de Nacimiento para que el sistema configure el formulario correctamente. ¿Esta identificación pertenece al jugador (mayor de edad)?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, es del jugador',
+        cancelButtonText: 'No, es del tutor / menor de edad',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      });
+      if (!result.isConfirmed) {
+        Swal.fire({
+          title: 'Carga cancelada',
+          text: 'Por favor, carga Por favor, carga primero el Acta de Nacimiento del jugador para actualizar el formulario. el Acta de Nacimiento del jugador para identificar si es menor de edad.',
+          icon: 'info',
+          confirmButtonColor: COLORS.primary
+        });
+        setDocuments(prev => ({ ...prev, [documentKey]: null }));
+        setPreviews(prev => ({ ...prev, [documentKey]: null }));
+        return;
+      }
+    }
+
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
-    if (documentKey === 'acta' || documentKey === 'ine' || documentKey === 'identificacionMenor') {
+    if (documentKey === 'acta' || documentKey === 'ine') {
       Swal.fire({
         title: 'Analizando Documento...',
         html: 'Extrayendo información. Por favor espere.',
@@ -1656,9 +1762,15 @@ export default function ConfigurarEquipo() {
       try {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
-
-        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataOcr
+        });
+        if (!response.ok) throw new Error('Error al analizar el documento');
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -1682,6 +1794,7 @@ export default function ConfigurarEquipo() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -1707,7 +1820,10 @@ export default function ConfigurarEquipo() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
-          
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
+
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
           }
@@ -1745,10 +1861,16 @@ export default function ConfigurarEquipo() {
           });
 
           if (!result.isConfirmed) {
-            setDocuments(prev => ({ ...prev, [documentKey]: null }));
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            setDocuments(prev => ({ ...prev, [documentKey]: prevDoc }));
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out CURP to block registration completion
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -1799,13 +1921,50 @@ export default function ConfigurarEquipo() {
           setExtractedData(merged);
           guardarBorradorEnBD(merged);
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          const missing = [];
+          if (!ocrResult.nombreJugador) missing.push('nombreJugador');
+          if (!ocrResult.apellidoPaterno) missing.push('apellidoPaterno');
+          if (!ocrResult.apellidoMaterno) missing.push('apellidoMaterno');
+          if (!ocrResult.curp) missing.push('curp');
+          if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
+          if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
+          if (!extractedData.correo) missing.push('correo');
+          if (!extractedData.telefono) missing.push('telefono');
+          setMissingOcrFields(missing);
+
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            const labels = {
+              nombreJugador: 'Nombre(s)',
+              apellidoPaterno: 'Apellido Paterno',
+              apellidoMaterno: 'Apellido Materno',
+              curp: 'CURP',
+              fechaNacimiento: 'Fecha de Nacimiento',
+              lugarNacimiento: 'Lugar de Nacimiento',
+              correo: 'Correo electrónico',
+              telefono: 'Número de teléfono'
+            };
+            const missingLabels = missing.map(m => labels[m]).filter(Boolean);
+
+            let text = nombreEncontrado ? `Se detectó a: ${nombreEncontrado}.` : 'Lectura del documento completada.';
+            if (missingLabels.length > 0) {
+              text += `\n\nPor favor, completa manualmente los campos resaltados en amarillo: ${missingLabels.join(', ')}.`;
+            }
+
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: text,
+              icon: 'success',
+              confirmButtonText: 'Aceptar',
+              confirmButtonColor: COLORS.primary
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -1834,6 +1993,23 @@ export default function ConfigurarEquipo() {
       timer: 1500,
       showConfirmButton: false
     });
+  };
+
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
+    });
+  };
+
+  const handleDocumentCardClick = (documentKey) => {
+    openDocumentCaptureOptions(documentKey);
   };
 
   // AUXILIAR PARA ESCRITURA EN PDF
@@ -1884,9 +2060,17 @@ export default function ConfigurarEquipo() {
       }
 
       // Rellenar campos básicos
-      safeSetField(form, 'Nombres', extractedData.nombreJugador);
-      safeSetField(form, 'Apellido Paterno', extractedData.apellidoPaterno);
-      safeSetField(form, 'Apellido Materno', extractedData.apellidoMaterno);
+      const nombreVal = extractedData.nombreJugador || '';
+      const nombreFs = nombreVal.length > 35 ? 6 : nombreVal.length > 25 ? 7 : nombreVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Nombres', nombreVal, nombreFs);
+
+      const apPaternoVal = extractedData.apellidoPaterno || '';
+      const apPaternoFs = apPaternoVal.length > 35 ? 6 : apPaternoVal.length > 25 ? 7 : apPaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Paterno', apPaternoVal, apPaternoFs);
+
+      const apMaternoVal = extractedData.apellidoMaterno || '';
+      const apMaternoFs = apMaternoVal.length > 35 ? 6 : apMaternoVal.length > 25 ? 7 : apMaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Materno', apMaternoVal, apMaternoFs);
       safeSetField(form, 'CURP o Clave Única de Registro de Población', extractedData.curp);
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
@@ -1897,7 +2081,7 @@ export default function ConfigurarEquipo() {
       const correoCJEFs = correoCJE.length > 35 ? 6 : correoCJE.length > 25 ? 7 : correoCJE.length > 18 ? 8 : 10;
       safeSetField(form, 'Correo electrónico', correoCJE, correoCJEFs);
       safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
-      safeSetField(form, 'Asociación', 'AFAEM');
+      safeSetField(form, 'Asociación', 'Asociación de Morelos');
 
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(selectedSeguroId));
@@ -1906,8 +2090,13 @@ export default function ConfigurarEquipo() {
         try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
       }
 
-      safeSetField(form, 'Liga', (equipo?.Liga || '').split('(')[0].trim());
-      safeSetField(form, 'Equipo', equipo?.NombreEquipo || '');
+      const ligaVal = (equipo?.Liga || '').split('(')[0].trim();
+      const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Liga', ligaVal, ligaFs);
+
+      const equipoVal = equipo?.NombreEquipo || '';
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
       safeSetField(form, 'Categoría', equipo?.Categoria || '');
 
       // Traducir el ID de posición a su nombre en texto
@@ -2117,9 +2306,9 @@ export default function ConfigurarEquipo() {
         return;
       }
 
-      const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
+      const minAgeDate = new Date(hoy.getFullYear() - 2, hoy.getMonth(), hoy.getDate());
       if (fechaDate > minAgeDate) {
-        Swal.fire('Atención', 'El jugador debe tener al menos 5 años de edad.', 'warning');
+        Swal.fire('Atención', 'El jugador debe tener al menos 2 años de edad.', 'warning');
         return;
       }
     }
@@ -2621,6 +2810,7 @@ export default function ConfigurarEquipo() {
                     id="team-logo-upload"
                     accept=".jpg,.jpeg,.png"
                     style={{ display: 'none' }}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       const file = e.target.files[0];
                       if (!file) return;
@@ -2947,8 +3137,19 @@ export default function ConfigurarEquipo() {
                       <div
                         key={doc.key}
                         className="document-card-custom"
+                        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                          const file = e.dataTransfer.files[0];
+                          if (file) handleFileUpload(doc.key, file);
+                        }}
                         style={{
-                          border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                          backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
+                          border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
                           backgroundImage: (documents[doc.key] && documents[doc.key].type !== 'application/pdf' && previews[doc.key]) ? `linear-gradient(${COLORS.overlaySlateDark}, ${COLORS.overlaySlateDeep}), url(${previews[doc.key]})` : 'none',
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
@@ -2958,26 +3159,7 @@ export default function ConfigurarEquipo() {
                         }}
                         onClick={() => {
                           if (!documents[doc.key]) {
-                            if (doc.key === 'foto') {
-                              Swal.fire({
-                                title: 'Selecciona una opción',
-                                text: '¿Cómo deseas cargar la fotografía?',
-                                icon: 'question',
-                                showCancelButton: true,
-                                confirmButtonText: '📷 Tomar con cámara',
-                                cancelButtonText: '📁 Subir archivo',
-                                confirmButtonColor: COLORS.primary,
-                                cancelButtonColor: COLORS.slate500
-                              }).then((result) => {
-                                if (result.isConfirmed) {
-                                  setIsCameraOpen(true);
-                                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                  document.getElementById(`file-${doc.key}`).click();
-                                }
-                              });
-                            } else {
-                              document.getElementById(`file-${doc.key}`).click();
-                            }
+                            handleDocumentCardClick(doc.key);
                           }
                         }}
                       >
@@ -3045,32 +3227,20 @@ export default function ConfigurarEquipo() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (doc.key === 'foto') {
-                                        Swal.fire({
-                                          title: 'Selecciona una opción',
-                                          text: '¿Cómo deseas cargar la fotografía?',
-                                          icon: 'question',
-                                          showCancelButton: true,
-                                          confirmButtonText: '📷 Tomar con cámara',
-                                          cancelButtonText: '📁 Subir archivo',
-                                          confirmButtonColor: COLORS.primary,
-                                          cancelButtonColor: COLORS.slate500
-                                        }).then((result) => {
-                                          if (result.isConfirmed) {
-                                            setIsCameraOpen(true);
-                                          } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                            document.getElementById(`file-${doc.key}`).click();
-                                          }
-                                        });
-                                      } else {
-                                        document.getElementById(`file-${doc.key}`).click();
-                                      }
-                                    }}
+                                    onClick={() => handleDocumentCardClick(doc.key)}
                                     className="doc-action-btn change"
                                     title="Cambiar archivo"
                                   >
                                     <FaSyncAlt />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveDocument(doc.key)}
+                                    className="doc-action-btn delete"
+                                    title="Quitar archivo"
+                                    style={{ backgroundColor: COLORS.danger }}
+                                  >
+                                    <FaTrash />
                                   </button>
                                 </div>
                               </>
@@ -3128,6 +3298,7 @@ export default function ConfigurarEquipo() {
                           id={`file-${doc.key}`}
                           style={{ display: 'none' }}
                           accept=".pdf,.jpg,.jpeg,.png"
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                         />
                       </div>
@@ -3137,7 +3308,8 @@ export default function ConfigurarEquipo() {
                   <CameraCaptureModal
                     isOpen={isCameraOpen}
                     onClose={() => setIsCameraOpen(false)}
-                    onCapture={(file) => handleFileUpload('foto', file)}
+                    onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                    captureKind={getCameraCaptureKind(cameraTargetKey)}
                   />
 
                   {/* Loader temporal OCR */}
@@ -3153,38 +3325,37 @@ export default function ConfigurarEquipo() {
               {showStep3 && (
                 <section className="fade-in" style={{ marginBottom: '40px' }}>
                   <div style={{ marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                      <StepBadge number="3" isActive={true} isDone={false} />
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <StepBadge number="3" isActive={true} isDone={false} />
+                        <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResetForm}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${COLORS.danger}`,
+                          background: 'white',
+                          color: COLORS.danger,
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => { e.target.style.background = COLORS.dangerBgLight; }}
+                        onMouseLeave={e => { e.target.style.background = 'white'; }}
+                      >
+                        <FaTrash /> Limpiar formulario
+                      </button>
                     </div>
                   </div>
 
-                  {/* AVISO DE DISCREPANCIA OCR */}
-                  {ocrDataOriginal && (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) && (
-                    <div className="fade-in" style={{
-                      marginBottom: '20px',
-                      padding: '16px',
-                      borderRadius: '12px',
-                      background: COLORS.orange50,
-                      border: `1px solid ${COLORS.orange100}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px'
-                    }}>
-                      <div style={{ fontSize: '20px' }}>⚠️</div>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                          Discrepancia detectada
-                        </h4>
-                        <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                          La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* CAMPOS DEL FORMULARIO */}
                   <div className="dashboard-card" style={{ border: `1px solid ${COLORS.slate200}`, marginBottom: '30px' }}>
@@ -3192,15 +3363,93 @@ export default function ConfigurarEquipo() {
                     <div className="form-inputs-grid-4">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.nombreJugador} onChange={e => handleFieldChange('nombreJugador', e.target.value)} onBlur={handleBlur} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                        <input
+                          type="text"
+                          maxLength={30}
+                          value={extractedData.nombreJugador}
+                          onChange={e => handleFieldChange('nombreJugador', e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Juan"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: validationErrors.nombreJugador
+                              ? `1.5px solid ${COLORS.danger}`
+                              : (missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                                ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                : `1px solid ${COLORS.slate300}`),
+                            backgroundColor: missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                              ? '#fef3c7'
+                              : 'white',
+                            fontSize: '14px'
+                          }}
+                        />
+                        {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            No se pudo completar automáticamente
+                          </span>
+                        )}
+                        {validationErrors.nombreJugador && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.nombreJugador}</span>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.apellidoPaterno} onChange={e => handleFieldChange('apellidoPaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                        <input
+                          type="text"
+                          maxLength={30}
+                          value={extractedData.apellidoPaterno}
+                          onChange={e => handleFieldChange('apellidoPaterno', e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Pérez"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: validationErrors.apellidoPaterno
+                              ? `1.5px solid ${COLORS.danger}`
+                              : (missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                                ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                : `1px solid ${COLORS.slate300}`),
+                            backgroundColor: missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                              ? '#fef3c7'
+                              : 'white',
+                            fontSize: '14px'
+                          }}
+                        />
+                        {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            No se pudo completar automáticamente
+                          </span>
+                        )}
+                        {validationErrors.apellidoPaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoPaterno}</span>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.apellidoMaterno} onChange={e => handleFieldChange('apellidoMaterno', e.target.value)} onBlur={handleBlur} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                        <input
+                          type="text"
+                          maxLength={30}
+                          value={extractedData.apellidoMaterno}
+                          onChange={e => handleFieldChange('apellidoMaterno', e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Gómez"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: validationErrors.apellidoMaterno
+                              ? `1.5px solid ${COLORS.danger}`
+                              : (missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                                ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                : `1px solid ${COLORS.slate300}`),
+                            backgroundColor: missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                              ? '#fef3c7'
+                              : 'white',
+                            fontSize: '14px'
+                          }}
+                        />
+                        {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            No se pudo completar automáticamente
+                          </span>
+                        )}
+                        {validationErrors.apellidoMaterno && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold' }}>❌ {validationErrors.apellidoMaterno}</span>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>
@@ -3210,28 +3459,29 @@ export default function ConfigurarEquipo() {
                         <input
                           type="text"
                           value={extractedData.curp || ''}
-                          onChange={(e) => {
-                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                            let sId = extractedData.genero;
-                            if (val.length >= 11) {
-                                const char = val.charAt(10);
-                                if (char === 'M') sId = '2'; // Femenino
-                                else if (char === 'H') sId = '1'; // Masculino
-                            }
-                            const updated = { ...extractedData, curp: val, genero: sId };
-                            setExtractedData(updated);
-                          }}
+                          onChange={e => handleFieldChange('curp', e.target.value)}
                           onBlur={handleBlur}
-                          placeholder="ABCD..."
+                          placeholder="Ingresa o corrige la CURP"
                           maxLength="18"
                           style={{
                             padding: '10px',
                             borderRadius: '8px',
-                            border: `1.5px solid ${curpExistente ? COLORS.danger : COLORS.slate300}`,
+                            border: curpExistente
+                              ? `1.5px solid ${COLORS.danger}`
+                              : (missingOcrFields.includes('curp') && !extractedData.curp
+                                ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                : `1.5px solid ${COLORS.slate300}`),
                             boxShadow: curpExistente ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : 'white',
+                            cursor: 'text'
                           }}
                         />
+                        {missingOcrFields.includes('curp') && !extractedData.curp && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            No se pudo completar automáticamente
+                          </span>
+                        )}
                         {curpExistente && (
                           <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>
                             Esta CURP ya se encuentra registrada.
@@ -3248,8 +3498,23 @@ export default function ConfigurarEquipo() {
                           value={extractedData.fechaNacimiento || ''}
                           onChange={e => handleFieldChange('fechaNacimiento', e.target.value)}
                           onBlur={handleBlur}
-                          style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                              ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                              : `1px solid ${COLORS.slate300}`,
+                            backgroundColor: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                              ? '#fef3c7'
+                              : 'white',
+                            fontSize: '14px'
+                          }}
                         />
+                        {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            No se pudo completar automáticamente
+                          </span>
+                        )}
                         {(() => {
                           const val = extractedData.fechaNacimiento;
                           if (!val) return null;
@@ -3263,9 +3528,9 @@ export default function ConfigurarEquipo() {
                             return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento es inválido</div>;
                           }
 
-                          const minAgeDate = new Date(hoy.getFullYear() - 5, hoy.getMonth(), hoy.getDate());
+                          const minAgeDate = new Date(hoy.getFullYear() - 2, hoy.getMonth(), hoy.getDate());
                           if (fechaDate > minAgeDate) {
-                            return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 5 años</div>;
+                            return <div style={{ color: COLORS.danger, fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El jugador debe tener al menos 2 años</div>;
                           }
 
                           return null;
@@ -3273,7 +3538,30 @@ export default function ConfigurarEquipo() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                        <input type="text" maxLength={30} value={extractedData.lugarNacimiento || ''} onChange={e => handleFieldChange('lugarNacimiento', e.target.value)} onBlur={handleBlur} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                        <input
+                          type="text"
+                          maxLength={30}
+                          value={extractedData.lugarNacimiento || ''}
+                          onChange={e => handleFieldChange('lugarNacimiento', e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder="Ej. Monterrey, NL"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                              ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                              : `1px solid ${COLORS.slate300}`,
+                            backgroundColor: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                              ? '#fef3c7'
+                              : 'white',
+                            fontSize: '14px'
+                          }}
+                        />
+                        {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            No se pudo completar automáticamente
+                          </span>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
@@ -3357,7 +3645,33 @@ export default function ConfigurarEquipo() {
                     <div className="form-inputs-grid-2" style={{ width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Correo electrónico <span className="required-star">*</span></label>
-                        <input type="email" maxLength={60} value={extractedData.correo} onChange={e => handleFieldChange('correo', e.target.value)} onBlur={handleBlur} placeholder="correo@ejemplo.com" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
+                        <input
+                          type="email"
+                          maxLength={60}
+                          value={extractedData.correo}
+                          onChange={e => handleFieldChange('correo', e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder="correo@ejemplo.com"
+                          style={{
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: missingOcrFields.includes('correo') && !extractedData.correo
+                              ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                              : `1px solid ${COLORS.slate300}`,
+                            backgroundColor: missingOcrFields.includes('correo') && !extractedData.correo
+                              ? '#fef3c7'
+                              : 'white',
+                            fontSize: '14px',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            minWidth: 0
+                          }}
+                        />
+                        {missingOcrFields.includes('correo') && !extractedData.correo && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            Completa manualmente.
+                          </span>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono <span className="required-star">*</span></label>
@@ -3406,7 +3720,12 @@ export default function ConfigurarEquipo() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1px solid ${COLORS.slate300}`,
+                              border: missingOcrFields.includes('telefono') && !extractedData.telefono
+                                ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                : `1px solid ${COLORS.slate300}`,
+                              backgroundColor: missingOcrFields.includes('telefono') && !extractedData.telefono
+                                ? '#fef3c7'
+                                : 'white',
                               fontSize: '14px',
                               flexGrow: 1,
                               width: '65%',
@@ -3415,6 +3734,11 @@ export default function ConfigurarEquipo() {
                             }}
                           />
                         </div>
+                        {missingOcrFields.includes('telefono') && !extractedData.telefono && (
+                          <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                            Completa manualmente.
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -3507,13 +3831,13 @@ export default function ConfigurarEquipo() {
                             <EntradaFormulario
                               etiqueta="Nacionalidad del jugador"
                               valor={extractedData.nacionalidadJugador}
-                              alCambiar={val => handleFieldChange('nacionalidadJugador', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadJugador', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                             <EntradaFormulario
                               etiqueta="País de residencia actual"
                               valor={extractedData.paisResidencia}
-                              alCambiar={val => handleFieldChange('paisResidencia', val)}
+                              alCambiar={e => handleFieldChange('paisResidencia', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                           </div>
@@ -3522,8 +3846,8 @@ export default function ConfigurarEquipo() {
                             <EntradaSeleccion
                               etiqueta="¿El jugador ha vivido en el extranjero?"
                               valor={extractedData.haVividoExtranjero ? '1' : '0'}
-                              alCambiar={val => {
-                                const boolVal = val === '1';
+                              alCambiar={e => {
+                                const boolVal = e.target.value === '1';
                                 handleFieldChange('haVividoExtranjero', boolVal);
                                 guardarBorradorEnBD({ ...extractedData, haVividoExtranjero: boolVal });
                               }}
@@ -3534,7 +3858,7 @@ export default function ConfigurarEquipo() {
                               <EntradaFormulario
                                 etiqueta="¿En qué país?"
                                 valor={extractedData.dondeVividoExtranjero}
-                                alCambiar={val => handleFieldChange('dondeVividoExtranjero', val)}
+                                alCambiar={e => handleFieldChange('dondeVividoExtranjero', e.target.value)}
                                 alPerderEnfoque={handleBlur}
                                 obligatorio={true}
                               />
@@ -3545,13 +3869,13 @@ export default function ConfigurarEquipo() {
                             <EntradaFormulario
                               etiqueta="Nacionalidad del padre"
                               valor={extractedData.nacionalidadPadre}
-                              alCambiar={val => handleFieldChange('nacionalidadPadre', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadPadre', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                             <EntradaFormulario
                               etiqueta="Nacionalidad de la madre"
                               valor={extractedData.nacionalidadMadre}
-                              alCambiar={val => handleFieldChange('nacionalidadMadre', val)}
+                              alCambiar={e => handleFieldChange('nacionalidadMadre', e.target.value)}
                               alPerderEnfoque={handleBlur}
                             />
                           </div>
@@ -3559,23 +3883,23 @@ export default function ConfigurarEquipo() {
                           <EntradaFormulario
                             etiqueta="El jugador ha sido registrado por la Asociación Nacional de Fútbol (en el extranjero) como jugador amateur o profesional, previo a su solitud de registro en la FMF (Si - No)"
                             valor={extractedData.registroAsociacionExtranjera}
-                            alCambiar={val => handleFieldChange('registroAsociacionExtranjera', val)}
+                            alCambiar={e => handleFieldChange('registroAsociacionExtranjera', e.target.value)}
                             alPerderEnfoque={handleBlur}
                             filas={2}
                             obligatorio={true}
                           />
 
                           <div className="abuelos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', width: '100%' }}>
-                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={val => handleFieldChange('nacAbueloPaterno', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={val => handleFieldChange('nacAbuelaPaterna', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={val => handleFieldChange('nacAbueloMaterno', val)} alPerderEnfoque={handleBlur} />
-                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={val => handleFieldChange('nacAbuelaMaterna', val)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuelo Paterno" valor={extractedData.nacAbueloPaterno} alCambiar={e => handleFieldChange('nacAbueloPaterno', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Paterna" valor={extractedData.nacAbuelaPaterna} alCambiar={e => handleFieldChange('nacAbuelaPaterna', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuelo Materno" valor={extractedData.nacAbueloMaterno} alCambiar={e => handleFieldChange('nacAbueloMaterno', e.target.value)} alPerderEnfoque={handleBlur} />
+                            <EntradaFormulario etiqueta="Nac. Abuela Materna" valor={extractedData.nacAbuelaMaterna} alCambiar={e => handleFieldChange('nacAbuelaMaterna', e.target.value)} alPerderEnfoque={handleBlur} />
                           </div>
 
                           <EntradaFormulario
                             etiqueta="El jugador ha jugado en un Club extranjero y participado en Torneos y/o competencias internacionales, escolares o de recreo como campamentos estacionales, cursos, etc"
                             valor={extractedData.juegoClubExtranjero}
-                            alCambiar={val => handleFieldChange('juegoClubExtranjero', val)}
+                            alCambiar={e => handleFieldChange('juegoClubExtranjero', e.target.value)}
                             alPerderEnfoque={handleBlur}
                             filas={3}
                             obligatorio={true}
@@ -3632,7 +3956,7 @@ export default function ConfigurarEquipo() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '100%', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />
@@ -3721,6 +4045,7 @@ export default function ConfigurarEquipo() {
               id="final-signed-form"
               style={{ display: 'none' }}
               accept=".pdf,.jpg,.jpeg,.png"
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 const file = e.target.files[0];
                 if (!file) return;

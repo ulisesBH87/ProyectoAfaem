@@ -10,13 +10,16 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaSearchPlus,
-  FaGlobeAmericas
+  FaGlobeAmericas,
+  FaTrash
 } from 'react-icons/fa';
 import { PDFDocument } from 'pdf-lib';
 import { validarFotografia } from '../../services/foto';
+import { API_BASE } from '../../config/config';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -164,7 +167,7 @@ export default function AdminCrearJugador() {
     tipoAfiliacion: 'JUGADOR',
     posicion: '',
     numCamiseta: '',
-    asociacion: 'AFAEM',
+    asociacion: 'Asociación de Morelos',
     liga: '',
     equipo: '',
     categoria: '',
@@ -199,12 +202,16 @@ export default function AdminCrearJugador() {
 
   // RESPALDO DE DATOS OCR (PARA COMPARACIÓN)
   const [ocrDataOriginal, setOcrDataOriginal] = useState(null);
+  const [failedPhoto, setFailedPhoto] = useState(null);
+  const [missingOcrFields, setMissingOcrFields] = useState([]);
 
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [signedForm, setSignedForm] = useState(null);
   const [signedFormPreview, setSignedFormPreview] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('fotografia');
+  const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
 
   // DETERMINACIÓN DE PASOS
   const isStep1Done = !!extractedData.equipoSeleccionado;
@@ -244,6 +251,87 @@ export default function AdminCrearJugador() {
     fetchTeamCatalog();
   }, []);
 
+  const handleResetForm = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar formulario?',
+      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, limpiar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+
+    if (result.isConfirmed) {
+      setExtractedData({
+        nombreJugador: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        curp: '',
+        genero: '1',
+        fechaNacimiento: '',
+        lugarNacimiento: 'MÉXICO',
+        correo: '',
+        codigoPais: '+52',
+        telefono: '',
+        posicion: '',
+        numCamiseta: '',
+        esForaneo: false,
+        nacionalidadJugador: 'MEXICANA',
+        paisResidencia: 'MÉXICO',
+        haVividoExtranjero: false,
+        dondeVividoExtranjero: '',
+        nacionalidadPadre: 'MEXICANA',
+        nacionalidadMadre: 'MEXICANA',
+        registroAsociacionExtranjera: 'NO',
+        nacAbueloPaterno: 'MEXICANA',
+        nacAbuelaPaterna: 'MEXICANA',
+        nacAbueloMaterno: 'MEXICANA',
+        nacAbuelaMaterna: 'MEXICANA',
+        juegoClubExtranjero: 'NO',
+        nui: ''
+      });
+      setValidationErrors({});
+      Swal.fire({
+        title: 'Formulario Limpiado',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  };
+
+  const handleRemoveDocument = async (docKey) => {
+    const result = await Swal.fire({
+      title: '¿Quitar documento?',
+      text: 'Se eliminará el documento cargado actualmente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, quitar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.danger,
+      cancelButtonColor: COLORS.slate400
+    });
+    if (result.isConfirmed) {
+      setDocuments(prev => ({ ...prev, [docKey]: null }));
+      setPreviews(prev => ({ ...prev, [docKey]: null }));
+    }
+  };
+
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
+    });
+  };
+
   // PROCESAR OCR
   const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
   const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
@@ -261,6 +349,9 @@ export default function AdminCrearJugador() {
       });
       return;
     }
+
+    const prevDoc = documents[documentKey] || null;
+    const prevPreview = previews[documentKey] || null;
 
     setDocuments(prev => ({ ...prev, [documentKey]: file }));
 
@@ -328,6 +419,30 @@ export default function AdminCrearJugador() {
       }
     }
 
+    if (documentKey === 'identificacion' && !extractedData?.fechaNacimiento) {
+      const result = await Swal.fire({
+        title: '¿De quién es esta identificación?',
+        text: 'Si este registro es para un menor de edad, debes subir primero el Acta de Nacimiento para que el sistema configure el formulario correctamente. ¿Esta identificación pertenece al jugador (mayor de edad)?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, es del jugador',
+        cancelButtonText: 'No, es del tutor / menor de edad',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      });
+      if (!result.isConfirmed) {
+        Swal.fire({
+          title: 'Carga cancelada',
+          text: 'Por favor, carga Por favor, carga primero el Acta de Nacimiento del jugador para actualizar el formulario. el Acta de Nacimiento del jugador para actualizar el formulario.',
+          icon: 'info',
+          confirmButtonColor: COLORS.primary
+        });
+        setDocuments(prev => ({ ...prev, [documentKey]: null }));
+        setPreviews(prev => ({ ...prev, [documentKey]: null }));
+        return;
+      }
+    }
+
     // PROCESAR OCR PARA ACTA O IDENTIFICACIÓN
     if (documentKey === 'actaNacimiento' || documentKey === 'identificacion') {
       Swal.fire({
@@ -342,8 +457,15 @@ export default function AdminCrearJugador() {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
 
-        const response = await fetch('/ocr-api', { method: 'POST', body: formDataOcr });
-        if (!response.ok) throw new Error('Error al conectar con el servidor OCR');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
+        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formDataOcr
+        });
+        if (!response.ok) throw new Error('Ocurrió un error al analizar el documento');
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -367,6 +489,7 @@ export default function AdminCrearJugador() {
         let fechaNacEncontrada = '';
         let lugarNacEncontrado = '';
         let documentoEncontrado = '';
+        let verificacionRenapo = '';
 
         const rows = doc.querySelectorAll('.dato-fila');
         rows.forEach(row => {
@@ -392,7 +515,10 @@ export default function AdminCrearJugador() {
 
           if (label.includes('curp')) curpEncontrada = value;
           if (label.includes('documento')) documentoEncontrado = value;
-          
+          if (label.includes('verificación renapo') || label.includes('renapo')) {
+            verificacionRenapo = value;
+          }
+
           if (label.includes('lugar de nacimiento') || label.includes('lugar nacimiento') || (label.includes('entidad') && !label.includes('identidad') && !label.includes('curp'))) {
             lugarNacEncontrado = value;
           }
@@ -430,10 +556,16 @@ export default function AdminCrearJugador() {
           });
 
           if (!result.isConfirmed) {
-            setDocuments(prev => ({ ...prev, [documentKey]: null }));
-            setPreviews(prev => ({ ...prev, [documentKey]: null }));
+            setDocuments(prev => ({ ...prev, [documentKey]: prevDoc }));
+            setPreviews(prev => ({ ...prev, [documentKey]: prevPreview }));
             return;
           }
+        }
+
+        const curpOriginalCapturada = curpEncontrada;
+        const curpNoValida = (verificacionRenapo === 'RECHAZADO');
+        if (curpNoValida) {
+          curpEncontrada = ''; // Clear out CURP to block player creation
         }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
@@ -486,13 +618,46 @@ export default function AdminCrearJugador() {
             ...ocrResult
           }));
 
-          Swal.fire({
-            title: '¡Lectura Exitosa!',
-            text: nombreEncontrado ? `Se detectó a: ${nombreEncontrado}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-            icon: nombreEncontrado ? 'success' : 'warning',
-            timer: nombreEncontrado ? 2000 : 3500,
-            showConfirmButton: !nombreEncontrado
-          });
+          const missing = [];
+          if (!ocrResult.nombreJugador) missing.push('nombreJugador');
+          if (!ocrResult.apellidoPaterno) missing.push('apellidoPaterno');
+          if (!ocrResult.apellidoMaterno) missing.push('apellidoMaterno');
+          if (!ocrResult.curp) missing.push('curp');
+          if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
+          if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
+          setMissingOcrFields(missing);
+
+          if (curpNoValida) {
+            Swal.fire({
+              title: 'CURP no validada',
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary || '#1a3b5c'
+            });
+          } else {
+            const labels = {
+              nombreJugador: 'Nombre(s)',
+              apellidoPaterno: 'Apellido Paterno',
+              apellidoMaterno: 'Apellido Materno',
+              curp: 'CURP',
+              fechaNacimiento: 'Fecha de Nacimiento',
+              lugarNacimiento: 'Lugar de Nacimiento'
+            };
+            const missingLabels = missing.map(m => labels[m]).filter(Boolean);
+
+            let text = nombreEncontrado ? `Se detectó a: ${nombreEncontrado}.` : 'Lectura del documento completada.';
+            if (missingLabels.length > 0) {
+              text += `\n\nPor favor, completa manualmente los campos resaltados en amarillo: ${missingLabels.join(', ')}.`;
+            }
+
+            Swal.fire({
+              title: '¡Lectura Exitosa!',
+              text: text,
+              icon: 'success',
+              confirmButtonText: 'Aceptar',
+              confirmButtonColor: COLORS.primary
+            });
+          }
         } else {
           throw new Error('No se detectaron datos legibles en este documento.');
         }
@@ -549,9 +714,17 @@ export default function AdminCrearJugador() {
       }
 
       // RELLENAR CAMPOS BÁSICOS
-      safeSetField(form, 'Nombres', extractedData.nombreJugador);
-      safeSetField(form, 'Apellido Paterno', extractedData.apellidoPaterno);
-      safeSetField(form, 'Apellido Materno', extractedData.apellidoMaterno);
+      const nombreVal = extractedData.nombreJugador || '';
+      const nombreFs = nombreVal.length > 35 ? 6 : nombreVal.length > 25 ? 7 : nombreVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Nombres', nombreVal, nombreFs);
+
+      const apPaternoVal = extractedData.apellidoPaterno || '';
+      const apPaternoFs = apPaternoVal.length > 35 ? 6 : apPaternoVal.length > 25 ? 7 : apPaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Paterno', apPaternoVal, apPaternoFs);
+
+      const apMaternoVal = extractedData.apellidoMaterno || '';
+      const apMaternoFs = apMaternoVal.length > 35 ? 6 : apMaternoVal.length > 25 ? 7 : apMaternoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Apellido Materno', apMaternoVal, apMaternoFs);
       safeSetField(form, 'CURP o Clave Única de Registro de Población', extractedData.curp);
       safeSetField(form, 'Fecha de Nacimiento', extractedData.fechaNacimiento);
       safeSetField(form, 'Sexo', extractedData.genero === '1' ? 'MASCULINO' : 'FEMENINO');
@@ -563,12 +736,17 @@ export default function AdminCrearJugador() {
       safeSetField(form, 'Correo electrónico', correoACJ, correoACJFs);
       safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
 
-      // La Asociación y campo fill_24 (empírico para Tipo Afiliación / Asociación) deben ser "AFAEM"
-      safeSetField(form, 'Asociación', 'AFAEM');
-      safeSetField(form, 'fill_24', 'AFAEM');
+      // La Asociación y campo fill_24 (empírico para Tipo Afiliación / Asociación) deben ser "Asociación de Morelos"
+      safeSetField(form, 'Asociación', 'Asociación de Morelos');
+      safeSetField(form, 'fill_24', 'Asociación de Morelos');
 
-      safeSetField(form, 'Liga', extractedData.liga);
-      safeSetField(form, 'Equipo', extractedData.equipo);
+      const ligaVal = extractedData.liga || '';
+      const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Liga', ligaVal, ligaFs);
+
+      const equipoVal = extractedData.equipo || '';
+      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
+      safeSetField(form, 'Equipo', equipoVal, equipoFs);
       safeSetField(form, 'Categoría', extractedData.categoria);
 
       // Traducir el ID de Posición a su Nombre string
@@ -1011,15 +1189,27 @@ export default function AdminCrearJugador() {
                 <div
                   key={doc.key}
                   className="document-card"
+                  onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleFileUpload(doc.key, file);
+                  }}
                   style={{
-                    backgroundColor: 'white',
+                    backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
                     borderRadius: '20px',
-                    border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`,
+                    border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
                     padding: '15px',
                     textAlign: 'center',
                     transition: 'all 0.3s',
                     position: 'relative',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    cursor: 'pointer'
                   }}
                 >
                   <div style={{
@@ -1035,16 +1225,6 @@ export default function AdminCrearJugador() {
                     justifyContent: 'center',
                     border: `1px solid ${COLORS.slate100}`
                   }}
-
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                    }}
-
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const file = e.dataTransfer.files[0];
-                      handleFileUpload(doc.key, file);
-                    }}
                   >
                     {previews[doc.key] ? (
                       <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -1113,6 +1293,22 @@ export default function AdminCrearJugador() {
                           >
                             <FaSyncAlt />
                           </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveDocument(doc.key);
+                            }}
+                            className="btn-delete"
+                            style={{
+                              width: '36px', height: '36px', borderRadius: '50%',
+                              backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                            }}
+                          >
+                            <FaTrash />
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -1159,7 +1355,32 @@ export default function AdminCrearJugador() {
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}
               >
                 {[{ key: 'identificacion', title: 'Identificación (INE / Pasaporte)' }].map(doc => (
-                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                  <div
+                    key={doc.key}
+                    className="document-card"
+                    onClick={() => document.getElementById(`file-${doc.key}`).click()}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) handleFileUpload(doc.key, file);
+                    }}
+                    style={{
+                      backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
+                      borderRadius: '20px',
+                      border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                      padding: '15px',
+                      textAlign: 'center',
+                      transition: 'all 0.3s',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.slate50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.slate100}` }}>
                       {previews[doc.key] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -1169,6 +1390,7 @@ export default function AdminCrearJugador() {
                           <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
                             <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: documents[doc.key]?.type === 'application/pdf' ? 'pdf' : 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
                             <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${doc.key}`).click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSyncAlt /></button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveDocument(doc.key); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.danger, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaTrash /></button>
                           </div>
                         </div>
                       ) : (
@@ -1191,7 +1413,31 @@ export default function AdminCrearJugador() {
             {/* ── Documento Estudiante para menores (aparece tras OCR del acta) ── */}
             {documents.actaNacimiento && extractedData.fechaNacimiento && esMenorDeEdad && (
               <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                <div className="document-card" style={{ borderRadius: '20px', border: documents.documentoEstudiante ? `2px solid ${COLORS.success}` : `2px solid ${COLORS.warningLight}`, background: documents.documentoEstudiante ? COLORS.successBgTranslucent04 : `linear-gradient(135deg,${COLORS.warningBgLight} 0%,${COLORS.warningBg} 100%)`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
+                <div
+                  className="document-card"
+                  onClick={() => document.getElementById('file-documentoEstudiante').click()}
+                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, documentoEstudiante: true })); }}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, documentoEstudiante: false })); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(prev => ({ ...prev, documentoEstudiante: false }));
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleFileUpload('documentoEstudiante', file);
+                  }}
+                  style={{
+                    borderRadius: '20px',
+                    border: dragActive.documentoEstudiante ? `2px solid ${COLORS.primary}` : (documents.documentoEstudiante ? `2px solid ${COLORS.success}` : `2px solid ${COLORS.warningLight}`),
+                    background: dragActive.documentoEstudiante ? 'rgba(26, 59, 92, 0.05)' : (documents.documentoEstudiante ? COLORS.successBgTranslucent04 : `linear-gradient(135deg,${COLORS.warningBgLight} 0%,${COLORS.warningBg} 100%)`),
+                    padding: '15px',
+                    textAlign: 'center',
+                    transition: 'all 0.3s',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    cursor: 'pointer'
+                  }}
+                >
                   <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                   <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.yellow50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.warningBgDark}` }}>
                     {previews.documentoEstudiante ? (
@@ -1202,6 +1448,7 @@ export default function AdminCrearJugador() {
                         <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease' }}>
                           <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews.documentoEstudiante, type: documents.documentoEstudiante?.type === 'application/pdf' ? 'pdf' : 'image', title: 'Documento de Estudiante' }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSearchPlus /></button>
                           <button type="button" onClick={(e) => { e.stopPropagation(); document.getElementById('file-documentoEstudiante').click(); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaSyncAlt /></button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveDocument('documentoEstudiante'); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.danger, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTrash /></button>
                         </div>
                       </div>
                     ) : (
@@ -1225,86 +1472,115 @@ export default function AdminCrearJugador() {
             {documents.actaNacimiento && extractedData.fechaNacimiento && (
               <>
                 <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
-                  <div key={doc.key} className="document-card" style={{ backgroundColor: 'white', borderRadius: '20px', border: documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`, padding: '15px', textAlign: 'center', transition: 'all 0.3s', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.slate50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.slate100}` }}>
-                      {previews[doc.key] ? (
-                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          <img src={previews[doc.key]} alt="Preview foto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
-                             <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
-                             <button type="button" onClick={(e) => {
-                               e.stopPropagation();
-                               if (doc.key === 'fotografia') {
-                                 Swal.fire({
-                                   title: 'Selecciona una opción',
-                                   text: '¿Cómo deseas cargar la fotografía?',
-                                   icon: 'question',
-                                   showCancelButton: true,
-                                   confirmButtonText: '📷 Tomar con cámara',
-                                   cancelButtonText: '📁 Subir archivo',
-                                   confirmButtonColor: COLORS.primary,
-                                   cancelButtonColor: COLORS.slate500
-                                 }).then((result) => {
-                                   if (result.isConfirmed) {
-                                     setIsCameraOpen(true);
-                                   } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                     document.getElementById(`file-${doc.key}`).click();
-                                   }
-                                 });
-                               } else {
-                                 document.getElementById(`file-${doc.key}`).click();
-                               }
-                             }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSyncAlt /></button>
+                  {[{ key: 'fotografia', title: 'Fotografía del Jugador' }].map(doc => (
+                    <div
+                      key={doc.key}
+                      className="document-card"
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: true })); }}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.key]: false })); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragActive(prev => ({ ...prev, [doc.key]: false }));
+                        const file = e.dataTransfer.files[0];
+                        if (file) handleFileUpload(doc.key, file);
+                      }}
+                      style={{
+                        backgroundColor: dragActive[doc.key] ? 'rgba(26, 59, 92, 0.05)' : 'white',
+                        borderRadius: '20px',
+                        border: dragActive[doc.key] ? `2px solid ${COLORS.primary}` : (documents[doc.key] ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                        padding: '15px',
+                        textAlign: 'center',
+                        transition: 'all 0.3s',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{ height: '140px', width: '100%', backgroundColor: COLORS.slate50, borderRadius: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${COLORS.slate100}` }}>
+                        {previews[doc.key] ? (
+                          <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                            <img src={previews[doc.key]} alt="Preview foto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <div className="overlay-actions" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlaySlateGray, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: 0, transition: 'opacity 0.2s ease', backdropFilter: 'blur(2px)' }}>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
+                              <button type="button" onClick={(e) => {
+                                e.stopPropagation();
+                                openDocumentCaptureOptions(doc.key);
+                                return;
+                                if (doc.key === 'fotografia') {
+                                  Swal.fire({
+                                    title: 'Selecciona una opción',
+                                    text: '¿Cómo deseas cargar la fotografía?',
+                                    icon: 'question',
+                                    showCancelButton: true,
+                                    confirmButtonText: '📷 Tomar con cámara',
+                                    cancelButtonText: '📁 Subir archivo',
+                                    confirmButtonColor: COLORS.primary,
+                                    cancelButtonColor: COLORS.slate500
+                                  }).then((result) => {
+                                    if (result.isConfirmed) {
+                                      setIsCameraOpen(true);
+                                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                      document.getElementById(`file-${doc.key}`).click();
+                                    }
+                                  });
+                                } else {
+                                  document.getElementById(`file-${doc.key}`).click();
+                                }
+                              }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.sky, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSyncAlt /></button>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); handleRemoveDocument(doc.key); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.danger, color: COLORS.white, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaTrash /></button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div onClick={() => {
-                          if (doc.key === 'fotografia') {
-                            Swal.fire({
-                              title: 'Selecciona una opción',
-                              text: '¿Cómo deseas cargar la fotografía?',
-                              icon: 'question',
-                              showCancelButton: true,
-                              confirmButtonText: '📷 Tomar con cámara',
-                              cancelButtonText: '📁 Subir archivo',
-                              confirmButtonColor: COLORS.primary,
-                              cancelButtonColor: COLORS.slate500
-                            }).then((result) => {
-                              if (result.isConfirmed) {
-                                setIsCameraOpen(true);
-                              } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                document.getElementById(`file-${doc.key}`).click();
-                              }
-                            });
-                          } else {
-                            document.getElementById(`file-${doc.key}`).click();
-                          }
-                        }} style={{ textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
-                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
-                        </div>
+                        ) : (
+                          <div onClick={() => {
+                            openDocumentCaptureOptions(doc.key);
+                            return;
+                            if (doc.key === 'fotografia') {
+                              Swal.fire({
+                                title: 'Selecciona una opción',
+                                text: '¿Cómo deseas cargar la fotografía?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: '📷 Tomar con cámara',
+                                cancelButtonText: '📁 Subir archivo',
+                                confirmButtonColor: COLORS.primary,
+                                cancelButtonColor: COLORS.slate500
+                              }).then((result) => {
+                                if (result.isConfirmed) {
+                                  setIsCameraOpen(true);
+                                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                  document.getElementById(`file-${doc.key}`).click();
+                                }
+                              });
+                            } else {
+                              document.getElementById(`file-${doc.key}`).click();
+                            }
+                          }} style={{ textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                            <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                          </div>
+                        )}
+                      </div>
+                      <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
+                      {doc.key === 'fotografia' && (
+                        <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                          Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                        </p>
                       )}
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? COLORS.greenBg : COLORS.slate100, color: documents[doc.key] ? COLORS.greenDarker : COLORS.slate500, fontSize: '10px', fontWeight: '800' }}>
+                        {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                      </div>
+                      <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
                     </div>
-                    <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
-                    {doc.key === 'fotografia' && (
-                      <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
-                        Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
-                      </p>
-                    )}
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', backgroundColor: documents[doc.key] ? COLORS.greenBg : COLORS.slate100, color: documents[doc.key] ? COLORS.greenDarker : COLORS.slate500, fontSize: '10px', fontWeight: '800' }}>
-                      {documents[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                    </div>
-                    <input type="file" id={`file-${doc.key}`} style={{ display: 'none' }} accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload(doc.key, e.target.files[0])} />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
-              <CameraCaptureModal
-                isOpen={isCameraOpen}
-                onClose={() => setIsCameraOpen(false)}
-                onCapture={(file) => handleFileUpload('fotografia', file)}
-              />
+                <CameraCaptureModal
+                  isOpen={isCameraOpen}
+                  onClose={() => setIsCameraOpen(false)}
+                  onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                  captureKind={getCameraCaptureKind(cameraTargetKey)}
+                />
               </>
             )}
 
@@ -1332,9 +1608,33 @@ export default function AdminCrearJugador() {
         {showStep3 && (
           <section className="fade-in" style={{ marginBottom: '40px' }}>
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <StepBadge number="3" isActive={true} isDone={false} />
-                <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <StepBadge number="3" isActive={true} isDone={false} />
+                  <h3 style={{ fontSize: '17px', fontWeight: '700', color: COLORS.slate800, margin: 0 }}>Formulario de afiliación completo</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleResetForm}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${COLORS.danger}`,
+                    background: 'white',
+                    color: COLORS.danger,
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => { e.target.style.background = COLORS.dangerBgLight; }}
+                  onMouseLeave={e => { e.target.style.background = 'white'; }}
+                >
+                  <FaTrash /> Limpiar formulario
+                </button>
               </div>
             </div>
 
@@ -1382,15 +1682,78 @@ export default function AdminCrearJugador() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Nombre(s) <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.nombreJugador} onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })} placeholder="Ej. Juan" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.nombreJugador}
+                    onChange={e => setExtractedData({ ...extractedData, nombreJugador: e.target.value })}
+                    placeholder="Ej. Juan"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('nombreJugador') && !extractedData.nombreJugador && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      No se pudo completar automáticamente
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Paterno <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.apellidoPaterno} onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })} placeholder="Ej. Pérez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.apellidoPaterno}
+                    onChange={e => setExtractedData({ ...extractedData, apellidoPaterno: e.target.value })}
+                    placeholder="Ej. Pérez"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('apellidoPaterno') && !extractedData.apellidoPaterno && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      No se pudo completar automáticamente
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Ap. Materno <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.apellidoMaterno} onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })} placeholder="Ej. Gómez" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.apellidoMaterno}
+                    onChange={e => setExtractedData({ ...extractedData, apellidoMaterno: e.target.value })}
+                    placeholder="Ej. Gómez"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('apellidoMaterno') && !extractedData.apellidoMaterno && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      No se pudo completar automáticamente
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1413,16 +1776,28 @@ export default function AdminCrearJugador() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '15px', marginBottom: '25px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>CURP o Identificador <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.curp || ''} onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
-                    let sId = extractedData.genero;
-                    if (val.length >= 11) {
-                      const char = val.charAt(10).toUpperCase();
-                      if (char === 'M') sId = '2'; // Femenino
-                      else if (char === 'H') sId = '1'; // Masculino
-                    }
-                    setExtractedData({ ...extractedData, curp: val, genero: sId });
-                  }} placeholder="ABCD..." maxLength="18" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.curp || ''}
+                    readOnly
+                    placeholder="Se auto-completará con el documento de identidad"
+                    maxLength="18"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('curp') && !extractedData.curp
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      fontSize: '14px',
+                      backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : '#f1f5f9',
+                      cursor: missingOcrFields.includes('curp') && !extractedData.curp ? 'text' : 'not-allowed'
+                    }}
+                  />
+                  {missingOcrFields.includes('curp') && !extractedData.curp && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      No se pudo completar automáticamente
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1435,12 +1810,48 @@ export default function AdminCrearJugador() {
                     min={minDateStr}
                     max={today}
                     onChange={e => setExtractedData({ ...extractedData, fechaNacimiento: e.target.value })}
-                    style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }}
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
                   />
+                  {missingOcrFields.includes('fechaNacimiento') && !extractedData.fechaNacimiento && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      No se pudo completar automáticamente
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Lugar de Nacimiento <span className="required-star">*</span></label>
-                  <input type="text" value={extractedData.lugarNacimiento || ''} onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })} placeholder="Ej. Monterrey, NL" style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${COLORS.slate300}`, fontSize: '14px' }} />
+                  <input
+                    type="text"
+                    value={extractedData.lugarNacimiento || ''}
+                    onChange={e => setExtractedData({ ...extractedData, lugarNacimiento: e.target.value })}
+                    placeholder="Ej. Monterrey, NL"
+                    style={{
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                        ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                        : `1px solid ${COLORS.slate300}`,
+                      backgroundColor: missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento
+                        ? '#fef3c7'
+                        : 'white',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {missingOcrFields.includes('lugarNacimiento') && !extractedData.lugarNacimiento && (
+                    <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
+                      No se pudo completar automáticamente
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Sexo <span className="required-star">*</span></label>
@@ -1635,7 +2046,7 @@ export default function AdminCrearJugador() {
         }}>
           {previewDoc.type === 'pdf' ? (
             <iframe
-              src={previewDoc.url}
+              src={`${previewDoc.url}#toolbar=0&navpanes=0`}
               style={{ width: '1800px', height: '70vh', border: 'none' }}
               title="Visor de PDF"
             />
@@ -1688,14 +2099,44 @@ export default function AdminCrearJugador() {
           </div>
 
           <div
-            onClick={() => document.getElementById('final-signed-form').click()}
+            onClick={() => { if (!signedForm) document.getElementById('final-signed-form').click(); }}
+            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(true); }}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingSignedForm(false); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDraggingSignedForm(false);
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png'];
+                if (!allowed.includes(file.type) || !allowedExt.includes(ext)) {
+                  Swal.fire({ title: 'Tipo de archivo no permitido', text: 'Solo se aceptan archivos PDF, JPG, JPEG o PNG.', icon: 'error', confirmButtonColor: COLORS.primary });
+                  return;
+                }
+                setSignedForm(file);
+              }
+            }}
+            className={signedForm ? "document-card" : ""}
             style={{
-              border: signedForm ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.sky}`,
+              border: signedForm
+                ? `2px solid ${COLORS.success}`
+                : (isDraggingSignedForm
+                  ? `2px solid ${COLORS.primary}`
+                  : `2px dashed ${COLORS.sky}`),
               borderRadius: '20px',
               padding: '40px 20px',
-              backgroundColor: signedForm ? COLORS.greenBg50 : COLORS.slate50,
-              cursor: 'pointer',
-              transition: 'all 0.3s'
+              backgroundColor: signedForm
+                ? COLORS.greenBg50
+                : (isDraggingSignedForm
+                  ? 'rgba(26, 59, 92, 0.05)'
+                  : COLORS.slate50),
+              cursor: !signedForm ? 'pointer' : 'default',
+              transition: 'all 0.3s',
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
             {signedForm ? (
@@ -1703,6 +2144,76 @@ export default function AdminCrearJugador() {
                 <FaFilePdf style={{ fontSize: '50px', marginBottom: '15px' }} />
                 <p style={{ margin: 0, fontWeight: '700' }}>{signedForm.name}</p>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>Archivo listo para enviar</p>
+
+                {/* Overlay actions when hover */}
+                <div className="overlay-actions" style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: COLORS.overlaySlateGray,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease',
+                  backdropFilter: 'blur(2px)',
+                  zIndex: 2
+                }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = typeof signedForm === 'string' ? signedForm : URL.createObjectURL(signedForm);
+                      setPreviewDoc({
+                        open: true,
+                        url: url,
+                        type: 'pdf',
+                        title: 'Formato de Afiliación Oficial'
+                      });
+                    }}
+                    className="btn-zoom"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSearchPlus />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.getElementById('final-signed-form').click();
+                    }}
+                    className="btn-change"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaSyncAlt />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSignedForm(null);
+                    }}
+                    className="btn-delete"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                    }}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             ) : (
               <div style={{ color: COLORS.sky }}>

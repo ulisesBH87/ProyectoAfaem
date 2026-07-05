@@ -1,7 +1,5 @@
 import os
 import re
-import cv2
-import numpy as np
 import customtkinter as ctk
 from tkinter import filedialog
 from google.cloud import vision
@@ -101,21 +99,6 @@ class AppOCR(ctk.CTk):
             client = vision.ImageAnnotatorClient()
             with open(ruta, "rb") as f:
                 content = f.read()
-            
-            # Preprocesar imagen (Separación de Canales de Color - Canal Verde + División de Fondo)
-            try:
-                nparr = np.frombuffer(content, np.uint8)
-                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                if img is not None:
-                    b, g, r = cv2.split(img)
-                    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
-                    background = cv2.morphologyEx(g, cv2.MORPH_DILATE, kernel)
-                    normalized = cv2.divide(g, background, scale=255)
-                    _, thresh = cv2.threshold(normalized, 180, 255, cv2.THRESH_BINARY)
-                    _, encoded_img = cv2.imencode(".png", thresh)
-                    content = encoded_img.tobytes()
-            except Exception as pe:
-                print(f"[ERROR PREPROCESAMIENTO] {pe}")
             
             image = vision.Image(content=content)
             response = client.document_text_detection(image=image)
