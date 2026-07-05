@@ -746,7 +746,7 @@ export default function CompletarJugadoresEquipo() {
   const [cargandoOrdenAmpliacion, setCargandoOrdenAmpliacion] = useState(false);
 
   // Estados para creación de ampliación administrativa
-  const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(1);
+  const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(0);
   const [asignacionSegurosAmpliacion, setAsignacionSegurosAmpliacion] = useState({});
   const [aprobarAutomaticamente, setAprobarAutomaticamente] = useState(true);
   const [procesandoAmpliacionAdmin, setProcesandoAmpliacionAdmin] = useState(false);
@@ -758,6 +758,17 @@ export default function CompletarJugadoresEquipo() {
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
     return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
+
+  // Calcular la suma de seguros asignados en la ampliación administrativa
+  const totalSegurosAsignados = React.useMemo(() => {
+    return Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
+      const s = segurosJugador.find(x => String(x.id) === String(id));
+      if (s) {
+        return acc + (Number(cant) || 0);
+      }
+      return acc;
+    }, 0);
+  }, [asignacionSegurosAmpliacion, segurosJugador]);
 
   const abrirModalDetalle = (seguro) => {
     setSeguroDetalle(seguro);
@@ -2226,66 +2237,72 @@ export default function CompletarJugadoresEquipo() {
                       </label>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         value={numJugadoresAmpliacion}
-                        onChange={(e) => setNumJugadoresAmpliacion(Math.max(1, parseInt(e.target.value) || 1))}
+                        onChange={(e) => setNumJugadoresAmpliacion(Math.max(0, parseInt(e.target.value) || 0))}
                         style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
                       />
                     </div>
 
-                    {/* Seguros */}
-                    <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
-                        Selección de Seguros
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-                        {segurosJugador.map(seg => (
-                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: `1px solid ${COLORS.slate200}` }}>
-                            <div>
-                              <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{seg.nombre}</div>
-                              <div style={{ fontSize: '12px', color: COLORS.slate500 }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                    <div style={{ display: 'flex', gap: '25px', flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: '25px' }}>
+                      {/* Lado izquierdo: Seguros */}
+                      <div style={{ flex: '1 1 60%', minWidth: '300px' }}>
+                        <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
+                          Selección de Seguros
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+                          {segurosJugador.map(seg => (
+                            <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: `1px solid ${COLORS.slate200}` }}>
+                              <div>
+                                <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{seg.nombre}</div>
+                                <div style={{ fontSize: '12px', color: COLORS.slate500 }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                              </div>
+                              <input
+                                type="number"
+                                min="0"
+                                value={asignacionSegurosAmpliacion[seg.id] || ''}
+                                placeholder="0"
+                                onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.slate300}` }}
+                              />
                             </div>
-                            <input
-                              type="number"
-                              min="0"
-                              value={asignacionSegurosAmpliacion[seg.id] || ''}
-                              placeholder="0"
-                              onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                              style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.slate300}` }}
-                            />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Resumen */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
-                      <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800 }}>Resumen de Costos</h4>
+                      {/* Lado derecho: Resumen */}
+                      <div style={{ flex: '1 1 35%', minWidth: '280px' }}>
+                        {/* Spacer para alinear verticalmente con la etiqueta de Selección de Seguros */}
+                        <div style={{ height: '31px' }}></div>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
+                          <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800 }}>Resumen de Costos</h4>
 
-                      {segurosJugador.map(seg => {
-                        const cant = asignacionSegurosAmpliacion[seg.id] || 0;
-                        if (cant === 0) return null;
-                        return (
-                          <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: COLORS.slate500 }}>
-                            <span>Seguro {seg.nombre} x{cant}</span>
-                            <span style={{ fontWeight: '700', color: COLORS.slate800 }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                          {segurosJugador.map(seg => {
+                            const cant = asignacionSegurosAmpliacion[seg.id] || 0;
+                            if (cant === 0) return null;
+                            return (
+                              <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: COLORS.slate500 }}>
+                                <span>Seguro {seg.nombre} x{cant}</span>
+                                <span style={{ fontWeight: '700', color: COLORS.slate800 }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                              </div>
+                            );
+                          })}
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: `2px solid ${COLORS.slate100}` }}>
+                            <span style={{ fontWeight: '800', color: COLORS.slate800 }}>TOTAL A PAGAR</span>
+                            <span style={{ fontWeight: '900', color: COLORS.primary, fontSize: '18px' }}>
+                              ${(
+                                Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
+                                  const s = segurosJugador.find(x => String(x.id) === String(id));
+                                  if (s) {
+                                    return acc + (cant * Number(s.precio || 0));
+                                  }
+                                  return acc;
+                                }, 0)
+                              ).toFixed(2)}
+                            </span>
                           </div>
-                        );
-                      })}
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: `2px solid ${COLORS.slate100}` }}>
-                        <span style={{ fontWeight: '800', color: COLORS.slate800 }}>TOTAL A PAGAR</span>
-                        <span style={{ fontWeight: '900', color: COLORS.primary, fontSize: '18px' }}>
-                          ${(
-                            Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
-                              const s = segurosJugador.find(x => String(x.id) === String(id));
-                              if (s) {
-                                return acc + (cant * Number(s.precio || 0));
-                              }
-                              return acc;
-                            }, 0)
-                          ).toFixed(2)}
-                        </span>
+                        </div>
                       </div>
                     </div>
 
@@ -2312,7 +2329,7 @@ export default function CompletarJugadoresEquipo() {
                     <BotonPrimario
                       etiqueta={procesandoAmpliacionAdmin ? "Procesando..." : "Generar Ampliación"}
                       alHacerClick={handleGenerarAmpliacionAdmin}
-                      deshabilitado={procesandoAmpliacionAdmin}
+                      deshabilitado={procesandoAmpliacionAdmin || numJugadoresAmpliacion <= 0 || numJugadoresAmpliacion !== totalSegurosAsignados}
                       estilo={{ padding: '12px 24px', fontSize: '15px', minWidth: '200px' }}
                     />
                   </div>
