@@ -3023,7 +3023,7 @@ function PreRegistroPresidente() {
                     }}>
                       <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '20px', width: '100%', flexWrap: 'wrap' }}>
                         <div style={{ flex: '1', minWidth: '240px', textAlign: 'left' }}>
-                          <label className="input-label" style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-text)', lineHeight: '1.4' }}>Ingresa la cantidad total de seguros que deseas pagar para ti y tus jugadores</label>
+                          <label className="input-label" style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-text)', lineHeight: '1.4' }}>Ingresa la cantidad total de seguros que deseas pagar para tus jugadores</label>
                         </div>
                         <input
                           type="text"
@@ -3301,8 +3301,14 @@ function PreRegistroPresidente() {
                     <button
                       className="btn-nav-blue"
                       onClick={irSiguientePaso}
-                      disabled={!ordenPendienteId ? (numPersonas <= 0) : !comprobantePago}
-                      title={!ordenPendienteId && (numPersonas <= 0) ? 'Ingresa la cantidad de jugadores para continuar' : ''}
+                      disabled={!ordenPendienteId ? (numPersonas <= 0 || totalAsignados !== segurosRequeridos) : !comprobantePago}
+                      title={!ordenPendienteId
+                        ? (numPersonas <= 0
+                          ? 'Ingresa la cantidad de jugadores para continuar'
+                          : (totalAsignados !== segurosRequeridos
+                            ? 'La cantidad de seguros asignados debe coincidir con la cantidad total de seguros a pagar'
+                            : ''))
+                        : ''}
                       style={{ padding: '10px 24px', marginTop: '16px', width: '100%' }}
                     >
                       {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
