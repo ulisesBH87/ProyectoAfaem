@@ -2190,7 +2190,7 @@ function PreRegistroPresidente() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '40px 20px',
+      padding: '20px 20px',
       position: 'relative',
     }}>
       <style>{`
@@ -2234,7 +2234,7 @@ function PreRegistroPresidente() {
         .cuotas-layout {
           display: grid;
           grid-template-columns: minmax(0, 2fr) minmax(240px, 0.5fr);
-          gap: 24px;
+          gap: 32px;
           align-items: start;
         }
 
@@ -2242,14 +2242,14 @@ function PreRegistroPresidente() {
         .insurance-layout-right {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 24px;
           min-width: 0;
         }
 
         .insurance-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
+          gap: 24px;
         }
 
         .insurance-section {
@@ -2262,14 +2262,14 @@ function PreRegistroPresidente() {
         .insurance-card-list {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-          gap: 16px;
+          gap: 20px;
           min-width: 0;
         }
 
         .insurance-card-list-responsive {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
+          gap: 20px;
           min-width: 0;
         }
 
@@ -2460,8 +2460,8 @@ function PreRegistroPresidente() {
         }
 
         .prereg-dark-page .input-number {
-          background: var(--color-card) !important;
-          border: 1.5px solid var(--color-border) !important;
+          background: #030712 !important;
+          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
           color: var(--color-text) !important;
           border-radius: 12px;
           padding: 12px 16px;
@@ -2470,15 +2470,15 @@ function PreRegistroPresidente() {
         }
 
         .prereg-dark-page .input-number:focus {
-          background: rgba(0, 0, 0, 0.2) !important;
+          background: #000000 !important;
           border-color: var(--color-primary) !important;
-          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
           outline: none;
         }
 
         .prereg-dark-page .insurance-input {
-          background: var(--color-card) !important;
-          border: 1.5px solid var(--color-border) !important;
+          background: #030712 !important;
+          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
           color: var(--color-text) !important;
           border-radius: 10px;
           width: 76px;
@@ -2492,9 +2492,9 @@ function PreRegistroPresidente() {
         }
 
         .prereg-dark-page .insurance-input:focus {
-          background: rgba(0, 0, 0, 0.2) !important;
+          background: #000000 !important;
           border-color: var(--color-primary) !important;
-          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
         }
 
         .prereg-dark-page .insurance-input.error-state {
@@ -2836,7 +2836,7 @@ function PreRegistroPresidente() {
       `}</style>
 
       {/* HEADER LOGOS */}
-      <div style={{ width: '95%', maxWidth: '1400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+      <div style={{ width: '95%', maxWidth: '1400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <img
           src={AfaemLogo}
           alt="AFAEM"
@@ -2866,7 +2866,7 @@ function PreRegistroPresidente() {
         {/* ===== GLASS STEPPER HEADER (PASO 1, 2 Y 3) ===== */}
         {(pasoActual === 1 || pasoActual === 3 || pasoActual === 5) && (
           <div style={{
-            padding: '18px 30px 14px',
+            padding: '12px 24px 10px',
             borderBottom: `1px solid ${COLORS.overlayWhite08}`,
             background: COLORS.overlayWhite03,
             backdropFilter: 'blur(10px)',
@@ -2958,7 +2958,7 @@ function PreRegistroPresidente() {
 
         {/* PASO 1: CUOTAS */}
         {pasoActual === 1 && (
-          <div className="content-body" style={{ padding: '24px 30px' }}>
+          <div className="content-body" style={{ padding: '16px 24px' }}>
             {error && (
               <div style={{
                 marginBottom: '20px',
@@ -2993,7 +2993,7 @@ function PreRegistroPresidente() {
                 </p>
               </div>
             )}
-            <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '20px', fontSize: '20px' }}>Distribución de seguros</h3>
+            <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '28px', fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>Distribución de seguros</h3>
 
             <div className="cuotas-layout">
               <div className="insurance-layout-left">
@@ -3026,22 +3026,33 @@ function PreRegistroPresidente() {
                   </div>
                 ) : (
                   <div className="pago-card">
-                    <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '15px' }}>
-                      <label className="input-label" style={{ textAlign: 'left', fontSize: '18px', margin: 0, color: COLORS.overlayWhite90 }}>Ingresa la cantidad total de seguros que deseas pagar para Jugadores.</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength="2"
-                        className="input-number"
-                        value={numPersonas}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          setNumPersonas(val === '' ? '' : parseInt(val, 10));
-                          setError(null);
-                        }}
-                        style={{ marginTop: '0', width: '80px', textAlign: 'center' }}
-                      />
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.015)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      marginBottom: '24px'
+                    }}>
+                      <div className="input-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center', width: '100%' }}>
+                        <div>
+                          <label className="input-label" style={{ textAlign: 'center', fontSize: '16px', fontWeight: '800', display: 'block', marginBottom: '6px', color: 'var(--color-text)' }}>Cantidad total de seguros para Jugadores</label>
+                          <span style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)' }}>Ingresa el número total de seguros que deseas pagar para tu equipo</span>
+                        </div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength="2"
+                          className="input-number"
+                          value={numPersonas}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setNumPersonas(val === '' ? '' : parseInt(val, 10));
+                            setError(null);
+                          }}
+                          style={{ marginTop: '0', width: '120px', height: '48px', fontSize: '20px', textAlign: 'center', borderRadius: '12px', border: `1.5px solid var(--color-primary)` }}
+                        />
+                      </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 12px' }}>
                       <div style={{ width: '4px', height: '18px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
