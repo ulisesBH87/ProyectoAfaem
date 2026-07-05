@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaMoneyBillWave, FaFileAlt, FaClock, FaCamera, FaTrash } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaFileAlt, FaClock, FaCamera, FaTrash } from 'react-icons/fa';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -772,12 +772,12 @@ function PreRegistroPresidente() {
       }
 
       if (estatusSolicitud === 1) {
-        setPasoActual(5); // Paso 3: Validación
+        setPasoActual(5); // PASO 3: VALIDACIÓN
         return;
       }
 
       if (estatusSolicitud === 3) {
-        setPasoActual(5); // Paso 3: Validación
+        setPasoActual(5); // PASO 3: VALIDACIÓN
         await Swal.fire({
           title: 'Tu solicitud tiene observaciones',
           //text: `Motivo general: ${observacionesSolicitud}. Por favor, revisa el estado de tus documentos y reemplaza los que fueron rechazados.`,
@@ -2871,24 +2871,21 @@ function PreRegistroPresidente() {
             background: COLORS.overlayWhite03,
             backdropFilter: 'blur(10px)',
           }}>
-            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: COLORS.overlayWhite30, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px' }}>
+            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: COLORS.overlayWhite90, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px' }}>
               PROCESO DE ACTIVACIÓN
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* STEP 1 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '40px', height: '40px', borderRadius: '12px',
+                  width: '18px', height: '18px', borderRadius: '999px',
                   background: pasoActual === 1 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : COLORS.successBgTranslucent10,
                   border: pasoActual === 1 ? `1px solid ${COLORS.brandBlueLight50}` : `1px solid ${COLORS.successBgTranslucent30}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 1 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                }}>
-                  {pasoActual > 1 ? <span style={{ color: COLORS.successLight, fontSize: '16px' }}>✓</span> : <FaMoneyBillWave style={{ color: 'white' }} />}
-                </div>
+                }} />
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 1 ? COLORS.brandBlueLight : COLORS.successLightTranslucent80 }}>
-                  Paso 1: Cuotas
+                  PASO 1: CUOTAS
                 </span>
               </div>
 
@@ -2907,17 +2904,14 @@ function PreRegistroPresidente() {
               {/* STEP 2 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '40px', height: '40px', borderRadius: '12px',
+                  width: '18px', height: '18px', borderRadius: '999px',
                   background: pasoActual === 3 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : (pasoActual > 3 ? COLORS.successBgTranslucent10 : COLORS.overlayWhite04),
                   border: pasoActual === 3 ? `1px solid ${COLORS.brandBlueLight50}` : (pasoActual > 3 ? `1px solid ${COLORS.successBgTranslucent30}` : `1px solid ${COLORS.overlayWhite10}`),
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 3 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                }}>
-                  {pasoActual > 3 ? <span style={{ color: COLORS.successLight, fontSize: '16px' }}>✓</span> : <FaFileAlt style={{ color: pasoActual === 3 ? 'white' : COLORS.overlayWhite25 }} />}
-                </div>
+                }} />
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 3 ? COLORS.brandBlueLight : (pasoActual > 3 ? COLORS.successLightTranslucent80 : COLORS.overlayWhite25) }}>
-                  Paso 2: Documentos
+                  PASO 2: DOCUMENTOS
                 </span>
               </div>
 
@@ -2936,20 +2930,14 @@ function PreRegistroPresidente() {
               {/* STEP 3 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
-                  width: '40px', height: '40px', borderRadius: '12px',
+                  width: '18px', height: '18px', borderRadius: '999px',
                   background: pasoActual === 5 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : COLORS.overlayWhite04,
                   border: pasoActual === 5 ? `1px solid ${COLORS.brandBlueLight50}` : `1px solid ${COLORS.overlayWhite10}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
                   boxShadow: pasoActual === 5 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
                   transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
-                }}>
-                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="18" width="18" xmlns="http://www.w3.org/2000/svg" style={{ color: pasoActual === 5 ? 'white' : COLORS.overlayWhite25 }}>
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                </div>
+                }} />
                 <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 5 ? COLORS.brandBlueLight : COLORS.overlayWhite25 }}>
-                  Paso 3: Validación
+                  PASO 3: VALIDACIÓN
                 </span>
               </div>
             </div>
@@ -3033,10 +3021,9 @@ function PreRegistroPresidente() {
                       padding: '24px',
                       marginBottom: '24px'
                     }}>
-                      <div className="input-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center', width: '100%' }}>
-                        <div>
-                          <label className="input-label" style={{ textAlign: 'center', fontSize: '16px', fontWeight: '800', display: 'block', marginBottom: '6px', color: 'var(--color-text)' }}>Cantidad total de seguros para Jugadores</label>
-                          <span style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)' }}>Ingresa el número total de seguros que deseas pagar para tu equipo</span>
+                      <div className="input-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '20px', width: '100%', flexWrap: 'wrap' }}>
+                        <div style={{ flex: '1', minWidth: '240px', textAlign: 'left' }}>
+                          <label className="input-label" style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-text)', lineHeight: '1.4' }}>Ingresa la cantidad total de seguros que deseas pagar para ti y tus jugadores</label>
                         </div>
                         <input
                           type="text"
@@ -3050,15 +3037,10 @@ function PreRegistroPresidente() {
                             setNumPersonas(val === '' ? '' : parseInt(val, 10));
                             setError(null);
                           }}
-                          style={{ marginTop: '0', width: '120px', height: '48px', fontSize: '20px', textAlign: 'center', borderRadius: '12px', border: `1.5px solid var(--color-primary)` }}
+                          style={{ marginTop: '0', width: '100px', height: '48px', fontSize: '20px', textAlign: 'center', borderRadius: '12px' }}
                         />
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 12px' }}>
-                      <div style={{ width: '4px', height: '18px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
-                      <span style={{ fontSize: '10px', padding: '2px 8px', background: COLORS.dangerBgTranslucent30, color: COLORS.dangerLight, border: `1.5px solid ${COLORS.danger}`, borderRadius: '20px', fontWeight: '700' }}>Obligatorio</span>
-                    </div>
-
                     {cargandoSeguros ? (
                       <div className="insurance-card">
                         <div className="insurance-info">
@@ -3316,6 +3298,15 @@ function PreRegistroPresidente() {
                       <span style={{ color: COLORS.overlayWhite70 }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
                       <span style={{ color: COLORS.brandBlueLight }}>${totalMostrado}</span>
                     </div>
+                    <button
+                      className="btn-nav-blue"
+                      onClick={irSiguientePaso}
+                      disabled={!ordenPendienteId ? (numPersonas <= 0) : !comprobantePago}
+                      title={!ordenPendienteId && (numPersonas <= 0) ? 'Ingresa la cantidad de jugadores para continuar' : ''}
+                      style={{ padding: '10px 24px', marginTop: '16px', width: '100%' }}
+                    >
+                      {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -3377,16 +3368,7 @@ function PreRegistroPresidente() {
 
 
             <div className="footer-nav">
-              <button className="btn-nav-gray" onClick={irPasoAnterior} style={{ padding: '10px 24px' }}>Anterior</button>
-              <button
-                className="btn-nav-blue"
-                onClick={irSiguientePaso}
-                disabled={!ordenPendienteId ? (numPersonas <= 0) : !comprobantePago}
-                title={!ordenPendienteId && (numPersonas <= 0) ? 'Ingresa la cantidad de jugadores para continuar' : ''}
-                style={{ padding: '10px 24px' }}
-              >
-                {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
-              </button>
+              <button className="btn-nav-gray" onClick={irPasoAnterior} style={{ padding: '10px 24px' }}>Regresar</button>
             </div>
           </div>
         )}
@@ -5014,5 +4996,7 @@ function PreRegistroPresidente() {
 }
 
 export default PreRegistroPresidente;
+
+
 
 
