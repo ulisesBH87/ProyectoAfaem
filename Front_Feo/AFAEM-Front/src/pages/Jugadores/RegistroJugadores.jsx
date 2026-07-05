@@ -1370,16 +1370,53 @@ export default function RegistroJugadores() {
       if (response.ok) {
         const result = await response.json();
 
+        let updatedDocs = null;
+        let updatedSignedForm = null;
+        
+        if (result.datos && result.datos.documentosBorrador) {
+          const returnedDocs = result.datos.documentosBorrador;
+          updatedDocs = {};
+          for (const key of Object.keys(returnedDocs)) {
+            const docData = returnedDocs[key];
+            if (docData && docData.data && docData.name) {
+              if (String(docData.data).startsWith('data:')) {
+                try {
+                  const file = await base64ToFile(docData.data, docData.name);
+                  if (key === 'formatoFirmado') {
+                    updatedSignedForm = file;
+                  } else {
+                    updatedDocs[key] = file;
+                  }
+                } catch (e) {
+                  console.warn(`Error al convertir borrador retornado:`, e);
+                }
+              }
+            }
+          }
+        }
+
         setJugadores(prev => {
           const next = [...prev];
           const playerIdx = next.findIndex(p => p.slotId === slotId);
           if (playerIdx !== -1) {
+            const currentPlayer = next[playerIdx];
+            const nextDocs = updatedDocs 
+              ? { ...currentPlayer.documentos, ...updatedDocs } 
+              : currentPlayer.documentos;
+            
+            const nextSignedForm = updatedSignedForm 
+              ? updatedSignedForm 
+              : currentPlayer.signedForm;
+
             next[playerIdx] = {
-              ...next[playerIdx],
+              ...currentPlayer,
               datos: {
-                ...next[playerIdx].datos,
+                ...currentPlayer.datos,
+                ...(result.datos || {}),
                 isCurpDuplicated: !!result.curp_duplicada
-              }
+              },
+              documentos: nextDocs,
+              signedForm: nextSignedForm
             };
           }
           return next;

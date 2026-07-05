@@ -25,8 +25,16 @@ async def subir_documento_servicio(db, persona_id, documento_afiliacion_id, arch
 
     ruta = os.path.join(UPLOAD_DIR, nombre)
 
+    file_bytes = await archivo.read()
+    try:
+        from app.utilidades.procesador_documentos import procesar_documento_subido
+        file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
+    except Exception as e:
+        import logging
+        logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
+
     with open(ruta, "wb") as buffer:
-        buffer.write(await archivo.read())
+        buffer.write(file_bytes)
 
     documentos_repositorio.subir_documento_repo(db, persona_id, documento_afiliacion_id, ruta)
 
@@ -119,8 +127,16 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         ruta_absoluta = os.path.join(target_dir, nombre)
         ruta_db = os.path.join("uploads", upload_subfolder, nombre).replace("\\", "/")
 
+        file_bytes = await archivo.read()
+        try:
+            from app.utilidades.procesador_documentos import procesar_documento_subido
+            file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
+        except Exception as e:
+            import logging
+            logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
+
         with open(ruta_absoluta, "wb") as buffer:
-            buffer.write(await archivo.read())
+            buffer.write(file_bytes)
 
         doc = documentos_repositorio.subir_documento_repo2(
             db,
@@ -220,8 +236,16 @@ async def subir_documentos_jugador_equipo(
         ruta_absoluta = os.path.join(target_dir, nombre_archivo)
         ruta_db = os.path.join("uploads", upload_subfolder, nombre_archivo).replace("\\", "/")
 
+        file_bytes = await archivo.read()
+        try:
+            from app.utilidades.procesador_documentos import procesar_documento_subido
+            file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
+        except Exception as e:
+            import logging
+            logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
+
         with open(ruta_absoluta, "wb") as buffer:
-            buffer.write(await archivo.read())
+            buffer.write(file_bytes)
 
         from app.repositorios import documentos_repositorio
         doc = documentos_repositorio.subir_documento_repo2(

@@ -862,7 +862,8 @@ def guardar_borrador_jugador(
     db.commit()
     return {
         "mensaje": "Borrador guardado correctamente",
-        "curp_duplicada": curp_duplicada
+        "curp_duplicada": curp_duplicada,
+        "datos": datos_procesados
     }
 
 
@@ -1024,7 +1025,8 @@ def crear_o_actualizar_borrador_presidente(
         "presidente_id": presidente.PresidenteEquipoId,
         "usuario_id": usuario_db.UsuarioId,
         "mensaje": "Borrador guardado correctamente",
-        "curp_duplicada": curp_duplicada
+        "curp_duplicada": curp_duplicada,
+        "datos": datos_procesados
     }
 
 @router.get("/borrador-presidente/{borrador_id}")

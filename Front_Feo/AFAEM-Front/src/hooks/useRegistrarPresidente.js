@@ -387,6 +387,42 @@ export function useRegistrarPresidente() {
             window.history.pushState({ path: newUrl }, '', newUrl);
           }
 
+          if (resData && resData.datos && resData.datos.documentosBorrador) {
+            const returnedDocs = resData.datos.documentosBorrador;
+            const updatedDocs = {};
+            const updatedPreviews = {};
+            let changed = false;
+            for (const key of Object.keys(returnedDocs)) {
+              const docData = returnedDocs[key];
+              if (docData && docData.data && docData.name) {
+                if (String(docData.data).startsWith('data:')) {
+                  const currentDoc = documents[key];
+                  try {
+                    const file = await base64ToFile(docData.data, docData.name);
+                    if (!currentDoc || currentDoc.size !== file.size) {
+                      updatedDocs[key] = file;
+                      updatedPreviews[key] = URL.createObjectURL(file);
+                      changed = true;
+                    }
+                  } catch (e) {
+                    console.warn(`Error al actualizar previsualización de borrador:`, e);
+                  }
+                }
+              }
+            }
+            if (changed) {
+              setDocuments(prev => ({ ...prev, ...updatedDocs }));
+              setPreviews(prev => {
+                Object.keys(updatedPreviews).forEach(k => {
+                  if (prev[k] && prev[k].startsWith('blob:')) {
+                    URL.revokeObjectURL(prev[k]);
+                  }
+                });
+                return { ...prev, ...updatedPreviews };
+              });
+            }
+          }
+
           if (validarCurpEnEsteGuardado) {
             ultimaCurpValidadaRef.current = curpActual;
             if (resData && resData.curp_duplicada) {
