@@ -170,6 +170,7 @@ export default function PresidenteEquipoMisJugadores() {
       html: `
         <div style="text-align: left; font-size: 14px; line-height: 1.8; padding: 10px;">
           <p style="margin-bottom: 8px;"><strong>Nombre Completo:</strong> ${player.NombreCompleto}</p>
+          <p style="margin-bottom: 8px;"><strong>NUI:</strong> ${player.NUI || 'No asignado'}</p>
           <p style="margin-bottom: 8px;"><strong>Equipo Vinculado:</strong> ${player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}</p>
           <p style="margin-bottom: 8px;"><strong>Posición / Rol:</strong> ${player.Rol || 'Miembro Registrado'}</p>
           <p style="margin-bottom: 8px;"><strong>Fecha de Registro:</strong> ${player.FechaIngreso ? new Date(player.FechaIngreso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>

@@ -1172,7 +1172,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             foto_subquery.label("RutaFoto"),
             MiembrosEquipo.NumeroCamiseta,
             seguro_subquery.label("SeguroNombre"),
-            MiembrosEquipo.EquipoID.label("EquipoId")
+            MiembrosEquipo.EquipoID.label("EquipoId"),
+            Personas.NUI
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
          .join(EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId)\
