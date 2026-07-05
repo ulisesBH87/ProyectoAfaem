@@ -2673,8 +2673,8 @@ function PreRegistroPresidente() {
         }
 
         .doc-glass-icon {
-          width: 54px; 
-          height: 54px; 
+          width: 92px; 
+          height: 74px; 
           border-radius: 18px;
           display: flex; 
           align-items: center; 
@@ -3615,12 +3615,11 @@ function PreRegistroPresidente() {
                   </p>
 
                   <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>📄 Documentos a preparar:</h4>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>Documentos a preparar:</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
                       <span>• Acta de nacimiento</span>
                       <span>• Fotografía reciente</span>
                       <span>• Identificación oficial</span>
-                      <span>• Formato de afiliación</span>
                     </div>
                   </div>
 
@@ -3893,7 +3892,14 @@ function PreRegistroPresidente() {
                           background: isUploaded ? `linear-gradient(135deg,${COLORS.successBgTranslucent10},${COLORS.greenMediumTranslucent})` : `linear-gradient(135deg,${COLORS.primaryBgTranslucent},${COLORS.overlaySlateSuperLight})`,
                           border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px solid ${COLORS.brandBlueLight12}`,
                         }}>
-                          <span>{icons[doc.documento]}</span>
+                          {isUploaded ? (
+                            <span>{icons[doc.documento]}</span>
+                          ) : (
+                            <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                              <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                              <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                            </div>
+                          )}
                         </div>
                         {/* Title */}
                         <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? COLORS.successLight : 'var(--text-main)', margin: '0 0 5px' }}>
@@ -4008,7 +4014,7 @@ function PreRegistroPresidente() {
                                 flex: 1
                               }}
                             >
-                              {hasLocalFile ? '🔄 Cambiar' : (docGuardado ? '🔄 Reemplazar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir'))}
+                              {hasLocalFile ? 'Cambiar' : (docGuardado ? 'Reemplazar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir'))}
                             </button>
                           )}
                           {hasLocalFile && documents[doc.documento] && (
@@ -4098,45 +4104,6 @@ function PreRegistroPresidente() {
                             }}
                           />
                         </div>
-                        {/* OCR toggle */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDetailsOpen(prev => ({ ...prev, [doc.documento]: !prev[doc.documento] }));
-                          }}
-                          style={{ marginTop: '12px', background: 'none', border: 'none', color: COLORS.overlayWhite30, fontSize: '10px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', letterSpacing: '0.5px' }}
-                        >
-                          {detailsOpen[doc.documento] ? '▲ Ocultar detalles' : '▼ Ver detalles extraídos'}
-                        </button>
-                        {detailsOpen[doc.documento] && (
-                          <div className="ocr-panel">
-                            {(doc.documento === 'actaNacimiento' || doc.documento === 'identificacion') && Object.keys(ocrResults).length > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {[
-                                  { label: 'Nombre', value: ocrResults.nombre },
-                                  { label: 'CURP', value: ocrResults.curp },
-                                  { label: 'Fecha Nac.', value: ocrResults.fecha_nac },
-                                  { label: 'Edad', value: ocrResults.edad },
-                                  { label: 'Nacionalidad', value: ocrResults.nacionalidad },
-                                  { label: 'Sexo', value: ocrResults.sexo },
-                                  { label: 'Teléfono', value: ocrResults.telefono },
-                                  { label: 'Equipo', value: ocrResults.equipo },
-                                ].map((row, i) => (
-                                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                                    <span style={{ color: 'var(--text-muted)', fontWeight: '700' }}>{row.label}:</span>
-                                    <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>{row.value || '—'}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : doc.documento === 'fotografia' ? (
-                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📸 Validación automática de rostro, calidad y formato.</p>
-                            ) : doc.documento === 'formatoAfiliacion' ? (
-                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>📝 Descarga el formato, fírmalo físicamente y súbelo aquí.</p>
-                            ) : (
-                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, textAlign: 'center' }}>Sube el documento primero para ver los datos extraídos.</p>
-                            )}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -4186,9 +4153,8 @@ function PreRegistroPresidente() {
                     placeholder="Se auto-completará con el documento de identidad"
                     maxLength={18}
                     value={ocrResults.curp || ''}
-                    readOnly
+                    onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
                     className="premium-input"
-                    style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
                   />
                   {curpExistente && (
                     <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
@@ -4495,7 +4461,14 @@ function PreRegistroPresidente() {
                       background: isUploaded ? `linear-gradient(135deg,${COLORS.successBgTranslucent10},${COLORS.greenMediumTranslucent})` : `linear-gradient(135deg,${COLORS.primaryBgTranslucent},${COLORS.overlaySlateSuperLight})`,
                       border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px solid ${COLORS.brandBlueLight12}`,
                     }}>
-                      <span>{icons[doc.documento]}</span>
+                      {isUploaded ? (
+                        <span>{icons[doc.documento]}</span>
+                      ) : (
+                        <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                        </div>
+                      )}
                     </div>
                     {/* Title */}
                     <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? COLORS.successLight : 'var(--text-main)', margin: '0 0 5px' }}>
