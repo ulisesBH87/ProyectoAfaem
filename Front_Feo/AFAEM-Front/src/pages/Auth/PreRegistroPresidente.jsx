@@ -273,6 +273,7 @@ function PreRegistroPresidente() {
   // Estados para modal de beneficios de seguros
   const [seguroDetalle, setSeguroDetalle] = useState(null);
   const [cantidadModal, setCantidadModal] = useState(0);
+  const [comprobanteDragActive, setComprobanteDragActive] = useState(false);
 
   useEffect(() => {
     if (seguroDetalle) {
@@ -694,6 +695,14 @@ function PreRegistroPresidente() {
       return false;
     }
     return true;
+  };
+
+  const manejarArchivoComprobante = (file) => {
+    if (file && validarArchivoPermitido(file)) {
+      setComprobantePago(file);
+      return true;
+    }
+    return false;
   };
 
   const resolverFlujoBackend = async (data, token) => {
@@ -3322,10 +3331,13 @@ function PreRegistroPresidente() {
               <div style={{
                 marginTop: '20px',
                 background: COLORS.primaryBgTranslucent,
-                border: `1.5px dashed ${COLORS.brandBlueLight30}`,
+                border: `1.5px dashed ${comprobanteDragActive ? COLORS.brandBlueLight : COLORS.brandBlueLight30}`,
                 borderRadius: '16px',
                 padding: '18px 20px',
                 backdropFilter: 'blur(8px)',
+                transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+                boxShadow: comprobanteDragActive ? `0 0 0 3px ${COLORS.brandBlueLight20}` : 'none',
+                backgroundColor: comprobanteDragActive ? COLORS.brandBlueLight10 : COLORS.primaryBgTranslucent,
               }}>
                 <p style={{ fontSize: '13px', fontWeight: '800', color: COLORS.brandBlueLight, marginBottom: '4px' }}>
                   Paso 2: Sube tu comprobante de pago
@@ -3333,7 +3345,33 @@ function PreRegistroPresidente() {
                 <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                   Adjunta el comprobante (PDF o imagen) para procesar tu registro.
                 </p>
-                <div className="file-input-custom" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div
+                  className="file-input-custom"
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setComprobanteDragActive(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!comprobanteDragActive) setComprobanteDragActive(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.currentTarget.contains(e.relatedTarget)) return;
+                    setComprobanteDragActive(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setComprobanteDragActive(false);
+                    const file = e.dataTransfer?.files?.[0];
+                    manejarArchivoComprobante(file);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}
+                >
                   <input
                     type="file"
                     id="comprobante"
@@ -3341,9 +3379,7 @@ function PreRegistroPresidente() {
                     accept=".pdf,.png,.jpg,.jpeg"
                     onChange={(e) => {
                       const file = e.target.files[0];
-                      if (file && validarArchivoPermitido(file)) {
-                        setComprobantePago(file);
-                      } else {
+                      if (!manejarArchivoComprobante(file)) {
                         e.target.value = '';
                       }
                     }}
@@ -3355,6 +3391,16 @@ function PreRegistroPresidente() {
                   >
                     {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
                   </button>
+                  {comprobantePago && (
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={() => setPreviewDoc({ file: comprobantePago, title: 'Comprobante de pago' })}
+                      style={{ padding: '8px 16px' }}
+                    >
+                      Ver archivo
+                    </button>
+                  )}
                   {ordenPendienteId && (
                     <button
                       type="button"
@@ -3367,6 +3413,9 @@ function PreRegistroPresidente() {
                   )}
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
+                  </span>
+                  <span style={{ width: '100%', fontSize: '11px', color: comprobanteDragActive ? COLORS.brandBlueLight : 'var(--text-muted)' }}>
+                    Arrastra y suelta tu comprobante aquí, o selecciónalo manualmente.
                   </span>
                 </div>
               </div>
