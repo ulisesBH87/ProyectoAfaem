@@ -902,7 +902,7 @@ function PreRegistroPresidente() {
   const requisitos = [
     { documento: 'actaNacimiento', nombre: 'Acta de nacimiento' },
     { documento: 'identificacion', nombre: 'Identificación oficial' },
-    { documento: 'fotografia', nombre: 'Fotografía (Imagen)' },
+    { documento: 'fotografia', nombre: 'Fotografía' },
     { documento: 'formatoAfiliacion', nombre: 'Formato de afiliación firmado', hasDownload: true }
   ];
 
@@ -4975,17 +4975,25 @@ function PreRegistroPresidente() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
             {previewDoc.file.type.startsWith('image/') ? (
-              <img
-                src={previewUrl}
-                alt={previewDoc.title}
-                style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
-              />
+              previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt={previewDoc.title}
+                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
+                />
+              ) : (
+                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+              )
             ) : previewDoc.file.type === 'application/pdf' ? (
-              <iframe
-                src={`${previewUrl}#toolbar=0&navpanes=0`}
-                title={previewDoc.title}
-                style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
-              />
+              previewUrl ? (
+                <iframe
+                  src={`${previewUrl}#toolbar=0&navpanes=0`}
+                  title={previewDoc.title}
+                  style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
+                />
+              ) : (
+                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+              )
             ) : (
               <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate500 }}>
                 <p style={{ fontSize: '16px', fontWeight: 'bold' }}>No se puede previsualizar este tipo de archivo directamente.</p>
