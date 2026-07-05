@@ -1407,7 +1407,7 @@ export default function RegistroJugadores() {
     } else if (field === 'lugarNacimiento') {
       cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
     } else if (field === 'correo') {
-      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 60);
     } else if (field === 'curp') {
       cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'telefono') {
@@ -1525,6 +1525,14 @@ export default function RegistroJugadores() {
       });
       if (datos.correo) {
         datos.correo = datos.correo.toString().toLowerCase();
+        const trimmed = datos.correo.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+          setValidationErrors(prev => ({ ...prev, correo: 'Ingrese un correo electrónico válido.' }));
+        } else {
+          setValidationErrors(prev => ({ ...prev, correo: null }));
+        }
+      } else {
+        setValidationErrors(prev => ({ ...prev, correo: 'El correo electrónico es obligatorio.' }));
       }
 
       updatePlayerDatos(currentPlayerIndex, datos);
@@ -4086,8 +4094,16 @@ export default function RegistroJugadores() {
                             maxLength={60}
                             value={currentDatos.correo}
                             onChange={e => {
-                              handleFieldChange('correo', e.target.value);
-                              setValidationErrors(prev => ({ ...prev, correo: null }));
+                              const val = e.target.value;
+                              handleFieldChange('correo', val);
+                              const trimmed = val.trim();
+                              if (!trimmed) {
+                                setValidationErrors(prev => ({ ...prev, correo: 'El correo electrónico es obligatorio.' }));
+                              } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                                setValidationErrors(prev => ({ ...prev, correo: 'Ingrese un correo electrónico válido.' }));
+                              } else {
+                                setValidationErrors(prev => ({ ...prev, correo: null }));
+                              }
                             }}
                             onBlur={handleBlur}
                             placeholder="correo@ejemplo.com"
