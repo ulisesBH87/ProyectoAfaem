@@ -4201,8 +4201,15 @@ export default function RegistroJugadores() {
                               type="tel"
                               value={currentDatos.telefono}
                               onChange={e => {
-                                handleFieldChange('telefono', e.target.value.replace(/\D/g, '').slice(0, 10));
-                                setValidationErrors(prev => ({ ...prev, telefono: null }));
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                handleFieldChange('telefono', val);
+                                if (!val) {
+                                  setValidationErrors(prev => ({ ...prev, telefono: 'El teléfono es obligatorio.' }));
+                                } else if (val.length < 10) {
+                                  setValidationErrors(prev => ({ ...prev, telefono: 'El teléfono debe tener 10 dígitos.' }));
+                                } else {
+                                  setValidationErrors(prev => ({ ...prev, telefono: null }));
+                                }
                               }}
                               onBlur={handleBlur}
                               placeholder="10 dígitos numéricos"
