@@ -3506,7 +3506,8 @@ export default function RegistroJugadores() {
                             cursor: 'pointer'
                           }}
                         >
-                          {/* Indicador de Menor para tutor/credencial */}
+                          <div style={{ pointerEvents: dragActive[doc.key] ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+                            {/* Indicador de Menor para tutor/credencial */}
                           {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
                             <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
                           )}
@@ -3794,6 +3795,7 @@ export default function RegistroJugadores() {
                               </button>
                             </div>
                           )}
+                          </div>
 
                           <input
                             type="file"
@@ -4685,89 +4687,92 @@ export default function RegistroJugadores() {
                           overflow: 'hidden'
                         }}
                       >
-                        {currentPlayer?.signedForm ? (
-                          <div style={{ color: COLORS.success }}>
-                            <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
-                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado, cargado, y listo</p>
-                          </div>
-                        ) : (
-                          <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400 }}>
-                            <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
-                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
-                          </div>
-                        )}
+                        <div style={{ pointerEvents: isDraggingSignedForm ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%', width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                          {currentPlayer?.signedForm ? (
+                            <div style={{ color: COLORS.success, textAlign: 'center' }}>
+                              <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
+                              <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado, cargado, y listo</p>
+                            </div>
+                          ) : (
+                            <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400, textAlign: 'center' }}>
+                              <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
+                              <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado</p>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
+                            </div>
+                          )}
 
-                        {currentPlayer?.signedForm && (
-                          <div className="overlay-actions" style={{
-                            position: 'absolute',
-                            top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: COLORS.overlaySlateGray,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '12px',
-                            opacity: 0,
-                            transition: 'opacity 0.2s ease',
-                            backdropFilter: 'blur(2px)',
-                            zIndex: 2
-                          }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewDoc({
-                                  open: true,
-                                  url: previews.signedForm,
-                                  type: 'pdf',
-                                  title: 'Formato de Afiliación Oficial'
-                                });
-                              }}
-                              className="btn-zoom"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                              }}
-                            >
-                              <FaSearchPlus />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                document.getElementById('final-signed-form').click();
-                              }}
-                              className="btn-change"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                              }}
-                            >
-                              <FaSyncAlt />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updatePlayerSignedForm(currentPlayerIndex, null);
-                              }}
-                              className="btn-delete"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                              }}
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        )}
+                          {currentPlayer?.signedForm && (
+                            <div className="overlay-actions" style={{
+                              position: 'absolute',
+                              top: 0, left: 0, right: 0, bottom: 0,
+                              backgroundColor: COLORS.overlaySlateGray,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '12px',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease',
+                              backdropFilter: 'blur(2px)',
+                              zIndex: 2,
+                              pointerEvents: 'auto'
+                            }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewDoc({
+                                    open: true,
+                                    url: previews.signedForm,
+                                    type: 'pdf',
+                                    title: 'Formato de Afiliación Oficial'
+                                  });
+                                }}
+                                className="btn-zoom"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                }}
+                              >
+                                <FaSearchPlus />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  document.getElementById('final-signed-form').click();
+                                }}
+                                className="btn-change"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePlayerSignedForm(currentPlayerIndex, null);
+                                }}
+                                className="btn-delete"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          )}
+                        </div>
 
                         <input
                           type="file"
