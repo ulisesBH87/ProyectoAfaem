@@ -1311,6 +1311,19 @@ export default function RegistroJugadores() {
   const currentDocuments = currentPlayer.documentos || {};
   const currentSeguroId = currentPlayer.seguroId || '';
 
+  const isNombreValido = !!currentDatos.nombreJugador?.trim() && !validationErrors.nombreJugador;
+  const isApellidoPaternoValido = !!currentDatos.apellidoPaterno?.trim() && !validationErrors.apellidoPaterno;
+  const isApellidoMaternoValido = !!currentDatos.apellidoMaterno?.trim() && !validationErrors.apellidoMaterno;
+  const isCurpValido = !!currentDatos.curp && currentDatos.curp.length === 18 && !validationErrors.curp;
+  const isFechaNacimientoValido = !!currentDatos.fechaNacimiento && !validarFechaNacimiento(currentDatos.fechaNacimiento) && !validationErrors.fechaNacimiento;
+  const isLugarNacimientoValido = !!currentDatos.lugarNacimiento?.trim() && !validationErrors.lugarNacimiento;
+  const isGeneroValido = !!currentDatos.genero && !validationErrors.genero;
+  const isCorreoValido = !!currentDatos.correo?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentDatos.correo.trim()) && !validationErrors.correo;
+  const isTelefonoValido = !!currentDatos.telefono && currentDatos.telefono.length === 10 && !validationErrors.telefono;
+
+  const isNumCamisetaValido = !!currentDatos.numCamiseta && !validationErrors.numCamiseta;
+  const isPosicionValido = !!currentDatos.posicion && !validationErrors.posicion;
+
   const esMenorDeEdad = React.useMemo(() => {
     return isPlayerMinor(currentDatos.fechaNacimiento);
   }, [currentDatos.fechaNacimiento]);
@@ -3860,9 +3873,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.nombreJugador
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isNombreValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
                                 ? '#fef3c7'
                                 : 'white',
@@ -3895,9 +3910,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.apellidoPaterno
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isApellidoPaternoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
                                 ? '#fef3c7'
                                 : 'white',
@@ -3930,9 +3947,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.apellidoMaterno
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isApellidoMaternoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
                                 ? '#fef3c7'
                                 : 'white',
@@ -3967,9 +3986,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.curp
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('curp') && !currentDatos.curp
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isCurpValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('curp') && !currentDatos.curp
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               fontSize: '14px',
                               outline: 'none',
                               backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : 'white',
@@ -4006,9 +4027,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.fechaNacimiento
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isFechaNacimientoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
                                 ? '#fef3c7'
                                 : 'white',
@@ -4040,9 +4063,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.lugarNacimiento
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isLugarNacimientoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
                                 ? '#fef3c7'
                                 : 'white',
@@ -4071,7 +4096,11 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.genero ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.genero
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (isGeneroValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               backgroundColor: 'white',
                               outline: 'none'
@@ -4114,9 +4143,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.correo
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('correo') && !currentDatos.correo
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isCorreoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('correo') && !currentDatos.correo
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('correo') && !currentDatos.correo
                                 ? '#fef3c7'
                                 : 'white',
@@ -4180,9 +4211,11 @@ export default function RegistroJugadores() {
                                 borderRadius: '8px',
                                 border: validationErrors.telefono
                                   ? `1.5px solid ${COLORS.danger}`
-                                  : (missingOcrFields.includes('telefono') && !currentDatos.telefono
-                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                    : `1.5px solid ${COLORS.slate300}`),
+                                  : (isTelefonoValido
+                                    ? `1.5px solid ${COLORS.success}`
+                                    : (missingOcrFields.includes('telefono') && !currentDatos.telefono
+                                      ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                      : `1.5px solid ${COLORS.slate300}`)),
                                 backgroundColor: missingOcrFields.includes('telefono') && !currentDatos.telefono
                                   ? '#fef3c7'
                                   : 'white',
@@ -4231,7 +4264,11 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.numCamiseta
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (isNumCamisetaValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               outline: 'none'
                             }}
@@ -4252,7 +4289,11 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.posicion
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (isPosicionValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               backgroundColor: 'white',
                               outline: 'none'
