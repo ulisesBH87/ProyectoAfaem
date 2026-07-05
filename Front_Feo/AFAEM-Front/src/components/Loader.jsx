@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '../assets/afaem-logo@4x1.png';
+import logo from '../assets/afaem-logo@4x1Azul.png';
 
 const Loader = ({ text = "AFAEM DIGITAL", inline = false }) => {
   return (
