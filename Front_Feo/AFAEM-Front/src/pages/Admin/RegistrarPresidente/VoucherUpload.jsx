@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
  * Zona de arrastrar/soltar para el comprobante de pago (opcional)
  * Rediseñada para coincidir con la estética de las document cards de RegistroJugadores.
  */
-export default function VoucherUpload({ voucher, onFileChange }) {
+export default function VoucherUpload({ voucher, onFileChange, hasInsurancesSelected }) {
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -75,8 +75,24 @@ export default function VoucherUpload({ voucher, onFileChange }) {
     }
   };
 
+  const checkSelectionAndExecute = (action) => {
+    if (!hasInsurancesSelected) {
+      Swal.fire({
+        title: 'Selecciona un seguro primero',
+        text: 'Debes elegir al menos un seguro para tu plantilla antes de poder subir el comprobante de pago.',
+        icon: 'warning',
+        confirmButtonColor: COLORS.primary
+      });
+      return false;
+    }
+    action();
+    return true;
+  };
+
   const handleCardClick = () => {
-    document.getElementById('voucher-inp')?.click();
+    checkSelectionAndExecute(() => {
+      document.getElementById('voucher-inp')?.click();
+    });
   };
 
   return (
@@ -86,8 +102,8 @@ export default function VoucherUpload({ voucher, onFileChange }) {
           opacity: 1 !important;
         }
         .voucher-upload-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 15px -3px ${COLORS.shadow10};
+          transform: ${hasInsurancesSelected ? 'translateY(-5px)' : 'none'};
+          box-shadow: ${hasInsurancesSelected ? `0 10px 15px -3px ${COLORS.shadow10}` : 'none'};
         }
       `}</style>
       <div style={{ fontSize: 12, fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: 14 }}>
@@ -97,13 +113,27 @@ export default function VoucherUpload({ voucher, onFileChange }) {
       <div
         className="voucher-upload-card"
         onClick={!voucher ? handleCardClick : undefined}
-        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!hasInsurancesSelected) return;
+          setIsDragging(true);
+        }}
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
         onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setIsDragging(false);
+          if (!hasInsurancesSelected) {
+            Swal.fire({
+              title: 'Selecciona un seguro primero',
+              text: 'Debes elegir al menos un seguro para tu plantilla antes de poder subir el comprobante de pago.',
+              icon: 'warning',
+              confirmButtonColor: COLORS.primary
+            });
+            return;
+          }
           const file = e.dataTransfer.files[0];
           if (file) handleFileChange(file);
         }}
@@ -116,7 +146,8 @@ export default function VoucherUpload({ voucher, onFileChange }) {
           transition: 'all 0.3s',
           position: 'relative',
           overflow: 'hidden',
-          cursor: voucher ? 'default' : 'pointer'
+          cursor: voucher ? 'default' : 'pointer',
+          opacity: hasInsurancesSelected ? 1 : 0.6
         }}
       >
         <div style={{ pointerEvents: isDragging ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>

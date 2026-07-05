@@ -229,6 +229,10 @@ export default function Step3Cuotas({
     setAsignacion(prev => ({ ...prev, [seg.id]: num }));
   };
 
+  const hasInsurancesSelected = esEntrenador
+    ? segurosPresidente.some(seg => Number(asignacion[seg.id] || 0) > 0)
+    : totalAsignados > 0;
+
   return (
     <div>
       <PasoHeader
@@ -415,7 +419,7 @@ export default function Step3Cuotas({
 
         {/* Voucher y total */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <VoucherUpload voucher={voucher} onFileChange={setVoucher} />
+          <VoucherUpload voucher={voucher} onFileChange={setVoucher} hasInsurancesSelected={hasInsurancesSelected} />
 
           <div style={{ background: COLORS.warningBgTranslucent07, border: `1px solid ${COLORS.warningBgTranslucent18}`, borderRadius: 18, padding: '18px 20px', textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Monto Estimado</div>
