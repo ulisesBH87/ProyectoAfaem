@@ -347,3 +347,51 @@
     padding: 10px 16px;
   }
 }
+
+.camera-instructions-flat {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.camera-instructions-flat p {
+  margin: 0 0 10px 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #0b4ea6;
+}
+
+.camera-instructions-flat .camera-instruction-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px 20px;
+}
+
+.camera-instructions-flat .camera-instruction-item {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 480px) {
+  .camera-instructions-flat {
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+  .camera-instructions-flat p {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+  .camera-instructions-flat .camera-instruction-item {
+    font-size: 11px;
+  }
+}

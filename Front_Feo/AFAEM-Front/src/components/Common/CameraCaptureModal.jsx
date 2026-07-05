@@ -261,20 +261,22 @@ export default function CameraCaptureModal({
                 ref={overlayRef}
                 className={`camera-overlay-guide camera-overlay-guide--${modalConfig.guideVariant}`}
               />
-
-              <div className={`camera-instructions camera-instructions--${modalConfig.guideVariant}`}>
-                <p>{modalConfig.instructionTitle}</p>
-                <div className="camera-instruction-list">
-                  {modalConfig.instructions.map((instruction) => (
-                    <div key={instruction} className="camera-instruction-item">
-                      <FaCheck /> {instruction}
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
         </div>
+
+        {!error && (
+          <div className="camera-instructions-flat">
+            <p>{modalConfig.instructionTitle}</p>
+            <div className="camera-instruction-list">
+              {modalConfig.instructions.map((instruction) => (
+                <div key={instruction} className="camera-instruction-item">
+                  <FaCheck /> {instruction}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="camera-controls">
           {!error && (
