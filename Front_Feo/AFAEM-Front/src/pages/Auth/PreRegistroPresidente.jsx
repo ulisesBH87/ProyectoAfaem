@@ -4179,16 +4179,25 @@ function PreRegistroPresidente() {
                 <div className="premium-input-group">
                   <label className="premium-label">Fecha de Nacimiento *</label>
                   <input
-                    type="date"
-                    value={convertToYYYYMMDD(ocrResults.fecha_nac) || ''}
-                    onChange={(e) => handleManualOcrChange('fecha_nac', convertToDDMMYYYY(e.target.value))}
+                    type="text"
+                    value={ocrResults.fecha_nac || ''}
+                    onChange={(e) => handleManualOcrChange('fecha_nac', e.target.value)}
+                    placeholder="DD/MM/AAAA"
                     className="premium-input"
-                    style={{ colorScheme: 'dark', cursor: 'pointer' }}
                   />
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '4px', display: 'block' }}>
+                    Día/Mes/Año (ej: 25/12/1990)
+                  </span>
                   {(() => {
-                    const val = convertToYYYYMMDD(ocrResults.fecha_nac);
+                    const dateStr = ocrResults.fecha_nac || '';
+                    const parts = dateStr.split('/');
+                    if (parts.length !== 3 || !parts[2] || parts[2].length !== 4) return null;
+
+                    const val = convertToYYYYMMDD(dateStr);
                     if (!val) return null;
                     const fechaDate = new Date(val);
+                    if (isNaN(fechaDate.getTime())) return null;
+
                     if (fechaDate.getFullYear() < 1900) {
                       return <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '6px', fontWeight: '700' }}>El año de nacimiento no puede ser menor a 1900</div>;
                     }

@@ -69,6 +69,20 @@ const base64ToFile = async (dataurl, filename) => {
   }
 };
 
+const convertToDDMMYYYY = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
+const convertToYYYYMMDD = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+
 const parsearTelefonoE164 = (telefonoCompleto) => {
   if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
   const telClean = telefonoCompleto.trim();
@@ -1372,7 +1386,7 @@ export default function RegistroJugadores() {
 
         let updatedDocs = null;
         let updatedSignedForm = null;
-        
+
         if (result.datos && result.datos.documentosBorrador) {
           const returnedDocs = result.datos.documentosBorrador;
           updatedDocs = {};
@@ -1400,12 +1414,12 @@ export default function RegistroJugadores() {
           const playerIdx = next.findIndex(p => p.slotId === slotId);
           if (playerIdx !== -1) {
             const currentPlayer = next[playerIdx];
-            const nextDocs = updatedDocs 
-              ? { ...currentPlayer.documentos, ...updatedDocs } 
+            const nextDocs = updatedDocs
+              ? { ...currentPlayer.documentos, ...updatedDocs }
               : currentPlayer.documentos;
-            
-            const nextSignedForm = updatedSignedForm 
-              ? updatedSignedForm 
+
+            const nextSignedForm = updatedSignedForm
+              ? updatedSignedForm
               : currentPlayer.signedForm;
 
             next[playerIdx] = {
@@ -3545,293 +3559,293 @@ export default function RegistroJugadores() {
                         >
                           <div style={{ pointerEvents: dragActive[doc.key] ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
                             {/* Indicador de Menor para tutor/credencial */}
-                          {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
-                            <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
-                          )}
+                            {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
+                              <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
+                            )}
 
-                          <div style={{
-                            height: '140px',
-                            width: '100%',
-                            backgroundColor: COLORS.slate50,
-                            borderRadius: '12px',
-                            marginBottom: '10px',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: `1px solid ${COLORS.slate100}`
-                          }}
-                          >
-                            {previews[doc.key] ? (
-                              <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                {currentDocuments[doc.key]?.type === 'application/pdf' ? (
-                                  isMobileDevice ? (
-                                    <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                      <FaFilePdf />
-                                      <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
-                                    </div>
+                            <div style={{
+                              height: '140px',
+                              width: '100%',
+                              backgroundColor: COLORS.slate50,
+                              borderRadius: '12px',
+                              marginBottom: '10px',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: `1px solid ${COLORS.slate100}`
+                            }}
+                            >
+                              {previews[doc.key] ? (
+                                <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                  {currentDocuments[doc.key]?.type === 'application/pdf' ? (
+                                    isMobileDevice ? (
+                                      <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                        <FaFilePdf />
+                                        <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
+                                      </div>
+                                    ) : (
+                                      <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: COLORS.white }}>
+                                        <iframe
+                                          src={`${previews[doc.key]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                          title={`Preview ${doc.title}`}
+                                          style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            border: 'none',
+                                            pointerEvents: 'none'
+                                          }}
+                                        />
+                                        <div style={{
+                                          position: 'absolute',
+                                          bottom: '8px',
+                                          left: '8px',
+                                          backgroundColor: COLORS.overlaySlateGray,
+                                          color: COLORS.white,
+                                          fontSize: '10px',
+                                          fontWeight: '800',
+                                          padding: '4px 8px',
+                                          borderRadius: '999px',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}>
+                                          <FaFilePdf />
+                                          PDF
+                                        </div>
+                                      </div>
+                                    )
                                   ) : (
-                                    <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: COLORS.white }}>
-                                      <iframe
-                                        src={`${previews[doc.key]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                                        title={`Preview ${doc.title}`}
-                                        style={{
-                                          width: '100%',
-                                          height: '100%',
-                                          border: 'none',
-                                          pointerEvents: 'none'
-                                        }}
-                                      />
-                                      <div style={{
-                                        position: 'absolute',
-                                        bottom: '8px',
-                                        left: '8px',
-                                        backgroundColor: COLORS.overlaySlateGray,
+                                    <img
+                                      src={previews[doc.key]}
+                                      alt="Preview"
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                    />
+                                  )}
+
+                                  {/* OVERLAY ACTIONS */}
+                                  <div className="overlay-actions" style={{
+                                    position: 'absolute',
+                                    top: 0, left: 0, right: 0, bottom: 0,
+                                    backgroundColor: COLORS.overlaySlateGray,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '12px',
+                                    opacity: 0,
+                                    transition: 'opacity 0.2s ease',
+                                    backdropFilter: 'blur(2px)'
+                                  }}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const isPdf = currentDocuments[doc.key]?.type === 'application/pdf';
+                                        setPreviewDoc({
+                                          open: true,
+                                          url: previews[doc.key],
+                                          type: isPdf ? 'pdf' : 'image',
+                                          title: doc.title
+                                        });
+                                      }}
+                                      className="btn-zoom"
+                                      style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                      }}
+                                    >
+                                      <FaSearchPlus />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDocumentCardClick(doc.key);
+                                        return;
+                                        if (doc.key === 'foto') {
+                                          Swal.fire({
+                                            title: 'Selecciona una opción',
+                                            text: '¿Cómo deseas cargar la fotografía?',
+                                            icon: 'question',
+                                            showCancelButton: true,
+                                            confirmButtonText: '📷 Tomar con cámara',
+                                            cancelButtonText: '📁 Subir archivo',
+                                            confirmButtonColor: COLORS.primary,
+                                            cancelButtonColor: COLORS.slate500
+                                          }).then((result) => {
+                                            if (result.isConfirmed) {
+                                              setIsCameraOpen(true);
+                                            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                              document.getElementById(`file-${doc.key}`).click();
+                                            }
+                                          });
+                                        } else {
+                                          document.getElementById(`file-${doc.key}`).click();
+                                        }
+                                      }}
+                                      className="btn-change"
+                                      style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                      }}
+                                    >
+                                      <FaSyncAlt />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        const result = await Swal.fire({
+                                          title: '¿Quitar documento?',
+                                          text: 'Se eliminará el documento cargado actualmente.',
+                                          icon: 'warning',
+                                          showCancelButton: true,
+                                          confirmButtonText: 'Sí, quitar',
+                                          cancelButtonText: 'Cancelar',
+                                          confirmButtonColor: COLORS.danger,
+                                          cancelButtonColor: COLORS.slate400
+                                        });
+                                        if (result.isConfirmed) {
+                                          updatePlayerDocuments(currentPlayerIndex, { [doc.key]: null });
+                                          setPreviews(prev => ({ ...prev, [doc.key]: null }));
+                                        }
+                                      }}
+                                      className="btn-delete"
+                                      style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                      }}
+                                    >
+                                      <FaTrash />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ESTADO VACÍO */
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDocumentCardClick(doc.key);
+                                    return;
+                                    if (doc.key === 'foto') {
+                                      Swal.fire({
+                                        title: 'Selecciona una opción',
+                                        text: '¿Cómo deseas cargar la fotografía?',
+                                        icon: 'question',
+                                        showCancelButton: true,
+                                        confirmButtonText: '📷 Tomar con cámara',
+                                        cancelButtonText: '📁 Subir archivo',
+                                        confirmButtonColor: COLORS.primary,
+                                        cancelButtonColor: COLORS.slate500
+                                      }).then((result) => {
+                                        if (result.isConfirmed) {
+                                          setIsCameraOpen(true);
+                                        } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                          document.getElementById(`file-${doc.key}`).click();
+                                        }
+                                      });
+                                    } else {
+                                      document.getElementById(`file-${doc.key}`).click();
+                                    }
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    textAlign: 'center',
+                                    color: COLORS.slate400,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                                  {doc.key === 'foto' ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDocumentCardClick(doc.key);
+                                      }}
+                                      style={{
+                                        marginTop: '4px',
+                                        padding: '8px 12px',
+                                        borderRadius: '999px',
+                                        border: 'none',
+                                        backgroundColor: COLORS.primary,
                                         color: COLORS.white,
                                         fontSize: '10px',
                                         fontWeight: '800',
-                                        padding: '4px 8px',
-                                        borderRadius: '999px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                      }}>
-                                        <FaFilePdf />
-                                        PDF
-                                      </div>
-                                    </div>
-                                  )
-                                ) : (
-                                  <img
-                                    src={previews[doc.key]}
-                                    alt="Preview"
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                  />
-                                )}
-
-                                {/* OVERLAY ACTIONS */}
-                                <div className="overlay-actions" style={{
-                                  position: 'absolute',
-                                  top: 0, left: 0, right: 0, bottom: 0,
-                                  backgroundColor: COLORS.overlaySlateGray,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '12px',
-                                  opacity: 0,
-                                  transition: 'opacity 0.2s ease',
-                                  backdropFilter: 'blur(2px)'
-                                }}>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const isPdf = currentDocuments[doc.key]?.type === 'application/pdf';
-                                      setPreviewDoc({
-                                        open: true,
-                                        url: previews[doc.key],
-                                        type: isPdf ? 'pdf' : 'image',
-                                        title: doc.title
-                                      });
-                                    }}
-                                    className="btn-zoom"
-                                    style={{
-                                      width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                                    }}
-                                  >
-                                    <FaSearchPlus />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDocumentCardClick(doc.key);
-                                      return;
-                                      if (doc.key === 'foto') {
-                                        Swal.fire({
-                                          title: 'Selecciona una opción',
-                                          text: '¿Cómo deseas cargar la fotografía?',
-                                          icon: 'question',
-                                          showCancelButton: true,
-                                          confirmButtonText: '📷 Tomar con cámara',
-                                          cancelButtonText: '📁 Subir archivo',
-                                          confirmButtonColor: COLORS.primary,
-                                          cancelButtonColor: COLORS.slate500
-                                        }).then((result) => {
-                                          if (result.isConfirmed) {
-                                            setIsCameraOpen(true);
-                                          } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                            document.getElementById(`file-${doc.key}`).click();
-                                          }
-                                        });
-                                      } else {
-                                        document.getElementById(`file-${doc.key}`).click();
-                                      }
-                                    }}
-                                    className="btn-change"
-                                    style={{
-                                      width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                                    }}
-                                  >
-                                    <FaSyncAlt />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      const result = await Swal.fire({
-                                        title: '¿Quitar documento?',
-                                        text: 'Se eliminará el documento cargado actualmente.',
-                                        icon: 'warning',
-                                        showCancelButton: true,
-                                        confirmButtonText: 'Sí, quitar',
-                                        cancelButtonText: 'Cancelar',
-                                        confirmButtonColor: COLORS.danger,
-                                        cancelButtonColor: COLORS.slate400
-                                      });
-                                      if (result.isConfirmed) {
-                                        updatePlayerDocuments(currentPlayerIndex, { [doc.key]: null });
-                                        setPreviews(prev => ({ ...prev, [doc.key]: null }));
-                                      }
-                                    }}
-                                    className="btn-delete"
-                                    style={{
-                                      width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                                    }}
-                                  >
-                                    <FaTrash />
-                                  </button>
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      Subir archivo
+                                    </button>
+                                  ) : (
+                                    <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                  )}
                                 </div>
-                              </div>
-                            ) : (
-                              /* ESTADO VACÍO */
-                              <div
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDocumentCardClick(doc.key);
-                                  return;
-                                  if (doc.key === 'foto') {
-                                    Swal.fire({
-                                      title: 'Selecciona una opción',
-                                      text: '¿Cómo deseas cargar la fotografía?',
-                                      icon: 'question',
-                                      showCancelButton: true,
-                                      confirmButtonText: '📷 Tomar con cámara',
-                                      cancelButtonText: '📁 Subir archivo',
-                                      confirmButtonColor: COLORS.primary,
-                                      cancelButtonColor: COLORS.slate500
-                                    }).then((result) => {
-                                      if (result.isConfirmed) {
-                                        setIsCameraOpen(true);
-                                      } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                        document.getElementById(`file-${doc.key}`).click();
-                                      }
-                                    });
-                                  } else {
-                                    document.getElementById(`file-${doc.key}`).click();
-                                  }
-                                }}
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: '100%',
-                                  textAlign: 'center',
-                                  color: COLORS.slate400,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                                {doc.key === 'foto' ? (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDocumentCardClick(doc.key);
-                                    }}
-                                    style={{
-                                      marginTop: '4px',
-                                      padding: '8px 12px',
-                                      borderRadius: '999px',
-                                      border: 'none',
-                                      backgroundColor: COLORS.primary,
-                                      color: COLORS.white,
-                                      fontSize: '10px',
-                                      fontWeight: '800',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    Subir archivo
-                                  </button>
-                                ) : (
-                                  <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
-                                )}
+                              )}
+                            </div>
+
+                            <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
+                            <p style={{ margin: '0 0 6px', fontSize: '10px', color: COLORS.slate500, lineHeight: 1.4 }}>{doc.subtitle}</p>
+                            {doc.key === 'foto' && (
+                              <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                                Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                              </p>
+                            )}
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 12px',
+                              borderRadius: '20px',
+                              backgroundColor: currentDocuments[doc.key] ? COLORS.greenBg : COLORS.slate100,
+                              color: currentDocuments[doc.key] ? COLORS.greenDeep : COLORS.slate500,
+                              fontSize: '10px',
+                              fontWeight: '800'
+                            }}>
+                              {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                            </div>
+
+                            {/* Botón de validación fallida y bypass para fotografía */}
+                            {doc.key === 'foto' && !currentDocuments.foto && failedPhoto && (
+                              <div style={{ marginTop: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={forceLoadFailedPhoto}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    backgroundColor: COLORS.warning,
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    boxShadow: `0 2px 4px ${COLORS.warningBgTranslucent30}`,
+                                    transition: 'background-color 0.2s'
+                                  }}
+                                  onMouseEnter={e => e.target.style.backgroundColor = COLORS.warningDark}
+                                  onMouseLeave={e => e.target.style.backgroundColor = COLORS.warning}
+                                >
+                                  ⚠️ Cargar igualmente
+                                </button>
                               </div>
                             )}
-                          </div>
-
-                          <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
-                          <p style={{ margin: '0 0 6px', fontSize: '10px', color: COLORS.slate500, lineHeight: 1.4 }}>{doc.subtitle}</p>
-                          {doc.key === 'foto' && (
-                            <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
-                              Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
-                            </p>
-                          )}
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '4px 12px',
-                            borderRadius: '20px',
-                            backgroundColor: currentDocuments[doc.key] ? COLORS.greenBg : COLORS.slate100,
-                            color: currentDocuments[doc.key] ? COLORS.greenDeep : COLORS.slate500,
-                            fontSize: '10px',
-                            fontWeight: '800'
-                          }}>
-                            {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                          </div>
-
-                          {/* Botón de validación fallida y bypass para fotografía */}
-                          {doc.key === 'foto' && !currentDocuments.foto && failedPhoto && (
-                            <div style={{ marginTop: '8px' }}>
-                              <button
-                                type="button"
-                                onClick={forceLoadFailedPhoto}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  backgroundColor: COLORS.warning,
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '8px',
-                                  fontSize: '11px',
-                                  fontWeight: '800',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
-                                  boxShadow: `0 2px 4px ${COLORS.warningBgTranslucent30}`,
-                                  transition: 'background-color 0.2s'
-                                }}
-                                onMouseEnter={e => e.target.style.backgroundColor = COLORS.warningDark}
-                                onMouseLeave={e => e.target.style.backgroundColor = COLORS.warning}
-                              >
-                                ⚠️ Cargar igualmente
-                              </button>
-                            </div>
-                          )}
                           </div>
 
                           <input
@@ -4051,14 +4065,19 @@ export default function RegistroJugadores() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Fecha Nac. <span className="required-star">*</span></label>
                           <input
-                            type="date"
-                            value={currentDatos.fechaNacimiento || ''}
-                            min={minDateStr}
-                            max={maxBirthDateStr}
+                            type="text"
+                            value={convertToDDMMYYYY(currentDatos.fechaNacimiento) || ''}
+                            placeholder="DD/MM/AAAA"
                             onChange={e => {
                               const val = e.target.value;
-                              handleFieldChange('fechaNacimiento', val);
-                              const errorMsg = validarFechaNacimiento(val);
+                              handleFieldChange('fechaNacimiento', convertToYYYYMMDD(val));
+                              const parts = val.split('/');
+                              let errorMsg = null;
+                              if (parts.length === 3 && parts[2]?.length === 4) {
+                                errorMsg = validarFechaNacimiento(convertToYYYYMMDD(val));
+                              } else {
+                                errorMsg = null;
+                              }
                               setValidationErrors(prev => ({ ...prev, fechaNacimiento: errorMsg }));
                             }}
                             onBlur={handleBlur}
@@ -4079,6 +4098,9 @@ export default function RegistroJugadores() {
                               outline: 'none'
                             }}
                           />
+                          <span style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>
+                            Día/Mes/Año (ej: 26/10/1985)
+                          </span>
                           {missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
                               No se pudo completar automáticamente
