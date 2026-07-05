@@ -587,7 +587,27 @@ export function useRegistrarPresidente() {
 
   // ── Manejo de subida de archivos ─────────────────────────────────────────
   const handleFileUpload = (docKey, file) => {
-    if (!file) return;
+    if (!file) {
+      setPreviews(prev => {
+        const next = { ...prev };
+        if (next[docKey] && next[docKey].startsWith('blob:')) {
+          URL.revokeObjectURL(next[docKey]);
+        }
+        delete next[docKey];
+        return next;
+      });
+      setDocuments(prev => {
+        const next = { ...prev };
+        delete next[docKey];
+        return next;
+      });
+      setOcrResults(prev => {
+        const next = { ...prev };
+        delete next[docKey];
+        return next;
+      });
+      return;
+    }
     const previousDocument = documents[docKey] || null;
     const previousPreview = previews[docKey] || null;
     const previousOcrMarker = ocrResults[docKey];
