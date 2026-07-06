@@ -271,17 +271,9 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
       <div style={{ padding: '8px 10px', borderTop: `1px solid ${theme.border}` }}>
         {/* SECCIÓN LEGAL MAPEADA */}
         {[{
-          label: 'Reglamentos',
+          label: 'Reglamentos y Legal',
           icon: <FaGavel style={{ fontSize: '18px' }} />,
           path: isAdmin ? ROUTES.ADMIN.REGLAMENTOS : ROUTES.PRESIDENTE.REGLAMENTOS,
-        }, {
-          label: 'Política de Privacidad',
-          icon: <FaShieldAlt style={{ fontSize: '18px' }} />,
-          path: isAdmin ? ROUTES.ADMIN.POLITICA_PRIVACIDAD : ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD,
-        }, {
-          label: 'Términos y Condiciones',
-          icon: <FaFileContract style={{ fontSize: '18px' }} />,
-          path: isAdmin ? ROUTES.ADMIN.TERMINOS_CONDICIONES : ROUTES.PRESIDENTE.TERMINOS_CONDICIONES,
         }].map(({ label, icon, path }) => {
           const isActive = location.pathname === path;
           return (
