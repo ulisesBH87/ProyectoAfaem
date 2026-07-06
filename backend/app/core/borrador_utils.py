@@ -113,6 +113,7 @@ def procesar_borrador_guardar(datos: dict, slot_id: int, datos_antiguos=None) ->
     return datos
 
 
+
 def procesar_borrador_cargar(datos: dict) -> dict:
     """
     Busca documentosBorrador en datos, y convierte de vuelta las rutas a Base64.

@@ -814,6 +814,11 @@ export default function RegistroJugadores() {
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
   const [seguroDetalle, setSeguroDetalle] = useState(null);
 
+  const jugadoresRef = useRef([]);
+  useEffect(() => {
+    jugadoresRef.current = jugadores;
+  }, [jugadores]);
+
   useEffect(() => {
     if (seguroDetalle) {
       document.body.style.overflow = 'hidden';
@@ -828,7 +833,7 @@ export default function RegistroJugadores() {
     document.activeElement?.blur();
     setCurrentStep(prev => {
       const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
-      
+
       setVisitedSteps(vPrev => vPrev.includes(newStep) ? vPrev : [...vPrev, newStep]);
 
       setJugadores(jPrev => {
@@ -1310,6 +1315,45 @@ export default function RegistroJugadores() {
       }
 
       return next;
+    });
+  };
+
+  const handleEliminarTodosLosDocumentos = () => {
+    Swal.fire({
+      title: '¿Eliminar todos los documentos?',
+      text: 'Esta acción eliminará todos los documentos cargados (Acta, Identificación, Foto, etc.) de este jugador. Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: COLORS.danger || '#ef4444',
+      cancelButtonColor: COLORS.slate500 || '#64748b',
+      confirmButtonText: 'Sí, eliminar todos',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        setPreviews(prev => ({
+          ...prev,
+          acta: null,
+          ine: null,
+          ineTutor: null,
+          identificacionMenor: null,
+          foto: null
+        }));
+        setFailedPhoto(null);
+        await updatePlayerDocuments(currentPlayerIndex, {
+          acta: null,
+          ine: null,
+          ineTutor: null,
+          identificacionMenor: null,
+          foto: null
+        });
+        Swal.fire({
+          title: 'Documentos Eliminados',
+          text: 'Se han eliminado todos los documentos correctamente.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
     });
   };
 
@@ -1877,14 +1921,14 @@ export default function RegistroJugadores() {
     const player = jugadores[currentPlayerIndex];
     const savedStep = player?.datos?.currentStep || 1;
     setCurrentStep(savedStep);
-    
+
     // Inicializar los pasos visitados del jugador basándose en el paso guardado
     const initialVisited = [];
     for (let i = 1; i <= savedStep; i++) {
       initialVisited.push(i);
     }
     setVisitedSteps(initialVisited);
-    
+
     setValidationErrors({});
 
     if (currentDocuments) {
@@ -1972,6 +2016,7 @@ export default function RegistroJugadores() {
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
 
+    const uploadPlayerIndex = currentPlayerIndex;
     const ext = '.' + file.name.split('.').pop().toLowerCase();
     if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
       Swal.fire({
@@ -1983,10 +2028,10 @@ export default function RegistroJugadores() {
       return;
     }
 
-    const prevDoc = jugadores[currentPlayerIndex]?.documentos?.[documentKey] || null;
+    const prevDoc = jugadores[uploadPlayerIndex]?.documentos?.[documentKey] || null;
     const prevPreview = previews[documentKey] || null;
 
-    updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
+    updatePlayerDocuments(uploadPlayerIndex, { [documentKey]: file });
 
     // Generar Previsualización
     if (file.type.startsWith('image/')) {
@@ -2022,7 +2067,7 @@ export default function RegistroJugadores() {
             type: data.tipo_imagen
           });
 
-          updatePlayerDocuments(currentPlayerIndex, { foto: newFile });
+          updatePlayerDocuments(uploadPlayerIndex, { foto: newFile });
           setPreviews(prev => ({ ...prev, foto: imageUrl }));
           setFailedPhoto(null);
 
@@ -2030,7 +2075,7 @@ export default function RegistroJugadores() {
         } else {
           setFailedPhoto(file);
           setPreviews(prev => ({ ...prev, foto: null }));
-          updatePlayerDocuments(currentPlayerIndex, { foto: null });
+          updatePlayerDocuments(uploadPlayerIndex, { foto: null });
 
           Swal.fire({
             title: 'Error en la fotografía',
@@ -2048,7 +2093,7 @@ export default function RegistroJugadores() {
                 setPreviews(prev => ({ ...prev, foto: reader.result }));
               };
               reader.readAsDataURL(file);
-              updatePlayerDocuments(currentPlayerIndex, { foto: file });
+              updatePlayerDocuments(uploadPlayerIndex, { foto: file });
               setFailedPhoto(null);
 
               Swal.fire({
@@ -2084,7 +2129,7 @@ export default function RegistroJugadores() {
           icon: 'info',
           confirmButtonColor: COLORS.primary
         });
-        updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+        updatePlayerDocuments(uploadPlayerIndex, { [documentKey]: null });
         setPreviews(prev => ({ ...prev, [documentKey]: null }));
         return;
       }
@@ -2255,11 +2300,13 @@ export default function RegistroJugadores() {
             isCurpInvalid: curpNoValida
           };
 
-          const merged = { ...currentDatos, ...ocrResult };
-          updatePlayerDatos(currentPlayerIndex, ocrResult);
+          const latestPlayer = jugadoresRef.current[uploadPlayerIndex];
+          const latestDatos = latestPlayer?.datos || { ...defaultPlayerDatos };
+          const merged = { ...latestDatos, ...ocrResult };
+          updatePlayerDatos(uploadPlayerIndex, ocrResult);
 
-          if (currentPlayer?.slotId) {
-            guardarBorradorEnBD(currentPlayer.slotId, merged);
+          if (latestPlayer?.slotId) {
+            guardarBorradorEnBD(latestPlayer.slotId, merged);
           }
 
           const missing = [];
@@ -2269,14 +2316,14 @@ export default function RegistroJugadores() {
           if (!ocrResult.curp) missing.push('curp');
           if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
           if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
-          if (!currentDatos.correo) missing.push('correo');
-          if (!currentDatos.telefono) missing.push('telefono');
+          if (!latestDatos.correo) missing.push('correo');
+          if (!latestDatos.telefono) missing.push('telefono');
           setMissingOcrFields(missing);
 
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -3526,9 +3573,41 @@ export default function RegistroJugadores() {
                 {/* PASO 1: CARGA DE DOCUMENTOS */}
                 {currentStep === 1 && (
                   <section className="wizard-step-container">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                      <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
+                      </div>
+                      {Object.values(currentDocuments).some(Boolean) && (
+                        <button
+                          type="button"
+                          onClick={handleEliminarTodosLosDocumentos}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            backgroundColor: COLORS.dangerBgLight || '#fee2e2',
+                            color: COLORS.danger || '#ef4444',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.danger || '#ef4444';
+                            e.currentTarget.style.color = '#ffffff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.dangerBgLight || '#fee2e2';
+                            e.currentTarget.style.color = COLORS.danger || '#ef4444';
+                          }}
+                        >
+                          Eliminar todos los documentos
+                        </button>
+                      )}
                     </div>
 
                     <div style={{
@@ -4081,7 +4160,7 @@ export default function RegistroJugadores() {
                           )}
                           {currentDatos.isCurpInvalid && (
                             <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
-                              Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
+                              No se pudo validar la veracidad de esta CURP.
                             </span>
                           )}
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}

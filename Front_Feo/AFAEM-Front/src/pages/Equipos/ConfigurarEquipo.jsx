@@ -524,6 +524,11 @@ export default function ConfigurarEquipo() {
     isCurpInvalid: false
   });
 
+  const extractedDataRef = useRef(extractedData);
+  useEffect(() => {
+    extractedDataRef.current = extractedData;
+  }, [extractedData]);
+
   // Detección de minoría de edad
   const esMenorDeEdad = React.useMemo(() => {
     if (!extractedData.fechaNacimiento) return false;
@@ -1933,7 +1938,8 @@ export default function ConfigurarEquipo() {
             isCurpInvalid: curpNoValida
           };
 
-          const merged = { ...extractedData, ...ocrResult };
+          const latestExtractedData = extractedDataRef.current;
+          const merged = { ...latestExtractedData, ...ocrResult };
           setOcrDataOriginal(ocrResult);
           setExtractedData(merged);
           guardarBorradorEnBD(merged);
@@ -1945,14 +1951,14 @@ export default function ConfigurarEquipo() {
           if (!ocrResult.curp) missing.push('curp');
           if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
           if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
-          if (!extractedData.correo) missing.push('correo');
-          if (!extractedData.telefono) missing.push('telefono');
+          if (!latestExtractedData.correo) missing.push('correo');
+          if (!latestExtractedData.telefono) missing.push('telefono');
           setMissingOcrFields(missing);
 
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -3501,7 +3507,7 @@ export default function ConfigurarEquipo() {
                         )}
                         {extractedData.isCurpInvalid && (
                           <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
-                            Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
+                            No se pudo validar la veracidad de esta CURP.
                           </span>
                         )}
                         {curpExistente && (
