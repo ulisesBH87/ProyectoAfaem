@@ -36,6 +36,89 @@ CATALOGO_MAP = {
     }
 }
 
+
+# == ADMINISTRACIÓN DE SEGUOS ==
+from app.modelos.catalogo_seguros import Seguro
+from pydantic import BaseModel
+from typing import Optional
+from datetime import date
+
+class SeguroAdminCreateUpdate(BaseModel):
+    Nombre: str
+    Precio: float
+    TipoVigencia: Optional[int] = 1
+    VigenciaTemporal: Optional[int] = None
+    FechaVigencia: Optional[date] = None
+    Activo: Optional[bool] = True
+    TipoPersonaId: Optional[int] = None
+
+@router.get("/seguros/lista")
+def listar_seguros_admin(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    if getattr(usuario, "RolId", None) != 1:
+        raise HTTPException(status_code=403, detail="No tienes permisos para realizar esta acción")
+    return db.query(Seguro).all()
+
+@router.post("/seguros")
+def crear_seguro_admin(data: SeguroAdminCreateUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    if getattr(usuario, "RolId", None) != 1:
+        raise HTTPException(status_code=403, detail="No tienes permisos para realizar esta acción")
+    try:
+        nuevo_seguro = Seguro(
+            Nombre=data.Nombre,
+            Precio=data.Precio,
+            TipoVigencia=data.TipoVigencia,
+            VigenciaTemporal=data.VigenciaTemporal,
+            FechaVigencia=data.FechaVigencia,
+            Activo=data.Activo,
+            TipoPersonaId=data.TipoPersonaId
+        )
+        db.add(nuevo_seguro)
+        db.commit()
+        db.refresh(nuevo_seguro)
+        return nuevo_seguro
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/seguros/{seguro_id}")
+def actualizar_seguro_admin(seguro_id: int, data: SeguroAdminCreateUpdate, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    if getattr(usuario, "RolId", None) != 1:
+        raise HTTPException(status_code=403, detail="No tienes permisos para realizar esta acción")
+    seguro = db.query(Seguro).filter(Seguro.SeguroId == seguro_id).first()
+    if not seguro:
+        raise HTTPException(status_code=404, detail="Seguro no encontrado")
+    try:
+        seguro.Nombre = data.Nombre
+        seguro.Precio = data.Precio
+        seguro.TipoVigencia = data.TipoVigencia
+        seguro.VigenciaTemporal = data.VigenciaTemporal
+        seguro.FechaVigencia = data.FechaVigencia
+        seguro.Activo = data.Activo
+        seguro.TipoPersonaId = data.TipoPersonaId
+        db.commit()
+        db.refresh(seguro)
+        return seguro
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/seguros/{seguro_id}")
+def eliminar_seguro_admin(seguro_id: int, db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
+    if getattr(usuario, "RolId", None) != 1:
+        raise HTTPException(status_code=403, detail="No tienes permisos para realizar esta acción")
+    seguro = db.query(Seguro).filter(Seguro.SeguroId == seguro_id).first()
+    if not seguro:
+        raise HTTPException(status_code=404, detail="Seguro no encontrado")
+    try:
+        # Hacemos soft delete para no romper FKs históricas en pagos o registros de jugador
+        seguro.Activo = False
+        db.commit()
+        return {"message": "Seguro desactivado correctamente"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{tipo}", response_model=List[CatalogoResponse])
 def listar_catalogos(tipo: str, db: Session = Depends(get_db)):
     if tipo not in CATALOGO_MAP:

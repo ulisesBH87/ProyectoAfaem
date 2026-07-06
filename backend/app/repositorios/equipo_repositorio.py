@@ -108,12 +108,35 @@ def crear_equipo_temporal_repo(db, orden, solicitud_id, tipo_proceso, equipo_id=
             if es_seguro_presidente:
                 continue
 
+            from datetime import date
             for _ in range(d.Cantidad):
+                fecha_vencimiento = None
+                if seguro:
+                    tipo_vig = getattr(seguro, 'TipoVigencia', 1) or 1
+                    if tipo_vig == 1 and seguro.VigenciaTemporal:
+                        hoy = date.today()
+                        meses = seguro.VigenciaTemporal
+                        ano = hoy.year
+                        mes = hoy.month + meses
+                        while mes > 12:
+                            ano += 1
+                            mes -= 12
+                        dia = hoy.day
+                        while True:
+                            try:
+                                fecha_vencimiento = date(ano, mes, dia)
+                                break
+                            except ValueError:
+                                dia -= 1
+                    elif tipo_vig == 2:
+                        fecha_vencimiento = seguro.FechaVigencia
+
                 slot = EquipoTemporalJugador(
                     EquipoTemporalId=equipo.EquipoTemporalId,
                     Completo=False,
                     PersonaId=None,
-                    SeguroId=d.SeguroId  #Asignar seguro desde el inicio
+                    SeguroId=d.SeguroId,  #Asignar seguro desde el inicio
+                    Vigencia=fecha_vencimiento
                 )
                 db.add(slot)
                 total_slots_creados += 1
@@ -1027,8 +1050,15 @@ def obtener_directorio_jugadores_repo(db):
         EquipoTemporalJugador.PersonaId == Personas.PersonaId
     ).limit(1).scalar_subquery()
 
+    seguro_vigencia_subquery = db.query(
+        EquipoTemporalJugador.Vigencia
+    ).filter(
+        EquipoTemporalJugador.PersonaId == Personas.PersonaId
+    ).limit(1).scalar_subquery()
+
     resultados = db.query(
-        MiembrosEquipo, Personas, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoSexo.Nombre, seguro_subquery.label("SeguroNombre")
+        MiembrosEquipo, Personas, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoSexo.Nombre, 
+        seguro_subquery.label("SeguroNombre"), seguro_vigencia_subquery.label("SeguroVigencia")
     ).join(
         Personas, MiembrosEquipo.PersonaId == Personas.PersonaId
     ).join(
@@ -1044,8 +1074,13 @@ def obtener_directorio_jugadores_repo(db):
     ).all()
 
     jugadores_response = []
-    for (miembro, persona, equipo_nombre, liga, sexo_nombre, seguro_nombre) in resultados:
+    for (miembro, persona, equipo_nombre, liga, sexo_nombre, seguro_nombre, seguro_vigencia) in resultados:
         docs_aprobados = verificar_documentos_aprobados_repo(db, persona.PersonaId, persona.FechaNacimiento)
+        
+        vigencia_str = None
+        if seguro_vigencia:
+            vigencia_str = seguro_vigencia.strftime("%Y-%m-%d")
+
         # El rol del jugador debería de ser algo que identifique que es jugador, pero asumimos todos por ahora
         jugadores_response.append({
             "MiembroEquipoId": miembro.MiembroEquipoId,
@@ -1067,7 +1102,8 @@ def obtener_directorio_jugadores_repo(db):
             "DocumentosAprobados": docs_aprobados,
             "NumeroCamiseta": miembro.NumeroCamiseta,
             "RolEnEquipo": miembro.RolEnEquipo,
-            "SeguroNombre": seguro_nombre or "Sin seguro asignado"
+            "SeguroNombre": seguro_nombre or "Sin seguro asignado",
+            "SeguroVigencia": vigencia_str
         })
 
     return jugadores_response

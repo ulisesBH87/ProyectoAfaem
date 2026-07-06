@@ -166,7 +166,10 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
                     "id": s.SeguroId,
                     "nombre": s.Nombre,
                     "precio": float(s.Precio),
-                    "TipoPersonaId": s.TipoPersonaId
+                    "TipoPersonaId": s.TipoPersonaId,
+                    "TipoVigencia": s.TipoVigencia or 1,
+                    "VigenciaTemporal": s.VigenciaTemporal,
+                    "FechaVigencia": s.FechaVigencia.strftime("%Y-%m-%d") if s.FechaVigencia else None
                 }
                 for s in seguros
             ],
@@ -1157,6 +1160,12 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             EquipoTemporalJugador.PersonaId == Personas.PersonaId
         ).limit(1).scalar_subquery()
 
+        seguro_vigencia_subquery = db.query(
+            EquipoTemporalJugador.Vigencia
+        ).filter(
+            EquipoTemporalJugador.PersonaId == Personas.PersonaId
+        ).limit(1).scalar_subquery()
+
         # 2. Base query with joins
         query = db.query(
             MiembrosEquipo.MiembroEquipoId,
@@ -1172,6 +1181,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             foto_subquery.label("RutaFoto"),
             MiembrosEquipo.NumeroCamiseta,
             seguro_subquery.label("SeguroNombre"),
+            seguro_vigencia_subquery.label("SeguroVigencia"),
             MiembrosEquipo.EquipoID.label("EquipoId"),
             Personas.NUI
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
@@ -1247,6 +1257,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "NumeroCamiseta": r.NumeroCamiseta,
                 "EstatusDocumentos": estatus_docs,
                 "SeguroNombre": r.SeguroNombre or "Sin seguro asignado",
+                "SeguroVigencia": r.SeguroVigencia.strftime("%Y-%m-%d") if r.SeguroVigencia else None,
                 "EquipoId": r.EquipoId
             })
 

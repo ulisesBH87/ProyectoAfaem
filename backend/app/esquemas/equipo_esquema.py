@@ -45,6 +45,7 @@ class MiembroResponse(BaseModel):
     NumeroCamiseta: Optional[int] = None
     EstatusDocumentos: Optional[str] = "Pendiente"
     SeguroNombre: Optional[str] = None
+    SeguroVigencia: Optional[str] = None
     EquipoId: Optional[int] = None
     NUI: Optional[str] = None
 
@@ -140,6 +141,7 @@ class DirectorioJugadorResponse(BaseModel):
     RolEnEquipo: Optional[int] = None
     DocumentosAprobados: Optional[bool] = False
     SeguroNombre: Optional[str] = None
+    SeguroVigencia: Optional[str] = None
 
     class Config:
         from_attributes = True

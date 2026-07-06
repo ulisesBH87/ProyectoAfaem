@@ -1082,6 +1082,7 @@ export default function AdminJugadores() {
       numeroCamiseta: jugador.NumeroCamiseta !== undefined && jugador.NumeroCamiseta !== null ? jugador.NumeroCamiseta : '',
       rolEnEquipo: jugador.RolEnEquipo !== undefined && jugador.RolEnEquipo !== null ? jugador.RolEnEquipo : '',
       seguroNombre: jugador.SeguroNombre || 'Sin seguro asignado',
+      seguroVigencia: jugador.SeguroVigencia ? new Date(jugador.SeguroVigencia + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
       isCurpInvalid: false
     });
     setHaCambiado(false);
@@ -1828,6 +1829,7 @@ export default function AdminJugadores() {
               <EntradaSeleccion etiqueta="Rol en equipo" valor={String(datosEditables.rolEnEquipo ?? '')} onChange={manejarCambioInput} nombre="rolEnEquipo" opciones={[{ valor: '', etiqueta: 'Selecciona un rol...' }, ...rolesEquipo.map(r => ({ valor: String(r.id), etiqueta: r.nombre }))]} />
               <EntradaSeleccion etiqueta="Estatus del jugador" valor={datosEditables.estatus} onChange={manejarCambioInput} nombre="estatus" opciones={[{ valor: '1', etiqueta: 'Activo' }, { valor: '0', etiqueta: 'Baja' }]} />
               <EntradaFormulario etiqueta="Seguro asignado" valor={datosEditables.seguroNombre} deshabilitado={true} />
+              <EntradaFormulario etiqueta="Vigencia del seguro" valor={datosEditables.seguroVigencia} deshabilitado={true} />
             </div>
           </div>
         </div>

@@ -1,7 +1,8 @@
 from pydantic import BaseModel, EmailStr, Field
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 from typing import List
+
 
 class SeguroSeleccionado(BaseModel):
     SeguroId: int
@@ -30,6 +31,11 @@ class SeguroBase(BaseModel):
     SeguroId: int
     Nombre: str
     Precio: float
+    TipoVigencia: date | int | None = 1
+    VigenciaTemporal: int | None = None
+    FechaVigencia: date | None = None
+    Activo: bool | None = None
+    TipoPersonaId: int | None = None
 
     class Config:
         from_attributes = True

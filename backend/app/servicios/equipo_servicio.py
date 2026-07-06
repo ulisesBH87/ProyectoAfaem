@@ -77,6 +77,32 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
     slot.Completo = True
     slot.SeguroId = seguro_id
 
+    # Calcular y asignar la vigencia del seguro al slot
+    from app.modelos.catalogo_seguros import Seguro
+    from datetime import date
+    seguro = db.query(Seguro).filter(Seguro.SeguroId == seguro_id).first()
+    fecha_vencimiento = None
+    if seguro:
+        tipo_vig = getattr(seguro, 'TipoVigencia', 1) or 1
+        if tipo_vig == 1 and seguro.VigenciaTemporal:
+            hoy = date.today()
+            meses = seguro.VigenciaTemporal
+            ano = hoy.year
+            mes = hoy.month + meses
+            while mes > 12:
+                ano += 1
+                mes -= 12
+            dia = hoy.day
+            while True:
+                try:
+                    fecha_vencimiento = date(ano, mes, dia)
+                    break
+                except ValueError:
+                    dia -= 1
+        elif tipo_vig == 2:
+            fecha_vencimiento = seguro.FechaVigencia
+    slot.Vigencia = fecha_vencimiento
+
     # Si el equipo real ya está creado
     if equipo.EquipoId is not None:
         import json

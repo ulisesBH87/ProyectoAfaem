@@ -177,6 +177,7 @@ export default function PresidenteEquipoMisJugadores() {
           <p style="margin-bottom: 8px;"><strong>Dorsal / Camiseta:</strong> ${player.NumeroCamiseta || 'No asignado'}</p>
           <p style="margin-bottom: 8px;"><strong>Estado de Registro:</strong> ${player.Estatus ? 'Activo / Aprobado' : 'Inactivo / Pendiente'}</p>
           <p style="margin-bottom: 8px;"><strong>Seguro Asignado:</strong> ${player.SeguroNombre || 'Sin seguro asignado'}</p>
+          <p style="margin-bottom: 8px;"><strong>Vigencia del Seguro:</strong> ${player.SeguroVigencia ? new Date(player.SeguroVigencia + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
         </div>
       `,
       icon: 'info',

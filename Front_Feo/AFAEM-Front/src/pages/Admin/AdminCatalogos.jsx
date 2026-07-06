@@ -3,7 +3,7 @@ import { FaPlus, FaEdit, FaTrash, FaListAlt, FaNetworkWired, FaTrophy, FaTags, F
 import DashboardTable from '../../components/DashboardTable';
 import Swal from 'sweetalert2';
 import api from '../../services/auth';
-import { getCatalogosRegistro, getEquiposDirectorio } from '../../services/admin';
+import { getCatalogosRegistro, getEquiposDirectorio, getSegurosAdmin, createSeguroAdmin, updateSeguroAdmin, deleteSeguroAdmin } from '../../services/admin';
 import Loader from '../../components/Loader';
 import COLORS from '../../styles/colors';
 
@@ -12,7 +12,8 @@ export default function AdminCatalogos() {
     ligas: [],
     categorias: [],
     modalidades: [],
-    ramas: []
+    ramas: [],
+    seguros: []
   });
 
   const [seccionActiva, setSeccionActiva] = useState('ligas');
@@ -32,7 +33,13 @@ export default function AdminCatalogos() {
     descripcion: '',
     categoriaId: '',
     modalidadId: '',
-    ramaId: ''
+    ramaId: '',
+    precio: '',
+    tipoVigencia: 1,
+    vigenciaTemporal: '',
+    fechaVigencia: '',
+    activo: true,
+    tipoPersonaId: ''
   });
 
   useEffect(() => {
@@ -43,15 +50,23 @@ export default function AdminCatalogos() {
     setCargando(true);
     try {
       // Usamos /equipo-temporal/catalogos-registro que ya funciona en producción
-      const [data, equiposData] = await Promise.all([
+      const [data, equiposData, segurosData] = await Promise.all([
         getCatalogosRegistro(),
-        getEquiposDirectorio()
+        getEquiposDirectorio(),
+        getSegurosAdmin()
       ]);
       setCatalogos({
         ligas: data.ligas || [],
         categorias: data.categorias || [],
         modalidades: data.modalidades || [],
-        ramas: data.ramas || []
+        ramas: data.ramas || [],
+        seguros: (segurosData || []).map(s => ({
+          ...s,
+          id: s.SeguroId,
+          nombre: s.Nombre,
+          precio: s.Precio,
+          activo: s.Activo
+        }))
       });
       setEquiposGlobales(equiposData || []);
     } catch (error) {
@@ -60,7 +75,8 @@ export default function AdminCatalogos() {
         ligas: [],
         categorias: [],
         modalidades: [],
-        ramas: []
+        ramas: [],
+        seguros: []
       });
       setEquiposGlobales([]);
     } finally {
@@ -76,7 +92,8 @@ export default function AdminCatalogos() {
     ligas: <FaTrophy />,
     categorias: <FaTags />,
     modalidades: <FaListAlt />,
-    ramas: <FaNetworkWired />
+    ramas: <FaNetworkWired />,
+    seguros: <FaShieldAlt />
   };
 
   const dataActual = catalogos[seccionActiva] || [];
@@ -89,6 +106,13 @@ export default function AdminCatalogos() {
     { key: "rama", label: "Rama" },
     { key: "descripcion", label: "Descripción" },
     { key: "equipos_inscritos", label: "Equipos" },
+    { key: "acciones", label: "Acciones", style: { width: '120px', textAlign: 'center' } }
+  ] : seccionActiva === 'seguros' ? [
+    { key: "id", label: "ID" },
+    { key: "nombre", label: "Seguro" },
+    { key: "precio", label: "Costo ($)" },
+    { key: "vigencia", label: "Vigencia" },
+    { key: "activo", label: "Estatus", style: { textAlign: 'center' } },
     { key: "acciones", label: "Acciones", style: { width: '120px', textAlign: 'center' } }
   ] : [
     { key: "id", label: "ID" },
@@ -108,7 +132,11 @@ export default function AdminCatalogos() {
       showLoaderOnConfirm: true,
       preConfirm: async () => {
         try {
-          await api.delete(`/catalogos/${seccionActiva}/${id}`);
+          if (seccionActiva === 'seguros') {
+            await deleteSeguroAdmin(id);
+          } else {
+            await api.delete(`/catalogos/${seccionActiva}/${id}`);
+          }
           return true;
         } catch (error) {
           Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo eliminar'}`);
@@ -120,7 +148,7 @@ export default function AdminCatalogos() {
       if (result.isConfirmed && result.value) {
         setCatalogos(prev => ({
           ...prev,
-          [seccionActiva]: prev[seccionActiva].filter(item => item.id !== id)
+          [seccionActiva]: prev[seccionActiva].filter(item => (item.id || item.SeguroId) !== id)
         }));
         Swal.fire('¡Eliminado!', 'El registro se eliminó correctamente.', 'success');
       }
@@ -129,63 +157,145 @@ export default function AdminCatalogos() {
 
   const handleEditar = (item) => {
     setModalConfig({ tipo: 'editar', item });
-    setFormData({
-      nombre: (seccionActiva === 'ligas' ? (item.nombreOriginal || item.nombre) : item.nombre) || '',
-      descripcion: item.descripcion || '',
-      categoriaId: item.categoriaId || '',
-      modalidadId: item.modalidadId || '',
-      ramaId: item.ramaId || ''
-    });
+    if (seccionActiva === 'seguros') {
+      setFormData({
+        nombre: item.Nombre || item.nombre || '',
+        precio: item.Precio ?? item.precio ?? '',
+        tipoVigencia: item.TipoVigencia ?? item.tipoVigencia ?? 1,
+        vigenciaTemporal: item.VigenciaTemporal ?? item.vigenciaTemporal ?? '',
+        fechaVigencia: item.FechaVigencia ?? item.fechaVigencia ?? '',
+        activo: item.Activo ?? item.activo ?? true,
+        tipoPersonaId: item.TipoPersonaId ?? item.tipoPersonaId ?? ''
+      });
+    } else {
+      setFormData({
+        nombre: (seccionActiva === 'ligas' ? (item.nombreOriginal || item.nombre) : item.nombre) || '',
+        descripcion: item.descripcion || '',
+        categoriaId: item.categoriaId || '',
+        modalidadId: item.modalidadId || '',
+        ramaId: item.ramaId || ''
+      });
+    }
     setModalShow(true);
   };
 
   const handleCrear = () => {
     setModalConfig({ tipo: 'crear', item: null });
-    setFormData({
-      nombre: '',
-      descripcion: '',
-      categoriaId: '',
-      modalidadId: '',
-      ramaId: ''
-    });
+    if (seccionActiva === 'seguros') {
+      setFormData({
+        nombre: '',
+        precio: '',
+        tipoVigencia: 1,
+        vigenciaTemporal: '',
+        fechaVigencia: '',
+        activo: true,
+        tipoPersonaId: ''
+      });
+    } else {
+      setFormData({
+        nombre: '',
+        descripcion: '',
+        categoriaId: '',
+        modalidadId: '',
+        ramaId: ''
+      });
+    }
     setModalShow(true);
   };
 
   const handleModalSubmit = async (e) => {
     e.preventDefault();
+    const isSeguros = seccionActiva === 'seguros';
     const isLiga = seccionActiva === 'ligas';
-    const { nombre, descripcion, categoriaId, modalidadId, ramaId } = formData;
+    const { nombre, descripcion, categoriaId, modalidadId, ramaId, precio, tipoVigencia, vigenciaTemporal, fechaVigencia, activo, tipoPersonaId } = formData;
 
     if (!nombre) {
       Swal.fire('Error', 'El nombre no puede estar vacío', 'error');
       return;
     }
 
-    let payload = { nombre, descripcion };
-    if (isLiga) {
-      if (!categoriaId || !modalidadId || !ramaId) {
-        Swal.fire('Error', 'Categoría, Modalidad y Rama son requeridas', 'error');
+    if (isSeguros) {
+      if (precio === '' || isNaN(parseFloat(precio))) {
+        Swal.fire('Error', 'El precio debe ser un número válido', 'error');
         return;
       }
-      payload.categoriaId = parseInt(categoriaId);
-      payload.modalidadId = parseInt(modalidadId);
-      payload.ramaId = parseInt(ramaId);
+      if (parseInt(tipoVigencia) === 1 && !vigenciaTemporal) {
+        Swal.fire('Error', 'La vigencia en meses es requerida', 'error');
+        return;
+      }
+      if (parseInt(tipoVigencia) === 2 && !fechaVigencia) {
+        Swal.fire('Error', 'La fecha de vigencia es requerida', 'error');
+        return;
+      }
+    }
+
+    let payload = {};
+    if (isSeguros) {
+      payload = {
+        Nombre: nombre,
+        Precio: parseFloat(precio),
+        TipoVigencia: parseInt(tipoVigencia),
+        VigenciaTemporal: parseInt(tipoVigencia) === 1 ? parseInt(vigenciaTemporal) : null,
+        FechaVigencia: parseInt(tipoVigencia) === 2 ? fechaVigencia : null,
+        Activo: activo,
+        TipoPersonaId: tipoPersonaId ? parseInt(tipoPersonaId) : null
+      };
+    } else {
+      payload = { nombre, descripcion };
+      if (isLiga) {
+        if (!categoriaId || !modalidadId || !ramaId) {
+          Swal.fire('Error', 'Categoría, Modalidad y Rama son requeridas', 'error');
+          return;
+        }
+        payload.categoriaId = parseInt(categoriaId);
+        payload.modalidadId = parseInt(modalidadId);
+        payload.ramaId = parseInt(ramaId);
+      }
     }
 
     setEnviando(true);
     try {
       if (modalConfig.tipo === 'crear') {
-        const response = await api.post(`/catalogos/${seccionActiva}`, payload);
+        let response;
+        if (isSeguros) {
+          response = await createSeguroAdmin(payload);
+        } else {
+          response = await api.post(`/catalogos/${seccionActiva}`, payload);
+        }
+        
+        const nuevoItem = isSeguros ? {
+          ...response,
+          id: response.SeguroId,
+          nombre: response.Nombre,
+          precio: response.Precio,
+          activo: response.Activo
+        } : response;
+
         setCatalogos(prev => ({
           ...prev,
-          [seccionActiva]: [...prev[seccionActiva], response.data]
+          [seccionActiva]: [...prev[seccionActiva], nuevoItem]
         }));
         Swal.fire('¡Éxito!', 'El registro se ha creado correctamente.', 'success');
       } else {
-        const response = await api.put(`/catalogos/${seccionActiva}/${modalConfig.item.id}`, payload);
+        const itemId = modalConfig.item.id || modalConfig.item.SeguroId;
+        let response;
+        if (isSeguros) {
+          response = await updateSeguroAdmin(itemId, payload);
+        } else {
+          response = await api.put(`/catalogos/${seccionActiva}/${itemId}`, payload);
+        }
+
+        const itemActualizado = isSeguros ? {
+          ...response,
+          id: response.SeguroId,
+          nombre: response.Nombre,
+          precio: response.Precio,
+          activo: response.Activo
+        } : response;
+
         setCatalogos(prev => ({
           ...prev,
-          [seccionActiva]: prev[seccionActiva].map(i => i.id === modalConfig.item.id ? response.data : i)
+          [seccionActiva]: prev[seccionActiva].map(i => (i.id || i.SeguroId) === itemId ? itemActualizado : i)
         }));
         Swal.fire('¡Actualizado!', 'El registro se ha guardado correctamente.', 'success');
       }
@@ -198,6 +308,54 @@ export default function AdminCatalogos() {
   };
 
   const dataTransformada = dataActual.map(item => {
+    if (seccionActiva === 'seguros') {
+      const vigenciaLabel = item.TipoVigencia === 1 
+        ? `${item.VigenciaTemporal} meses` 
+        : item.FechaVigencia 
+          ? new Date(item.FechaVigencia).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+          : '-';
+
+      return {
+        id: <span style={{ fontWeight: '700', color: COLORS.slate500 }}>#{item.id || item.SeguroId}</span>,
+        nombre: <span style={{ fontWeight: '600' }}>{item.Nombre || item.nombre}</span>,
+        precio: <span style={{ fontWeight: '700', color: COLORS.greenDeep }}>${parseFloat(item.Precio || item.precio || 0).toFixed(2)}</span>,
+        vigencia: <span style={{ fontWeight: '500' }}>{vigenciaLabel}</span>,
+        activo: (
+          <div style={{ textAlign: 'center' }}>
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '11px',
+                fontWeight: '800',
+                background: (item.Activo ?? item.activo) ? COLORS.greenBg : COLORS.dangerBg,
+                color: (item.Activo ?? item.activo) ? COLORS.greenDeep : COLORS.dangerDeep,
+                border: (item.Activo ?? item.activo) ? `1px solid ${COLORS.greenBgDark}` : `1px solid ${COLORS.dangerBgMedium}`,
+              }}
+            >
+              {(item.Activo ?? item.activo) ? 'ACTIVO' : 'INACTIVO'}
+            </span>
+          </div>
+        ),
+        acciones: (
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <button
+              onClick={() => handleEditar(item)}
+              style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, color: COLORS.blue, cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
+            >
+              <FaEdit />
+            </button>
+            <button
+              onClick={() => handleEliminar(item.id || item.SeguroId)}
+              style={{ background: COLORS.dangerBgLight, border: `1px solid ${COLORS.dangerBgMedium}`, color: COLORS.danger, cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
+            >
+              <FaTrash />
+            </button>
+          </div>
+        )
+      };
+    }
+
     const row = {
       id: <span style={{ fontWeight: '700', color: COLORS.slate500 }}>#{item.id}</span>,
       nombre: <span style={{ fontWeight: '600' }}>{seccionActiva === 'ligas' ? (item.nombreOriginal || item.nombre) : item.nombre}</span>,
@@ -370,6 +528,92 @@ export default function AdminCatalogos() {
                             {catalogos.ramas.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                           </select>
                         </div>
+                      </div>
+                    </>
+                  )}
+                  {seccionActiva === 'seguros' && (
+                    <>
+                      <div style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Costo ($) <span style={{ color: COLORS.danger }}>*</span></label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="form-control"
+                            value={formData.precio}
+                            onChange={e => setFormData({ ...formData, precio: e.target.value })}
+                            placeholder="Ej. 150.00"
+                            style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Tipo de Persona</label>
+                          <select
+                            className="form-select"
+                            value={formData.tipoPersonaId}
+                            onChange={e => setFormData({ ...formData, tipoPersonaId: e.target.value })}
+                            style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
+                          >
+                            <option value="">No especificado (Ambos)</option>
+                            <option value="2">Presidente de Equipo</option>
+                            <option value="3">Jugador</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Tipo de Vigencia <span style={{ color: COLORS.danger }}>*</span></label>
+                        <select
+                          className="form-select"
+                          value={formData.tipoVigencia}
+                          onChange={e => setFormData({ ...formData, tipoVigencia: e.target.value })}
+                          style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
+                          required
+                        >
+                          <option value="1">Vigencia por meses (Temporal)</option>
+                          <option value="2">Vigencia por fecha fija (Calendario)</option>
+                        </select>
+                      </div>
+
+                      {parseInt(formData.tipoVigencia) === 1 ? (
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Vigencia en Meses <span style={{ color: COLORS.danger }}>*</span></label>
+                          <input
+                            type="number"
+                            min="1"
+                            className="form-control"
+                            value={formData.vigenciaTemporal}
+                            onChange={e => setFormData({ ...formData, vigenciaTemporal: e.target.value })}
+                            placeholder="Ej. 12 (para 1 año)"
+                            style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
+                            required
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Fecha de Vencimiento <span style={{ color: COLORS.danger }}>*</span></label>
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={formData.fechaVigencia ? formData.fechaVigencia.substring(0, 10) : ''}
+                            onChange={e => setFormData({ ...formData, fechaVigencia: e.target.value })}
+                            style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
+                            required
+                          />
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="checkbox"
+                          id="activo-seguro"
+                          checked={formData.activo}
+                          onChange={e => setFormData({ ...formData, activo: e.target.checked })}
+                          style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="activo-seguro" style={{ fontSize: '14px', fontWeight: '700', color: COLORS.slate700, cursor: 'pointer', margin: 0 }}>Seguro Activo (Disponible para compra)</label>
                       </div>
                     </>
                   )}
