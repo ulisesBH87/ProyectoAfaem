@@ -456,6 +456,26 @@ export const getEquiposSinEntrenador = async () => {
   return response.data;
 };
 
+export const getSegurosAdmin = async () => {
+  const response = await api.get('/catalogos/seguros/lista');
+  return response.data;
+};
+
+export const createSeguroAdmin = async (data) => {
+  const response = await api.post('/catalogos/seguros', data);
+  return response.data;
+};
+
+export const updateSeguroAdmin = async (id, data) => {
+  const response = await api.put(`/catalogos/seguros/${id}`, data);
+  return response.data;
+};
+
+export const deleteSeguroAdmin = async (id) => {
+  const response = await api.delete(`/catalogos/seguros/${id}`);
+  return response.data;
+};
+
 export const getAuditoriasMaster = async (page = 1, size = 10, filters = {}) => {
   const params = { page, size, ...filters };
   const response = await api.get('/auditoria/master/listar', { params });
@@ -525,6 +545,10 @@ export default {
   getCatalogosRegistro,
   checkOrdenAmpliacionAdmin,
   getJugadoresEquipo,
+  getSegurosAdmin,
+  createSeguroAdmin,
+  updateSeguroAdmin,
+  deleteSeguroAdmin,
   getAuditoriasMaster,
   getMetricasMaster,
   getReporteMensualMaster,

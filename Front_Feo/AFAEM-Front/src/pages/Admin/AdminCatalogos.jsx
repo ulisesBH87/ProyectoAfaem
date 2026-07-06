@@ -537,12 +537,27 @@ export default function AdminCatalogos() {
                         <div>
                           <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Costo ($) <span style={{ color: COLORS.danger }}>*</span></label>
                           <input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            type="text"
                             className="form-control"
                             value={formData.precio}
-                            onChange={e => setFormData({ ...formData, precio: e.target.value })}
+                            onKeyDown={e => {
+                              if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Escape', 'Enter'].includes(e.key)) {
+                                return;
+                              }
+                              if (/^[0-9.]$/.test(e.key)) {
+                                if (e.key === '.' && String(formData.precio).includes('.')) {
+                                  e.preventDefault();
+                                }
+                                return;
+                              }
+                              e.preventDefault();
+                            }}
+                            onChange={e => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d{0,4}(\.\d{0,2})?$/.test(val)) {
+                                setFormData({ ...formData, precio: val });
+                              }
+                            }}
                             placeholder="Ej. 150.00"
                             style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
                             required
