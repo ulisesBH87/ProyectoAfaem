@@ -60,6 +60,7 @@ export function useRegistrarPresidente() {
   const hasLoadedRef = useRef(false);
   const cuentaFieldsEditadosRef = useRef(new Set());
   const ultimaCurpValidadaRef = useRef(null);
+  const isFreshOcrRef = useRef(false);
 
   // ── Estado del wizard ────────────────────────────────────────────────────
   const [paso, setPaso] = useState(1);
@@ -486,6 +487,8 @@ export function useRegistrarPresidente() {
 
   // ── Sincronizar ocrResults con cuenta ────────────────────────────────────
   useEffect(() => {
+    if (!isFreshOcrRef.current) return;
+    isFreshOcrRef.current = false;
     if (ocrResults && (ocrResults.curp || ocrResults.nombre || ocrResults.fecha_nac || ocrResults.nacionalidad || ocrResults.sexo)) {
       setCuenta(prev => {
         const next = { ...prev };
@@ -619,7 +622,10 @@ export function useRegistrarPresidente() {
     } else {
       setDocuments(prev => ({ ...prev, [docKey]: file }));
       if (['actaNacimiento', 'identificacion'].includes(docKey)) {
+        cuentaFieldsEditadosRef.current.clear();
+        isFreshOcrRef.current = true;
         procesarOCR(docKey, file, () => {
+          isFreshOcrRef.current = false;
           setPreviews(prev => {
             const next = { ...prev };
             if (previousPreview) next[docKey] = previousPreview;
