@@ -851,6 +851,26 @@ def guardar_borrador_jugador(
     datos_procesados = procesar_borrador_guardar(payload.datos, slot.EquipoTemporalJugadorId, datos_antiguos)
     limpiar_archivos_borrador_obsoletos(datos_antiguos, datos_procesados)
     slot.DatosBorrador = json.dumps(datos_procesados, ensure_ascii=False)
+
+    # Guardar InicioSeguro y Vigencia en las columnas si existen en el payload
+    from datetime import date
+    inicio_seguro_str = payload.datos.get("inicioSeguro")
+    if inicio_seguro_str:
+        try:
+            slot.InicioSeguro = date.fromisoformat(inicio_seguro_str)
+        except Exception:
+            slot.InicioSeguro = None
+    else:
+        slot.InicioSeguro = None
+
+    vigencia_str = payload.datos.get("vigencia")
+    if vigencia_str:
+        try:
+            slot.Vigencia = date.fromisoformat(vigencia_str)
+        except Exception:
+            slot.Vigencia = None
+    else:
+        slot.Vigencia = None
     
     curp_duplicada = False
     curp = str(payload.datos.get("curp") or "").strip().upper()
@@ -1157,6 +1177,20 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             EquipoTemporalJugador.PersonaId == Personas.PersonaId
         ).limit(1).scalar_subquery()
 
+        # Subconsulta escalar para obtener el inicio de seguro del jugador
+        inicio_seguro_subquery = db.query(
+            EquipoTemporalJugador.InicioSeguro
+        ).filter(
+            EquipoTemporalJugador.PersonaId == Personas.PersonaId
+        ).limit(1).scalar_subquery()
+
+        # Subconsulta escalar para obtener la vigencia (fin de seguro) del jugador
+        vigencia_seguro_subquery = db.query(
+            EquipoTemporalJugador.Vigencia
+        ).filter(
+            EquipoTemporalJugador.PersonaId == Personas.PersonaId
+        ).limit(1).scalar_subquery()
+
         # 2. Base query with joins
         query = db.query(
             MiembrosEquipo.MiembroEquipoId,
@@ -1172,6 +1206,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             foto_subquery.label("RutaFoto"),
             MiembrosEquipo.NumeroCamiseta,
             seguro_subquery.label("SeguroNombre"),
+            inicio_seguro_subquery.label("InicioSeguro"),
+            vigencia_seguro_subquery.label("Vigencia"),
             MiembrosEquipo.EquipoID.label("EquipoId"),
             Personas.NUI
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
@@ -1247,7 +1283,9 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "NumeroCamiseta": r.NumeroCamiseta,
                 "EstatusDocumentos": estatus_docs,
                 "SeguroNombre": r.SeguroNombre or "Sin seguro asignado",
-                "EquipoId": r.EquipoId
+                "EquipoId": r.EquipoId,
+                "InicioSeguro": r.InicioSeguro,
+                "Vigencia": r.Vigencia
             })
 
         return formatted_results
@@ -1782,7 +1820,9 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
             fecha_nacimiento=jugador_data.FechaNacimiento,
             nui=jugador_data.NUI,
             numero_camiseta=jugador_data.NumeroCamiseta,
-            rol_en_equipo=jugador_data.RolEnEquipo
+            rol_en_equipo=jugador_data.RolEnEquipo,
+            inicio_seguro=jugador_data.InicioSeguro,
+            vigencia=jugador_data.Vigencia
         )
         if not miembro:
             raise HTTPException(status_code=404, detail="Jugador no encontrado")
