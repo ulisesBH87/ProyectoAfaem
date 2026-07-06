@@ -1812,7 +1812,7 @@ export default function AdminJugadores() {
               <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
               <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza automáticamente" deshabilitado={true} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
+                <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Ingresa o corrige la CURP" deshabilitado={false} />
                 {datosEditables.isCurpInvalid && (
                   <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '-8px', marginBottom: '12px', display: 'block' }}>
                     No se pudo validar la veracidad de esta CURP.

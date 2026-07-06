@@ -1795,8 +1795,8 @@ export default function AdminCrearJugador() {
                   <input
                     type="text"
                     value={extractedData.curp || ''}
-                    readOnly
-                    placeholder="Se auto-completará con el documento de identidad"
+                    onChange={e => setExtractedData({ ...extractedData, curp: e.target.value })}
+                    placeholder="Ingresa o corrige la CURP"
                     maxLength="18"
                     style={{
                       padding: '10px',
@@ -1805,8 +1805,8 @@ export default function AdminCrearJugador() {
                         ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
                         : `1px solid ${COLORS.slate300}`,
                       fontSize: '14px',
-                      backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : '#f1f5f9',
-                      cursor: missingOcrFields.includes('curp') && !extractedData.curp ? 'text' : 'not-allowed'
+                      backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : 'white',
+                      cursor: 'text'
                     }}
                   />
                   {missingOcrFields.includes('curp') && !extractedData.curp && (
