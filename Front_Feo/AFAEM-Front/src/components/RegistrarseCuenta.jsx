@@ -7,11 +7,13 @@ import RegistrationSuccess from './Auth/RegistrationSuccess';
 import { Modal } from './partials';
 import PoliticaPrivacidad from '../pages/Legales/PoliticaPrivacidad';
 import TerminosCondiciones from '../pages/Legales/TerminosCondiciones';
+import PreciosSeguros from '../pages/Legales/PreciosSeguros';
 
 function RegistrarseCuenta() {
 	const navigate = useNavigate();
 	const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 	const [showTermsModal, setShowTermsModal] = useState(false);
+	const [showInsuranceModal, setShowInsuranceModal] = useState(false);
 
 	// ESTADO DEL FORMULARIO
 	const [formData, setFormData] = useState({
@@ -313,7 +315,7 @@ function RegistrarseCuenta() {
 										<div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
 											<input id="aceptaPoliticas" type="checkbox" name="aceptaPoliticas" checked={formData.aceptaPoliticas} onChange={handleChange} style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: 'var(--primary)' }} required />
 											<label htmlFor="aceptaPoliticas" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4' }}>
-												He leído y acepto la <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivacyModal(true); }} style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }}>Política de Privacidad</span> y los <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowTermsModal(true); }} style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }}>Términos y Condiciones</span>
+												He leído y acepto los <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowTermsModal(true); }} style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }}>Términos y Condiciones</span>, la <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivacyModal(true); }} style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }}>Política de Privacidad</span> y los <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowInsuranceModal(true); }} style={{ color: 'white', cursor: 'pointer', textDecoration: 'underline' }}>Precios de Seguros</span>
 											</label>
 										</div>
 									</div>
@@ -352,6 +354,15 @@ function RegistrarseCuenta() {
 				tamanio="grande"
 			>
 				<TerminosCondiciones />
+			</Modal>
+
+			<Modal
+				estaAbierto={showInsuranceModal}
+				titulo="Precios de Seguros"
+				alCerrar={() => setShowInsuranceModal(false)}
+				tamanio="grande"
+			>
+				<PreciosSeguros />
 			</Modal>
 		</div>
 	);
