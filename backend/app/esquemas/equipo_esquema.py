@@ -47,6 +47,8 @@ class MiembroResponse(BaseModel):
     SeguroNombre: Optional[str] = None
     EquipoId: Optional[int] = None
     NUI: Optional[str] = None
+    InicioSeguro: Optional[date] = None
+    Vigencia: Optional[date] = None
 
     class Config:
         from_attributes = True
@@ -140,6 +142,8 @@ class DirectorioJugadorResponse(BaseModel):
     RolEnEquipo: Optional[int] = None
     DocumentosAprobados: Optional[bool] = False
     SeguroNombre: Optional[str] = None
+    InicioSeguro: Optional[date] = None
+    Vigencia: Optional[date] = None
 
     class Config:
         from_attributes = True
@@ -171,6 +175,8 @@ class JugadorUpdate(BaseModel):
     NUI: Optional[str] = None
     NumeroCamiseta: Optional[int] = None
     RolEnEquipo: Optional[int] = None
+    InicioSeguro: Optional[date] = None
+    Vigencia: Optional[date] = None
 
 class PresidenteAdminCreate(BaseModel):
     nombre: str

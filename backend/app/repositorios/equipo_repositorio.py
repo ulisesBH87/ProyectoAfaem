@@ -855,9 +855,11 @@ def actualizar_equipo_repo(db, equipo_id: int, nombre: str, estatus: bool,
 def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apellido: str,
                             segundo_apellido: str, curp: str, estatus: bool,
                             email: str = None, sexo_id: int = None, fecha_nacimiento=None, nui: str = None,
-                            numero_camiseta: int = None, rol_en_equipo: int = None):
+                            numero_camiseta: int = None, rol_en_equipo: int = None,
+                            inicio_seguro=None, vigencia=None):
     from app.modelos.miembro_equipo_modelo import MiembrosEquipo
     from app.modelos.persona_modelo import Personas
+    from app.modelos.equipo_temporal_jugador_modelo import EquipoTemporalJugador
     
     miembro = db.query(MiembrosEquipo).filter(MiembrosEquipo.MiembroEquipoId == miembro_equipo_id).first()
     if not miembro:
@@ -890,10 +892,30 @@ def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apel
         miembro.NumeroCamiseta = numero_camiseta
     if rol_en_equipo is not None:
         miembro.RolEnEquipo = rol_en_equipo
+
+    # Actualizar también InicioSeguro y Vigencia en la tabla EquipoTemporalJugador si el slot existe
+    slot = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.PersonaId == persona.PersonaId).first()
+    if slot:
+        final_inicio = inicio_seguro if inicio_seguro is not None else slot.InicioSeguro
+        final_vigencia = vigencia if vigencia is not None else slot.Vigencia
+        if final_inicio and final_inicio.year > 2099:
+            raise ValueError("La fecha de inicio del seguro no puede rebasar el año 2099")
+        if final_vigencia and final_vigencia.year > 2099:
+            raise ValueError("La fecha de fin (vigencia) no puede rebasar el año 2099")
+        if final_inicio and final_vigencia:
+            if final_vigencia <= final_inicio:
+                raise ValueError("La fecha de fin (vigencia) debe ser posterior a la fecha de inicio del seguro")
+
+        if inicio_seguro is not None:
+            slot.InicioSeguro = inicio_seguro
+        if vigencia is not None:
+            slot.Vigencia = vigencia
         
     db.commit()
     db.refresh(persona)
     db.refresh(miembro)
+    if slot:
+        db.refresh(slot)
     return miembro
 
 
@@ -1027,8 +1049,21 @@ def obtener_directorio_jugadores_repo(db):
         EquipoTemporalJugador.PersonaId == Personas.PersonaId
     ).limit(1).scalar_subquery()
 
+    inicio_seguro_subquery = db.query(
+        EquipoTemporalJugador.InicioSeguro
+    ).filter(
+        EquipoTemporalJugador.PersonaId == Personas.PersonaId
+    ).limit(1).scalar_subquery()
+
+    vigencia_subquery = db.query(
+        EquipoTemporalJugador.Vigencia
+    ).filter(
+        EquipoTemporalJugador.PersonaId == Personas.PersonaId
+    ).limit(1).scalar_subquery()
+
     resultados = db.query(
-        MiembrosEquipo, Personas, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoSexo.Nombre, seguro_subquery.label("SeguroNombre")
+        MiembrosEquipo, Personas, Equipos.NombreEquipo, Ligas.Nombreliga, CatalogoSexo.Nombre,
+        seguro_subquery.label("SeguroNombre"), inicio_seguro_subquery.label("InicioSeguro"), vigencia_subquery.label("Vigencia")
     ).join(
         Personas, MiembrosEquipo.PersonaId == Personas.PersonaId
     ).join(
@@ -1044,7 +1079,7 @@ def obtener_directorio_jugadores_repo(db):
     ).all()
 
     jugadores_response = []
-    for (miembro, persona, equipo_nombre, liga, sexo_nombre, seguro_nombre) in resultados:
+    for (miembro, persona, equipo_nombre, liga, sexo_nombre, seguro_nombre, inicio_seguro, vigencia) in resultados:
         docs_aprobados = verificar_documentos_aprobados_repo(db, persona.PersonaId, persona.FechaNacimiento)
         # El rol del jugador debería de ser algo que identifique que es jugador, pero asumimos todos por ahora
         jugadores_response.append({
@@ -1067,7 +1102,9 @@ def obtener_directorio_jugadores_repo(db):
             "DocumentosAprobados": docs_aprobados,
             "NumeroCamiseta": miembro.NumeroCamiseta,
             "RolEnEquipo": miembro.RolEnEquipo,
-            "SeguroNombre": seguro_nombre or "Sin seguro asignado"
+            "SeguroNombre": seguro_nombre or "Sin seguro asignado",
+            "InicioSeguro": inicio_seguro,
+            "Vigencia": vigencia
         })
 
     return jugadores_response
