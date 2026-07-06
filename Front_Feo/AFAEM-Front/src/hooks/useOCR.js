@@ -129,29 +129,67 @@ export function useOCR() {
     }
 
     const firstWord = d.nombre ? d.nombre.split(' ')[0] : '';
-    if (!d.nombre || d.nombre === 'No detectado' || d.nombre.split(' ').length < 2 || firstWord.length <= 1) {
+    const isInvalidShortName = firstWord.length <= 1 && d.nombre.split(' ').length < 3;
+    if (!d.nombre || d.nombre === 'No detectado' || d.nombre.split(' ').length < 2 || isInvalidShortName) {
       const lines = rawTextCleaned.split('\n').map(l => l.trim()).filter(Boolean);
       let nombres = '', ap1 = '', ap2 = '';
+      
+      const isTrashValue = (val) => {
+        if (!val) return true;
+        const v = val.toUpperCase();
+        return v.includes('FECHA') || v.includes('ECHA') || v.includes('HORA') || v.includes('SEXO') || v.includes('LUGAR') || v.includes('NACIMIENTO') || v.includes('CERTIFICADO') || v.includes('PADRE') || v.includes('MADRE');
+      };
+
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) {
-          const nextVal = lines[i + 1].toUpperCase();
-          if ((nextVal === 'S' || nextVal === '(S)' || nextVal.length <= 1) && i + 2 < lines.length) {
-            nombres = lines[i + 2];
-          } else {
-            nombres = lines[i + 1];
+        if (l.includes('NOMBRE(S)')) {
+          if (i + 1 < lines.length) {
+            const nextVal = lines[i + 1];
+            const nextValUpper = nextVal.toUpperCase();
+            if (!isTrashValue(nextVal)) {
+              if ((nextValUpper === 'S' || nextValUpper === '(S)' || nextValUpper.length <= 1) && i + 2 < lines.length) {
+                const nextVal2 = lines[i + 2];
+                if (!isTrashValue(nextVal2)) nombres = nextVal2;
+              } else {
+                nombres = nextVal;
+              }
+            }
+          }
+          if ((!nombres || isTrashValue(nombres)) && i > 0) {
+            const prevVal = lines[i - 1];
+            if (!isTrashValue(prevVal) && prevVal.length > 2) {
+              nombres = prevVal;
+            }
           }
         }
-        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) {
-          const val = lines[i + 1];
-          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
-            ap1 = val;
+        
+        if (l.includes('PRIMER APELLIDO')) {
+          if (i + 1 < lines.length) {
+            const val = lines[i + 1];
+            if (!isTrashValue(val) && !val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+              ap1 = val;
+            }
+          }
+          if ((!ap1 || isTrashValue(ap1)) && i > 0) {
+            const prevVal = lines[i - 1];
+            if (!isTrashValue(prevVal) && !prevVal.toUpperCase().includes('APELLIDO') && !prevVal.toUpperCase().includes('NOMBRE')) {
+              ap1 = prevVal;
+            }
           }
         }
-        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) {
-          const val = lines[i + 1];
-          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
-            ap2 = val;
+        
+        if (l.includes('SEGUNDO APELLIDO')) {
+          if (i + 1 < lines.length) {
+            const val = lines[i + 1];
+            if (!isTrashValue(val) && !val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
+              ap2 = val;
+            }
+          }
+          if ((!ap2 || isTrashValue(ap2)) && i > 0) {
+            const prevVal = lines[i - 1];
+            if (!isTrashValue(prevVal) && !prevVal.toUpperCase().includes('APELLIDO') && !prevVal.toUpperCase().includes('NOMBRE')) {
+              ap2 = prevVal;
+            }
           }
         }
       }

@@ -50,36 +50,6 @@ def guardar_cache_curps(cache):
     except Exception as e:
         print(f"[ERROR] No se pudo guardar el cache de CURPs: {str(e)}")
 
-def validar_tlaloc(curp, token):
-    if not curp or curp == "No detectado":
-        return {"verificado": False, "mensaje": "Sin CURP para verificar"}
-        
-    curp_norm = curp.strip().upper()
-    cache = cargar_cache_curps()
-    if curp_norm in cache:
-        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)"}
-
-    url = "https://api.tlaloc.sh/mx/v1/curp"
-    headers = {
-        "Accept": "application/json",
-        "Authorization": f"Bearer {token}"
-    }
-    params = {"curp": curp_norm}
-    try:
-        respuesta = requests.get(url, params=params, headers=headers)
-        if respuesta.status_code == 200:
-            datos_api = respuesta.json()
-            if "curp" in datos_api and "nombres" in datos_api:
-                cache.add(curp_norm)
-                guardar_cache_curps(cache)
-                return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Tlaloc)"}
-        elif respuesta.status_code == 404:
-            return {"verificado": False, "mensaje": "CURP no encontrada en RENAPO"}
-        return {"verificado": False, "mensaje": f"API Tlaloc respondio con codigo {respuesta.status_code}"}
-    except Exception as e:
-        print(f"[ERROR] Error de conexion con la API de Tlaloc: {str(e)}")
-        return {"verificado": False, "mensaje": "Error de conexion con la API de Tlaloc"}
-
 def validar_verificamex(curp):
     if not curp or curp == "No detectado":
         return {"verificado": False, "mensaje": "Sin CURP para verificar"}
@@ -89,7 +59,7 @@ def validar_verificamex(curp):
     if curp_norm in cache:
         return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)"}
         
-    # 1. Intentar validar con Verificamex primero si esta configurado
+    # 1. Intentar validar con Verificamex si esta configurado
     token = os.getenv("VERIFICAMEX_API_TOKEN")
     if token and token != "TU_TOKEN_DE_VERIFICAMEX_AQUI":
         url = "https://api.verificamex.com/identity/v1/scraping/renapo"
@@ -115,13 +85,8 @@ def validar_verificamex(curp):
             print(f"[ERROR] Error de conexion con la API de Verificamex: {str(e)}")
             return {"verificado": False, "mensaje": "Error de conexion con la API"}
 
-    # 2. Intentar validar con Tlaloc de respaldo si esta configurado
-    tlaloc_token = os.getenv("TLALOC_API_KEY") or os.getenv("TLALOC")
-    if tlaloc_token and tlaloc_token != "TU_TOKEN_DE_TLALOC_AQUI":
-        return validar_tlaloc(curp_norm, tlaloc_token)
-
-    # 3. Fallback a Simulacion si ninguno esta configurado
-    print("[WARNING] Ni VERIFICAMEX_API_TOKEN ni TLALOC/TLALOC_API_KEY configurados en variables de entorno. Ejecutando en modo Simulacion.")
+    # 2. Fallback a Simulacion si no esta configurado
+    print("[WARNING] VERIFICAMEX_API_TOKEN no configurado en variables de entorno. Ejecutando en modo Simulacion.")
     return {"verificado": True, "mensaje": "CURP Validada en RENAPO (Simulacion)"}
 
 def calcular_datos_curp(curp):
@@ -186,9 +151,10 @@ def letters_match_or_similar(c1, c2):
 def curp_coincide_con_nombre(curp, nombres, ap1, ap2):
     if not curp or curp == "No detectado" or len(curp) < 4:
         return False, False
-    c_n = nombres.strip().upper() if nombres else ""
-    c_ap1 = ap1.strip().upper() if ap1 else ""
-    c_ap2 = ap2.strip().upper() if ap2 else ""
+    curp = curp.strip().upper()
+    c_n = normalizar_texto(nombres) if nombres else ""
+    c_ap1 = normalizar_texto(ap1) if ap1 else ""
+    c_ap2 = normalizar_texto(ap2) if ap2 else ""
     if not c_n or not c_ap1:
         return False, False
     n_words = c_n.split()
@@ -199,33 +165,72 @@ def curp_coincide_con_nombre(curp, nombres, ap1, ap2):
         first_name = n_words[0] if n_words else ""
     if not first_name:
         return False, False
-    l_ap1 = c_ap1[0] if c_ap1 else ""
-    l_ap2 = c_ap2[0] if c_ap2 else ""
-    l_n = first_name[0] if first_name else ""
-    curp_prefix = curp[:4].upper()
-    
-    m3 = letters_match_or_similar(curp_prefix[3], l_n)
-    if not m3:
-        return False, False
+
+    def get_vocal_interna(w):
+        for char in w[1:]:
+            if char in "AEIOU":
+                return char
+        return "X"
+
+    def get_consonante_interna(w):
+        for char in w[1:]:
+            if char in "BCDFGHJKLMNPQRSTVWXYZ":
+                return char
+            elif char == "Ñ":
+                return "X"
+        return "X"
+
+    ap1_letra = c_ap1[0] if c_ap1 else "X"
+    ap1_vocal = get_vocal_interna(c_ap1)
+    ap2_letra = c_ap2[0] if c_ap2 else "X"
+    n_letra = first_name[0] if first_name else "X"
+
+    # Intentar coincidencia estándar
+    standard_match = (
+        letters_match_or_similar(curp[0], ap1_letra) and
+        letters_match_or_similar(curp[1], ap1_vocal) and
+        letters_match_or_similar(curp[2], ap2_letra) and
+        letters_match_or_similar(curp[3], n_letra)
+    )
+
+    # Intentar coincidencia con apellidos invertidos (a veces ocurre en el registro)
+    swapped_match = False
+    if c_ap2:
+        swapped_match = (
+            letters_match_or_similar(curp[0], ap2_letra) and
+            letters_match_or_similar(curp[1], get_vocal_interna(c_ap2)) and
+            letters_match_or_similar(curp[2], ap1_letra) and
+            letters_match_or_similar(curp[3], n_letra)
+        )
+
+    # Validar consonantes internas en posiciones 13, 14, 15 (si la longitud de la CURP lo permite)
+    if len(curp) >= 16:
+        ap1_cons = get_consonante_interna(c_ap1)
+        ap2_cons = get_consonante_interna(c_ap2)
+        n_cons = get_consonante_interna(first_name)
         
-    if l_ap2:
-        m0_standard = letters_match_or_similar(curp_prefix[0], l_ap1)
-        m2_standard = letters_match_or_similar(curp_prefix[2], l_ap2)
-        if m0_standard and m2_standard:
-            return True, False
-            
-        m0_swapped = letters_match_or_similar(curp_prefix[2], l_ap1)
-        m2_swapped = letters_match_or_similar(curp_prefix[0], l_ap2)
-        if m0_swapped and m2_swapped:
-            return True, True
+        if standard_match:
+            cons_match = (
+                letters_match_or_similar(curp[13], ap1_cons) or
+                letters_match_or_similar(curp[14], ap2_cons) or
+                letters_match_or_similar(curp[15], n_cons)
+            )
+            if cons_match:
+                return True, False
+        if swapped_match:
+            cons_match_swapped = (
+                letters_match_or_similar(curp[13], ap2_cons) or
+                letters_match_or_similar(curp[14], ap1_cons) or
+                letters_match_or_similar(curp[15], n_cons)
+            )
+            if cons_match_swapped:
+                return True, True
     else:
-        m0_standard = letters_match_or_similar(curp_prefix[0], l_ap1)
-        if m0_standard:
+        if standard_match:
             return True, False
-        m0_swapped = letters_match_or_similar(curp_prefix[2], l_ap1)
-        if m0_swapped:
+        if swapped_match:
             return True, True
-            
+
     return False, False
 
 def limpiar_basura_del_nombre(campo):
@@ -459,11 +464,42 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
                         
     return None
 
+def normalizar_curp_ocr(curp_raw):
+    """Corrige errores comunes de Tesseract (sustituciones de letras/números) según su posición en la CURP"""
+    digit_map = {'O': '0', 'Q': '0', 'I': '1', 'L': '1', 'T': '1', 'S': '5', 'G': '6', 'Z': '2', 'B': '8'}
+    letter_map = {'0': 'O', '1': 'I', '5': 'S', '2': 'Z', '6': 'G', '7': 'T', '8': 'B'}
+    
+    curp_chars = list(curp_raw.upper())
+    
+    # Índices que deben ser letras (0-3, 10, 11-12, 13-15)
+    letter_indices = [0, 1, 2, 3, 10, 11, 12, 13, 14, 15]
+    # Índices que deben ser números (4-9, 17) -- el 16 puede ser letra o número
+    digit_indices = [4, 5, 6, 7, 8, 9, 17]
+    
+    for idx in letter_indices:
+        if idx < len(curp_chars):
+            c = curp_chars[idx]
+            if c in letter_map:
+                curp_chars[idx] = letter_map[c]
+                
+    for idx in digit_indices:
+        if idx < len(curp_chars):
+            c = curp_chars[idx]
+            if c in digit_map:
+                curp_chars[idx] = digit_map[c]
+                
+    return "".join(curp_chars)
+
 def extraer_curp_segura(texto):
-    """Extrae la CURP usando Expresiones Regulares estrictas"""
+    """Extrae la CURP usando Expresiones Regulares tolerantes a errores de OCR y las normaliza"""
     texto_limpio = texto.replace(" ", "").replace("\n", "").upper()
-    match = re.search(r'[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d', texto_limpio)
-    return match.group(0) if match else "No detectado"
+    # Expresión regular tolerante a sustituciones comunes en las posiciones numéricas y alfabéticas
+    patron_tolerante = r'[A-Z0-9]{4}[0-9OQILTSGZ]{6}[HM][A-Z0-9]{5}[A-Z0-9OQILTSGZ][0-9OQILTSGZ]'
+    match = re.search(patron_tolerante, texto_limpio)
+    if match:
+        curp_candidata = match.group(0)
+        return normalizar_curp_ocr(curp_candidata)
+    return "No detectado"
 
 def determinar_tipo_documento(texto_up):
     if "ACTA" in texto_up and ("NACIMIENTO" in texto_up or "REGISTRO CIVIL" in texto_up):
