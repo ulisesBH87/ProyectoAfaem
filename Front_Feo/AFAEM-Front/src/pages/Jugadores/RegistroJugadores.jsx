@@ -261,8 +261,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -810,6 +810,7 @@ export default function RegistroJugadores() {
   const [failedPhoto, setFailedPhoto] = useState(null);
   const [linkError, setLinkError] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [visitedSteps, setVisitedSteps] = useState([1]);
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
   const [seguroDetalle, setSeguroDetalle] = useState(null);
 
@@ -827,6 +828,8 @@ export default function RegistroJugadores() {
     document.activeElement?.blur();
     setCurrentStep(prev => {
       const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
+
+      setVisitedSteps(vPrev => vPrev.includes(newStep) ? vPrev : [...vPrev, newStep]);
 
       setJugadores(jPrev => {
         const next = [...jPrev];
@@ -1064,19 +1067,20 @@ export default function RegistroJugadores() {
     posicion: '',
     numCamiseta: '',
     esForaneo: false,
-    nacionalidadJugador: 'MEXICANA',
-    paisResidencia: 'MÉXICO',
+    nacionalidadJugador: '',
+    paisResidencia: '',
     haVividoExtranjero: false,
     dondeVividoExtranjero: '',
-    nacionalidadPadre: 'MEXICANA',
-    nacionalidadMadre: 'MEXICANA',
-    registroAsociacionExtranjera: 'NO',
-    nacAbueloPaterno: 'MEXICANA',
-    nacAbuelaPaterna: 'MEXICANA',
-    nacAbueloMaterno: 'MEXICANA',
-    nacAbuelaMaterna: 'MEXICANA',
-    juegoClubExtranjero: 'NO',
-    nui: ''
+    nacionalidadPadre: '',
+    nacionalidadMadre: '',
+    registroAsociacionExtranjera: '',
+    nacAbueloPaterno: '',
+    nacAbuelaPaterna: '',
+    nacAbueloMaterno: '',
+    nacAbuelaMaterna: '',
+    juegoClubExtranjero: '',
+    nui: '',
+    isCurpInvalid: false
   };
 
   const emptyPlayer = (index = 0, seguroId = '', slotId = null) => ({
@@ -1520,7 +1524,11 @@ export default function RegistroJugadores() {
       }
     }
 
-    updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
+    if (field === 'curp') {
+      updatePlayerDatos(currentPlayerIndex, { curp: cleanValue, isCurpInvalid: false });
+    } else {
+      updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
+    }
   };
 
   const handleBlur = () => {
@@ -1610,7 +1618,7 @@ export default function RegistroJugadores() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -1633,7 +1641,15 @@ export default function RegistroJugadores() {
           };
           next[currentPlayerIndex] = normalizePlayer({
             ...currentPlayerState,
-            datos: resetDatos
+            datos: resetDatos,
+            documentos: {
+              acta: null,
+              ine: null,
+              ineTutor: null,
+              identificacionMenor: null,
+              foto: null
+            },
+            signedForm: null
           });
 
           if (currentPlayerState.slotId) {
@@ -1752,7 +1768,7 @@ export default function RegistroJugadores() {
           .filter(seguro => {
             const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
             const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-            return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+            return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
           })
           .map(seguro => String(seguro.id))
       );
@@ -1861,6 +1877,14 @@ export default function RegistroJugadores() {
     const player = jugadores[currentPlayerIndex];
     const savedStep = player?.datos?.currentStep || 1;
     setCurrentStep(savedStep);
+
+    // Inicializar los pasos visitados del jugador basándose en el paso guardado
+    const initialVisited = [];
+    for (let i = 1; i <= savedStep; i++) {
+      initialVisited.push(i);
+    }
+    setVisitedSteps(initialVisited);
+
     setValidationErrors({});
 
     if (currentDocuments) {
@@ -2186,9 +2210,6 @@ export default function RegistroJugadores() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out the invalid CURP so the user is blocked
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -2227,10 +2248,11 @@ export default function RegistroJugadores() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || 'MÉXICO',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
           const merged = { ...currentDatos, ...ocrResult };
@@ -2254,7 +2276,7 @@ export default function RegistroJugadores() {
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -3385,7 +3407,7 @@ export default function RegistroJugadores() {
                     { step: 6, label: 'Resumen' }
                   ].map((s) => {
                     const isActive = currentStep === s.step;
-                    const isCompleted = esPasoCompleto(s.step);
+                    const isCompleted = currentPlayer.completo || (esPasoCompleto(s.step) && visitedSteps.includes(s.step));
                     return (
                       <div
                         key={`step-indicator-${s.step}`}
@@ -4055,6 +4077,11 @@ export default function RegistroJugadores() {
                           {missingOcrFields.includes('curp') && !currentDatos.curp && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
                               No se pudo completar automáticamente
+                            </span>
+                          )}
+                          {currentDatos.isCurpInvalid && (
+                            <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              No se pudo validar la veracidad de esta CURP.
                             </span>
                           )}
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}

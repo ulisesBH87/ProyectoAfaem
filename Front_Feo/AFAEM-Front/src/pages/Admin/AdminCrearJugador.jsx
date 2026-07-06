@@ -185,7 +185,8 @@ export default function AdminCrearJugador() {
     nacAbuelaPaterna: '',
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
-    juegoClubExtranjero: ''
+    juegoClubExtranjero: '',
+    isCurpInvalid: false
   });
 
   // ── Detección de minoría de edad ──
@@ -254,7 +255,7 @@ export default function AdminCrearJugador() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -290,8 +291,25 @@ export default function AdminCrearJugador() {
         nacAbueloMaterno: 'MEXICANA',
         nacAbuelaMaterna: 'MEXICANA',
         juegoClubExtranjero: 'NO',
-        nui: ''
+        nui: '',
+        isCurpInvalid: false
       });
+      setDocuments({
+        actaNacimiento: null,
+        identificacion: null,
+        fotografia: null,
+        formatoAfiliacion: null,
+        documentoEstudiante: null
+      });
+      setPreviews({
+        actaNacimiento: null,
+        identificacion: null,
+        fotografia: null,
+        formatoAfiliacion: null,
+        documentoEstudiante: null
+      });
+      setSignedForm(null);
+      setSignedFormPreview(null);
       setValidationErrors({});
       Swal.fire({
         title: 'Formulario Limpiado',
@@ -564,9 +582,6 @@ export default function AdminCrearJugador() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out CURP to block player creation
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -605,10 +620,11 @@ export default function AdminCrearJugador() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || '',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
           setOcrDataOriginal(ocrResult);
@@ -1796,6 +1812,11 @@ export default function AdminCrearJugador() {
                   {missingOcrFields.includes('curp') && !extractedData.curp && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
                       No se pudo completar automáticamente
+                    </span>
+                  )}
+                  {extractedData.isCurpInvalid && (
+                    <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
+                      Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
                     </span>
                   )}
                 </div>

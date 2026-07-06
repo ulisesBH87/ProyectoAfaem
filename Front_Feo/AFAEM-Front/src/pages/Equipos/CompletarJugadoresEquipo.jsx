@@ -214,8 +214,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -637,7 +637,8 @@ export default function CompletarJugadoresEquipo() {
     nacAbuelaPaterna: '',
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
-    juegoClubExtranjero: ''
+    juegoClubExtranjero: '',
+    isCurpInvalid: false
   });
 
   // Detección de minoría de edad
@@ -667,7 +668,7 @@ export default function CompletarJugadoresEquipo() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -706,6 +707,21 @@ export default function CompletarJugadoresEquipo() {
         nui: ''
       };
       setExtractedData(resetDatos);
+      setDocuments({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setPreviews({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setSignedForm(null);
       setValidationErrors({});
 
       // Guardar borrador vacío en BD si existe slot de borrador
@@ -756,7 +772,7 @@ export default function CompletarJugadoresEquipo() {
   const segurosJugador = (catalogs?.seguros || []).filter(seguro => {
     const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+    return (!['TIPO G', 'TIPO J'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
 
   // Calcular la suma de seguros asignados en la ampliación administrativa
@@ -1074,7 +1090,8 @@ export default function CompletarJugadoresEquipo() {
         nacAbuelaPaterna: '',
         nacAbueloMaterno: '',
         nacAbuelaMaterna: '',
-        juegoClubExtranjero: ''
+        juegoClubExtranjero: '',
+        isCurpInvalid: false
       });
     }
   }, [selectedSeguroId, slotsData]);
@@ -1170,7 +1187,13 @@ export default function CompletarJugadoresEquipo() {
       }
     }
 
-    setExtractedData(prev => ({ ...prev, [field]: cleanValue }));
+    setExtractedData(prev => {
+      const updated = { ...prev, [field]: cleanValue };
+      if (field === 'curp') {
+        updated.isCurpInvalid = false;
+      }
+      return updated;
+    });
   };
 
   // PROCESAR SUBIDA DE DOCUMENTOS Y OCR
@@ -1435,9 +1458,6 @@ export default function CompletarJugadoresEquipo() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out CURP to block step completion
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -1476,10 +1496,11 @@ export default function CompletarJugadoresEquipo() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || 'MÉXICO',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
           setOcrDataOriginal(ocrResult);
@@ -1499,7 +1520,7 @@ export default function CompletarJugadoresEquipo() {
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -2932,6 +2953,11 @@ export default function CompletarJugadoresEquipo() {
                     {missingOcrFields.includes('curp') && !extractedData.curp && (
                       <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
                         No se pudo completar automáticamente
+                      </span>
+                    )}
+                    {extractedData.isCurpInvalid && (
+                      <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
+                        No se pudo validar la veracidad de esta CURP.
                       </span>
                     )}
                     {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}

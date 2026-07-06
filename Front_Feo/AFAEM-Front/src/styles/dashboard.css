@@ -99,6 +99,21 @@
   margin: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  -ms-overflow-style: none !important;  /* IE y Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* Ocultar barra de desplazamiento para Chrome, Safari y Opera */
+.sidebar-menu::-webkit-scrollbar,
+.dashboard-sidebar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.dashboard-sidebar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 .sidebar-menu-item {
@@ -2182,4 +2197,9 @@
 /* SweetAlert container z-index adjustment */
 .swal2-container {
   z-index: 20000 !important;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

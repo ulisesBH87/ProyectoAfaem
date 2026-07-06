@@ -220,8 +220,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -346,12 +346,12 @@ export default function ConfigurarEquipo() {
   const segurosPresidente = (catalogs.seguros || []).filter(seguro => {
     const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-    return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+    return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
   });
   const segurosJugador = (catalogs.seguros || []).filter(seguro => {
     const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+    return (!['TIPO G', 'TIPO J'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
   const seguroJugadorIds = new Set(segurosJugador.map(seguro => String(seguro.id)));
   const segurosPresidenteIds = new Set(segurosPresidente.map(seguro => String(seguro.id)));
@@ -520,7 +520,8 @@ export default function ConfigurarEquipo() {
     nacAbueloMaterno: 'MEXICANA',
     nacAbuelaMaterna: 'MEXICANA',
     juegoClubExtranjero: 'NO',
-    nui: ''
+    nui: '',
+    isCurpInvalid: false
   });
 
   // Detección de minoría de edad
@@ -565,7 +566,7 @@ export default function ConfigurarEquipo() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -604,6 +605,21 @@ export default function ConfigurarEquipo() {
         nui: ''
       };
       setExtractedData(resetDatos);
+      setDocuments({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setPreviews({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setSignedForm(null);
       setValidationErrors({});
 
       // Guardar borrador vacío en BD si existe slot de borrador
@@ -702,6 +718,9 @@ export default function ConfigurarEquipo() {
 
     setExtractedData(prev => {
       const updated = { ...prev, [field]: cleanValue };
+      if (field === 'curp') {
+        updated.isCurpInvalid = false;
+      }
       return updated;
     });
   };
@@ -768,7 +787,7 @@ export default function ConfigurarEquipo() {
             .filter(seguro => {
               const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
               const tipoPersonaId = Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
-              return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+              return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
             })
             .map(seguro => String(seguro.id))
         );
@@ -1869,9 +1888,6 @@ export default function ConfigurarEquipo() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out CURP to block registration completion
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -1910,10 +1926,11 @@ export default function ConfigurarEquipo() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || 'MÉXICO',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
           const merged = { ...extractedData, ...ocrResult };
@@ -1935,7 +1952,7 @@ export default function ConfigurarEquipo() {
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -3480,6 +3497,11 @@ export default function ConfigurarEquipo() {
                         {missingOcrFields.includes('curp') && !extractedData.curp && (
                           <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
                             No se pudo completar automáticamente
+                          </span>
+                        )}
+                        {extractedData.isCurpInvalid && (
+                          <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
+                            No se pudo validar la veracidad de esta CURP.
                           </span>
                         )}
                         {curpExistente && (
