@@ -235,7 +235,7 @@ export default function PresidenteJugadorDocumentos() {
           <FaArrowLeft />
         </button>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Documentación del Jugador</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Documentación de {jugadorInfo?.nombre ? jugadorInfo.nombre.toUpperCase() : 'Jugador'}</h2>
           <p style={{ margin: 0, fontSize: '14px', color: COLORS.slate500, marginTop: '2px' }}>Consulta el estatus de los documentos de afiliación y sube archivos si fueron rechazados.</p>
         </div>
       </div>
@@ -381,27 +381,30 @@ export default function PresidenteJugadorDocumentos() {
                       />
                     </>
                   ) : (
-                    <label style={{
-                      flex: 1,
-                      padding: '10px 14px',
-                      background: COLORS.primary,
-                      color: 'white',
-                      borderRadius: '10px',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      textAlign: 'center',
-                      margin: 0
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      openUploadOptions(item.tipoId);
-                    }}>
-                      <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
+                    <>
+                      <button
+                        type="button"
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          background: COLORS.primary,
+                          color: 'white',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          textAlign: 'center',
+                          margin: 0,
+                          border: 'none'
+                        }}
+                        onClick={() => openUploadOptions(item.tipoId)}
+                      >
+                        <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
+                      </button>
                       <input
                         type="file"
                         id={`file-upload-${item.tipoId}`}
@@ -420,7 +423,7 @@ export default function PresidenteJugadorDocumentos() {
                           handleSubirDocumento(item.tipoId, file);
                         }}
                       />
-                    </label>
+                    </>
                   )}
                 </div>
               )}

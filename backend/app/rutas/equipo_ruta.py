@@ -1172,7 +1172,8 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             foto_subquery.label("RutaFoto"),
             MiembrosEquipo.NumeroCamiseta,
             seguro_subquery.label("SeguroNombre"),
-            MiembrosEquipo.EquipoID.label("EquipoId")
+            MiembrosEquipo.EquipoID.label("EquipoId"),
+            Personas.NUI
         ).join(Personas, MiembrosEquipo.PersonaId == Personas.PersonaId)\
          .join(RolesDeEquipo, MiembrosEquipo.RolEnEquipo == RolesDeEquipo.RolId)\
          .join(EquiposJugando, MiembrosEquipo.EquipoID == EquiposJugando.EquiposJugandoId)\
@@ -1207,21 +1208,22 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
             docs_requeridos = 5 if es_menor else 4
             required_docs_ids = [22, 33, 36, 25, 28] if es_menor else [22, 26, 25, 28]
 
-            approved_count = db.query(DocumentosEntregados.DocumentoAfiliacionId).filter(
-                DocumentosEntregados.PersonaId == r.PersonaId,
-                DocumentosEntregados.DocumentoAfiliacionId.in_(required_docs_ids),
-                DocumentosEntregados.EstadoValidacionId == 2
-            ).distinct().count()
+            # Obtener el estatus de los documentos más recientes por tipo
+            latest_statuses = []
+            for doc_type_id in required_docs_ids:
+                latest_doc = db.query(DocumentosEntregados.EstadoValidacionId).filter(
+                    DocumentosEntregados.PersonaId == r.PersonaId,
+                    DocumentosEntregados.DocumentoAfiliacionId == doc_type_id
+                ).order_by(DocumentosEntregados.FechaEntrega.desc()).first()
+                if latest_doc:
+                    latest_statuses.append(latest_doc[0])
+                else:
+                    latest_statuses.append(None)
 
-            rejected_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
-                DocumentosEntregados.PersonaId == r.PersonaId,
-                DocumentosEntregados.EstadoValidacionId == 3
-            ).count()
-
-            pending_count = db.query(DocumentosEntregados.DocumentosSolicitudId).filter(
-                DocumentosEntregados.PersonaId == r.PersonaId,
-                DocumentosEntregados.EstadoValidacionId == 1
-            ).count()
+            # Calcular los conteos basados en el documento más reciente de cada tipo
+            approved_count = sum(1 for s in latest_statuses if str(s) == "2" or s == 2)
+            rejected_count = sum(1 for s in latest_statuses if str(s) == "3" or s == 3)
+            pending_count = sum(1 for s in latest_statuses if str(s) == "1" or s == 1)
 
             if rejected_count > 0:
                 estatus_docs = "Rechazado"

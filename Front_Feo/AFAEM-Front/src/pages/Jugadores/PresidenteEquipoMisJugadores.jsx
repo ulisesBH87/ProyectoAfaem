@@ -170,6 +170,7 @@ export default function PresidenteEquipoMisJugadores() {
       html: `
         <div style="text-align: left; font-size: 14px; line-height: 1.8; padding: 10px;">
           <p style="margin-bottom: 8px;"><strong>Nombre Completo:</strong> ${player.NombreCompleto}</p>
+          <p style="margin-bottom: 8px;"><strong>NUI:</strong> ${player.NUI || 'No asignado'}</p>
           <p style="margin-bottom: 8px;"><strong>Equipo Vinculado:</strong> ${player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}</p>
           <p style="margin-bottom: 8px;"><strong>Posición / Rol:</strong> ${player.Rol || 'Miembro Registrado'}</p>
           <p style="margin-bottom: 8px;"><strong>Fecha de Registro:</strong> ${player.FechaIngreso ? new Date(player.FechaIngreso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
@@ -207,14 +208,20 @@ export default function PresidenteEquipoMisJugadores() {
           { label: 'Total Jugadores', value: totalJugadores, filter: 'todos', color: 'var(--primary)', icon: <FaUsers /> },
           { label: 'Miembros Activos', value: activos, filter: 'activos', color: 'var(--secondary)', icon: <FaCheckCircle /> },
           { label: 'Inactivos / Bajas', value: inactivos, filter: 'inactivos', color: 'var(--danger)', icon: <FaUserInjured /> },
-          { label: 'Equipos a cargo', value: equiposUnicos, color: COLORS.indigo, icon: <FaUsers />, isMetricOnly: true }
+          { label: 'Equipos a cargo', value: equiposUnicos, color: COLORS.indigo, icon: <FaUsers />, action: () => navigate(ROUTES.PRESIDENTE.EQUIPOS) }
         ].map((stat, i) => (
           <div
             key={i}
-            onClick={() => stat.filter && setFiltroEstatus(stat.filter)}
+            onClick={() => {
+              if (stat.action) {
+                stat.action();
+              } else if (stat.filter) {
+                setFiltroEstatus(stat.filter);
+              }
+            }}
             className={`metric-card ${filtroEstatus === stat.filter ? 'active' : ''}`}
             style={{
-              cursor: stat.isMetricOnly ? 'default' : 'pointer',
+              cursor: 'pointer',
               border: filtroEstatus === stat.filter ? `2px solid ${stat.color}` : '1.5px solid var(--border-light)',
               boxShadow: filtroEstatus === stat.filter ? `0 12px 20px ${stat.color}15` : 'none'
             }}

@@ -271,7 +271,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .premium-details-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto 30px auto;
       background: linear-gradient(135deg, ${COLORS.slate800} 0%, ${COLORS.slate900} 100%);
       color: white;
@@ -286,7 +286,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .main-form-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto;
       background: white;
       border-radius: 24px;
@@ -296,7 +296,7 @@ export default function CompletarJugadoresEquipo() {
     }
     
     .no-slots-card {
-      max-width: 1000px;
+      max-width: 100%;
       margin: 0 auto;
       background: white;
       border-radius: 24px;
@@ -746,7 +746,7 @@ export default function CompletarJugadoresEquipo() {
   const [cargandoOrdenAmpliacion, setCargandoOrdenAmpliacion] = useState(false);
 
   // Estados para creación de ampliación administrativa
-  const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(1);
+  const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(0);
   const [asignacionSegurosAmpliacion, setAsignacionSegurosAmpliacion] = useState({});
   const [aprobarAutomaticamente, setAprobarAutomaticamente] = useState(true);
   const [procesandoAmpliacionAdmin, setProcesandoAmpliacionAdmin] = useState(false);
@@ -758,6 +758,17 @@ export default function CompletarJugadoresEquipo() {
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
     return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
+
+  // Calcular la suma de seguros asignados en la ampliación administrativa
+  const totalSegurosAsignados = React.useMemo(() => {
+    return Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
+      const s = segurosJugador.find(x => String(x.id) === String(id));
+      if (s) {
+        return acc + (Number(cant) || 0);
+      }
+      return acc;
+    }, 0);
+  }, [asignacionSegurosAmpliacion, segurosJugador]);
 
   const abrirModalDetalle = (seguro) => {
     setSeguroDetalle(seguro);
@@ -1550,7 +1561,8 @@ export default function CompletarJugadoresEquipo() {
           CantidadJugadores: Number(numJugadoresAmpliacion),
           Seguros: segurosPayload,
           TipoSolicitud: 3, // JUGADOR
-          EquipoId: Number(equipoId)
+          EquipoId: Number(equipoId),
+          PresidenteId: equipo?.PresidenteEquipoId || null
         })
       });
 
@@ -2220,72 +2232,78 @@ export default function CompletarJugadoresEquipo() {
 
                   <div style={{ background: COLORS.slate50, padding: '25px', borderRadius: '16px', border: `1px solid ${COLORS.slate200}`, marginBottom: '25px' }}>
                     {/* Cantidad de Jugadores */}
-                    <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
+                    <div style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <label style={{ fontWeight: '800', color: COLORS.slate800, margin: 0 }}>
                         Cantidad de espacios a generar (Jugadores)
                       </label>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         value={numJugadoresAmpliacion}
-                        onChange={(e) => setNumJugadoresAmpliacion(Math.max(1, parseInt(e.target.value) || 1))}
-                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
+                        onChange={(e) => setNumJugadoresAmpliacion(Math.max(0, parseInt(e.target.value) || 0))}
+                        style={{ width: '120px', padding: '10px 12px', borderRadius: '10px', border: `1px solid ${COLORS.slate300}`, fontSize: '15px' }}
                       />
                     </div>
 
-                    {/* Seguros */}
-                    <div style={{ marginBottom: '25px' }}>
-                      <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
-                        Selección de Seguros
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-                        {segurosJugador.map(seg => (
-                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: `1px solid ${COLORS.slate200}` }}>
-                            <div>
-                              <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{seg.nombre}</div>
-                              <div style={{ fontSize: '12px', color: COLORS.slate500 }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                    <div style={{ display: 'flex', gap: '25px', flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: '25px' }}>
+                      {/* Lado izquierdo: Seguros */}
+                      <div style={{ flex: '1 1 60%', minWidth: '300px' }}>
+                        <label style={{ display: 'block', fontWeight: '800', color: COLORS.slate800, marginBottom: '10px' }}>
+                          Selección de Seguros
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+                          {segurosJugador.map(seg => (
+                            <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '10px', border: `1px solid ${COLORS.slate200}` }}>
+                              <div>
+                                <div style={{ fontWeight: '700', color: COLORS.slate800, fontSize: '14px' }}>{seg.nombre}</div>
+                                <div style={{ fontSize: '12px', color: COLORS.slate500 }}>${Number(seg.precio || 0).toFixed(2)} c/u</div>
+                              </div>
+                              <input
+                                type="number"
+                                min="0"
+                                value={asignacionSegurosAmpliacion[seg.id] || ''}
+                                placeholder="0"
+                                onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.slate300}` }}
+                              />
                             </div>
-                            <input
-                              type="number"
-                              min="0"
-                              value={asignacionSegurosAmpliacion[seg.id] || ''}
-                              placeholder="0"
-                              onChange={(e) => setAsignacionSegurosAmpliacion(prev => ({ ...prev, [seg.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                              style={{ width: '60px', padding: '8px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.slate300}` }}
-                            />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Resumen */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
-                      <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800 }}>Resumen de Costos</h4>
+                      {/* Lado derecho: Resumen */}
+                      <div style={{ flex: '1 1 35%', minWidth: '280px' }}>
+                        {/* Spacer para alinear verticalmente con la etiqueta de Selección de Seguros */}
+                        <div style={{ height: '31px' }}></div>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
+                          <h4 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '800', color: COLORS.slate800 }}>Resumen de Costos</h4>
 
-                      {segurosJugador.map(seg => {
-                        const cant = asignacionSegurosAmpliacion[seg.id] || 0;
-                        if (cant === 0) return null;
-                        return (
-                          <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: COLORS.slate500 }}>
-                            <span>Seguro {seg.nombre} x{cant}</span>
-                            <span style={{ fontWeight: '700', color: COLORS.slate800 }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                          {segurosJugador.map(seg => {
+                            const cant = asignacionSegurosAmpliacion[seg.id] || 0;
+                            if (cant === 0) return null;
+                            return (
+                              <div key={`res-seg-${seg.id}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: COLORS.slate500 }}>
+                                <span>Seguro {seg.nombre} x{cant}</span>
+                                <span style={{ fontWeight: '700', color: COLORS.slate800 }}>${(Number(seg.precio || 0) * cant).toFixed(2)}</span>
+                              </div>
+                            );
+                          })}
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: `2px solid ${COLORS.slate100}` }}>
+                            <span style={{ fontWeight: '800', color: COLORS.slate800 }}>TOTAL A PAGAR</span>
+                            <span style={{ fontWeight: '900', color: COLORS.primary, fontSize: '18px' }}>
+                              ${(
+                                Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
+                                  const s = segurosJugador.find(x => String(x.id) === String(id));
+                                  if (s) {
+                                    return acc + (cant * Number(s.precio || 0));
+                                  }
+                                  return acc;
+                                }, 0)
+                              ).toFixed(2)}
+                            </span>
                           </div>
-                        );
-                      })}
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', paddingTop: '15px', borderTop: `2px solid ${COLORS.slate100}` }}>
-                        <span style={{ fontWeight: '800', color: COLORS.slate800 }}>TOTAL A PAGAR</span>
-                        <span style={{ fontWeight: '900', color: COLORS.primary, fontSize: '18px' }}>
-                          ${(
-                            Object.entries(asignacionSegurosAmpliacion).reduce((acc, [id, cant]) => {
-                              const s = segurosJugador.find(x => String(x.id) === String(id));
-                              if (s) {
-                                return acc + (cant * Number(s.precio || 0));
-                              }
-                              return acc;
-                            }, 0)
-                          ).toFixed(2)}
-                        </span>
+                        </div>
                       </div>
                     </div>
 
@@ -2312,7 +2330,7 @@ export default function CompletarJugadoresEquipo() {
                     <BotonPrimario
                       etiqueta={procesandoAmpliacionAdmin ? "Procesando..." : "Generar Ampliación"}
                       alHacerClick={handleGenerarAmpliacionAdmin}
-                      deshabilitado={procesandoAmpliacionAdmin}
+                      deshabilitado={procesandoAmpliacionAdmin || numJugadoresAmpliacion <= 0 || numJugadoresAmpliacion !== totalSegurosAsignados}
                       estilo={{ padding: '12px 24px', fontSize: '15px', minWidth: '200px' }}
                     />
                   </div>
@@ -2785,32 +2803,7 @@ export default function CompletarJugadoresEquipo() {
                 </div>
               </div>
 
-              {/* AVISO DE DISCREPANCIA OCR */}
-              {ocrDataOriginal && (
-                extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-              ) && (
-                  <div className="fade-in" style={{
-                    marginBottom: '20px',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    background: COLORS.orange50,
-                    border: `1px solid ${COLORS.orange100}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}>
-                    <div style={{ fontSize: '20px' }}>⚠️</div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                        Discrepancia detectada
-                      </h4>
-                      <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                        La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                      </p>
-                    </div>
-                  </div>
-                )}
+
 
               {/* CAMPOS DEL FORMULARIO */}
               <div className="inner-form-card">

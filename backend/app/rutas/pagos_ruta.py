@@ -58,6 +58,26 @@ def crear_orden_pago(datos: CrearOrdenPago, service: PagosServicio = Depends(get
                 self.UsuarioId = usuario_id
 
         usuario_objetivo = UsuarioObjetivo(usuario_id_objetivo)
+    elif datos.TipoSolicitud == TiposSolicitudEnum.JUGADOR and datos.EquipoId is not None:
+        from app.modelos.equipo_modelo import EquiposJugando
+        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+        from app.modelos.usuario_modelo import Usuario
+        from app.modelos.persona_modelo import Personas
+        
+        eq_jugando = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == datos.EquipoId).first()
+        if eq_jugando and eq_jugando.PresidenteEquipoId is not None:
+            usuario_id_objetivo = (
+                db.query(Usuario.UsuarioId)
+                .join(Personas, Personas.PersonaId == Usuario.PersonaId)
+                .join(PresidenteEquipo, PresidenteEquipo.PersonaId == Personas.PersonaId)
+                .filter(PresidenteEquipo.PresidenteEquipoId == eq_jugando.PresidenteEquipoId)
+                .scalar()
+            )
+            if usuario_id_objetivo:
+                class UsuarioObjetivo:
+                    def __init__(self, usuario_id):
+                        self.UsuarioId = usuario_id
+                usuario_objetivo = UsuarioObjetivo(usuario_id_objetivo)
 
     #Se crea primero la solicitud
     tipo_solicitud = datos.TipoSolicitud #La que viene del frontend. Se relaciona con tabla solicitudes
