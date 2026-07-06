@@ -540,6 +540,7 @@ export default function CompletarJugadoresEquipo() {
   const [seguroDetalle, setSeguroDetalle] = useState(null);
   const [registeredPlayers, setRegisteredPlayers] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
+
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
 
   // Obtener el slot actual según el seguro seleccionado
@@ -640,6 +641,9 @@ export default function CompletarJugadoresEquipo() {
     juegoClubExtranjero: '',
     isCurpInvalid: false
   });
+
+  const isCorreoValido = !!extractedData?.correo?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(extractedData.correo.trim()) && !validationErrors.correo;
+  const isTelefonoValido = !!extractedData?.telefono && extractedData.telefono.length === 10 && !validationErrors.telefono;
 
   // Detección de minoría de edad
   const esMenorDeEdad = React.useMemo(() => {
@@ -3145,20 +3149,36 @@ export default function CompletarJugadoresEquipo() {
                       type="email"
                       maxLength={60}
                       value={extractedData.correo}
-                      onChange={e => handleFieldChange('correo', e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value;
+                        handleFieldChange('correo', val);
+                        const trimmed = val.trim();
+                        if (!trimmed) {
+                          setValidationErrors(prev => ({ ...prev, correo: 'El correo electrónico es obligatorio.' }));
+                        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                          setValidationErrors(prev => ({ ...prev, correo: 'Ingrese un correo electrónico válido.' }));
+                        } else {
+                          setValidationErrors(prev => ({ ...prev, correo: null }));
+                        }
+                      }}
                       placeholder="correo@ejemplo.com"
                       style={{
                         padding: '10px',
                         borderRadius: '8px',
-                        border: missingOcrFields.includes('correo') && !extractedData.correo
-                          ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                          : `1px solid ${COLORS.slate300}`,
+                        border: validationErrors.correo
+                          ? `1.5px solid ${COLORS.danger}`
+                          : (isCorreoValido
+                            ? `1.5px solid ${COLORS.success}`
+                            : (missingOcrFields.includes('correo') && !extractedData.correo
+                              ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                              : `1px solid ${COLORS.slate300}`)),
                         backgroundColor: missingOcrFields.includes('correo') && !extractedData.correo
                           ? '#fef3c7'
                           : 'white',
                         fontSize: '14px',
                         width: '100%',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        outline: 'none'
                       }}
                     />
                     {missingOcrFields.includes('correo') && !extractedData.correo && (
@@ -3166,6 +3186,7 @@ export default function CompletarJugadoresEquipo() {
                         Completa manualmente.
                       </span>
                     )}
+                    {validationErrors.correo && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>❌ {validationErrors.correo}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}># de Teléfono <span className="required-star">*</span></label>
@@ -3205,19 +3226,34 @@ export default function CompletarJugadoresEquipo() {
                       <input
                         type="tel"
                         value={extractedData.telefono}
-                        onChange={e => handleFieldChange('telefono', e.target.value)}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          handleFieldChange('telefono', val);
+                          if (!val) {
+                            setValidationErrors(prev => ({ ...prev, telefono: 'El teléfono es obligatorio.' }));
+                          } else if (val.length < 10) {
+                            setValidationErrors(prev => ({ ...prev, telefono: 'El teléfono debe tener 10 dígitos.' }));
+                          } else {
+                            setValidationErrors(prev => ({ ...prev, telefono: null }));
+                          }
+                        }}
                         placeholder="10 dígitos numéricos"
                         style={{
                           padding: '10px',
                           borderRadius: '8px',
-                          border: missingOcrFields.includes('telefono') && !extractedData.telefono
-                            ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                            : `1px solid ${COLORS.slate300}`,
+                          border: validationErrors.telefono
+                            ? `1.5px solid ${COLORS.danger}`
+                            : (isTelefonoValido
+                              ? `1.5px solid ${COLORS.success}`
+                              : (missingOcrFields.includes('telefono') && !extractedData.telefono
+                                ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                : `1px solid ${COLORS.slate300}`)),
                           backgroundColor: missingOcrFields.includes('telefono') && !extractedData.telefono
                             ? '#fef3c7'
                             : 'white',
                           fontSize: '14px',
-                          flexGrow: 1
+                          flexGrow: 1,
+                          outline: 'none'
                         }}
                       />
                     </div>
@@ -3226,6 +3262,7 @@ export default function CompletarJugadoresEquipo() {
                         Completa manualmente.
                       </span>
                     )}
+                    {validationErrors.telefono && <span style={{ color: COLORS.danger, fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>❌ {validationErrors.telefono}</span>}
                   </div>
                 </div>
 

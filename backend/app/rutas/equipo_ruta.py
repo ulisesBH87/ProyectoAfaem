@@ -211,6 +211,13 @@ async def crear_equipo_completo(request: Request, db: Session = Depends(get_db),
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+LATEST_ERROR_TRACEBACK = None
+
+@router.get("/debug-latest-error")
+async def debug_latest_error():
+    global LATEST_ERROR_TRACEBACK
+    return {"traceback": LATEST_ERROR_TRACEBACK}
+
 @router.post("/agregar-jugador-equipo-existente")
 async def agregar_jugador_equipo_existente(
     request: Request,
@@ -468,9 +475,11 @@ async def agregar_jugador_equipo_existente(
         db.rollback()
         exc_type, exc_obj, exc_tb = sys.exc_info()
         tb = traceback.format_exc()
+        global LATEST_ERROR_TRACEBACK
+        LATEST_ERROR_TRACEBACK = tb
         error_msg = str(e)
         print("ERROR EN AGREGAR JUGADOR:", tb, file=sys.stderr)
-        raise HTTPException(status_code=500, detail=f"Error interno")
+        raise HTTPException(status_code=500, detail=f"Error interno: {error_msg}")
 
 @router.post("/registrar-jugador")
 async def registrar_jugador(
