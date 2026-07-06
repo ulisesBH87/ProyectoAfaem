@@ -3550,6 +3550,31 @@ export default function RegistroJugadores() {
                                     <FaCheckCircle style={{ color: COLORS.primary, fontSize: '16px', flexShrink: 0, marginTop: '2px' }} />
                                   )}
                                 </div>
+                                {(() => {
+                                  const tv = seg.TipoVigencia != null ? seg.TipoVigencia : seg.tipoVigencia;
+                                  const m = seg.VigenciaTemporal != null ? seg.VigenciaTemporal : seg.vigenciaTemporal;
+                                  const fv = seg.FechaVigencia || seg.fechaVigencia;
+                                  let vigenciaTexto = 'N/A';
+                                  if (String(tv) === '1' && m) {
+                                    const hoy = new Date();
+                                    const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + parseInt(m, 10), hoy.getDate());
+                                    const fechaFinStr = fechaFin.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                                    vigenciaTexto = `${m} meses (Vence: ${fechaFinStr})`;
+                                  } else if (String(tv) === '2' && fv) {
+                                    const dateParts = String(fv).split('T')[0].split('-');
+                                    if (dateParts.length === 3) {
+                                      const fechaObj = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
+                                      vigenciaTexto = fechaObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+                                    } else {
+                                      vigenciaTexto = String(fv);
+                                    }
+                                  }
+                                  return (
+                                    <div style={{ fontSize: '11px', color: COLORS.slate500, fontWeight: '500', marginTop: '4px', marginBottom: '4px' }}>
+                                      Vigencia: <strong style={{ color: COLORS.slate700 }}>{vigenciaTexto}</strong>
+                                    </div>
+                                  );
+                                })()}
                                 <div className="seguro-card-badge" style={{
                                   background: noDisponible ? COLORS.dangerBg : COLORS.greenBg,
                                   color: noDisponible ? COLORS.danger : COLORS.greenDarker,

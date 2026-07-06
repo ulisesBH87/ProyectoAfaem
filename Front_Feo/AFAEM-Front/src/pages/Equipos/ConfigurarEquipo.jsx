@@ -3114,10 +3114,35 @@ export default function ConfigurarEquipo() {
                                 )}
                               </div>
                               {matchedSeguro?.precio !== undefined && (
-                                <span style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '600' }}>
+                                <span style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '600', display: 'block' }}>
                                   Precio: ${matchedSeguro.precio} MXN
                                 </span>
                               )}
+                              {matchedSeguro && (() => {
+                                const tv = matchedSeguro.TipoVigencia != null ? matchedSeguro.TipoVigencia : matchedSeguro.tipoVigencia;
+                                const m = matchedSeguro.VigenciaTemporal != null ? matchedSeguro.VigenciaTemporal : matchedSeguro.vigenciaTemporal;
+                                const fv = matchedSeguro.FechaVigencia || matchedSeguro.fechaVigencia;
+                                let vigenciaTexto = 'N/A';
+                                if (String(tv) === '1' && m) {
+                                  const hoy = new Date();
+                                  const fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + parseInt(m, 10), hoy.getDate());
+                                  const fechaFinStr = fechaFin.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                                  vigenciaTexto = `${m} meses (Vence: ${fechaFinStr})`;
+                                } else if (String(tv) === '2' && fv) {
+                                  const dateParts = String(fv).split('T')[0].split('-');
+                                  if (dateParts.length === 3) {
+                                    const fechaObj = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
+                                    vigenciaTexto = fechaObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+                                  } else {
+                                    vigenciaTexto = String(fv);
+                                  }
+                                }
+                                return (
+                                  <div style={{ fontSize: '11px', color: COLORS.slate500, fontWeight: '500', marginTop: '4px' }}>
+                                    Vigencia: <strong style={{ color: COLORS.slate700 }}>{vigenciaTexto}</strong>
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div className="insurance-badge-wrapper" style={{ marginTop: '5px', display: 'inline-flex', alignSelf: 'start', padding: '2px 8px', borderRadius: '20px', background: COLORS.greenBg, color: COLORS.greenDarker, fontSize: '11px', fontWeight: '800' }}>
                               {seg.Cantidad} disponibles
