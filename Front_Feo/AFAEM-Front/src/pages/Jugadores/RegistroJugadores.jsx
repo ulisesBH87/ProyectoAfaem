@@ -810,6 +810,7 @@ export default function RegistroJugadores() {
   const [failedPhoto, setFailedPhoto] = useState(null);
   const [linkError, setLinkError] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [visitedSteps, setVisitedSteps] = useState([1]);
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
   const [seguroDetalle, setSeguroDetalle] = useState(null);
 
@@ -827,6 +828,8 @@ export default function RegistroJugadores() {
     document.activeElement?.blur();
     setCurrentStep(prev => {
       const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
+      
+      setVisitedSteps(vPrev => vPrev.includes(newStep) ? vPrev : [...vPrev, newStep]);
 
       setJugadores(jPrev => {
         const next = [...jPrev];
@@ -1076,7 +1079,8 @@ export default function RegistroJugadores() {
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
     juegoClubExtranjero: '',
-    nui: ''
+    nui: '',
+    isCurpInvalid: false
   };
 
   const emptyPlayer = (index = 0, seguroId = '', slotId = null) => ({
@@ -1520,7 +1524,11 @@ export default function RegistroJugadores() {
       }
     }
 
-    updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
+    if (field === 'curp') {
+      updatePlayerDatos(currentPlayerIndex, { curp: cleanValue, isCurpInvalid: false });
+    } else {
+      updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
+    }
   };
 
   const handleBlur = () => {
@@ -1869,6 +1877,14 @@ export default function RegistroJugadores() {
     const player = jugadores[currentPlayerIndex];
     const savedStep = player?.datos?.currentStep || 1;
     setCurrentStep(savedStep);
+    
+    // Inicializar los pasos visitados del jugador basándose en el paso guardado
+    const initialVisited = [];
+    for (let i = 1; i <= savedStep; i++) {
+      initialVisited.push(i);
+    }
+    setVisitedSteps(initialVisited);
+    
     setValidationErrors({});
 
     if (currentDocuments) {
@@ -2194,9 +2210,6 @@ export default function RegistroJugadores() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out the invalid CURP so the user is blocked
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -2235,10 +2248,11 @@ export default function RegistroJugadores() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || 'MÉXICO',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
           const merged = { ...currentDatos, ...ocrResult };
@@ -3393,7 +3407,7 @@ export default function RegistroJugadores() {
                     { step: 6, label: 'Resumen' }
                   ].map((s) => {
                     const isActive = currentStep === s.step;
-                    const isCompleted = esPasoCompleto(s.step);
+                    const isCompleted = currentPlayer.completo || (esPasoCompleto(s.step) && visitedSteps.includes(s.step));
                     return (
                       <div
                         key={`step-indicator-${s.step}`}
@@ -4063,6 +4077,11 @@ export default function RegistroJugadores() {
                           {missingOcrFields.includes('curp') && !currentDatos.curp && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
                               No se pudo completar automáticamente
+                            </span>
+                          )}
+                          {currentDatos.isCurpInvalid && (
+                            <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
                             </span>
                           )}
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}

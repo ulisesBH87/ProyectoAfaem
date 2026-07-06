@@ -1080,7 +1080,8 @@ export default function AdminJugadores() {
       estatus: jugador.Estatus ? '1' : '0',
       numeroCamiseta: jugador.NumeroCamiseta !== undefined && jugador.NumeroCamiseta !== null ? jugador.NumeroCamiseta : '',
       rolEnEquipo: jugador.RolEnEquipo !== undefined && jugador.RolEnEquipo !== null ? jugador.RolEnEquipo : '',
-      seguroNombre: jugador.SeguroNombre || 'Sin seguro asignado'
+      seguroNombre: jugador.SeguroNombre || 'Sin seguro asignado',
+      isCurpInvalid: false
     });
     setHaCambiado(false);
     setOcrCargando(false);
@@ -1205,9 +1206,6 @@ export default function AdminJugadores() {
 
       const curpOriginalCapturada = curpEncontrada;
       const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-      if (curpNoValida) {
-        curpEncontrada = '';
-      }
 
       // Fallback: buscar en texto plano si los selectores no devuelven nada
       if (!nombresEncontrados && !apellidoPaternoEncontrado && !nombreEncontrado && !curpEncontrada) {
@@ -1246,7 +1244,8 @@ export default function AdminJugadores() {
           ...(firstName && { nombre: firstName }),
           ...(lastNameP && { primerApellido: lastNameP }),
           ...(lastNameM && { segundoApellido: lastNameM }),
-          ...(curpEncontrada && { curp: curpEncontrada }),
+          curp: curpOriginalCapturada || '',
+          isCurpInvalid: curpNoValida,
           ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada })
         }));
         setHaCambiado(true);
@@ -1295,7 +1294,13 @@ export default function AdminJugadores() {
 
   const manejarCambioInput = (e) => {
     const { name, value } = e.target;
-    setDatosEditables(prev => ({ ...prev, [name]: value }));
+    setDatosEditables(prev => {
+      const updated = { ...prev, [name]: value };
+      if (name === 'curp') {
+        updated.isCurpInvalid = false;
+      }
+      return updated;
+    });
     setHaCambiado(true);
   };
 
@@ -1804,7 +1809,14 @@ export default function AdminJugadores() {
               <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
               <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
               <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza automáticamente" deshabilitado={true} />
-              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
+                {datosEditables.isCurpInvalid && (
+                  <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '-8px', marginBottom: '12px', display: 'block' }}>
+                    Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
+                  </span>
+                )}
+              </div>
 
               <EntradaFormulario etiqueta="Fecha de nacimiento" valor={datosEditables.fechaNacimiento} onChange={manejarCambioInput} nombre="fechaNacimiento" tipo="date" />
               <EntradaSeleccion etiqueta="Sexo" valor={datosEditables.sexo} onChange={manejarCambioInput} nombre="sexo" opciones={[{ valor: 'Masculino', etiqueta: 'Masculino' }, { valor: 'Femenino', etiqueta: 'Femenino' }, { valor: 'No Binario', etiqueta: 'Otro' }]} />

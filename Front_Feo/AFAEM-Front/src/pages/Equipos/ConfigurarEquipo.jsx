@@ -520,7 +520,8 @@ export default function ConfigurarEquipo() {
     nacAbueloMaterno: 'MEXICANA',
     nacAbuelaMaterna: 'MEXICANA',
     juegoClubExtranjero: 'NO',
-    nui: ''
+    nui: '',
+    isCurpInvalid: false
   });
 
   // Detección de minoría de edad
@@ -717,6 +718,9 @@ export default function ConfigurarEquipo() {
 
     setExtractedData(prev => {
       const updated = { ...prev, [field]: cleanValue };
+      if (field === 'curp') {
+        updated.isCurpInvalid = false;
+      }
       return updated;
     });
   };
@@ -1884,9 +1888,6 @@ export default function ConfigurarEquipo() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out CURP to block registration completion
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -1925,10 +1926,11 @@ export default function ConfigurarEquipo() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || 'MÉXICO',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
           const merged = { ...extractedData, ...ocrResult };
@@ -3495,6 +3497,11 @@ export default function ConfigurarEquipo() {
                         {missingOcrFields.includes('curp') && !extractedData.curp && (
                           <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
                             No se pudo completar automáticamente
+                          </span>
+                        )}
+                        {extractedData.isCurpInvalid && (
+                          <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
+                            Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
                           </span>
                         )}
                         {curpExistente && (
