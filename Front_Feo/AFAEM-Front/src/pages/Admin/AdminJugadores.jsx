@@ -470,6 +470,7 @@ export default function AdminJugadores() {
 
   const [jugadores, setJugadores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Estados para filtros, búsqueda y paginación
@@ -503,9 +504,13 @@ export default function AdminJugadores() {
 
   const mostrarFallback = !(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) || avatarError || imgError;
 
-  const loadJugadores = async (forceRefresh = false) => {
+  const loadJugadores = async (forceRefresh = false, isTableOnly = false) => {
     try {
-      setLoading(true);
+      if (isTableOnly) {
+        setTableLoading(true);
+      } else {
+        setLoading(true);
+      }
       const data = await getJugadoresDirectorio(forceRefresh);
       setJugadores(data);
       setError(null);
@@ -514,16 +519,12 @@ export default function AdminJugadores() {
       setError("Error al cargar el directorio de jugadores.");
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
   const loadJugadoresSilencioso = async () => {
-    try {
-      const data = await getJugadoresDirectorio(true);
-      setJugadores(data);
-    } catch (err) {
-      console.error("Error al recargar jugadores silenciosamente:", err);
-    }
+    await loadJugadores(true, true);
   };
 
   const cargarRoles = async () => {
@@ -1447,6 +1448,10 @@ export default function AdminJugadores() {
   return (
     <div className="dashboard-content">
       <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
         .swal2-container {
           z-index: 11000 !important;
         }
@@ -1498,13 +1503,6 @@ export default function AdminJugadores() {
           <p style={{ margin: 0, fontSize: '14px', color: COLORS.slate500, marginTop: '4px' }}>Visualiza y gestiona jugadores.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => loadJugadores(true)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: COLORS.slate700, border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FaSyncAlt />
-          </button>
           <button
             className="btn btn-primary"
             onClick={() => navigate(ROUTES.ADMIN.LAYOUT_JUGADORES)}
@@ -1669,6 +1667,10 @@ export default function AdminJugadores() {
               width="280px"
             />
 
+            <button onClick={() => loadJugadores(true, true)} className="btn-premium" style={{ padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaSyncAlt style={{ animation: tableLoading ? 'spin 1s linear infinite' : 'none' }} />
+            </button>
+
             <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate600 }}>
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DEC'}
             </button>
@@ -1686,7 +1688,7 @@ export default function AdminJugadores() {
         <DashboardTable
           columns={columns}
           data={dataTransformada}
-          isLoading={loading}
+          isLoading={loading || tableLoading}
           totalItems={filteredJugadores.length}
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
