@@ -131,7 +131,7 @@ export default function PagoPrevioJugador() {
         nuevaAsignacion[String(s.id)] = 0;
       });
 
-      const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
+      const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'TIPO J'].includes((s.nombre || '').toUpperCase().trim()));
       if (primerSeguroJugador) {
         nuevaAsignacion[String(primerSeguroJugador.id)] = totalNecesario;
       } else if (catalogs.seguros.length > 0) {
@@ -198,7 +198,7 @@ export default function PagoPrevioJugador() {
   const detallesSeguros = orderDetails.filter(detalle => Number(detalle.SeguroId) > 0);
   const segurosRequeridosPagoJugador = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
   const totalAsignadosPagoJugador = catalogs.seguros.reduce((sum, seguro) => {
-    const isPresidente = ['TIPO G', 'SIN SEGURO'].includes((seguro.nombre || '').toUpperCase().trim());
+    const isPresidente = ['TIPO G', 'TIPO J'].includes((seguro.nombre || '').toUpperCase().trim());
     return sum + (isPresidente ? 0 : Number(asignacionSegurosAgregar[String(seguro.id)] || 0));
   }, 0);
   const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
@@ -563,7 +563,7 @@ export default function PagoPrevioJugador() {
 
                 <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: COLORS.primary, textTransform: 'uppercase' }}>Distribucion de seguros</div>
                 <div className="responsive-seguros-grid">
-                  {catalogs.seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim())).map(seguro => {
+                  {catalogs.seguros.filter(s => !['TIPO G', 'TIPO J'].includes((s.nombre || '').toUpperCase().trim())).map(seguro => {
                     const id = String(seguro.id);
                     return (
                       <div

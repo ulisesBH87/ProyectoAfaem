@@ -213,8 +213,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -289,7 +289,7 @@ function PreRegistroPresidente() {
   const abrirModalDetalle = (seguro) => {
     setSeguroDetalle(seguro);
     const normalizedName = normalizarNombreSeguro(seguro.nombre);
-    const esPres = ['TIPO G', 'SIN SEGURO'].includes(normalizedName);
+    const esPres = ['TIPO G', 'TIPO J'].includes(normalizedName);
     if (!esPres) {
       setCantidadModal(Number(asignacionSeguros[seguro.id] || 0));
     }
@@ -401,10 +401,10 @@ function PreRegistroPresidente() {
   };
 
   const segurosPresidente = catalogoSeguros.filter((seg) =>
-    ['TIPO G', 'SIN SEGURO'].includes(seg.nombre.toUpperCase().trim())
+    ['TIPO G', 'TIPO J'].includes(seg.nombre.toUpperCase().trim())
   );
   const segurosJugadores = catalogoSeguros.filter((seg) =>
-    !['TIPO G', 'SIN SEGURO'].includes(seg.nombre.toUpperCase().trim())
+    !['TIPO G', 'TIPO J'].includes(seg.nombre.toUpperCase().trim())
   );
 
 
@@ -480,7 +480,7 @@ function PreRegistroPresidente() {
         setCatalogoSeguros(segurosMapeados);
         const initAsignacion = {};
         segurosMapeados.forEach(seg => {
-          if (seg.nombre.toUpperCase().trim() === 'SIN SEGURO') {
+          if (seg.nombre.toUpperCase().trim() === 'TIPO J') {
             initAsignacion[seg.id] = 1;
           } else {
             initAsignacion[seg.id] = 0;
@@ -631,7 +631,7 @@ function PreRegistroPresidente() {
   /* ─── Catálogos para Selectores ─── */
   const CATALOGO_ROLES = [
     { valor: 'TIPO G', etiqueta: 'TIPO G' },
-    { valor: 'SIN SEGURO', etiqueta: 'SIN SEGURO' }
+    { valor: 'TIPO J', etiqueta: 'TIPO J' }
   ];
 
   const bankInfo = DEFAULT_BANK_INFO;
@@ -4719,7 +4719,7 @@ function PreRegistroPresidente() {
           beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
           coberturas: []
         };
-        const esPresidente = ['TIPO G', 'SIN SEGURO'].includes(segNombreNormalizado);
+        const esPresidente = ['TIPO G', 'TIPO J'].includes(segNombreNormalizado);
 
         return createPortal(
           <div style={{

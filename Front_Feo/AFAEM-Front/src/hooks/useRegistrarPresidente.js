@@ -757,7 +757,7 @@ export function useRegistrarPresidente() {
         Object.entries(asignacion).forEach(([k, v]) => {
           if (Number(v) > 0) {
             const segObj = seguros.find(s => String(s.id) === String(k));
-            if (segObj && ['TIPO G', 'SIN SEGURO'].includes(segObj.nombre.toUpperCase().trim())) return;
+            if (segObj && ['TIPO G', 'TIPO J'].includes(segObj.nombre.toUpperCase().trim())) return;
             segFiltrados[k] = Number(v);
           }
         });

@@ -470,6 +470,7 @@ export default function AdminJugadores() {
 
   const [jugadores, setJugadores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Estados para filtros, búsqueda y paginación
@@ -503,9 +504,13 @@ export default function AdminJugadores() {
 
   const mostrarFallback = !(fotoJugadorEdicion || jugadorEdicion?.RutaFoto) || avatarError || imgError;
 
-  const loadJugadores = async (forceRefresh = false) => {
+  const loadJugadores = async (forceRefresh = false, isTableOnly = false) => {
     try {
-      setLoading(true);
+      if (isTableOnly) {
+        setTableLoading(true);
+      } else {
+        setLoading(true);
+      }
       const data = await getJugadoresDirectorio(forceRefresh);
       setJugadores(data);
       setError(null);
@@ -514,16 +519,12 @@ export default function AdminJugadores() {
       setError("Error al cargar el directorio de jugadores.");
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
   const loadJugadoresSilencioso = async () => {
-    try {
-      const data = await getJugadoresDirectorio(true);
-      setJugadores(data);
-    } catch (err) {
-      console.error("Error al recargar jugadores silenciosamente:", err);
-    }
+    await loadJugadores(true, true);
   };
 
   const cargarRoles = async () => {
@@ -1080,7 +1081,8 @@ export default function AdminJugadores() {
       estatus: jugador.Estatus ? '1' : '0',
       numeroCamiseta: jugador.NumeroCamiseta !== undefined && jugador.NumeroCamiseta !== null ? jugador.NumeroCamiseta : '',
       rolEnEquipo: jugador.RolEnEquipo !== undefined && jugador.RolEnEquipo !== null ? jugador.RolEnEquipo : '',
-      seguroNombre: jugador.SeguroNombre || 'Sin seguro asignado'
+      seguroNombre: jugador.SeguroNombre || 'Sin seguro asignado',
+      isCurpInvalid: false
     });
     setHaCambiado(false);
     setOcrCargando(false);
@@ -1205,9 +1207,6 @@ export default function AdminJugadores() {
 
       const curpOriginalCapturada = curpEncontrada;
       const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-      if (curpNoValida) {
-        curpEncontrada = '';
-      }
 
       // Fallback: buscar en texto plano si los selectores no devuelven nada
       if (!nombresEncontrados && !apellidoPaternoEncontrado && !nombreEncontrado && !curpEncontrada) {
@@ -1246,7 +1245,8 @@ export default function AdminJugadores() {
           ...(firstName && { nombre: firstName }),
           ...(lastNameP && { primerApellido: lastNameP }),
           ...(lastNameM && { segundoApellido: lastNameM }),
-          ...(curpEncontrada && { curp: curpEncontrada }),
+          curp: curpOriginalCapturada || '',
+          isCurpInvalid: curpNoValida,
           ...(fechaNacEncontrada && { fechaNacimiento: fechaNacEncontrada })
         }));
         setHaCambiado(true);
@@ -1295,7 +1295,13 @@ export default function AdminJugadores() {
 
   const manejarCambioInput = (e) => {
     const { name, value } = e.target;
-    setDatosEditables(prev => ({ ...prev, [name]: value }));
+    setDatosEditables(prev => {
+      const updated = { ...prev, [name]: value };
+      if (name === 'curp') {
+        updated.isCurpInvalid = false;
+      }
+      return updated;
+    });
     setHaCambiado(true);
   };
 
@@ -1442,6 +1448,10 @@ export default function AdminJugadores() {
   return (
     <div className="dashboard-content">
       <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
         .swal2-container {
           z-index: 11000 !important;
         }
@@ -1493,13 +1503,6 @@ export default function AdminJugadores() {
           <p style={{ margin: 0, fontSize: '14px', color: COLORS.slate500, marginTop: '4px' }}>Visualiza y gestiona jugadores.</p>
         </div>
         <div className="section-actions" style={{ display: 'flex', gap: '12px' }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => loadJugadores(true)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: COLORS.slate700, border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FaSyncAlt />
-          </button>
           <button
             className="btn btn-primary"
             onClick={() => navigate(ROUTES.ADMIN.LAYOUT_JUGADORES)}
@@ -1664,6 +1667,10 @@ export default function AdminJugadores() {
               width="280px"
             />
 
+            <button onClick={() => loadJugadores(true, true)} className="btn-premium" style={{ padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaSyncAlt style={{ animation: tableLoading ? 'spin 1s linear infinite' : 'none' }} />
+            </button>
+
             <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate600 }}>
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ASC' : 'DEC'}
             </button>
@@ -1681,7 +1688,7 @@ export default function AdminJugadores() {
         <DashboardTable
           columns={columns}
           data={dataTransformada}
-          isLoading={loading}
+          isLoading={loading || tableLoading}
           totalItems={filteredJugadores.length}
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
@@ -1804,7 +1811,14 @@ export default function AdminJugadores() {
               <EntradaFormulario etiqueta="Nombre(s) *" valor={datosEditables.nombre} onChange={manejarCambioInput} nombre="nombre" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
               <EntradaFormulario etiqueta="Primer apellido *" valor={datosEditables.primerApellido} onChange={manejarCambioInput} nombre="primerApellido" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
               <EntradaFormulario etiqueta="Segundo apellido *" valor={datosEditables.segundoApellido} onChange={manejarCambioInput} nombre="segundoApellido" placeholder="Se actualiza automáticamente" deshabilitado={true} />
-              <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <EntradaFormulario etiqueta="CURP *" valor={datosEditables.curp} onChange={manejarCambioInput} nombre="curp" obligatorio placeholder="Se actualiza automáticamente" deshabilitado={true} />
+                {datosEditables.isCurpInvalid && (
+                  <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '-8px', marginBottom: '12px', display: 'block' }}>
+                    Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
+                  </span>
+                )}
+              </div>
 
               <EntradaFormulario etiqueta="Fecha de nacimiento" valor={datosEditables.fechaNacimiento} onChange={manejarCambioInput} nombre="fechaNacimiento" tipo="date" />
               <EntradaSeleccion etiqueta="Sexo" valor={datosEditables.sexo} onChange={manejarCambioInput} nombre="sexo" opciones={[{ valor: 'Masculino', etiqueta: 'Masculino' }, { valor: 'Femenino', etiqueta: 'Femenino' }, { valor: 'No Binario', etiqueta: 'Otro' }]} />

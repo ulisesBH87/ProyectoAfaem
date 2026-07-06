@@ -444,31 +444,20 @@ const AdminAuditorias = () => {
             <button
               onClick={fetchAuditorias}
               disabled={loading}
-              title="Actualizar tabla"
+              className="btn-premium"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                background: COLORS.secondaryBg,
-                border: `1px solid ${COLORS.secondaryBgDark}`,
-                color: COLORS.secondaryDark,
-                padding: '8px 16px',
-                borderRadius: '10px',
+                padding: '10px 18px',
+                borderRadius: '12px',
                 fontSize: '13px',
                 fontWeight: '700',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: loading ? 'not-allowed' : 'pointer'
               }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.background = COLORS.secondaryBg100;
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.background = COLORS.secondaryBg;
-              }}
+              title="Actualizar tabla"
             >
-              <FaSyncAlt className={loading ? 'spin-animation' : ''} />
-              Actualizar
+              <FaSyncAlt style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             </button>
             <span style={{ fontSize: '12px', color: COLORS.secondaryDark, fontWeight: '700', background: COLORS.secondaryBg, border: `1px solid ${COLORS.secondaryBgDark}`, padding: '4px 10px', borderRadius: '8px' }}>
               {totalItems} registros totales

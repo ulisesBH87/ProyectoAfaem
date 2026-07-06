@@ -11,14 +11,19 @@ export default function AdminLayoutJugadores() {
   const [jugadores, setJugadores] = useState([]);
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchParams] = useSearchParams();
   const [filtroEquipo, setFiltroEquipo] = useState(searchParams.get('equipo') || 'todos');
   const [copiedCell, setCopiedCell] = useState(null);
   const navigate = useNavigate();
 
-  const fetchData = async (forceRefresh = false) => {
-    setLoading(true);
+  const fetchData = async (forceRefresh = false, isTableOnly = false) => {
+    if (isTableOnly) {
+      setTableLoading(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [j, e] = await Promise.all([
         getJugadoresDirectorio(forceRefresh),
@@ -30,6 +35,7 @@ export default function AdminLayoutJugadores() {
       console.error('Error cargando datos:', err);
     } finally {
       setLoading(false);
+      setTableLoading(false);
     }
   };
 
@@ -103,7 +109,7 @@ export default function AdminLayoutJugadores() {
     );
   };
 
-  if (loading) {
+  if (loading && !tableLoading) {
     return <Loader text="Cargando layout de jugadores..." />;
   }
 
@@ -120,10 +126,11 @@ export default function AdminLayoutJugadores() {
         </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
-            onClick={() => fetchData(true)}
-            style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', color: COLORS.slate700 }}
+            onClick={() => fetchData(true, true)}
+            className="btn-premium"
+            style={{ padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: tableLoading ? 'not-allowed' : 'pointer' }}
           >
-            <FaSyncAlt />
+            <FaSyncAlt style={{ animation: tableLoading ? 'spin 1s linear infinite' : 'none' }} />
           </button>
           <button
             onClick={() => navigate(ROUTES.ADMIN.JUGADORES)}
