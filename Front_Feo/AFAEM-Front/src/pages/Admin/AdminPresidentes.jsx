@@ -367,7 +367,7 @@ export default function AdminPresidentes() {
       const nombresVal = mashedMatch[1].trim();
       const ap1Val = mashedMatch[2].trim();
       const ap2Val = mashedMatch[3].trim();
-      
+
       data.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
       data.nombres = nombresVal.toUpperCase();
       data.apellido_paterno = ap1Val.toUpperCase();
@@ -375,7 +375,7 @@ export default function AdminPresidentes() {
       data.nombreSolo = nombresVal.toUpperCase();
       data.primerApellido = ap1Val.toUpperCase();
       data.segundoApellido = ap2Val.toUpperCase();
-      
+
       const rest = mashedMatch[4].trim();
       if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
         data.nacionalidad = rest.toUpperCase();
@@ -594,13 +594,13 @@ export default function AdminPresidentes() {
       }
 
       setOcrResults(prev => ({ ...prev, ...extracted, [docKey]: `OCR Procesado: ${extracted.nombre}` }));
-       Swal.fire({
-         title: '¡Lectura Exitosa!',
-         text: extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-         icon: extracted.nombre ? 'success' : 'warning',
-         timer: extracted.nombre ? 2000 : 3500,
-         showConfirmButton: !extracted.nombre
-       });
+      Swal.fire({
+        title: '¡Lectura Exitosa!',
+        text: extracted.nombre ? `Se detectó a: ${extracted.nombre}` : 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
+        icon: extracted.nombre ? 'success' : 'warning',
+        timer: extracted.nombre ? 2000 : 3500,
+        showConfirmButton: !extracted.nombre
+      });
     } catch (_err) {
       Swal.fire({ title: 'Error', text: 'No se pudo leer el documento de forma automática. Podrás continuar manualmente.', icon: 'warning' });
     }
@@ -1715,8 +1715,9 @@ export default function AdminPresidentes() {
                 etiqueta="CURP"
                 nombre="curp"
                 valor={datosEditables.curp}
-                placeholder="Se auto-completará con el documento de identidad"
-                deshabilitado={true}
+                onChange={manejarCambioInput}
+                placeholder="Ingresa o corrige la CURP"
+                deshabilitado={false}
               />
               <EntradaSeleccion
                 etiqueta="Estatus del Presidente"
