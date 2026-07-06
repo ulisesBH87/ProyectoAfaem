@@ -62,3 +62,26 @@ Este servicio reemplaza a Google Cloud Vision API utilizando **Tesseract OCR** l
    ```bash
    python app.py
    ```
+
+---
+
+## Cómo reconectar el OCR Local (Solución tras Merges o Conflictos)
+
+Si tras un git merge o actualización el backend vuelve a intentar usar el OCR antiguo de Google o se desconecta el OCR local, siga estos sencillos pasos para reestablecer la conexión:
+
+1. **Configurar el Backend (`backend/.env`)**:
+   Abra el archivo `backend/.env` y asegúrese de tener configurada la URL del microservicio local:
+   ```env
+   OCR_URL=http://127.0.0.1:5001/
+   ```
+   *(Asegúrese también de eliminar o comentar cualquier línea `GOOGLE_APPLICATION_CREDENTIALS` o `GGOOGLE_...`).*
+
+2. **Verificar la Ruta de Comunicación en el Código**:
+   En el archivo `backend/app/rutas/documentos_ruta.py`, el servicio debe leer dinámicamente el `OCR_URL` configurado. Confirme que la línea 237 está configurada así:
+   ```python
+   ocr_url = os.getenv("OCR_URL", "http://127.0.0.1:5001/")
+   ```
+
+3. **Eliminar directorios heredados**:
+   Si la carpeta obsoleta `OCR/` (que contenía las credenciales json antiguas de Google) volvió a aparecer tras el merge, elimínela para mantener limpio el entorno de desarrollo.
+
