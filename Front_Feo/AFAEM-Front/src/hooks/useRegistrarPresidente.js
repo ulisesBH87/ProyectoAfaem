@@ -387,6 +387,42 @@ export function useRegistrarPresidente() {
             window.history.pushState({ path: newUrl }, '', newUrl);
           }
 
+          if (resData && resData.datos && resData.datos.documentosBorrador) {
+            const returnedDocs = resData.datos.documentosBorrador;
+            const updatedDocs = {};
+            const updatedPreviews = {};
+            let changed = false;
+            for (const key of Object.keys(returnedDocs)) {
+              const docData = returnedDocs[key];
+              if (docData && docData.data && docData.name) {
+                if (String(docData.data).startsWith('data:')) {
+                  const currentDoc = documents[key];
+                  try {
+                    const file = await base64ToFile(docData.data, docData.name);
+                    if (!currentDoc || currentDoc.size !== file.size) {
+                      updatedDocs[key] = file;
+                      updatedPreviews[key] = URL.createObjectURL(file);
+                      changed = true;
+                    }
+                  } catch (e) {
+                    console.warn(`Error al actualizar previsualización de borrador:`, e);
+                  }
+                }
+              }
+            }
+            if (changed) {
+              setDocuments(prev => ({ ...prev, ...updatedDocs }));
+              setPreviews(prev => {
+                Object.keys(updatedPreviews).forEach(k => {
+                  if (prev[k] && prev[k].startsWith('blob:')) {
+                    URL.revokeObjectURL(prev[k]);
+                  }
+                });
+                return { ...prev, ...updatedPreviews };
+              });
+            }
+          }
+
           if (validarCurpEnEsteGuardado) {
             ultimaCurpValidadaRef.current = curpActual;
             if (resData && resData.curp_duplicada) {
@@ -551,7 +587,27 @@ export function useRegistrarPresidente() {
 
   // ── Manejo de subida de archivos ─────────────────────────────────────────
   const handleFileUpload = (docKey, file) => {
-    if (!file) return;
+    if (!file) {
+      setPreviews(prev => {
+        const next = { ...prev };
+        if (next[docKey] && next[docKey].startsWith('blob:')) {
+          URL.revokeObjectURL(next[docKey]);
+        }
+        delete next[docKey];
+        return next;
+      });
+      setDocuments(prev => {
+        const next = { ...prev };
+        delete next[docKey];
+        return next;
+      });
+      setOcrResults(prev => {
+        const next = { ...prev };
+        delete next[docKey];
+        return next;
+      });
+      return;
+    }
     const previousDocument = documents[docKey] || null;
     const previousPreview = previews[docKey] || null;
     const previousOcrMarker = ocrResults[docKey];
@@ -701,7 +757,7 @@ export function useRegistrarPresidente() {
         Object.entries(asignacion).forEach(([k, v]) => {
           if (Number(v) > 0) {
             const segObj = seguros.find(s => String(s.id) === String(k));
-            if (segObj && ['TIPO G', 'SIN SEGURO'].includes(segObj.nombre.toUpperCase().trim())) return;
+            if (segObj && ['TIPO G', 'TIPO J'].includes(segObj.nombre.toUpperCase().trim())) return;
             segFiltrados[k] = Number(v);
           }
         });

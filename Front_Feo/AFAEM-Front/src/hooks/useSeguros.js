@@ -15,12 +15,12 @@ export function useSeguros() {
 
   // ── Segmentar seguros por tipo ───────────────────────────────────────────
   const segurosPresidente = useMemo(
-    () => seguros.filter(s => ['TIPO G', 'SIN SEGURO'].includes(s.nombre.toUpperCase().trim())),
+    () => seguros.filter(s => ['TIPO G', 'TIPO J'].includes(s.nombre.toUpperCase().trim())),
     [seguros]
   );
 
   const segurosJugadores = useMemo(
-    () => seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes(s.nombre.toUpperCase().trim())),
+    () => seguros.filter(s => !['TIPO G', 'TIPO J'].includes(s.nombre.toUpperCase().trim())),
     [seguros]
   );
 
@@ -51,10 +51,10 @@ export function useSeguros() {
           precio: Number(s.costo || s.Costo || s.precio || s.Precio || 0),
         }));
         setSeguros(mapped);
-        // Inicializar asignación: SIN SEGURO = 1, resto = 0
+        // Inicializar asignación: TIPO J = 1, resto = 0
         const init = {};
         mapped.forEach(s => {
-          init[s.id] = s.nombre.toUpperCase().trim() === 'SIN SEGURO' ? 1 : 0;
+          init[s.id] = s.nombre.toUpperCase().trim() === 'TIPO J' ? 1 : 0;
         });
         setAsignacion(init);
       } catch {

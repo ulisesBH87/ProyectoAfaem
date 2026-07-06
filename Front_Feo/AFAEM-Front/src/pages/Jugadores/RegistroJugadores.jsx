@@ -26,6 +26,7 @@ import { validarFotografia } from '../../services/foto';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -66,6 +67,20 @@ const base64ToFile = async (dataurl, filename) => {
       throw fetchErr;
     }
   }
+};
+
+const convertToDDMMYYYY = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
+const convertToYYYYMMDD = (dateStr) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
 };
 
 const parsearTelefonoE164 = (telefonoCompleto) => {
@@ -246,8 +261,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -795,8 +810,14 @@ export default function RegistroJugadores() {
   const [failedPhoto, setFailedPhoto] = useState(null);
   const [linkError, setLinkError] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [visitedSteps, setVisitedSteps] = useState([1]);
   const [isCheckingCurp, setIsCheckingCurp] = useState(false);
   const [seguroDetalle, setSeguroDetalle] = useState(null);
+
+  const jugadoresRef = useRef([]);
+  useEffect(() => {
+    jugadoresRef.current = jugadores;
+  }, [jugadores]);
 
   useEffect(() => {
     if (seguroDetalle) {
@@ -812,6 +833,8 @@ export default function RegistroJugadores() {
     document.activeElement?.blur();
     setCurrentStep(prev => {
       const newStep = typeof stepOrUpdater === 'function' ? stepOrUpdater(prev) : stepOrUpdater;
+
+      setVisitedSteps(vPrev => vPrev.includes(newStep) ? vPrev : [...vPrev, newStep]);
 
       setJugadores(jPrev => {
         const next = [...jPrev];
@@ -1029,6 +1052,7 @@ export default function RegistroJugadores() {
 
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
   const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
   const selectedInvitationTeam = invitationTeams.find(
     (team) => String(team.equipo_temporal_id) === String(teamId)
@@ -1048,19 +1072,20 @@ export default function RegistroJugadores() {
     posicion: '',
     numCamiseta: '',
     esForaneo: false,
-    nacionalidadJugador: 'MEXICANA',
-    paisResidencia: 'MÉXICO',
+    nacionalidadJugador: '',
+    paisResidencia: '',
     haVividoExtranjero: false,
     dondeVividoExtranjero: '',
-    nacionalidadPadre: 'MEXICANA',
-    nacionalidadMadre: 'MEXICANA',
-    registroAsociacionExtranjera: 'NO',
-    nacAbueloPaterno: 'MEXICANA',
-    nacAbuelaPaterna: 'MEXICANA',
-    nacAbueloMaterno: 'MEXICANA',
-    nacAbuelaMaterna: 'MEXICANA',
-    juegoClubExtranjero: 'NO',
-    nui: ''
+    nacionalidadPadre: '',
+    nacionalidadMadre: '',
+    registroAsociacionExtranjera: '',
+    nacAbueloPaterno: '',
+    nacAbuelaPaterna: '',
+    nacAbueloMaterno: '',
+    nacAbuelaMaterna: '',
+    juegoClubExtranjero: '',
+    nui: '',
+    isCurpInvalid: false
   };
 
   const emptyPlayer = (index = 0, seguroId = '', slotId = null) => ({
@@ -1293,6 +1318,45 @@ export default function RegistroJugadores() {
     });
   };
 
+  const handleEliminarTodosLosDocumentos = () => {
+    Swal.fire({
+      title: '¿Eliminar todos los documentos?',
+      text: 'Esta acción eliminará todos los documentos cargados (Acta, Identificación, Foto, etc.) de este jugador. Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: COLORS.danger || '#ef4444',
+      cancelButtonColor: COLORS.slate500 || '#64748b',
+      confirmButtonText: 'Sí, eliminar todos',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        setPreviews(prev => ({
+          ...prev,
+          acta: null,
+          ine: null,
+          ineTutor: null,
+          identificacionMenor: null,
+          foto: null
+        }));
+        setFailedPhoto(null);
+        await updatePlayerDocuments(currentPlayerIndex, {
+          acta: null,
+          ine: null,
+          ineTutor: null,
+          identificacionMenor: null,
+          foto: null
+        });
+        Swal.fire({
+          title: 'Documentos Eliminados',
+          text: 'Se han eliminado todos los documentos correctamente.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+    });
+  };
+
   const updatePlayerSeguro = (index, seguroId) => {
     setJugadores(prev => {
       const next = [...prev];
@@ -1308,6 +1372,19 @@ export default function RegistroJugadores() {
   const currentDatos = currentPlayer.datos || { ...defaultPlayerDatos };
   const currentDocuments = currentPlayer.documentos || {};
   const currentSeguroId = currentPlayer.seguroId || '';
+
+  const isNombreValido = !!currentDatos.nombreJugador?.trim() && !validationErrors.nombreJugador;
+  const isApellidoPaternoValido = !!currentDatos.apellidoPaterno?.trim() && !validationErrors.apellidoPaterno;
+  const isApellidoMaternoValido = !!currentDatos.apellidoMaterno?.trim() && !validationErrors.apellidoMaterno;
+  const isCurpValido = !!currentDatos.curp && currentDatos.curp.length === 18 && !validationErrors.curp;
+  const isFechaNacimientoValido = !!currentDatos.fechaNacimiento && !validarFechaNacimiento(currentDatos.fechaNacimiento) && !validationErrors.fechaNacimiento;
+  const isLugarNacimientoValido = !!currentDatos.lugarNacimiento?.trim() && !validationErrors.lugarNacimiento;
+  const isGeneroValido = !!currentDatos.genero && !validationErrors.genero;
+  const isCorreoValido = !!currentDatos.correo?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentDatos.correo.trim()) && !validationErrors.correo;
+  const isTelefonoValido = !!currentDatos.telefono && currentDatos.telefono.length === 10 && !validationErrors.telefono;
+
+  const isNumCamisetaValido = !!currentDatos.numCamiseta && !validationErrors.numCamiseta;
+  const isPosicionValido = !!currentDatos.posicion && !validationErrors.posicion;
 
   const esMenorDeEdad = React.useMemo(() => {
     return isPlayerMinor(currentDatos.fechaNacimiento);
@@ -1355,16 +1432,53 @@ export default function RegistroJugadores() {
       if (response.ok) {
         const result = await response.json();
 
+        let updatedDocs = null;
+        let updatedSignedForm = null;
+
+        if (result.datos && result.datos.documentosBorrador) {
+          const returnedDocs = result.datos.documentosBorrador;
+          updatedDocs = {};
+          for (const key of Object.keys(returnedDocs)) {
+            const docData = returnedDocs[key];
+            if (docData && docData.data && docData.name) {
+              if (String(docData.data).startsWith('data:')) {
+                try {
+                  const file = await base64ToFile(docData.data, docData.name);
+                  if (key === 'formatoFirmado') {
+                    updatedSignedForm = file;
+                  } else {
+                    updatedDocs[key] = file;
+                  }
+                } catch (e) {
+                  console.warn(`Error al convertir borrador retornado:`, e);
+                }
+              }
+            }
+          }
+        }
+
         setJugadores(prev => {
           const next = [...prev];
           const playerIdx = next.findIndex(p => p.slotId === slotId);
           if (playerIdx !== -1) {
+            const currentPlayer = next[playerIdx];
+            const nextDocs = updatedDocs
+              ? { ...currentPlayer.documentos, ...updatedDocs }
+              : currentPlayer.documentos;
+
+            const nextSignedForm = updatedSignedForm
+              ? updatedSignedForm
+              : currentPlayer.signedForm;
+
             next[playerIdx] = {
-              ...next[playerIdx],
+              ...currentPlayer,
               datos: {
-                ...next[playerIdx].datos,
+                ...currentPlayer.datos,
+                ...(result.datos || {}),
                 isCurpDuplicated: !!result.curp_duplicada
-              }
+              },
+              documentos: nextDocs,
+              signedForm: nextSignedForm
             };
           }
           return next;
@@ -1405,7 +1519,9 @@ export default function RegistroJugadores() {
     } else if (field === 'lugarNacimiento') {
       cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
     } else if (field === 'correo') {
-      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
+      cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 60);
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'telefono') {
       cleanValue = value.replace(/\D/g, '').slice(0, 10);
     } else if (field === 'numCamiseta') {
@@ -1452,7 +1568,11 @@ export default function RegistroJugadores() {
       }
     }
 
-    updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
+    if (field === 'curp') {
+      updatePlayerDatos(currentPlayerIndex, { curp: cleanValue, isCurpInvalid: false });
+    } else {
+      updatePlayerDatos(currentPlayerIndex, { [field]: cleanValue });
+    }
   };
 
   const handleBlur = () => {
@@ -1521,6 +1641,14 @@ export default function RegistroJugadores() {
       });
       if (datos.correo) {
         datos.correo = datos.correo.toString().toLowerCase();
+        const trimmed = datos.correo.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+          setValidationErrors(prev => ({ ...prev, correo: 'Ingrese un correo electrónico válido.' }));
+        } else {
+          setValidationErrors(prev => ({ ...prev, correo: null }));
+        }
+      } else {
+        setValidationErrors(prev => ({ ...prev, correo: 'El correo electrónico es obligatorio.' }));
       }
 
       updatePlayerDatos(currentPlayerIndex, datos);
@@ -1534,7 +1662,7 @@ export default function RegistroJugadores() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -1557,7 +1685,15 @@ export default function RegistroJugadores() {
           };
           next[currentPlayerIndex] = normalizePlayer({
             ...currentPlayerState,
-            datos: resetDatos
+            datos: resetDatos,
+            documentos: {
+              acta: null,
+              ine: null,
+              ineTutor: null,
+              identificacionMenor: null,
+              foto: null
+            },
+            signedForm: null
           });
 
           if (currentPlayerState.slotId) {
@@ -1676,7 +1812,7 @@ export default function RegistroJugadores() {
           .filter(seguro => {
             const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
             const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-            return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+            return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
           })
           .map(seguro => String(seguro.id))
       );
@@ -1785,6 +1921,14 @@ export default function RegistroJugadores() {
     const player = jugadores[currentPlayerIndex];
     const savedStep = player?.datos?.currentStep || 1;
     setCurrentStep(savedStep);
+
+    // Inicializar los pasos visitados del jugador basándose en el paso guardado
+    const initialVisited = [];
+    for (let i = 1; i <= savedStep; i++) {
+      initialVisited.push(i);
+    }
+    setVisitedSteps(initialVisited);
+
     setValidationErrors({});
 
     if (currentDocuments) {
@@ -1872,6 +2016,7 @@ export default function RegistroJugadores() {
   const handleFileUpload = async (documentKey, file) => {
     if (!file) return;
 
+    const uploadPlayerIndex = currentPlayerIndex;
     const ext = '.' + file.name.split('.').pop().toLowerCase();
     if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTENSIONS.includes(ext)) {
       Swal.fire({
@@ -1883,10 +2028,10 @@ export default function RegistroJugadores() {
       return;
     }
 
-    const prevDoc = jugadores[currentPlayerIndex]?.documentos?.[documentKey] || null;
+    const prevDoc = jugadores[uploadPlayerIndex]?.documentos?.[documentKey] || null;
     const prevPreview = previews[documentKey] || null;
 
-    updatePlayerDocuments(currentPlayerIndex, { [documentKey]: file });
+    updatePlayerDocuments(uploadPlayerIndex, { [documentKey]: file });
 
     // Generar Previsualización
     if (file.type.startsWith('image/')) {
@@ -1922,7 +2067,7 @@ export default function RegistroJugadores() {
             type: data.tipo_imagen
           });
 
-          updatePlayerDocuments(currentPlayerIndex, { foto: newFile });
+          updatePlayerDocuments(uploadPlayerIndex, { foto: newFile });
           setPreviews(prev => ({ ...prev, foto: imageUrl }));
           setFailedPhoto(null);
 
@@ -1930,7 +2075,7 @@ export default function RegistroJugadores() {
         } else {
           setFailedPhoto(file);
           setPreviews(prev => ({ ...prev, foto: null }));
-          updatePlayerDocuments(currentPlayerIndex, { foto: null });
+          updatePlayerDocuments(uploadPlayerIndex, { foto: null });
 
           Swal.fire({
             title: 'Error en la fotografía',
@@ -1948,7 +2093,7 @@ export default function RegistroJugadores() {
                 setPreviews(prev => ({ ...prev, foto: reader.result }));
               };
               reader.readAsDataURL(file);
-              updatePlayerDocuments(currentPlayerIndex, { foto: file });
+              updatePlayerDocuments(uploadPlayerIndex, { foto: file });
               setFailedPhoto(null);
 
               Swal.fire({
@@ -1984,7 +2129,7 @@ export default function RegistroJugadores() {
           icon: 'info',
           confirmButtonColor: COLORS.primary
         });
-        updatePlayerDocuments(currentPlayerIndex, { [documentKey]: null });
+        updatePlayerDocuments(uploadPlayerIndex, { [documentKey]: null });
         setPreviews(prev => ({ ...prev, [documentKey]: null }));
         return;
       }
@@ -2110,9 +2255,6 @@ export default function RegistroJugadores() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out the invalid CURP so the user is blocked
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -2151,17 +2293,20 @@ export default function RegistroJugadores() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || 'MÉXICO',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
-          const merged = { ...currentDatos, ...ocrResult };
-          updatePlayerDatos(currentPlayerIndex, ocrResult);
+          const latestPlayer = jugadoresRef.current[uploadPlayerIndex];
+          const latestDatos = latestPlayer?.datos || { ...defaultPlayerDatos };
+          const merged = { ...latestDatos, ...ocrResult };
+          updatePlayerDatos(uploadPlayerIndex, ocrResult);
 
-          if (currentPlayer?.slotId) {
-            guardarBorradorEnBD(currentPlayer.slotId, merged);
+          if (latestPlayer?.slotId) {
+            guardarBorradorEnBD(latestPlayer.slotId, merged);
           }
 
           const missing = [];
@@ -2171,14 +2316,14 @@ export default function RegistroJugadores() {
           if (!ocrResult.curp) missing.push('curp');
           if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
           if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
-          if (!currentDatos.correo) missing.push('correo');
-          if (!currentDatos.telefono) missing.push('telefono');
+          if (!latestDatos.correo) missing.push('correo');
+          if (!latestDatos.telefono) missing.push('telefono');
           setMissingOcrFields(missing);
 
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -2241,6 +2386,19 @@ export default function RegistroJugadores() {
     document.getElementById(`file-${documentKey}`)?.click();
   };
 
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        openDocumentFilePicker(documentKey);
+      }
+    });
+  };
+
   const openPhotoUploadOptions = () => {
     Swal.fire({
       title: 'Selecciona una opción',
@@ -2261,8 +2419,12 @@ export default function RegistroJugadores() {
   };
 
   const handleDocumentCardClick = (documentKey) => {
-    if (documentKey === 'foto') {
+    if (isPhotoCaptureKey(documentKey)) {
       openPhotoUploadOptions();
+      return;
+    }
+    if (documentKey !== 'signedForm') {
+      openDocumentCaptureOptions(documentKey);
       return;
     }
     openDocumentFilePicker(documentKey);
@@ -3292,7 +3454,7 @@ export default function RegistroJugadores() {
                     { step: 6, label: 'Resumen' }
                   ].map((s) => {
                     const isActive = currentStep === s.step;
-                    const isCompleted = esPasoCompleto(s.step);
+                    const isCompleted = currentPlayer.completo || (esPasoCompleto(s.step) && visitedSteps.includes(s.step));
                     return (
                       <div
                         key={`step-indicator-${s.step}`}
@@ -3411,9 +3573,41 @@ export default function RegistroJugadores() {
                 {/* PASO 1: CARGA DE DOCUMENTOS */}
                 {currentStep === 1 && (
                   <section className="wizard-step-container">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
-                      <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
-                      <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <StepBadge number="1" isActive={true} isDone={esPasoCompleto(1)} />
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Carga de Documentación</h3>
+                      </div>
+                      {Object.values(currentDocuments).some(Boolean) && (
+                        <button
+                          type="button"
+                          onClick={handleEliminarTodosLosDocumentos}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            backgroundColor: COLORS.dangerBgLight || '#fee2e2',
+                            color: COLORS.danger || '#ef4444',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.danger || '#ef4444';
+                            e.currentTarget.style.color = '#ffffff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = COLORS.dangerBgLight || '#fee2e2';
+                            e.currentTarget.style.color = COLORS.danger || '#ef4444';
+                          }}
+                        >
+                          Eliminar todos los documentos
+                        </button>
+                      )}
                     </div>
 
                     <div style={{
@@ -3464,300 +3658,303 @@ export default function RegistroJugadores() {
                             cursor: 'pointer'
                           }}
                         >
-                          {/* Indicador de Menor para tutor/credencial */}
-                          {esMenorDeEdad && (doc.key === 'ineTutor' || doc.key === 'identificacionMenor') && (
-                            <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
-                          )}
+                          <div style={{ pointerEvents: dragActive[doc.key] ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+                            {/* Indicador de Menor para tutor/credencial */}
+                            {esMenorDeEdad && (doc.key === 'acta' || doc.key === 'identificacionMenor' || doc.key === 'foto') && (
+                              <div style={{ position: 'absolute', top: 10, right: 10, background: `linear-gradient(90deg,${COLORS.warning},${COLORS.warningLight})`, borderRadius: '12px', padding: '3px 9px', fontSize: '9px', fontWeight: '950', color: 'white', letterSpacing: '0.5px', zIndex: 1 }}>Menor de edad</div>
+                            )}
 
-                          <div style={{
-                            height: '140px',
-                            width: '100%',
-                            backgroundColor: COLORS.slate50,
-                            borderRadius: '12px',
-                            marginBottom: '10px',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: `1px solid ${COLORS.slate100}`
-                          }}
-                          >
-                            {previews[doc.key] ? (
-                              <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                {currentDocuments[doc.key]?.type === 'application/pdf' ? (
-                                  isMobileDevice ? (
-                                    <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                      <FaFilePdf />
-                                      <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
-                                    </div>
+                            <div style={{
+                              height: '140px',
+                              width: '100%',
+                              backgroundColor: COLORS.slate50,
+                              borderRadius: '12px',
+                              marginBottom: '10px',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: `1px solid ${COLORS.slate100}`
+                            }}
+                            >
+                              {previews[doc.key] ? (
+                                <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                  {currentDocuments[doc.key]?.type === 'application/pdf' ? (
+                                    isMobileDevice ? (
+                                      <div style={{ color: COLORS.danger, fontSize: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                        <FaFilePdf />
+                                        <span style={{ fontSize: '10px', color: COLORS.slate500, fontWeight: '800' }}>PDF</span>
+                                      </div>
+                                    ) : (
+                                      <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: COLORS.white }}>
+                                        <iframe
+                                          src={`${previews[doc.key]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                          title={`Preview ${doc.title}`}
+                                          style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            border: 'none',
+                                            pointerEvents: 'none'
+                                          }}
+                                        />
+                                        <div style={{
+                                          position: 'absolute',
+                                          bottom: '8px',
+                                          left: '8px',
+                                          backgroundColor: COLORS.overlaySlateGray,
+                                          color: COLORS.white,
+                                          fontSize: '10px',
+                                          fontWeight: '800',
+                                          padding: '4px 8px',
+                                          borderRadius: '999px',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}>
+                                          <FaFilePdf />
+                                          PDF
+                                        </div>
+                                      </div>
+                                    )
                                   ) : (
-                                    <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: COLORS.white }}>
-                                      <iframe
-                                        src={`${previews[doc.key]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                                        title={`Preview ${doc.title}`}
-                                        style={{
-                                          width: '100%',
-                                          height: '100%',
-                                          border: 'none',
-                                          pointerEvents: 'none'
-                                        }}
-                                      />
-                                      <div style={{
-                                        position: 'absolute',
-                                        bottom: '8px',
-                                        left: '8px',
-                                        backgroundColor: COLORS.overlaySlateGray,
+                                    <img
+                                      src={previews[doc.key]}
+                                      alt="Preview"
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                    />
+                                  )}
+
+                                  {/* OVERLAY ACTIONS */}
+                                  <div className="overlay-actions" style={{
+                                    position: 'absolute',
+                                    top: 0, left: 0, right: 0, bottom: 0,
+                                    backgroundColor: COLORS.overlaySlateGray,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '12px',
+                                    opacity: 0,
+                                    transition: 'opacity 0.2s ease',
+                                    backdropFilter: 'blur(2px)'
+                                  }}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const isPdf = currentDocuments[doc.key]?.type === 'application/pdf';
+                                        setPreviewDoc({
+                                          open: true,
+                                          url: previews[doc.key],
+                                          type: isPdf ? 'pdf' : 'image',
+                                          title: doc.title
+                                        });
+                                      }}
+                                      className="btn-zoom"
+                                      style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                      }}
+                                    >
+                                      <FaSearchPlus />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDocumentCardClick(doc.key);
+                                        return;
+                                        if (doc.key === 'foto') {
+                                          Swal.fire({
+                                            title: 'Selecciona una opción',
+                                            text: '¿Cómo deseas cargar la fotografía?',
+                                            icon: 'question',
+                                            showCancelButton: true,
+                                            confirmButtonText: '📷 Tomar con cámara',
+                                            cancelButtonText: '📁 Subir archivo',
+                                            confirmButtonColor: COLORS.primary,
+                                            cancelButtonColor: COLORS.slate500
+                                          }).then((result) => {
+                                            if (result.isConfirmed) {
+                                              setIsCameraOpen(true);
+                                            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                              document.getElementById(`file-${doc.key}`).click();
+                                            }
+                                          });
+                                        } else {
+                                          document.getElementById(`file-${doc.key}`).click();
+                                        }
+                                      }}
+                                      className="btn-change"
+                                      style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                      }}
+                                    >
+                                      <FaSyncAlt />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        const result = await Swal.fire({
+                                          title: '¿Quitar documento?',
+                                          text: 'Se eliminará el documento cargado actualmente.',
+                                          icon: 'warning',
+                                          showCancelButton: true,
+                                          confirmButtonText: 'Sí, quitar',
+                                          cancelButtonText: 'Cancelar',
+                                          confirmButtonColor: COLORS.danger,
+                                          cancelButtonColor: COLORS.slate400
+                                        });
+                                        if (result.isConfirmed) {
+                                          updatePlayerDocuments(currentPlayerIndex, { [doc.key]: null });
+                                          setPreviews(prev => ({ ...prev, [doc.key]: null }));
+                                        }
+                                      }}
+                                      className="btn-delete"
+                                      style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                      }}
+                                    >
+                                      <FaTrash />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ESTADO VACÍO */
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDocumentCardClick(doc.key);
+                                    return;
+                                    if (doc.key === 'foto') {
+                                      Swal.fire({
+                                        title: 'Selecciona una opción',
+                                        text: '¿Cómo deseas cargar la fotografía?',
+                                        icon: 'question',
+                                        showCancelButton: true,
+                                        confirmButtonText: '📷 Tomar con cámara',
+                                        cancelButtonText: '📁 Subir archivo',
+                                        confirmButtonColor: COLORS.primary,
+                                        cancelButtonColor: COLORS.slate500
+                                      }).then((result) => {
+                                        if (result.isConfirmed) {
+                                          setIsCameraOpen(true);
+                                        } else if (result.dismiss === Swal.DismissReason.cancel) {
+                                          document.getElementById(`file-${doc.key}`).click();
+                                        }
+                                      });
+                                    } else {
+                                      document.getElementById(`file-${doc.key}`).click();
+                                    }
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    textAlign: 'center',
+                                    color: COLORS.slate400,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                                  {doc.key === 'foto' ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDocumentCardClick(doc.key);
+                                      }}
+                                      style={{
+                                        marginTop: '4px',
+                                        padding: '8px 12px',
+                                        borderRadius: '999px',
+                                        border: 'none',
+                                        backgroundColor: COLORS.primary,
                                         color: COLORS.white,
                                         fontSize: '10px',
                                         fontWeight: '800',
-                                        padding: '4px 8px',
-                                        borderRadius: '999px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                      }}>
-                                        <FaFilePdf />
-                                        PDF
-                                      </div>
-                                    </div>
-                                  )
-                                ) : (
-                                  <img
-                                    src={previews[doc.key]}
-                                    alt="Preview"
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                  />
-                                )}
-
-                                {/* OVERLAY ACTIONS */}
-                                <div className="overlay-actions" style={{
-                                  position: 'absolute',
-                                  top: 0, left: 0, right: 0, bottom: 0,
-                                  backgroundColor: COLORS.overlaySlateGray,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '12px',
-                                  opacity: 0,
-                                  transition: 'opacity 0.2s ease',
-                                  backdropFilter: 'blur(2px)'
-                                }}>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const isPdf = currentDocuments[doc.key]?.type === 'application/pdf';
-                                      setPreviewDoc({
-                                        open: true,
-                                        url: previews[doc.key],
-                                        type: isPdf ? 'pdf' : 'image',
-                                        title: doc.title
-                                      });
-                                    }}
-                                    className="btn-zoom"
-                                    style={{
-                                      width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                                    }}
-                                  >
-                                    <FaSearchPlus />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDocumentCardClick(doc.key);
-                                      return;
-                                      if (doc.key === 'foto') {
-                                        Swal.fire({
-                                          title: 'Selecciona una opción',
-                                          text: '¿Cómo deseas cargar la fotografía?',
-                                          icon: 'question',
-                                          showCancelButton: true,
-                                          confirmButtonText: '📷 Tomar con cámara',
-                                          cancelButtonText: '📁 Subir archivo',
-                                          confirmButtonColor: COLORS.primary,
-                                          cancelButtonColor: COLORS.slate500
-                                        }).then((result) => {
-                                          if (result.isConfirmed) {
-                                            setIsCameraOpen(true);
-                                          } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                            document.getElementById(`file-${doc.key}`).click();
-                                          }
-                                        });
-                                      } else {
-                                        document.getElementById(`file-${doc.key}`).click();
-                                      }
-                                    }}
-                                    className="btn-change"
-                                    style={{
-                                      width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                                    }}
-                                  >
-                                    <FaSyncAlt />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      const result = await Swal.fire({
-                                        title: '¿Quitar documento?',
-                                        text: 'Se eliminará el documento cargado actualmente.',
-                                        icon: 'warning',
-                                        showCancelButton: true,
-                                        confirmButtonText: 'Sí, quitar',
-                                        cancelButtonText: 'Cancelar',
-                                        confirmButtonColor: COLORS.danger,
-                                        cancelButtonColor: COLORS.slate400
-                                      });
-                                      if (result.isConfirmed) {
-                                        updatePlayerDocuments(currentPlayerIndex, { [doc.key]: null });
-                                        setPreviews(prev => ({ ...prev, [doc.key]: null }));
-                                      }
-                                    }}
-                                    className="btn-delete"
-                                    style={{
-                                      width: '36px', height: '36px', borderRadius: '50%',
-                                      backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                                    }}
-                                  >
-                                    <FaTrash />
-                                  </button>
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      Subir archivo
+                                    </button>
+                                  ) : (
+                                    <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                                  )}
                                 </div>
-                              </div>
-                            ) : (
-                              /* ESTADO VACÍO */
-                              <div
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDocumentCardClick(doc.key);
-                                  return;
-                                  if (doc.key === 'foto') {
-                                    Swal.fire({
-                                      title: 'Selecciona una opción',
-                                      text: '¿Cómo deseas cargar la fotografía?',
-                                      icon: 'question',
-                                      showCancelButton: true,
-                                      confirmButtonText: '📷 Tomar con cámara',
-                                      cancelButtonText: '📁 Subir archivo',
-                                      confirmButtonColor: COLORS.primary,
-                                      cancelButtonColor: COLORS.slate500
-                                    }).then((result) => {
-                                      if (result.isConfirmed) {
-                                        setIsCameraOpen(true);
-                                      } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                        document.getElementById(`file-${doc.key}`).click();
-                                      }
-                                    });
-                                  } else {
-                                    document.getElementById(`file-${doc.key}`).click();
-                                  }
-                                }}
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: '100%',
-                                  textAlign: 'center',
-                                  color: COLORS.slate400,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                                {doc.key === 'foto' ? (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDocumentCardClick(doc.key);
-                                    }}
-                                    style={{
-                                      marginTop: '4px',
-                                      padding: '8px 12px',
-                                      borderRadius: '999px',
-                                      border: 'none',
-                                      backgroundColor: COLORS.primary,
-                                      color: COLORS.white,
-                                      fontSize: '10px',
-                                      fontWeight: '800',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    Subir archivo
-                                  </button>
-                                ) : (
-                                  <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
-                                )}
+                              )}
+                            </div>
+
+                            <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
+                            <p style={{ margin: '0 0 6px', fontSize: '10px', color: COLORS.slate500, lineHeight: 1.4 }}>{doc.subtitle}</p>
+                            {doc.key === 'foto' && (
+                              <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
+                                Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                              </p>
+                            )}
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 12px',
+                              borderRadius: '20px',
+                              backgroundColor: currentDocuments[doc.key] ? COLORS.greenBg : COLORS.slate100,
+                              color: currentDocuments[doc.key] ? COLORS.greenDeep : COLORS.slate500,
+                              fontSize: '10px',
+                              fontWeight: '800'
+                            }}>
+                              {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
+                            </div>
+
+                            {/* Botón de validación fallida y bypass para fotografía */}
+                            {doc.key === 'foto' && !currentDocuments.foto && failedPhoto && (
+                              <div style={{ marginTop: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={forceLoadFailedPhoto}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    backgroundColor: COLORS.warning,
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    boxShadow: `0 2px 4px ${COLORS.warningBgTranslucent30}`,
+                                    transition: 'background-color 0.2s'
+                                  }}
+                                  onMouseEnter={e => e.target.style.backgroundColor = COLORS.warningDark}
+                                  onMouseLeave={e => e.target.style.backgroundColor = COLORS.warning}
+                                >
+                                  ⚠️ Cargar igualmente
+                                </button>
                               </div>
                             )}
                           </div>
-
-                          <h4 style={{ fontSize: '13px', fontWeight: '800', margin: '8px 0 5px 0', color: COLORS.slate800 }}>{doc.title}</h4>
-                          <p style={{ margin: '0 0 6px', fontSize: '10px', color: COLORS.slate500, lineHeight: 1.4 }}>{doc.subtitle}</p>
-                          {doc.key === 'foto' && (
-                            <p style={{ margin: '0 0 8px', fontSize: '10px', color: COLORS.danger, fontStyle: 'italic', fontWeight: '500', lineHeight: 1.4 }}>
-                              Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
-                            </p>
-                          )}
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '4px 12px',
-                            borderRadius: '20px',
-                            backgroundColor: currentDocuments[doc.key] ? COLORS.greenBg : COLORS.slate100,
-                            color: currentDocuments[doc.key] ? COLORS.greenDeep : COLORS.slate500,
-                            fontSize: '10px',
-                            fontWeight: '800'
-                          }}>
-                            {currentDocuments[doc.key] ? <><FaCheckCircle /> Listo</> : 'Pendiente'}
-                          </div>
-
-                          {/* Botón de validación fallida y bypass para fotografía */}
-                          {doc.key === 'foto' && !currentDocuments.foto && failedPhoto && (
-                            <div style={{ marginTop: '8px' }}>
-                              <button
-                                type="button"
-                                onClick={forceLoadFailedPhoto}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  backgroundColor: COLORS.warning,
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '8px',
-                                  fontSize: '11px',
-                                  fontWeight: '800',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
-                                  boxShadow: `0 2px 4px ${COLORS.warningBgTranslucent30}`,
-                                  transition: 'background-color 0.2s'
-                                }}
-                                onMouseEnter={e => e.target.style.backgroundColor = COLORS.warningDark}
-                                onMouseLeave={e => e.target.style.backgroundColor = COLORS.warning}
-                              >
-                                ⚠️ Cargar igualmente
-                              </button>
-                            </div>
-                          )}
 
                           <input
                             type="file"
                             id={`file-${doc.key}`}
                             style={{ display: 'none' }}
                             accept=".pdf,.jpg,.jpeg,.png"
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                           />
                         </div>
@@ -3767,7 +3964,8 @@ export default function RegistroJugadores() {
                     <CameraCaptureModal
                       isOpen={isCameraOpen}
                       onClose={() => setIsCameraOpen(false)}
-                      onCapture={(file) => handleFileUpload('foto', file)}
+                      onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                      captureKind={getCameraCaptureKind(cameraTargetKey)}
                     />
 
                     {/* Loader temporal OCR */}
@@ -3830,9 +4028,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.nombreJugador
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isNombreValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('nombreJugador') && !currentDatos.nombreJugador
                                 ? '#fef3c7'
                                 : 'white',
@@ -3865,9 +4065,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.apellidoPaterno
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isApellidoPaternoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('apellidoPaterno') && !currentDatos.apellidoPaterno
                                 ? '#fef3c7'
                                 : 'white',
@@ -3900,9 +4102,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.apellidoMaterno
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isApellidoMaternoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('apellidoMaterno') && !currentDatos.apellidoMaterno
                                 ? '#fef3c7'
                                 : 'white',
@@ -3928,28 +4132,35 @@ export default function RegistroJugadores() {
                           <input
                             type="text"
                             value={currentDatos.curp || ''}
-                            readOnly
+                            onChange={e => handleFieldChange('curp', e.target.value)}
                             onBlur={handleBlur}
-                            placeholder="Se auto-completará con el documento de identidad"
+                            placeholder="Ingresa o corrige la CURP"
                             maxLength="18"
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
                               border: validationErrors.curp
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('curp') && !currentDatos.curp
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isCurpValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('curp') && !currentDatos.curp
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               fontSize: '14px',
                               outline: 'none',
-                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : '#f1f5f9',
-                              cursor: missingOcrFields.includes('curp') && !currentDatos.curp ? 'text' : 'not-allowed',
+                              backgroundColor: missingOcrFields.includes('curp') && !currentDatos.curp ? '#fef3c7' : 'white',
+                              cursor: 'text',
                               boxShadow: validationErrors.curp ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none'
                             }}
                           />
                           {missingOcrFields.includes('curp') && !currentDatos.curp && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
                               No se pudo completar automáticamente
+                            </span>
+                          )}
+                          {currentDatos.isCurpInvalid && (
+                            <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
+                              No se pudo validar la veracidad de esta CURP.
                             </span>
                           )}
                           {validationErrors.curp && <span className="field-error-msg">❌ {validationErrors.curp}</span>}
@@ -3960,14 +4171,19 @@ export default function RegistroJugadores() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <label style={{ fontSize: '12px', fontWeight: '700', color: COLORS.slate600 }}>Fecha Nac. <span className="required-star">*</span></label>
                           <input
-                            type="date"
-                            value={currentDatos.fechaNacimiento || ''}
-                            min={minDateStr}
-                            max={maxBirthDateStr}
+                            type="text"
+                            value={convertToDDMMYYYY(currentDatos.fechaNacimiento) || ''}
+                            placeholder="DD/MM/AAAA"
                             onChange={e => {
                               const val = e.target.value;
-                              handleFieldChange('fechaNacimiento', val);
-                              const errorMsg = validarFechaNacimiento(val);
+                              handleFieldChange('fechaNacimiento', convertToYYYYMMDD(val));
+                              const parts = val.split('/');
+                              let errorMsg = null;
+                              if (parts.length === 3 && parts[2]?.length === 4) {
+                                errorMsg = validarFechaNacimiento(convertToYYYYMMDD(val));
+                              } else {
+                                errorMsg = null;
+                              }
                               setValidationErrors(prev => ({ ...prev, fechaNacimiento: errorMsg }));
                             }}
                             onBlur={handleBlur}
@@ -3976,9 +4192,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.fechaNacimiento
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isFechaNacimientoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento
                                 ? '#fef3c7'
                                 : 'white',
@@ -3986,6 +4204,9 @@ export default function RegistroJugadores() {
                               outline: 'none'
                             }}
                           />
+                          <span style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>
+                            Día/Mes/Año (ej: 26/10/1985)
+                          </span>
                           {missingOcrFields.includes('fechaNacimiento') && !currentDatos.fechaNacimiento && (
                             <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold', marginTop: '2px' }}>
                               No se pudo completar automáticamente
@@ -4010,9 +4231,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.lugarNacimiento
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isLugarNacimientoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('lugarNacimiento') && !currentDatos.lugarNacimiento
                                 ? '#fef3c7'
                                 : 'white',
@@ -4041,7 +4264,11 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.genero ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.genero
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (isGeneroValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               backgroundColor: 'white',
                               outline: 'none'
@@ -4064,8 +4291,16 @@ export default function RegistroJugadores() {
                             maxLength={60}
                             value={currentDatos.correo}
                             onChange={e => {
-                              handleFieldChange('correo', e.target.value);
-                              setValidationErrors(prev => ({ ...prev, correo: null }));
+                              const val = e.target.value;
+                              handleFieldChange('correo', val);
+                              const trimmed = val.trim();
+                              if (!trimmed) {
+                                setValidationErrors(prev => ({ ...prev, correo: 'El correo electrónico es obligatorio.' }));
+                              } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                                setValidationErrors(prev => ({ ...prev, correo: 'Ingrese un correo electrónico válido.' }));
+                              } else {
+                                setValidationErrors(prev => ({ ...prev, correo: null }));
+                              }
                             }}
                             onBlur={handleBlur}
                             placeholder="correo@ejemplo.com"
@@ -4076,9 +4311,11 @@ export default function RegistroJugadores() {
                               borderRadius: '8px',
                               border: validationErrors.correo
                                 ? `1.5px solid ${COLORS.danger}`
-                                : (missingOcrFields.includes('correo') && !currentDatos.correo
-                                  ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                  : `1.5px solid ${COLORS.slate300}`),
+                                : (isCorreoValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : (missingOcrFields.includes('correo') && !currentDatos.correo
+                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                    : `1.5px solid ${COLORS.slate300}`)),
                               backgroundColor: missingOcrFields.includes('correo') && !currentDatos.correo
                                 ? '#fef3c7'
                                 : 'white',
@@ -4132,8 +4369,15 @@ export default function RegistroJugadores() {
                               type="tel"
                               value={currentDatos.telefono}
                               onChange={e => {
-                                handleFieldChange('telefono', e.target.value.replace(/\D/g, '').slice(0, 10));
-                                setValidationErrors(prev => ({ ...prev, telefono: null }));
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                handleFieldChange('telefono', val);
+                                if (!val) {
+                                  setValidationErrors(prev => ({ ...prev, telefono: 'El teléfono es obligatorio.' }));
+                                } else if (val.length < 10) {
+                                  setValidationErrors(prev => ({ ...prev, telefono: 'El teléfono debe tener 10 dígitos.' }));
+                                } else {
+                                  setValidationErrors(prev => ({ ...prev, telefono: null }));
+                                }
                               }}
                               onBlur={handleBlur}
                               placeholder="10 dígitos numéricos"
@@ -4142,9 +4386,11 @@ export default function RegistroJugadores() {
                                 borderRadius: '8px',
                                 border: validationErrors.telefono
                                   ? `1.5px solid ${COLORS.danger}`
-                                  : (missingOcrFields.includes('telefono') && !currentDatos.telefono
-                                    ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
-                                    : `1.5px solid ${COLORS.slate300}`),
+                                  : (isTelefonoValido
+                                    ? `1.5px solid ${COLORS.success}`
+                                    : (missingOcrFields.includes('telefono') && !currentDatos.telefono
+                                      ? `1.5px dashed ${COLORS.warning || '#f59e0b'}`
+                                      : `1.5px solid ${COLORS.slate300}`)),
                                 backgroundColor: missingOcrFields.includes('telefono') && !currentDatos.telefono
                                   ? '#fef3c7'
                                   : 'white',
@@ -4193,7 +4439,11 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.numCamiseta ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.numCamiseta
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (isNumCamisetaValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               outline: 'none'
                             }}
@@ -4214,7 +4464,11 @@ export default function RegistroJugadores() {
                             style={{
                               padding: '10px',
                               borderRadius: '8px',
-                              border: `1.5px solid ${validationErrors.posicion ? COLORS.danger : COLORS.slate300}`,
+                              border: validationErrors.posicion
+                                ? `1.5px solid ${COLORS.danger}`
+                                : (isPosicionValido
+                                  ? `1.5px solid ${COLORS.success}`
+                                  : `1.5px solid ${COLORS.slate300}`),
                               fontSize: '14px',
                               backgroundColor: 'white',
                               outline: 'none'
@@ -4599,95 +4853,99 @@ export default function RegistroJugadores() {
                           overflow: 'hidden'
                         }}
                       >
-                        {currentPlayer?.signedForm ? (
-                          <div style={{ color: COLORS.success }}>
-                            <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
-                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado, cargado, y listo</p>
-                          </div>
-                        ) : (
-                          <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400 }}>
-                            <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
-                            <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado</p>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
-                          </div>
-                        )}
+                        <div style={{ pointerEvents: isDraggingSignedForm ? 'none' : 'auto', display: 'flex', flexDirection: 'column', height: '100%', width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                          {currentPlayer?.signedForm ? (
+                            <div style={{ color: COLORS.success, textAlign: 'center' }}>
+                              <FaFilePdf style={{ fontSize: '45px', marginBottom: '12px' }} />
+                              <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>{currentPlayer.signedForm.name}</p>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '11px' }}>Documento firmado, cargado, y listo</p>
+                            </div>
+                          ) : (
+                            <div style={{ color: pasos1a5Completos ? COLORS.sky : COLORS.slate400, textAlign: 'center' }}>
+                              <FaUpload style={{ fontSize: '45px', marginBottom: '12px' }} />
+                              <p style={{ margin: 0, fontWeight: '700', fontSize: '14px' }}>Subir formato firmado</p>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: COLORS.slate500 }}>Solo se permiten archivos PDF</p>
+                            </div>
+                          )}
 
-                        {currentPlayer?.signedForm && (
-                          <div className="overlay-actions" style={{
-                            position: 'absolute',
-                            top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: COLORS.overlaySlateGray,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '12px',
-                            opacity: 0,
-                            transition: 'opacity 0.2s ease',
-                            backdropFilter: 'blur(2px)',
-                            zIndex: 2
-                          }}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewDoc({
-                                  open: true,
-                                  url: previews.signedForm,
-                                  type: 'pdf',
-                                  title: 'Formato de Afiliación Oficial'
-                                });
-                              }}
-                              className="btn-zoom"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                              }}
-                            >
-                              <FaSearchPlus />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                document.getElementById('final-signed-form').click();
-                              }}
-                              className="btn-change"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                              }}
-                            >
-                              <FaSyncAlt />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updatePlayerSignedForm(currentPlayerIndex, null);
-                              }}
-                              className="btn-delete"
-                              style={{
-                                width: '36px', height: '36px', borderRadius: '50%',
-                                backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
-                              }}
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        )}
+                          {currentPlayer?.signedForm && (
+                            <div className="overlay-actions" style={{
+                              position: 'absolute',
+                              top: 0, left: 0, right: 0, bottom: 0,
+                              backgroundColor: COLORS.overlaySlateGray,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '12px',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease',
+                              backdropFilter: 'blur(2px)',
+                              zIndex: 2,
+                              pointerEvents: 'auto'
+                            }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewDoc({
+                                    open: true,
+                                    url: previews.signedForm,
+                                    type: 'pdf',
+                                    title: 'Formato de Afiliación Oficial'
+                                  });
+                                }}
+                                className="btn-zoom"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                }}
+                              >
+                                <FaSearchPlus />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  document.getElementById('final-signed-form').click();
+                                }}
+                                className="btn-change"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.sky, color: COLORS.white, border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updatePlayerSignedForm(currentPlayerIndex, null);
+                                }}
+                                className="btn-delete"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.danger, color: COLORS.white, border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer'
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          )}
+                        </div>
 
                         <input
                           type="file"
                           id="final-signed-form"
                           style={{ display: 'none' }}
                           accept=".pdf"
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             if (pasos1a5Completos && e.target.files[0]) {
                               updatePlayerSignedForm(currentPlayerIndex, e.target.files[0]);

@@ -19,6 +19,7 @@ import { API_BASE } from '../../config/config';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -184,7 +185,8 @@ export default function AdminCrearJugador() {
     nacAbuelaPaterna: '',
     nacAbueloMaterno: '',
     nacAbuelaMaterna: '',
-    juegoClubExtranjero: ''
+    juegoClubExtranjero: '',
+    isCurpInvalid: false
   });
 
   // ── Detección de minoría de edad ──
@@ -209,6 +211,7 @@ export default function AdminCrearJugador() {
   const [signedFormPreview, setSignedFormPreview] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('fotografia');
   const [isDraggingSignedForm, setIsDraggingSignedForm] = useState(false);
 
   // DETERMINACIÓN DE PASOS
@@ -252,7 +255,7 @@ export default function AdminCrearJugador() {
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -288,8 +291,25 @@ export default function AdminCrearJugador() {
         nacAbueloMaterno: 'MEXICANA',
         nacAbuelaMaterna: 'MEXICANA',
         juegoClubExtranjero: 'NO',
-        nui: ''
+        nui: '',
+        isCurpInvalid: false
       });
+      setDocuments({
+        actaNacimiento: null,
+        identificacion: null,
+        fotografia: null,
+        formatoAfiliacion: null,
+        documentoEstudiante: null
+      });
+      setPreviews({
+        actaNacimiento: null,
+        identificacion: null,
+        fotografia: null,
+        formatoAfiliacion: null,
+        documentoEstudiante: null
+      });
+      setSignedForm(null);
+      setSignedFormPreview(null);
       setValidationErrors({});
       Swal.fire({
         title: 'Formulario Limpiado',
@@ -315,6 +335,19 @@ export default function AdminCrearJugador() {
       setDocuments(prev => ({ ...prev, [docKey]: null }));
       setPreviews(prev => ({ ...prev, [docKey]: null }));
     }
+  };
+
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
+    });
   };
 
   // PROCESAR OCR
@@ -549,9 +582,6 @@ export default function AdminCrearJugador() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out CURP to block player creation
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -590,10 +620,11 @@ export default function AdminCrearJugador() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || '',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
           setOcrDataOriginal(ocrResult);
@@ -615,7 +646,7 @@ export default function AdminCrearJugador() {
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -1490,6 +1521,8 @@ export default function AdminCrearJugador() {
                               <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewDoc({ open: true, url: previews[doc.key], type: 'image', title: doc.title }); }} style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: COLORS.white, color: COLORS.slate800, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 6px -1px ${COLORS.shadow10}`, cursor: 'pointer' }}><FaSearchPlus /></button>
                               <button type="button" onClick={(e) => {
                                 e.stopPropagation();
+                                openDocumentCaptureOptions(doc.key);
+                                return;
                                 if (doc.key === 'fotografia') {
                                   Swal.fire({
                                     title: 'Selecciona una opción',
@@ -1516,6 +1549,8 @@ export default function AdminCrearJugador() {
                           </div>
                         ) : (
                           <div onClick={() => {
+                            openDocumentCaptureOptions(doc.key);
+                            return;
                             if (doc.key === 'fotografia') {
                               Swal.fire({
                                 title: 'Selecciona una opción',
@@ -1559,7 +1594,8 @@ export default function AdminCrearJugador() {
                 <CameraCaptureModal
                   isOpen={isCameraOpen}
                   onClose={() => setIsCameraOpen(false)}
-                  onCapture={(file) => handleFileUpload('fotografia', file)}
+                  onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                  captureKind={getCameraCaptureKind(cameraTargetKey)}
                 />
               </>
             )}
@@ -1776,6 +1812,11 @@ export default function AdminCrearJugador() {
                   {missingOcrFields.includes('curp') && !extractedData.curp && (
                     <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
                       No se pudo completar automáticamente
+                    </span>
+                  )}
+                  {extractedData.isCurpInvalid && (
+                    <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
+                      No se pudo validar la veracidad de esta CURP.
                     </span>
                   )}
                 </div>

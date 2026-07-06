@@ -44,6 +44,7 @@ export default function PagoPrevioJugador() {
   const [asignacionSegurosAgregar, setAsignacionSegurosAgregar] = useState({});
   const [pagoErrorJugador, setPagoErrorJugador] = useState(null);
   const [procesandoPagoJugador, setProcesandoPagoJugador] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const pathSegments = location.pathname.split('/');
@@ -130,7 +131,7 @@ export default function PagoPrevioJugador() {
         nuevaAsignacion[String(s.id)] = 0;
       });
 
-      const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim()));
+      const primerSeguroJugador = catalogs.seguros.find(s => !['TIPO G', 'TIPO J'].includes((s.nombre || '').toUpperCase().trim()));
       if (primerSeguroJugador) {
         nuevaAsignacion[String(primerSeguroJugador.id)] = totalNecesario;
       } else if (catalogs.seguros.length > 0) {
@@ -197,7 +198,7 @@ export default function PagoPrevioJugador() {
   const detallesSeguros = orderDetails.filter(detalle => Number(detalle.SeguroId) > 0);
   const segurosRequeridosPagoJugador = Number(numJugadoresAgregar || 0) > 0 ? Number(numJugadoresAgregar || 0) : 0;
   const totalAsignadosPagoJugador = catalogs.seguros.reduce((sum, seguro) => {
-    const isPresidente = ['TIPO G', 'SIN SEGURO'].includes((seguro.nombre || '').toUpperCase().trim());
+    const isPresidente = ['TIPO G', 'TIPO J'].includes((seguro.nombre || '').toUpperCase().trim());
     return sum + (isPresidente ? 0 : Number(asignacionSegurosAgregar[String(seguro.id)] || 0));
   }, 0);
   const segurosPendientesPagoJugador = segurosRequeridosPagoJugador - totalAsignadosPagoJugador;
@@ -209,8 +210,7 @@ export default function PagoPrevioJugador() {
   );
   const totalPagoMostradoJugador = Number(pagoData?.total || totalPagoEstimadoJugador || 0);
 
-  const handleSeleccionarComprobante = (e) => {
-    const file = e.target.files?.[0];
+  const processSelectedFile = (file) => {
     if (!file) return;
 
     // Validar tipo de archivo
@@ -228,6 +228,11 @@ export default function PagoPrevioJugador() {
 
     setComprobanteFile(file);
     setComprobante(file.name);
+  };
+
+  const handleSeleccionarComprobante = (e) => {
+    const file = e.target.files?.[0];
+    processSelectedFile(file);
   };
 
   const handleSubirComprobante = async () => {
@@ -381,34 +386,87 @@ export default function PagoPrevioJugador() {
       )}
       <h3 style={{ color: COLORS.slate800, fontWeight: '900', marginBottom: '8px' }}>Sube tu comprobante de pago</h3>
       <p style={{ color: COLORS.slate500, lineHeight: 1.6, marginBottom: '22px' }}>{helperText}</p>
-      <div style={{ border: `2px dashed ${COLORS.secondaryBgDark}`, borderRadius: '16px', padding: '26px', textAlign: 'center', background: COLORS.slate50 }}>
-        <FaUpload style={{ fontSize: '34px', color: COLORS.primary, marginBottom: '12px' }} />
-        <input
-          id={uploadInputId}
-          type="file"
-          onChange={handleSeleccionarComprobante}
-          disabled={uploadingComprobante}
-          style={{ display: 'none' }}
-          accept=".pdf,.jpg,.jpeg,.png"
-        />
-        <div style={{ fontWeight: '800', color: COLORS.slate800, marginBottom: '12px' }}>
-          {comprobante || 'No se ha seleccionado archivo'}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => document.getElementById(uploadInputId)?.click()}
+      <div
+        onClick={() => document.getElementById(uploadInputId)?.click()}
+        onDragEnter={(e) => {
+          if (!uploadingComprobante) {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragActive(true);
+          }
+        }}
+        onDragOver={(e) => {
+          if (!uploadingComprobante) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        onDragLeave={(e) => {
+          if (!uploadingComprobante) {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragActive(false);
+          }
+        }}
+        onDrop={(e) => {
+          if (uploadingComprobante) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setDragActive(false);
+          const file = e.dataTransfer.files[0];
+          processSelectedFile(file);
+        }}
+        style={{
+          border: dragActive
+            ? `2px solid ${COLORS.primary}`
+            : `2px dashed ${comprobanteFile ? COLORS.successBgTranslucent30 : COLORS.secondaryBgDark}`,
+          borderRadius: '16px',
+          padding: '26px',
+          textAlign: 'center',
+          background: dragActive
+            ? 'rgba(26, 59, 92, 0.08)'
+            : (comprobanteFile ? COLORS.greenBgTranslucent03 : COLORS.slate50),
+          cursor: uploadingComprobante ? 'not-allowed' : 'pointer',
+          transition: 'all 0.3s'
+        }}
+      >
+        <div style={{ pointerEvents: dragActive ? 'none' : 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+          <FaUpload style={{ fontSize: '34px', color: comprobanteFile ? COLORS.success : COLORS.primary, marginBottom: '12px' }} />
+          <input
+            id={uploadInputId}
+            type="file"
+            onClick={(e) => e.stopPropagation()}
+            onChange={handleSeleccionarComprobante}
             disabled={uploadingComprobante}
-            style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.primary}`, background: 'white', color: COLORS.primary, fontWeight: '900', cursor: uploadingComprobante ? 'not-allowed' : 'pointer', opacity: uploadingComprobante ? 0.7 : 1 }}
-          >
-            {buttonText}
-          </button>
-          <button
-            type="button"
-            onClick={handleDescargarOrdenPagoJugador}
-            style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.brandBlueLight50}`, background: 'white', color: COLORS.secondaryLight, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FaFilePdf /> Descargar Ficha de Pago
-          </button>
+            style={{ display: 'none' }}
+            accept=".pdf,.jpg,.jpeg,.png"
+          />
+          <div style={{ fontWeight: '800', color: COLORS.slate800, marginBottom: '12px' }}>
+            {comprobante || 'Arrastra o haz clic para subir tu comprobante'}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                document.getElementById(uploadInputId)?.click();
+              }}
+              disabled={uploadingComprobante}
+              style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.primary}`, background: 'white', color: COLORS.primary, fontWeight: '900', cursor: uploadingComprobante ? 'not-allowed' : 'pointer', opacity: uploadingComprobante ? 0.7 : 1 }}
+            >
+              {buttonText}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDescargarOrdenPagoJugador();
+              }}
+              style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.brandBlueLight50}`, background: 'white', color: COLORS.secondaryLight, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <FaFilePdf /> Descargar Ficha de Pago
+            </button>
+          </div>
         </div>
       </div>
       <button
@@ -505,7 +563,7 @@ export default function PagoPrevioJugador() {
 
                 <div style={{ marginBottom: '12px', fontSize: '13px', fontWeight: '900', color: COLORS.primary, textTransform: 'uppercase' }}>Distribucion de seguros</div>
                 <div className="responsive-seguros-grid">
-                  {catalogs.seguros.filter(s => !['TIPO G', 'SIN SEGURO'].includes((s.nombre || '').toUpperCase().trim())).map(seguro => {
+                  {catalogs.seguros.filter(s => !['TIPO G', 'TIPO J'].includes((s.nombre || '').toUpperCase().trim())).map(seguro => {
                     const id = String(seguro.id);
                     return (
                       <div
@@ -550,32 +608,78 @@ export default function PagoPrevioJugador() {
                 <p style={{ color: COLORS.slate500, lineHeight: 1.6, marginBottom: '22px' }}>
                   Adjunta un PDF o imagen del comprobante. El registro se habilitara cuando el administrador apruebe esta orden.
                 </p>
-                <div style={{ border: `2px dashed ${COLORS.secondaryBgDark}`, borderRadius: '16px', padding: '26px', textAlign: 'center', background: COLORS.slate50 }}>
-                  <FaUpload style={{ fontSize: '34px', color: COLORS.primary, marginBottom: '12px' }} />
-                  <input
-                    id={uploadInputId}
-                    type="file"
-                    onChange={handleSeleccionarComprobante}
-                    style={{ display: 'none' }}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  <div style={{ fontWeight: '800', color: COLORS.slate800, marginBottom: '12px' }}>
-                    {comprobante || 'No se ha seleccionado archivo'}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => document.getElementById(uploadInputId)?.click()}
-                      style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.primary}`, background: 'white', color: COLORS.primary, fontWeight: '900', cursor: 'pointer' }}
-                    >
-                      {comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDescargarOrdenPagoJugador}
-                      style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.brandBlueLight50}`, background: 'white', color: COLORS.secondaryLight, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <FaFilePdf /> Descargar Ficha de Pago
-                    </button>
+                <div
+                  onClick={() => document.getElementById(uploadInputId)?.click()}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragActive(false);
+                    const file = e.dataTransfer.files[0];
+                    processSelectedFile(file);
+                  }}
+                  style={{
+                    border: dragActive
+                      ? `2px solid ${COLORS.primary}`
+                      : `2px dashed ${comprobanteFile ? COLORS.successBgTranslucent30 : COLORS.secondaryBgDark}`,
+                    borderRadius: '16px',
+                    padding: '26px',
+                    textAlign: 'center',
+                    background: dragActive
+                      ? 'rgba(26, 59, 92, 0.08)'
+                      : (comprobanteFile ? COLORS.greenBgTranslucent03 : COLORS.slate50),
+                    cursor: 'pointer',
+                    transition: 'all 0.3s'
+                  }}
+                >
+                  <div style={{ pointerEvents: dragActive ? 'none' : 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                    <FaUpload style={{ fontSize: '34px', color: comprobanteFile ? COLORS.success : COLORS.primary, marginBottom: '12px' }} />
+                    <input
+                      id={uploadInputId}
+                      type="file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleSeleccionarComprobante}
+                      style={{ display: 'none' }}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                    />
+                    <div style={{ fontWeight: '800', color: COLORS.slate800, marginBottom: '12px' }}>
+                      {comprobante || 'Arrastra o haz clic para subir tu comprobante'}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          document.getElementById(uploadInputId)?.click();
+                        }}
+                        style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.primary}`, background: 'white', color: COLORS.primary, fontWeight: '900', cursor: 'pointer' }}
+                      >
+                        {comprobante ? 'Cambiar archivo' : 'Seleccionar archivo'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDescargarOrdenPagoJugador();
+                        }}
+                        style={{ padding: '11px 22px', borderRadius: '10px', border: `1px solid ${COLORS.brandBlueLight50}`, background: 'white', color: COLORS.secondaryLight, fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <FaFilePdf /> Descargar Ficha de Pago
+                      </button>
+                    </div>
                   </div>
                 </div>
               </>

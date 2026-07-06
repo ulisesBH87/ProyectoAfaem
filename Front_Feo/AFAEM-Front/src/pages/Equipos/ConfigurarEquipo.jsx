@@ -27,6 +27,7 @@ import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
+import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -219,8 +220,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO',
+  'TIPO J': {
+    nombre: 'TIPO J',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -345,12 +346,12 @@ export default function ConfigurarEquipo() {
   const segurosPresidente = (catalogs.seguros || []).filter(seguro => {
     const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-    return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+    return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
   });
   const segurosJugador = (catalogs.seguros || []).filter(seguro => {
     const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
     const tipoPersonaId = getSeguroTipoPersonaId(seguro);
-    return (!['TIPO G', 'SIN SEGURO'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
+    return (!['TIPO G', 'TIPO J'].includes(nombreUpper) && tipoPersonaId !== 2) || tipoPersonaId === 4;
   });
   const seguroJugadorIds = new Set(segurosJugador.map(seguro => String(seguro.id)));
   const segurosPresidenteIds = new Set(segurosPresidente.map(seguro => String(seguro.id)));
@@ -519,8 +520,14 @@ export default function ConfigurarEquipo() {
     nacAbueloMaterno: 'MEXICANA',
     nacAbuelaMaterna: 'MEXICANA',
     juegoClubExtranjero: 'NO',
-    nui: ''
+    nui: '',
+    isCurpInvalid: false
   });
+
+  const extractedDataRef = useRef(extractedData);
+  useEffect(() => {
+    extractedDataRef.current = extractedData;
+  }, [extractedData]);
 
   // Detección de minoría de edad
   const esMenorDeEdad = React.useMemo(() => {
@@ -559,11 +566,12 @@ export default function ConfigurarEquipo() {
   const [signedForm, setSignedForm] = useState(null);
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetKey, setCameraTargetKey] = useState('foto');
 
   const handleResetForm = async () => {
     const result = await Swal.fire({
       title: '¿Limpiar formulario?',
-      text: 'Se borrarán todos los datos capturados de este jugador. Los documentos subidos no se eliminarán con esta opción, pero sí toda la información del formulario.',
+      text: 'Se borrarán todos los datos capturados de este jugador, incluyendo los documentos subidos y el formato firmado, para iniciar el registro desde cero.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Sí, limpiar',
@@ -602,6 +610,21 @@ export default function ConfigurarEquipo() {
         nui: ''
       };
       setExtractedData(resetDatos);
+      setDocuments({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setPreviews({
+        acta: null,
+        ine: null,
+        ineTutor: null,
+        identificacionMenor: null,
+        foto: null
+      });
+      setSignedForm(null);
       setValidationErrors({});
 
       // Guardar borrador vacío en BD si existe slot de borrador
@@ -690,6 +713,8 @@ export default function ConfigurarEquipo() {
       }
     } else if (field === 'lugarNacimiento') {
       cleanValue = value.replace(/[^A-ZÁÉÍÓÚÜÑ0-9\s]/gi, '').slice(0, 30);
+    } else if (field === 'curp') {
+      cleanValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 18).toUpperCase();
     } else if (field === 'correo') {
       cleanValue = value.replace(/[^a-zA-Z0-9@._-]/g, '').slice(0, 30);
     } else if (field === 'telefono' || field === 'numCamiseta') {
@@ -698,6 +723,9 @@ export default function ConfigurarEquipo() {
 
     setExtractedData(prev => {
       const updated = { ...prev, [field]: cleanValue };
+      if (field === 'curp') {
+        updated.isCurpInvalid = false;
+      }
       return updated;
     });
   };
@@ -764,7 +792,7 @@ export default function ConfigurarEquipo() {
             .filter(seguro => {
               const nombreUpper = seguro?.nombre?.toUpperCase()?.trim() || '';
               const tipoPersonaId = Number(seguro?.TipoPersonaId ?? seguro?.tipoPersonaId ?? 0);
-              return ['TIPO G', 'SIN SEGURO'].includes(nombreUpper) || tipoPersonaId === 2;
+              return ['TIPO G', 'TIPO J'].includes(nombreUpper) || tipoPersonaId === 2;
             })
             .map(seguro => String(seguro.id))
         );
@@ -1491,6 +1519,7 @@ export default function ConfigurarEquipo() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     style={{ display: 'none' }}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -1864,9 +1893,6 @@ export default function ConfigurarEquipo() {
 
         const curpOriginalCapturada = curpEncontrada;
         const curpNoValida = (verificacionRenapo === 'RECHAZADO');
-        if (curpNoValida) {
-          curpEncontrada = ''; // Clear out CURP to block registration completion
-        }
 
         if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado || nombreEncontrado || curpEncontrada || fechaNacEncontrada) {
           let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
@@ -1905,13 +1931,15 @@ export default function ConfigurarEquipo() {
             nombreJugador: firstName || '',
             apellidoPaterno: lastNamePaterno || '',
             apellidoMaterno: lastNameMaterno || '',
-            curp: curpEncontrada || '',
+            curp: curpOriginalCapturada || '',
             fechaNacimiento: fechaNacEncontrada || '',
             lugarNacimiento: lugarNacEncontrado || 'MÉXICO',
-            genero: detectedGenero
+            genero: detectedGenero,
+            isCurpInvalid: curpNoValida
           };
 
-          const merged = { ...extractedData, ...ocrResult };
+          const latestExtractedData = extractedDataRef.current;
+          const merged = { ...latestExtractedData, ...ocrResult };
           setOcrDataOriginal(ocrResult);
           setExtractedData(merged);
           guardarBorradorEnBD(merged);
@@ -1923,14 +1951,14 @@ export default function ConfigurarEquipo() {
           if (!ocrResult.curp) missing.push('curp');
           if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
           if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
-          if (!extractedData.correo) missing.push('correo');
-          if (!extractedData.telefono) missing.push('telefono');
+          if (!latestExtractedData.correo) missing.push('correo');
+          if (!latestExtractedData.telefono) missing.push('telefono');
           setMissingOcrFields(missing);
 
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -1988,6 +2016,23 @@ export default function ConfigurarEquipo() {
       timer: 1500,
       showConfirmButton: false
     });
+  };
+
+  const openDocumentCaptureOptions = (documentKey) => {
+    const captureKind = getCameraCaptureKind(documentKey);
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey(documentKey);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-${documentKey}`)?.click();
+      }
+    });
+  };
+
+  const handleDocumentCardClick = (documentKey) => {
+    openDocumentCaptureOptions(documentKey);
   };
 
   // AUXILIAR PARA ESCRITURA EN PDF
@@ -2788,6 +2833,7 @@ export default function ConfigurarEquipo() {
                     id="team-logo-upload"
                     accept=".jpg,.jpeg,.png"
                     style={{ display: 'none' }}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       const file = e.target.files[0];
                       if (!file) return;
@@ -3136,26 +3182,7 @@ export default function ConfigurarEquipo() {
                         }}
                         onClick={() => {
                           if (!documents[doc.key]) {
-                            if (doc.key === 'foto') {
-                              Swal.fire({
-                                title: 'Selecciona una opción',
-                                text: '¿Cómo deseas cargar la fotografía?',
-                                icon: 'question',
-                                showCancelButton: true,
-                                confirmButtonText: '📷 Tomar con cámara',
-                                cancelButtonText: '📁 Subir archivo',
-                                confirmButtonColor: COLORS.primary,
-                                cancelButtonColor: COLORS.slate500
-                              }).then((result) => {
-                                if (result.isConfirmed) {
-                                  setIsCameraOpen(true);
-                                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                  document.getElementById(`file-${doc.key}`).click();
-                                }
-                              });
-                            } else {
-                              document.getElementById(`file-${doc.key}`).click();
-                            }
+                            handleDocumentCardClick(doc.key);
                           }
                         }}
                       >
@@ -3223,28 +3250,7 @@ export default function ConfigurarEquipo() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (doc.key === 'foto') {
-                                        Swal.fire({
-                                          title: 'Selecciona una opción',
-                                          text: '¿Cómo deseas cargar la fotografía?',
-                                          icon: 'question',
-                                          showCancelButton: true,
-                                          confirmButtonText: '📷 Tomar con cámara',
-                                          cancelButtonText: '📁 Subir archivo',
-                                          confirmButtonColor: COLORS.primary,
-                                          cancelButtonColor: COLORS.slate500
-                                        }).then((result) => {
-                                          if (result.isConfirmed) {
-                                            setIsCameraOpen(true);
-                                          } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                            document.getElementById(`file-${doc.key}`).click();
-                                          }
-                                        });
-                                      } else {
-                                        document.getElementById(`file-${doc.key}`).click();
-                                      }
-                                    }}
+                                    onClick={() => handleDocumentCardClick(doc.key)}
                                     className="doc-action-btn change"
                                     title="Cambiar archivo"
                                   >
@@ -3315,6 +3321,7 @@ export default function ConfigurarEquipo() {
                           id={`file-${doc.key}`}
                           style={{ display: 'none' }}
                           accept=".pdf,.jpg,.jpeg,.png"
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleFileUpload(doc.key, e.target.files[0])}
                         />
                       </div>
@@ -3324,7 +3331,8 @@ export default function ConfigurarEquipo() {
                   <CameraCaptureModal
                     isOpen={isCameraOpen}
                     onClose={() => setIsCameraOpen(false)}
-                    onCapture={(file) => handleFileUpload('foto', file)}
+                    onCapture={(file) => handleFileUpload(cameraTargetKey, file)}
+                    captureKind={getCameraCaptureKind(cameraTargetKey)}
                   />
 
                   {/* Loader temporal OCR */}
@@ -3370,32 +3378,7 @@ export default function ConfigurarEquipo() {
                     </div>
                   </div>
 
-                  {/* AVISO DE DISCREPANCIA OCR */}
-                  {ocrDataOriginal && (
-                    extractedData.nombreJugador?.toUpperCase() !== ocrDataOriginal.nombreJugador?.toUpperCase() ||
-                    extractedData.curp?.toUpperCase() !== ocrDataOriginal.curp?.toUpperCase()
-                  ) && (
-                      <div className="fade-in" style={{
-                        marginBottom: '20px',
-                        padding: '16px',
-                        borderRadius: '12px',
-                        background: COLORS.orange50,
-                        border: `1px solid ${COLORS.orange100}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px'
-                      }}>
-                        <div style={{ fontSize: '20px' }}>⚠️</div>
-                        <div>
-                          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: COLORS.orangeDeep }}>
-                            Discrepancia detectada
-                          </h4>
-                          <p style={{ margin: 0, fontSize: '12px', color: COLORS.orangeDarker }}>
-                            La información ingresada difiere de la detectada en el documento subido. Por favor, verifica tu captura.
-                          </p>
-                        </div>
-                      </div>
-                    )}
+
 
                   {/* CAMPOS DEL FORMULARIO */}
                   <div className="dashboard-card" style={{ border: `1px solid ${COLORS.slate200}`, marginBottom: '30px' }}>
@@ -3499,9 +3482,9 @@ export default function ConfigurarEquipo() {
                         <input
                           type="text"
                           value={extractedData.curp || ''}
-                          readOnly
+                          onChange={e => handleFieldChange('curp', e.target.value)}
                           onBlur={handleBlur}
-                          placeholder="Se auto-completará con el documento de identidad"
+                          placeholder="Ingresa o corrige la CURP"
                           maxLength="18"
                           style={{
                             padding: '10px',
@@ -3513,13 +3496,18 @@ export default function ConfigurarEquipo() {
                                 : `1.5px solid ${COLORS.slate300}`),
                             boxShadow: curpExistente ? `0 0 0 3px ${COLORS.dangerBgTranslucent10}` : 'none',
                             fontSize: '14px',
-                            backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : '#f1f5f9',
-                            cursor: missingOcrFields.includes('curp') && !extractedData.curp ? 'text' : 'not-allowed'
+                            backgroundColor: missingOcrFields.includes('curp') && !extractedData.curp ? '#fef3c7' : 'white',
+                            cursor: 'text'
                           }}
                         />
                         {missingOcrFields.includes('curp') && !extractedData.curp && (
                           <span style={{ color: '#d97706', fontSize: '11px', fontWeight: 'bold' }}>
                             No se pudo completar automáticamente
+                          </span>
+                        )}
+                        {extractedData.isCurpInvalid && (
+                          <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
+                            No se pudo validar la veracidad de esta CURP.
                           </span>
                         )}
                         {curpExistente && (
@@ -4085,6 +4073,7 @@ export default function ConfigurarEquipo() {
               id="final-signed-form"
               style={{ display: 'none' }}
               accept=".pdf,.jpg,.jpeg,.png"
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 const file = e.target.files[0];
                 if (!file) return;

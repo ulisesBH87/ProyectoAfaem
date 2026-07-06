@@ -162,8 +162,8 @@ const DETALLES_SEGUROS = {
     ],
     coberturas: []
   },
-  'SIN SEGURO': {
-    nombre: 'SIN SEGURO (CON RESPONSABILIDAD DE LIGA)',
+  'TIPO J': {
+    nombre: 'TIPO "J" (SIN SEGURO)',
     precio: 0,
     poliza: 'N/A',
     vigencia: 'N/A',
@@ -209,7 +209,7 @@ export default function Step3Cuotas({
   const abrirModalDetalle = (seguro) => {
     setSeguroDetalle(seguro);
     const normalizedName = normalizarNombreSeguro(seguro.nombre);
-    const esPres = ['TIPO G', 'SIN SEGURO'].includes(normalizedName);
+    const esPres = ['TIPO G', 'TIPO J'].includes(normalizedName);
     if (!esPres) {
       setCantidadModal(Number(asignacion[seguro.id] || 0));
     }
@@ -229,6 +229,10 @@ export default function Step3Cuotas({
     setAsignacion(prev => ({ ...prev, [seg.id]: num }));
   };
 
+  const hasInsurancesSelected = esEntrenador
+    ? segurosPresidente.some(seg => Number(asignacion[seg.id] || 0) > 0)
+    : totalAsignados > 0;
+
   return (
     <div>
       <PasoHeader
@@ -239,7 +243,7 @@ export default function Step3Cuotas({
       {/* Datos del expediente */}
       <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: '20px 22px', marginBottom: 22 }}>
         <h3 style={{ marginTop: 0, marginBottom: 16, color: C.text, fontSize: 16 }}>Datos del Expediente</h3>
-        
+
         {/* Fila única: Nombre del equipo, Cargo, Asociación y Liga Destino */}
         <div className="rp-grid-4cols-equal">
           <div>
@@ -348,7 +352,7 @@ export default function Step3Cuotas({
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
                   <input
-                     type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={numPersonas}
+                    type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={numPersonas}
                     onChange={e => {
                       const rawVal = e.target.value.replace(/\D/g, '').slice(0, 2);
                       setNumPersonas(rawVal === '' ? '' : parseInt(rawVal, 10));
@@ -370,7 +374,7 @@ export default function Step3Cuotas({
           {/* Grid de seguros por categoría */}
           <div className={esEntrenador ? "" : "rp-grid-1to1"}>
             {[['Seguros Jugadores', segurosJugadores, false], ['Seguros Presidente', segurosPresidente, true]]
-              .filter(([,, isPres]) => !esEntrenador || isPres)
+              .filter(([, , isPres]) => !esEntrenador || isPres)
               .map(([titulo, lista, isPres]) => (
                 <div key={titulo} style={{ width: '100%' }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: C.amber, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -415,7 +419,7 @@ export default function Step3Cuotas({
 
         {/* Voucher y total */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <VoucherUpload voucher={voucher} onFileChange={setVoucher} />
+          <VoucherUpload voucher={voucher} onFileChange={setVoucher} hasInsurancesSelected={hasInsurancesSelected} />
 
           <div style={{ background: COLORS.warningBgTranslucent07, border: `1px solid ${COLORS.warningBgTranslucent18}`, borderRadius: 18, padding: '18px 20px', textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Monto Estimado</div>
@@ -485,7 +489,7 @@ export default function Step3Cuotas({
           beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
           coberturas: []
         };
-        const esPresidente = ['TIPO G', 'SIN SEGURO'].includes(segNombreNormalizado);
+        const esPresidente = ['TIPO G', 'TIPO J'].includes(segNombreNormalizado);
         const jugadoresRestantes = Math.max(0, segurosRequeridos - totalAsignados);
 
         return createPortal(
@@ -725,7 +729,7 @@ export default function Step3Cuotas({
                       setSeguroDetalle(null);
                     }}
                     style={{
-                      background: `linear-gradient(135deg, ${COLORS.blue} 0%, ${COLORS.secondaryDark} 100%)`,
+                      background: `linear-gradient(135deg, ${COLORS.secondary} 0%, ${COLORS.secondaryDark} 100%)`,
                       border: 'none',
                       color: COLORS.white,
                       padding: '10px 28px',

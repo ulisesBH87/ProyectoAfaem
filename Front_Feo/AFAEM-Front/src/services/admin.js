@@ -51,7 +51,21 @@ const fetchWithCache = async (url, options = {}) => {
     return cachedData;
   }
 
-  const response = await api.get(url, options);
+  let finalUrl = url;
+  let config = { ...options };
+
+  if (options.forceRefresh) {
+    const separator = url.includes('?') ? '&' : '?';
+    finalUrl = `${url}${separator}_t=${Date.now()}`;
+    config.headers = {
+      ...config.headers,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+  }
+
+  const response = await api.get(finalUrl, config);
   serviceCache.set(cacheKey, response.data);
   return response.data;
 };

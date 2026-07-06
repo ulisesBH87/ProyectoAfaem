@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import { FaArrowLeft, FaFileAlt, FaCheckCircle, FaExclamationCircle, FaUpload, FaClock, FaEye } from 'react-icons/fa';
 import { ROUTES } from '../../routes/paths';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
+import { buildCaptureSourceDialog, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
 
 // Tipos de documentos requeridos y opcionales por edad
 const TIPOS_DOCUMENTO_ADULTO = [
@@ -69,6 +70,7 @@ export default function PresidenteJugadorDocumentos() {
   const [jugadorInfo, setJugadorInfo] = useState(null);
   const [personaId, setPersonaId] = useState(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraTargetTipoId, setCameraTargetTipoId] = useState(25);
 
   const cargarDatos = async () => {
     try {
@@ -175,6 +177,26 @@ export default function PresidenteJugadorDocumentos() {
     }
   };
 
+  const openUploadOptions = (tipoId) => {
+    const supportsCameraCapture = tipoId !== 28;
+
+    if (!supportsCameraCapture) {
+      document.getElementById(`file-upload-${tipoId}`)?.click();
+      return;
+    }
+
+    const captureKind = tipoId === 25 ? CAMERA_CAPTURE_KIND.PHOTO : CAMERA_CAPTURE_KIND.DOCUMENT;
+
+    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetTipoId(tipoId);
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        document.getElementById(`file-upload-${tipoId}`)?.click();
+      }
+    });
+  };
+
   if (loading) {
     return <Loader text="Cargando expediente digital..." />;
   }
@@ -213,7 +235,7 @@ export default function PresidenteJugadorDocumentos() {
           <FaArrowLeft />
         </button>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Documentación del Jugador</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: COLORS.slate800, margin: 0 }}>Documentación de {jugadorInfo?.nombre ? jugadorInfo.nombre.toUpperCase() : 'Jugador'}</h2>
           <p style={{ margin: 0, fontSize: '14px', color: COLORS.slate500, marginTop: '2px' }}>Consulta el estatus de los documentos de afiliación y sube archivos si fueron rechazados.</p>
         </div>
       </div>
@@ -300,6 +322,8 @@ export default function PresidenteJugadorDocumentos() {
                       <button
                         type="button"
                         onClick={() => {
+                          openUploadOptions(item.tipoId);
+                          return;
                           Swal.fire({
                             title: 'Selecciona una opción',
                             text: '¿Cómo deseas cargar la fotografía?',
@@ -357,25 +381,33 @@ export default function PresidenteJugadorDocumentos() {
                       />
                     </>
                   ) : (
-                    <label style={{
-                      flex: 1,
-                      padding: '10px 14px',
-                      background: COLORS.primary,
-                      color: 'white',
-                      borderRadius: '10px',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      textAlign: 'center',
-                      margin: 0
-                    }}>
-                      <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
+                    <>
+                      <button
+                        type="button"
+                        style={{
+                          flex: 1,
+                          padding: '10px 14px',
+                          background: COLORS.primary,
+                          color: 'white',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          textAlign: 'center',
+                          margin: 0,
+                          border: 'none'
+                        }}
+                        onClick={() => openUploadOptions(item.tipoId)}
+                      >
+                        <FaUpload /> {item.documento ? 'Reemplazar' : 'Subir'}
+                      </button>
                       <input
                         type="file"
+                        id={`file-upload-${item.tipoId}`}
                         accept=".pdf,.jpg,.jpeg,.png"
                         style={{ display: 'none' }}
                         onChange={(e) => {
@@ -391,7 +423,7 @@ export default function PresidenteJugadorDocumentos() {
                           handleSubirDocumento(item.tipoId, file);
                         }}
                       />
-                    </label>
+                    </>
                   )}
                 </div>
               )}
@@ -402,7 +434,8 @@ export default function PresidenteJugadorDocumentos() {
       <CameraCaptureModal
         isOpen={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
-        onCapture={(file) => handleSubirDocumento(25, file)}
+        onCapture={(file) => handleSubirDocumento(cameraTargetTipoId, file)}
+        captureKind={cameraTargetTipoId === 25 ? CAMERA_CAPTURE_KIND.PHOTO : CAMERA_CAPTURE_KIND.DOCUMENT}
       />
     </div>
   );

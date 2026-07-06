@@ -88,6 +88,7 @@ export default function AdminPresidentes() {
 
   const [presidentes, setPresidentes] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
 
   // Estados para filtros, búsqueda y paginación
   const [filtroEstatus, setFiltroEstatus] = useState('pendientes');
@@ -158,8 +159,14 @@ export default function AdminPresidentes() {
   );
 
   /* ─── Carga inicial ─── */
-  const cargarPresidentes = async (forceRefresh = false, esBackground = false) => {
-    if (!esBackground) setCargando(true);
+  const cargarPresidentes = async (forceRefresh = false, esBackground = false, esTableOnly = false) => {
+    if (!esBackground) {
+      if (esTableOnly) {
+        setTableLoading(true);
+      } else {
+        setCargando(true);
+      }
+    }
     try {
       const data = await getPresidentesDirectorio(forceRefresh);
       setPresidentes(Array.isArray(data) ? data : []);
@@ -172,7 +179,10 @@ export default function AdminPresidentes() {
         { id: 3, nombre: 'Miguel Angel', correo: 'm.angel@outlook.com', telefono: '33 1122 3344', curp: 'ANGM850404HJCR11', estatus: false, equipo: null, equipoId: null, equipos: [] },
       ]);
     } finally {
-      if (!esBackground) setCargando(false);
+      if (!esBackground) {
+        setCargando(false);
+        setTableLoading(false);
+      }
     }
   };
 
@@ -1447,12 +1457,6 @@ export default function AdminPresidentes() {
           <p style={{ margin: 0, fontSize: 14, color: COLORS.slate500 }}>Administra los accesos y directivos registrados.</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            onClick={() => cargarPresidentes(true)}
-            style={{ padding: '10px 20px', backgroundColor: 'white', color: COLORS.slate700, border: `1.5px solid ${COLORS.slate200}`, borderRadius: '12px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <FaSyncAlt />
-          </button>
           <button onClick={() => navigate(ROUTES.ADMIN.REGISTRAR_PRESIDENTE)}
             style={{ background: COLORS.primary, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <FaPlus /> Registrar Presidente
@@ -1522,6 +1526,10 @@ export default function AdminPresidentes() {
               {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'REC' : 'ANT'}
             </button>
 
+            <button onClick={() => cargarPresidentes(true, false, true)} className="btn-premium" style={{ padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaSyncAlt style={{ animation: tableLoading ? 'spin 1s linear infinite' : 'none' }} />
+            </button>
+
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
               {['pendientes', 'todos', 'activos', 'inactivos', 'solo_presidentes', 'solo_entrenadores'].map((val) => (
                 <button
@@ -1557,7 +1565,7 @@ export default function AdminPresidentes() {
         <DashboardTable
           columns={columns}
           data={dataTransformada}
-          isLoading={cargando}
+          isLoading={cargando || tableLoading}
           totalItems={filteredPresidentes.length}
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
