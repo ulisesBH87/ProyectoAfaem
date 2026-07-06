@@ -6,6 +6,7 @@ import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 import Swal from 'sweetalert2';
+import { Modal, BotonPrimario } from '../../components/partials';
 import { API_BASE } from '../../config/config';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import '../../styles/dashboard.css';
@@ -106,6 +107,8 @@ export default function PresidenteEquipoMisJugadores() {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+  const [selectedPlayerDetails, setSelectedPlayerDetails] = useState(null);
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   const loadData = async () => {
     try {
@@ -185,118 +188,8 @@ export default function PresidenteEquipoMisJugadores() {
   }, [filteredPlayers, currentPage]);
 
   const handleVerDetalles = (player) => {
-    const inicioSegStr = formatFecha(player.InicioSeguro);
-    const finSegStr = formatFecha(player.Vigencia);
-    const regDateStr = player.FechaIngreso ? formatFecha(player.FechaIngreso.split('T')[0]) : '—';
-    const isProximo = esSeguroProximoAVencer(player.Vigencia);
-
-    Swal.fire({
-      title: '',
-      html: `
-        <div style="font-family: 'Outfit', 'Inter', sans-serif; text-align: left; background: #ffffff; border-radius: 16px; overflow: hidden; margin: -20px;">
-          <!-- Header Banner -->
-          <div style="background: linear-gradient(135deg, ${COLORS.slate800}, ${COLORS.slate900}); padding: 25px 20px; color: white; display: flex; align-items: center; gap: 15px; border-bottom: 3px solid ${COLORS.primary};">
-            <div style="width: 50px; height: 50px; background: ${COLORS.primary}20; border: 2px solid ${COLORS.primary}; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: ${COLORS.primary}; flex-shrink: 0;">
-              🛡️
-            </div>
-            <div style="min-width: 0; flex-grow: 1;">
-              <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${player.NombreCompleto}</h3>
-              <p style="margin: 4px 0 0; font-size: 12px; color: ${COLORS.slate300}; font-weight: 500;">Ficha del Jugador</p>
-            </div>
-          </div>
-
-          <!-- Content Grid -->
-          <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8fafc;">
-            <!-- NUI -->
-            <div style="background: white; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center;">
-              <span style="font-size: 18px;">🪪</span>
-              <div>
-                <div style="font-size: 10px; font-weight: 700; color: ${COLORS.slate400}; text-transform: uppercase; letter-spacing: 0.5px;">NUI</div>
-                <div style="font-size: 13px; font-weight: 750; color: ${COLORS.slate800};">${player.NUI || 'No asignado'}</div>
-              </div>
-            </div>
-
-            <!-- Equipo -->
-            <div style="background: white; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center;">
-              <span style="font-size: 18px;">🛡️</span>
-              <div style="min-width: 0;">
-                <div style="font-size: 10px; font-weight: 700; color: ${COLORS.slate400}; text-transform: uppercase; letter-spacing: 0.5px;">Equipo</div>
-                <div style="font-size: 13px; font-weight: 750; color: ${COLORS.slate800}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}</div>
-              </div>
-            </div>
-
-            <!-- Rol / Posición -->
-            <div style="background: white; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center;">
-              <span style="font-size: 18px;">🏃</span>
-              <div>
-                <div style="font-size: 10px; font-weight: 700; color: ${COLORS.slate400}; text-transform: uppercase; letter-spacing: 0.5px;">Posición / Rol</div>
-                <div style="font-size: 13px; font-weight: 750; color: ${COLORS.slate800};">${player.Rol || 'Miembro Registrado'}</div>
-              </div>
-            </div>
-
-            <!-- Dorsal / Camiseta -->
-            <div style="background: white; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center;">
-              <span style="font-size: 18px;">👕</span>
-              <div>
-                <div style="font-size: 10px; font-weight: 700; color: ${COLORS.slate400}; text-transform: uppercase; letter-spacing: 0.5px;">Dorsal</div>
-                <div style="font-size: 13px; font-weight: 750; color: ${COLORS.slate800};">${player.NumeroCamiseta ? `# ${player.NumeroCamiseta}` : 'No asignado'}</div>
-              </div>
-            </div>
-
-            <!-- Fecha de Registro -->
-            <div style="background: white; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center;">
-              <span style="font-size: 18px;">📅</span>
-              <div>
-                <div style="font-size: 10px; font-weight: 700; color: ${COLORS.slate400}; text-transform: uppercase; letter-spacing: 0.5px;">Registro</div>
-                <div style="font-size: 13px; font-weight: 750; color: ${COLORS.slate800};">${regDateStr}</div>
-              </div>
-            </div>
-
-            <!-- Estado de Registro -->
-            <div style="background: white; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; gap: 10px; align-items: center;">
-              <span style="font-size: 18px;">📌</span>
-              <div>
-                <div style="font-size: 10px; font-weight: 700; color: ${COLORS.slate400}; text-transform: uppercase; letter-spacing: 0.5px;">Estatus</div>
-                <div style="font-size: 13px; font-weight: 750; color: ${player.Estatus ? COLORS.greenDark : COLORS.danger};">${player.Estatus ? 'Activo / Aprobado' : 'Inactivo / Pendiente'}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Seguro Asignado Section -->
-          <div style="padding: 16px 20px; border-top: 1px solid #e2e8f0; background: #ffffff;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <h4 style="margin: 0; font-size: 13px; font-weight: 800; color: ${COLORS.slate800}; display: flex; align-items: center; gap: 6px;">
-                <span>🩺</span> Seguro Asignado
-              </h4>
-              ${isProximo ? `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; border-radius: 6px; padding: 2px 8px; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px;">⚠️ PRÓXIMO A VENCER</span>` : ''}
-            </div>
-            
-            <div style="background: #f8fafc; padding: 12px 14px; border-radius: 10px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 13px; font-weight: 800; color: ${COLORS.primary}; margin-bottom: 6px;">
-                ${player.SeguroNombre || 'Sin seguro asignado'}
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px; color: ${COLORS.slate600};">
-                <div>
-                  <strong style="color: ${COLORS.slate500}; font-size: 10px; text-transform: uppercase;">Inicio Seguro:</strong><br/>
-                  ${inicioSegStr}
-                </div>
-                <div>
-                  <strong style="color: ${COLORS.slate500}; font-size: 10px; text-transform: uppercase;">Fin Seguro (Vigencia):</strong><br/>
-                  ${finSegStr}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `,
-      showConfirmButton: true,
-      confirmButtonText: 'Cerrar',
-      confirmButtonColor: COLORS.primary,
-      width: '460px',
-      customClass: {
-        popup: 'swal2-popup-refined-custom'
-      }
-    });
+    setSelectedPlayerDetails(player);
+    setModalAbierto(true);
   };
 
   if (loading && players.length === 0) {
@@ -524,7 +417,7 @@ export default function PresidenteEquipoMisJugadores() {
                           fontWeight: '800'
                         }}
                       >
-                        ⚠️ SEGURO PRÓXIMO A VENCER
+                        SEGURO PRÓXIMO A VENCER
                       </span>
                     )}
                   </div>
@@ -576,6 +469,155 @@ export default function PresidenteEquipoMisJugadores() {
           </>
         )}
       </div>
+
+      {/* MODAL DE DETALLES DEL JUGADOR */}
+      <Modal
+        estaAbierto={modalAbierto}
+        alCerrar={() => setModalAbierto(false)}
+        titulo="Ficha del Jugador"
+        tamanio="grande"
+        bloquearCierreFondo={false}
+        pie={
+          <BotonPrimario
+            etiqueta="Cerrar"
+            onClick={() => setModalAbierto(false)}
+          />
+        }
+      >
+        {selectedPlayerDetails && (() => {
+          const player = selectedPlayerDetails;
+          const inicioSegStr = formatFecha(player.InicioSeguro);
+          const finSegStr = formatFecha(player.Vigencia);
+          const regDateStr = player.FechaIngreso ? formatFecha(player.FechaIngreso.split('T')[0]) : '—';
+          const isProximo = esSeguroProximoAVencer(player.Vigencia);
+
+          return (
+            <div style={{ display: 'flex', gap: '20px', flexDirection: 'column', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+              {/* CABECERA CON BANNER */}
+              <div style={{
+                background: `linear-gradient(135deg, ${COLORS.slate800}, ${COLORS.slate900})`,
+                padding: '25px 20px',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '15px',
+                borderRadius: '12px',
+                borderBottom: `3px solid ${COLORS.primary}`
+              }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  background: `${COLORS.primary}20`,
+                  border: `2px solid ${COLORS.primary}`,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  color: COLORS.primary,
+                  flexShrink: 0
+                }}>
+                  🛡️
+                </div>
+                <div style={{ minWidth: 0, flexGrow: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {player.NombreCompleto}
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '15px', color: COLORS.slate300, fontWeight: '500' }}>
+                    Ficha del Jugador
+                  </p>
+                </div>
+              </div>
+
+              {/* GRID DE CONTENIDO */}
+              <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', borderRadius: '12px' }}>
+                {/* NUI */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>NUI</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{player.NUI || 'No asignado'}</div>
+                  </div>
+                </div>
+
+                {/* EQUIPO */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Equipo</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* POSICION */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Posición / Rol</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{player.Rol || 'Miembro Registrado'}</div>
+                  </div>
+                </div>
+
+                {/* DORSAL */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Playera</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>
+                      {player.NumeroCamiseta ? `# ${player.NumeroCamiseta}` : 'No asignado'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* REGISTRO */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registro</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{regDateStr}</div>
+                  </div>
+                </div>
+
+                {/* ESTATUS */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estatus</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: player.Estatus ? COLORS.greenDark : COLORS.danger }}>
+                      {player.Estatus ? 'Activo / Aprobado' : 'Inactivo / Pendiente'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEGURO ASIGNADO */}
+              <div style={{ padding: '16px 20px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: COLORS.slate800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  </h4>
+                  {isProximo && (
+                    <span style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fef3c7', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      PRÓXIMO A VENCER
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '800', color: COLORS.primary, marginBottom: '6px' }}>
+                    {player.SeguroNombre || 'Sin seguro asignado'}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '15px', color: COLORS.slate800 }}>
+                    <div>
+                      <strong style={{ color: COLORS.slate500, fontSize: '13px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Inicio Seguro:</strong>
+                      {inicioSegStr}
+                    </div>
+                    <div>
+                      <strong style={{ color: COLORS.slate500, fontSize: '13px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Fin Seguro (Vigencia):</strong>
+                      {finSegStr}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }
