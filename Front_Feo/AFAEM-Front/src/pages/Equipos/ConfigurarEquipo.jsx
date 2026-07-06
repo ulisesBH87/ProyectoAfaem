@@ -524,6 +524,11 @@ export default function ConfigurarEquipo() {
     isCurpInvalid: false
   });
 
+  const extractedDataRef = useRef(extractedData);
+  useEffect(() => {
+    extractedDataRef.current = extractedData;
+  }, [extractedData]);
+
   // Detección de minoría de edad
   const esMenorDeEdad = React.useMemo(() => {
     if (!extractedData.fechaNacimiento) return false;
@@ -1933,7 +1938,8 @@ export default function ConfigurarEquipo() {
             isCurpInvalid: curpNoValida
           };
 
-          const merged = { ...extractedData, ...ocrResult };
+          const latestExtractedData = extractedDataRef.current;
+          const merged = { ...latestExtractedData, ...ocrResult };
           setOcrDataOriginal(ocrResult);
           setExtractedData(merged);
           guardarBorradorEnBD(merged);
@@ -1945,8 +1951,8 @@ export default function ConfigurarEquipo() {
           if (!ocrResult.curp) missing.push('curp');
           if (!ocrResult.fechaNacimiento) missing.push('fechaNacimiento');
           if (!ocrResult.lugarNacimiento) missing.push('lugarNacimiento');
-          if (!extractedData.correo) missing.push('correo');
-          if (!extractedData.telefono) missing.push('telefono');
+          if (!latestExtractedData.correo) missing.push('correo');
+          if (!latestExtractedData.telefono) missing.push('telefono');
           setMissingOcrFields(missing);
 
           if (curpNoValida) {

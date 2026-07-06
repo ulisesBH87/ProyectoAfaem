@@ -87,19 +87,11 @@ def procesar_borrador_guardar(datos: dict, slot_id: int, datos_antiguos=None) ->
     if not datos or not isinstance(datos, dict):
         return datos
         
-    documentos = datos.setdefault("documentosBorrador", {})
-    if not isinstance(documentos, dict):
-        documentos = {}
-        datos["documentosBorrador"] = documentos
+    documentos = datos.get("documentosBorrador")
+    if not documentos or not isinstance(documentos, dict):
+        return datos
         
     documentos_antiguos = (datos_antiguos or {}).get("documentosBorrador") or {}
-
-    # Preservar documentos antiguos si el nuevo payload no los trae o los trae vacíos/inválidos
-    for key, doc_antiguo in documentos_antiguos.items():
-        if isinstance(doc_antiguo, dict) and doc_antiguo.get("data") and doc_antiguo.get("name"):
-            doc_nuevo = documentos.get(key)
-            if not doc_nuevo or not isinstance(doc_nuevo, dict) or not doc_nuevo.get("data") or not doc_nuevo.get("name"):
-                documentos[key] = doc_antiguo
 
     for key, doc in documentos.items():
         if isinstance(doc, dict) and doc.get("data") and doc.get("name"):
