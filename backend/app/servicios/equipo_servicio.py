@@ -233,7 +233,10 @@ def obtener_equipo_temporal_servicio(db, equipo_temporal_id):
             "nombre": seguro.Nombre,
             "pagados": total,
             "usados": usados,
-            "disponibles": total - usados
+            "disponibles": total - usados,
+            "TipoVigencia": seguro.TipoVigencia or 1,
+            "VigenciaTemporal": seguro.VigenciaTemporal,
+            "FechaVigencia": seguro.FechaVigencia.strftime("%Y-%m-%d") if seguro.FechaVigencia else None,
         })
 
     nombre_equipo = equipo.NombreEquipo

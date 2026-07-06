@@ -5339,15 +5339,45 @@ export default function RegistroJugadores() {
       {/* MODAL DE DETALLE DE SEGUROS */}
       {seguroDetalle && (() => {
         const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
-        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
+
+        let vigenciaFormateada = 'N/A';
+        const tv = seguroDetalle.TipoVigencia != null ? seguroDetalle.TipoVigencia : seguroDetalle.tipoVigencia;
+        const m = seguroDetalle.VigenciaTemporal != null ? seguroDetalle.VigenciaTemporal : seguroDetalle.vigenciaTemporal;
+        const fv = seguroDetalle.FechaVigencia || seguroDetalle.fechaVigencia;
+
+        if (String(tv) === '1') {
+          vigenciaFormateada = m ? `${m} meses` : 'N/A';
+        } else if (String(tv) === '2' && fv) {
+          const dateParts = String(fv).split('T')[0].split('-');
+          if (dateParts.length === 3) {
+            const fechaObj = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
+            vigenciaFormateada = fechaObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
+          } else {
+            vigenciaFormateada = String(fv);
+          }
+        }
+
+        const baseInfo = DETALLES_SEGUROS[segNombreNormalizado] || {
           nombre: seguroDetalle.nombre,
           precio: seguroDetalle.precio,
           poliza: 'N/A',
-          vigencia: 'N/A',
-          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
-          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
+          vigencia: vigenciaFormateada,
+          alcance: 'Esta afiliación incluye acceso a los torneos oficiales organizados y supervisados por la asociación de fútbol correspondiente.',
+          beneficios: [
+            'Participación en Torneos Locales y Estatales autorizados',
+            'Expediente deportivo en la base de datos oficial',
+            'Acceso a capacitaciones y clínicas deportivas convocadas'
+          ],
           coberturas: []
         };
+
+        const info = {
+          ...baseInfo,
+          nombre: seguroDetalle.nombre || baseInfo.nombre,
+          precio: seguroDetalle.precio !== undefined ? seguroDetalle.precio : baseInfo.precio,
+          vigencia: vigenciaFormateada !== 'N/A' ? vigenciaFormateada : baseInfo.vigencia
+        };
+
         const isSelected = String(currentSeguroId) === String(seguroDetalle.seguro_id);
 
         return createPortal(

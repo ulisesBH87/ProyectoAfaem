@@ -49,6 +49,9 @@ export function useSeguros() {
           id: String(s.id || s.SeguroId || i + 1),
           nombre: s.nombre || s.Nombre || s.name || 'Seguro',
           precio: Number(s.costo || s.Costo || s.precio || s.Precio || 0),
+          TipoVigencia: s.TipoVigencia ?? s.tipoVigencia,
+          VigenciaTemporal: s.VigenciaTemporal ?? s.vigenciaTemporal,
+          FechaVigencia: s.FechaVigencia ?? s.fechaVigencia,
         }));
         setSeguros(mapped);
         // Inicializar asignación: TIPO J = 1, resto = 0
