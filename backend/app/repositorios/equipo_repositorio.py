@@ -896,6 +896,16 @@ def actualizar_jugador_repo(db, miembro_equipo_id: int, nombre: str, primer_apel
     # Actualizar también InicioSeguro y Vigencia en la tabla EquipoTemporalJugador si el slot existe
     slot = db.query(EquipoTemporalJugador).filter(EquipoTemporalJugador.PersonaId == persona.PersonaId).first()
     if slot:
+        final_inicio = inicio_seguro if inicio_seguro is not None else slot.InicioSeguro
+        final_vigencia = vigencia if vigencia is not None else slot.Vigencia
+        if final_inicio and final_inicio.year > 2099:
+            raise ValueError("La fecha de inicio del seguro no puede rebasar el año 2099")
+        if final_vigencia and final_vigencia.year > 2099:
+            raise ValueError("La fecha de fin (vigencia) no puede rebasar el año 2099")
+        if final_inicio and final_vigencia:
+            if final_vigencia <= final_inicio:
+                raise ValueError("La fecha de fin (vigencia) debe ser posterior a la fecha de inicio del seguro")
+
         if inicio_seguro is not None:
             slot.InicioSeguro = inicio_seguro
         if vigencia is not None:

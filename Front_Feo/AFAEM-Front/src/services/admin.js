@@ -296,6 +296,8 @@ export const updateJugador = async (miembroEquipoId, data) => {
     NUI: data.NUI || null,
     NumeroCamiseta: data.numeroCamiseta !== undefined && data.numeroCamiseta !== null && data.numeroCamiseta !== '' ? Number(data.numeroCamiseta) : null,
     RolEnEquipo: data.rolEnEquipo !== undefined && data.rolEnEquipo !== null && data.rolEnEquipo !== '' ? Number(data.rolEnEquipo) : null,
+    InicioSeguro: data.inicioSeguro || null,
+    Vigencia: data.vigencia || null,
   });
   serviceCache.clear('/equipo-temporal/directorio-jugadores');
   return response.data;

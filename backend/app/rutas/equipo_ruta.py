@@ -1829,6 +1829,8 @@ def update_jugador(miembro_equipo_id: int, jugador_data: JugadorUpdate, db: Sess
         return {"mensaje": "Jugador actualizado correctamente", "miembro_equipo_id": miembro.MiembroEquipoId}
     except HTTPException:
         raise
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno")
