@@ -646,7 +646,7 @@ export default function AdminCrearJugador() {
           if (curpNoValida) {
             Swal.fire({
               title: 'CURP no validada',
-              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Por favor, sube un documento válido.`,
+              text: `La CURP ${curpOriginalCapturada} ingresada no fue validada. Revisa si el documento es correcto.`,
               icon: 'warning',
               confirmButtonColor: COLORS.primary || '#1a3b5c'
             });
@@ -1816,7 +1816,7 @@ export default function AdminCrearJugador() {
                   )}
                   {extractedData.isCurpInvalid && (
                     <span style={{ color: COLORS.danger || '#ef4444', fontSize: '11px', fontWeight: 'bold', marginTop: '2px', display: 'block' }}>
-                      Esta CURP no se pudo validar con "VERIFICAMEX", procede bajo tu propio riesgo
+                      No se pudo validar la veracidad de esta CURP.
                     </span>
                   )}
                 </div>
