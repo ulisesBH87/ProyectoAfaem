@@ -340,7 +340,7 @@ export function useRegistrarPresidente() {
       numPersonas ||
       Object.keys(documents).length > 0
     );
-    if (!tieneDatos) return;
+    if (!tieneDatos && !borradorId) return;
 
     const delayDebounceFn = setTimeout(() => {
       const save = async () => {
