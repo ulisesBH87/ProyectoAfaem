@@ -6,6 +6,7 @@ import teamsService from '../../services/teams';
 import Loader from '../../components/Loader';
 import SearchBar from '../../components/Common/SearchBar';
 import Swal from 'sweetalert2';
+import { Modal, BotonPrimario } from '../../components/partials';
 import { API_BASE } from '../../config/config';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import '../../styles/dashboard.css';
@@ -61,6 +62,26 @@ function PlayerAvatar({ rutaFoto, nombre, fallbackIcon }) {
   );
 }
 
+const esSeguroProximoAVencer = (vigenciaStr) => {
+  if (!vigenciaStr) return false;
+  const vigencia = new Date(vigenciaStr);
+  if (isNaN(vigencia.getTime())) return false;
+  const hoy = new Date();
+  const diffTime = vigencia - hoy;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays >= 0 && diffDays <= 30;
+};
+
+const formatFecha = (fechaStr) => {
+  if (!fechaStr) return 'No especificada';
+  try {
+    const date = new Date(fechaStr + 'T00:00:00'); // avoid timezone shifts
+    return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+  } catch (e) {
+    return fechaStr;
+  }
+};
+
 export default function PresidenteEquipoMisJugadores() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,6 +107,8 @@ export default function PresidenteEquipoMisJugadores() {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+  const [selectedPlayerDetails, setSelectedPlayerDetails] = useState(null);
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   const loadData = async () => {
     try {
@@ -165,27 +188,8 @@ export default function PresidenteEquipoMisJugadores() {
   }, [filteredPlayers, currentPage]);
 
   const handleVerDetalles = (player) => {
-    Swal.fire({
-      title: 'Información del Jugador',
-      html: `
-        <div style="text-align: left; font-size: 14px; line-height: 1.8; padding: 10px;">
-          <p style="margin-bottom: 8px;"><strong>Nombre Completo:</strong> ${player.NombreCompleto}</p>
-          <p style="margin-bottom: 8px;"><strong>NUI:</strong> ${player.NUI || 'No asignado'}</p>
-          <p style="margin-bottom: 8px;"><strong>Equipo Vinculado:</strong> ${player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}</p>
-          <p style="margin-bottom: 8px;"><strong>Posición / Rol:</strong> ${player.Rol || 'Miembro Registrado'}</p>
-          <p style="margin-bottom: 8px;"><strong>Fecha de Registro:</strong> ${player.FechaIngreso ? new Date(player.FechaIngreso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
-          <p style="margin-bottom: 8px;"><strong>Dorsal / Camiseta:</strong> ${player.NumeroCamiseta || 'No asignado'}</p>
-          <p style="margin-bottom: 8px;"><strong>Estado de Registro:</strong> ${player.Estatus ? 'Activo / Aprobado' : 'Inactivo / Pendiente'}</p>
-          <p style="margin-bottom: 8px;"><strong>Seguro Asignado:</strong> ${player.SeguroNombre || 'Sin seguro asignado'}</p>
-        </div>
-      `,
-      icon: 'info',
-      confirmButtonText: 'Cerrar',
-      confirmButtonColor: COLORS.slate300,
-      customClass: {
-        popup: 'swal2-popup-custom'
-      }
-    });
+    setSelectedPlayerDetails(player);
+    setModalAbierto(true);
   };
 
   if (loading && players.length === 0) {
@@ -398,6 +402,24 @@ export default function PresidenteEquipoMisJugadores() {
                         DOCS: {player.EstatusDocumentos.toUpperCase()}
                       </span>
                     )}
+
+                    {esSeguroProximoAVencer(player.Vigencia) && (
+                      <span
+                        className="status-badge-table player-card-status-badge"
+                        style={{
+                          background: '#fffbeb',
+                          color: '#b45309',
+                          border: '1px solid #fef3c7',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          margin: 0,
+                          fontWeight: '800'
+                        }}
+                      >
+                        SEGURO PRÓXIMO A VENCER
+                      </span>
+                    )}
                   </div>
 
                   <div className="player-card-actions" style={{ display: 'flex', gap: '8px', width: '100%' }}>
@@ -447,6 +469,155 @@ export default function PresidenteEquipoMisJugadores() {
           </>
         )}
       </div>
+
+      {/* MODAL DE DETALLES DEL JUGADOR */}
+      <Modal
+        estaAbierto={modalAbierto}
+        alCerrar={() => setModalAbierto(false)}
+        titulo="Ficha del Jugador"
+        tamanio="grande"
+        bloquearCierreFondo={false}
+        pie={
+          <BotonPrimario
+            etiqueta="Cerrar"
+            onClick={() => setModalAbierto(false)}
+          />
+        }
+      >
+        {selectedPlayerDetails && (() => {
+          const player = selectedPlayerDetails;
+          const inicioSegStr = formatFecha(player.InicioSeguro);
+          const finSegStr = formatFecha(player.Vigencia);
+          const regDateStr = player.FechaIngreso ? formatFecha(player.FechaIngreso.split('T')[0]) : '—';
+          const isProximo = esSeguroProximoAVencer(player.Vigencia);
+
+          return (
+            <div style={{ display: 'flex', gap: '20px', flexDirection: 'column', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+              {/* CABECERA CON BANNER */}
+              <div style={{
+                background: `linear-gradient(135deg, ${COLORS.slate800}, ${COLORS.slate900})`,
+                padding: '25px 20px',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '15px',
+                borderRadius: '12px',
+                borderBottom: `3px solid ${COLORS.primary}`
+              }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  background: `${COLORS.primary}20`,
+                  border: `2px solid ${COLORS.primary}`,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  color: COLORS.primary,
+                  flexShrink: 0
+                }}>
+                  🛡️
+                </div>
+                <div style={{ minWidth: 0, flexGrow: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {player.NombreCompleto}
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '15px', color: COLORS.slate300, fontWeight: '500' }}>
+                    Ficha del Jugador
+                  </p>
+                </div>
+              </div>
+
+              {/* GRID DE CONTENIDO */}
+              <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', borderRadius: '12px' }}>
+                {/* NUI */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>NUI</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{player.NUI || 'No asignado'}</div>
+                  </div>
+                </div>
+
+                {/* EQUIPO */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Equipo</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* POSICION */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Posición / Rol</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{player.Rol || 'Miembro Registrado'}</div>
+                  </div>
+                </div>
+
+                {/* DORSAL */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Playera</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>
+                      {player.NumeroCamiseta ? `# ${player.NumeroCamiseta}` : 'No asignado'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* REGISTRO */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registro</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{regDateStr}</div>
+                  </div>
+                </div>
+
+                {/* ESTATUS */}
+                <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estatus</div>
+                    <div style={{ fontSize: '16px', fontWeight: '750', color: player.Estatus ? COLORS.greenDark : COLORS.danger }}>
+                      {player.Estatus ? 'Activo / Aprobado' : 'Inactivo / Pendiente'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEGURO ASIGNADO */}
+              <div style={{ padding: '16px 20px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: COLORS.slate800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  </h4>
+                  {isProximo && (
+                    <span style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fef3c7', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      PRÓXIMO A VENCER
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '800', color: COLORS.primary, marginBottom: '6px' }}>
+                    {player.SeguroNombre || 'Sin seguro asignado'}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '15px', color: COLORS.slate800 }}>
+                    <div>
+                      <strong style={{ color: COLORS.slate500, fontSize: '13px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Inicio Seguro:</strong>
+                      {inicioSegStr}
+                    </div>
+                    <div>
+                      <strong style={{ color: COLORS.slate500, fontSize: '13px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Fin Seguro (Vigencia):</strong>
+                      {finSegStr}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }

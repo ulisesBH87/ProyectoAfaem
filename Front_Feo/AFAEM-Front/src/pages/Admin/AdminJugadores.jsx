@@ -1082,6 +1082,8 @@ export default function AdminJugadores() {
       numeroCamiseta: jugador.NumeroCamiseta !== undefined && jugador.NumeroCamiseta !== null ? jugador.NumeroCamiseta : '',
       rolEnEquipo: jugador.RolEnEquipo !== undefined && jugador.RolEnEquipo !== null ? jugador.RolEnEquipo : '',
       seguroNombre: jugador.SeguroNombre || 'Sin seguro asignado',
+      inicioSeguro: jugador.InicioSeguro ? jugador.InicioSeguro.split('T')[0] : '',
+      vigencia: jugador.Vigencia ? jugador.Vigencia.split('T')[0] : '',
       isCurpInvalid: false
     });
     setHaCambiado(false);
@@ -1316,6 +1318,31 @@ export default function AdminJugadores() {
       return;
     }
 
+    if (datosEditables.inicioSeguro) {
+      const inicio = new Date(datosEditables.inicioSeguro);
+      if (inicio.getFullYear() > 2099) {
+        Swal.fire('Año inválido', 'La fecha de inicio de seguro no puede rebasar el año 2099.', 'warning');
+        return;
+      }
+    }
+
+    if (datosEditables.vigencia) {
+      const fin = new Date(datosEditables.vigencia);
+      if (fin.getFullYear() > 2099) {
+        Swal.fire('Año inválido', 'La fecha de fin (vigencia) no puede rebasar el año 2099.', 'warning');
+        return;
+      }
+    }
+
+    if (datosEditables.inicioSeguro && datosEditables.vigencia) {
+      const inicio = new Date(datosEditables.inicioSeguro);
+      const fin = new Date(datosEditables.vigencia);
+      if (fin <= inicio) {
+        Swal.fire('Fechas de seguro inválidas', 'La fecha de fin (vigencia) debe ser posterior a la fecha de inicio del seguro.', 'warning');
+        return;
+      }
+    }
+
     try {
       setGuardando(true);
       await updateJugador(jugadorEdicion.MiembroEquipoId, {
@@ -1329,7 +1356,9 @@ export default function AdminJugadores() {
         NUI: datosEditables.NUI,
         estatus: datosEditables.estatus,
         numeroCamiseta: datosEditables.numeroCamiseta,
-        rolEnEquipo: datosEditables.rolEnEquipo
+        rolEnEquipo: datosEditables.rolEnEquipo,
+        inicioSeguro: datosEditables.inicioSeguro,
+        vigencia: datosEditables.vigencia
       });
 
       Swal.fire('¡Éxito!', 'Información del jugador actualizada correctamente.', 'success');
@@ -1828,6 +1857,8 @@ export default function AdminJugadores() {
               <EntradaSeleccion etiqueta="Rol en equipo" valor={String(datosEditables.rolEnEquipo ?? '')} onChange={manejarCambioInput} nombre="rolEnEquipo" opciones={[{ valor: '', etiqueta: 'Selecciona un rol...' }, ...rolesEquipo.map(r => ({ valor: String(r.id), etiqueta: r.nombre }))]} />
               <EntradaSeleccion etiqueta="Estatus del jugador" valor={datosEditables.estatus} onChange={manejarCambioInput} nombre="estatus" opciones={[{ valor: '1', etiqueta: 'Activo' }, { valor: '0', etiqueta: 'Baja' }]} />
               <EntradaFormulario etiqueta="Seguro asignado" valor={datosEditables.seguroNombre} deshabilitado={true} />
+              <EntradaFormulario etiqueta="Inicio seguro" valor={datosEditables.inicioSeguro} onChange={manejarCambioInput} nombre="inicioSeguro" tipo="date" max="2099-12-31" />
+              <EntradaFormulario etiqueta="Fin seguro" valor={datosEditables.vigencia} onChange={manejarCambioInput} nombre="vigencia" tipo="date" max="2099-12-31" />
             </div>
           </div>
         </div>

@@ -18,4 +18,6 @@ class EquipoTemporalJugador(Base):
     SeguroId = Column(Integer, ForeignKey("CatalogoSeguros.SeguroId"))
     SeguroRelacion = relationship("Seguro", back_populates="EquipoTemporalJugadorRelacion")
 
-    DatosBorrador = Column(String, nullable=True)
+    DatosBorrador = Column(String, nullable=True)
+    Vigencia = Column(Date, nullable=True)
+    InicioSeguro = Column(Date, nullable=True)
