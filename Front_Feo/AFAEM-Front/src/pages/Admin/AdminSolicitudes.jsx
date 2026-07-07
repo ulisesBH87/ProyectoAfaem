@@ -485,7 +485,7 @@ export default function AdminSolicitudes() {
           <button
             onClick={() => handleVerDetalles(row.SolicitudId)}
             style={{
-              padding: '7px 14px', background: COLORS.blue, color: 'white',
+              padding: '7px 14px', background: COLORS.primary, color: 'white',
               border: 'none', borderRadius: '8px', cursor: 'pointer',
               fontSize: '12px', fontWeight: '700'
             }}

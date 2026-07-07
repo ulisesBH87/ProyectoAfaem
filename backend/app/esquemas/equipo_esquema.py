@@ -58,6 +58,7 @@ class MiembroResponse(BaseModel):
 class CatalogoItem(BaseModel):
     id: int
     nombre: str
+    estatus: Optional[bool] = True
 
 class LigaCatalogoItem(BaseModel):
     id: int
@@ -70,6 +71,7 @@ class LigaCatalogoItem(BaseModel):
     modalidadId: Optional[int] = None
     categoriaId: Optional[int] = None
     ramaId: Optional[int] = None
+    estatus: Optional[bool] = True
 
 class CatalogosRegistroResponse(BaseModel):
     ligas: List[LigaCatalogoItem]

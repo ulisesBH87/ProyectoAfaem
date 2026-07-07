@@ -53,9 +53,7 @@ const MobileBottomNav = () => {
   const extraMenus = allValidMenus.filter(item => !mainMenus.includes(item));
 
   const legalLinks = [
-    { label: 'Reglamentos', icon: <FaGavel />, path: isAdmin ? ROUTES.ADMIN.REGLAMENTOS : ROUTES.PRESIDENTE.REGLAMENTOS },
-    { label: 'Privacidad', icon: <FaShieldAlt />, path: isAdmin ? ROUTES.ADMIN.POLITICA_PRIVACIDAD : ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD },
-    { label: 'Términos', icon: <FaFileContract />, path: isAdmin ? ROUTES.ADMIN.TERMINOS_CONDICIONES : ROUTES.PRESIDENTE.TERMINOS_CONDICIONES },
+    { label: 'Reglamentos y Legal', icon: <FaGavel />, path: isAdmin ? ROUTES.ADMIN.REGLAMENTOS : ROUTES.PRESIDENTE.REGLAMENTOS },
   ];
 
   return (
