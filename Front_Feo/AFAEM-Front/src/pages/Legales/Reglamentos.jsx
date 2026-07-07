@@ -1,5 +1,6 @@
 import COLORS from '../../styles/colors';
 import React, { useState } from 'react';
+import PreciosSeguros from './PreciosSeguros';
 import {
   FaGavel,
   FaFileContract,
@@ -17,6 +18,18 @@ import {
   FaMapMarkerAlt,
   FaPhoneAlt,
   FaExternalLinkAlt,
+  FaCheckCircle,
+  FaTools,
+  FaUserCog,
+  FaCreditCard,
+  FaCopyright,
+  FaExclamationTriangle,
+  FaUserShield,
+  FaDatabase,
+  FaFileSignature,
+  FaExchangeAlt,
+  FaKey,
+  FaHandshake,
 } from 'react-icons/fa';
 import './Reglamentos.css';
 
@@ -109,81 +122,107 @@ Las controversias de naturaleza civil o mercantil entre AFAEM y sus afiliados se
 const terminosSecciones = [
   {
     id: 'tc1',
+    icono: <FaCheckCircle />,
     titulo: '1. Aceptación de los Términos',
-    contenido: `Al acceder, registrarse o usar la plataforma digital de AFAEM (en adelante "la Plataforma"), el usuario acepta de forma expresa e irrevocable los presentes Términos y Condiciones, así como el Aviso de Privacidad vigente. Si no está de acuerdo con alguno de los términos, deberá abstenerse de usar la Plataforma.
+    contenido: `Al registrarte y utilizar la plataforma digital de AFAEM (Asociación de Fútbol Amateur del Estado de Morelos), aceptas de manera expresa e irrevocable los presentes Términos y Condiciones de Uso.
 
-La Plataforma es operada por la Asociación de Fútbol Amateur del Estado de Morelos (AFAEM). Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios serán comunicados mediante la propia Plataforma y entrarán en vigor a los 5 días naturales de su publicación.`,
+Si no estás de acuerdo con alguna de las condiciones aquí establecidas, deberás abstenerte de usar la plataforma.
+
+Estos términos aplican a:
+• Presidentes de equipo registrados.
+• Jugadores inscritos a través de sus equipos.
+• Administradores de la plataforma.
+• Cualquier visitante que acceda al portal.
+
+AFAEM se reserva el derecho de actualizar estos términos en cualquier momento, notificando los cambios con al menos 15 días de anticipación.`,
   },
   {
     id: 'tc2',
+    icono: <FaTools />,
     titulo: '2. Descripción del Servicio',
-    contenido: `La Plataforma AFAEM es un sistema de gestión deportiva que permite a sus usuarios:
+    contenido: `La plataforma AFAEM es un sistema de gestión deportiva que permite:
 
-• Registrar y gestionar equipos de fútbol amateur en el Estado de Morelos.
-• Inscribir jugadores a ligas y torneos oficiales de AFAEM.
-• Consultar estadísticas, calendarios y resultados de competencias.
-• Gestionar pagos de cuotas de inscripción y afiliación.
-• Enviar y dar seguimiento a solicitudes administrativas ante AFAEM.
+• Registro y administración de equipos de fútbol amateur.
+• Inscripción de jugadores y gestión de plantillas.
+• Participación en ligas y torneos oficiales de AFAEM.
+• Generación de reportes estadísticos y desempeño.
+• Gestión de solicitudes de inscripción y traspasos.
+• Comunicación entre presidentes de equipo y la administración.
 
-El acceso a ciertas funcionalidades requiere el pago previo de las cuotas correspondientes. AFAEM se reserva el derecho de modificar, suspender o descontinuar cualquier funcionalidad del servicio sin previo aviso.`,
+El servicio se presta de manera digital y puede estar sujeto a interrupciones por mantenimiento, actualizaciones o causas de fuerza mayor. AFAEM hará su mejor esfuerzo por minimizar el tiempo de inactividad.`,
   },
   {
     id: 'tc3',
-    titulo: '3. Cuentas de Usuario y Responsabilidades',
-    contenido: `Al crear una cuenta en la Plataforma, el usuario se compromete a:
+    icono: <FaUserCog />,
+    titulo: '3. Obligaciones del Usuario',
+    contenido: `Al utilizar la plataforma, el usuario se compromete a:
 
-• Proporcionar información verídica, actualizada y completa en el proceso de registro y en todo momento posterior.
-• Mantener la confidencialidad de sus credenciales de acceso (correo electrónico y contraseña). El usuario es el único responsable de todas las actividades realizadas bajo su cuenta.
-• Notificar de inmediato a AFAEM ante cualquier uso no autorizado de su cuenta o cualquier brecha de seguridad.
-• No ceder, vender o transferir su cuenta a terceros sin autorización previa y por escrito de AFAEM.
+• Proporcionar información veraz, completa y actualizada al momento del registro.
+• Mantener la confidencialidad de sus credenciales de acceso.
+• No ceder, vender o transferir su cuenta a terceros.
+• Usar la plataforma exclusivamente para los fines deportivos para los que fue diseñada.
+• Notificar de inmediato cualquier uso no autorizado de su cuenta.
+• Respetar los reglamentos internos de AFAEM y las disposiciones de las ligas.
+• Abstenerse de subir contenido ilegal, ofensivo o que viole derechos de terceros.
 
-AFAEM no será responsable de los daños o pérdidas derivadas del incumplimiento de estas obligaciones por parte del usuario.`,
+El incumplimiento de estas obligaciones podrá resultar en la suspensión o cancelación definitiva de la cuenta sin derecho a reembolso.`,
   },
   {
     id: 'tc4',
-    titulo: '4. Pagos y Reembolsos',
-    contenido: `Las cuotas de inscripción, afiliación y demás pagos realizados a través de la Plataforma son definitivos y no reembolsables, salvo en los casos siguientes:
+    icono: <FaCreditCard />,
+    titulo: '4. Pagos e Inscripciones',
+    contenido: `Las cuotas de inscripción y participación en ligas organizadas por AFAEM están sujetas a las siguientes condiciones:
 
-• Cancelación comprobada del torneo o competencia por parte de AFAEM antes del inicio de la fase correspondiente.
-• Error técnico documentado en el procesamiento del pago que haya generado un cobro duplicado.
-
-Los pagos se procesarán a través de los métodos de pago habilitados en la Plataforma. AFAEM no almacena datos de tarjetas bancarias en sus servidores; dicho proceso está delegado a los proveedores de pago certificados.
-
-En caso de disputa sobre un cobro, el usuario deberá contactar a AFAEM dentro de los 10 días naturales siguientes a la fecha de la transacción.`,
+• Los montos serán publicados con anticipación en la plataforma y pueden variar por temporada.
+• Los pagos realizados son no reembolsables, salvo cancelación comprobable de la liga por causas imputables a AFAEM.
+• El registro en una liga implica la aceptación del reglamento específico de dicha competición.
+• AFAEM no almacena información de tarjetas de crédito o débito; los pagos se procesan a través de canales seguros certificados.
+• Cualquier disputa sobre pagos deberá presentarse dentro de los 10 días hábiles siguientes a la transacción.`,
   },
   {
     id: 'tc5',
+    icono: <FaCopyright />,
     titulo: '5. Propiedad Intelectual',
-    contenido: `Todo el contenido disponible en la Plataforma —incluyendo pero no limitado a: logotipos, marcas, diseños, textos, imágenes, estadísticas y código fuente— es propiedad de AFAEM o ha sido licenciado a ella, y está protegido por las leyes de propiedad intelectual aplicables en México.
+    contenido: `Todos los elementos de la plataforma AFAEM, incluyendo pero no limitado a:
 
-Queda expresamente prohibido:
-• Reproducir, distribuir o modificar el contenido de la Plataforma sin autorización previa y por escrito de AFAEM.
-• Usar la marca AFAEM o sus logos para fines comerciales no autorizados.
-• Realizar ingeniería inversa o intentar acceder al código fuente de la Plataforma.`,
+• Logotipos, marcas y nombres comerciales.
+• Diseño gráfico e interfaces de usuario.
+• Código fuente y arquitectura del sistema.
+• Bases de datos y contenidos estadísticos.
+
+Son propiedad exclusiva de AFAEM o sus licenciantes y están protegidos por la Ley Federal del Derecho de Autor y demás disposiciones aplicables.
+
+Queda prohibida la reproducción, distribución o uso comercial de cualquier elemento sin autorización expresa y por escrito de AFAEM.`,
   },
   {
     id: 'tc6',
+    icono: <FaExclamationTriangle />,
     titulo: '6. Limitación de Responsabilidad',
-    contenido: `AFAEM no garantiza la disponibilidad ininterrumpida de la Plataforma y no será responsable por:
+    contenido: `AFAEM no será responsable por:
 
-• Interrupciones del servicio por mantenimiento programado o incidentes técnicos imprevistos.
-• Daños directos, indirectos, incidentales o consecuentes derivados del uso o imposibilidad de uso de la Plataforma.
-• Inexactitudes en la información proporcionada por los propios usuarios o equipos registrados.
-• Decisiones deportivas o disciplinarias tomadas por la Comisión Disciplinaria de AFAEM, las cuales se rigen exclusivamente por el Reglamento de Competencia.
+• Daños derivados del uso incorrecto de la plataforma por parte del usuario.
+• Pérdida de datos ocasionada por causas ajenas a AFAEM (fallos de conexión, dispositivos del usuario, etc.).
+• Interrupciones del servicio por mantenimiento programado o causas de fuerza mayor.
+• Decisiones tomadas por el usuario basadas en la información mostrada en la plataforma.
+• Actos de terceros que puedan afectar la integridad de la información.
 
-La responsabilidad total de AFAEM ante cualquier reclamación no excederá el importe pagado por el usuario en los últimos 12 meses.`,
+La plataforma se provee "tal como está", y AFAEM realizará sus mejores esfuerzos para mantenerla operativa y segura.`,
   },
   {
     id: 'tc7',
-    titulo: '7. Conducta del Usuario y Uso Prohibido',
-    contenido: `El usuario se compromete a hacer un uso lícito de la Plataforma. Están expresamente prohibidas las siguientes conductas:
+    icono: <FaBan />,
+    titulo: '7. Causas de Suspensión y Terminación',
+    contenido: `AFAEM podrá suspender o cancelar el acceso de un usuario cuando:
 
-• Cargar, publicar o transmitir contenido difamatorio, obsceno, amenazante, fraudulento o que viole derechos de terceros.
-• Usar la Plataforma para actividades ilegales o contrarias a la moral pública.
-• Intentar acceder sin autorización a sistemas o datos de otros usuarios o de AFAEM.
-• Usar bots, scripts u otros medios automatizados para interactuar con la Plataforma de forma masiva o no autorizada.
+• Se detecte uso fraudulento o malintencionado de la plataforma.
+• El usuario incumpla de manera grave los presentes términos o el reglamento interno.
+• Se reciban denuncias fundamentadas de conducta inapropiada.
+• El usuario proporcione información falsa o engañosa.
+• Por resolución de autoridad competente.
 
-El incumplimiento de estas prohibiciones podrá resultar en la suspensión inmediata de la cuenta del usuario y, de ser el caso, en la denuncia ante las autoridades competentes.`,
+En caso de suspensión, el usuario será notificado por correo electrónico con las razones de la decisión. AFAEM se reserva el derecho de determinar si la suspensión es temporal o definitiva según la gravedad del caso.
+
+Ante cualquier desacuerdo, el usuario podrá presentar su caso a través de los canales de contacto indicados.`,
   },
 ];
 
@@ -193,48 +232,49 @@ El incumplimiento de estas prohibiciones podrá resultar en la suspensión inmed
 const privacidadSecciones = [
   {
     id: 'pv1',
+    icono: <FaUserShield />,
     titulo: 'I. Identidad y Domicilio del Responsable',
-    contenido: `La Asociación de Fútbol Amateur del Estado de Morelos (AFAEM), con domicilio en el Estado de Morelos, México, es la entidad responsable del tratamiento de sus datos personales de conformidad con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) y su Reglamento.
+    contenido: `La Asociación de Fútbol Amateur del Estado de Morelos (AFAEM) es la entidad responsable del tratamiento de sus datos personales, con domicilio en: Morelos, México.
 
-Para cualquier consulta relacionada con el tratamiento de sus datos personales, puede contactar a nuestro Departamento de Protección de Datos a través de los medios indicados al final del presente aviso.`,
+Para cualquier asunto relacionado con sus datos personales, puede contactarnos directamente a través de los canales indicados en la sección de contacto al final de este aviso.
+
+De conformidad con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) y su Reglamento, AFAEM se compromete a tratar sus datos con absoluta confidencialidad.`,
   },
   {
     id: 'pv2',
+    icono: <FaDatabase />,
     titulo: 'II. Datos Personales que Recabamos',
-    contenido: `AFAEM recaba los siguientes datos personales a través de la Plataforma:
+    contenido: `AFAEM recaba las siguientes categorías de datos personales:
 
-Datos de identificación: Nombre completo, fecha de nacimiento, CURP, número de credencial INE/IFE, fotografía.
+• Datos de identificación: nombre completo, fecha de nacimiento, CURP, fotografía.
+• Datos de contacto: correo electrónico, número de teléfono, domicilio.
+• Datos deportivos: posición, historial de equipos, estadísticas de juego.
+• Datos del equipo: nombre del equipo, categoría, liga en la que participa.
+• Datos de acceso: usuario y contraseña (almacenada de forma cifrada).
 
-Datos de contacto: Correo electrónico, número de teléfono, domicilio.
-
-Datos deportivos: Historial de equipos, posición de juego, número de jersey, antecedentes en ligas nacionales e internacionales.
-
-Datos de menores de edad: Para jugadores menores de 18 años, adicionalmente se recaban datos del tutor o padre/madre: nombre, número de teléfono y relación con el menor. El tratamiento de datos de menores requiere el consentimiento expreso del tutor legal.
-
-Datos financieros: Para el procesamiento de pagos, se recopila información de transacción (monto, fecha, referencia). Los datos de tarjetas bancarias son procesados directamente por el proveedor de pago y NO son almacenados por AFAEM.
-
-Datos sensibles: En caso de requerir información de salud (lesiones, restricciones médicas) para fines de seguridad del jugador, AFAEM solicitará su consentimiento expreso y por escrito.`,
+No recabamos datos personales sensibles según el artículo 3 fracción VI de la LFPDPPP, salvo que usted nos los proporcione voluntariamente para fines específicos debidamente justificados.`,
   },
   {
     id: 'pv3',
+    icono: <FaFileSignature />,
     titulo: 'III. Finalidades del Tratamiento',
-    contenido: `Sus datos personales serán utilizados para las siguientes finalidades primarias (necesarias para la relación jurídica con AFAEM):
+    contenido: `Sus datos personales serán utilizados para las siguientes finalidades primarias, necesarias para la prestación de nuestros servicios:
 
-• Gestión de registro e inscripción de jugadores y equipos en competencias oficiales de AFAEM.
-• Verificación de elegibilidad deportiva conforme al Reglamento de Competencia.
-• Procesamiento de pagos de cuotas de afiliación e inscripción.
-• Comunicación de información oficial sobre calendarios, resultados y decisiones disciplinarias.
-• Cumplimiento de obligaciones legales ante autoridades deportivas (FMF, Sector Amateur) y gubernamentales.
+• Gestión y administración de equipos y jugadores registrados en AFAEM.
+• Inscripción y seguimiento de participación en ligas y torneos.
+• Generación de reportes y estadísticas deportivas.
+• Comunicación relacionada con actividades de la asociación.
+• Cumplimiento de obligaciones legales y reglamentarias.
 
-Finalidades secundarias (que requieren su consentimiento):
-• Envío de comunicaciones promocionales sobre eventos, torneos y actividades de AFAEM.
-• Elaboración de estadísticas e informes de desempeño deportivo.
-• Difusión de imágenes y resultados deportivos en medios de comunicación y redes sociales de AFAEM.
+Finalidades secundarias (no necesarias para el servicio):
+• Envío de comunicados informativos sobre eventos deportivos.
+• Mejora de nuestros servicios digitales mediante análisis de uso.
 
-Si no desea que sus datos sean utilizados para finalidades secundarias, puede manifestarlo en cualquier momento a través de los medios de contacto indicados en este aviso.`,
+Usted puede oponerse a las finalidades secundarias enviando su solicitud a través de los medios de contacto indicados en este aviso.`,
   },
   {
     id: 'pv4',
+    icono: <FaExchangeAlt />,
     titulo: 'IV. Derechos ARCO',
     contenido: `De conformidad con la LFPDPPP, usted tiene derecho a:
 
@@ -243,10 +283,16 @@ Si no desea que sus datos sean utilizados para finalidades secundarias, puede ma
 • Cancelación: Pedir la eliminación de sus datos de nuestras bases cuando considere que no están siendo tratados conforme a la ley o han dejado de ser necesarios para la finalidad que motivó su obtención.
 • Oposición: Oponerse al tratamiento de sus datos para finalidades específicas, en particular para las finalidades secundarias indicadas en la sección III.
 
-Para ejercer cualquiera de estos derechos, deberá enviar una solicitud por correo electrónico a la dirección de contacto indicada al final del presente aviso, adjuntando copia de su identificación oficial vigente y describiendo de forma clara el derecho que desea ejercer. AFAEM dará respuesta a su solicitud en un plazo máximo de 20 días hábiles.`,
+Para ejercer cualquiera de estos derechos, deberá enviar una solicitud que contenga:
+1. Nombre completo y correo electrónico registrado.
+2. Descripción clara del derecho que desea ejercer.
+3. Copia de identificación oficial vigente.
+
+AFAEM dará respuesta a su solicitud en un plazo máximo de 20 días hábiles. Las solicitudes pueden enviarse al correo: contacto@afaem.mx`,
   },
   {
     id: 'pv5',
+    icono: <FaKey />,
     titulo: 'V. Transferencia de Datos',
     contenido: `AFAEM podrá transferir sus datos personales a las siguientes entidades, sin requerir su consentimiento, conforme al artículo 37 de la LFPDPPP:
 
@@ -258,12 +304,13 @@ Fuera de los supuestos anteriores, AFAEM no cederá ni transferirá sus datos a 
   },
   {
     id: 'pv6',
+    icono: <FaHandshake />,
     titulo: 'VI. Seguridad y Cambios al Aviso',
     contenido: `AFAEM implementa medidas de seguridad técnicas, administrativas y físicas para proteger sus datos personales contra pérdida, robo, uso no autorizado, alteración o destrucción.
 
-Actualización del aviso: El presente Aviso de Privacidad podrá ser modificado en cualquier momento. Los cambios sustanciales le serán notificados a través de la Plataforma o al correo electrónico registrado en su cuenta, con al menos 10 días naturales de anticipación a su entrada en vigor.
+El presente Aviso de Privacidad podrá ser modificado en cualquier momento para adecuarlo a cambios legislativos o políticas internas. Cualquier modificación sustancial le será notificada con al menos 15 días de anticipación a su entrada en vigor mediante la plataforma o por correo electrónico.
 
-La versión vigente del Aviso de Privacidad estará siempre disponible en la Plataforma en la sección "Reglamentos y Legal".
+La versión vigente estará siempre disponible en la sección "Reglamentos y Legal" de la plataforma.
 
 Fecha de última actualización: Mayo 2025.`,
   },
@@ -348,6 +395,14 @@ const Reglamentos = () => {
       descripcion:
         'Tratamiento y protección de los datos personales de jugadores, equipos y directivos, conforme a la LFPDPPP.',
     },
+    {
+      id: 'seguros',
+      label: 'Precios de Seguros',
+      icono: <FaShieldAlt />,
+      color: COLORS.sky,
+      descripcion:
+        'Costos, pólizas, vigencias y coberturas de seguros oficiales para jugadores y presidentes.',
+    },
   ];
 
   const tabInfo = tabs.find((t) => t.id === tabActiva);
@@ -409,6 +464,9 @@ const Reglamentos = () => {
         )}
         {tabActiva === 'privacidad' && (
           <Acordeon items={privacidadSecciones} colorAcento={tabInfo.color} />
+        )}
+        {tabActiva === 'seguros' && (
+          <PreciosSeguros hideHero={true} />
         )}
       </div>
 

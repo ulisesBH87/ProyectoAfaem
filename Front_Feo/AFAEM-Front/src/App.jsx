@@ -222,13 +222,13 @@ function App() {
             <Route path={ROUTES.ADMIN.REGLAMENTOS} element={<Reglamentos />} />
             <Route path={ROUTES.PRESIDENTE.REGLAMENTOS} element={<Reglamentos />} />
             {/* Política de Privacidad */}
-            <Route path={ROUTES.LEGAL.POLITICA_PRIVACIDAD} element={<PoliticaPrivacidad />} />
-            <Route path={ROUTES.ADMIN.POLITICA_PRIVACIDAD} element={<PoliticaPrivacidad />} />
-            <Route path={ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD} element={<PoliticaPrivacidad />} />
+            <Route path={ROUTES.LEGAL.POLITICA_PRIVACIDAD} element={<Navigate to={ROUTES.LEGAL.REGLAMENTOS} replace />} />
+            <Route path={ROUTES.ADMIN.POLITICA_PRIVACIDAD} element={<Navigate to={ROUTES.ADMIN.REGLAMENTOS} replace />} />
+            <Route path={ROUTES.PRESIDENTE.POLITICA_PRIVACIDAD} element={<Navigate to={ROUTES.PRESIDENTE.REGLAMENTOS} replace />} />
             {/* Términos y Condiciones */}
-            <Route path={ROUTES.LEGAL.TERMINOS_CONDICIONES} element={<TerminosCondiciones />} />
-            <Route path={ROUTES.ADMIN.TERMINOS_CONDICIONES} element={<TerminosCondiciones />} />
-            <Route path={ROUTES.PRESIDENTE.TERMINOS_CONDICIONES} element={<TerminosCondiciones />} />
+            <Route path={ROUTES.LEGAL.TERMINOS_CONDICIONES} element={<Navigate to={ROUTES.LEGAL.REGLAMENTOS} replace />} />
+            <Route path={ROUTES.ADMIN.TERMINOS_CONDICIONES} element={<Navigate to={ROUTES.ADMIN.REGLAMENTOS} replace />} />
+            <Route path={ROUTES.PRESIDENTE.TERMINOS_CONDICIONES} element={<Navigate to={ROUTES.PRESIDENTE.REGLAMENTOS} replace />} />
           </Route>
 
           <Route path={ROUTES.REGISTRAR_ADMIN} element={<RegistrarAdmin />} />
