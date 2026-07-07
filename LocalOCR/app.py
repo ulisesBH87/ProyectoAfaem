@@ -492,14 +492,28 @@ def normalizar_curp_ocr(curp_raw):
 
 def extraer_curp_segura(texto):
     """Extrae la CURP usando Expresiones Regulares tolerantes a errores de OCR y las normaliza"""
-    texto_limpio = texto.replace(" ", "").replace("\n", "").upper()
-    # Expresión regular tolerante a sustituciones comunes en las posiciones numéricas y alfabéticas
+    # 1. Intentar búsqueda anclada cerca del título del documento de arriba hacia abajo
+    lineas = [l.strip() for l in texto.split('\n')]
     patron_tolerante = r'[A-Z0-9]{4}[0-9OQILTSGZ]{6}[HM][A-Z0-9]{5}[A-Z0-9OQILTSGZ][0-9OQILTSGZ]'
+    for idx, l in enumerate(lineas):
+        l_norm = normalizar_texto(l)
+        if "CLAVE UNICA" in l_norm or "REGISTRO DE POBLACION" in l_norm or "POBLACION" in l_norm:
+            # Buscar en la línea misma y en las siguientes 4 líneas
+            for offset in range(0, 5):
+                if idx + offset < len(lineas):
+                    line_to_check = lineas[idx + offset].replace(" ", "").upper()
+                    match = re.search(patron_tolerante, line_to_check)
+                    if match:
+                        return normalizar_curp_ocr(match.group(0))
+
+    # 2. Fallback a búsqueda global en todo el texto si falla el ancla
+    texto_limpio = texto.replace(" ", "").replace("\n", "").upper()
     match = re.search(patron_tolerante, texto_limpio)
     if match:
         curp_candidata = match.group(0)
         return normalizar_curp_ocr(curp_candidata)
     return "No detectado"
+
 
 def determinar_tipo_documento(texto_up):
     if "ACTA" in texto_up and ("NACIMIENTO" in texto_up or "REGISTRO CIVIL" in texto_up):
@@ -757,6 +771,167 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
         
     return None
 
+def extraer_datos_por_lineas_ancla(texto_crudo, curp):
+    """
+    Intenta extraer datos basándose en el orden de arriba hacia abajo de las actas de nacimiento/CURPs.
+    Busca la sección 'Datos de la Persona Registrada' y localiza las líneas de valores
+    situadas inmediatamente arriba de las etiquetas 'Nombre(s) Primer Apellido...' y 'Sexo Fecha...'.
+    """
+    if not texto_crudo:
+        return None
+        
+    lineas = [l.strip() for l in texto_crudo.split('\n')]
+    lineas_norm = [normalizar_texto(l) for l in lineas]
+    
+    idx_datos_persona = -1
+    for idx, l_norm in enumerate(lineas_norm):
+        if any(kw in l_norm for kw in ["DATOS DE LA PERSONA REGISTRADA", "DATOS PERSONA REGISTRADA", "DATOS DEL REGISTRADO"]):
+            idx_datos_persona = idx
+            break
+            
+    # Si no se encuentra explícitamente "Datos de la Persona Registrada", podemos buscar desde el principio
+    start_idx = idx_datos_persona if idx_datos_persona != -1 else 0
+    
+    # 1. Buscar línea de etiquetas del Nombre
+    idx_label_nombre = -1
+    for idx in range(start_idx, len(lineas)):
+        l_norm = lineas_norm[idx]
+        has_nombre = any(kw in l_norm for kw in ["NOMBRE", "NOMBRES", "NOMORE", "NOMRES", "NOMRE"])
+        has_apellido = any(kw in l_norm for kw in ["APELLIDO", "APELLIDOS", "APELIDO", "APELIDOS", "PATERNO", "MATERNO"])
+        if has_nombre and has_apellido:
+            idx_label_nombre = idx
+            break
+            
+    nombres, ap1, ap2 = "No detectado", "No detectado", ""
+    found_name = False
+    
+    if idx_label_nombre > 0:
+        linea_valores_nombre = ""
+        # Buscar hasta 3 líneas hacia arriba por si hay ruido o líneas vacías
+        for offset in range(1, 4):
+            candidate_idx = idx_label_nombre - offset
+            if candidate_idx >= start_idx:
+                candidate_line = lineas[candidate_idx].strip()
+                candidate_norm = lineas_norm[candidate_idx]
+                if (len(candidate_line.split()) >= 2 and 
+                    not any(kw in candidate_norm for kw in ["NOMBRE", "NOMBRES", "APELLIDO", "APELLIDOS", "PATERNO", "MATERNO", "REGISTRADA", "REGISTRADO", "DATOS"]) and
+                    not any(c.isdigit() for c in candidate_line)):
+                    linea_valores_nombre = candidate_line
+                    break
+        
+        if linea_valores_nombre:
+            partes = linea_valores_nombre.split()
+            n_partes = len(partes)
+            best_match = None
+            if 2 <= n_partes <= 7:
+                for i in range(1, n_partes):
+                    n_cand = " ".join(partes[:i])
+                    ap1_cand = partes[i]
+                    ap2_cand = " ".join(partes[i+1:]) if i+1 < n_partes else ""
+                    
+                    if validar_candidato_nombre(n_cand, ap1_cand, ap2_cand):
+                        coincide = False
+                        invertido = False
+                        if curp != "No detectado":
+                            coincide, invertido = curp_coincide_con_nombre(curp, n_cand, ap1_cand, ap2_cand)
+                        else:
+                            coincide = True
+                            
+                        if coincide:
+                            paterno = limpiar_basura_del_nombre(ap2_cand if invertido else ap1_cand)
+                            materno = limpiar_basura_del_nombre(ap1_cand if invertido else ap2_cand)
+                            nombres_limpios = limpiar_basura_del_nombre(n_cand)
+                            best_match = {
+                                "nombres": nombres_limpios,
+                                "apellido_paterno": paterno,
+                                "apellido_materno": materno,
+                                "nombre_completo": f"{nombres_limpios} {paterno} {materno}".strip()
+                            }
+                            break
+                            
+            if best_match:
+                nombres = best_match["nombres"]
+                ap1 = best_match["apellido_paterno"]
+                ap2 = best_match["apellido_materno"]
+                found_name = True
+            elif n_partes >= 2:
+                if n_partes >= 3:
+                    nombres = limpiar_basura_del_nombre(" ".join(partes[:-2]))
+                    ap1 = limpiar_basura_del_nombre(partes[-2])
+                    ap2 = limpiar_basura_del_nombre(partes[-1])
+                else:
+                    nombres = limpiar_basura_del_nombre(partes[0])
+                    ap1 = limpiar_basura_del_nombre(partes[1])
+                    ap2 = ""
+                found_name = True
+
+    # 2. Buscar línea de etiquetas de Sexo/Fecha/Lugar de Nacimiento
+    idx_label_datos = -1
+    search_start = idx_label_nombre if idx_label_nombre != -1 else start_idx
+    for idx in range(search_start, len(lineas)):
+        l_norm = lineas_norm[idx]
+        has_sexo = "SEXO" in l_norm or "SEXC" in l_norm
+        has_fecha = "FECHA" in l_norm or "NACIMIENTO" in l_norm
+        if has_sexo and has_fecha:
+            idx_label_datos = idx
+            break
+            
+    sexo = "No detectado"
+    fecha_nac = "No detectada"
+    lugar_nac = "No detectado"
+    
+    if idx_label_datos > 0:
+        linea_valores_datos = ""
+        for offset in range(1, 4):
+            candidate_idx = idx_label_datos - offset
+            if candidate_idx >= search_start:
+                candidate_line = lineas[candidate_idx].strip()
+                candidate_norm = lineas_norm[candidate_idx]
+                if (len(candidate_line.split()) >= 1 and 
+                    candidate_idx != idx_label_nombre and 
+                    candidate_idx != idx_label_nombre - 1 and
+                    not any(kw in candidate_norm for kw in ["SEXO", "FECHA", "NACIMIENTO", "LUGAR", "NOMBRE", "APELLIDO"])):
+                    linea_valores_datos = candidate_line
+                    break
+                    
+        if linea_valores_datos:
+            val_upper = linea_valores_datos.upper()
+            if "FEM" in val_upper or "MUJ" in val_upper:
+                sexo = "MUJER"
+            elif "MAS" in val_upper or "HOM" in val_upper:
+                sexo = "HOMBRE"
+                
+            match_date = re.search(r'(\d{2})[\/\-](\d{2})[\/\-](\d{4})', linea_valores_datos)
+            if match_date:
+                fecha_nac = f"{match_date.group(1)}/{match_date.group(2)}/{match_date.group(3)}"
+                
+            cleaned_lugar = linea_valores_datos
+            if match_date:
+                cleaned_lugar = cleaned_lugar.replace(match_date.group(0), "")
+            for s_word in ["HOMBRE", "MUJER", "MASCULINO", "FEMENINO", "s", "S"]:
+                cleaned_lugar = re.sub(r'\b' + re.escape(s_word) + r'\b', '', cleaned_lugar, flags=re.IGNORECASE)
+                
+            cleaned_lugar = re.sub(r'[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]', ' ', cleaned_lugar)
+            cleaned_lugar = re.sub(r'\s+', ' ', cleaned_lugar).strip()
+            
+            words_lugar = [w for w in cleaned_lugar.split() if len(w) > 2 and w.upper() not in BLACKLISTED_WORDS]
+            if words_lugar:
+                lugar_nac = " ".join(words_lugar).upper()
+
+    if found_name:
+        return {
+            "nombres": nombres,
+            "apellido_paterno": ap1,
+            "apellido_materno": ap2,
+            "nombre_completo": f"{nombres} {ap1} {ap2}".strip(),
+            "sexo": sexo,
+            "fecha_nac": fecha_nac,
+            "lugar_nacimiento": lugar_nac,
+            "origen": "Structured Anchor Line Parser"
+        }
+    return None
+
+
 def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None):
     texto_norm = normalizar_texto(texto_crudo)
     lineas = [normalizar_texto(l) for l in texto_crudo.split('\n') if l.strip()]
@@ -790,6 +965,11 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                         return datos
 
     elif tipo_doc == "ACTA DE NACIMIENTO":
+        # Primero intentar extraer usando la estructura de líneas ancla de arriba hacia abajo
+        res_ancla = extraer_datos_por_lineas_ancla(texto_crudo, curp)
+        if res_ancla:
+            candidatos_encontrados.append(res_ancla)
+
         matched_candidate = None
         header_keywords = ["ESTADOS UNIDOS MEXICANOS", "REGISTRO CIVIL", "ACTA DE NACIMIENTO", "CERTIFICADO DE NACIMIENTO"]
         first_header_idx = 0
@@ -942,6 +1122,12 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             datos["apellido_materno"] = ap2
             datos["nombre_completo"] = f"{nombres} {ap1} {ap2}".strip()
             datos["origen"] = final_cand.get("origen", "Desconocido")
+            if "sexo" in final_cand:
+                datos["sexo"] = final_cand["sexo"]
+            if "fecha_nac" in final_cand:
+                datos["fecha_nac"] = final_cand["fecha_nac"]
+            if "lugar_nacimiento" in final_cand:
+                datos["lugar_nacimiento"] = final_cand["lugar_nacimiento"]
             return datos
         else:
             res_raw = extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp=curp, texto_original=texto_original)
@@ -1073,6 +1259,13 @@ def procesar_texto(texto, vision_response=None):
 
     if not info_doc or not info_doc["nombres"] or info_doc["nombres"] == "No detectado":
         info_doc = extraer_datos_inteligentes(texto_para_procesar, tipo_doc, curp, texto_original=texto)
+        if info_doc:
+            if "sexo" in info_doc and info_doc["sexo"] != "No detectado" and (sexo == "No detectado" or not sexo):
+                sexo = info_doc["sexo"]
+            if "fecha_nac" in info_doc and info_doc["fecha_nac"] != "No detectada" and (fecha_nac == "No detectada" or not fecha_nac):
+                fecha_nac = info_doc["fecha_nac"]
+            if "lugar_nacimiento" in info_doc and info_doc["lugar_nacimiento"] != "No detectado" and (lugar_nac == "No detectado" or not lugar_nac):
+                lugar_nac = info_doc["lugar_nacimiento"]
 
     if curp != "No detectado":
         edad, curp_fecha = calcular_datos_curp(curp)
