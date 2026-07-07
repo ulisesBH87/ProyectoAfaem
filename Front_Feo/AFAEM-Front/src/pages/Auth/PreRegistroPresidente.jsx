@@ -4081,7 +4081,7 @@ function PreRegistroPresidente() {
                     placeholder="Se auto-completará con el documento de identidad"
                     maxLength={18}
                     value={ocrResults.curp || ''}
-                    onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
+                    onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                     className="premium-input"
                   />
                   {curpExistente && (
@@ -4095,8 +4095,9 @@ function PreRegistroPresidente() {
                   <input
                     type="text"
                     placeholder="Ej. MEXICANA"
+                    maxLength={30}
                     value={ocrResults.nacionalidad || ''}
-                    onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase())}
+                    onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÜÑ\s]/g, ''))}
                     className="premium-input"
                   />
                 </div>
@@ -4106,14 +4107,17 @@ function PreRegistroPresidente() {
                 <div className="premium-input-group">
                   <label className="premium-label">Fecha de Nacimiento *</label>
                   <input
-                    type="text"
-                    value={ocrResults.fecha_nac || ''}
-                    onChange={(e) => handleManualOcrChange('fecha_nac', e.target.value)}
-                    placeholder="DD/MM/AAAA"
+                    type="date"
+                    value={ocrResults.fecha_nac ? convertToYYYYMMDD(ocrResults.fecha_nac) : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const converted = convertToDDMMYYYY(val);
+                      handleManualOcrChange('fecha_nac', converted);
+                    }}
                     className="premium-input"
                   />
                   <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '4px', display: 'block' }}>
-                    Día/Mes/Año (ej: 25/12/1990)
+                    Selecciona tu fecha de nacimiento
                   </span>
                   {(() => {
                     const dateStr = ocrResults.fecha_nac || '';
