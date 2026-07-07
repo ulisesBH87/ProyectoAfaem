@@ -357,7 +357,7 @@ function PreRegistroPresidente() {
 
   useEffect(() => {
     if (!documentosGuardados || documentosGuardados.length === 0) return;
-    
+
     const docIdMap = {
       8: 'actaNacimiento',
       38: 'identificacion',
@@ -2966,19 +2966,6 @@ function PreRegistroPresidente() {
         }
       `}</style>
 
-      {/* HEADER LOGOS */}
-      <div style={{ width: '95%', maxWidth: '1400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <img
-          src={AfaemLogo}
-          alt="AFAEM"
-          style={{ height: '70px', width: 'auto', objectFit: 'contain' }}
-        />
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <img src={FmfLogo} alt="FMF" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
-          <img src={AmateurLogo} alt="Amateur" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
-        </div>
-      </div>
-
       <div className="card glass" style={{ width: '95%', maxWidth: '1400px', padding: 0, overflow: 'hidden' }}>
         {/* PASO 0: BIENVENIDA */}
         {pasoActual === 0 && (
@@ -3000,9 +2987,36 @@ function PreRegistroPresidente() {
             padding: '16px 24px 14px',
             borderBottom: `1px solid rgba(255, 255, 255, 0.15)`,
           }}>
-            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#ffffff', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px', opacity: 0.8 }}>
-              PROCESO DE ACTIVACIÓN
-            </p>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: '16px', 
+              flexWrap: 'wrap', 
+              gap: '12px' 
+            }}>
+              <img
+                src={AfaemLogo}
+                alt="AFAEM"
+                style={{ height: '45px', width: 'auto', objectFit: 'contain' }}
+              />
+              <p style={{ 
+                fontSize: '11px', 
+                fontWeight: '700', 
+                color: '#ffffff', 
+                letterSpacing: '2px', 
+                textTransform: 'uppercase', 
+                margin: 0, 
+                opacity: 0.8,
+                textAlign: 'center'
+              }}>
+                PROCESO DE ACTIVACIÓN
+              </p>
+              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                <img src={FmfLogo} alt="FMF" style={{ height: '30px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
+                <img src={AmateurLogo} alt="Amateur" style={{ height: '30px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
+              </div>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* STEP 1 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
@@ -3965,43 +3979,43 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews[doc.documento] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents[doc.documento]?.type === 'application/pdf' || 
+                          {(documents[doc.documento]?.type === 'application/pdf' ||
                             (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
-                              <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
-                                <iframe
-                                  src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                                  title={`Preview ${doc.nombre}`}
-                                  style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    border: 'none',
-                                    pointerEvents: 'none'
-                                  }}
-                                />
-                                <div style={{
-                                  position: 'absolute',
-                                  bottom: '8px',
-                                  left: '8px',
-                                  backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                                  color: '#ffffff',
-                                  fontSize: '10px',
-                                  fontWeight: '800',
-                                  padding: '4px 8px',
-                                  borderRadius: '999px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}>
-                                  <FaFileAlt /> PDF
-                                </div>
-                              </div>
-                            ) : (
-                              <img
-                                src={previews[doc.documento]}
-                                alt="Preview"
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title={`Preview ${doc.nombre}`}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
                               />
-                            )}
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={previews[doc.documento]}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          )}
 
                           {/* OVERLAY ACTIONS */}
                           {!isApproved && (
@@ -4021,7 +4035,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' || 
+                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
                                     (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
                                   setPreviewDoc({
                                     url: previews[doc.documento],
@@ -4405,7 +4419,7 @@ function PreRegistroPresidente() {
                   {formatAfiliacionLocked && (
                     <div style={{ backgroundColor: '#fef2f2', border: `1px solid #fee2e2`, borderRadius: '12px', padding: '12px', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px auto', textAlign: 'center' }}>
                       <span style={{ color: '#9b1c1c', fontSize: '13px', fontWeight: '700' }}>
-                        Debes completar todos los datos de identidad y subir los documentos anteriores para descargar el formato.
+                        Debes completar todos tus datos y subir los documentos anteriores para descargar el formato.
                       </span>
                     </div>
                   )}
@@ -4518,43 +4532,43 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews.formatoAfiliacion ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents.formatoAfiliacion?.type === 'application/pdf' || 
+                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
                             (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
-                              <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
-                                <iframe
-                                  src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                                  title="Preview Formato de afiliación firmado"
-                                  style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    border: 'none',
-                                    pointerEvents: 'none'
-                                  }}
-                                />
-                                <div style={{
-                                  position: 'absolute',
-                                  bottom: '8px',
-                                  left: '8px',
-                                  backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                                  color: '#ffffff',
-                                  fontSize: '10px',
-                                  fontWeight: '800',
-                                  padding: '4px 8px',
-                                  borderRadius: '999px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}>
-                                  <FaFileAlt /> PDF
-                                </div>
-                              </div>
-                            ) : (
-                              <img
-                                src={previews.formatoAfiliacion}
-                                alt="Preview"
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title="Preview Formato de afiliación firmado"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
                               />
-                            )}
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={previews.formatoAfiliacion}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          )}
 
                           {/* OVERLAY ACTIONS */}
                           {!isApproved && (
@@ -4574,7 +4588,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' || 
+                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
                                     (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
                                   setPreviewDoc({
                                     url: previews.formatoAfiliacion,
@@ -4857,43 +4871,43 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews[doc.documento] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents[doc.documento]?.type === 'application/pdf' || 
+                          {(documents[doc.documento]?.type === 'application/pdf' ||
                             (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
-                              <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
-                                <iframe
-                                  src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                                  title={`Preview ${doc.nombre}`}
-                                  style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    border: 'none',
-                                    pointerEvents: 'none'
-                                  }}
-                                />
-                                <div style={{
-                                  position: 'absolute',
-                                  bottom: '8px',
-                                  left: '8px',
-                                  backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                                  color: '#ffffff',
-                                  fontSize: '10px',
-                                  fontWeight: '800',
-                                  padding: '4px 8px',
-                                  borderRadius: '999px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}>
-                                  <FaFileAlt /> PDF
-                                </div>
-                              </div>
-                            ) : (
-                              <img
-                                src={previews[doc.documento]}
-                                alt="Preview"
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title={`Preview ${doc.nombre}`}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
                               />
-                            )}
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={previews[doc.documento]}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          )}
 
                           {/* OVERLAY ACTIONS */}
                           {!isApproved && (
@@ -4913,7 +4927,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' || 
+                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
                                     (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
                                   setPreviewDoc({
                                     url: previews[doc.documento],
@@ -5200,43 +5214,43 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews.formatoAfiliacion ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents.formatoAfiliacion?.type === 'application/pdf' || 
+                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
                             (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
-                              <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
-                                <iframe
-                                  src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                                  title="Preview Formato de afiliación firmado"
-                                  style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    border: 'none',
-                                    pointerEvents: 'none'
-                                  }}
-                                />
-                                <div style={{
-                                  position: 'absolute',
-                                  bottom: '8px',
-                                  left: '8px',
-                                  backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                                  color: '#ffffff',
-                                  fontSize: '10px',
-                                  fontWeight: '800',
-                                  padding: '4px 8px',
-                                  borderRadius: '999px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px'
-                                }}>
-                                  <FaFileAlt /> PDF
-                                </div>
-                              </div>
-                            ) : (
-                              <img
-                                src={previews.formatoAfiliacion}
-                                alt="Preview"
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title="Preview Formato de afiliación firmado"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
                               />
-                            )}
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={previews.formatoAfiliacion}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          )}
 
                           {/* OVERLAY ACTIONS */}
                           {!isApproved && (
@@ -5256,7 +5270,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' || 
+                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
                                     (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
                                   setPreviewDoc({
                                     url: previews.formatoAfiliacion,
@@ -5716,10 +5730,10 @@ function PreRegistroPresidente() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
             {(() => {
-              const isImage = previewDoc.type === 'image' || 
-                              (previewDoc.file?.type && previewDoc.file.type.startsWith('image/'));
-              const isPdf = previewDoc.type === 'pdf' || 
-                            (previewDoc.file?.type && previewDoc.file.type === 'application/pdf');
+              const isImage = previewDoc.type === 'image' ||
+                (previewDoc.file?.type && previewDoc.file.type.startsWith('image/'));
+              const isPdf = previewDoc.type === 'pdf' ||
+                (previewDoc.file?.type && previewDoc.file.type === 'application/pdf');
               const fileName = previewDoc.file?.name || previewDoc.title || 'documento';
 
               if (isImage) {
