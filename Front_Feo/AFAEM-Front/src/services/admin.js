@@ -269,8 +269,14 @@ export const updateEquipo = async (equipoId, nombre, estatus, extras = {}) => {
 /**
  * OBTIENE CATÁLOGOS DE REGISTRO (LIGAS, MODALIDADES, CATEGORÍAS, RAMAS)
  */
-export const getCatalogosRegistro = async (forceRefresh = false) => {
-  return fetchWithCache('/equipo-temporal/catalogos-registro', { forceRefresh });
+export const getCatalogosRegistro = async (forceRefresh = false, adminMode = false) => {
+  const url = adminMode ? '/equipo-temporal/catalogos-registro?admin_mode=true' : '/equipo-temporal/catalogos-registro';
+  return fetchWithCache(url, { forceRefresh });
+};
+
+export const clearCatalogosCache = () => {
+  serviceCache.clear('/equipo-temporal/catalogos-registro');
+  serviceCache.clear('/equipo-temporal/catalogos-registro?admin_mode=true');
 };
 
 /**

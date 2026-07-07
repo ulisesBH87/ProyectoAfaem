@@ -11,6 +11,15 @@ const api = axios.create({
   },
 });
 
+// INTERCEPTOR PARA AGREGAR EL TOKEN DINÁMICAMENTE
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // APLICAR INTERCEPTOR CENTRALIZADO DE ERRORES
 applyErrorInterceptor(api);
 

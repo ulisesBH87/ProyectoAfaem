@@ -3,7 +3,7 @@ import { FaPlus, FaEdit, FaTrash, FaListAlt, FaNetworkWired, FaTrophy, FaTags, F
 import DashboardTable from '../../components/DashboardTable';
 import Swal from 'sweetalert2';
 import api from '../../services/auth';
-import { getCatalogosRegistro, getEquiposDirectorio } from '../../services/admin';
+import { getCatalogosRegistro, getEquiposDirectorio, clearCatalogosCache } from '../../services/admin';
 import Loader from '../../components/Loader';
 import COLORS from '../../styles/colors';
 import { Modal } from '../../components/partials';
@@ -50,7 +50,7 @@ export default function AdminCatalogos() {
     try {
       // Usamos /equipo-temporal/catalogos-registro que ya funciona en producción
       const [data, equiposData] = await Promise.all([
-        getCatalogosRegistro(isTableOnly),
+        getCatalogosRegistro(isTableOnly, true),
         getEquiposDirectorio(isTableOnly)
       ]);
       setCatalogos({
@@ -96,40 +96,50 @@ export default function AdminCatalogos() {
     { key: "rama", label: "Rama" },
     { key: "descripcion", label: "Descripción" },
     { key: "equipos_inscritos", label: "Equipos" },
-    { key: "acciones", label: "Acciones", style: { width: '120px', textAlign: 'center' } }
+    { key: "estatus", label: "Estatus", style: { width: '120px', textAlign: 'center' } },
+    { key: "acciones", label: "Acciones", style: { width: '80px', textAlign: 'center' } }
   ] : [
     { key: "id", label: "ID" },
     { key: "nombre", label: "Nombre del Registro" },
     { key: "descripcion", label: "Descripción" },
-    { key: "acciones", label: "Acciones", style: { width: '120px', textAlign: 'center' } }
+    { key: "estatus", label: "Estatus", style: { width: '120px', textAlign: 'center' } },
+    { key: "acciones", label: "Acciones", style: { width: '80px', textAlign: 'center' } }
   ];
 
-  const handleEliminar = (id) => {
+  const handleToggleEstatus = (item) => {
+    const nuevoEstatus = !item.estatus;
     Swal.fire({
-      title: '¿Eliminar registro?',
-      text: "Esta acción eliminará permanentemente el registro de la base de datos.",
-      icon: 'warning',
+      title: `${nuevoEstatus ? '¿Activar' : '¿Desactivar'} registro?`,
+      text: `El registro ${nuevoEstatus ? 'estará' : 'dejará de estar'} disponible en los formularios de selección.`,
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
+      confirmButtonText: 'Sí, cambiar',
       cancelButtonText: 'Cancelar',
-      showLoaderOnConfirm: true,
-      preConfirm: async () => {
+      confirmButtonColor: nuevoEstatus ? COLORS.primary : COLORS.danger,
+    }).then(async (result) => {
+      if (result.isConfirmed) {
         try {
-          await api.delete(`/catalogos/${seccionActiva}/${id}`);
-          return true;
+          let payload = {
+            nombre: (seccionActiva === 'ligas' ? (item.nombreOriginal || item.nombre) : item.nombre) || '',
+            descripcion: item.descripcion || '',
+            estatus: nuevoEstatus
+          };
+          if (seccionActiva === 'ligas') {
+            payload.categoriaId = parseInt(item.categoriaId);
+            payload.modalidadId = parseInt(item.modalidadId);
+            payload.ramaId = parseInt(item.ramaId);
+          }
+          
+          const response = await api.put(`/catalogos/${seccionActiva}/${item.id}`, payload);
+          clearCatalogosCache();
+          setCatalogos(prev => ({
+            ...prev,
+            [seccionActiva]: prev[seccionActiva].map(i => i.id === item.id ? response.data : i)
+          }));
+          Swal.fire('¡Actualizado!', `El registro se ha ${nuevoEstatus ? 'activado' : 'desactivado'} correctamente.`, 'success');
         } catch (error) {
-          Swal.showValidationMessage(`Error: ${error.response?.data?.detail || 'No se pudo eliminar'}`);
-          return false;
+          Swal.fire('Error', error.response?.data?.detail || 'No se pudo cambiar el estatus del registro', 'error');
         }
-      },
-      allowOutsideClick: () => !Swal.isLoading()
-    }).then((result) => {
-      if (result.isConfirmed && result.value) {
-        setCatalogos(prev => ({
-          ...prev,
-          [seccionActiva]: prev[seccionActiva].filter(item => item.id !== id)
-        }));
-        Swal.fire('¡Eliminado!', 'El registro se eliminó correctamente.', 'success');
       }
     });
   };
@@ -183,6 +193,7 @@ export default function AdminCatalogos() {
     try {
       if (modalConfig.tipo === 'crear') {
         const response = await api.post(`/catalogos/${seccionActiva}`, payload);
+        clearCatalogosCache();
         setCatalogos(prev => ({
           ...prev,
           [seccionActiva]: [...prev[seccionActiva], response.data]
@@ -190,6 +201,7 @@ export default function AdminCatalogos() {
         Swal.fire('¡Éxito!', 'El registro se ha creado correctamente.', 'success');
       } else {
         const response = await api.put(`/catalogos/${seccionActiva}/${modalConfig.item.id}`, payload);
+        clearCatalogosCache();
         setCatalogos(prev => ({
           ...prev,
           [seccionActiva]: prev[seccionActiva].map(i => i.id === modalConfig.item.id ? response.data : i)
@@ -209,6 +221,28 @@ export default function AdminCatalogos() {
       id: <span style={{ fontWeight: '700', color: COLORS.slate500 }}>#{item.id}</span>,
       nombre: <span style={{ fontWeight: '600' }}>{seccionActiva === 'ligas' ? (item.nombreOriginal || item.nombre) : item.nombre}</span>,
       descripcion: <span style={{ color: COLORS.slate500 }}>{item.descripcion || '-'}</span>,
+      estatus: (
+        <button
+          onClick={() => handleToggleEstatus(item)}
+          style={{
+            background: item.estatus ? COLORS.successBg : COLORS.dangerBg,
+            color: item.estatus ? COLORS.successDarker : COLORS.dangerDark,
+            border: `1.5px solid ${item.estatus ? COLORS.successBgDark : COLORS.dangerBgDark}`,
+            cursor: 'pointer',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            fontSize: '11px',
+            fontWeight: '800',
+            textTransform: 'uppercase',
+            display: 'inline-flex',
+            alignItems: 'center',
+            transition: 'all 0.15s'
+          }}
+          title={item.estatus ? "Click para desactivar" : "Click para activar"}
+        >
+          {item.estatus ? 'Activo' : 'Inactivo'}
+        </button>
+      ),
       acciones: (
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
           <button
@@ -216,12 +250,6 @@ export default function AdminCatalogos() {
             style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, color: COLORS.blue, cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
           >
             <FaEdit />
-          </button>
-          <button
-            onClick={() => handleEliminar(item.id)}
-            style={{ background: COLORS.dangerBgLight, border: `1px solid ${COLORS.dangerBgMedium}`, color: COLORS.danger, cursor: 'pointer', padding: '6px 10px', borderRadius: '6px' }}
-          >
-            <FaTrash />
           </button>
         </div>
       )
