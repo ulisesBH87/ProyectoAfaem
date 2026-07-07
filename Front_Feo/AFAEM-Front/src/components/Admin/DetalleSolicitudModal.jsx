@@ -217,7 +217,7 @@ export default function DetalleSolicitudModal({
     }
     .doc-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 20px;
       width: 100%;
     }
