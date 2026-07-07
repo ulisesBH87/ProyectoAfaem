@@ -5715,48 +5715,58 @@ function PreRegistroPresidente() {
           tamanio="grande"
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-            {previewDoc.file.type.startsWith('image/') ? (
-              previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt={previewDoc.title}
-                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
-                />
-              ) : (
-                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
-              )
-            ) : previewDoc.file.type === 'application/pdf' ? (
-              previewUrl ? (
-                <iframe
-                  src={`${previewUrl}#toolbar=0&navpanes=0`}
-                  title={previewDoc.title}
-                  style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
-                />
-              ) : (
-                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
-              )
-            ) : (
-              <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate500 }}>
-                <p style={{ fontSize: '16px', fontWeight: 'bold' }}>No se puede previsualizar este tipo de archivo directamente.</p>
-                <p style={{ fontSize: '14px' }}>Archivo: {previewDoc.file.name}</p>
-                <a
-                  href={previewUrl}
-                  download={previewDoc.file.name}
-                  style={{
-                    display: 'inline-block',
-                    marginTop: '15px',
-                    padding: '10px 20px',
-                    backgroundColor: COLORS.primary,
-                    color: 'white',
-                    borderRadius: '8px',
-                    textDecoration: 'none',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Descargar archivo
-                </a>
-              </div>
-            )}
+            {(() => {
+              const isImage = previewDoc.type === 'image' || 
+                              (previewDoc.file?.type && previewDoc.file.type.startsWith('image/'));
+              const isPdf = previewDoc.type === 'pdf' || 
+                            (previewDoc.file?.type && previewDoc.file.type === 'application/pdf');
+              const fileName = previewDoc.file?.name || previewDoc.title || 'documento';
+
+              if (isImage) {
+                return previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt={previewDoc.title}
+                    style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
+                  />
+                ) : (
+                  <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+                );
+              } else if (isPdf) {
+                return previewUrl ? (
+                  <iframe
+                    src={`${previewUrl}#toolbar=0&navpanes=0`}
+                    title={previewDoc.title}
+                    style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
+                  />
+                ) : (
+                  <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+                );
+              } else {
+                return (
+                  <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate500 }}>
+                    <p style={{ fontSize: '16px', fontWeight: 'bold' }}>No se puede previsualizar este tipo de archivo directamente.</p>
+                    <p style={{ fontSize: '14px' }}>Archivo: {fileName}</p>
+                    <a
+                      href={previewUrl}
+                      download={fileName}
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '15px',
+                        padding: '10px 20px',
+                        backgroundColor: COLORS.primary,
+                        color: 'white',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      Descargar archivo
+                    </a>
+                  </div>
+                );
+              }
+            })()}
           </div>
         </Modal>
       )}
