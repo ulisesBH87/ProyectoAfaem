@@ -2385,7 +2385,7 @@ function PreRegistroPresidente() {
         }
 
         /* Stepper header styling (Blue Header!) */
-        .prereg-dark-page .card > div:first-child {
+        .prereg-stepper-header {
           background: var(--color-primary) !important;
           border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
         }
@@ -2868,7 +2868,7 @@ function PreRegistroPresidente() {
 
         {/* ===== GLASS STEPPER HEADER (PASO 1, 2 Y 3) ===== */}
         {(pasoActual === 1 || pasoActual === 3 || pasoActual === 5) && (
-          <div style={{
+          <div className="prereg-stepper-header" style={{
             padding: '16px 24px 14px',
             borderBottom: `1px solid rgba(255, 255, 255, 0.15)`,
           }}>
