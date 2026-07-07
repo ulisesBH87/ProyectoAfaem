@@ -269,8 +269,8 @@ export const updateEquipo = async (equipoId, nombre, estatus, extras = {}) => {
 /**
  * OBTIENE CATÁLOGOS DE REGISTRO (LIGAS, MODALIDADES, CATEGORÍAS, RAMAS)
  */
-export const getCatalogosRegistro = async () => {
-  return fetchWithCache('/equipo-temporal/catalogos-registro');
+export const getCatalogosRegistro = async (forceRefresh = false) => {
+  return fetchWithCache('/equipo-temporal/catalogos-registro', { forceRefresh });
 };
 
 /**

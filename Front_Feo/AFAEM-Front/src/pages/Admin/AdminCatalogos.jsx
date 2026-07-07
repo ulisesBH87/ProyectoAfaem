@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash, FaListAlt, FaNetworkWired, FaTrophy, FaTags, FaShieldAlt } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaListAlt, FaNetworkWired, FaTrophy, FaTags, FaShieldAlt, FaSyncAlt } from 'react-icons/fa';
 import DashboardTable from '../../components/DashboardTable';
 import Swal from 'sweetalert2';
 import api from '../../services/auth';
 import { getCatalogosRegistro, getEquiposDirectorio } from '../../services/admin';
 import Loader from '../../components/Loader';
 import COLORS from '../../styles/colors';
+import { Modal } from '../../components/partials';
 
 export default function AdminCatalogos() {
   const [catalogos, setCatalogos] = useState({
@@ -17,6 +18,7 @@ export default function AdminCatalogos() {
 
   const [seccionActiva, setSeccionActiva] = useState('ligas');
   const [cargando, setCargando] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [equiposGlobales, setEquiposGlobales] = useState([]);
 
   // Estado para ver equipos de una liga
@@ -39,13 +41,17 @@ export default function AdminCatalogos() {
     cargarDatos();
   }, []);
 
-  const cargarDatos = async () => {
-    setCargando(true);
+  const cargarDatos = async (isTableOnly = false) => {
+    if (isTableOnly) {
+      setTableLoading(true);
+    } else {
+      setCargando(true);
+    }
     try {
       // Usamos /equipo-temporal/catalogos-registro que ya funciona en producción
       const [data, equiposData] = await Promise.all([
-        getCatalogosRegistro(),
-        getEquiposDirectorio()
+        getCatalogosRegistro(isTableOnly),
+        getEquiposDirectorio(isTableOnly)
       ]);
       setCatalogos({
         ligas: data.ligas || [],
@@ -65,6 +71,7 @@ export default function AdminCatalogos() {
       setEquiposGlobales([]);
     } finally {
       setCargando(false);
+      setTableLoading(false);
     }
   };
 
@@ -295,160 +302,156 @@ export default function AdminCatalogos() {
       </div>
 
       <div style={{ background: 'white', borderRadius: '16px', padding: '25px', boxShadow: `0 4px 12px ${COLORS.shadow03}`, border: `1px solid ${COLORS.slate100}` }}>
-        <h4 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '800', color: COLORS.slate800, borderBottom: `1px solid ${COLORS.slate100}`, paddingBottom: '15px' }}>
-          Directorio de {seccionActiva.charAt(0).toUpperCase() + seccionActiva.slice(1)}
-        </h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${COLORS.slate100}`, paddingBottom: '15px' }}>
+          <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: COLORS.slate800 }}>
+            Directorio de {seccionActiva.charAt(0).toUpperCase() + seccionActiva.slice(1)}
+          </h4>
+          <button
+            onClick={() => cargarDatos(true)}
+            className="btn-premium"
+            style={{
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <FaSyncAlt style={{ animation: tableLoading ? 'spin 1s linear infinite' : 'none' }} />
+          </button>
+        </div>
         <div style={{ overflowX: 'auto', width: '100%' }}>
           <DashboardTable
             columns={columns}
             data={dataTransformada}
-            isLoading={cargando}
+            isLoading={cargando || tableLoading}
             emptyMessage={`No hay registros en ${seccionActiva}`}
           />
         </div>
       </div>
 
-      {/* Modal Nativo de Bootstrap */}
-      {modalShow && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: COLORS.overlaySlateDark, zIndex: 1050 }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', boxShadow: `0 10px 25px ${COLORS.shadow10}` }}>
-              <div className="modal-header" style={{ borderBottom: `1px solid ${COLORS.slate100}`, padding: '20px 24px' }}>
-                <h5 className="modal-title" style={{ fontSize: '18px', fontWeight: '800', color: COLORS.slate800 }}>
-                  {modalConfig.tipo === 'crear' ? `Nuevo Registro en ${seccionActiva.toUpperCase()}` : 'Editar Registro'}
-                </h5>
-                <button type="button" className="btn-close" onClick={() => setModalShow(false)} aria-label="Close" style={{ fontSize: '12px' }}></button>
-              </div>
-
-              <form onSubmit={handleModalSubmit}>
-                <div className="modal-body" style={{ padding: '24px' }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Nombre <span style={{ color: COLORS.danger }}>*</span></label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formData.nombre}
-                      onChange={e => setFormData({ ...formData, nombre: e.target.value })}
-                      placeholder="Ej. Liga MX"
-                      style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
-                      required
-                    />
-                  </div>
-
-                  {seccionActiva === 'ligas' && (
-                    <>
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Descripción</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={formData.descripcion}
-                          onChange={e => setFormData({ ...formData, descripcion: e.target.value })}
-                          placeholder="Descripción opcional..."
-                          style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
-                        />
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-                        <div>
-                          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Categoría <span style={{ color: COLORS.danger }}>*</span></label>
-                          <select className="form-select" value={formData.categoriaId} onChange={e => setFormData({ ...formData, categoriaId: e.target.value })} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }} required>
-                            <option value="">Selecciona Categoría...</option>
-                            {catalogos.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Modalidad <span style={{ color: COLORS.danger }}>*</span></label>
-                          <select className="form-select" value={formData.modalidadId} onChange={e => setFormData({ ...formData, modalidadId: e.target.value })} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }} required>
-                            <option value="">Selecciona Modalidad...</option>
-                            {catalogos.modalidades.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Rama <span style={{ color: COLORS.danger }}>*</span></label>
-                          <select className="form-select" value={formData.ramaId} onChange={e => setFormData({ ...formData, ramaId: e.target.value })} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }} required>
-                            <option value="">Selecciona Rama...</option>
-                            {catalogos.ramas.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="modal-footer" style={{ borderTop: `1px solid ${COLORS.slate100}`, padding: '16px 24px', background: COLORS.slate50, borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
-                  <button type="button" className="btn btn-light" onClick={() => setModalShow(false)} style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: 'white', border: `1px solid ${COLORS.slate200}`, color: COLORS.slate500 }} disabled={enviando}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary" style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: COLORS.primary, border: 'none' }} disabled={enviando}>
-                    {enviando ? 'Guardando...' : (modalConfig.tipo === 'crear' ? 'Crear Registro' : 'Guardar Cambios')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+      {/* Modal Reutilizable Global */}
+      <Modal
+        estaAbierto={modalShow}
+        alCerrar={() => setModalShow(false)}
+        titulo={modalConfig.tipo === 'crear' ? `Nuevo Registro en ${seccionActiva.toUpperCase()}` : 'Editar Registro'}
+        tamanio="medio"
+        pie={
+          <>
+            <button type="button" className="btn btn-light" onClick={() => setModalShow(false)} style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: 'white', border: `1px solid ${COLORS.slate200}`, color: COLORS.slate500 }} disabled={enviando}>Cancelar</button>
+            <button type="button" className="btn btn-primary" onClick={handleModalSubmit} style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: COLORS.primary, border: 'none' }} disabled={enviando}>
+              {enviando ? 'Guardando...' : (modalConfig.tipo === 'crear' ? 'Crear Registro' : 'Guardar Cambios')}
+            </button>
+          </>
+        }
+      >
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Nombre <span style={{ color: COLORS.danger }}>*</span></label>
+          <input
+            type="text"
+            className="form-control"
+            value={formData.nombre}
+            onChange={e => setFormData({ ...formData, nombre: e.target.value })}
+            placeholder="Ej. Liga MX"
+            style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
+            required
+          />
         </div>
-      )}
-      {/* Modal para Ver Equipos de la Liga */}
-      {modalEquiposShow && ligaSeleccionada && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: COLORS.overlaySlateDark, zIndex: 1050 }}>
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content" style={{ borderRadius: '16px', border: 'none', boxShadow: `0 10px 25px ${COLORS.shadow10}` }}>
-              <div className="modal-header" style={{ borderBottom: `1px solid ${COLORS.slate100}`, padding: '20px 24px', background: `linear-gradient(135deg, ${COLORS.secondaryBg} 0%, ${COLORS.secondaryBg100} 100%)`, borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
-                <div>
-                  <h5 className="modal-title" style={{ fontSize: '18px', fontWeight: '800', color: COLORS.blueDark, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaTrophy style={{ color: COLORS.blue }} /> Equipos inscritos en {ligaSeleccionada.nombreOriginal || ligaSeleccionada.nombre}
-                  </h5>
-                  <p style={{ margin: 0, fontSize: '13px', color: COLORS.blue, marginTop: '4px', fontWeight: '500' }}>
-                    {ligaSeleccionada.nombreCategoria} - {ligaSeleccionada.nombreModalidad} - {ligaSeleccionada.nombreRama}
-                  </p>
-                </div>
-                <button type="button" className="btn-close" onClick={() => setModalEquiposShow(false)} aria-label="Close" style={{ fontSize: '12px' }}></button>
+
+        {seccionActiva === 'ligas' && (
+          <>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Descripción</label>
+              <input
+                type="text"
+                className="form-control"
+                value={formData.descripcion}
+                onChange={e => setFormData({ ...formData, descripcion: e.target.value })}
+                placeholder="Descripción opcional..."
+                style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Categoría <span style={{ color: COLORS.danger }}>*</span></label>
+                <select className="form-select" value={formData.categoriaId} onChange={e => setFormData({ ...formData, categoriaId: e.target.value })} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }} required>
+                  <option value="">Selecciona Categoría...</option>
+                  {catalogos.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
               </div>
-              <div className="modal-body" style={{ padding: '0', maxHeight: '60vh', overflowY: 'auto' }}>
-                {(() => {
-                  const equiposFiltrados = equiposGlobales.filter(e => String(e.LigaId) === String(ligaSeleccionada.id));
-                  if (equiposFiltrados.length === 0) {
-                    return (
-                      <div style={{ padding: '40px 20px', textAlign: 'center', color: COLORS.slate400 }}>
-                        <FaShieldAlt style={{ fontSize: '40px', marginBottom: '10px', opacity: 0.5 }} />
-                        <h4 style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: '700', color: COLORS.slate500 }}>No hay equipos</h4>
-                        <p style={{ margin: 0, fontSize: '13px' }}>Aún no se han inscrito equipos en esta liga.</p>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="table-responsive">
-                      <table className="table" style={{ margin: 0, fontSize: '13px' }}>
-                        <thead style={{ background: COLORS.slate50, color: COLORS.slate600, fontSize: '12px', textTransform: 'uppercase' }}>
-                          <tr>
-                            <th style={{ padding: '12px 24px', fontWeight: '800', borderBottom: `1px solid ${COLORS.slate200}` }}>Equipo</th>
-                            <th style={{ padding: '12px 24px', fontWeight: '800', borderBottom: `1px solid ${COLORS.slate200}` }}>Presidente</th>
-                            <th style={{ padding: '12px 24px', fontWeight: '800', borderBottom: `1px solid ${COLORS.slate200}`, textAlign: 'center' }}>Estatus</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {equiposFiltrados.map((eq, idx) => (
-                            <tr key={eq.EquipoId} style={{ background: idx % 2 === 0 ? 'white' : COLORS.slate50 }}>
-                              <td style={{ padding: '12px 24px', fontWeight: '700', color: COLORS.slate900, borderBottom: `1px solid ${COLORS.slate100}` }}>{eq.NombreEquipo}</td>
-                              <td style={{ padding: '12px 24px', color: COLORS.slate600, borderBottom: `1px solid ${COLORS.slate100}` }}>{eq.PresidenteNombreCompleto || 'Sin presidente'}</td>
-                              <td style={{ padding: '12px 24px', textAlign: 'center', borderBottom: `1px solid ${COLORS.slate100}` }}>
-                                {eq.Estatus ?
-                                  <span style={{ background: COLORS.greenBg, color: COLORS.greenDarker, padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>ACTIVO</span> :
-                                  <span style={{ background: COLORS.dangerBg, color: COLORS.dangerDeep, padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>INACTIVO</span>
-                                }
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()}
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Modalidad <span style={{ color: COLORS.danger }}>*</span></label>
+                <select className="form-select" value={formData.modalidadId} onChange={e => setFormData({ ...formData, modalidadId: e.target.value })} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }} required>
+                  <option value="">Selecciona Modalidad...</option>
+                  {catalogos.modalidades.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                </select>
               </div>
-              <div className="modal-footer" style={{ borderTop: `1px solid ${COLORS.slate100}`, padding: '16px 24px', background: COLORS.slate50, borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
-                <button type="button" className="btn btn-primary" onClick={() => setModalEquiposShow(false)} style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: COLORS.primary, border: 'none' }}>Cerrar</button>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate600, display: 'block', marginBottom: '6px' }}>Rama <span style={{ color: COLORS.danger }}>*</span></label>
+                <select className="form-select" value={formData.ramaId} onChange={e => setFormData({ ...formData, ramaId: e.target.value })} style={{ padding: '12px 16px', borderRadius: '12px', fontSize: '14px', background: COLORS.slate50, cursor: 'pointer', border: `1.5px solid ${COLORS.slate300}`, boxShadow: 'none' }} required>
+                  <option value="">Selecciona Rama...</option>
+                  {catalogos.ramas.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                </select>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
+
+      {/* Modal Reutilizable para Ver Equipos */}
+      <Modal
+        estaAbierto={modalEquiposShow}
+        alCerrar={() => setModalEquiposShow(false)}
+        titulo={`Equipos inscritos en ${ligaSeleccionada?.nombreOriginal || ligaSeleccionada?.nombre}`}
+        tamanio="grande"
+        pie={
+          <button type="button" className="btn btn-primary" onClick={() => setModalEquiposShow(false)} style={{ borderRadius: '10px', fontWeight: '700', padding: '10px 20px', background: COLORS.primary, border: 'none' }}>Cerrar</button>
+        }
+      >
+        {(() => {
+          const equiposFiltrados = equiposGlobales.filter(e => String(e.LigaId) === String(ligaSeleccionada?.id));
+          if (equiposFiltrados.length === 0) {
+            return (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: COLORS.slate400 }}>
+                <FaShieldAlt style={{ fontSize: '40px', marginBottom: '10px', opacity: 0.5 }} />
+                <h4 style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: '700', color: COLORS.slate500 }}>No hay equipos</h4>
+                <p style={{ margin: 0, fontSize: '13px' }}>Aún no se han inscrito equipos en esta liga.</p>
+              </div>
+            );
+          }
+          return (
+            <div className="table-responsive">
+              <table className="table" style={{ margin: 0, fontSize: '13px' }}>
+                <thead style={{ background: COLORS.slate50, color: COLORS.slate600, fontSize: '12px', textTransform: 'uppercase' }}>
+                  <tr>
+                    <th style={{ padding: '12px 24px', fontWeight: '800', borderBottom: `1px solid ${COLORS.slate200}` }}>Equipo</th>
+                    <th style={{ padding: '12px 24px', fontWeight: '800', borderBottom: `1px solid ${COLORS.slate200}` }}>Presidente</th>
+                    <th style={{ padding: '12px 24px', fontWeight: '800', borderBottom: `1px solid ${COLORS.slate200}`, textAlign: 'center' }}>Estatus</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {equiposFiltrados.map((eq, idx) => (
+                    <tr key={eq.EquipoId} style={{ background: idx % 2 === 0 ? 'white' : COLORS.slate50 }}>
+                      <td style={{ padding: '12px 24px', fontWeight: '700', color: COLORS.slate900, borderBottom: `1px solid ${COLORS.slate100}` }}>{eq.NombreEquipo}</td>
+                      <td style={{ padding: '12px 24px', color: COLORS.slate600, borderBottom: `1px solid ${COLORS.slate100}` }}>{eq.PresidenteNombreCompleto || 'Sin presidente'}</td>
+                      <td style={{ padding: '12px 24px', textAlign: 'center', borderBottom: `1px solid ${COLORS.slate100}` }}>
+                        {eq.Estatus ?
+                          <span style={{ background: COLORS.greenBg, color: COLORS.greenDarker, padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>ACTIVO</span> :
+                          <span style={{ background: COLORS.dangerBg, color: COLORS.dangerDeep, padding: '4px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: '800' }}>INACTIVO</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </Modal>
 
     </div>
   );
