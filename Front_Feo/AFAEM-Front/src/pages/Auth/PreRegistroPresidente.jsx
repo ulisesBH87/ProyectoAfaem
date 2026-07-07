@@ -2314,6 +2314,9 @@ function PreRegistroPresidente() {
     isActaUploaded && isIneUploaded && isFotoUploaded
   );
 
+  const isFormatoUploaded = !!documents.formatoAfiliacion || documentosGuardados.some(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === 10);
+  const isRegistroCompleto = !formatAfiliacionLocked && isFormatoUploaded;
+
   if (rbacLoading || pasoActual === null) {
     return (
       <div style={{
@@ -4786,8 +4789,12 @@ function PreRegistroPresidente() {
               <button
                 className="btn-premium"
                 onClick={handleSolicitarRegistro}
-                disabled={loading}
-                style={{ padding: '12px 50px', opacity: loading ? 0.7 : 1 }}
+                disabled={loading || !isRegistroCompleto}
+                style={{
+                  padding: '12px 50px',
+                  opacity: (loading || !isRegistroCompleto) ? 0.5 : 1,
+                  cursor: (loading || !isRegistroCompleto) ? 'not-allowed' : 'pointer'
+                }}
               >
                 {loading ? 'Enviando...' : 'Finalizar Registro ✓'}
               </button>
