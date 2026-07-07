@@ -1871,9 +1871,7 @@ function PreRegistroPresidente() {
       setOcrResults(prev => ({
         ...prev,
         [field]: value,
-        ...extra,
-        actaNacimiento: prev.actaNacimiento || 'Manual',
-        identificacion: prev.identificacion || 'Manual'
+        ...extra
       }));
 
       if (value.length === 18) {
@@ -1889,9 +1887,7 @@ function PreRegistroPresidente() {
     } else {
       setOcrResults(prev => ({
         ...prev,
-        [field]: value,
-        actaNacimiento: prev.actaNacimiento || 'Manual',
-        identificacion: prev.identificacion || 'Manual'
+        [field]: value
       }));
     }
   };
